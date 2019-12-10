@@ -1,0 +1,140 @@
+# Documentation at http://goreleaser.com
+
+# Project name
+project_name: HORNET
+
+# Environment variables
+env:
+- GO111MODULE=on
+
+# Builds
+builds:
+# macOS AMD64
+- id: hornet-darwin-amd64
+  binary: hornet
+  env:
+  - CGO_ENABLED=1
+  - CC=o64-clang
+  - CXX=o64-clang++
+  ldflags:
+  - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+  flags:
+  - -tags=pow_avx
+  main: main.go
+  goos:
+    - darwin
+  goarch:
+    - amd64
+# Linux AMD64
+- id: hornet-linux-amd64
+  binary: hornet
+  env:
+  - CGO_ENABLED=1
+  ldflags:
+  - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+  flags:
+  - -tags=pow_avx
+  main: main.go
+  goos:
+    - linux
+  goarch:
+    - amd64
+# Linux ARM(v7)
+- id: hornet-linux-arm
+  binary: hornet
+  env:
+    - CGO_ENABLED=1
+    - CC=arm-linux-gnueabi-gcc
+  ldflags:
+  - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+  flags:
+  - -tags=pow_c
+  main: main.go
+  goos:
+    - linux
+  goarch:
+    - arm
+  goarm:
+    - 7
+# Linux ARM64
+- id: hornet-linux-arm64
+  binary: hornet
+  env:
+    - CGO_ENABLED=1
+    - CC=aarch64-linux-gnu-gcc
+  ldflags:
+  - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+  flags:
+  - -tags=pow_c
+  main: main.go
+  goos:
+    - linux
+  goarch:
+    - arm64
+# Windows AMD64
+- id: hornet-windows-amd64
+  binary: hornet
+  env:
+    - CGO_ENABLED=1
+    - CC=x86_64-w64-mingw32-gcc
+    - CXX=x86_64-w64-mingw32-g++
+  ldflags:
+  - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+  flags:
+  - -tags=pow_avx
+  main: main.go
+  goos:
+    - windows
+  goarch:
+    - amd64
+
+# Archives
+archives:
+- format: tar.gz
+  format_overrides:
+    - goos: windows
+      format: zip
+  name_template: "{{.ProjectName}}-{{.Version}}_{{.Os}}_{{.Arch}}"
+  replacements:
+    amd64: x86_64
+    386: 32bit
+    arm: ARM
+    arm64: ARM64
+    darwin: macOS
+    linux: Linux
+    windows: Windows
+    openbsd: OpenBSD
+    netbsd: NetBSD
+    freebsd: FreeBSD
+    dragonfly: DragonFlyBSD
+  files:
+    - README.md
+    - LICENSE
+
+# Checksum
+checksum:
+  name_template: 'checksums.txt'
+
+# Snapshot
+snapshot:
+  name_template: "{{ .Tag }}"
+
+# Changelog (if --release-notes not set)
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - '^dev:'
+    - 'README'
+    - Merge pull request
+    - Merge branch
+
+# Release
+release:
+  prerelease: auto
+  name_template: "{{.ProjectName}}-{{.Version}}"
+  github:
+    owner: gohornet
+    name: hornet

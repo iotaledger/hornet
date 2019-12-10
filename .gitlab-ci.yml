@@ -1,0 +1,36 @@
+image: docker:stable
+services:
+- docker:stable-dind
+
+stages:
+- build
+- deploy
+
+variables:
+  # GoReleaser Cross Compiler
+  GORELEASER_IMAGE: iotmod/goreleaser-cgo-cross-compiler:1.13.5
+  # Path to this repo
+  REPO_PATH: /go/src/gitlab.com/$CI_PROJECT_PATH
+  # Golang image
+  GOLANG_IMAGE: golang:1.13.5
+
+# Try to build HORNET with Go 1.13
+Go 1.13:
+  tags:
+    - docker
+  stage: build
+  script:
+    - docker pull $GOLANG_IMAGE
+    - docker run --rm --privileged -v $PWD:$REPO_PATH -v /var/run/docker.sock:/var/run/docker.sock -w $REPO_PATH -e GO111MODULE=on $GOLANG_IMAGE go build main.go
+
+# Release with GoReleaser
+release:
+  tags:
+    - docker
+  stage: deploy
+  script:
+    - docker pull $GORELEASER_IMAGE
+    - docker run --rm --privileged -v $PWD:$REPO_PATH -v /var/run/docker.sock:/var/run/docker.sock -w $REPO_PATH -e GITHUB_TOKEN $GORELEASER_IMAGE goreleaser --release-notes=CHANGELOG.md --rm-dist
+  when: manual
+  only:
+    - tags
