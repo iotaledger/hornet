@@ -1,0 +1,18 @@
+version: '3'
+services:
+  hornet:
+    build:
+      context: .
+    image: hornet:latest
+    # Best performance via host network:
+    network_mode: host
+    # Else:
+    #ports:
+    #  - "14265:14265"
+    #  - "15600:15600"
+    cap_add:
+      - ALL
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./latest-export.gz.bin:/app/latest-export.gz.bin
+      - ./mainnetdb:/app/mainnetdb

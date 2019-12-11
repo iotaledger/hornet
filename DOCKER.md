@@ -7,11 +7,6 @@ To quickly build, first clone the repository
 git clone https://github.com/gohornet/hornet && cd hornet
 ```
 
-## Run build
-```sh
-docker build -t hornet:latest .
-```
-
 ## Prepare
 
 i. Download the DB file
@@ -19,18 +14,31 @@ i. Download the DB file
 curl -LO https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin
 ```
 
-ii. Create a directory for the database. You can choose any path (perferably on a partition with enough disk space):
+ii. Edit the `config.json` for neighbors and alternative ports if needed.
+
+## Docker compose
+
+For docker compose: this will build the image and run the process.
 ```sh
-mkdir /tmp/db
+docker-compose up
 ```
-(Note: In the example above we're using /tmp that will get wiped after a reboot)
+CTRL-c to stop.
 
-iii. Edit the `config.json` for neighbors and alternative ports if needed.
+Add `-d` to run detached, and to stop:
 
+```sh
+docker-compose down
+```
+
+## Run build
+If not running via docker-compose, build manually:
+
+```sh
+docker build -t hornet:latest .
 
 ## Run
 
-Best run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)
+Best is to run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)
 ```sh
 docker run --rm -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/latest-export.gz.bin:/app/latest-export.gz.bin:ro -v /tmp/db:/app/mainnetdb --name hornet --net=host hornet:latest
 ```
