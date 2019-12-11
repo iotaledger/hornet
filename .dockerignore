@@ -1,1 +1,8 @@
 latest-export.gz.bin
+.github
+.git
+Dockerfile
+DOCKER.md
+README.md
+.dockerignore
+docker-compose.yml

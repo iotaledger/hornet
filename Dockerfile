@@ -13,12 +13,13 @@ ENV TINI_VERSION v0.18.0
 # Tini is excellent: https://github.com/krallin/tini#why-tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static.asc /tini.asc
+ADD entrypoint.sh /entrypoint.sh
 
 COPY --from=builder ["/go/src/github.com/gohornet/hornet/hornet", "/go/src/github.com/gohornet/hornet/config.json", "/app/"]
 RUN apk --no-cache add ca-certificates gnupg\
  && addgroup --gid 39999 hornet\
  && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\
- && chmod +x /tini /app/hornet\
+ && chmod +x /tini /app/hornet /entrypoint.sh\
  && chown hornet:hornet -R /app\
  && gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7\
  && gpg --batch --verify /tini.asc /tini
@@ -30,5 +31,4 @@ RUN apk --no-cache add ca-certificates gnupg\
 # Source: https://docs.docker.com/network/host/
 
 USER hornet
-ENTRYPOINT ["/tini", "--"]
-CMD ["/app/hornet"]
+ENTRYPOINT ["/entrypoint.sh"]
