@@ -18,3 +18,9 @@ jobs:
 
     - name: Build HORNET
       run: go build -v .
+
+    - name: Build HORNET Docker image
+      run: docker build . --file Dockerfile --tag hornet:latest
+
+    - name: Test HORNET Docker image
+      run: docker run --rm --name hornet hornet:latest --help

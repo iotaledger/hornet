@@ -1,3 +1,3 @@
 #!/bin/sh
 
-/tini -- /app/hornet $@
+/tini -s -- /app/hornet $@
