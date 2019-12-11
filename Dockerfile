@@ -38,4 +38,4 @@ RUN apk --no-cache add ca-certificates gnupg\
 # Source: https://docs.docker.com/network/host/
 
 USER hornet
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/tini", "-s", "--", "/app/hornet"]
