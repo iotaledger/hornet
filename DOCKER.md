@@ -35,6 +35,7 @@ If not running via docker-compose, build manually:
 
 ```sh
 docker build -t hornet:latest .
+```
 
 ## Run
 
