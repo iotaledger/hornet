@@ -110,6 +110,7 @@ archives:
   files:
     - README.md
     - LICENSE
+    - config.json
 
 # Checksum
 checksum:
