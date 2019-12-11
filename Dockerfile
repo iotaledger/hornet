@@ -21,8 +21,15 @@ RUN apk --no-cache add ca-certificates gnupg\
  && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\
  && chmod +x /tini /app/hornet /entrypoint.sh\
  && chown hornet:hornet -R /app\
- && gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7\
- && gpg --batch --verify /tini.asc /tini
+ && for server in $(shuf -e ha.pool.sks-keyservers.net \
+                            hkp://p80.pool.sks-keyservers.net:80 \
+                            keyserver.ubuntu.com \
+                            hkp://keyserver.ubuntu.com:80 \
+                            keyserver.pgp.com \
+                            pgp.mit.edu); do \
+        gpg --keyserver "$server" --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 && break || : ; \
+    done; \
+ gpg --batch --verify /tini.asc /tini
 
 # Not exposing ports, as it might be more efficient to run this on host network because of performance gain.
 # | Host mode networking can be useful to optimize performance, and in situations where a container needs
