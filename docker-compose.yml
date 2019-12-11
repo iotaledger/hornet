@@ -10,7 +10,7 @@ services:
     #ports:
     #  - "14265:14265"
     #  - "15600:15600"
-    cap_add:
+    cap_drop:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
