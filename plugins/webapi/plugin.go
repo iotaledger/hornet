@@ -7,15 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/parameter"
 )
 
 // PLUGIN WebAPI
@@ -43,12 +42,21 @@ func configure(plugin *node.Plugin) {
 	api.Use(gin.Recovery())
 
 	// CORS
-	api.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "OPTIONS", "CONNECT", "PATCH"},
-		AllowHeaders:     []string{"User-Agent", "Origin", "X-Requested-With", "Content-Type", "Accept", "X-IOTA-API-Version"},
-		AllowCredentials: true,
-	}))
+	corsMiddleware := func(c *gin.Context) {
+
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "User-Agent, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Accept, Origin, Cache-Control, X-Requested-With, X-IOTA-API-Version")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+	api.Use(corsMiddleware)
 
 	// GZIP
 	api.Use(gzip.Gzip(gzip.DefaultCompression))
