@@ -1,6 +1,8 @@
 package hornet
 
 import (
+	"time"
+
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -36,6 +38,9 @@ type Transaction struct {
 
 	// TxTimestamp or, if available, AttachmentTimestamp
 	timestamp int64
+
+	// Unix time when the Tx became solid (needed for local modifiers for tipselection)
+	solidificationTimestamp int32
 
 	// The index of the milestone which confirmed this tx
 	confirmationIndex milestone_index.MilestoneIndex
@@ -76,14 +81,15 @@ func NewTransactionFromGossip(transaction *transaction.Transaction, transactionB
 	}
 }
 
-func NewTransactionFromDatabase(transaction *transaction.Transaction, transactionBytes []byte, confirmationIndex milestone_index.MilestoneIndex, metadata byte) *Transaction {
+func NewTransactionFromDatabase(transaction *transaction.Transaction, transactionBytes []byte, solidificationTimestamp int32, confirmationIndex milestone_index.MilestoneIndex, metadata byte) *Transaction {
 	return &Transaction{
-		Tx:                transaction,
-		RawBytes:          transactionBytes,
-		timestamp:         getTimestampFromTx(transaction),
-		confirmationIndex: confirmationIndex,
-		metadata:          bitutils.BitMask(metadata),
-		modified:          false,
+		Tx:                      transaction,
+		RawBytes:                transactionBytes,
+		timestamp:               getTimestampFromTx(transaction),
+		solidificationTimestamp: solidificationTimestamp,
+		confirmationIndex:       confirmationIndex,
+		metadata:                bitutils.BitMask(metadata),
+		modified:                false,
 	}
 }
 
@@ -113,6 +119,10 @@ func (tx *Transaction) GetTimestamp() int64 {
 	return tx.timestamp
 }
 
+func (tx *Transaction) GetSolidificationTimestamp() int32 {
+	return tx.solidificationTimestamp
+}
+
 func (tx *Transaction) IsTail() bool {
 	return tx.Tx.CurrentIndex == 0
 }
@@ -133,6 +143,7 @@ func (tx *Transaction) SetSolid(solid bool) {
 	defer tx.metadataMutex.Unlock()
 
 	if solid != tx.metadata.HasFlag(HORNET_TX_METADATA_SOLID) {
+		tx.solidificationTimestamp = int32(time.Now().Unix())
 		tx.metadata = tx.metadata.ModifyingFlag(HORNET_TX_METADATA_SOLID, solid)
 		tx.SetModified(true)
 	}
