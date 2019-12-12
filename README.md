@@ -26,3 +26,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 - Add neighbors to the config.json file
 - Download the latest HORNET snapshot from [dbfiles.iota.org](https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin)
 - Run HORNET: `./hornet -c config`
+
+### Docker
+
+See [Docker](DOCKER.md)
