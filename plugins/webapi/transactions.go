@@ -6,12 +6,12 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 func init() {
@@ -79,8 +79,7 @@ func findTransactions(i interface{}, c *gin.Context) {
 	txHashes := []string{}
 
 	if len(ft.Bundles) == 0 && len(ft.Addresses) == 0 {
-		e.Error = "Nothing to search for"
-		c.JSON(http.StatusBadRequest, e)
+		c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: []string{}})
 		return
 	}
 
