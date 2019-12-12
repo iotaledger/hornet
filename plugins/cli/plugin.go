@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/iotaledger/hive.go/events"
 	"github.com/gohornet/hornet/packages/node"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/parameter"
 )
 
 var (
 	// AppVersion version number
-	AppVersion = "0.1.0"
+	AppVersion = "dev"
+
 	// AppName app code name
 	AppName = "HORNET"
 )
