@@ -40,6 +40,11 @@ func configure(plugin *node.Plugin) {
 	if tangle.IsDatabaseCorrupted() {
 		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
 	}
+
+	if !tangle.IsCorrectDatabaseVersion() {
+		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
+	}
+
 	tangle.MarkDatabaseCorrupted()
 
 	tangle.ConfigureMilestones(

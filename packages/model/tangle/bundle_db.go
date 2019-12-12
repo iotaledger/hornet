@@ -3,6 +3,7 @@ package tangle
 import (
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/packages/bitutils"
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
@@ -11,7 +12,7 @@ import (
 var bundleDatabase database.Database
 
 func configureBundleDatabase() {
-	if db, err := database.Get("bundle"); err != nil {
+	if db, err := database.Get(DBPrefixBundles); err != nil {
 		panic(err)
 	} else {
 		bundleDatabase = db

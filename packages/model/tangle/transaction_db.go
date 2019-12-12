@@ -15,7 +15,7 @@ import (
 var transactionDatabase database.Database
 
 func configureTransactionDatabase() {
-	if db, err := database.Get("tx"); err != nil {
+	if db, err := database.Get(DBPrefixTransactions); err != nil {
 		panic(err)
 	} else {
 		transactionDatabase = db
@@ -41,7 +41,7 @@ func StoreTransactionsInDatabase(transactions []*hornet.Transaction) error {
 	var modifiedTx []*hornet.Transaction
 	for _, transaction := range transactions {
 		if transaction.IsModified() {
-			value := make([]byte, 4, 4+len(transaction.RawBytes))
+			value := make([]byte, 8, 8+len(transaction.RawBytes))
 			confirmed, confirmationIndex := transaction.GetConfirmed()
 
 			if !confirmed {
@@ -49,6 +49,7 @@ func StoreTransactionsInDatabase(transactions []*hornet.Transaction) error {
 			}
 
 			binary.LittleEndian.PutUint32(value, uint32(confirmationIndex))
+			binary.LittleEndian.PutUint32(value[4:], uint32(transaction.GetSolidificationTimestamp()))
 			value = append(value, transaction.RawBytes...)
 
 			entry := database.Entry{
@@ -100,13 +101,14 @@ func readTransactionFromDatabase(transactionHash trinary.Hash) (*hornet.Transact
 	}
 
 	confirmationIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(entry.Value[:4]))
-	rawBytes := entry.Value[4:]
+	solidificationTimestamp := int32(binary.LittleEndian.Uint32(entry.Value[4:8]))
+	rawBytes := entry.Value[8:]
 
 	tx, err := compressed.TransactionFromCompressedBytes(rawBytes, transactionHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decompress tx")
 	} else {
-		return hornet.NewTransactionFromDatabase(tx, rawBytes, confirmationIndex, entry.Meta), nil
+		return hornet.NewTransactionFromDatabase(tx, rawBytes, solidificationTimestamp, confirmationIndex, entry.Meta), nil
 	}
 }
 

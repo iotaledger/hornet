@@ -11,7 +11,7 @@ var (
 )
 
 func configureSpentAddressesDatabase() {
-	if db, err := database.Get("spent"); err != nil {
+	if db, err := database.Get(DBPrefixSpentAddresses); err != nil {
 		panic(err)
 	} else {
 		spentAddressesDatabase = db

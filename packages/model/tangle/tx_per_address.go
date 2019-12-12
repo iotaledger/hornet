@@ -12,7 +12,7 @@ var (
 )
 
 func configureTransactionHashesForAddressDatabase() {
-	if db, err := database.Get("address"); err != nil {
+	if db, err := database.Get(DBPrefixAddresses); err != nil {
 		panic(err)
 	} else {
 		transactionsHashesForAddressDatabase = db
