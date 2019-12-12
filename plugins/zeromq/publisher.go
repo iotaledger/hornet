@@ -26,9 +26,8 @@ func NewPublisher() (*Publisher, error) {
 
 // Start the publisher on the given port.
 func (pub *Publisher) Start() error {
-	port := parameter.NodeConfig.GetInt("zmq.port")
-	endpoint := parameter.NodeConfig.GetString("zmq.protocol") + "://" + parameter.NodeConfig.GetString("zmq.host")
-	return pub.socket.Listen(endpoint + ":" + strconv.Itoa(port))
+	endpoint := parameter.NodeConfig.GetString("zmq.protocol") + "://" + parameter.NodeConfig.GetString("zmq.host") + ":" + strconv.Itoa(parameter.NodeConfig.GetInt("zmq.port"))
+	return pub.socket.Listen(endpoint)
 }
 
 // Shutdown stops the publisher.
