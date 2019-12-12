@@ -14,7 +14,7 @@ import (
 var snapshotDatabase database.Database
 
 func configureSnapshotDatabase() {
-	if db, err := database.Get("ls"); err != nil {
+	if db, err := database.Get(DBPrefixSnapshot); err != nil {
 		panic(err)
 	} else {
 		snapshotDatabase = db

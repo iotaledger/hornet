@@ -13,7 +13,7 @@ import (
 var milestoneDatabase database.Database
 
 func configureMilestoneDatabase() {
-	if db, err := database.Get("ms"); err != nil {
+	if db, err := database.Get(DBPrefixMilestones); err != nil {
 		panic(err)
 	} else {
 		milestoneDatabase = db

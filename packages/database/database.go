@@ -15,30 +15,24 @@ var (
 
 type prefixDb struct {
 	db     *badger.DB
-	name   string
 	prefix []byte
 }
 
-func getPrefix(name string) []byte {
-	return []byte(name + "_")
-}
-
-func Get(name string) (Database, error) {
+func Get(dbPrefix byte) (Database, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if db, exists := dbMap[name]; exists {
+	if db, exists := dbMap[string(dbPrefix)]; exists {
 		return db, nil
 	}
 
 	badger := GetBadgerInstance()
 	db := &prefixDb{
 		db:     badger,
-		name:   name,
-		prefix: getPrefix(name),
+		prefix: []byte{dbPrefix},
 	}
 
-	dbMap[name] = db
+	dbMap[string(dbPrefix)] = db
 
 	return db, nil
 }
@@ -52,7 +46,7 @@ func (pdb *prefixDb) keyWithPrefix(key Key) Key {
 }
 
 func (pdb *prefixDb) keyWithoutPrefix(key Key) Key {
-	return key[len(pdb.prefix):]
+	return key[1:]
 }
 
 func (k Key) keyWithoutKeyPrefix(prefix KeyPrefix) Key {

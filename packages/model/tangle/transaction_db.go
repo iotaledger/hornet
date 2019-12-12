@@ -15,7 +15,7 @@ import (
 var transactionDatabase database.Database
 
 func configureTransactionDatabase() {
-	if db, err := database.Get("tx"); err != nil {
+	if db, err := database.Get(DBPrefixTransactions); err != nil {
 		panic(err)
 	} else {
 		transactionDatabase = db

@@ -9,7 +9,7 @@ import (
 var approversDatabase database.Database
 
 func configureApproversDatabase() {
-	if db, err := database.Get("approvers"); err != nil {
+	if db, err := database.Get(DBPrefixApprovers); err != nil {
 		panic(err)
 	} else {
 		approversDatabase = db
