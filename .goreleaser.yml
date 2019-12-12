@@ -120,17 +120,9 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}"
 
-# Changelog (if --release-notes not set)
+# Changelog
 changelog:
-  sort: asc
-  filters:
-    exclude:
-    - '^docs:'
-    - '^test:'
-    - '^dev:'
-    - 'README'
-    - Merge pull request
-    - Merge branch
+  skip: true
 
 # Release
 release:
