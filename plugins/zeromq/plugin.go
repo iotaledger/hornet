@@ -3,9 +3,6 @@ package zeromq
 import (
 	"time"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -15,6 +12,9 @@ import (
 	"github.com/gohornet/hornet/packages/timeutil"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/tangle"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/parameter"
 )
 
 const (
@@ -180,5 +180,5 @@ func startPublisher() error {
 	}
 	publisher = pub
 
-	return publisher.Start(parameter.NodeConfig.GetInt("zmq.port"))
+	return publisher.Start()
 }

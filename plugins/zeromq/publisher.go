@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	zmq "github.com/go-zeromq/zmq4"
+	"github.com/iotaledger/hive.go/parameter"
 )
 
 // Publisher is a simple zmq publisher abstraction
@@ -24,8 +25,10 @@ func NewPublisher() (*Publisher, error) {
 }
 
 // Start the publisher on the given port.
-func (pub *Publisher) Start(port int) error {
-	return pub.socket.Listen("tcp://*:" + strconv.Itoa(port))
+func (pub *Publisher) Start() error {
+	port := parameter.NodeConfig.GetInt("zmq.port")
+	endpoint := parameter.NodeConfig.GetString("zmq.protocol") + "://" + parameter.NodeConfig.GetString("zmq.host")
+	return pub.socket.Listen(endpoint + ":" + strconv.Itoa(port))
 }
 
 // Shutdown stops the publisher.
