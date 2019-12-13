@@ -1,9 +1,9 @@
-name: Build
+name: Build HORNET
 on: [push, pull_request]
 jobs:
 
   build:
-    name: Build
+    name: Build HORNET
     runs-on: ubuntu-latest
     steps:
 
@@ -18,9 +18,3 @@ jobs:
 
     - name: Build HORNET
       run: go build -v .
-
-    - name: Build HORNET Docker image
-      run: docker build . --file Dockerfile --tag hornet:latest
-
-    - name: Test HORNET Docker image
-      run: docker run --rm --name hornet hornet:latest --help 2>/dev/null | grep -q "help requested"
