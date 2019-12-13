@@ -1,8 +1,9 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/profile"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -23,7 +24,7 @@ func MarkAddressAsSpent(address trinary.Hash) {
 }
 
 func InitSpentAddressesCache() {
-	spentAddressesCache = datastructure.NewLRUCache(SpentAddressesCacheSize, &datastructure.LRUCacheOptions{
+	spentAddressesCache = datastructure.NewLRUCache(profile.GetProfile().Caches.SpentAddresses, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictSpentAddress,
 		EvictionBatchSize: 1000,
 	})

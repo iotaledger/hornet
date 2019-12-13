@@ -3,17 +3,19 @@ package tangle
 import (
 	"time"
 
+	"github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/node"
+	"github.com/gohornet/hornet/packages/profile"
+	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/packages/timeutil"
+	"github.com/gohornet/hornet/plugins/gossip"
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/node"
-	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/timeutil"
-	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 // region plugin module setup //////////////////////////////////////////////////////////////////////////////////////////
@@ -25,6 +27,7 @@ var belowMaxDepthTransactionLimit int
 func configure(plugin *node.Plugin) {
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
+	RefsAnInvalidBundleCache = datastructure.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle)
 
 	tangle.InitTransactionCache(onEvictTransactions)
 	tangle.InitBundleCache()
@@ -32,19 +35,11 @@ func configure(plugin *node.Plugin) {
 	tangle.InitMilestoneCache()
 	tangle.InitSpentAddressesCache()
 
-	tangle.ConfigureDatabases(
-		parameter.NodeConfig.GetString("db.path"),
-		parameter.NodeConfig.GetBool("light"),
-	)
+	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"))
 
 	if tangle.IsDatabaseCorrupted() {
 		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
 	}
-
-	if !tangle.IsCorrectDatabaseVersion() {
-		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
-	}
-
 	tangle.MarkDatabaseCorrupted()
 
 	tangle.ConfigureMilestones(

@@ -3,13 +3,6 @@ package gossip
 import (
 	"time"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
-	"github.com/pkg/errors"
-
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/curl"
 	"github.com/gohornet/hornet/packages/datastructure"
@@ -18,15 +11,21 @@ import (
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/packages/typeutils"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/transaction"
+	"github.com/iotaledger/iota.go/trinary"
+	"github.com/pkg/errors"
 )
 
 const (
-	TRANSACTION_FILTER_SIZE            = 5000
 	PACKET_PROCESSOR_WORKER_QUEUE_SIZE = 50000
 )
 
@@ -35,13 +34,14 @@ var (
 	packetProcessorWorkerPool  *workerpool.WorkerPool
 
 	RequestQueue  *queue.RequestQueue
-	incomingCache = datastructure.NewLRUCache(TRANSACTION_FILTER_SIZE)
+	incomingCache *datastructure.LRUCache
 
 	ErrTxExpired = errors.New("tx too old")
 )
 
 func configurePacketProcessor() {
 	RequestQueue = queue.NewRequestQueue()
+	incomingCache = datastructure.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter)
 
 	gossipLogger.Infof("Configuring packetProcessorWorkerPool with %d workers", packetProcessorWorkerCount)
 	packetProcessorWorkerPool = workerpool.New(func(task workerpool.Task) {

@@ -3,6 +3,7 @@ package tangle
 import (
 	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
@@ -10,7 +11,7 @@ var (
 )
 
 func InitMilestoneCache() {
-	milestoneCache = datastructure.NewLRUCache(MilestoneCacheSize, &datastructure.LRUCacheOptions{
+	milestoneCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Milestones, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictMilestones,
 		EvictionBatchSize: 100,
 	})

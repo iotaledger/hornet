@@ -1,4 +1,39 @@
 {
+  "useProfile": "default",
+  "profiles": {
+    "custom": {
+      "caches": {
+        "requestQueue": 100000,
+        "approvers": 100000,
+        "bundles": 20000,
+        "milestones": 1000,
+        "spentAddresses": 5000,
+        "transactions": 50000,
+        "incomingTransactionFilter": 5000,
+        "refsInvalidBundle": 10000
+      },
+      "badger": {
+        "levelOneSize": 268435456,
+        "levelSizeMultiplier": 10,
+        "tableLoadingMode": 2,
+        "valueLogLoadingMode": 2,
+        "maxLevels": 7,
+        "maxTableSize": 67108864,
+        "numCompactors": 2,
+        "numLevelZeroTables": 5,
+        "numLevelZeroTablesStall": 10,
+        "numMemtables": 5,
+        "numVersionsToKeep": 1,
+        "syncWrites": true,
+        "compactLevel0OnClose": true,
+        "valueLogFileSize": 1073741823,
+        "valueLogMaxEntries": 1000000,
+        "valueThreshold": 32,
+        "logRotatesToFlush": 2,
+        "maxCacheSize": 50000000
+      }
+    }
+  },
   "api": {
     "auth": {
       "password": "",

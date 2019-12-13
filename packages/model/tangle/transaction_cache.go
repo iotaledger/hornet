@@ -1,9 +1,10 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/profile"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 )
 
 func InitTransactionCache(notifyCallback func(notifyStoredTx []*hornet.Transaction)) {
-	transactionCache = datastructure.NewLRUCache(TransactionCacheSize, &datastructure.LRUCacheOptions{
+	transactionCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Transactions, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictTransactions,
 		EvictionBatchSize: 1000,
 	})

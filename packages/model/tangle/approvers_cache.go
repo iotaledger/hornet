@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
@@ -10,7 +11,7 @@ var (
 )
 
 func InitApproversCache() {
-	approversCache = datastructure.NewLRUCache(ApproversCacheSize, &datastructure.LRUCacheOptions{
+	approversCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Approvers, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictApprovers,
 		EvictionBatchSize: 1000,
 	})

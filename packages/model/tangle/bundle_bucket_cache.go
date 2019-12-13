@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
@@ -9,7 +10,7 @@ var (
 )
 
 func InitBundleCache() {
-	bundleBucketCache = datastructure.NewLRUCache(BundleCacheSize, &datastructure.LRUCacheOptions{
+	bundleBucketCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Bundles, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictBundles,
 		EvictionBatchSize: 1000,
 	})
