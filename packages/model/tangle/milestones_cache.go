@@ -11,9 +11,10 @@ var (
 )
 
 func InitMilestoneCache() {
-	milestoneCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Milestones, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.Milestones
+	milestoneCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictMilestones,
-		EvictionBatchSize: 100,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 }
 

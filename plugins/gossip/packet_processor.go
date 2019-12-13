@@ -41,7 +41,7 @@ var (
 
 func configurePacketProcessor() {
 	RequestQueue = queue.NewRequestQueue()
-	incomingCache = datastructure.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter)
+	incomingCache = datastructure.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter.Size)
 
 	gossipLogger.Infof("Configuring packetProcessorWorkerPool with %d workers", packetProcessorWorkerCount)
 	packetProcessorWorkerPool = workerpool.New(func(task workerpool.Task) {

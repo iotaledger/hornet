@@ -27,7 +27,7 @@ var belowMaxDepthTransactionLimit int
 func configure(plugin *node.Plugin) {
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
-	RefsAnInvalidBundleCache = datastructure.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle)
+	RefsAnInvalidBundleCache = datastructure.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
 
 	tangle.InitTransactionCache(onEvictTransactions)
 	tangle.InitBundleCache()
@@ -44,7 +44,7 @@ func configure(plugin *node.Plugin) {
 	if !tangle.IsCorrectDatabaseVersion() {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 	}
-	
+
 	tangle.MarkDatabaseCorrupted()
 
 	tangle.ConfigureMilestones(

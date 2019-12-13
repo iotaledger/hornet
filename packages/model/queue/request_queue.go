@@ -27,7 +27,7 @@ type RequestQueue struct {
 func NewRequestQueue() *RequestQueue {
 
 	queue := &RequestQueue{
-		requestedCache: datastructure.NewLRUCache(profile.GetProfile().Caches.RequestQueue),
+		requestedCache: datastructure.NewLRUCache(profile.GetProfile().Caches.RequestQueue.Size),
 		ticker:         time.NewTicker(RequestQueueTickerInterval),
 		tickerDone:     make(chan bool),
 	}

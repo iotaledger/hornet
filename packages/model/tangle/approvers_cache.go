@@ -11,7 +11,7 @@ var (
 )
 
 func InitApproversCache() {
-	approversCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Approvers, &datastructure.LRUCacheOptions{
+	approversCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Approvers.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictApprovers,
 		EvictionBatchSize: 1000,
 	})

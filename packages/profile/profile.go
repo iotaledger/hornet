@@ -38,15 +38,35 @@ func GetProfile() *Profile {
 }
 
 var DefaultProfile = &Profile{
-	Caches: CacheOpts{
-		RequestQueue:              100000,
-		Approvers:                 100000,
-		Bundles:                   20000,
-		Milestones:                1000,
-		SpentAddresses:            5000,
-		Transactions:              50000,
-		IncomingTransactionFilter: 5000,
-		RefsInvalidBundle:         10000,
+	Caches: Caches{
+		RequestQueue: CacheOpts{
+			Size: 100000,
+		},
+		Approvers: CacheOpts{
+			Size:         100000,
+			EvictionSize: 1000,
+		},
+		Bundles: CacheOpts{
+			Size:         20000,
+			EvictionSize: 1000,
+		},
+		Milestones: CacheOpts{
+			Size:         1000,
+			EvictionSize: 100,
+		},
+		SpentAddresses: CacheOpts{
+			Size: 5000,
+		},
+		Transactions: CacheOpts{
+			Size:         50000,
+			EvictionSize: 1000,
+		},
+		IncomingTransactionFilter: CacheOpts{
+			Size: 5000,
+		},
+		RefsInvalidBundle: CacheOpts{
+			Size: 10000,
+		},
 	},
 	Badger: BadgerOpts{
 		LevelOneSize:            268435456,
@@ -71,15 +91,35 @@ var DefaultProfile = &Profile{
 }
 
 var LightProfile = &Profile{
-	Caches: CacheOpts{
-		RequestQueue:              100000,
-		Approvers:                 100000,
-		Bundles:                   20000,
-		Milestones:                1000,
-		SpentAddresses:            5000,
-		Transactions:              50000,
-		IncomingTransactionFilter: 5000,
-		RefsInvalidBundle:         10000,
+	Caches: Caches{
+		RequestQueue: CacheOpts{
+			Size: 100000,
+		},
+		Approvers: CacheOpts{
+			Size:         10000,
+			EvictionSize: 1000,
+		},
+		Bundles: CacheOpts{
+			Size:         5000,
+			EvictionSize: 1000,
+		},
+		Milestones: CacheOpts{
+			Size:         150,
+			EvictionSize: 100,
+		},
+		SpentAddresses: CacheOpts{
+			Size: 2000,
+		},
+		Transactions: CacheOpts{
+			Size:         10000,
+			EvictionSize: 1000,
+		},
+		IncomingTransactionFilter: CacheOpts{
+			Size: 5000,
+		},
+		RefsInvalidBundle: CacheOpts{
+			Size: 10000,
+		},
 	},
 	Badger: BadgerOpts{
 		LevelOneSize:            67108864,
@@ -105,19 +145,24 @@ var LightProfile = &Profile{
 
 type Profile struct {
 	Name   string     `json:"name"`
-	Caches CacheOpts  `json:"caches"`
+	Caches Caches     `json:"caches"`
 	Badger BadgerOpts `json:"badger"`
 }
 
+type Caches struct {
+	RequestQueue              CacheOpts `json:"requestQueue"`
+	Approvers                 CacheOpts `json:"approvers"`
+	Bundles                   CacheOpts `json:"bundles"`
+	Milestones                CacheOpts `json:"milestones"`
+	SpentAddresses            CacheOpts `json:"spentAddresses"`
+	Transactions              CacheOpts `json:"transactions"`
+	IncomingTransactionFilter CacheOpts `json:"incomingTransactionFilter"`
+	RefsInvalidBundle         CacheOpts `json:"refsInvalidBundle"`
+}
+
 type CacheOpts struct {
-	RequestQueue              int `json:"request_queue"`
-	Approvers                 int `json:"approvers"`
-	Bundles                   int `json:"bundles"`
-	Milestones                int `json:"milestones"`
-	SpentAddresses            int `json:"spentAddresses"`
-	Transactions              int `json:"transactions"`
-	IncomingTransactionFilter int `json:"incomingTransactionFilter"`
-	RefsInvalidBundle         int `json:""`
+	Size         int    `json:"size"`
+	EvictionSize uint64 `json:"evictionSize"`
 }
 
 type BadgerOpts struct {

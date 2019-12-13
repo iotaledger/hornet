@@ -24,9 +24,10 @@ func MarkAddressAsSpent(address trinary.Hash) {
 }
 
 func InitSpentAddressesCache() {
-	spentAddressesCache = datastructure.NewLRUCache(profile.GetProfile().Caches.SpentAddresses, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.SpentAddresses
+	spentAddressesCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictSpentAddress,
-		EvictionBatchSize: 1000,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 }
 

@@ -13,9 +13,10 @@ var (
 )
 
 func InitTransactionCache(notifyCallback func(notifyStoredTx []*hornet.Transaction)) {
-	transactionCache = datastructure.NewLRUCache(profile.GetProfile().Caches.Transactions, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.Transactions
+	transactionCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictTransactions,
-		EvictionBatchSize: 1000,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 	evictionNotifyCallback = notifyCallback
 }

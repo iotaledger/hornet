@@ -3,14 +3,33 @@
   "profiles": {
     "custom": {
       "caches": {
-        "requestQueue": 100000,
-        "approvers": 100000,
-        "bundles": 20000,
-        "milestones": 1000,
-        "spentAddresses": 5000,
-        "transactions": 50000,
-        "incomingTransactionFilter": 5000,
-        "refsInvalidBundle": 10000
+        "requestQueue": {
+          "size": 100000
+        },
+        "approvers": {
+          "size": 100000
+        },
+        "bundles": {
+          "size": 20000,
+          "evictionSize": 1000
+        },
+        "milestones": {
+          "size": 1000,
+          "evictionSize": 100
+        },
+        "spentAddresses": {
+          "size": 5000
+        },
+        "transactions": {
+          "size": 50000,
+          "evictionSize": 1000
+        },
+        "incomingTransactionFilter": {
+          "size": 5000
+        },
+        "refsInvalidBundle": {
+          "size": 10000
+        }
       },
       "badger": {
         "levelOneSize": 268435456,
