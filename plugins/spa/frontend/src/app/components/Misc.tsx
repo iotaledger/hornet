@@ -95,6 +95,22 @@ export class Debug extends React.Component<Props, any> {
                     <Col>
                         <Card>
                             <Card.Body>
+                                <Card.Title>Cache Sizes</Card.Title>
+                                <small>
+                                    The cache size shrinks whenever an eviction happens.
+                                    Note that the sizes are sampled only every second, so you won't necessarily
+                                    see the cache hitting its capacity.
+                                </small>
+                                <Line height={60} data={this.props.nodeStore.cacheMetricsSeries}
+                                      options={reqLineChartOptions}/>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+                <Row className={"mb-3"}>
+                    <Col>
+                        <Card>
+                            <Card.Body>
                                 <Card.Title>Requests</Card.Title>
                                 <Line height={60} data={this.props.nodeStore.stingReqs}
                                       options={reqLineChartOptions}/>
