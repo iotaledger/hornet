@@ -1,19 +1,18 @@
 package queue
 
 import (
-	"github.com/gohornet/hornet/packages/datastructure"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/typeutils"
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
+	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
-	RequestQueueRequestesCacheSize = 100000
-	RequestQueueTickerInterval     = 2 * time.Second
+	RequestQueueTickerInterval = 2 * time.Second
 )
 
 type RequestQueue struct {
@@ -28,7 +27,7 @@ type RequestQueue struct {
 func NewRequestQueue() *RequestQueue {
 
 	queue := &RequestQueue{
-		requestedCache: datastructure.NewLRUCache(RequestQueueRequestesCacheSize),
+		requestedCache: datastructure.NewLRUCache(profile.GetProfile().Caches.RequestQueue.Size),
 		ticker:         time.NewTicker(RequestQueueTickerInterval),
 		tickerDone:     make(chan bool),
 	}

@@ -21,7 +21,7 @@ func NewApprovers(hash trinary.Hash) *Approvers {
 }
 
 func GetApprovers(hash trinary.Hash) (result *Approvers, err error) {
-	if cacheResult := approversCache.ComputeIfAbsent(hash, func() interface{} {
+	if cacheResult := ApproversCache.ComputeIfAbsent(hash, func() interface{} {
 		approvers, dbErr := readApproversForTransactionFromDatabase(hash)
 		if dbErr == nil {
 			return approvers
@@ -35,7 +35,7 @@ func GetApprovers(hash trinary.Hash) (result *Approvers, err error) {
 }
 
 func DiscardApproversFromCache(hash trinary.Hash) {
-	approversCache.DeleteWithoutEviction(hash)
+	ApproversCache.DeleteWithoutEviction(hash)
 }
 
 func (approvers *Approvers) Add(transactionHash trinary.Hash) {

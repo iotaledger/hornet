@@ -1,4 +1,60 @@
 {
+  "useProfile": "default",
+  "profiles": {
+    "custom": {
+      "caches": {
+        "requestQueue": {
+          "size": 100000
+        },
+        "approvers": {
+          "size": 100000,
+          "evictionSize": 1000
+        },
+        "bundles": {
+          "size": 20000,
+          "evictionSize": 1000
+        },
+        "milestones": {
+          "size": 1000,
+          "evictionSize": 100
+        },
+        "spentAddresses": {
+          "size": 5000,
+          "evictionSize": 1000
+        },
+        "transactions": {
+          "size": 50000,
+          "evictionSize": 1000
+        },
+        "incomingTransactionFilter": {
+          "size": 5000
+        },
+        "refsInvalidBundle": {
+          "size": 10000
+        }
+      },
+      "badger": {
+        "levelOneSize": 268435456,
+        "levelSizeMultiplier": 10,
+        "tableLoadingMode": 2,
+        "valueLogLoadingMode": 2,
+        "maxLevels": 7,
+        "maxTableSize": 67108864,
+        "numCompactors": 2,
+        "numLevelZeroTables": 5,
+        "numLevelZeroTablesStall": 10,
+        "numMemtables": 5,
+        "numVersionsToKeep": 1,
+        "syncWrites": true,
+        "compactLevel0OnClose": true,
+        "valueLogFileSize": 1073741823,
+        "valueLogMaxEntries": 1000000,
+        "valueThreshold": 32,
+        "logRotatesToFlush": 2,
+        "maxCacheSize": 50000000
+      }
+    }
+  },
   "api": {
     "auth": {
       "password": "",
@@ -41,7 +97,6 @@
   "db": {
     "path": "mainnetdb"
   },
-  "light": false,
   "localsnapshots": {
     "path": "latest-export.gz.bin"
   },
