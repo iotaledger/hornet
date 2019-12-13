@@ -55,7 +55,8 @@ var DefaultProfile = &Profile{
 			EvictionSize: 100,
 		},
 		SpentAddresses: CacheOpts{
-			Size: 5000,
+			Size:         5000,
+			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
 			Size:         50000,
@@ -108,7 +109,8 @@ var LightProfile = &Profile{
 			EvictionSize: 100,
 		},
 		SpentAddresses: CacheOpts{
-			Size: 2000,
+			Size:         2000,
+			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
 			Size:         10000,

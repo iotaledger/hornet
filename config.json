@@ -7,7 +7,8 @@
           "size": 100000
         },
         "approvers": {
-          "size": 100000
+          "size": 100000,
+          "evictionSize": 1000
         },
         "bundles": {
           "size": 20000,
@@ -18,7 +19,8 @@
           "evictionSize": 100
         },
         "spentAddresses": {
-          "size": 5000
+          "size": 5000,
+          "evictionSize": 1000
         },
         "transactions": {
           "size": 50000,
