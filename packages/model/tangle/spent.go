@@ -7,11 +7,11 @@ import (
 )
 
 var (
-	spentAddressesCache *datastructure.LRUCache
+	SpentAddressesCache *datastructure.LRUCache
 )
 
 func WasAddressSpentFrom(address trinary.Hash) (result bool, err error) {
-	if spentAddressesCache.Contains(address) {
+	if SpentAddressesCache.Contains(address) {
 		result = true
 	} else {
 		result, err = spentDatabaseContainsAddress(address)
@@ -20,12 +20,12 @@ func WasAddressSpentFrom(address trinary.Hash) (result bool, err error) {
 }
 
 func MarkAddressAsSpent(address trinary.Hash) {
-	spentAddressesCache.Set(address, true)
+	SpentAddressesCache.Set(address, true)
 }
 
 func InitSpentAddressesCache() {
 	opts := profile.GetProfile().Caches.SpentAddresses
-	spentAddressesCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	SpentAddressesCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictSpentAddress,
 		EvictionBatchSize: opts.EvictionSize,
 	})
@@ -46,5 +46,5 @@ func onEvictSpentAddress(keys interface{}, _ interface{}) {
 }
 
 func FlushSpentAddressesCache() {
-	spentAddressesCache.DeleteAll()
+	SpentAddressesCache.DeleteAll()
 }

@@ -75,11 +75,11 @@ const reqLineChartOptions = Object.assign({
 
 @inject("nodeStore")
 @observer
-export class Debug extends React.Component<Props, any> {
+export class Misc extends React.Component<Props, any> {
     render() {
         return (
             <Container>
-                <h3>Debug</h3>
+                <h3>Misc</h3>
                 <Row className={"mb-3"}>
                     <Col>
                         <Card>

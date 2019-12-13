@@ -14,7 +14,7 @@ import {ExplorerTransactionQueryResult} from "app/components/ExplorerTransaction
 import {ExplorerBundleQueryResult} from "app/components/ExplorerBundleQueryResult";
 import {ExplorerAddressQueryResult} from "app/components/ExplorerAddressResult";
 import {Explorer404} from "app/components/Explorer404";
-import {Debug} from "app/components/Debug";
+import {Misc} from "app/components/Misc";
 import {Neighbors} from "app/components/Neighbors";
 import {Explorer420} from "app/components/Explorer420";
 
@@ -65,7 +65,7 @@ export class Root extends React.Component<Props, any> {
                         </LinkContainer>
                         <LinkContainer to="/debug">
                             <Nav.Link>
-                                Debug
+                                Misc
                             </Nav.Link>
                         </LinkContainer>
                     </Nav>
@@ -80,7 +80,7 @@ export class Root extends React.Component<Props, any> {
                 </Navbar>
                 <Switch>
                     <Route exact path="/dashboard" component={Dashboard}/>
-                    <Route exact path="/debug" component={Debug}/>
+                    <Route exact path="/debug" component={Misc}/>
                     <Route exact path="/neighbors" component={Neighbors}/>
                     <Route exact path="/explorer/tx/:hash" component={ExplorerTransactionQueryResult}/>
                     <Route exact path="/explorer/bundle/:hash" component={ExplorerBundleQueryResult}/>
