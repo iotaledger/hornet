@@ -76,7 +76,6 @@
   "db": {
     "path": "mainnetdb"
   },
-  "light": false,
   "localsnapshots": {
     "path": "latest-export.gz.bin"
   },
