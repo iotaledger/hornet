@@ -9,12 +9,12 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/parameter"
 
 	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/parameter"
 )
 
 // PLUGIN WebAPI
@@ -25,6 +25,7 @@ var (
 	server              *http.Server
 	permitedEndpoints   = make(map[string]string)
 	implementedAPIcalls = make(map[string]apiEndpoint)
+	features            []string
 	api                 *gin.Engine
 	webAPIBase          = ""
 	auth                string
@@ -68,6 +69,11 @@ func configure(plugin *node.Plugin) {
 			ep := strings.ToLower(endpoint)
 			permitedEndpoints[ep] = ep
 		}
+	}
+
+	// Check for features
+	if _, ok := permitedEndpoints["attachtotangle"]; ok {
+		features = append(features, "RemotePOW")
 	}
 
 	// Set basic auth if enabled
