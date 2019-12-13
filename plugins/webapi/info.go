@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -75,8 +76,7 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	info.Time = time.Now().Unix() * 1000
 
 	// Features
-	feat := make([]string, 0)
-	info.Features = feat
+	info.Features = features
 
 	// TX to request
 	_, info.TransactionsToRequest = gossip.RequestQueue.CurrentMilestoneIndexAndSize()
