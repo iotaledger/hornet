@@ -2,17 +2,19 @@ package tangle
 
 import (
 	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
 	// Transactions that approve a certain TxHash
-	approversCache *datastructure.LRUCache
+	ApproversCache *datastructure.LRUCache
 )
 
 func InitApproversCache() {
-	approversCache = datastructure.NewLRUCache(ApproversCacheSize, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.Approvers
+	ApproversCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictApprovers,
-		EvictionBatchSize: 1000,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 }
 
@@ -30,5 +32,5 @@ func onEvictApprovers(_ interface{}, values interface{}) {
 }
 
 func FlushApproversCache() {
-	approversCache.DeleteAll()
+	ApproversCache.DeleteAll()
 }

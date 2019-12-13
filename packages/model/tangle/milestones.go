@@ -218,7 +218,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 }
 
 func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) (result *Bundle, err error) {
-	if cacheResult := milestoneCache.ComputeIfAbsent(milestoneIndex, func() interface{} {
+	if cacheResult := MilestoneCache.ComputeIfAbsent(milestoneIndex, func() interface{} {
 		if txHash, dbErr := readMilestoneTransactionHashFromDatabase(milestoneIndex); dbErr != nil {
 			err = dbErr
 			return nil
@@ -244,7 +244,7 @@ func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) (result *Bundle
 }
 
 func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) (result bool, err error) {
-	if milestoneCache.Contains(milestoneIndex) {
+	if MilestoneCache.Contains(milestoneIndex) {
 		result = true
 	} else {
 		result, err = databaseContainsMilestone(milestoneIndex)
@@ -254,7 +254,7 @@ func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) (result bo
 
 func StoreMilestoneInCache(milestone *Bundle) {
 	if milestone.IsMilestone() {
-		milestoneCache.Set(milestone.GetMilestoneIndex(), milestone)
+		MilestoneCache.Set(milestone.GetMilestoneIndex(), milestone)
 	}
 }
 

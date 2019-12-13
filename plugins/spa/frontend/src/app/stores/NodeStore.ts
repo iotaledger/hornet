@@ -37,6 +37,24 @@ class Status {
     request_queue_size: number;
     server_metrics: ServerMetrics;
     mem: MemoryMetrics = new MemoryMetrics();
+    caches: CacheMetrics = new CacheMetrics();
+}
+
+class CacheMetrics {
+    approvers: CacheMetric;
+    request_queue: CacheMetric;
+    bundles: CacheMetric;
+    milestones: CacheMetric;
+    spent_addresses: CacheMetric;
+    transactions: CacheMetric;
+    incoming_transaction_filter: CacheMetric;
+    refs_invalid_bundle: CacheMetric;
+    ts: string;
+}
+
+class CacheMetric {
+    size: number;
+    capacity: number;
 }
 
 class MemoryMetrics {
@@ -263,6 +281,7 @@ export class NodeStore {
     @observable collected_req_q_metrics: Array<ReqQMetric> = [];
     @observable collected_server_metrics: Array<ServerMetrics> = [];
     @observable collected_mem_metrics: Array<MemoryMetrics> = [];
+    @observable collected_cache_metrics: Array<CacheMetrics> = [];
     @observable neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
 
     constructor() {
@@ -319,6 +338,12 @@ export class NodeStore {
             this.collected_mem_metrics.shift();
         }
         this.collected_mem_metrics.push(status.mem);
+
+        status.caches.ts = dateformat(Date.now(), "HH:MM:ss");
+        if (this.collected_cache_metrics.length > maxMetricsDataPoints) {
+            this.collected_cache_metrics.shift();
+        }
+        this.collected_cache_metrics.push(status.caches);
 
         this.status = status;
     };
@@ -434,6 +459,55 @@ export class NodeStore {
         return {
             labels: labels,
             datasets: [incoming, outgoing, ne],
+        };
+    }
+
+    @computed
+    get cacheMetricsSeries() {
+        let reqQ = Object.assign({}, chartSeriesOpts,
+            series("Request Queue", 'rgba(14, 230, 183,1)', 'rgba(14, 230, 183,0.4)')
+        );
+        let approvers = Object.assign({}, chartSeriesOpts,
+            series("Approvers", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
+        );
+        let bundles = Object.assign({}, chartSeriesOpts,
+            series("Bundles", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
+        );
+        let milestones = Object.assign({}, chartSeriesOpts,
+            series("Milestones", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
+        );
+        let spentAddrs = Object.assign({}, chartSeriesOpts,
+            series("Spent Addresses", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
+        );
+        let txs = Object.assign({}, chartSeriesOpts,
+            series("Transactions", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
+        );
+        let incomingTxsFilter = Object.assign({}, chartSeriesOpts,
+            series("Incoming Txs Filter", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
+        );
+        let refsInvalidBundle = Object.assign({}, chartSeriesOpts,
+            series("Ref. Invalid Bundle (Tip-Sel)", 'rgba(138, 245, 66,1)', 'rgba(138, 245, 66,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_cache_metrics.length; i++) {
+            let metric: CacheMetrics = this.collected_cache_metrics[i];
+            labels.push(metric.ts);
+            reqQ.data.push(metric.request_queue.size);
+            approvers.data.push(metric.approvers.size);
+            bundles.data.push(metric.bundles.size);
+            milestones.data.push(metric.milestones.size);
+            spentAddrs.data.push(metric.spent_addresses.size);
+            txs.data.push(metric.transactions.size);
+            incomingTxsFilter.data.push(metric.incoming_transaction_filter.size);
+            refsInvalidBundle.data.push(metric.refs_invalid_bundle.size);
+        }
+
+        return {
+            labels: labels,
+            datasets: [
+                reqQ, approvers, bundles, milestones, spentAddrs, txs, incomingTxsFilter, refsInvalidBundle
+            ],
         };
     }
 

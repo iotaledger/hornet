@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/mitchellh/mapstructure"
-	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {

@@ -2,12 +2,11 @@ package spa
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"net/http"
+	"runtime"
+	"sync"
+	"time"
+
 	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -20,10 +19,12 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip/server"
 	"github.com/gohornet/hornet/plugins/metrics"
 	tangle_plugin "github.com/gohornet/hornet/plugins/tangle"
-	"net/http"
-	"runtime"
-	"sync"
-	"time"
+	"github.com/gorilla/websocket"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/parameter"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 )
 
 var (
@@ -188,6 +189,7 @@ type nodestatus struct {
 	RequestQueueSize   int                            `json:"request_queue_size"`
 	ServerMetrics      *servermetrics                 `json:"server_metrics"`
 	Mem                *memmetrics                    `json:"mem"`
+	Caches             *cachesmetric                  `json:"caches"`
 }
 
 type servermetrics struct {
@@ -230,6 +232,22 @@ type neighbormetric struct {
 	Connected        bool                    `json:"connected"`
 }
 
+type cachesmetric struct {
+	RequestQueue              cache `json:"request_queue"`
+	Approvers                 cache `json:"approvers"`
+	Bundles                   cache `json:"bundles"`
+	Milestones                cache `json:"milestones"`
+	SpentAddresses            cache `json:"spent_addresses"`
+	Transactions              cache `json:"transactions"`
+	IncomingTransactionFilter cache `json:"incoming_transaction_filter"`
+	RefsInvalidBundle         cache `json:"refs_invalid_bundle"`
+}
+
+type cache struct {
+	Size     int `json:"size"`
+	Capacity int `json:"capacity"`
+}
+
 func neighborMetrics() []*neighbormetric {
 	infos := gossip.GetNeighbors()
 	stats := []*neighbormetric{}
@@ -258,6 +276,8 @@ func currentNodeStatus() *nodestatus {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	status := &nodestatus{}
+
+	// node status
 	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 	status.Version = cli.AppVersion
 	status.Uptime = time.Now().Sub(nodeStartAt).Milliseconds()
@@ -266,6 +286,45 @@ func currentNodeStatus() *nodestatus {
 	status.MsRequestQueueSize = requestCount
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueSize = requestCount
+
+	// cache metrics
+	reqQueueCache := gossip.RequestQueue.GetCache()
+	status.Caches = &cachesmetric{
+		Approvers: cache{
+			Size:     tangle.ApproversCache.GetSize(),
+			Capacity: tangle.ApproversCache.GetCapacity(),
+		},
+		RequestQueue: cache{
+			Size:     reqQueueCache.GetSize(),
+			Capacity: reqQueueCache.GetCapacity(),
+		},
+		Bundles: cache{
+			Size:     tangle.BundleBucketCache.GetSize(),
+			Capacity: tangle.BundleBucketCache.GetCapacity(),
+		},
+		Milestones: cache{
+			Size:     tangle.MilestoneCache.GetSize(),
+			Capacity: tangle.MilestoneCache.GetCapacity(),
+		},
+		SpentAddresses: cache{
+			Size:     tangle.SpentAddressesCache.GetSize(),
+			Capacity: tangle.SpentAddressesCache.GetCapacity(),
+		},
+		Transactions: cache{
+			Size:     tangle.TransactionCache.GetSize(),
+			Capacity: tangle.TransactionCache.GetCapacity(),
+		},
+		IncomingTransactionFilter: cache{
+			Size:     gossip.IncomingCache.GetSize(),
+			Capacity: gossip.IncomingCache.GetCapacity(),
+		},
+		RefsInvalidBundle: cache{
+			Size:     tangle_plugin.RefsAnInvalidBundleCache.GetSize(),
+			Capacity: tangle_plugin.RefsAnInvalidBundleCache.GetCapacity(),
+		},
+	}
+
+	// server metrics
 	status.ServerMetrics = &servermetrics{
 		AllTxs:             server.SharedServerMetrics.GetAllTransactionsCount(),
 		InvalidTxs:         server.SharedServerMetrics.GetInvalidTransactionsCount(),
@@ -279,6 +338,8 @@ func currentNodeStatus() *nodestatus {
 		RecTxReq:           server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
 		SentTxReq:          server.SharedServerMetrics.GetSentTransactionRequestCount(),
 	}
+
+	// memory metrics
 	status.Mem = &memmetrics{
 		Sys:          m.Sys,
 		HeapSys:      m.HeapSys,

@@ -1,20 +1,22 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/profile"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
-	transactionCache       *datastructure.LRUCache
+	TransactionCache       *datastructure.LRUCache
 	evictionNotifyCallback func(notifyStoredTx []*hornet.Transaction)
 )
 
 func InitTransactionCache(notifyCallback func(notifyStoredTx []*hornet.Transaction)) {
-	transactionCache = datastructure.NewLRUCache(TransactionCacheSize, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.Transactions
+	TransactionCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictTransactions,
-		EvictionBatchSize: 1000,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 	evictionNotifyCallback = notifyCallback
 }
@@ -59,13 +61,13 @@ func StoreEvictedTransactions(evicted []*hornet.Transaction) []*hornet.Transacti
 }
 
 func StoreTransactionInCache(transaction *hornet.Transaction) {
-	transactionCache.Set(transaction.GetHash(), transaction)
+	TransactionCache.Set(transaction.GetHash(), transaction)
 }
 
 func DiscardTransactionFromCache(txHash trinary.Hash) {
-	transactionCache.DeleteWithoutEviction(txHash)
+	TransactionCache.DeleteWithoutEviction(txHash)
 }
 
 func FlushTransactionCache() {
-	transactionCache.DeleteAll()
+	TransactionCache.DeleteAll()
 }

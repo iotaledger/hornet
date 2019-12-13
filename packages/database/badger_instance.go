@@ -7,15 +7,14 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/dgraph-io/badger/v2/options"
+	"github.com/gohornet/hornet/packages/profile"
 	"github.com/pkg/errors"
 )
 
 var (
 	instance  *badger.DB
 	once      sync.Once
-	directory string = "mainnetdb"
-	light     bool
+	directory = "mainnetdb"
 )
 
 // Returns whether the given file or directory exists.
@@ -31,9 +30,8 @@ func exists(path string) (bool, error) {
 }
 
 // Settings sets DB dir and light mode
-func Settings(dir string, lightMode bool) {
+func Settings(dir string) {
 	directory = dir
-	light = lightMode
 }
 
 func checkDir(dir string) error {
@@ -56,49 +54,28 @@ func createDB() (*badger.DB, error) {
 	opts := badger.DefaultOptions(directory)
 	opts.Logger = &logger{}
 
-	if light {
-		opts = opts.WithLevelOneSize(256 << 18).
-			WithLevelSizeMultiplier(10).
-			WithTableLoadingMode(options.FileIO).
-			WithValueLogLoadingMode(options.FileIO).
-			WithMaxLevels(5).
-			WithMaxTableSize(64 << 18).
-			WithNumCompactors(1). // Compactions can be expensive. Only run 2.
-			WithNumLevelZeroTables(1).
-			WithNumLevelZeroTablesStall(2).
-			WithNumMemtables(1).
-			WithSyncWrites(false).
-			WithNumVersionsToKeep(1).
-			WithCompactL0OnClose(true).
-			WithValueLogFileSize(1<<25 - 1).
-			WithValueLogMaxEntries(250000).
-			WithValueThreshold(32).
-			WithLogRotatesToFlush(2).
-			WithMaxCacheSize(50000000)
-	} else {
-		opts = opts.WithLevelOneSize(256 << 20).
-			WithLevelSizeMultiplier(10).
-			WithTableLoadingMode(options.MemoryMap).
-			WithValueLogLoadingMode(options.MemoryMap).
-			WithMaxLevels(7).
-			WithMaxTableSize(64 << 20).
-			WithNumCompactors(2). // Compactions can be expensive. Only run 2.
-			WithNumLevelZeroTables(5).
-			WithNumLevelZeroTablesStall(10).
-			WithNumMemtables(5).
-			WithSyncWrites(true).
-			WithNumVersionsToKeep(1).
-			WithCompactL0OnClose(true).
-			WithValueLogFileSize(1<<30 - 1).
-			WithValueLogMaxEntries(1000000).
-			WithValueThreshold(32).
-			WithLogRotatesToFlush(2).
-			WithMaxCacheSize(50000000)
+	badgerOpts := profile.GetProfile().Badger
+	opts = opts.WithLevelOneSize(badgerOpts.LevelOneSize).
+		WithLevelSizeMultiplier(badgerOpts.LevelSizeMultiplier).
+		WithTableLoadingMode(badgerOpts.TableLoadingMode).
+		WithValueLogLoadingMode(badgerOpts.ValueLogLoadingMode).
+		WithMaxLevels(badgerOpts.MaxLevels).
+		WithMaxTableSize(badgerOpts.MaxTableSize).
+		WithNumCompactors(badgerOpts.NumCompactors).
+		WithNumLevelZeroTables(badgerOpts.NumLevelZeroTables).
+		WithNumLevelZeroTablesStall(badgerOpts.NumLevelZeroTablesStall).
+		WithNumMemtables(badgerOpts.NumMemtables).
+		WithSyncWrites(badgerOpts.SyncWrites).
+		WithNumVersionsToKeep(badgerOpts.NumVersionsToKeep).
+		WithCompactL0OnClose(badgerOpts.CompactLevel0OnClose).
+		WithValueLogFileSize(badgerOpts.ValueLogFileSize).
+		WithValueLogMaxEntries(badgerOpts.ValueLogMaxEntries).
+		WithValueThreshold(badgerOpts.ValueThreshold).
+		WithLogRotatesToFlush(badgerOpts.LogRotatesToFlush).
+		WithMaxCacheSize(badgerOpts.MaxCacheSize)
 
-		// must be used under Windows otherwise restarts don't work
-		if runtime.GOOS == "windows" {
-			opts = opts.WithTruncate(true)
-		}
+	if runtime.GOOS == "windows" {
+		opts = opts.WithTruncate(true)
 	}
 
 	db, err := badger.Open(opts)

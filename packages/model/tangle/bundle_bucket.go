@@ -7,7 +7,7 @@ import (
 )
 
 func GetBundleBucket(bundleHash trinary.Hash) (result *BundleBucket, err error) {
-	if cacheResult := bundleBucketCache.ComputeIfAbsent(bundleHash, func() interface{} {
+	if cacheResult := BundleBucketCache.ComputeIfAbsent(bundleHash, func() interface{} {
 		bundleBucket, dbErr := readBundleBucketFromDatabase(bundleHash)
 		if bundleBucket != nil && dbErr == nil {
 			return bundleBucket

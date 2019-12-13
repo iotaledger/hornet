@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gohornet/hornet/packages/node"
+	"github.com/gohornet/hornet/packages/profile"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/parameter"
 )
@@ -59,7 +60,7 @@ func configure(ctx *node.Plugin) {
 
 	parameter.FetchConfig(true)
 	parseParameters()
-
+	ctx.Node.Logger.Infof("Using profile '%s'", profile.GetProfile().Name)
 	ctx.Node.Logger.Info("Loading plugins ...")
 }
 

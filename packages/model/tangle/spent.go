@@ -1,16 +1,17 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/profile"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
-	spentAddressesCache *datastructure.LRUCache
+	SpentAddressesCache *datastructure.LRUCache
 )
 
 func WasAddressSpentFrom(address trinary.Hash) (result bool, err error) {
-	if spentAddressesCache.Contains(address) {
+	if SpentAddressesCache.Contains(address) {
 		result = true
 	} else {
 		result, err = spentDatabaseContainsAddress(address)
@@ -19,13 +20,14 @@ func WasAddressSpentFrom(address trinary.Hash) (result bool, err error) {
 }
 
 func MarkAddressAsSpent(address trinary.Hash) {
-	spentAddressesCache.Set(address, true)
+	SpentAddressesCache.Set(address, true)
 }
 
 func InitSpentAddressesCache() {
-	spentAddressesCache = datastructure.NewLRUCache(SpentAddressesCacheSize, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.SpentAddresses
+	SpentAddressesCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictSpentAddress,
-		EvictionBatchSize: 1000,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 }
 
@@ -44,5 +46,5 @@ func onEvictSpentAddress(keys interface{}, _ interface{}) {
 }
 
 func FlushSpentAddressesCache() {
-	spentAddressesCache.DeleteAll()
+	SpentAddressesCache.DeleteAll()
 }

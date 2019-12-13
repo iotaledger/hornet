@@ -2,16 +2,18 @@ package tangle
 
 import (
 	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
-	bundleBucketCache *datastructure.LRUCache
+	BundleBucketCache *datastructure.LRUCache
 )
 
 func InitBundleCache() {
-	bundleBucketCache = datastructure.NewLRUCache(BundleCacheSize, &datastructure.LRUCacheOptions{
+	opts := profile.GetProfile().Caches.Bundles
+	BundleBucketCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictBundles,
-		EvictionBatchSize: 1000,
+		EvictionBatchSize: opts.EvictionSize,
 	})
 }
 
@@ -30,5 +32,5 @@ func onEvictBundles(_ interface{}, values interface{}) {
 }
 
 func FlushBundleCache() {
-	bundleBucketCache.DeleteAll()
+	BundleBucketCache.DeleteAll()
 }
