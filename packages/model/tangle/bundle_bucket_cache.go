@@ -6,12 +6,12 @@ import (
 )
 
 var (
-	bundleBucketCache *datastructure.LRUCache
+	BundleBucketCache *datastructure.LRUCache
 )
 
 func InitBundleCache() {
 	opts := profile.GetProfile().Caches.Bundles
-	bundleBucketCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	BundleBucketCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictBundles,
 		EvictionBatchSize: opts.EvictionSize,
 	})
@@ -32,5 +32,5 @@ func onEvictBundles(_ interface{}, values interface{}) {
 }
 
 func FlushBundleCache() {
-	bundleBucketCache.DeleteAll()
+	BundleBucketCache.DeleteAll()
 }

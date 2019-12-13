@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	milestoneCache *datastructure.LRUCache
+	MilestoneCache *datastructure.LRUCache
 )
 
 func InitMilestoneCache() {
 	opts := profile.GetProfile().Caches.Milestones
-	milestoneCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	MilestoneCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictMilestones,
 		EvictionBatchSize: opts.EvictionSize,
 	})
@@ -32,9 +32,9 @@ func onEvictMilestones(_ interface{}, values interface{}) {
 }
 
 func DiscardMilestoneFromCache(milestoneIndex milestone_index.MilestoneIndex) {
-	milestoneCache.DeleteWithoutEviction(milestoneIndex)
+	MilestoneCache.DeleteWithoutEviction(milestoneIndex)
 }
 
 func FlushMilestoneCache() {
-	milestoneCache.DeleteAll()
+	MilestoneCache.DeleteAll()
 }

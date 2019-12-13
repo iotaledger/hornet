@@ -46,6 +46,10 @@ func NewRequestQueue() *RequestQueue {
 	return queue
 }
 
+func (s *RequestQueue) GetCache() *datastructure.LRUCache {
+	return s.requestedCache
+}
+
 func (s *RequestQueue) retryPending() {
 
 	s.Lock()

@@ -8,13 +8,13 @@ import (
 )
 
 var (
-	transactionCache       *datastructure.LRUCache
+	TransactionCache       *datastructure.LRUCache
 	evictionNotifyCallback func(notifyStoredTx []*hornet.Transaction)
 )
 
 func InitTransactionCache(notifyCallback func(notifyStoredTx []*hornet.Transaction)) {
 	opts := profile.GetProfile().Caches.Transactions
-	transactionCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	TransactionCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
 		EvictionCallback:  onEvictTransactions,
 		EvictionBatchSize: opts.EvictionSize,
 	})
@@ -61,13 +61,13 @@ func StoreEvictedTransactions(evicted []*hornet.Transaction) []*hornet.Transacti
 }
 
 func StoreTransactionInCache(transaction *hornet.Transaction) {
-	transactionCache.Set(transaction.GetHash(), transaction)
+	TransactionCache.Set(transaction.GetHash(), transaction)
 }
 
 func DiscardTransactionFromCache(txHash trinary.Hash) {
-	transactionCache.DeleteWithoutEviction(txHash)
+	TransactionCache.DeleteWithoutEviction(txHash)
 }
 
 func FlushTransactionCache() {
-	transactionCache.DeleteAll()
+	TransactionCache.DeleteAll()
 }

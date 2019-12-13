@@ -34,14 +34,14 @@ var (
 	packetProcessorWorkerPool  *workerpool.WorkerPool
 
 	RequestQueue  *queue.RequestQueue
-	incomingCache *datastructure.LRUCache
+	IncomingCache *datastructure.LRUCache
 
 	ErrTxExpired = errors.New("tx too old")
 )
 
 func configurePacketProcessor() {
 	RequestQueue = queue.NewRequestQueue()
-	incomingCache = datastructure.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter.Size)
+	IncomingCache = datastructure.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter.Size)
 
 	gossipLogger.Infof("Configuring packetProcessorWorkerPool with %d workers", packetProcessorWorkerCount)
 	packetProcessorWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -339,7 +339,7 @@ func pendingRequestFor(recTxBytes []byte) (result *PendingNeighborRequests) {
 
 	cacheKey := typeutils.BytesToString(recTxBytes)
 
-	if cacheResult := incomingCache.ComputeIfAbsent(cacheKey, func() interface{} {
+	if cacheResult := IncomingCache.ComputeIfAbsent(cacheKey, func() interface{} {
 		return &PendingNeighborRequests{
 			recTxBytes: recTxBytes,
 			requests:   make([]*NeighborRequest, 0),

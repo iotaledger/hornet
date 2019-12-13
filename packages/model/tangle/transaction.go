@@ -7,7 +7,7 @@ import (
 )
 
 func GetTransaction(transactionHash trinary.Hash) (result *hornet.Transaction, err error) {
-	if cacheResult := transactionCache.ComputeIfAbsent(transactionHash, func() interface{} {
+	if cacheResult := TransactionCache.ComputeIfAbsent(transactionHash, func() interface{} {
 		if transaction, dbErr := readTransactionFromDatabase(transactionHash); dbErr != nil {
 			err = dbErr
 			return nil
@@ -24,7 +24,7 @@ func GetTransaction(transactionHash trinary.Hash) (result *hornet.Transaction, e
 }
 
 func ContainsTransaction(transactionHash trinary.Hash) (result bool, err error) {
-	if transactionCache.Contains(transactionHash) {
+	if TransactionCache.Contains(transactionHash) {
 		result = true
 	} else {
 		result, err = databaseContainsTransaction(transactionHash)
