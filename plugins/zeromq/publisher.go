@@ -2,10 +2,11 @@ package zeromq
 
 import (
 	"context"
-	"strconv"
+	"fmt"
 	"strings"
 
 	zmq "github.com/go-zeromq/zmq4"
+
 	"github.com/iotaledger/hive.go/parameter"
 )
 
@@ -26,8 +27,7 @@ func NewPublisher() (*Publisher, error) {
 
 // Start the publisher on the given port.
 func (pub *Publisher) Start() error {
-	endpoint := parameter.NodeConfig.GetString("zmq.protocol") + "://" + parameter.NodeConfig.GetString("zmq.host") + ":" + strconv.Itoa(parameter.NodeConfig.GetInt("zmq.port"))
-	return pub.socket.Listen(endpoint)
+	return pub.socket.Listen(fmt.Sprintf("%s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.host"), parameter.NodeConfig.GetInt("zmq.port")))
 }
 
 // Shutdown stops the publisher.

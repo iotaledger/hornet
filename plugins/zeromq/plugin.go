@@ -73,8 +73,7 @@ func configure(plugin *node.Plugin) {
 
 // Start the zeromq plugin
 func run(plugin *node.Plugin) {
-
-	log.Infof("Starting ZeroMQ Publisher (port %d) ...", parameter.NodeConfig.GetInt("zmq.port"))
+	log.Infof("Starting ZeroMQ Publisher (%s://%s:%d) ...", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.host"), parameter.NodeConfig.GetInt("zmq.port"))
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
