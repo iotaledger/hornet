@@ -6,6 +6,7 @@ import (
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/batchworkerpool"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -64,6 +65,7 @@ func runAddressPersister() {
 		log.Info("Starting AddressPersister ... done")
 		addressPersisterWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping AddressPersister ...")
 		addressPersisterWorkerPool.StopAndWait()
 		log.Info("Stopping AddressPersister ... done")
 	}, shutdown.ShutdownPriorityPersisters)
@@ -116,6 +118,7 @@ func runUnconfirmedTransactionPersister() {
 		Events.TransactionConfirmed.Attach(notifyConfirmedTx)
 		unconfirmedTxWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping UnconfirmedTxPersister ...")
 		Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		unconfirmedTxWorkerPool.StopAndWait()

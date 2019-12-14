@@ -7,15 +7,16 @@ import (
 	"strconv"
 	"sync"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/packages/iputils"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/plugins/gossip/neighbor"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 )
 
 var (
@@ -85,6 +86,8 @@ func configureNeighbors() {
 
 	daemon.BackgroundWorker("NeighborConnections", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
+		gossipLogger.Info("Closing neighbor connections ...")
+
 		for _, neighbor := range connectedNeighbors {
 			RemoveNeighbor(neighbor.Identity)
 		}

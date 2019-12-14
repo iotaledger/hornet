@@ -55,18 +55,20 @@ func configure(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		log.Info("Flushing caches to database...")
 
+		log.Info("Flushing caches to database...")
 		tangle.FlushMilestoneCache()
 		tangle.FlushBundleCache()
 		tangle.FlushTransactionCache()
 		tangle.FlushApproversCache()
 		tangle.FlushSpentAddressesCache()
+		log.Info("Flushing caches to database... done")
 
 		tangle.MarkDatabaseHealthy()
 
+		log.Info("Syncing database to disk...")
 		database.CloseDatabase()
-		log.Info("Closed database...")
+		log.Info("Syncing database to disk... done")
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
 	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(msBundle *tangle.Bundle) {

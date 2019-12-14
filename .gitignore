@@ -27,3 +27,4 @@ mainnetdb/
 # template files
 *node_modules
 *build
+plugins/monitor/tanglemonitor

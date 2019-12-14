@@ -73,8 +73,7 @@ func configure(plugin *node.Plugin) {
 
 // Start the zeromq plugin
 func run(plugin *node.Plugin) {
-
-	log.Infof("Starting ZeroMQ Publisher (port %d) ...", parameter.NodeConfig.GetInt("zmq.port"))
+	log.Infof("Starting ZeroMQ Publisher (%s://%s:%d) ...", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.host"), parameter.NodeConfig.GetInt("zmq.port"))
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
@@ -136,6 +135,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
 		newTxWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping ZeroMQ[NewTxWorker] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewTxWorker] ... done")
@@ -146,6 +146,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedTx)
 		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping ZeroMQ[ConfirmedTxWorker] ...")
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[ConfirmedTxWorker] ... done")
@@ -156,6 +157,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.LatestMilestoneChanged.Attach(notifyNewLatestMilestone)
 		newLatestMilestoneWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping ZeroMQ[NewLatestMilestoneWorker] ...")
 		tangle.Events.LatestMilestoneChanged.Detach(notifyNewLatestMilestone)
 		newLatestMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewLatestMilestoneWorker] ... done")
@@ -166,6 +168,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.SolidMilestoneChanged.Attach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping ZeroMQ[NewSolidMilestoneWorker] ...")
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewSolidMilestoneWorker] ... done")

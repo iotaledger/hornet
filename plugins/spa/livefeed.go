@@ -1,15 +1,15 @@
 package spa
 
 import (
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/iota.go/transaction"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tangle_model "github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/tangle"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/iota.go/transaction"
 )
 
 var liveFeedWorkerCount = 1
@@ -45,8 +45,10 @@ func runLiveFeed() {
 		tangle.Events.LatestMilestoneChanged.Attach(notifyLMChanged)
 		liveFeedWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping SPA[TxUpdater] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
 		liveFeedWorkerPool.StopAndWait()
+		log.Info("Stopping SPA[TxUpdater] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 }

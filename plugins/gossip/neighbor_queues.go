@@ -3,13 +3,12 @@ package gossip
 import (
 	"bytes"
 	"fmt"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 	"runtime"
 	"strings"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -17,6 +16,8 @@ import (
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/packages/workerpool"
+	"github.com/gohornet/hornet/plugins/gossip/server"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 )
 
 const (
@@ -109,6 +110,7 @@ func runBroadcastQueue() {
 		gossipLogger.Info("Starting ReplyProcessor ... done")
 		replyWorkerPool.Start()
 		<-shutdownSignal
+		gossipLogger.Info("Stopping ReplyProcessor ...")
 		replyWorkerPool.StopAndWait()
 		gossipLogger.Info("Stopping ReplyProcessor ... done")
 	}, shutdown.ShutdownPriorityReplyProcessor)
@@ -119,6 +121,7 @@ func runBroadcastQueue() {
 		for {
 			select {
 			case <-shutdownSignal:
+				gossipLogger.Info("Stopping Broadcast Queue Dispatcher ...")
 				gossipLogger.Info("Stopping Broadcast Queue Dispatcher ... done")
 				return
 
@@ -394,6 +397,8 @@ func startNeighborSendQueue(neighbor *Neighbor, neighborQueue *neighborQueue) {
 		for {
 			select {
 			case <-shutdownSignal:
+				gossipLogger.Infof("Stopping Gossip Send Queue Dispatcher (%s) ...", neighbor.Identity)
+				gossipLogger.Infof("Stopping Gossip Send Queue Dispatcher (%s) ... done", neighbor.Identity)
 				return
 
 			case <-neighborQueue.disconnectChan:

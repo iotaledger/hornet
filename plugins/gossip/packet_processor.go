@@ -3,6 +3,12 @@ package gossip
 import (
 	"time"
 
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/transaction"
+	"github.com/iotaledger/iota.go/trinary"
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/curl"
 	"github.com/gohornet/hornet/packages/datastructure"
@@ -18,11 +24,6 @@ import (
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -72,6 +73,7 @@ func runPacketProcessor() {
 		gossipLogger.Info("Starting PacketProcessor ... done")
 		packetProcessorWorkerPool.Start()
 		<-shutdownSignal
+		gossipLogger.Info("Stopping PacketProcessor ...")
 		packetProcessorWorkerPool.StopAndWait()
 		gossipLogger.Info("Stopping PacketProcessor ... done")
 	}, shutdown.ShutdownPriorityPacketProcessor)

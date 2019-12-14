@@ -34,6 +34,7 @@ func runSTINGRequestsProcessor() {
 		gossipLogger.Info("Starting STINGRequestsProcessor ... done")
 		stingRequestsWorkerPool.Start()
 		<-shutdownSignal
+		gossipLogger.Info("Stopping STINGRequestsProcessor ...")
 		RequestQueue.Stop()
 		stingRequestsWorkerPool.StopAndWait()
 		gossipLogger.Info("Stopping STINGRequestsProcessor ... done")
