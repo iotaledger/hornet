@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"container/ring"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -69,17 +70,32 @@ func initRingBuffer() {
 }
 
 func onConnectHandler(s socketio.Conn) error {
-	log.Infof("Monitor client connection established (ID: %v)", s.ID())
+	infoMsg := "Monitor client connection established"
+	if s != nil {
+		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
+	}
+	log.Info(infoMsg)
 	socketioServer.JoinRoom("broadcast", s)
 	return nil
 }
 
 func onErrorHandler(s socketio.Conn, e error) {
-	log.Errorf("Monitor meet error (ID: %v): %s", s.ID(), e.Error())
+	errorMsg := "Monitor meet error"
+	if s != nil {
+		errorMsg = fmt.Sprintf("%s (ID: %v)", errorMsg, s.ID())
+	}
+	if e != nil {
+		errorMsg = fmt.Sprintf("%s: %s", errorMsg, e.Error())
+	}
+	log.Error(errorMsg)
 }
 
 func onDisconnectHandler(s socketio.Conn, msg string) {
-	log.Infof("Monitor client connection closed (ID: %v): %s", s.ID(), msg)
+	infoMsg := "Monitor client connection closed"
+	if s != nil {
+		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
+	}
+	log.Info(fmt.Sprintf("%s: %s", infoMsg, msg))
 	socketioServer.LeaveAllRooms(s)
 }
 
