@@ -81,9 +81,6 @@ func onConnectHandler(s socketio.Conn) error {
 
 func onErrorHandler(s socketio.Conn, e error) {
 	errorMsg := "Monitor meet error"
-	if s != nil {
-		errorMsg = fmt.Sprintf("%s (ID: %v)", errorMsg, s.ID())
-	}
 	if e != nil {
 		errorMsg = fmt.Sprintf("%s: %s", errorMsg, e.Error())
 	}
