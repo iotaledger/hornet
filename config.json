@@ -105,6 +105,9 @@
     "coordinatorsecuritylevel": 2,
     "numberofkeysinamilestone": 23
   },
+  "monitor": {
+    "tanglemonitorpath": "tanglemonitor/frontend"
+  },
   "network": {
     "address": "0.0.0.0",
     "autotetheringenabled": false,

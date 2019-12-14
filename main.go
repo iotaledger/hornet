@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/metrics"
+	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
 	"github.com/gohornet/hornet/plugins/tangle"
@@ -35,5 +36,6 @@ func main() {
 		webapi.PLUGIN,
 		spa.PLUGIN,
 		zeromq.PLUGIN,
+		monitor.PLUGIN,
 	)
 }

@@ -12,6 +12,8 @@ require (
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-zeromq/zmq4 v0.6.3-0.20191107165341-4bfbf6cedab7
 	github.com/gobuffalo/packr/v2 v2.7.1
+	github.com/googollee/go-engine.io v1.4.3-0.20190924125625-798118fc0dd2
+	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
 	github.com/gorilla/websocket v1.4.1
 	github.com/iotaledger/goshimmer v0.0.0-20191125182838-26e99d88bddb
 	github.com/iotaledger/hive.go v0.0.0-20191206213336-9f6cd83f0501
