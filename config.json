@@ -106,7 +106,11 @@
     "numberofkeysinamilestone": 23
   },
   "monitor": {
-    "tanglemonitorpath": "tanglemonitor/frontend"
+    "tanglemonitorpath": "tanglemonitor/frontend",
+    "domain": "",
+    "host": "127.0.0.1",
+    "port": 4434,
+    "apiport": 4433
   },
   "network": {
     "address": "0.0.0.0",

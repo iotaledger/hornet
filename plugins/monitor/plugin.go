@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -206,13 +207,13 @@ func run(plugin *node.Plugin) {
 
 		//  socket.io and web server
 		server = &http.Server{
-			Addr:    ":4434",
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.port")),
 			Handler: router,
 		}
 
 		// REST api server
 		apiServer = &http.Server{
-			Addr:    ":4433",
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.apiport")),
 			Handler: api,
 		}
 
