@@ -74,6 +74,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 		gossip.Events.ReceivedTransaction.Attach(notifyReceivedTx)
 		receiveTxWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
 		gossip.Events.ReceivedTransaction.Detach(notifyReceivedTx)
 		receiveTxWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
@@ -83,6 +84,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 		log.Info("Starting TangleProcessor[CheckForMilestone] ... done")
 		checkForMilestoneWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping TangleProcessor[CheckForMilestone] ...")
 		checkForMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[CheckForMilestone] ... done")
 	}, shutdown.ShutdownPriorityMilestoneChecker)
@@ -91,6 +93,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		milestoneSolidifierWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		milestoneSolidifierWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)

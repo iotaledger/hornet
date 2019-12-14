@@ -1,12 +1,12 @@
 package spa
 
 import (
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/tipselection"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
 )
 
 var tipSelMetricWorkerCount = 1
@@ -37,7 +37,9 @@ func runTipSelMetricWorker() {
 		tipselection.Events.TipSelPerformed.Attach(notifyTipSelPerformed)
 		tipSelMetricWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping SPA[TipSelMetricUpdater] ...")
 		tipselection.Events.TipSelPerformed.Detach(notifyTipSelPerformed)
 		tipSelMetricWorkerPool.StopAndWait()
+		log.Info("Stopping SPA[TipSelMetricUpdater] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 }

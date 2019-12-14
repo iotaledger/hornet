@@ -42,6 +42,7 @@ func runGossipSolidifier() {
 		Events.ReceivedNewTransaction.Attach(notifyNewTx)
 		gossipSolidifierWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping Solidifier ...")
 		Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		gossipSolidifierWorkerPool.StopAndWait()
 

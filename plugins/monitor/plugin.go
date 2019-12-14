@@ -165,6 +165,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
 		newTxWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping Monitor[NewTxWorker] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[NewTxWorker] ... done")
@@ -175,6 +176,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedTx)
 		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping Monitor[ConfirmedTxWorker] ...")
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[ConfirmedTxWorker] ... done")
@@ -185,6 +187,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewMilestone.Attach(notifyNewMilestone)
 		newMilestoneWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping Monitor[NewMilestoneWorker] ...")
 		tangle.Events.ReceivedNewMilestone.Detach(notifyNewMilestone)
 		newMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[NewMilestoneWorker] ... done")
@@ -194,6 +197,7 @@ func run(plugin *node.Plugin) {
 		log.Info("Starting Monitor[ReattachmentWorker] ... done")
 		reattachmentWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping Monitor[ReattachmentWorker] ...")
 		reattachmentWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[ReattachmentWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
@@ -236,5 +240,6 @@ func run(plugin *node.Plugin) {
 
 		_ = server.Shutdown(ctx)
 		_ = apiServer.Shutdown(ctx)
+		log.Info("Stopping Monitor ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 }

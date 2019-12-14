@@ -39,6 +39,7 @@ func runServer() {
 
 		go TCPServer.Listen(parameter.NodeConfig.GetString("network.address"), parameter.NodeConfig.GetInt("network.port"))
 		<-shutdownSignal
+		gossipLogger.Info("Stopping TCP Server ...")
 		TCPServer.Shutdown()
 
 		gossipLogger.Info("Stopping TCP Server ... done")

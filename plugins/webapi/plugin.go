@@ -128,5 +128,6 @@ func run(plugin *node.Plugin) {
 			}
 			cancel()
 		}
+		log.Info("Stopping WebAPI server ... done")
 	}, shutdown.ShutdownPriorityAPI)
 }

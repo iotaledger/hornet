@@ -130,6 +130,8 @@ func spawnReconnecter() {
 		for {
 			select {
 			case <-shutdownSignal:
+				gossipLogger.Info("Stopping Reconnecter")
+				gossipLogger.Info("Stopping Reconnecter ... done")
 				return
 			case <-reconnectPoolWakeup:
 				reconnect()

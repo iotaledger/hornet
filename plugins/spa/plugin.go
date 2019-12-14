@@ -76,10 +76,12 @@ func run(plugin *node.Plugin) {
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
 		wsSendWorkerPool.Start()
 		<-shutdownSignal
+		log.Info("Stopping SPA[WSSend] ...")
 		metrics.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
 		wsSendWorkerPool.StopAndWait()
+		log.Info("Stopping SPA[WSSend] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 
 	runLiveFeed()
