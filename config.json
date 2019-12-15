@@ -1,5 +1,5 @@
 {
-  "useProfile": "default",
+  "useProfile": "auto",
   "profiles": {
     "custom": {
       "caches": {

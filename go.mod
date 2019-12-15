@@ -20,6 +20,7 @@ require (
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.8.1
+	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/spf13/pflag v1.0.5
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	go.uber.org/atomic v1.5.1

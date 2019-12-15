@@ -1,26 +1,59 @@
 package profile
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/badger/v2/options"
 	"github.com/iotaledger/hive.go/parameter"
+	"github.com/shirou/gopsutil/mem"
 )
 
-var once = sync.Once{}
-var profile *Profile
+var (
+	once    = sync.Once{}
+	profile *Profile
+
+	ErrNotEnoughMemory = errors.New("Not enough system memory")
+)
 
 func GetProfile() *Profile {
 	once.Do(func() {
 		profileName := parameter.NodeConfig.GetString("useProfile")
+		if profileName == "auto" {
+			v, err := mem.VirtualMemory()
+			if err != nil {
+				panic(err)
+			}
+
+			if v.Total >= 8589934592 {
+				profileName = "8gb"
+			} else if v.Total >= 4294967296 {
+				profileName = "4gb"
+			} else if v.Total >= 2147483648 {
+				profileName = "2gb"
+			} else if v.Total >= 1073741824 {
+				profileName = "1gb"
+			} else {
+				panic(ErrNotEnoughMemory)
+			}
+
+			println(fmt.Sprintf("Profile mode 'auto', Available system memory: %d bytes, Used profile: %s", v.Total, profileName))
+		}
+
 		switch profileName {
-		case "default":
-			profile = DefaultProfile
-			profile.Name = "default"
-		case "light":
-			profile = LightProfile
-			profile.Name = "light"
+		case "8gb", "default":
+			profile = Profile8GB
+			profile.Name = "8gb"
+		case "4gb":
+			profile = Profile4GB
+			profile.Name = "4gb"
+		case "2gb":
+			profile = Profile2GB
+			profile.Name = "2gb"
+		case "1gb", "light":
+			profile = Profile1GB
+			profile.Name = "1gb"
 		default:
 			p := &Profile{}
 			key := fmt.Sprintf("profiles.%s", profileName)
@@ -37,7 +70,7 @@ func GetProfile() *Profile {
 	return profile
 }
 
-var DefaultProfile = &Profile{
+var Profile8GB = &Profile{
 	Caches: Caches{
 		RequestQueue: CacheOpts{
 			Size: 100000,
@@ -98,7 +131,129 @@ var DefaultProfile = &Profile{
 	},
 }
 
-var LightProfile = &Profile{
+var Profile4GB = &Profile{
+	Caches: Caches{
+		RequestQueue: CacheOpts{
+			Size: 100000,
+		},
+		Approvers: CacheOpts{
+			Size:         100000,
+			EvictionSize: 1000,
+		},
+		Bundles: CacheOpts{
+			Size:         20000,
+			EvictionSize: 1000,
+		},
+		Milestones: CacheOpts{
+			Size:         1000,
+			EvictionSize: 100,
+		},
+		SpentAddresses: CacheOpts{
+			Size:         5000,
+			EvictionSize: 1000,
+		},
+		Transactions: CacheOpts{
+			Size:         50000,
+			EvictionSize: 1000,
+		},
+		IncomingTransactionFilter: CacheOpts{
+			Size: 5000,
+		},
+		RefsInvalidBundle: CacheOpts{
+			Size: 10000,
+		},
+	},
+	Badger: BadgerOpts{
+		LevelOneSize:            268435456,
+		LevelSizeMultiplier:     10,
+		TableLoadingMode:        options.FileIO,
+		ValueLogLoadingMode:     options.FileIO,
+		MaxLevels:               7,
+		MaxTableSize:            67108864,
+		NumCompactors:           2,
+		NumLevelZeroTables:      5,
+		NumLevelZeroTablesStall: 10,
+		NumMemtables:            5,
+		BloomFalsePositive:      0.01,
+		BlockSize:               4 * 1024,
+		SyncWrites:              false,
+		NumVersionsToKeep:       1,
+		CompactLevel0OnClose:    false,
+		KeepL0InMemory:          false,
+		VerifyValueChecksum:     false,
+		MaxCacheSize:            50000000,
+		ZSTDCompressionLevel:    10,
+		ValueLogFileSize:        1073741823,
+		ValueLogMaxEntries:      1000000,
+		ValueThreshold:          32,
+		WithTruncate:            false,
+		LogRotatesToFlush:       2,
+		EventLogging:            false,
+	},
+}
+
+var Profile2GB = &Profile{
+	Caches: Caches{
+		RequestQueue: CacheOpts{
+			Size: 100000,
+		},
+		Approvers: CacheOpts{
+			Size:         50000,
+			EvictionSize: 1000,
+		},
+		Bundles: CacheOpts{
+			Size:         10000,
+			EvictionSize: 1000,
+		},
+		Milestones: CacheOpts{
+			Size:         1000,
+			EvictionSize: 100,
+		},
+		SpentAddresses: CacheOpts{
+			Size:         2000,
+			EvictionSize: 1000,
+		},
+		Transactions: CacheOpts{
+			Size:         25000,
+			EvictionSize: 1000,
+		},
+		IncomingTransactionFilter: CacheOpts{
+			Size: 5000,
+		},
+		RefsInvalidBundle: CacheOpts{
+			Size: 10000,
+		},
+	},
+	Badger: BadgerOpts{
+		LevelOneSize:            268435456,
+		LevelSizeMultiplier:     10,
+		TableLoadingMode:        options.FileIO,
+		ValueLogLoadingMode:     options.FileIO,
+		MaxLevels:               7,
+		MaxTableSize:            67108864,
+		NumCompactors:           2,
+		NumLevelZeroTables:      5,
+		NumLevelZeroTablesStall: 10,
+		NumMemtables:            5,
+		BloomFalsePositive:      0.01,
+		BlockSize:               4 * 1024,
+		SyncWrites:              false,
+		NumVersionsToKeep:       1,
+		CompactLevel0OnClose:    false,
+		KeepL0InMemory:          false,
+		VerifyValueChecksum:     false,
+		MaxCacheSize:            50000000,
+		ZSTDCompressionLevel:    10,
+		ValueLogFileSize:        1073741823,
+		ValueLogMaxEntries:      1000000,
+		ValueThreshold:          32,
+		WithTruncate:            false,
+		LogRotatesToFlush:       2,
+		EventLogging:            false,
+	},
+}
+
+var Profile1GB = &Profile{
 	Caches: Caches{
 		RequestQueue: CacheOpts{
 			Size: 100000,
