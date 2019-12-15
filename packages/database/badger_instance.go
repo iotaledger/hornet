@@ -65,14 +65,21 @@ func createDB() (*badger.DB, error) {
 		WithNumLevelZeroTables(badgerOpts.NumLevelZeroTables).
 		WithNumLevelZeroTablesStall(badgerOpts.NumLevelZeroTablesStall).
 		WithNumMemtables(badgerOpts.NumMemtables).
+		WithBloomFalsePositive(badgerOpts.BloomFalsePositive).
+		WithBlockSize(badgerOpts.BlockSize).
 		WithSyncWrites(badgerOpts.SyncWrites).
 		WithNumVersionsToKeep(badgerOpts.NumVersionsToKeep).
 		WithCompactL0OnClose(badgerOpts.CompactLevel0OnClose).
+		WithKeepL0InMemory(badgerOpts.KeepL0InMemory).
+		WithVerifyValueChecksum(badgerOpts.VerifyValueChecksum).
+		WithMaxCacheSize(badgerOpts.MaxCacheSize).
+		WithZSTDCompressionLevel(badgerOpts.ZSTDCompressionLevel).
 		WithValueLogFileSize(badgerOpts.ValueLogFileSize).
 		WithValueLogMaxEntries(badgerOpts.ValueLogMaxEntries).
 		WithValueThreshold(badgerOpts.ValueThreshold).
+		WithTruncate(badgerOpts.WithTruncate).
 		WithLogRotatesToFlush(badgerOpts.LogRotatesToFlush).
-		WithMaxCacheSize(badgerOpts.MaxCacheSize)
+		WithEventLogging(badgerOpts.EventLogging)
 
 	if runtime.GOOS == "windows" {
 		opts = opts.WithTruncate(true)
