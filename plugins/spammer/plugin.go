@@ -46,7 +46,11 @@ func configure(plugin *node.Plugin) {
 	}
 
 	if int64(rateLimit) != 0 {
-		rateLimitChannel = make(chan struct{}, int64(rateLimit)*2)
+		rateLimitChannelSize := int64(rateLimit) * 2
+		if rateLimitChannelSize < 2 {
+			rateLimitChannelSize = 2
+		}
+		rateLimitChannel = make(chan struct{}, rateLimitChannelSize)
 
 		// create a background worker that fills rateLimitChannel every second
 		daemon.BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
