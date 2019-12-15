@@ -13,7 +13,7 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion = "0.2.1"
+	AppVersion = "0.2.2"
 
 	// AppName app code name
 	AppName = "HORNET"
@@ -58,7 +58,10 @@ func configure(ctx *node.Plugin) {
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
 ` + "\n\n")
 
-	parameter.FetchConfig(true)
+	ignoreSettingsAtPrint := []string{}
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "dashboard.basic_auth.password")
+	parameter.FetchConfig(true, ignoreSettingsAtPrint)
 	parseParameters()
 	ctx.Node.Logger.Infof("Using profile '%s'", profile.GetProfile().Name)
 	ctx.Node.Logger.Info("Loading plugins ...")

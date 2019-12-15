@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
+	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/tipselection"
 	"github.com/gohornet/hornet/plugins/webapi"
@@ -37,5 +38,6 @@ func main() {
 		spa.PLUGIN,
 		zeromq.PLUGIN,
 		monitor.PLUGIN,
+		spammer.PLUGIN,
 	)
 }

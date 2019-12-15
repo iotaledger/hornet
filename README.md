@@ -27,6 +27,56 @@ This way, HORNET is easier to install and runs on low-end devices.
 - Download the latest HORNET snapshot from [dbfiles.iota.org](https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin)
 - Run HORNET: `./hornet -c config`
 
+---
+
+### Available plugins
+
+#### TangleMonitor
+
+- Download the latest TangleMonitor source code
+```bash
+git clone https://github.com/unioproject/tanglemonitor.git
+```
+- Modify the `config.json` to fit your needs
+    - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
+    - Add `"Monitor"` to `"enableplugins"`
+    - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
+```json
+  "monitor": {
+    "tanglemonitorpath": "tanglemonitor/frontend",
+    "domain": "",
+    "host": "127.0.0.1"
+  },
+  "node": {
+    "disableplugins": [],
+    "enableplugins": ["Monitor"],
+    "loglevel": 3
+  },
+```
+
+#### Spammer
+
+- Modify the `config.json` to fit your needs
+    - Change `"address"`, `"message"`, `"tag"` and `"tpsratelimit"`
+    - Add `"Spammer"` to `"enableplugins"`
+```json
+  "spammer": {
+    "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
+    "depth": 3,
+    "message": "Spamming with HORNET tipselect",
+    "tag": "HORNET99INTEGRATED99SPAMMER",
+    "tpsratelimit": 0.1,
+    "workers": 1
+  },
+  "node": {
+    "disableplugins": [],
+    "enableplugins": ["Spammer"],
+    "loglevel": 3
+  },
+```
+
+---
+
 ### Docker
 
-See [Docker](DOCKER.md)
+- See [Docker](DOCKER.md)

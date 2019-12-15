@@ -139,6 +139,14 @@
   "protocol": {
     "mwm": 14
   },
+  "spammer": {
+    "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
+    "depth": 3,
+    "message": "Spamming with HORNET tipselect",
+    "tag": "HORNET99INTEGRATED99SPAMMER",
+    "tpsratelimit": 0.1,
+    "workers": 1
+  },
   "tipsel": {
     "belowmaxdepthtransactionlimit": 20000,
     "maxdepth": 15
