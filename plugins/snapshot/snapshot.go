@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -485,26 +485,21 @@ func LoadSnapshotFromFile(filePath string) error {
 		return fmt.Errorf("ledgerEntries: %s", err)
 	}
 
-	if parameter.NodeConfig.GetBool("localSnapshots.importSpentAddresses") {
-		log.Infof("Importing %d spent addresses\n", spentAddrsCount)
+	log.Infof("Importing %d spent addresses\n", spentAddrsCount)
+	for i := 0; i < int(spentAddrsCount); i++ {
+		spentAddrBuf := make([]byte, 49)
 
-		for i := 0; i < int(spentAddrsCount); i++ {
-			spentAddrBuf := make([]byte, 49)
-
-			err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
-			if err != nil {
-				return fmt.Errorf("spentAddrs: %s", err)
-			}
-
-			hash, err := trinary.BytesToTrytes(spentAddrBuf)
-			if err != nil {
-				return fmt.Errorf("spentAddrs: %s", err)
-			}
-
-			tangle.MarkAddressAsSpent(hash[:81])
+		err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
+		if err != nil {
+			return fmt.Errorf("spentAddrs: %s", err)
 		}
-	} else {
-		log.Warningf("Skipping importing %d spent addresses\n", spentAddrsCount)
+
+		hash, err := trinary.BytesToTrytes(spentAddrBuf)
+		if err != nil {
+			return fmt.Errorf("spentAddrs: %s", err)
+		}
+
+		tangle.MarkAddressAsSpent(hash[:81])
 	}
 
 	log.Info("Finished loading snapshot")
