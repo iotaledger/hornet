@@ -14,7 +14,6 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 - **Currently HORNET is only released for testing purposes. Don't use it for wallet transfers (except testing with small amounts).**
 - **Please open a [new issue](https://github.com/gohornet/hornet/issues/new) if you detect an error or crash (or submit a PR if you have already fixed it).**
-- **Feature requests will be deleted, because we cannot handle them at the moment.**
 - **The issue section is not a support section, if you have questions about HORNET please post them in the `#hornet` channel ([official iota discord server](https://discord.iota.org/)).**
 
 ---
