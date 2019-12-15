@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/curl"
 	"github.com/gohornet/hornet/packages/model/hornet"
@@ -19,13 +18,6 @@ import (
 )
 
 var (
-	address      = trinary.Pad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
-	message      = parameter.NodeConfig.GetString("spammer.message")
-	tagSubstring = trinary.Pad(parameter.NodeConfig.GetString("spammer.tag"), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
-	depth        = parameter.NodeConfig.GetUint("spammer.depth")
-	rateLimit    = parameter.NodeConfig.GetUint("spammer.tpsRateLimit")
-	mwm          = parameter.NodeConfig.GetInt("protocol.mwm")
-
 	_, powFunc       = pow.GetFastestProofOfWorkImpl()
 	rateLimitChannel chan struct{}
 	txCount          = 0
@@ -47,7 +39,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
-	if rateLimit != 0 {
+	if int64(rateLimit) != 0 {
 		select {
 		case <-shutdownSignal:
 			return

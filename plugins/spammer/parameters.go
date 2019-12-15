@@ -7,5 +7,6 @@ func init() {
 	flag.String("spammer.message", "Spamming with HORNET tipselect", "Message of the Tx")
 	flag.String("spammer.tag", "TANGLEKIT9SPAMMER99HORNET99", "Tag of the Tx")
 	flag.Uint("spammer.depth", 3, "Depth of the random walker")
-	flag.Uint("spammer.tpsRateLimit", 1, "Rate limit for the spam (0 = no limit)")
+	flag.Float64("spammer.tpsRateLimit", 0.10, "Rate limit for the spam (0 = no limit)")
+	flag.Uint("spammer.workers", 1, "How many spammers should run in parallel")
 }

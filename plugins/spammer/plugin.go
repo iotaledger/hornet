@@ -5,23 +5,48 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/packages/logger"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/timeutil"
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
 	PLUGIN = node.NewPlugin("Spammer", node.Disabled, configure, run)
 	log    = logger.NewLogger("Spammer")
 
-	spammerWorkerCount = runtime.NumCPU()
+	address            string
+	message            string
+	tagSubstring       string
+	depth              uint
+	rateLimit          float64
+	mwm                int
+	spammerWorkerCount int
 )
 
 func configure(plugin *node.Plugin) {
 
-	if rateLimit != 0 {
-		rateLimitChannel = make(chan struct{}, rateLimit*2)
+	address = trinary.Pad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
+	message = parameter.NodeConfig.GetString("spammer.message")
+	tagSubstring = trinary.Pad(parameter.NodeConfig.GetString("spammer.tag"), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
+	depth = parameter.NodeConfig.GetUint("spammer.depth")
+	rateLimit = parameter.NodeConfig.GetFloat64("spammer.tpsRateLimit")
+	mwm = parameter.NodeConfig.GetInt("protocol.mwm")
+	spammerWorkerCount = int(parameter.NodeConfig.GetUint("spammer.workers"))
+
+	if spammerWorkerCount >= runtime.NumCPU() {
+		spammerWorkerCount = runtime.NumCPU() - 1
+	}
+	if spammerWorkerCount < 1 {
+		spammerWorkerCount = 1
+	}
+
+	if int64(rateLimit) != 0 {
+		rateLimitChannel = make(chan struct{}, int64(rateLimit)*2)
 
 		// create a background worker that fills rateLimitChannel every second
 		daemon.BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
@@ -31,7 +56,7 @@ func configure(plugin *node.Plugin) {
 				default:
 					// Channel full
 				}
-			}, time.Duration(int64(time.Second)/int64(rateLimit)), shutdownSignal)
+			}, time.Duration(int64(float64(time.Second)/rateLimit)), shutdownSignal)
 		}, shutdown.ShutdownPrioritySpammer)
 	}
 
@@ -53,7 +78,9 @@ func run(plugin *node.Plugin) {
 					log.Infof("Stopping Spammer %d... done", i)
 					return
 				default:
-					doSpam(shutdownSignal)
+					if tangle.IsNodeSynced() {
+						doSpam(shutdownSignal)
+					}
 				}
 			}
 		}, shutdown.ShutdownPrioritySpammer)

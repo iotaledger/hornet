@@ -144,7 +144,8 @@
     "depth": 3,
     "message": "Spamming with HORNET tipselect",
     "tag": "TANGLEKIT9SPAMMER99HORNET99",
-    "tpsratelimit": 1
+    "tpsratelimit": 0.10,
+    "workers": 1
   },
   "tipsel": {
     "belowmaxdepthtransactionlimit": 20000,
