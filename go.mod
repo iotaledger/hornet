@@ -7,7 +7,6 @@ require (
 	github.com/dgraph-io/badger/v2 v2.0.1-0.20191206180002-8b99eb433aa7
 	github.com/dgraph-io/ristretto v0.0.0-20191114170855-99d1bbbf28e6 // indirect
 	github.com/dgryski/go-farm v0.0.0-20191112170834-c2139c5d712b // indirect
-	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-zeromq/zmq4 v0.6.3-0.20191107165341-4bfbf6cedab7
@@ -16,7 +15,7 @@ require (
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
 	github.com/gorilla/websocket v1.4.1
 	github.com/iotaledger/goshimmer v0.0.0-20191125182838-26e99d88bddb
-	github.com/iotaledger/hive.go v0.0.0-20191215095341-f16d8a5ea757
+	github.com/iotaledger/hive.go v0.0.0-20191215153041-f324513d92ce
 	github.com/iotaledger/iota.go v1.0.0-beta.12
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/mitchellh/mapstructure v1.1.2
