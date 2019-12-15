@@ -40,7 +40,7 @@ func configureReconnectPool() {
 		originAddr.PreferIPv6 = neighConf.PreferIPv6
 
 		// no need to lock the neighbors in the configure stage
-		addNeighborToReconnectPool(originAddr)
+		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
 	}
 
 	// if a neighbor was handshaked, we move it from being in-flight to connected
@@ -67,35 +67,21 @@ func reconnect() {
 	newlyInFlight := make([]*Neighbor, 0)
 
 	// try to lookup each address and if we fail to do so, keep the address in the reconnect pool
-	for _, originAddr := range reconnectPool {
-		host := originAddr.Addr
-		neighborAddresses := iputils.NewNeighborIPAddresses()
-		ip := net.ParseIP(host)
-		if ip != nil {
-			// host is an actual IP address
-			neighborAddresses.Add(&iputils.IP{IP: ip})
-			prefIP := neighborAddresses.GetPreferredAddress(originAddr.PreferIPv6)
-			newlyInFlight = append(newlyInFlight, NewOutboundNeighbor(originAddr, prefIP, originAddr.Port, neighborAddresses))
-			continue
-		}
-
-		ips, err := net.LookupHost(host)
+	for _, recNeigh := range reconnectPool {
+		originAddr := recNeigh.OriginAddr
+		neighborAddrs, err := possibleIdentitiesFromNeighborAddress(originAddr)
 		if err != nil {
-			gossipLogger.Warningf("couldn't lookup ips for %s, error: %s", host, err.Error())
+			gossipLogger.Error(err.Error())
 			continue
 		}
 
-		if len(ips) == 0 {
-			gossipLogger.Warningf("no ips found for %s", host)
-			continue
-		}
+		// cache ips
+		recNeigh.mu.Lock()
+		recNeigh.CachedIPs = neighborAddrs
+		recNeigh.mu.Unlock()
 
-		for _, ipAddr := range ips {
-			ip = net.ParseIP(ipAddr)
-			neighborAddresses.Add(&iputils.IP{IP: ip})
-		}
-		prefIP := neighborAddresses.GetPreferredAddress(false)
-		newlyInFlight = append(newlyInFlight, NewOutboundNeighbor(originAddr, prefIP, originAddr.Port, neighborAddresses))
+		prefIP := neighborAddrs.GetPreferredAddress(originAddr.PreferIPv6)
+		newlyInFlight = append(newlyInFlight, NewOutboundNeighbor(originAddr, prefIP, originAddr.Port, neighborAddrs))
 	}
 	neighborsLock.Unlock()
 
@@ -118,6 +104,38 @@ func reconnect() {
 
 		// kicks of the protocol by sending the handshake packet and then reading inbound data
 		go neighbor.Protocol.Init()
+	}
+}
+
+func cleanReconnectPool(neighbor *Neighbor) {
+	for key, recNeigh := range reconnectPool {
+		recNeigh.mu.Lock()
+		if recNeigh.CachedIPs == nil {
+			ips, err := possibleIdentitiesFromNeighborAddress(recNeigh.OriginAddr)
+			if err != nil {
+				gossipLogger.Errorf("can't check reconnect pool existence on %s, as IP lookups failed: %s", recNeigh.OriginAddr.String(), err.Error())
+				recNeigh.mu.Unlock()
+				continue
+			}
+			recNeigh.CachedIPs = ips
+		}
+		for ip := range recNeigh.CachedIPs.IPs {
+			if neighbor.Identity == NewNeighborIdentity(ip.String(), recNeigh.OriginAddr.Port) {
+				// auto. set domain if it is empty by using the reconnect pool's entry
+				if net.ParseIP(recNeigh.OriginAddr.Addr) == nil {
+					neighbor.InitAddress.Addr = recNeigh.OriginAddr.Addr
+				}
+
+				// make an union of what the reconnect pool entry had
+				neighbor.Addresses = recNeigh.CachedIPs.Union(neighbor.Addresses)
+
+				// delete out of reconnect pool
+				delete(reconnectPool, key)
+				gossipLogger.Infof("removed %s from reconnect pool", key)
+				break
+			}
+		}
+		recNeigh.mu.Unlock()
 	}
 }
 
