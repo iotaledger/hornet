@@ -1,9 +1,12 @@
 package tangle
 
 import (
+	"encoding/binary"
+	"io"
+
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
-	"github.com/gohornet/hornet/packages/database"
 )
 
 var (
@@ -51,19 +54,14 @@ func storeSpentAddressesInDatabase(spent []trinary.Hash) error {
 	return nil
 }
 
-// ToDo: stream that directly into the file
-func ReadSpentAddressesFromDatabase() ([][]byte, error) {
+func StreamSpentAddressesToWriter(buf io.Writer) error {
 
-	var addresses [][]byte
-	err := spentAddressesDatabase.ForEach(func(entry database.Entry) (stop bool) {
-		address := entry.Key
-		addresses = append(addresses, address)
-		return false
+	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
+		return binary.Write(buf, binary.BigEndian, entry.Key)
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(NewDatabaseError(err), "failed to read spent addresses from database")
-	} else {
-		return addresses, nil
+		return errors.Wrap(NewDatabaseError(err), "failed to stream spent addresses from database")
 	}
+	return nil
 }
