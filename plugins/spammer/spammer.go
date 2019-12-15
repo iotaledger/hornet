@@ -25,6 +25,14 @@ var (
 
 func doSpam(shutdownSignal <-chan struct{}) {
 
+	if int64(rateLimit) != 0 {
+		select {
+		case <-shutdownSignal:
+			return
+		case <-rateLimitChannel:
+		}
+	}
+
 	timeGTTA := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
 	if err != nil {
@@ -37,14 +45,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	b, err := createBundle(address, message, tagSubstring, txCount, infoMsg)
 	if err != nil {
 		return
-	}
-
-	if int64(rateLimit) != 0 {
-		select {
-		case <-shutdownSignal:
-			return
-		case <-rateLimitChannel:
-		}
 	}
 
 	err = doPow(b, tips[0], tips[1], mwm)
