@@ -80,14 +80,21 @@ var DefaultProfile = &Profile{
 		NumLevelZeroTables:      5,
 		NumLevelZeroTablesStall: 10,
 		NumMemtables:            5,
+		BloomFalsePositive:      0.01,
+		BlockSize:               4 * 1024,
+		SyncWrites:              false,
 		NumVersionsToKeep:       1,
-		SyncWrites:              true,
-		CompactLevel0OnClose:    true,
+		CompactLevel0OnClose:    false,
+		KeepL0InMemory:          false,
+		VerifyValueChecksum:     false,
+		MaxCacheSize:            50000000,
+		ZSTDCompressionLevel:    10,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
+		WithTruncate:            false,
 		LogRotatesToFlush:       2,
-		MaxCacheSize:            50000000,
+		EventLogging:            false,
 	},
 }
 
@@ -134,14 +141,21 @@ var LightProfile = &Profile{
 		NumLevelZeroTables:      1,
 		NumLevelZeroTablesStall: 2,
 		NumMemtables:            1,
-		NumVersionsToKeep:       1,
+		BloomFalsePositive:      0.01,
+		BlockSize:               4 * 1024,
 		SyncWrites:              false,
-		CompactLevel0OnClose:    true,
+		NumVersionsToKeep:       1,
+		CompactLevel0OnClose:    false,
+		KeepL0InMemory:          false,
+		VerifyValueChecksum:     false,
+		MaxCacheSize:            50000000,
+		ZSTDCompressionLevel:    10,
 		ValueLogFileSize:        33554431,
 		ValueLogMaxEntries:      250000,
 		ValueThreshold:          32,
+		WithTruncate:            false,
 		LogRotatesToFlush:       2,
-		MaxCacheSize:            50000000,
+		EventLogging:            false,
 	},
 }
 
@@ -178,12 +192,19 @@ type BadgerOpts struct {
 	NumLevelZeroTables      int                     `json:"numLevelZeroTables"`
 	NumLevelZeroTablesStall int                     `json:"numLevelZeroTablesStall"`
 	NumMemtables            int                     `json:"numMemtables"`
-	NumVersionsToKeep       int                     `json:"numVersionsToKeep"`
+	BloomFalsePositive      float64                 `json:"bloomFalsePositive"`
+	BlockSize               int                     `json:"blockSize"`
 	SyncWrites              bool                    `json:"syncWrites"`
+	NumVersionsToKeep       int                     `json:"numVersionsToKeep"`
 	CompactLevel0OnClose    bool                    `json:"compactLevel0OnClose"`
+	KeepL0InMemory          bool                    `json:"keepL0InMemory"`
+	VerifyValueChecksum     bool                    `json:"verifyValueChecksum"`
+	MaxCacheSize            int64                   `json:"maxCacheSize"`
+	ZSTDCompressionLevel    int                     `json:"ZSTDCompressionLevel"`
 	ValueLogFileSize        int64                   `json:"valueLogFileSize"`
 	ValueLogMaxEntries      uint32                  `json:"valueLogMaxEntries"`
 	ValueThreshold          int                     `json:"valueThreshold"`
+	WithTruncate            bool                    `json:"withTruncate"`
 	LogRotatesToFlush       int32                   `json:"logRotatesToFlush"`
-	MaxCacheSize            int64                   `json:"maxCacheSize"`
+	EventLogging            bool                    `json:"eventLogging"`
 }
