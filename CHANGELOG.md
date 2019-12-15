@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 15.12.2019
+
+This release fixes a CRITICAL bug! You have to delete your database folder.
+
+### Fixed
+
+    - Spent addresses were not imported from snapshot file.
+
 ## [0.2.3] - 15.12.2019
 
 ### Fixed
