@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 15.12.2019
+
+### Fixed
+
+    - Close on closed channel in "ordered daemon" on shutdown
+
 ## [0.2.2] - 15.12.2019
 
 ### Added
