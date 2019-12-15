@@ -2,10 +2,11 @@ package iputils
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type IP struct {
@@ -30,6 +31,21 @@ type NeighborIPAddresses struct {
 
 func NewNeighborIPAddresses() *NeighborIPAddresses {
 	return &NeighborIPAddresses{IPs: make(map[*IP]struct{})}
+}
+
+func (ips *NeighborIPAddresses) Union(other *NeighborIPAddresses) *NeighborIPAddresses {
+	union := NewNeighborIPAddresses()
+	set := map[string]struct{}{}
+	for ip := range ips.IPs {
+		union.Add(ip)
+		set[ip.String()] = struct{}{}
+	}
+	for ip := range other.IPs {
+		if _, ok := set[ip.String()]; !ok {
+			union.Add(ip)
+		}
+	}
+	return union
 }
 
 func (ips *NeighborIPAddresses) GetPreferredAddress(preferIPv6 bool) *IP {

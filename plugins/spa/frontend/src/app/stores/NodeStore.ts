@@ -350,6 +350,7 @@ export class NodeStore {
 
     @action
     updateNeighborMetrics = (neighborMetrics: Array<NeighborMetric>) => {
+        let updated = [];
         for (let i = 0; i < neighborMetrics.length; i++) {
             let metric = neighborMetrics[i];
             let neighbMetrics: NeighborMetrics = this.neighbor_metrics.get(metric.identity);
@@ -358,6 +359,13 @@ export class NodeStore {
             }
             neighbMetrics.addMetric(metric);
             this.neighbor_metrics.set(metric.identity, neighbMetrics);
+            updated.push(metric.identity);
+        }
+        // remove duplicates
+        for (const k of this.neighbor_metrics.keys()) {
+            if (!updated.includes(k)) {
+                this.neighbor_metrics.delete(k);
+            }
         }
     };
 

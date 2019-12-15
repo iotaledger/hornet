@@ -31,7 +31,7 @@ var (
 	inFlightNeighbors = make(map[string]*Neighbor)
 
 	// holds IP/port or host/port combinations of neighbors which we want to be connected to
-	reconnectPool       = make(map[string]*iputils.OriginAddress)
+	reconnectPool       = make(map[string]*reconnectneighbor)
 	reconnectPoolWakeup = make(chan struct{})
 
 	// a set containing identities which are allowed to connect
@@ -58,6 +58,12 @@ var (
 	// TODO: perhaps better naming
 	ErrNoIPsFound = errors.New("didn't find any IPs")
 )
+
+type reconnectneighbor struct {
+	mu         sync.Mutex
+	OriginAddr *iputils.OriginAddress       `json:"origin_addr"`
+	CachedIPs  *iputils.NeighborIPAddresses `json:"cached_ips"`
+}
 
 func availableNeighborSlotsFilled() bool {
 	// while this check is not thread-safe, initiated connections will be dropped
@@ -110,8 +116,6 @@ type Neighbor struct {
 	InitAddress *iputils.OriginAddress
 	// The ip/port combination of the neighbor
 	Identity string
-	// The domain under which the neighbor was initially added
-	Domain string
 	// The address IP address under which the neighbor is connected
 	PrimaryAddress *iputils.IP
 	// The IP addresses which were looked up during neighbor initialisation
@@ -155,7 +159,6 @@ func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
 
 	// InitAddress and Identity are set in finalizeHandshake
 	return &Neighbor{
-		Domain:         "",
 		PrimaryAddress: primaryAddr,
 		Addresses:      addresses,
 		Events: neighborEvents{
@@ -180,12 +183,12 @@ func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr *iputils
 	}
 }
 
-func addNeighborToReconnectPool(neighborAddr *iputils.OriginAddress) {
-	if _, has := reconnectPool[neighborAddr.String()]; has {
+func addNeighborToReconnectPool(recNeigh *reconnectneighbor) {
+	if _, has := reconnectPool[recNeigh.OriginAddr.String()]; has {
 		return
 	}
-	reconnectPool[neighborAddr.String()] = neighborAddr
-	Events.NeighborPutIntoReconnectPool.Trigger(neighborAddr)
+	reconnectPool[recNeigh.OriginAddr.String()] = recNeigh
+	Events.NeighborPutIntoReconnectPool.Trigger(recNeigh.OriginAddr)
 }
 
 func moveNeighborFromReconnectToInFlightPool(neighbor *Neighbor) {
@@ -198,7 +201,10 @@ func moveNeighborFromReconnectToInFlightPool(neighbor *Neighbor) {
 func moveFromInFlightToReconnectPool(neighbor *Neighbor) {
 	// neighbors lock must be held by caller
 	delete(inFlightNeighbors, neighbor.Identity)
-	reconnectPool[neighbor.InitAddress.String()] = neighbor.InitAddress
+	reconnectPool[neighbor.InitAddress.String()] = &reconnectneighbor{
+		OriginAddr: neighbor.InitAddress,
+		CachedIPs:  neighbor.Addresses,
+	}
 	Events.NeighborPutBackIntoReconnectPool.Trigger(neighbor)
 }
 
@@ -207,25 +213,30 @@ func moveNeighborToConnected(neighbor *Neighbor) {
 	delete(inFlightNeighbors, neighbor.Identity)
 	connectedNeighbors[neighbor.Identity] = neighbor
 
-	// also delete any ongoing reconnect attempt
-	delete(reconnectPool, neighbor.InitAddress.String())
+	// delete any existing neighbor from the reconnect pool
+	cleanReconnectPool(neighbor)
+
 	Events.NeighborPutIntoConnectedPool.Trigger(neighbor)
 }
 
 func moveNeighborFromConnectedToReconnectPool(neighbor *Neighbor) {
+	// neighbors lock must be held by caller
 	if !neighbor.MoveBackToReconnectPool {
 		return
 	}
 
-	neighborsLock.Lock()
-	defer neighborsLock.Unlock()
-
-	connectedNeighbor, ok := connectedNeighbors[neighbor.Identity]
-	if !ok && connectedNeighbor != neighbor {
+	if _, ok := connectedNeighbors[neighbor.Identity]; !ok {
 		return
 	}
 	delete(connectedNeighbors, neighbor.Identity)
-	reconnectPool[neighbor.InitAddress.String()] = neighbor.InitAddress
+
+	// remove any other reconnect pool entry where the identity would match
+	cleanReconnectPool(neighbor)
+
+	reconnectPool[neighbor.InitAddress.String()] = &reconnectneighbor{
+		OriginAddr: neighbor.InitAddress,
+		CachedIPs:  neighbor.Addresses,
+	}
 	Events.NeighborPutBackIntoReconnectPool.Trigger(neighbor)
 }
 
@@ -331,6 +342,8 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 	// if not closed on purpose
 	neighbor.Protocol.Conn.Events.Close.Attach(events.NewClosure(func() {
 		gossipLogger.Infof("connection closed to %s", neighbor.IdentityOrAddress())
+		neighborsLock.Lock()
+		defer neighborsLock.Unlock()
 		moveNeighborFromConnectedToReconnectPool(neighbor)
 	}))
 
@@ -428,7 +441,9 @@ func AddNeighbor(neighborAddr string) error {
 			return errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in-flight via %s", neighborAddr, identity)
 		}
 	}
-	addNeighborToReconnectPool(originAddr)
+	recNeigh := &reconnectneighbor{OriginAddr: originAddr, CachedIPs: possibleIdentities}
+	addNeighborToReconnectPool(recNeigh)
+
 	// force reconnect attempts now
 	wakeupReconnectPool()
 	return nil
@@ -443,10 +458,10 @@ func possibleIdentitiesFromNeighborAddress(originAddr *iputils.OriginAddress) (*
 	}
 	ips, err := net.LookupHost(originAddr.Addr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't lookup ips for %s, error: %s", originAddr.Addr, err.Error())
+		return nil, errors.Wrapf(err, "couldn't lookup IPs for %s, error: %s", originAddr.Addr, err.Error())
 	}
 	if len(ips) == 0 {
-		return nil, errors.Wrapf(ErrNoIPsFound, "no ips found for %s", originAddr.Addr)
+		return nil, errors.Wrapf(ErrNoIPsFound, "no IPs found for %s", originAddr.Addr)
 	}
 	for _, ipAddr := range ips {
 		possibleIdentities.Add(&iputils.IP{IP: net.ParseIP(ipAddr)})
@@ -546,7 +561,6 @@ type NeighborInfo struct {
 func GetNeighbor(identifier string) (*Neighbor, bool) {
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
-
 	neighbor, exists := connectedNeighbors[identifier]
 	return neighbor, exists
 }
@@ -568,14 +582,9 @@ func GetNeighbors() []NeighborInfo {
 	result := []NeighborInfo{}
 	for _, neighbor := range connectedNeighbors {
 		result = append(result, NeighborInfo{
-			Neighbor: neighbor,
-			Address:  neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
-			Domain: func() string {
-				if neighbor.Domain == "" {
-					return neighbor.InitAddress.Addr
-				}
-				return neighbor.Domain
-			}(),
+			Neighbor:                          neighbor,
+			Address:                           neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
+			Domain:                            neighbor.InitAddress.Addr,
 			NumberOfAllTransactions:           neighbor.Metrics.GetAllTransactionsCount(),
 			NumberOfInvalidTransactions:       neighbor.Metrics.GetInvalidTransactionsCount(),
 			NumberOfStaleTransactions:         neighbor.Metrics.GetStaleTransactionsCount(),
@@ -588,7 +597,8 @@ func GetNeighbors() []NeighborInfo {
 		})
 	}
 
-	for _, originAddr := range reconnectPool {
+	for _, recNeigh := range reconnectPool {
+		originAddr := recNeigh.OriginAddr
 		result = append(result, NeighborInfo{
 			Address:        originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			Domain:         originAddr.Addr,
