@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	solidifierTimeThreshold = 60
+	solidifierThresholdInSeconds int32 = 60
 )
 
 var (
@@ -69,7 +69,7 @@ func checkSolidityAndPropagate(transaction *hornet.Transaction) {
 
 			solid, _ := checkSolidity(tx, true)
 			if solid {
-				if int32(time.Now().Unix())-tx.GetSolidificationTimestamp() > solidifierTimeThreshold {
+				if int32(time.Now().Unix())-tx.GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions
 					continue
 				}
