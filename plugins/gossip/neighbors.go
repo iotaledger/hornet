@@ -249,7 +249,7 @@ func allowNeighborIdentity(neighbor *Neighbor) {
 }
 
 func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
-	// make sure only one handshake finalisation process is ongoing at once
+	// make sure only one handshake finalization process is ongoing at once
 	handshakeFinalisationLock.Lock()
 	defer handshakeFinalisationLock.Unlock()
 

@@ -27,7 +27,7 @@ func (nm *NeighborMetrics) IncrAllTransactionsCount() uint32 {
 	return atomic.AddUint32(&nm.allTxsCount, 1)
 }
 
-// Gets the number of invalid transctions.
+// Gets the number of invalid transactions.
 func (nm *NeighborMetrics) GetInvalidTransactionsCount() uint32 {
 	return atomic.LoadUint32(&nm.invalidTxsCount)
 }
