@@ -1,13 +1,19 @@
 package tangle
 
 import (
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
+	"time"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/workerpool"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+)
+
+const (
+	solidifierThresholdInSeconds int32 = 60
 )
 
 var (
@@ -63,6 +69,11 @@ func checkSolidityAndPropagate(transaction *hornet.Transaction) {
 
 			solid, _ := checkSolidity(tx, true)
 			if solid {
+				if int32(time.Now().Unix())-tx.GetSolidificationTimestamp() > solidifierThresholdInSeconds {
+					// Skip older transactions
+					continue
+				}
+
 				transactionApprovers, _ := tangle.GetApprovers(txHash)
 				for _, approverHash := range transactionApprovers.GetHashes() {
 					approver, _ := tangle.GetTransaction(approverHash)

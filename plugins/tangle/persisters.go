@@ -57,7 +57,7 @@ func configureAddressPersister() {
 		for _, task := range tasks {
 			task.Return(nil)
 		}
-	}, batchworkerpool.BatchCollectionTimeout(addressPersisterBatchCollectionTimeout), batchworkerpool.BatchSize(addressPersisterBatchSize), batchworkerpool.WorkerCount(addressPersisterWorkerCount), batchworkerpool.QueueSize(addressPersisterQueueSize))
+	}, batchworkerpool.BatchCollectionTimeout(addressPersisterBatchCollectionTimeout), batchworkerpool.BatchSize(addressPersisterBatchSize), batchworkerpool.WorkerCount(addressPersisterWorkerCount), batchworkerpool.QueueSize(addressPersisterQueueSize), batchworkerpool.FlushTasksAtShutdown(true))
 }
 
 func runAddressPersister() {
@@ -93,7 +93,7 @@ func configureUnconfirmedTransactionPersister() {
 		for _, task := range tasks {
 			task.Return(nil)
 		}
-	}, batchworkerpool.BatchCollectionTimeout(unconfirmedTxBatchCollectionTimeout), batchworkerpool.BatchSize(unconfirmedTxBatchSize), batchworkerpool.WorkerCount(unconfirmedTxWorkerCount), batchworkerpool.QueueSize(unconfirmedTxQueueSize))
+	}, batchworkerpool.BatchCollectionTimeout(unconfirmedTxBatchCollectionTimeout), batchworkerpool.BatchSize(unconfirmedTxBatchSize), batchworkerpool.WorkerCount(unconfirmedTxWorkerCount), batchworkerpool.QueueSize(unconfirmedTxQueueSize), batchworkerpool.FlushTasksAtShutdown(true))
 }
 
 func runUnconfirmedTransactionPersister() {

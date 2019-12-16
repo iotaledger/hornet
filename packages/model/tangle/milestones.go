@@ -3,9 +3,7 @@ package tangle
 import (
 	"fmt"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-
-	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/consts"
@@ -15,8 +13,9 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/pkg/errors"
 	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/packages/typeutils"
 )
 
@@ -169,7 +168,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0.GetHash())
 	}
 
-	if (milestoneIndex < 0) || (milestoneIndex >= maxMilestoneIndex) {
+	if milestoneIndex >= maxMilestoneIndex {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0.GetHash())
 	}
 

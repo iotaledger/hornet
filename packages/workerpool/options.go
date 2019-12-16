@@ -5,8 +5,9 @@ import (
 )
 
 var DEFAULT_OPTIONS = &Options{
-	WorkerCount: 2 * runtime.NumCPU(),
-	QueueSize:   4 * runtime.NumCPU(),
+	WorkerCount:          2 * runtime.NumCPU(),
+	QueueSize:            4 * runtime.NumCPU(),
+	FlushTasksAtShutdown: false,
 }
 
 func WorkerCount(workerCount int) Option {
@@ -21,9 +22,16 @@ func QueueSize(queueSize int) Option {
 	}
 }
 
+func FlushTasksAtShutdown(flush bool) Option {
+	return func(args *Options) {
+		args.FlushTasksAtShutdown = flush
+	}
+}
+
 type Options struct {
-	WorkerCount int
-	QueueSize   int
+	WorkerCount          int
+	QueueSize            int
+	FlushTasksAtShutdown bool
 }
 
 func (options Options) Override(optionalOptions ...Option) *Options {

@@ -10,6 +10,7 @@ var DEFAULT_OPTIONS = &Options{
 	QueueSize:              2 * runtime.NumCPU() * 64,
 	BatchSize:              64,
 	BatchCollectionTimeout: 15 * time.Millisecond,
+	FlushTasksAtShutdown:   false,
 }
 
 func WorkerCount(workerCount int) Option {
@@ -36,11 +37,18 @@ func QueueSize(queueSize int) Option {
 	}
 }
 
+func FlushTasksAtShutdown(flush bool) Option {
+	return func(args *Options) {
+		args.FlushTasksAtShutdown = flush
+	}
+}
+
 type Options struct {
 	WorkerCount            int
 	QueueSize              int
 	BatchSize              int
 	BatchCollectionTimeout time.Duration
+	FlushTasksAtShutdown   bool
 }
 
 func (options Options) Override(optionalOptions ...Option) *Options {
