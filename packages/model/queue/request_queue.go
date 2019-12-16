@@ -181,12 +181,20 @@ func (s *RequestQueue) MarkReceived(txHash trinary.Hash) bool {
 	defer s.Unlock()
 
 	cachedRequest := s.requestedCache.Get(txHash)
-	if typeutils.IsInterfaceNil(cachedRequest) {
-		return false
+	if !typeutils.IsInterfaceNil(cachedRequest) {
+		request := cachedRequest.(*request)
+		request.markReceived()
+		return true
 	}
-	request := cachedRequest.(*request)
-	request.markReceived()
-	return true
+
+	// If this was already evicted from our cache, check if it is still in the pending queue
+	for _, req := range s.pending {
+		if req.hash == txHash {
+			req.markReceived()
+			return true
+		}
+	}
+	return false
 }
 
 func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) bool {
@@ -197,6 +205,14 @@ func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) bool {
 	if !typeutils.IsInterfaceNil(cachedRequest) {
 		request := cachedRequest.(*request)
 		request.markProcessed()
+	} else {
+		// If this was already evicted from our cache, check if it is still in the pending queue
+		for _, req := range s.pending {
+			if req.hash == txHash {
+				req.markProcessed()
+				break
+			}
+		}
 	}
 
 	// First check if we still have tx waiting to be requested
