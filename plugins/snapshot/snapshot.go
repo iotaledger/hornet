@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	SpentAddressesImportBatchSize = 1000000
+	SpentAddressesImportBatchSize = 100000
 )
 
 type localSnapshot struct {
