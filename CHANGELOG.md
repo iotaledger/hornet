@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 16.12.2019
+
+### Changed
+
+    - Faster initial spent addresses import
+
 ## [0.2.5] - 15.12.2019
 
 ### Added
