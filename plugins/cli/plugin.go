@@ -63,7 +63,13 @@ func configure(ctx *node.Plugin) {
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "dashboard.basic_auth.password")
 	parameter.FetchConfig(true, ignoreSettingsAtPrint)
 	parseParameters()
-	ctx.Node.Logger.Infof("Using profile '%s'", profile.GetProfile().Name)
+
+	if parameter.NodeConfig.GetString("useProfile") == "auto" {
+		ctx.Node.Logger.Infof("Profile mode 'auto', Using profile '%s'", profile.GetProfile().Name)
+	} else {
+		ctx.Node.Logger.Infof("Using profile '%s'", profile.GetProfile().Name)
+	}
+
 	ctx.Node.Logger.Info("Loading plugins ...")
 }
 
