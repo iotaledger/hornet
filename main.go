@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"runtime"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/plugins/cli"
@@ -21,6 +25,15 @@ import (
 )
 
 func main() {
+
+	// Print out HORNET version
+	version := flag.BoolP("version", "v", false, "Prints the HORNET version")
+	flag.Parse()
+	if *version {
+		fmt.Println(cli.AppName + " " + cli.AppVersion)
+		os.Exit(0)
+	}
+
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 
