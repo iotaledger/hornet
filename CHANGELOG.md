@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - 17.12.2019
+
+### Added
+
+    - Version printout `--version`
+
+### Changed
+
+    - WorkerPools don't get flushed at shutdown by default
+    - Import spent addresses in smaller batches
+    - Faster syncing
+
+### Fixed
+
+    - RequestQueue never got empty if the cache overflowed
+    - Several shutdown problems
+    - Issue were only tail tx of a bundle got confirmed
+    - Status report was still active during shutdown
+    - Future cone solidifier got stuck, causing the node to become unsync
+
 ## [0.2.6] - 16.12.2019
 
 ### Changed
