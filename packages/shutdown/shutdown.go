@@ -17,9 +17,9 @@ const (
 	ShutdownPriorityNeighborReconnecter
 	ShutdownPriorityBadgerGarbageCollection
 	ShutdownPriorityMetricsUpdater
-	ShutdownPriorityStatusReport
 	ShutdownPrioritySPA
 	ShutdownPriorityAPI
 	ShutdownPriorityMetricsPublishers
 	ShutdownPrioritySpammer
+	ShutdownPriorityStatusReport
 )

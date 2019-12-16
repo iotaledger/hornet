@@ -142,15 +142,17 @@ func (wp *BatchWorkerPool) startBatchDispatcher() {
 			select {
 			case <-wp.terminate:
 
-			terminateLoop:
-				// process all waiting tasks after shutdown signal
-				for {
-					select {
-					case firstCall := <-wp.calls:
-						wp.dispatchTasks(firstCall)
+				if wp.options.FlushTasksAtShutdown {
+				terminateLoop:
+					// process all waiting tasks after shutdown signal
+					for {
+						select {
+						case firstCall := <-wp.calls:
+							wp.dispatchTasks(firstCall)
 
-					default:
-						break terminateLoop
+						default:
+							break terminateLoop
+						}
 					}
 				}
 
@@ -179,15 +181,17 @@ func (wp *BatchWorkerPool) startBatchWorkers() {
 				case <-wp.terminateBatchWorkers:
 					aborted = true
 
-				terminateLoop:
-					// process all waiting tasks after shutdown signal
-					for {
-						select {
-						case batchTask := <-wp.batchedCalls:
-							wp.workerFnc(batchTask)
+					if wp.options.FlushTasksAtShutdown {
+					terminateLoop:
+						// process all waiting tasks after shutdown signal
+						for {
+							select {
+							case batchTask := <-wp.batchedCalls:
+								wp.workerFnc(batchTask)
 
-						default:
-							break terminateLoop
+							default:
+								break terminateLoop
+							}
 						}
 					}
 
