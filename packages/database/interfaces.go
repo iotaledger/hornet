@@ -30,6 +30,10 @@ type Database interface {
 	ForEach(func(entry Entry) (stop bool)) error
 	ForEachPrefix(keyPrefix KeyPrefix, do func(entry Entry) (stop bool)) error
 	ForEachPrefixKeyOnly(keyPrefix KeyPrefix, do func(entry KeyOnlyEntry) (stop bool)) error
+	StreamForEach(func(entry Entry) error) error
+	StreamForEachKeyOnly(func(entry KeyOnlyEntry) error) error
+	StreamForEachPrefix(keyPrefix KeyPrefix, do func(entry Entry) error) error
+	StreamForEachPrefixKeyOnly(keyPrefix KeyPrefix, do func(entry KeyOnlyEntry) error) error
 
 	// Transactions
 	Apply(set []Entry, delete []Key) error
