@@ -96,9 +96,8 @@ func findTransactions(i interface{}, c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
-		for _, txHash := range bundleBucket.TransactionHashes() {
-			txHashes = append(txHashes, txHash)
-		}
+
+		txHashes = append(txHashes, bundleBucket.TransactionHashes()...)
 	}
 
 	// Searching for transactions that contains the given address
