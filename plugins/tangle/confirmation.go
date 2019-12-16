@@ -88,7 +88,11 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 				}
 			}
 
-			// Confirm this tx ONLY. Do NOT confirm the whole bundle here.
+			// we only add the tail transaction to the txsToConfirm set, in order to not
+			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not
+			// reference the same trunk transaction (as seen from the PoV of the bundle).
+			// if we wouldn't do it like this, we have a high chance of computing an
+			// inconsistent ledger state.
 			txsToConfirm[txHash] = struct{}{}
 		}
 	}
@@ -106,8 +110,21 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 			log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 		}
 
-		tx.SetConfirmed(true, milestoneIndex)
-		Events.TransactionConfirmed.Trigger(tx, milestoneIndex, milestoneTail.GetTimestamp())
+		// confirm all txs of the bundle
+		bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+		if err != nil {
+			log.Panicf("confirmMilestone: BundleBucket not found: %v, Error: %v", tx.Tx.Bundle, err)
+		}
+
+		// we only are iterating over tail txs
+		bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
+		if bundle == nil {
+			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, tx.Tx.Bundle)
+		}
+		for _, bndlTx := range bundle.GetTransactions() {
+			bndlTx.SetConfirmed(true, milestoneIndex)
+			Events.TransactionConfirmed.Trigger(bndlTx, milestoneIndex, milestoneTail.GetTimestamp())
+		}
 	}
 
 	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Now().Sub(ts))
