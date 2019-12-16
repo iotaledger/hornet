@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -19,6 +20,10 @@ import (
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+)
+
+const (
+	SpentAddressesImportBatchSize = 1000000
 )
 
 type localSnapshot struct {
@@ -485,21 +490,32 @@ func LoadSnapshotFromFile(filePath string) error {
 		return fmt.Errorf("ledgerEntries: %s", err)
 	}
 
-	log.Infof("Importing %d spent addresses\n", spentAddrsCount)
-	for i := 0; i < int(spentAddrsCount); i++ {
-		spentAddrBuf := make([]byte, 49)
+	log.Infof("Importing %d spent addresses", spentAddrsCount)
 
-		err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
-		if err != nil {
-			return fmt.Errorf("spentAddrs: %s", err)
+	batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
+	for i := 0; i < batchAmount; i++ {
+
+		var batchEntries [][]byte
+		batchStart := int32(i * SpentAddressesImportBatchSize)
+		batchEnd := batchStart + SpentAddressesImportBatchSize
+
+		if batchEnd > spentAddrsCount {
+			batchEnd = spentAddrsCount
 		}
 
-		hash, err := trinary.BytesToTrytes(spentAddrBuf)
-		if err != nil {
-			return fmt.Errorf("spentAddrs: %s", err)
+		for j := batchStart; j < batchEnd; j++ {
+
+			spentAddrBuf := make([]byte, 49)
+			err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
+			if err != nil {
+				return fmt.Errorf("spentAddrs: %s", err)
+			}
+
+			batchEntries = append(batchEntries, spentAddrBuf)
 		}
 
-		tangle.MarkAddressAsSpent(hash[:81])
+		tangle.StoreSpentAddressesBytesInDatabase(batchEntries)
+		log.Infof("Processed %d/%d", batchEnd, spentAddrsCount)
 	}
 
 	log.Info("Finished loading snapshot")
