@@ -21,6 +21,9 @@ import (
 )
 
 func main() {
+
+	cli.PrintVersion()
+
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 

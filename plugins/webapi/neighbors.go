@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/mitchellh/mapstructure"
 )
 
 func init() {
@@ -65,7 +65,7 @@ func removeNeighbors(i interface{}, c *gin.Context) {
 		for _, n := range nb {
 			// Remove connected neighbor
 			if n.Neighbor != nil {
-				if strings.ToLower(n.Neighbor.Identity) == strings.ToLower(uri) || strings.ToLower(n.Address) == strings.ToLower(uri) {
+				if strings.EqualFold(n.Neighbor.Identity, uri) || strings.EqualFold(n.Address, uri) {
 					err := gossip.RemoveNeighbor(uri)
 					if err != nil {
 						log.Errorf("Can't remove neighbor, Error: %s", err.Error())
@@ -77,7 +77,7 @@ func removeNeighbors(i interface{}, c *gin.Context) {
 				}
 				// Remove unconnected neighbor
 			} else {
-				if strings.ToLower(n.Address) == strings.ToLower(uri) {
+				if strings.EqualFold(n.Address, uri) {
 					err := gossip.RemoveNeighbor(uri)
 					if err != nil {
 						log.Errorf("Can't remove neighbor, Error: %s", err.Error())

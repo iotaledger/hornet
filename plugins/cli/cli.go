@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/gohornet/hornet/packages/node"
+	flag "github.com/spf13/pflag"
+
 	"github.com/iotaledger/hive.go/parameter"
 )
 
@@ -27,6 +28,16 @@ func AddPluginStatus(name string, status int) {
 func getList(a []string) string {
 	sort.Strings(a)
 	return strings.Join(a, " ")
+}
+
+// PrintVersion prints out the HORNET version
+func PrintVersion() {
+	version := flag.BoolP("version", "v", false, "Prints the HORNET version")
+	flag.Parse()
+	if *version {
+		fmt.Println(AppName + " " + AppVersion)
+		os.Exit(0)
+	}
 }
 
 func printUsage() {
