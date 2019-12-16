@@ -37,8 +37,6 @@ func GetProfile() *Profile {
 			} else {
 				panic(ErrNotEnoughMemory)
 			}
-
-			println(fmt.Sprintf("Profile mode 'auto', Available system memory: %d bytes, Used profile: %s", v.Total, profileName))
 		}
 
 		switch profileName {
