@@ -116,7 +116,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 			log.Panicf("confirmMilestone: BundleBucket not found: %v, Error: %v", tx.Tx.Bundle, err)
 		}
 
-		// we only are iterating over tail txs
+		// we are only iterating over tail txs
 		bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
 		if bundle == nil {
 			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, tx.Tx.Bundle)
