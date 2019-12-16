@@ -141,15 +141,17 @@ func (wp *WorkerPool) startWorkers() {
 				case <-wp.terminate:
 					aborted = true
 
-				terminateLoop:
-					// process all waiting tasks after shutdown signal
-					for {
-						select {
-						case batchTask := <-wp.calls:
-							wp.workerFnc(batchTask)
+					if wp.options.FlushTasksAtShutdown {
+					terminateLoop:
+						// process all waiting tasks after shutdown signal
+						for {
+							select {
+							case batchTask := <-wp.calls:
+								wp.workerFnc(batchTask)
 
-						default:
-							break terminateLoop
+							default:
+								break terminateLoop
+							}
 						}
 					}
 
