@@ -10,7 +10,7 @@ var DEFAULT_OPTIONS = &Options{
 	QueueSize:              2 * runtime.NumCPU() * 64,
 	BatchSize:              64,
 	BatchCollectionTimeout: 15 * time.Millisecond,
-	FlushTasksAtShutdown:   true,
+	FlushTasksAtShutdown:   false,
 }
 
 func WorkerCount(workerCount int) Option {
@@ -34,6 +34,12 @@ func BatchCollectionTimeout(batchCollectionTimeout time.Duration) Option {
 func QueueSize(queueSize int) Option {
 	return func(args *Options) {
 		args.QueueSize = queueSize
+	}
+}
+
+func FlushTasksAtShutdown(flush bool) Option {
+	return func(args *Options) {
+		args.FlushTasksAtShutdown = flush
 	}
 }
 

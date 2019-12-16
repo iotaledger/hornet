@@ -7,7 +7,7 @@ import (
 var DEFAULT_OPTIONS = &Options{
 	WorkerCount:          2 * runtime.NumCPU(),
 	QueueSize:            4 * runtime.NumCPU(),
-	FlushTasksAtShutdown: true,
+	FlushTasksAtShutdown: false,
 }
 
 func WorkerCount(workerCount int) Option {
@@ -19,6 +19,12 @@ func WorkerCount(workerCount int) Option {
 func QueueSize(queueSize int) Option {
 	return func(args *Options) {
 		args.QueueSize = queueSize
+	}
+}
+
+func FlushTasksAtShutdown(flush bool) Option {
+	return func(args *Options) {
+		args.FlushTasksAtShutdown = flush
 	}
 }
 
