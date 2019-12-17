@@ -34,6 +34,7 @@ export class Transaction {
 class AddressResult {
     balance: number;
     txs: Array<Transaction>;
+    spent: boolean;
 }
 
 class ConfirmedState {
@@ -92,7 +93,7 @@ export class ExplorerStore {
     }
 
     searchAny = async () => {
-        if(this.search === '420'){
+        if (this.search === '420') {
             this.routerStore.push(`/explorer/420`);
             return;
         }

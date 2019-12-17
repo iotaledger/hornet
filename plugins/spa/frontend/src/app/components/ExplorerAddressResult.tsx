@@ -10,6 +10,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
 import Alert from "react-bootstrap/Alert";
+import Badge from "react-bootstrap/Badge";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -48,7 +49,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                 txsEle.push(
                     <ListGroup.Item key={tx.hash}>
                         <small>
-                            {dateformat(new Date(tx.timestamp*1000), "dd.mm.yyyy HH:MM:ss")} {' '}
+                            {dateformat(new Date(tx.timestamp * 1000), "dd.mm.yyyy HH:MM:ss")} {' '}
                             <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         </small>
                     </ListGroup.Item>
@@ -57,9 +58,30 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
         }
         return (
             <Container>
-                <h3>Address {addr !== null && <span>({addr.txs.length})</span>}</h3>
+                <h3>Address {addr !== null && <span>({addr.txs.length} Transactions)</span>}</h3>
                 <p>
                     {hash} {' '}
+                    {
+                        addr &&
+                        <React.Fragment>
+                            <br/>
+                            {
+                                addr.spent ?
+                                    addr.balance > 0 ?
+                                        <Badge variant="danger">
+                                            Spent - funds are at risk
+                                        </Badge>
+                                        :
+                                        <Badge variant="warning">
+                                            Spent
+                                        </Badge>
+                                    :
+                                    <Badge variant="secondary">
+                                        Unspent
+                                    </Badge>
+                            }
+                        </React.Fragment>
+                    }
                 </p>
                 {
                     addr !== null ?
@@ -68,7 +90,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                                 Balance: {addr.balance}i
                             </p>
                             {
-                                addr !== null && addr.txs.length === 100 &&
+                                addr.txs !== null && addr.txs.length === 100 &&
                                 <Alert variant={"warning"}>
                                     Max. 100 transactions are shown.
                                 </Alert>
