@@ -40,8 +40,11 @@ func runLiveFeed() {
 		if !tangle_model.IsNodeSynced() {
 			return
 		}
-		<-newTxRateLimiter.C
-		liveFeedWorkerPool.TrySubmit(transaction.Tx)
+		select {
+		case <-newTxRateLimiter.C:
+			liveFeedWorkerPool.TrySubmit(transaction.Tx)
+		default:
+		}
 	})
 
 	notifyLMChanged := events.NewClosure(func(bndl *tangle_model.Bundle) {
