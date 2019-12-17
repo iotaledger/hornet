@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	isSyncThreshold = 5
+	isSyncThreshold = 1
 )
 
 var (
@@ -136,14 +136,16 @@ func run(plugin *node.Plugin) {
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
-			if (firstSeenLatestMilestoneIndex == 0) || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) || ((firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) > isSyncThreshold) {
+			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		newTxWorkerPool.TrySubmit(transaction)
+		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
+			newTxWorkerPool.TrySubmit(transaction)
+		}
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(transaction *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
