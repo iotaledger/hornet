@@ -130,7 +130,8 @@ var webSocketWriteTimeout = time.Duration(3) * time.Second
 
 var (
 	upgrader = websocket.Upgrader{
-		HandshakeTimeout: webSocketWriteTimeout,
+		HandshakeTimeout:  webSocketWriteTimeout,
+		EnableCompression: true,
 	}
 )
 

@@ -1,6 +1,8 @@
 package spa
 
 import (
+	"time"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tangle_model "github.com/gohornet/hornet/packages/model/tangle"
@@ -13,7 +15,7 @@ import (
 )
 
 var liveFeedWorkerCount = 1
-var liveFeedWorkerQueueSize = 100
+var liveFeedWorkerQueueSize = 50
 var liveFeedWorkerPool *workerpool.WorkerPool
 
 func configureLiveFeed() {
@@ -32,7 +34,13 @@ func configureLiveFeed() {
 
 func runLiveFeed() {
 
+	newTxRateLimiter := time.NewTicker(time.Second / 10)
+
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+		if !tangle_model.IsNodeSynced() {
+			return
+		}
+		<-newTxRateLimiter.C
 		liveFeedWorkerPool.TrySubmit(transaction.Tx)
 	})
 
@@ -48,6 +56,7 @@ func runLiveFeed() {
 		log.Info("Stopping SPA[TxUpdater] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
+		newTxRateLimiter.Stop()
 		liveFeedWorkerPool.StopAndWait()
 		log.Info("Stopping SPA[TxUpdater] ... done")
 	}, shutdown.ShutdownPrioritySPA)
