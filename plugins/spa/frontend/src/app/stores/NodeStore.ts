@@ -446,10 +446,10 @@ export class NodeStore {
     @computed
     get tpsSeries() {
         let incoming = Object.assign({}, chartSeriesOpts,
-            series("Incoming", 'rgba(14, 230, 183,1)', 'rgba(14, 230, 183,0.4)')
+            series("Incoming", 'rgba(159, 53, 230,1)', 'rgba(159, 53, 230,0.4)')
         );
         let outgoing = Object.assign({}, chartSeriesOpts,
-            series("Outgoing", 'rgba(14, 230, 100,1)', 'rgba(14, 230, 100,0.4)')
+            series("Outgoing", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
         );
         let ne = Object.assign({}, chartSeriesOpts,
             series("New", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
@@ -460,13 +460,13 @@ export class NodeStore {
             let metric: TPSMetric = this.collected_tps_metrics[i];
             labels.push(metric.ts);
             incoming.data.push(metric.incoming);
-            outgoing.data.push(metric.outgoing);
+            outgoing.data.push(-metric.outgoing);
             ne.data.push(metric.new);
         }
 
         return {
             labels: labels,
-            datasets: [incoming, outgoing, ne],
+            datasets: [incoming, ne, outgoing],
         };
     }
 

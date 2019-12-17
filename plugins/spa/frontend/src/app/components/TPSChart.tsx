@@ -28,12 +28,23 @@ const lineChartOptions = Object.assign({
                 display: false
             },
             ticks: {
+                callback: function (value, index, values) {
+                    return Math.abs(value);
+                },
                 fontSize: 10,
                 maxTicksLimit: 4,
                 beginAtZero: true,
             },
         }],
     },
+    tooltips: {
+        callbacks: {
+            label: function (tooltipItem, data) {
+                let label = data.datasets[tooltipItem.datasetIndex].label;
+                return `${label} ${Math.abs(tooltipItem.value)}`;
+            }
+        }
+    }
 }, defaultChartOptions);
 
 @inject("nodeStore")
