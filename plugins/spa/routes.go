@@ -2,13 +2,14 @@ package spa
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
+
 	"github.com/gobuffalo/packr/v2"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"net/http"
-	"time"
 )
 
 var ErrInvalidParameter = errors.New("invalid parameter")
@@ -107,7 +108,7 @@ func registerWSClient() (uint64, chan interface{}) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
 	clientID := nextClientID
-	channel := make(chan interface{}, 50)
+	channel := make(chan interface{}, 100)
 	preFeed(channel)
 	clients[clientID] = channel
 	nextClientID++
@@ -125,6 +126,7 @@ func websocketRoute(c echo.Context) error {
 		return err
 	}
 	defer ws.Close()
+	ws.EnableWriteCompression(true)
 
 	// cleanup client websocket
 	clientID, channel := registerWSClient()
@@ -135,8 +137,13 @@ func websocketRoute(c echo.Context) error {
 		clientsMu.Unlock()
 	}()
 
+	msgRateLimiter := time.NewTicker(time.Second / 20)
+	defer msgRateLimiter.Stop()
+
 	for {
-		if err := ws.WriteJSON(<-channel); err != nil {
+		<-msgRateLimiter.C
+		msg := <-channel
+		if err := ws.WriteJSON(msg); err != nil {
 			log.Errorf("error while writing to web socket client %s: %s", c.RealIP(), err.Error())
 			break
 		}

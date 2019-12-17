@@ -57,8 +57,8 @@ export default class TPSChart extends React.Component<Props, any> {
                     <Card.Title>Transactions Per Second</Card.Title>
                     <small>
                         Incoming: {this.props.nodeStore.last_tps_metric.incoming}.
-                        Outgoing: {this.props.nodeStore.last_tps_metric.outgoing}.
                         New: {this.props.nodeStore.last_tps_metric.new}.
+                        Outgoing: {this.props.nodeStore.last_tps_metric.outgoing}.
                     </small>
 
                     <Line height={50} data={this.props.nodeStore.tpsSeries} options={lineChartOptions}/>
