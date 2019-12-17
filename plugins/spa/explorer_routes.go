@@ -1,17 +1,18 @@
 package spa
 
 import (
+	"net/http"
+	"strconv"
+	"sync"
+
+	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	. "github.com/iotaledger/iota.go/trinary"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"net/http"
-	"strconv"
-	"sync"
 )
 
 type ExplorerTx struct {
@@ -188,6 +189,13 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 			return c.JSON(http.StatusOK, result)
 		}
 
+		if len(search) < 81 {
+			return errors.Wrapf(ErrInvalidParameter, "search hash invalid: %s", search)
+		}
+
+		// auto. remove checksum
+		search = search[:81]
+
 		wg := sync.WaitGroup{}
 		wg.Add(3)
 		go func() {
@@ -287,7 +295,10 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 }
 
 func findAddress(hash Hash) (*ExplorerAdress, error) {
-	if !guards.IsTrytesOfExactLength(hash, consts.HashTrytesSize) {
+	if len(hash) > 81 {
+		hash = hash[:81]
+	}
+	if  !guards.IsTrytesOfExactLength(hash, consts.HashTrytesSize) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
@@ -296,30 +307,33 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 		return nil, ErrInternalError
 	}
 
-	if len(txHashes) == 0 {
-		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
-	}
-
 	txs := make([]*ExplorerTx, 0, len(txHashes))
-	for i := 0; i < len(txHashes); i++ {
-		txHash := txHashes[i]
-		tx, err := tangle.GetTransaction(txHash)
-		if err != nil {
-			return nil, err
+	if len(txHashes) != 0 {
+		for i := 0; i < len(txHashes); i++ {
+			txHash := txHashes[i]
+			tx, err := tangle.GetTransaction(txHash)
+			if err != nil {
+				return nil, err
+			}
+			if tx == nil {
+				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
+			}
+			expTx, err := createExplorerTx(tx.GetHash(), tx)
+			if err != nil {
+				return nil, err
+			}
+			txs = append(txs, expTx)
 		}
-		if tx == nil {
-			return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
-		}
-		expTx, err := createExplorerTx(tx.GetHash(), tx)
-		if err != nil {
-			return nil, err
-		}
-		txs = append(txs, expTx)
 	}
 
 	balance, _, err := tangle.GetBalanceForAddress(hash)
 	if err != nil {
 		return nil, err
 	}
+
+	if len(txHashes) == 0 && balance == 0 {
+		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
+	}
+
 	return &ExplorerAdress{Balance: balance, Txs: txs}, nil
 }
