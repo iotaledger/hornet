@@ -17,11 +17,14 @@ import (
 var liveFeedWorkerCount = 1
 var liveFeedWorkerQueueSize = 50
 var liveFeedWorkerPool *workerpool.WorkerPool
+var newTxRateLimiter *time.Ticker
 
 func configureLiveFeed() {
+	newTxRateLimiter = time.NewTicker(time.Second / 10)
 	liveFeedWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *transaction.Transaction:
+			<-newTxRateLimiter.C
 			sendToAllWSClient(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
 		case milestone_index.MilestoneIndex:
 			if tailTx := getMilestone(x); tailTx != nil {
@@ -34,13 +37,10 @@ func configureLiveFeed() {
 
 func runLiveFeed() {
 
-	newTxRateLimiter := time.NewTicker(time.Second / 10)
-
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !tangle_model.IsNodeSynced() {
 			return
 		}
-		<-newTxRateLimiter.C
 		liveFeedWorkerPool.TrySubmit(transaction.Tx)
 	})
 
@@ -56,7 +56,9 @@ func runLiveFeed() {
 		log.Info("Stopping SPA[TxUpdater] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
-		newTxRateLimiter.Stop()
+		if newTxRateLimiter != nil {
+			newTxRateLimiter.Stop()
+		}
 		liveFeedWorkerPool.StopAndWait()
 		log.Info("Stopping SPA[TxUpdater] ... done")
 	}, shutdown.ShutdownPrioritySPA)
