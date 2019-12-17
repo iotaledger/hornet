@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	socketio "github.com/googollee/go-socket.io"
+	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -155,8 +156,8 @@ func onConfirmedTx(tx *hornet.Transaction, msIndex milestone_index.MilestoneInde
 			if isValue {
 				// Mark all different Txs in all bundles as reattachment
 				for _, bundle := range bundleBucket.Bundles() {
-					for _, tx := range bundle.GetTransactions() {
-						reattachmentWorkerPool.TrySubmit(tx)
+					for _, txHash := range bundle.GetTransactionHashes() {
+						reattachmentWorkerPool.TrySubmit(txHash)
 					}
 				}
 			}
@@ -209,9 +210,7 @@ func onNewMilestone(bundle *tangle.Bundle) {
 	broadcastLock.Unlock()
 }
 
-func onReattachment(tx *hornet.Transaction) {
-
-	txHash := tx.GetHash()
+func onReattachment(txHash trinary.Hash) {
 
 	txRingBufferLock.Lock()
 	if wsTx, exists := txPointerMap[txHash]; exists {

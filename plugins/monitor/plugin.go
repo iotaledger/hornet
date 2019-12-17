@@ -24,6 +24,7 @@ import (
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
@@ -125,7 +126,7 @@ func configure(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize))
 
 	reattachmentWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onReattachment(task.Param(0).(*hornet.Transaction))
+		onReattachment(task.Param(0).(trinary.Hash))
 		task.Return(nil)
 	}, workerpool.WorkerCount(reattachmentWorkerCount), workerpool.QueueSize(reattachmentWorkerQueueSize))
 
