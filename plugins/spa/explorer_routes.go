@@ -127,6 +127,7 @@ func createExplorerTx(hash Hash, tx *hornet.Transaction) (*ExplorerTx, error) {
 type ExplorerAdress struct {
 	Balance uint64        `json:"balance"`
 	Txs     []*ExplorerTx `json:"txs"`
+	Spent   bool          `json:"spent"`
 }
 
 type SearchResult struct {
@@ -326,6 +327,11 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 		}
 	}
 
+	spent, err := tangle.WasAddressSpentFrom(hash)
+	if err != nil {
+		return nil, ErrInternalError
+	}
+
 	balance, _, err := tangle.GetBalanceForAddress(hash)
 	if err != nil {
 		return nil, err
@@ -335,5 +341,5 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
 	}
 
-	return &ExplorerAdress{Balance: balance, Txs: txs}, nil
+	return &ExplorerAdress{Balance: balance, Txs: txs, Spent: spent}, nil
 }

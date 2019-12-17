@@ -10,6 +10,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
 import Alert from "react-bootstrap/Alert";
+import Badge from "react-bootstrap/Badge";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -60,6 +61,27 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                 <h3>Address {addr !== null && <span>({addr.txs.length} Transactions)</span>}</h3>
                 <p>
                     {hash} {' '}
+                    {
+                        addr &&
+                        <React.Fragment>
+                            <br/>
+                            {
+                                addr.spent ?
+                                    addr.balance > 0 ?
+                                        <Badge variant="danger">
+                                            Spent - funds are at risk
+                                        </Badge>
+                                        :
+                                        <Badge variant="warning">
+                                            Spent
+                                        </Badge>
+                                    :
+                                    <Badge variant="secondary">
+                                        Unspent
+                                    </Badge>
+                            }
+                        </React.Fragment>
+                    }
                 </p>
                 {
                     addr !== null ?

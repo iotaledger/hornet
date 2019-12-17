@@ -34,6 +34,7 @@ export class Transaction {
 class AddressResult {
     balance: number;
     txs: Array<Transaction>;
+    spent: boolean;
 }
 
 class ConfirmedState {
