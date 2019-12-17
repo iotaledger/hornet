@@ -298,7 +298,7 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 	if len(hash) > 81 {
 		hash = hash[:81]
 	}
-	if  !guards.IsTrytesOfExactLength(hash, consts.HashTrytesSize) {
+	if !guards.IsTrytesOfExactLength(hash, consts.HashTrytesSize) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
