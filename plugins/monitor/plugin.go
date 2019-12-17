@@ -24,10 +24,11 @@ import (
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
-	isSyncThreshold = 5
+	isSyncThreshold = 1
 )
 
 var (
@@ -125,7 +126,7 @@ func configure(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize))
 
 	reattachmentWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onReattachment(task.Param(0).(*hornet.Transaction))
+		onReattachment(task.Param(0).(trinary.Hash))
 		task.Return(nil)
 	}, workerpool.WorkerCount(reattachmentWorkerCount), workerpool.QueueSize(reattachmentWorkerQueueSize))
 
@@ -135,14 +136,16 @@ func run(plugin *node.Plugin) {
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
-			if (firstSeenLatestMilestoneIndex == 0) || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) || ((firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) > isSyncThreshold) {
+			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		newTxWorkerPool.TrySubmit(transaction)
+		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
+			newTxWorkerPool.TrySubmit(transaction)
+		}
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(transaction *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
