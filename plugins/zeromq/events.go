@@ -127,8 +127,8 @@ func publishTxTrytes(tx *hornet.Transaction) error {
 	}
 
 	messages := []string{
-		tx.Tx.Hash, // Transaction hash
 		trytes,     // Transaction trytes
+		tx.Tx.Hash, // Transaction hash
 	}
 
 	return publisher.Send(topicTxTrytes, messages)
