@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"runtime"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
 	"go.uber.org/atomic"
 
-	"github.com/gohornet/hornet/packages/logger"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -21,7 +23,7 @@ import (
 )
 
 var (
-	log = logger.NewLogger("Tangle")
+	log *logger.Logger
 
 	receiveTxWorkerCount = 2 * runtime.NumCPU()
 	receiveTxQueueSize   = 10000
@@ -35,6 +37,8 @@ var (
 )
 
 func configureTangleProcessor(plugin *node.Plugin) {
+	log = logger.NewLogger("Tangle", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+
 	configureGossipSolidifier()
 	configurePersisters()
 

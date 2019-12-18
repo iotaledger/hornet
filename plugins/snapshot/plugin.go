@@ -3,12 +3,13 @@ package snapshot
 import (
 	"strings"
 
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/node"
@@ -16,12 +17,13 @@ import (
 
 var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
-	log    = logger.NewLogger("Snapshot")
+	log    *logger.Logger
 
 	NullHash = strings.Repeat("9", 81)
 )
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("Snapshot", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 	installGenesisTransaction()
 }
 

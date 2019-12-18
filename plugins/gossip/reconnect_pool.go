@@ -5,18 +5,21 @@ import (
 	"strconv"
 	"time"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/pkg/errors"
 
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/iputils"
-	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/network"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
-var reconnectLogger = logger.NewLogger("Reconnect Pool")
+var (
+	reconnectLogger *logger.Logger
+)
 
 type NeighborConfig struct {
 	Identity   string `json:"identity"`
@@ -24,6 +27,8 @@ type NeighborConfig struct {
 }
 
 func configureReconnectPool() {
+	reconnectLogger = logger.NewLogger("Reconnect Pool", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+
 	neighborConfig := []NeighborConfig{}
 	if err := parameter.NodeConfig.UnmarshalKey("network.neighbors", &neighborConfig); err != nil {
 		panic(err)

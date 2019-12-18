@@ -141,7 +141,7 @@
   "node": {
     "disableplugins": [],
     "enableplugins": [],
-    "loglevel": 3
+    "loglevel": 127
   },
   "protocol": {
     "mwm": 14

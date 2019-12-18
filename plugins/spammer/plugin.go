@@ -4,20 +4,21 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gohornet/hornet/packages/logger"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/timeutil"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/parameter"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
 	PLUGIN = node.NewPlugin("Spammer", node.Disabled, configure, run)
-	log    = logger.NewLogger("Spammer")
+	log    *logger.Logger
 
 	address            string
 	message            string
@@ -29,6 +30,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("Spammer", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	address = trinary.Pad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = parameter.NodeConfig.GetString("spammer.message")

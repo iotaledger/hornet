@@ -8,16 +8,23 @@ import (
 	"time"
 
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/gohornet/hornet/packages/logger"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/node"
 )
 
 // maximum amount of time to wait for background processes to terminate. After that the process is killed.
 const WAIT_TO_KILL_TIME_IN_SECONDS = 120
 
-var log = logger.NewLogger("Graceful Shutdown")
+var (
+	PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, configure)
+	log    *logger.Logger
+)
 
-var PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, func(plugin *node.Plugin) {
+func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("Graceful Shutdown", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+
 	gracefulStop := make(chan os.Signal)
 
 	signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -49,4 +56,4 @@ var PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, func(plugin *node
 
 		daemon.ShutdownAndWait()
 	}()
-})
+}
