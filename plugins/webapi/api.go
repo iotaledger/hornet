@@ -19,7 +19,8 @@ func webAPIRoute() {
 		}
 
 		// Get the command and check if it's implemented
-		cmd := strings.ToLower(fmt.Sprint(request["command"]))
+		originCommand := fmt.Sprint(request["command"])
+		cmd := strings.ToLower(originCommand)
 
 		implementation, apiCallExists := implementedAPIcalls[cmd]
 
@@ -27,7 +28,7 @@ func webAPIRoute() {
 		_, permited := permitedEndpoints[cmd]
 		if apiCallExists && !permited && c.Request.RemoteAddr[:9] != "127.0.0.1" {
 			e := ErrorReturn{
-				Error: "'command' is protected",
+				Error: fmt.Sprintf("Command [%v] is protected", originCommand),
 			}
 			c.JSON(http.StatusForbidden, e)
 			return
@@ -35,7 +36,7 @@ func webAPIRoute() {
 
 		if !apiCallExists {
 			e := ErrorReturn{
-				Error: "'command' parameter has not been specified",
+				Error: fmt.Sprintf("Command [%v] is unknown", originCommand),
 			}
 			c.JSON(http.StatusBadRequest, e)
 			return
