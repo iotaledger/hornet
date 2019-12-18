@@ -234,6 +234,8 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
+		log.Infof("You can now access TangleMonitor using: http://%s:4434", parameter.NodeConfig.GetString("monitor.host"))
+
 		<-shutdownSignal
 		log.Info("Stopping Monitor ...")
 
