@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
+
+	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/mitchellh/mapstructure"
+
 	"github.com/gohornet/hornet/packages/curl"
-	"github.com/iotaledger/hive.go/parameter"
 )
 
 func init() {
@@ -115,6 +117,11 @@ func attachToTangle(i interface{}, c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
+	}
+
+	// Reverse the transactions the same way IRI does (for whatever reason)
+	for i, j := 0, len(txs)-1; i < j; i, j = i+1, j-1 {
+		txs[i], txs[j] = txs[j], txs[i]
 	}
 
 	powedTxTrytes := transaction.MustTransactionsToTrytes(txs)
