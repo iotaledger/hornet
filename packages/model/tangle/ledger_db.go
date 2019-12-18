@@ -276,10 +276,10 @@ func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, 
 
 	balances := make(map[trinary.Hash]uint64)
 
-	err := ledgerDatabase.ForEachPrefix(balancePrefix, func(entry database.Entry) (stop bool) {
+	err := ledgerDatabase.StreamForEachPrefix(balancePrefix, func(entry database.Entry) error {
 		address := trinary.MustBytesToTrytes(entry.Key, 81)
 		balances[address] = balanceFromBytes(entry.Value)
-		return false
+		return nil
 	})
 
 	if err != nil {
@@ -297,3 +297,53 @@ func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, 
 
 	return balances, ledgerMilestoneIndex, err
 }
+
+/*
+// Ledger should be locked between CountBalances and StreamBalancesToWriter
+func CountBalanceEntries() (int32, error) {
+
+	var balancesCount int32
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(balancePrefix, func(entry database.KeyOnlyEntry) error {
+		balancesCount++
+		return nil
+	})
+
+	if err != nil {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to count balances in database")
+	}
+
+	return balancesCount, nil
+}
+
+// Ledger should be locked before
+func StreamBalancesToWriter(buf io.Writer, balancesCount int32, totalBalanceDiffs map[trinary.Hash]uint64) (int, error) {
+
+	balancesWritten := 0
+
+	var total uint64
+	err := ledgerDatabase.StreamForEachPrefix(balancePrefix, func(entry database.Entry) error {
+
+
+		err := binary.Write(buf, binary.BigEndian, entry.Key[:49])
+		if err != nil {
+			return err
+		}
+
+		balance := balanceFromBytes(entry.Value)
+		total += balance
+		balancesWritten++
+
+		return binary.Write(buf, binary.BigEndian, balance)
+	})
+
+	if err != nil {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to stream balances from database")
+	}
+
+	if total != compressed.TOTAL_SUPPLY {
+		panic(fmt.Sprintf("StreamBalancesToWriter() Total does not match supply: %d != %d", total, compressed.TOTAL_SUPPLY))
+	}
+
+	return balancesWritten, nil
+}
+*/

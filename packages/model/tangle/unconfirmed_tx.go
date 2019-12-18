@@ -76,17 +76,17 @@ func ReadUnconfirmedTxHashOperations(milestoneIndex milestone_index.MilestoneInd
 
 	var transactionHashes []trinary.Hash
 
-	err := unconfirmedTransactionDatabase.ForEach(func(entry database.Entry) (stop bool) {
+	err := unconfirmedTransactionDatabase.StreamForEach(func(entry database.Entry) error {
 		index := milestoneIndexFromBytes(entry.Value)
 		if index <= milestoneIndex {
 			transactionHashes = append(transactionHashes, transactionHashFromDatabaseKey(entry.Key))
 		}
-		return false
+		return nil
 	})
 
 	if err != nil {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to read unconfirmed tx from database")
-	} else {
-		return transactionHashes, nil
 	}
+
+	return transactionHashes, nil
 }

@@ -56,7 +56,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	msWalkStartIndex := milestone_index.MilestoneIndex(math.Max(0, float64(lastSolidIndex-milestone_index.MilestoneIndex(depth))))
 
 	// either take the valid wanted ms at the given depth or use the initial snapshot milestone
-	msWalkStartIndex = milestone_index.MilestoneIndex(math.Max(float64(msWalkStartIndex), float64(tangle.GetSnapshotInfo().LedgerIndex+1)))
+	msWalkStartIndex = milestone_index.MilestoneIndex(math.Max(float64(msWalkStartIndex), float64(tangle.GetSnapshotInfo().SnapshotIndex+1)))
 	if msWalkStartIndex > lastSolidIndex {
 		msWalkStartIndex = lastSolidIndex
 	}

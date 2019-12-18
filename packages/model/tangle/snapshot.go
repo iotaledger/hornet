@@ -16,10 +16,10 @@ var (
 )
 
 type SnapshotInfo struct {
-	Hash         trinary.Hash
-	LedgerIndex  milestone_index.MilestoneIndex
-	PruningIndex milestone_index.MilestoneIndex
-	Timestamp    int64
+	Hash          trinary.Hash
+	SnapshotIndex milestone_index.MilestoneIndex
+	PruningIndex  milestone_index.MilestoneIndex
+	Timestamp     int64
 }
 
 func loadSnapshotInfo() {
@@ -29,7 +29,7 @@ func loadSnapshotInfo() {
 	}
 	snapshot = info
 	if info != nil {
-		println(fmt.Sprintf("SnapshotInfo: %d (%v) Timestamp: %v", info.LedgerIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second)))
+		println(fmt.Sprintf("SnapshotInfo: %d (%v) Timestamp: %v", info.SnapshotIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second)))
 	}
 }
 
@@ -40,24 +40,24 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	}
 
 	hash := trinary.MustBytesToTrytes(bytes[:49])
-	ledgerIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[49:53]))
+	snapshotIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[49:53]))
 	pruningIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[53:57]))
 	timestamp := int64(binary.LittleEndian.Uint64(bytes[57:65]))
 
 	return &SnapshotInfo{
-		Hash:         hash,
-		LedgerIndex:  ledgerIndex,
-		PruningIndex: pruningIndex,
-		Timestamp:    timestamp,
+		Hash:          hash,
+		SnapshotIndex: snapshotIndex,
+		PruningIndex:  pruningIndex,
+		Timestamp:     timestamp,
 	}, nil
 }
 
 func (i *SnapshotInfo) GetBytes() []byte {
 	bytes := trinary.MustTrytesToBytes(i.Hash)
 
-	ledgerIndexBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(ledgerIndexBytes, uint32(i.LedgerIndex))
-	bytes = append(bytes, ledgerIndexBytes...)
+	snapshotIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(snapshotIndexBytes, uint32(i.SnapshotIndex))
+	bytes = append(bytes, snapshotIndexBytes...)
 
 	pruningIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(pruningIndexBytes, uint32(i.PruningIndex))
@@ -70,14 +70,18 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(milestoneHash trinary.Hash, ledgerIndex milestone_index.MilestoneIndex, pruningIndex milestone_index.MilestoneIndex, timestamp int64) {
-	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), pruning index: %d, Timestamp: %v", ledgerIndex, milestoneHash, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second)))
+func SetSnapshotMilestone(milestoneHash trinary.Hash, snapshotIndex milestone_index.MilestoneIndex, pruningIndex milestone_index.MilestoneIndex, timestamp int64) {
+	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), pruning index: %d, Timestamp: %v", snapshotIndex, milestoneHash, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second)))
 	sn := &SnapshotInfo{
-		Hash:         milestoneHash,
-		LedgerIndex:  ledgerIndex,
-		PruningIndex: pruningIndex,
-		Timestamp:    timestamp,
+		Hash:          milestoneHash,
+		SnapshotIndex: snapshotIndex,
+		PruningIndex:  pruningIndex,
+		Timestamp:     timestamp,
 	}
+	SetSnapshotInfo(sn)
+}
+
+func SetSnapshotInfo(sn *SnapshotInfo) {
 	err := storeSnapshotInfoInDatabase(sn)
 	if err != nil {
 		panic(err)

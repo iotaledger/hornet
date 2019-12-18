@@ -112,8 +112,25 @@
     "port": 8083,
     "networkName": "meets HORNET"
   },
+  "pruning": {
+    "enabled": false,
+    "delay": 40000
+  },
   "localsnapshots": {
+    "enabled": true,
+    "depth": 100,
+    "intervalsynced": 10,
+    "intervalunsynced": 1000,
     "path": "latest-export.gz.bin"
+  },
+  "globalsnapshot": {
+    "load": false,
+    "path": "snapshotMainnet.txt",
+    "spentaddressespaths": ["previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"],
+    "index": 1050000
+  },
+  "privatetangle": {
+    "ledgerstatepath": "balances.txt"
   },
   "milestones": {
     "coordinator": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",

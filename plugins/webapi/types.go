@@ -1,6 +1,8 @@
 package webapi
 
-import "github.com/gohornet/hornet/plugins/gossip"
+import (
+	"github.com/gohornet/hornet/plugins/gossip"
+)
 
 //////////////////// addNeighbors /////////////////////////////////
 
@@ -350,3 +352,17 @@ type GetLedgerDiffExtReturn struct {
 }
 
 ///////////////////////////////////////////////////////////////////
+
+/////////////////// createSnapshot ////////////////////////
+
+// CreateSnapshot struct
+type CreateSnapshot struct {
+	Command     string `json:"command"`
+	TargetIndex uint64 `json:"targetIndex"`
+	FilePath    string `json:"filePath"`
+}
+
+// GetSnapshotReturn struct
+type CreateSnapshotReturn struct {
+	Duration int `json:"duration"`
+}
