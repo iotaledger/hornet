@@ -27,7 +27,7 @@ func webAPIRoute() {
 		_, permited := permitedEndpoints[cmd]
 		if apiCallExists && !permited && c.Request.RemoteAddr[:9] != "127.0.0.1" {
 			e := ErrorReturn{
-				Error: "'command' is protected",
+				Error: fmt.Sprintf("%v is protected", cmd),
 			}
 			c.JSON(http.StatusForbidden, e)
 			return
@@ -35,7 +35,7 @@ func webAPIRoute() {
 
 		if !apiCallExists {
 			e := ErrorReturn{
-				Error: "'command' parameter has not been specified",
+				Error: fmt.Sprintf("%v parameter has not been specified", cmd),
 			}
 			c.JSON(http.StatusBadRequest, e)
 			return
