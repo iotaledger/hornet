@@ -13,8 +13,7 @@ var (
 	log    *logger.Logger
 
 	// config options
-	maxDepth                      int
-	belowMaxDepthTransactionLimit int
+	maxDepth int
 )
 
 func WalkerStatsCaller(handler interface{}, params ...interface{}) {
@@ -33,5 +32,4 @@ func configure(node *node.Plugin) {
 	log = logger.NewLogger("Tip-Sel", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
-	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 }
