@@ -159,6 +159,7 @@ type GetNodeInfoReturn struct {
 	LatestMilestoneIndex               uint32   `json:"latestMilestoneIndex"`
 	LatestSolidSubtangleMilestone      string   `json:"latestSolidSubtangleMilestone"`
 	LatestSolidSubtangleMilestoneIndex uint32   `json:"latestSolidSubtangleMilestoneIndex"`
+	IsSynced                           bool     `json:"isSynced"`
 	MilestoneStartIndex                uint32   `json:"milestoneStartIndex,omitempty"`
 	LastSnapshottedMilestoneIndex      uint32   `json:"lastSnapshottedMilestoneIndex,omitempty"`
 	Neighbors                          uint     `json:"neighbors"`
