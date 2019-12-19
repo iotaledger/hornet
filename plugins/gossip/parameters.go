@@ -4,7 +4,7 @@ import flag "github.com/spf13/pflag"
 
 func init() {
 	flag.Bool("network.autoTetheringEnabled", false, "Enable new connections from unknown neighbors")
-	flag.Bool("network.preferIPv6", true, "Defines if IPv6 is preferred for neighbors added through the API")
+	flag.Bool("network.preferIPv6", false, "Defines if IPv6 is preferred for neighbors added through the API")
 	flag.String("network.address", "0.0.0.0", "Bind the TCP server socket for the gossip protocol to an address")
 	flag.Int("network.port", 15600, "Bind the TCP server socket for the gossip protocol to a port")
 	flag.StringSlice("network.neighbors", nil, "Set the URLs and IP addresses of neighbors")
