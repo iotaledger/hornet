@@ -412,11 +412,13 @@ func wakeupReconnectPool() {
 	reconnectPoolWakeup <- struct{}{}
 }
 
-func AddNeighbor(neighborAddr string) error {
+func AddNeighbor(neighborAddr string, preferIPv6 bool) error {
 	originAddr, err := iputils.ParseOriginAddress(neighborAddr)
 	if err != nil {
 		return errors.Wrapf(err, "invalid neighbor address %s", neighborAddr)
 	}
+
+	originAddr.PreferIPv6 = preferIPv6
 
 	// check whether the neighbor is already connected, in-flight or in the reconnect pool
 	// given any of the IP addresses to which the neighbor address resolved to
