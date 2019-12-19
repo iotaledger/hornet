@@ -2,6 +2,57 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.8] - 19.12.2019
+
+### Added
+
+    - Rate limiting for WebSocket sends
+    - Show address balance even if no txs are available (Dashboard - Explorer)
+    - Show spent state (Dashboard - Explorer)
+    - Port configuration for Monitor plugin
+    - Config to prefer IPv6 (addNeighbors)
+    - Alternative addNeighbors command
+
+### Changed
+
+    - Release archives now contain a dir which wraps all files
+    - API errors
+    - TPS chart for better visibility of input and output (Dashboard)
+
+### Fixed
+
+    - Check wasSyncedBefore in ZMQ and Monitor
+    - Wrong ZeroMQ `tx_trytes` response order
+    - Deadlock if node is shut down during startup phase
+    - Different TX order than IRI (attachToTangle)
+    - Log level was ignored
+
+### Config file changes
+
+New options:
+
+```json
+
+"network": {
+    "preferIPv6": false,
+}
+
+"monitor": {
+    "domain": "",
+    "host": "127.0.0.1",
+    "port": 4434,
+    "apiPort": 4433
+}
+```
+
+**Changed option (you have to edit it in your config):**
+
+```json
+"node": {
+    "loglevel": 127
+}
+```
+
 ## [0.2.7] - 17.12.2019
 
 ### Added
@@ -43,6 +94,7 @@ All notable changes to this project will be documented in this file.
 ### Config file changes
 
 New option:
+
 ```json
   "useProfile": "auto",
 ```
@@ -77,6 +129,7 @@ This release fixes a CRITICAL bug! You have to delete your database folder.
 ### Config file changes
 
 New settings:
+
 ```json
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
@@ -95,7 +148,6 @@ New settings:
     "host": "127.0.0.1",
   }
 ```
-
 
 ## [0.2.1] - 13.12.2019
 
