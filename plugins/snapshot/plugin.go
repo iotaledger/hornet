@@ -32,6 +32,10 @@ func run(plugin *node.Plugin) {
 	localSnapshotsFile := parameter.NodeConfig.GetString("localSnapshots.path")
 	loadGlobalSnapshot := parameter.NodeConfig.GetBool("loadGlobalSnapshot")
 	if tangle.GetSnapshotInfo() == nil {
+		if tangle.IsDatabaseCorrupted() {
+			log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
+		}
+
 		var err error
 		if loadGlobalSnapshot {
 			err = LoadGlobalSnapshot("snapshotMainnet.txt", []string{"previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"}, 1050000)
