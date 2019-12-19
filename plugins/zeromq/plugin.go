@@ -3,7 +3,11 @@ package zeromq
 import (
 	"time"
 
-	"github.com/gohornet/hornet/packages/logger"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
@@ -12,9 +16,6 @@ import (
 	"github.com/gohornet/hornet/packages/timeutil"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/tangle"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 // PLUGIN ZeroMQ
 var (
 	PLUGIN = node.NewPlugin("ZeroMQ", node.Disabled, configure, run)
-	log    = logger.NewLogger("ZeroMQ")
+	log    *logger.Logger
 
 	newTxWorkerCount     = 1
 	newTxWorkerQueueSize = 10000
@@ -49,6 +50,7 @@ var (
 
 // Configure the zeromq plugin
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("ZeroMQ", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*hornet.Transaction))
@@ -73,7 +75,7 @@ func configure(plugin *node.Plugin) {
 
 // Start the zeromq plugin
 func run(plugin *node.Plugin) {
-	log.Infof("Starting ZeroMQ Publisher (%s://%s:%d) ...", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.host"), parameter.NodeConfig.GetInt("zmq.port"))
+	log.Info("Starting ZeroMQ Publisher ...")
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
@@ -114,7 +116,8 @@ func run(plugin *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("ZeroMQ Publisher", func(shutdownSignal <-chan struct{}) {
-		log.Infof("Starting ZeroMQ Publisher (port %d)", parameter.NodeConfig.GetInt("zmq.port"))
+		log.Info("Starting ZeroMQ Publisher ... done")
+		log.Infof("You can now listen to ZMQ via: %s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.host"), parameter.NodeConfig.GetInt("zmq.port"))
 
 		go startPublisher()
 

@@ -516,7 +516,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return fmt.Errorf("ledgerEntries: %s", err)
 	}
 
-	log.Infof("Importing %d spent addresses", spentAddrsCount)
+	log.Infof("Importing %d spent addresses. This can take a while...", spentAddrsCount)
 
 	batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
 	for i := 0; i < batchAmount; i++ {
@@ -544,7 +544,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		}
 
 		tangle.StoreSpentAddressesBytesInDatabase(batchEntries)
-		log.Infof("Processed %d/%d", batchEnd, spentAddrsCount)
+		log.Infof("Processed %d/%d spent addresses", batchEnd, spentAddrsCount)
 	}
 
 	log.Info("Finished loading snapshot")

@@ -50,6 +50,7 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	// Solid milestone index
 	smi := tangle.GetSolidMilestoneIndex()
 	info.LatestSolidSubtangleMilestoneIndex = uint32(smi)
+	info.IsSynced = tangle.IsNodeSynced()
 
 	// Solid milestone hash
 	smBndl, err := tangle.GetMilestone(smi)

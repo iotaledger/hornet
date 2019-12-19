@@ -2,17 +2,19 @@ package tipselection
 
 import (
 	"github.com/iotaledger/hive.go/events"
-	"github.com/gohornet/hornet/packages/logger"
-	"github.com/gohornet/hornet/packages/node"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
+
+	"github.com/gohornet/hornet/packages/node"
 )
 
-var PLUGIN = node.NewPlugin("Tip-Sel", node.Enabled, configure, run)
-var log = logger.NewLogger("Tip-Sel")
+var (
+	PLUGIN = node.NewPlugin("Tip-Sel", node.Enabled, configure)
+	log    *logger.Logger
 
-// config options
-var maxDepth int
-var belowMaxDepthTransactionLimit int
+	// config options
+	maxDepth int
+)
 
 func WalkerStatsCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*TipSelStats))(params[0].(*TipSelStats))
@@ -27,9 +29,7 @@ type tipselevents struct {
 }
 
 func configure(node *node.Plugin) {
-	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
-	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
-}
+	log = logger.NewLogger("Tip-Sel", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
-func run(run *node.Plugin) {
+	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 }

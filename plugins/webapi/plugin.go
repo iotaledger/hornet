@@ -2,26 +2,27 @@ package webapi
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 
-	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
 // PLUGIN WebAPI
-var PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
-var log = logger.NewLogger("WebAPI")
-
 var (
+	PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
+	log    *logger.Logger
+
 	server              *http.Server
 	permitedEndpoints   = make(map[string]string)
 	implementedAPIcalls = make(map[string]apiEndpoint)
@@ -33,6 +34,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("WebAPI", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 
@@ -99,7 +101,7 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting WebAPI server ... done")
 
-		serveAddress := parameter.NodeConfig.GetString("api.host") + ":" + strconv.Itoa(parameter.NodeConfig.GetInt("api.port"))
+		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.host"), parameter.NodeConfig.GetInt("api.port"))
 
 		server = &http.Server{
 			Addr:    serveAddress,
@@ -107,6 +109,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		go func() {
+			log.Infof("You can now access the API using: http://%s", serveAddress)
 			err := server.ListenAndServe()
 			if err != nil {
 				if err == http.ErrServerClosed {

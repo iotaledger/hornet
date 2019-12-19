@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"runtime"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
 	"go.uber.org/atomic"
 
-	"github.com/gohornet/hornet/packages/logger"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -21,13 +23,14 @@ import (
 )
 
 var (
-	log = logger.NewLogger("Tangle")
+	log *logger.Logger
 
 	receiveTxWorkerCount = 2 * runtime.NumCPU()
 	receiveTxQueueSize   = 10000
 	receiveTxWorkerPool  *workerpool.WorkerPool
 
 	lastIncomingTPS uint32
+	lastNewTPS      uint32
 	lastOutgoingTPS uint32
 
 	markedSpentAddrs atomic.Uint64
@@ -35,6 +38,8 @@ var (
 )
 
 func configureTangleProcessor(plugin *node.Plugin) {
+	log = logger.NewLogger("Tangle", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+
 	configureGossipSolidifier()
 	configurePersisters()
 
@@ -55,6 +60,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 
 	metrics.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
+		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	}))
 }
@@ -184,7 +190,7 @@ func printStatus() {
 				"bndlsValidated: %d, "+
 				"txReqs(Tx/Rx): %d/%d, "+
 				"newTxs: %d, "+
-				"TPS: %d (in) / %d (out)",
+				"TPS: %d (in) / %d (new) / %d (out)",
 			requestCount,
 			requestedMilestone,
 			receiveTxWorkerPool.GetPendingQueueSize(),
@@ -196,5 +202,6 @@ func printStatus() {
 			server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
 			server.SharedServerMetrics.GetNewTransactionsCount(),
 			lastIncomingTPS,
+			lastNewTPS,
 			lastOutgoingTPS))
 }

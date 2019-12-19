@@ -13,7 +13,12 @@ import (
 	"github.com/googollee/go-engine.io/transport/websocket"
 	socketio "github.com/googollee/go-socket.io"
 
-	"github.com/gohornet/hornet/packages/logger"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
@@ -21,10 +26,6 @@ import (
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/tangle"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
@@ -33,8 +34,7 @@ const (
 
 var (
 	PLUGIN = node.NewPlugin("Monitor", node.Disabled, configure, run)
-
-	log = logger.NewLogger("Monitor")
+	log    *logger.Logger
 
 	newTxWorkerCount     = 1
 	newTxWorkerQueueSize = 10000
@@ -85,6 +85,8 @@ func configureSocketIOServer() error {
 }
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("Monitor", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+
 	initRingBuffer()
 
 	gin.SetMode(gin.ReleaseMode)
@@ -210,13 +212,13 @@ func run(plugin *node.Plugin) {
 
 		// socket.io and web server
 		server = &http.Server{
-			Addr:    fmt.Sprintf("%s:4434", parameter.NodeConfig.GetString("monitor.host")),
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.port")),
 			Handler: router,
 		}
 
 		// REST api server
 		apiServer = &http.Server{
-			Addr:    fmt.Sprintf("%s:4433", parameter.NodeConfig.GetString("monitor.host")),
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.apiPort")),
 			Handler: api,
 		}
 
@@ -233,6 +235,8 @@ func run(plugin *node.Plugin) {
 				log.Errorf(err.Error())
 			}
 		}()
+
+		log.Infof("You can now access TangleMonitor using: http://%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.port"))
 
 		<-shutdownSignal
 		log.Info("Stopping Monitor ...")

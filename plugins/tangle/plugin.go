@@ -18,11 +18,10 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-// region plugin module setup //////////////////////////////////////////////////////////////////////////////////////////
-
-var PLUGIN = node.NewPlugin("Tangle", node.Enabled, configure, run)
-
-var belowMaxDepthTransactionLimit int
+var (
+	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
+	belowMaxDepthTransactionLimit int
+)
 
 func configure(plugin *node.Plugin) {
 
@@ -106,5 +105,3 @@ func run(plugin *node.Plugin) {
 		timeutil.Ticker(database.CleanupBadgerInstance, 5*time.Minute, shutdownSignal)
 	}, shutdown.ShutdownPriorityBadgerGarbageCollection)
 }
-
-// endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////

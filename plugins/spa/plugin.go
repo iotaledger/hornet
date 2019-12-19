@@ -7,7 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/packages/logger"
+	"github.com/gorilla/websocket"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -19,17 +27,11 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip/server"
 	"github.com/gohornet/hornet/plugins/metrics"
 	tangle_plugin "github.com/gohornet/hornet/plugins/tangle"
-	"github.com/gorilla/websocket"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
 )
 
 var (
 	PLUGIN = node.NewPlugin("SPA", node.Enabled, configure, run)
-	log    = logger.NewLogger("SPA")
+	log    *logger.Logger
 
 	nodeStartAt = time.Now()
 
@@ -43,6 +45,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("SPA", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
@@ -109,7 +112,8 @@ func run(plugin *node.Plugin) {
 	setupRoutes(e)
 	addr := parameter.NodeConfig.GetString("dashboard.host")
 	port := parameter.NodeConfig.GetInt("dashboard.port")
-	log.Infof("SPA listening on: %s:%d", addr, port)
+
+	log.Infof("You can now access the dashboard using: http://%s:%d", addr, port)
 	go e.Start(fmt.Sprintf("%s:%d", addr, port))
 }
 
