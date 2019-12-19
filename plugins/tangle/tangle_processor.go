@@ -30,6 +30,7 @@ var (
 	receiveTxWorkerPool  *workerpool.WorkerPool
 
 	lastIncomingTPS uint32
+	lastNewTPS      uint32
 	lastOutgoingTPS uint32
 
 	markedSpentAddrs atomic.Uint64
@@ -59,6 +60,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 
 	metrics.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
+		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	}))
 }
@@ -188,7 +190,7 @@ func printStatus() {
 				"bndlsValidated: %d, "+
 				"txReqs(Tx/Rx): %d/%d, "+
 				"newTxs: %d, "+
-				"TPS: %d (in) / %d (out)",
+				"TPS: %d (in) / %d (new) / %d (out)",
 			requestCount,
 			requestedMilestone,
 			receiveTxWorkerPool.GetPendingQueueSize(),
@@ -200,5 +202,6 @@ func printStatus() {
 			server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
 			server.SharedServerMetrics.GetNewTransactionsCount(),
 			lastIncomingTPS,
+			lastNewTPS,
 			lastOutgoingTPS))
 }
