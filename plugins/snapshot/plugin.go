@@ -7,6 +7,7 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/model/hornet"
@@ -41,6 +42,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		if err != nil {
+			tangle.MarkDatabaseCorrupted()
 			log.Panic(err.Error())
 			return
 		}

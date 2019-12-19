@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/compressed"
@@ -24,6 +26,10 @@ import (
 
 const (
 	SpentAddressesImportBatchSize = 100000
+)
+
+var (
+	ErrSnapshotImportWasAborted = errors.New("snapshot import was aborted")
 )
 
 type localSnapshot struct {
@@ -230,6 +236,10 @@ func loadSpentAddresses(filePathSpent string) error {
 
 	ioReader := bufio.NewReader(spentFile)
 	for err == nil {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		line, err = ioReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -287,6 +297,10 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 
 	ioReader := bufio.NewReader(ledgerFile)
 	for err == nil {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		line, err = ioReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -415,6 +429,10 @@ func LoadSnapshotFromFile(filePath string) error {
 	log.Info("Importing solid entry points")
 
 	for i := 0; i < int(solidEntryPointsCount); i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		var val int32
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
@@ -441,6 +459,10 @@ func LoadSnapshotFromFile(filePath string) error {
 	log.Info("Importing seen milestones")
 
 	for i := 0; i < int(seenMilestonesCount); i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		var val int32
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
@@ -466,6 +488,10 @@ func LoadSnapshotFromFile(filePath string) error {
 
 	ledgerState := make(map[trinary.Hash]uint64)
 	for i := 0; i < int(ledgerEntriesCount); i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		var val uint64
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
@@ -494,6 +520,9 @@ func LoadSnapshotFromFile(filePath string) error {
 
 	batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
 	for i := 0; i < batchAmount; i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
 
 		var batchEntries [][]byte
 		batchStart := int32(i * SpentAddressesImportBatchSize)
