@@ -45,7 +45,13 @@ func configure(plugin *node.Plugin) {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 	}
 
-	tangle.MarkDatabaseCorrupted()
+	// Create a background worker that marks the database as corrupted at clean startup.
+	// This has to be done in a background worker, because the Daemon could receive
+	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
+	// and the database will never be marked as corrupted.
+	daemon.BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
+		tangle.MarkDatabaseCorrupted()
+	})
 
 	tangle.ConfigureMilestones(
 		trinary.Hash(parameter.NodeConfig.GetString("milestones.coordinator")),
