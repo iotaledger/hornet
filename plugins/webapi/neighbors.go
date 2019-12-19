@@ -59,21 +59,21 @@ func addNeighbors(i interface{}, c *gin.Context) {
 func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	addedNeighbors := 0
 
-	for _, uri := range s.Uris {
+	for _, neighbor := range s.Neighbors {
 
-		if strings.Contains(uri.Identity, "tcp://") {
-			uri.Identity = uri.Identity[6:]
-		} else if strings.Contains(uri.Identity, "://") {
+		if strings.Contains(neighbor.Identity, "tcp://") {
+			neighbor.Identity = neighbor.Identity[6:]
+		} else if strings.Contains(neighbor.Identity, "://") {
 			continue
 		}
 
 		// TODO: Add alias (uri.Alias)
 
-		if err := gossip.AddNeighbor(uri.Identity, uri.PreferIPv6); err != nil {
-			log.Warningf("Can't add neighbor %s, Error: %s", uri.Identity, err)
+		if err := gossip.AddNeighbor(neighbor.Identity, neighbor.PreferIPv6); err != nil {
+			log.Warningf("Can't add neighbor %s, Error: %s", neighbor.Identity, err)
 		} else {
 			addedNeighbors++
-			log.Infof("Added neighbor: %s", uri.Identity)
+			log.Infof("Added neighbor: %s", neighbor.Identity)
 		}
 	}
 

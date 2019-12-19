@@ -12,12 +12,12 @@ type AddNeighbors struct {
 
 // AddNeighborsHornet struct
 type AddNeighborsHornet struct {
-	Command string `json:"command"`
-	Uris    []URI  `json:"uris"`
+	Command   string     `json:"command"`
+	Neighbors []Neighbor `json:"neighbors"`
 }
 
-// URI struct
-type URI struct {
+// Neighbor struct
+type Neighbor struct {
 	Identity   string `json:"identity"`
 	PreferIPv6 bool   `json:"preferIPv6"`
 	Alias      string `json:"alias"`
@@ -235,22 +235,6 @@ type GetTrytes struct {
 type GetTrytesReturn struct {
 	Trytes   []string `json:"trytes"`
 	Duration int      `json:"duration"`
-}
-
-///////////////////////////////////////////////////////////////////
-
-///////////////////////// Neighbor ////////////////////////////////
-
-// Neighbor struct
-type Neighbor struct {
-	Address                           string `json:"address"`
-	NumberOfAllTransactions           uint32 `json:"numberOfAllTransactions"`
-	NumberOfRandomTransactionRequests uint32 `json:"numberOfRandomTransactionRequests"`
-	NumberOfNewTransactions           uint32 `json:"numberOfNewTransactions"`
-	NumberOfInvalidTransactions       uint32 `json:"numberOfInvalidTransactions"`
-	NumberOfStaleTransactions         uint32 `json:"numberOfStaleTransactions"`
-	NumberOfSentTransactions          uint32 `json:"numberOfSentTransactions"`
-	Connectiontype                    string `json:"connectiontype"`
 }
 
 ///////////////////////////////////////////////////////////////////
