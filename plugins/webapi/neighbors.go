@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/iotaledger/hive.go/parameter"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -19,6 +20,8 @@ func addNeighbors(i interface{}, c *gin.Context) {
 	an := &AddNeighbors{}
 	e := ErrorReturn{}
 	addedNeighbors := 0
+
+	preferIPv6 := parameter.NodeConfig.GetBool("network.preferIPv6")
 
 	if err := mapstructure.Decode(i, an); err != nil {
 		e.Error = "Internal error"
@@ -34,7 +37,7 @@ func addNeighbors(i interface{}, c *gin.Context) {
 			continue
 		}
 
-		if err := gossip.AddNeighbor(uri); err != nil {
+		if err := gossip.AddNeighbor(uri, preferIPv6); err != nil {
 			log.Warningf("Can't add neighbor %s, Error: %s", uri, err)
 		} else {
 			addedNeighbors++
