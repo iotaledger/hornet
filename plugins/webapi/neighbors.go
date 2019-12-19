@@ -17,6 +17,14 @@ func init() {
 }
 
 func addNeighbors(i interface{}, c *gin.Context) {
+
+	// Check if HORNET style addNeighbors call was made
+	han := &AddNeighborsHornet{}
+	if err := mapstructure.Decode(i, han); err == nil {
+		addNeighborsWithAlias(han, c)
+		return
+	}
+
 	an := &AddNeighbors{}
 	e := ErrorReturn{}
 	addedNeighbors := 0
@@ -42,6 +50,30 @@ func addNeighbors(i interface{}, c *gin.Context) {
 		} else {
 			addedNeighbors++
 			log.Infof("Added neighbor: %s", uri)
+		}
+	}
+
+	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
+}
+
+func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
+	addedNeighbors := 0
+
+	for _, uri := range s.Uris {
+
+		if strings.Contains(uri.Identity, "tcp://") {
+			uri.Identity = uri.Identity[6:]
+		} else if strings.Contains(uri.Identity, "://") {
+			continue
+		}
+
+		// TODO: Add alias (uri.Alias)
+
+		if err := gossip.AddNeighbor(uri.Identity, uri.PreferIPv6); err != nil {
+			log.Warningf("Can't add neighbor %s, Error: %s", uri.Identity, err)
+		} else {
+			addedNeighbors++
+			log.Infof("Added neighbor: %s", uri.Identity)
 		}
 	}
 

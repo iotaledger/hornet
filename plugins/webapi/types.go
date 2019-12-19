@@ -4,10 +4,23 @@ import "github.com/gohornet/hornet/plugins/gossip"
 
 //////////////////// addNeighbors /////////////////////////////////
 
-// AddNeighbors struct
+// AddNeighbors legacy struct
 type AddNeighbors struct {
 	Command string   `json:"command"`
 	Uris    []string `json:"uris"`
+}
+
+// AddNeighborsHornet struct
+type AddNeighborsHornet struct {
+	Command string `json:"command"`
+	Uris    []URI  `json:"uris"`
+}
+
+// URI struct
+type URI struct {
+	Identity   string `json:"identity"`
+	PreferIPv6 bool   `json:"preferIPv6"`
+	Alias      string `json:"alias"`
 }
 
 // AddNeighborsResponse struct
