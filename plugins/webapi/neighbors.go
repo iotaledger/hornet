@@ -21,8 +21,10 @@ func addNeighbors(i interface{}, c *gin.Context) {
 	// Check if HORNET style addNeighbors call was made
 	han := &AddNeighborsHornet{}
 	if err := mapstructure.Decode(i, han); err == nil {
-		addNeighborsWithAlias(han, c)
-		return
+		if len(han.Neighbors) != 0 {
+			addNeighborsWithAlias(han, c)
+			return
+		}
 	}
 
 	an := &AddNeighbors{}
@@ -67,7 +69,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 			continue
 		}
 
-		// TODO: Add alias (uri.Alias)
+		// TODO: Add alias (neighbor.Alias)
 
 		if err := gossip.AddNeighbor(neighbor.Identity, neighbor.PreferIPv6); err != nil {
 			log.Warningf("Can't add neighbor %s, Error: %s", neighbor.Identity, err)
