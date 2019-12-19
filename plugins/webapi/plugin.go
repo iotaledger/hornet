@@ -2,8 +2,8 @@ package webapi
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -99,7 +99,7 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting WebAPI server ... done")
 
-		serveAddress := parameter.NodeConfig.GetString("api.host") + ":" + strconv.Itoa(parameter.NodeConfig.GetInt("api.port"))
+		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.host"), parameter.NodeConfig.GetInt("api.port"))
 
 		server = &http.Server{
 			Addr:    serveAddress,
@@ -107,6 +107,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		go func() {
+			log.Infof("You can now access the API using: http://%s", serveAddress)
 			err := server.ListenAndServe()
 			if err != nil {
 				if err == http.ErrServerClosed {
