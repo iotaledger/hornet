@@ -210,13 +210,13 @@ func run(plugin *node.Plugin) {
 
 		// socket.io and web server
 		server = &http.Server{
-			Addr:    fmt.Sprintf("%s:4434", parameter.NodeConfig.GetString("monitor.host")),
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.port")),
 			Handler: router,
 		}
 
 		// REST api server
 		apiServer = &http.Server{
-			Addr:    fmt.Sprintf("%s:4433", parameter.NodeConfig.GetString("monitor.host")),
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.apiPort")),
 			Handler: api,
 		}
 

@@ -115,7 +115,9 @@
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
     "domain": "",
-    "host": "127.0.0.1"
+    "host": "127.0.0.1",
+    "port": 4434,
+    "apiPort": 4433
   },
   "network": {
     "address": "0.0.0.0",
