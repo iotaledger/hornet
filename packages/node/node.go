@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/gohornet/hornet/packages/logger"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 type Node struct {

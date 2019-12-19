@@ -9,19 +9,20 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 
-	"github.com/gohornet/hornet/packages/logger"
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
 // PLUGIN WebAPI
-var PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
-var log = logger.NewLogger("WebAPI")
-
 var (
+	PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
+	log    *logger.Logger
+
 	server              *http.Server
 	permitedEndpoints   = make(map[string]string)
 	implementedAPIcalls = make(map[string]apiEndpoint)
@@ -33,6 +34,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("WebAPI", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 
