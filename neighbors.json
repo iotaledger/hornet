@@ -1,0 +1,21 @@
+{
+  "autotetheringenabled": true,
+  "maxneighbors": 5,
+  "neighbors": [
+    {
+      "identity": "example1.neighbor.com:15600",
+      "alias": "My Neighbor 1",
+      "preferIPv6": false
+    },
+    {
+      "identity": "example2.neighbor.com:15600",
+      "alias": "My Neighbor 2",
+      "preferIPv6": false
+    },
+    {
+      "identity": "example3.neighbor.com:15600",
+      "alias": "My Neighbor 3",
+      "preferIPv6": false
+    }
+  ]
+}
