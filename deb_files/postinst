@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -e
+
+SERVICE_NAME="hornet"
+SYSTEMD_SERVICE="${SERVICE_NAME}.service"
+
+case "$1" in
+    configure|abort-upgrade|abort-remove|abort-deconfigure)
+        deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null || true
+        systemctl --system daemon-reload >/dev/null
+        if [ -n "$2" ]; then
+            deb-systemd-invoke restart "${SYSTEMD_SERVICE}" >/dev/null
+        fi
+
+        adduser --no-create-home --system --group hornet >/dev/null
+    ;;
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+

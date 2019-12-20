@@ -130,6 +130,37 @@ archives:
       - config.json
       - neighbors.json
 
+# Additional packages (i.e. deb)
+nfpms:
+-
+  id: nfpm
+  package_name: hornet
+  file_name_template: "{{ tolower .ProjectName }}_{{ replace .Version \"v\" \"\" }}_{{ .Arch }}"
+  vendor: HORNET
+  maintainer: HORNET
+  description:
+    HORNET is a lightweight alternative to IOTA's fullnode software “IRI”.
+  formats:
+    - deb
+  bindir: /usr/bin
+  files:
+    "deb_files/hornet.service": "/lib/systemd/system/hornet.service"
+    "deb_files/download_snapshot.sh" : "/usr/bin/hornet_download_snapshot.sh"
+  config_files:
+    "config.json": "/etc/hornet/config.json"
+    "neighbors.json": "/etc/hornet/neighbors.json"
+  dependencies:
+    - systemd
+    - wget
+    - curl
+    - bash
+  scripts:
+    preremove: "deb_files/prerm"
+    postremove: "deb_files/postrm"
+    postinstall: "deb_files/postinst"
+  replacements:
+    arm: armhf
+
 # Checksum
 checksum:
   name_template: "checksums.txt"
