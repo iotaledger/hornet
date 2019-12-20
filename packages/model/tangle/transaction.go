@@ -6,6 +6,7 @@ import (
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/iota.go/trinary"
+	"time"
 )
 
 var txStorage *objectstorage.ObjectStorage
@@ -59,7 +60,7 @@ func configureTransactionStorage() {
 	txStorage = objectstorage.New(database.GetBadgerInstance(),
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
-		objectstorage.CacheTime(0),
+		objectstorage.CacheTime(5*time.Second),
 		objectstorage.PersistenceEnabled(true))
 }
 
