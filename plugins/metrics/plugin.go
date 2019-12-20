@@ -4,7 +4,8 @@ import (
 	"time"
 
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/gohornet/hornet/packages/node"
+	"github.com/iotaledger/hive.go/node"
+
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/packages/timeutil"
 )

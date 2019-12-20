@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/gobuffalo/packr/v2"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var ErrInvalidParameter = errors.New("invalid parameter")

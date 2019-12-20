@@ -7,7 +7,7 @@ import (
 
 	zmq "github.com/go-zeromq/zmq4"
 
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 // Publisher is a simple zmq publisher abstraction

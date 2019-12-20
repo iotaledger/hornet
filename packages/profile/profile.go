@@ -6,8 +6,9 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger/v2/options"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/shirou/gopsutil/mem"
+
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (

@@ -1,11 +1,13 @@
 package gossip
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/byteutils"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 

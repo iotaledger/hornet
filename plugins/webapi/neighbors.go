@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 func init() {

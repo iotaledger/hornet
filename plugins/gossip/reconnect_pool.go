@@ -10,10 +10,10 @@ import (
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/parameter"
 
 	"github.com/gohornet/hornet/packages/iputils"
 	"github.com/gohornet/hornet/packages/network"
+	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
