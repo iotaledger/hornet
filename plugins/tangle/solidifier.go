@@ -207,12 +207,12 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 				// Go on with the check
 			}
 
-			cachedEntryTx, _ := tangle.GetCachedTransaction(entryTxHash)
-			if !cachedEntryTx.Exists() {
+			entryTx, _ := tangle.GetCachedTransaction(entryTxHash)
+			if !entryTx.Exists() {
 				log.Panicf("solidQueueCheck: Transaction not found: %v", entryTxHash)
 			}
 
-			if solid, newlySolid := checkSolidity(cachedEntryTx, false); solid {
+			if solid, newlySolid := checkSolidity(entryTx, false); solid {
 				// Add all tx to the map that approve this solid transaction
 				for approverTxHash := range approvers[entryTxHash] {
 					entryTxs[approverTxHash] = struct{}{}
@@ -220,15 +220,15 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 
 				if newlySolid && tangle.IsNodeSynced() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					cachedEntryTx.RegisterConsumer()
-					gossipSolidifierWorkerPool.Submit(cachedEntryTx)
+					entryTx.RegisterConsumer()
+					gossipSolidifierWorkerPool.Submit(entryTx)
 				}
 
 				// Delete the tx from the map since it is solid
 				delete(entryTxs, entryTxHash)
 				newSolidTxFound = true
 			}
-			cachedEntryTx.Release()
+			entryTx.Release()
 		}
 	}
 
