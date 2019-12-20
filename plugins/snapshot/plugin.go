@@ -1,17 +1,15 @@
 package snapshot
 
 import (
+	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/node"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"time"
-
-	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/node"
 )
 
 var (

@@ -3,13 +3,14 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"github.com/iotaledger/hive.go/parameter"
 	"strings"
 
 	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/parameter"
+	hiveNode "github.com/iotaledger/hive.go/node"
 )
 
 var (
@@ -30,11 +31,11 @@ func onAddPlugin(name string, status int) {
 
 func init() {
 
-	for name, status := range parameter.GetPlugins() {
+	for name, status := range hiveNode.GetPlugins() {
 		onAddPlugin(name, status)
 	}
 
-	parameter.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
+	hiveNode.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
 
 	flag.Usage = printUsage
 }
