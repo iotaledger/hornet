@@ -4,10 +4,7 @@ import (
 	"github.com/gohornet/hornet/packages/parameter"
 )
 
-type NeighborContainer struct {
-	Neighbors []ConfigNeighbor `mapstructure:"neighbors"`
-}
-
+// ConfigNeighbor struct
 type ConfigNeighbor struct {
 	Identity   string `json:"identity"`
 	Alias      string `json:"alias"`
@@ -47,15 +44,12 @@ func init() {
 	// "Set the maximum number of neighbors"
 	parameter.NeighborsConfig.SetDefault("maxNeighbors", 5)
 
-	/*
-		// "Set the URLs and IP addresses of neighbors"
-		parameter.NeighborsConfig.SetDefault("neighbors", NeighborContainer{
-			Neighbors: []ConfigNeighbor{
-				ConfigNeighbor{
-					Identity:   "example",
-					Alias:      "default",
-					PreferIPv6: false,
-				},
-			}})
-	*/
+	// "Set the URLs and IP addresses of neighbors"
+	parameter.NeighborsConfig.SetDefault("neighbors", []ConfigNeighbor{
+		ConfigNeighbor{
+			Identity:   "example",
+			Alias:      "default",
+			PreferIPv6: false,
+		},
+	})
 }

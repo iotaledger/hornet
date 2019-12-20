@@ -69,11 +69,11 @@ type reconnectneighbor struct {
 func availableNeighborSlotsFilled() bool {
 	// while this check is not thread-safe, initiated connections will be dropped
 	// when their handshaking was done but already all neighbor slots are filled
-	return len(connectedNeighbors) >= parameter.NeighborsConfig.GetInt("network.maxNeighbors")
+	return len(connectedNeighbors) >= parameter.NeighborsConfig.GetInt("maxNeighbors")
 }
 
 func configureNeighbors() {
-	autoTetheringEnabled = parameter.NeighborsConfig.GetBool("network.autoTetheringEnabled")
+	autoTetheringEnabled = parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
 
 	Events.NeighborPutBackIntoReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
 		gossipLogger.Infof("added neighbor %s back into reconnect pool...", neighbor.InitAddress.String())

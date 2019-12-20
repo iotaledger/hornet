@@ -40,7 +40,7 @@ func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 		return err
 	}
 
-	parameter.PrintConfig(NeighborsConfig, ignoreSettingsAtPrint...)
+	parameter.PrintConfig(NeighborsConfig)
 
 	return nil
 }
