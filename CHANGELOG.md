@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.9] - 20.12.2019
+
+### Fixed
+
+    - `addNeighbors` deadlock
+    - No printout of database corrupt message (panic)
+
 ## [0.2.8] - 19.12.2019
 
 ### Added
