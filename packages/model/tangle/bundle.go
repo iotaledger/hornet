@@ -480,6 +480,7 @@ func (bundle *Bundle) GetLedgerChanges() (map[trinary.Trytes]int64, bool) {
 	for txHash := range bundle.txs {
 		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
 		if tx.GetTransaction().Tx.Value == 0 {
+			tx.Release()
 			continue
 		}
 		changes[tx.GetTransaction().Tx.Address] += tx.GetTransaction().Tx.Value
@@ -519,6 +520,7 @@ func (bundle *Bundle) GetHead() *CachedTransaction {
 			bundle.headTx = tx.GetTransaction().Tx.Hash
 			return tx
 		}
+		tx.Release()
 	}
 	return nil
 }
@@ -545,6 +547,7 @@ func (bundle *Bundle) GetTail() *CachedTransaction {
 			bundle.headTx = tx.GetTransaction().Tx.Hash
 			return tx
 		}
+		tx.Release()
 	}
 	return nil
 }
