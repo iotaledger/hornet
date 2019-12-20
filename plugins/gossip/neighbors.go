@@ -409,7 +409,10 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 }
 
 func wakeupReconnectPool() {
-	reconnectPoolWakeup <- struct{}{}
+	select {
+	case reconnectPoolWakeup <- struct{}{}:
+	default:
+	}
 }
 
 func AddNeighbor(neighborAddr string, preferIPv6 bool) error {

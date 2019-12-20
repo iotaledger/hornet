@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.9] - 20.12.2019
+
+### Fixed
+
+    - `addNeighbors` deadlock
+    - Message logger caused fatal panic
+
 ## [0.2.8] - 19.12.2019
 
 ### Added

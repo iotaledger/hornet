@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/trinary"
 )
@@ -21,9 +22,12 @@ import (
 var (
 	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
 	belowMaxDepthTransactionLimit int
+	log                           *logger.Logger
 )
 
 func configure(plugin *node.Plugin) {
+
+	log = logger.NewLogger("Tangle", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 	RefsAnInvalidBundleCache = datastructure.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
