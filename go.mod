@@ -2,6 +2,8 @@ module github.com/gohornet/hornet
 
 go 1.13
 
+replace github.com/iotaledger/hive.go => github.com/alexsporn/hive.go v0.0.0-20191220005311-26550cf1c146
+
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/dgraph-io/badger/v2 v2.0.1-0.20191206180002-8b99eb433aa7

@@ -3,7 +3,6 @@ package tangle
 import (
 	"time"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -25,9 +24,12 @@ var (
 func configureGossipSolidifier() {
 	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		// Check solidity of gossip txs if the node is synced
+		tx := task.Param(0).(*tangle.CachedTransaction)
 		if tangle.IsNodeSynced() {
-			checkSolidityAndPropagate(task.Param(0).(*hornet.Transaction))
+			checkSolidityAndPropagate(tx)
 		}
+		// Release the consumer, since it was registered before adding to the pool
+		tx.Release()
 
 		task.Return(nil)
 	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize))
@@ -37,8 +39,9 @@ func configureGossipSolidifier() {
 func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
-	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if tangle.IsNodeSynced() {
+			transaction.RegisterConsumer()
 			gossipSolidifierWorkerPool.Submit(transaction)
 		}
 	})
@@ -57,10 +60,13 @@ func runGossipSolidifier() {
 }
 
 // Checks and updates the solid flag of a transaction and its approvers (future cone).
-func checkSolidityAndPropagate(transaction *hornet.Transaction) {
+func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
 
-	txsToCheck := make(map[string]*hornet.Transaction)
-	txsToCheck[transaction.GetHash()] = transaction
+	//Register consumer here, since we will add it to txsToCheck which will release every tx when they are processed
+	transaction.RegisterConsumer()
+
+	txsToCheck := make(map[string]*tangle.CachedTransaction)
+	txsToCheck[transaction.GetTransaction().GetHash()] = transaction
 
 	// Loop as long as new transactions are added in every loop cycle
 	for len(txsToCheck) != 0 {
@@ -69,19 +75,21 @@ func checkSolidityAndPropagate(transaction *hornet.Transaction) {
 
 			solid, _ := checkSolidity(tx, true)
 			if solid {
-				if int32(time.Now().Unix())-tx.GetSolidificationTimestamp() > solidifierThresholdInSeconds {
+				if int32(time.Now().Unix())-tx.GetTransaction().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions
+					tx.Release()
 					continue
 				}
 
 				transactionApprovers, _ := tangle.GetApprovers(txHash)
 				for _, approverHash := range transactionApprovers.GetHashes() {
-					approver, _ := tangle.GetTransaction(approverHash)
-					if approver != nil {
+					approver, _ := tangle.GetCachedTransaction(approverHash)
+					if approver.Exists() {
 						txsToCheck[approverHash] = approver
 					}
 				}
 			}
+			tx.Release()
 		}
 	}
 }

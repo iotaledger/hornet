@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/iotaledger/iota.go/consts"
 	"io"
 	"math"
 	"os"
@@ -279,7 +280,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 	tangle.ResetSolidEntryPoints()
 
 	// Genesis transaction
-	tangle.SolidEntryPointsAdd(NullHash, snapshotIndex)
+	tangle.SolidEntryPointsAdd(consts.NullHashTrytes, snapshotIndex)
 	tangle.StoreSolidEntryPoints()
 
 	log.Infof("Importing initial ledger from %v", filePathLedger)
@@ -341,7 +342,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 		}
 	}
 
-	tangle.SetSnapshotMilestone(NullHash, snapshotIndex, snapshotIndex, 0)
+	tangle.SetSnapshotMilestone(consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0)
 
 	log.Info("Finished loading snapshot")
 
@@ -374,7 +375,7 @@ func LoadSnapshotFromFile(filePath string) error {
 	tangle.ResetSolidEntryPoints()
 
 	// Genesis transaction
-	tangle.SolidEntryPointsAdd(NullHash, 0)
+	tangle.SolidEntryPointsAdd(consts.NullHashTrytes, 0)
 
 	/*
 		ls := &localSnapshot{

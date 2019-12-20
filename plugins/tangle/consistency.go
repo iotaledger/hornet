@@ -110,18 +110,22 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			tx, err := tangle.GetTransaction(txHash)
+			tx, err := tangle.GetCachedTransaction(txHash)
 			if err != nil {
 				log.Panic(err)
 			}
+			if !tx.Exists() {
+				log.Panicf("Tx with %v not found", txHash)
+			}
 
 			// ledger update process is write locked
-			confirmed, at := tx.GetConfirmed()
+			confirmed, at := tx.GetTransaction().GetConfirmed()
 			if confirmed {
 				if at > latestSolidMilestoneIndex {
-					log.Panicf("transaction %s was confirmed by a newer milestone %d", tx.GetHash(), at)
+					log.Panicf("transaction %s was confirmed by a newer milestone %d", tx.GetTransaction().GetHash(), at)
 				}
 				// only take transactions into account that have not been confirmed by the referenced or older milestones
+				tx.Release()
 				continue
 			}
 
@@ -129,23 +133,27 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			// check the same bundle twice, however, we still add the trunk and branch of the
 			// bundle transaction to ensure, that if a transaction within the bundle would reference
 			// another trunk (as seen from the view of the bundle), we'd get that cone too.
-			if !tx.IsTail() {
-				txsToTraverse[tx.GetTrunk()] = struct{}{}
-				txsToTraverse[tx.GetBranch()] = struct{}{}
+			if !tx.GetTransaction().IsTail() {
+				txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
+				txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
+				tx.Release()
 				continue
 			}
 
-			bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+			bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
 			if err != nil {
+				tx.Release()
 				return nil, err
 			}
 
-			bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetHash())
+			bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetTransaction().GetHash())
 			if bundle == nil || !bundle.IsComplete() {
+				tx.Release()
 				return nil, ErrRefBundleNotComplete
 			}
 
 			if !bundle.IsValid() {
+				tx.Release()
 				return nil, ErrRefBundleNotValid
 			}
 
@@ -156,8 +164,9 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				}
 			}
 
-			txsToTraverse[tx.GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetBranch()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
+			tx.Release()
 		}
 	}
 

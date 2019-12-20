@@ -6,7 +6,6 @@ import (
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -110,8 +109,12 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 }
 
 // RequestApproveesAndRemove add the approvees of a tx to the queue and removes the tx from the queue
-func RequestApprovees(tx *hornet.Transaction) {
-	txHash := tx.GetHash()
+func RequestApprovees(tx *tangle.CachedTransaction) {
+
+	tx.RegisterConsumer()
+	defer tx.Release()
+
+	txHash := tx.GetTransaction().GetHash()
 
 	if tangle.SolidEntryPointsContain(txHash) {
 		// Ignore solid entry points (snapshot milestone included)
@@ -122,9 +125,9 @@ func RequestApprovees(tx *hornet.Transaction) {
 	if contains {
 		// Tx was requested => request trunk and branch tx
 
-		approveeHashes := []trinary.Hash{tx.GetTrunk()}
-		if tx.GetTrunk() != tx.GetBranch() {
-			approveeHashes = append(approveeHashes, tx.GetBranch())
+		approveeHashes := []trinary.Hash{tx.GetTransaction().GetTrunk()}
+		if tx.GetTransaction().GetTrunk() != tx.GetTransaction().GetBranch() {
+			approveeHashes = append(approveeHashes, tx.GetTransaction().GetBranch())
 		}
 
 		approvesToAdd := trinary.Hashes{}
@@ -155,11 +158,13 @@ func RequestMilestone(milestone *tangle.Bundle) bool {
 	var requested bool
 
 	milestoneHeadTx := milestone.GetHead()
+	defer milestoneHeadTx.Release()
+
 	reqMilestoneIndex := milestone.GetMilestoneIndex()
 
-	approveeHashes := []trinary.Hash{milestoneHeadTx.GetTrunk()}
-	if milestoneHeadTx.GetTrunk() != milestoneHeadTx.GetBranch() {
-		approveeHashes = append(approveeHashes, milestoneHeadTx.GetBranch())
+	approveeHashes := []trinary.Hash{milestoneHeadTx.GetTransaction().GetTrunk()}
+	if milestoneHeadTx.GetTransaction().GetTrunk() != milestoneHeadTx.GetTransaction().GetBranch() {
+		approveeHashes = append(approveeHashes, milestoneHeadTx.GetTransaction().GetBranch())
 	}
 
 	for _, approveeHash := range approveeHashes {

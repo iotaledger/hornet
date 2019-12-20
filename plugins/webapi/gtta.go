@@ -2,10 +2,10 @@ package webapi
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/plugins/tipselection"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
-	"github.com/gohornet/hornet/plugins/tipselection"
 	"net/http"
 )
 

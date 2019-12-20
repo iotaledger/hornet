@@ -1,13 +1,12 @@
 package snapshot
 
 import (
-	"strings"
-
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
+	"time"
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/hornet"
@@ -18,8 +17,6 @@ import (
 var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
-
-	NullHash = strings.Repeat("9", 81)
 )
 
 func configure(plugin *node.Plugin) {
@@ -61,15 +58,16 @@ func installGenesisTransaction() {
 	// ensure genesis transaction exists
 	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
-	genesis.Hash = NullHash
+	genesis.Hash = consts.NullHashTrytes
 	txBytesTruncated := compressed.TruncateTx(trinary.TritsToBytes(genesisTxTrits))
 	genesisTx := hornet.NewTransactionFromAPI(genesis, txBytesTruncated)
-	tangle.StoreTransactionInCache(genesisTx)
+	transaction := tangle.StoreTransaction(genesisTx)
 
 	// ensure the bundle is also existent for the genesis tx
 	genesisBundleBucket, err := tangle.GetBundleBucket(genesis.Bundle)
 	if err != nil {
 		log.Panic(err)
 	}
-	genesisBundleBucket.AddTransaction(genesisTx)
+	genesisBundleBucket.AddTransaction(transaction)
+	transaction.Release()
 }

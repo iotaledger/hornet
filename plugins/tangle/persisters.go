@@ -98,16 +98,16 @@ func configureUnconfirmedTransactionPersister() {
 
 func runUnconfirmedTransactionPersister() {
 
-	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		unconfirmedTxWorkerPool.Submit(&tangle.UnconfirmedTxHashOperation{
-			TxHash:                        transaction.GetHash(),
+			TxHash:                        transaction.GetTransaction().GetHash(),
 			FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
 		})
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(transaction *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+	notifyConfirmedTx := events.NewClosure(func(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		unconfirmedTxWorkerPool.Submit(&tangle.UnconfirmedTxHashOperation{
-			TxHash:    transaction.GetHash(),
+			TxHash:    transaction.GetTransaction().GetHash(),
 			Confirmed: true,
 		})
 	})

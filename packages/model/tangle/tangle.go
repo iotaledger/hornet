@@ -5,7 +5,7 @@ import "github.com/gohornet/hornet/packages/database"
 func ConfigureDatabases(directory string) {
 	database.Settings(directory)
 	configureHealthDatabase()
-	configureTransactionDatabase()
+	configureTransactionStorage()
 	configureBundleDatabase()
 	configureTransactionHashesForAddressDatabase()
 	configureApproversDatabase()

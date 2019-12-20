@@ -1,8 +1,8 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 func (bundle *Bundle) IsMilestone() bool {
@@ -23,17 +23,25 @@ func (bundle *Bundle) SetMilestone(milestone bool) {
 }
 
 func (bundle *Bundle) GetMilestoneIndex() milestone_index.MilestoneIndex {
-	return milestone_index.MilestoneIndex(trinary.TrytesToInt(bundle.GetTail().Tx.ObsoleteTag))
+	tail := bundle.GetTail()
+	defer tail.Release()
+	return milestone_index.MilestoneIndex(trinary.TrytesToInt(tail.GetTransaction().Tx.ObsoleteTag))
 }
 
 func (bundle *Bundle) GetMilestoneHash() trinary.Hash {
-	return bundle.GetTail().GetHash()
+	tail := bundle.GetTail()
+	defer tail.Release()
+	return tail.GetTransaction().GetHash()
 }
 
 func (bundle *Bundle) GetTrunk() trinary.Hash {
-	return bundle.GetHead().GetTrunk()
+	head := bundle.GetHead()
+	defer head.Release()
+	return head.GetTransaction().GetTrunk()
 }
 
 func (bundle *Bundle) GetBranch() trinary.Hash {
-	return bundle.GetHead().GetBranch()
+	head := bundle.GetHead()
+	defer head.Release()
+	return head.GetTransaction().GetBranch()
 }

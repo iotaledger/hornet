@@ -3,20 +3,22 @@ package tangle
 import (
 	"time"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 // confirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction) {
+func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction) {
+	milestoneTail.RegisterConsumer()
+	defer milestoneTail.Release()
+
 	ts := time.Now()
 
 	txsToConfirm := make(map[string]struct{})
 	txsToTraverse := make(map[string]struct{})
 	totalLedgerChanges := make(map[string]int64)
-	txsToTraverse[milestoneTail.GetHash()] = struct{}{}
+	txsToTraverse[milestoneTail.GetTransaction().GetHash()] = struct{}{}
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -35,15 +37,15 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 				continue
 			}
 
-			tx, _ := tangle.GetTransaction(txHash)
-			if tx == nil {
+			tx, _ := tangle.GetCachedTransaction(txHash)
+			if !tx.Exists() {
 				log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 			}
 
-			confirmed, at := tx.GetConfirmed()
+			confirmed, at := tx.GetTransaction().GetConfirmed()
 			if confirmed {
 				if at > milestoneIndex {
-					log.Panicf("transaction %s was already confirmed by a newer milestone %d", tx.GetHash(), at)
+					log.Panicf("transaction %s was already confirmed by a newer milestone %d", tx.GetTransaction().GetHash(), at)
 				}
 
 				// Tx is already confirmed by another milestone => ignore
@@ -56,29 +58,33 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[tx.GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetBranch()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
 
-			if !tx.IsTail() {
+			if !tx.GetTransaction().IsTail() {
+				tx.Release()
 				continue
 			}
 
-			bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+			txBundle := tx.GetTransaction().Tx.Bundle
+			tx.Release()
+
+			bundleBucket, err := tangle.GetBundleBucket(txBundle)
 			if err != nil {
-				log.Panicf("confirmMilestone: BundleBucket not found: %v, Error: %v", tx.Tx.Bundle, err)
+				log.Panicf("confirmMilestone: BundleBucket not found: %v, Error: %v", txBundle, err)
 			}
 
 			bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
 			if bundle == nil {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, tx.Tx.Bundle)
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
 
 			if !bundle.IsValid() {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, tx.Tx.Bundle)
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, txBundle)
 			}
 
 			if !bundle.IsComplete() {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not complete: %v", txHash, tx.Tx.Bundle)
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not complete: %v", txHash, txBundle)
 			}
 
 			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
@@ -105,26 +111,30 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 
 	for txHash := range txsToConfirm {
 
-		tx, _ := tangle.GetTransaction(txHash)
-		if tx == nil {
+		cachedTx, _ := tangle.GetCachedTransaction(txHash)
+		if !cachedTx.Exists() {
 			log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 		}
 
 		// confirm all txs of the bundle
-		bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+		bundleBucket, err := tangle.GetBundleBucket(cachedTx.GetTransaction().Tx.Bundle)
 		if err != nil {
-			log.Panicf("confirmMilestone: BundleBucket not found: %v, Error: %v", tx.Tx.Bundle, err)
+			log.Panicf("confirmMilestone: BundleBucket not found: %v, Error: %v", cachedTx.GetTransaction().Tx.Bundle, err)
 		}
 
 		// we are only iterating over tail txs
 		bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
 		if bundle == nil {
-			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, tx.Tx.Bundle)
+			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, cachedTx.GetTransaction().Tx.Bundle)
 		}
-		for _, bndlTx := range bundle.GetTransactions() {
-			bndlTx.SetConfirmed(true, milestoneIndex)
-			Events.TransactionConfirmed.Trigger(bndlTx, milestoneIndex, milestoneTail.GetTimestamp())
+		cachedTx.Release()
+
+		transactions := bundle.GetTransactions()
+		for _, bndlTx := range transactions {
+			bndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
+			Events.TransactionConfirmed.Trigger(bndlTx, milestoneIndex, milestoneTail.GetTransaction().GetTimestamp())
 		}
+		transactions.Release()
 	}
 
 	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Now().Sub(ts))

@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/mitchellh/mapstructure"
-	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {
@@ -48,15 +48,15 @@ func getTrytes(i interface{}, c *gin.Context) {
 	}
 
 	for _, hash := range gt.Hashes {
-		t, err := tangle.GetTransaction(hash)
+		cachedTx, err := tangle.GetCachedTransaction(hash)
 		if err != nil {
 			e.Error = "Internal error"
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
 
-		if t != nil {
-			tx, err := transaction.TransactionToTrytes(t.Tx)
+		if cachedTx.Exists() {
+			tx, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
 			if err != nil {
 				e.Error = "Internal error"
 				c.JSON(http.StatusInternalServerError, e)
@@ -66,6 +66,7 @@ func getTrytes(i interface{}, c *gin.Context) {
 		} else {
 			trytes = append(trytes, strings.Repeat("9", 2673))
 		}
+		cachedTx.Release()
 	}
 
 	c.JSON(http.StatusOK, GetTrytesReturn{Trytes: trytes})

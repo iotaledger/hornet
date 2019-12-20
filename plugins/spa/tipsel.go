@@ -20,7 +20,8 @@ func configureTipSelMetric() {
 			sendToAllWSClient(&msg{MsgTypeTipSelMetric, x})
 		case milestone_index.MilestoneIndex:
 			if tailTx := getMilestone(x); tailTx != nil {
-				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetHash(), x}})
+				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), x}})
+				tailTx.Release()
 			}
 		}
 		task.Return(nil)

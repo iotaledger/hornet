@@ -3,11 +3,10 @@ package tangle
 import (
 	"log"
 
+	"github.com/gohornet/hornet/packages/bitutils"
+	"github.com/gohornet/hornet/packages/syncutils"
 	iotago_bundle "github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/gohornet/hornet/packages/bitutils"
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/syncutils"
 )
 
 func BundleCaller(handler interface{}, params ...interface{}) {
@@ -50,17 +49,18 @@ func (bucket *BundleBucket) Bundles() []*Bundle {
 	return bndls
 }
 
-func (bucket *BundleBucket) Transactions() []*hornet.Transaction {
+func (bucket *BundleBucket) Transactions() CachedTransactions {
 	bucket.mu.RLock()
 	defer bucket.mu.RUnlock()
-	txs := make([]*hornet.Transaction, 0)
+	txs := make([]*CachedTransaction, 0)
 	for txHash := range bucket.txs {
 		// TODO: the transaction could have been pruned away?
-		tx, err := GetTransaction(txHash)
+		tx, err := GetCachedTransaction(txHash)
 		if err != nil {
 			log.Panicf("error while loading bundle tx %s: %s", txHash, err.Error())
 		}
-		if tx == nil {
+		if !tx.Exists() {
+			tx.Release()
 			continue
 		}
 		txs = append(txs, tx)
@@ -149,49 +149,59 @@ func (bucket *BundleBucket) RemoveBundleByTailTxHash(txHash trinary.Hash) {
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.
-func (bucket *BundleBucket) remap(bndl *Bundle, startTx *hornet.Transaction, onMapped ...func(mapped *hornet.Transaction)) {
+func (bucket *BundleBucket) remap(bndl *Bundle, startTx *CachedTransaction, onMapped ...func(mapped *CachedTransaction)) {
 	bndl.txsMu.Lock()
 	defer bndl.txsMu.Unlock()
 
+	// This will be released while or after the loop as current
+	startTx.RegisterConsumer()
+
 	current := startTx
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-	for current.GetHash() != current.GetTrunk() && !bndl.isComplete() && !current.IsHead() {
+	for current.GetTransaction().GetHash() != current.GetTransaction().GetTrunk() && !bndl.isComplete() && !current.GetTransaction().IsHead() {
 
 		// check whether the trunk transaction is known to the bucket.
 		// this also ensures that the transaction has to be in the database
-		if _, ok := bucket.txs[current.GetTrunk()]; !ok {
+		if _, ok := bucket.txs[current.GetTransaction().GetTrunk()]; !ok {
 			break
 		}
 
 		// check whether trunk is in bundle instance already
-		if _, trunkAlreadyInBundle := bndl.txs[current.GetTrunk()]; trunkAlreadyInBundle {
-			trunkTx := loadBundleTxOrPanic(current.GetTrunk(), bndl.hash)
+		if _, trunkAlreadyInBundle := bndl.txs[current.GetTransaction().GetTrunk()]; trunkAlreadyInBundle {
+			trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash)
+			current.Release()
 			current = trunkTx
 			continue
 		}
 
-		trunkTx := loadBundleTxOrPanic(current.GetTrunk(), bndl.hash)
-		if trunkTx.Tx.Bundle != startTx.Tx.Bundle {
+		trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash)
+		if trunkTx.GetTransaction().Tx.Bundle != startTx.GetTransaction().Tx.Bundle {
+			trunkTx.Release()
 			break
 		}
 
 		// assign as head if last tx
-		if trunkTx.IsHead() {
-			bndl.headTx = trunkTx.GetHash()
+		if trunkTx.GetTransaction().IsHead() {
+			bndl.headTx = trunkTx.GetTransaction().GetHash()
 		}
 
 		// assign trunk tx to this bundle
-		bndl.txs[trunkTx.GetHash()] = struct{}{}
+		bndl.txs[trunkTx.GetTransaction().GetHash()] = struct{}{}
 
 		// call closure
 		if len(onMapped) > 0 {
+			trunkTx.RegisterConsumer()
 			onMapped[0](trunkTx)
+			trunkTx.Release()
 		}
 
 		// modify and advance to perhaps complete the bundle
 		bndl.SetModified(true)
+		current.Release()
 		current = trunkTx
 	}
+
+	current.Release()
 }
 
 // Returns the hash of the bundle the bucket is managing.
@@ -203,16 +213,19 @@ func (bucket *BundleBucket) GetHash() trinary.Hash {
 // assigning the transaction to an existing Bundle or to the unassigned pool.
 // It returns a slice of Bundles to which the transaction was added to. Adding a tail
 // transaction will ever only return one Bundle within the slice.
-func (bucket *BundleBucket) AddTransaction(tx *hornet.Transaction) []*Bundle {
+func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 
-	// add the transaction to the "all" transactions pool
-	bucket.txs[tx.GetHash()] = struct{}{}
+	tx.RegisterConsumer()
+	defer tx.Release()
 
-	if tx.Tx.CurrentIndex == 0 {
+	// add the transaction to the "all" transactions pool
+	bucket.txs[tx.GetTransaction().GetHash()] = struct{}{}
+
+	if tx.GetTransaction().Tx.CurrentIndex == 0 {
 		// don't need to do anything if the tail transaction already is indexed
-		if bndl, ok := bucket.bundleInstances[tx.GetHash()]; ok {
+		if bndl, ok := bucket.bundleInstances[tx.GetTransaction().GetHash()]; ok {
 			return []*Bundle{bndl}
 		}
 
@@ -221,22 +234,22 @@ func (bucket *BundleBucket) AddTransaction(tx *hornet.Transaction) []*Bundle {
 			txs:      make(map[trinary.Hash]struct{}),
 			metadata: bitutils.BitMask(0),
 			modified: true,
-			hash:     tx.Tx.Bundle,
-			tailTx:   tx.GetHash(),
+			hash:     tx.GetTransaction().Tx.Bundle,
+			tailTx:   tx.GetTransaction().GetHash(),
 		}
-		bndl.txs[tx.GetHash()] = struct{}{}
-		bndl.lastIndex = tx.Tx.LastIndex
+		bndl.txs[tx.GetTransaction().GetHash()] = struct{}{}
+		bndl.lastIndex = tx.GetTransaction().Tx.LastIndex
 
 		// check whether it is a bundle with only one transaction
-		if tx.Tx.CurrentIndex == tx.Tx.LastIndex {
-			bndl.headTx = tx.GetHash()
+		if tx.GetTransaction().Tx.CurrentIndex == tx.GetTransaction().Tx.LastIndex {
+			bndl.headTx = tx.GetTransaction().GetHash()
 		} else {
 			// lets try to complete the bundle by assigning txs into this bundle
 			bucket.remap(bndl, tx)
 		}
 
 		// add the new bundle to the bucket
-		bucket.bundleInstances[tx.GetHash()] = bndl
+		bucket.bundleInstances[tx.GetTransaction().GetHash()] = bndl
 		return []*Bundle{bndl}
 	}
 
@@ -250,24 +263,30 @@ func (bucket *BundleBucket) AddTransaction(tx *hornet.Transaction) []*Bundle {
 		}
 
 		// load tail of bundle as a starting point for the remap
-		current, err := GetTransaction(tailTxHash)
+		current, err := GetCachedTransaction(tailTxHash)
 		if err != nil {
 			log.Panic(err)
 		}
 
+		if !current.Exists() {
+			log.Panicf("Tx not found but it should be in storage: %s", tailTxHash)
+		}
+
 		// try to add the new transaction to the bundle
-		bucket.remap(bndl, current, func(mapped *hornet.Transaction) {
-			if mapped.GetHash() == tx.GetHash() {
+		bucket.remap(bndl, current, func(mapped *CachedTransaction) {
+			if mapped.GetTransaction().GetHash() == tx.GetTransaction().GetHash() {
 				addedTo = append(addedTo, bndl)
 			}
 		})
+
+		current.Release()
 	}
 
 	return addedTo
 }
 
 // Maps the given transactions to their corresponding bundle instances within the bucket.
-func (bucket *BundleBucket) Init(txs map[trinary.Hash]*hornet.Transaction, metaMap map[trinary.Hash]bitutils.BitMask) {
+func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitutils.BitMask) {
 	if len(bucket.txs) > 0 || len(bucket.bundleInstances) > 0 {
 		panic("Init called on a not new BundleBucket")
 	}
@@ -285,52 +304,58 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*hornet.Transaction, metaM
 
 	// go through each tail tx to create a bundle instance
 	for _, tx := range txs {
-		if tx.Tx.Bundle != bucket.hash {
-			log.Fatalf("tx %s was stored for bundle %s, but its bundle hash is %s", tx.GetHash(), bucket.hash, tx.Tx.Bundle)
+		tx.RegisterConsumer()
+		if tx.GetTransaction().Tx.Bundle != bucket.hash {
+			log.Fatalf("tx %s was stored for bundle %s, but its bundle hash is %s", tx.GetTransaction().GetHash(), bucket.hash, tx.GetTransaction().Tx.Bundle)
 		}
 
-		if !tx.IsTail() {
+		if !tx.GetTransaction().IsTail() {
+			tx.Release()
 			continue
 		}
 
 		// meta map only holds actual metadata bitmasks for tail txs
-		metadata := metaMap[tx.GetHash()]
+		metadata := metaMap[tx.GetTransaction().GetHash()]
 		bndl := &Bundle{
 			txs:       make(map[trinary.Hash]struct{}),
 			metadata:  metadata,
 			modified:  false,
 			hash:      bucket.hash,
-			tailTx:    tx.GetHash(),
-			lastIndex: tx.Tx.LastIndex,
+			tailTx:    tx.GetTransaction().GetHash(),
+			lastIndex: tx.GetTransaction().Tx.LastIndex,
 		}
 
-		bndl.txs[tx.GetHash()] = struct{}{}
+		bndl.txs[tx.GetTransaction().GetHash()] = struct{}{}
 
 		// full bundle
-		if tx.IsHead() {
-			bndl.headTx = tx.GetHash()
+		if tx.GetTransaction().IsHead() {
+			bndl.headTx = tx.GetTransaction().GetHash()
 		}
 
 		// fill up this bundle with the transactions.
 		// note that this is different than remap() as it ignores whether the bundle is complete
 		current := tx
-		for current.GetHash() != current.GetTrunk() && !current.IsHead() {
+		current.RegisterConsumer()
+		for current.GetTransaction().GetHash() != current.GetTransaction().GetTrunk() && !current.GetTransaction().IsHead() {
 
-			if _, ok := bucket.txs[current.GetTrunk()]; !ok {
+			if _, ok := bucket.txs[current.GetTransaction().GetTrunk()]; !ok {
 				break
 			}
 
-			trunkTx := loadBundleTxOrPanic(current.GetTrunk(), bndl.hash)
+			trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash)
 
-			if trunkTx.IsHead() {
-				bndl.headTx = trunkTx.GetHash()
+			if trunkTx.GetTransaction().IsHead() {
+				bndl.headTx = trunkTx.GetTransaction().GetHash()
 			}
 
-			bndl.txs[trunkTx.GetHash()] = struct{}{}
+			bndl.txs[trunkTx.GetTransaction().GetHash()] = struct{}{}
+			current.Release()
 			current = trunkTx
 		}
+		current.Release()
 
-		bucket.bundleInstances[tx.GetHash()] = bndl
+		bucket.bundleInstances[tx.GetTransaction().GetHash()] = bndl
+		tx.Release()
 	}
 
 	// now pre compute properties about every bundle
@@ -399,15 +424,15 @@ type Bundle struct {
 	isValueSpamBundle bool
 }
 
-func NewBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*hornet.Transaction) *BundleBucket {
+func NewBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction) *BundleBucket {
 	return newBundleBucket(bundleHash, transactions, nil)
 }
 
-func NewBundleBucketFromDatabase(bundleHash trinary.Hash, transactions map[trinary.Hash]*hornet.Transaction, metaMap map[trinary.Hash]bitutils.BitMask) *BundleBucket {
+func NewBundleBucketFromDatabase(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitutils.BitMask) *BundleBucket {
 	return newBundleBucket(bundleHash, transactions, metaMap)
 }
 
-func newBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*hornet.Transaction, metaMap map[trinary.Hash]bitutils.BitMask) *BundleBucket {
+func newBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitutils.BitMask) *BundleBucket {
 
 	bucket := &BundleBucket{
 		bundleInstances: make(map[trinary.Hash]*Bundle),
@@ -426,11 +451,17 @@ func (bundle *Bundle) GetHash() trinary.Hash {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	for txHash := range bundle.txs {
-		tx, err := GetTransaction(txHash)
+		tx, err := GetCachedTransaction(txHash)
 		if err != nil {
 			continue
 		}
-		bundle.hash = tx.Tx.Bundle
+		if !tx.Exists() {
+			tx.Release()
+			continue
+		}
+
+		bundle.hash = tx.GetTransaction().Tx.Bundle
+		tx.Release()
 		return bundle.hash
 	}
 	panic("GetHash() called on a bundle without any transactions")
@@ -447,11 +478,12 @@ func (bundle *Bundle) GetLedgerChanges() (map[trinary.Trytes]int64, bool) {
 
 	changes := map[trinary.Trytes]int64{}
 	for txHash := range bundle.txs {
-		tx := loadBundleTxOrPanic(txHash, bundle.hash)
-		if tx.Tx.Value == 0 {
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		if tx.GetTransaction().Tx.Value == 0 {
 			continue
 		}
-		changes[tx.Tx.Address] += tx.Tx.Value
+		changes[tx.GetTransaction().Tx.Address] += tx.GetTransaction().Tx.Value
+		tx.Release()
 	}
 
 	isValueSpamBundle := true
@@ -474,21 +506,17 @@ func (bundle *Bundle) GetLedgerChanges() (map[trinary.Trytes]int64, bool) {
 	return changes, isValueSpamBundle
 }
 
-func (bundle *Bundle) GetHead() *hornet.Transaction {
+func (bundle *Bundle) GetHead() *CachedTransaction {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	if bundle.headTx != "" {
-		tx, err := GetTransaction(bundle.headTx)
-		if err != nil {
-			log.Panicf("error while loading head tx %s of bundle %s: %s", bundle.tailTx, bundle.hash, err.Error())
-		}
-		return tx
+		return loadBundleTxIfExistsOrNil(bundle.headTx, bundle.hash)
 	}
 
 	for txHash := range bundle.txs {
-		tx := loadBundleTxOrPanic(txHash, bundle.hash)
-		if tx.Tx.CurrentIndex == tx.Tx.LastIndex {
-			bundle.headTx = tx.Tx.Hash
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		if tx.GetTransaction().Tx.CurrentIndex == tx.GetTransaction().Tx.LastIndex {
+			bundle.headTx = tx.GetTransaction().Tx.Hash
 			return tx
 		}
 	}
@@ -504,21 +532,17 @@ func (bundle *Bundle) GetTailHash() trinary.Hash {
 	return bundle.tailTx
 }
 
-func (bundle *Bundle) GetTail() *hornet.Transaction {
+func (bundle *Bundle) GetTail() *CachedTransaction {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	if bundle.tailTx != "" {
-		tx, err := GetTransaction(bundle.tailTx)
-		if err != nil {
-			log.Panicf("error while loading tail tx %s of bundle %s: %s", bundle.tailTx, bundle.hash, err.Error())
-		}
-		return tx
+		return loadBundleTxIfExistsOrNil(bundle.tailTx, bundle.hash)
 	}
 
 	for txHash := range bundle.txs {
-		tx := loadBundleTxOrPanic(txHash, bundle.hash)
-		if tx.Tx.CurrentIndex == 0 {
-			bundle.headTx = tx.Tx.Hash
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		if tx.GetTransaction().Tx.CurrentIndex == 0 {
+			bundle.headTx = tx.GetTransaction().Tx.Hash
 			return tx
 		}
 	}
@@ -537,13 +561,13 @@ func (bundle *Bundle) GetTransactionHashes() []trinary.Hash {
 	return values
 }
 
-func (bundle *Bundle) GetTransactions() []*hornet.Transaction {
+func (bundle *Bundle) GetTransactions() CachedTransactions {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 
-	var values []*hornet.Transaction
+	var values CachedTransactions
 	for txHash := range bundle.txs {
-		tx := loadBundleTxOrPanic(txHash, bundle.hash)
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
 		values = append(values, tx)
 	}
 
@@ -574,13 +598,17 @@ func (bundle *Bundle) IsValid() bool {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 
-	current := loadBundleTxOrPanic(bundle.tailTx, bundle.hash)
-	lastIndex := int(current.Tx.LastIndex)
 	iotaGoBundle := make(iotago_bundle.Bundle, len(bundle.txs))
-	iotaGoBundle[0] = *current.Tx
+
+	current := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash)
+	lastIndex := int(current.GetTransaction().Tx.LastIndex)
+	iotaGoBundle[0] = *current.GetTransaction().Tx
+	current.Release()
+
 	for i := 1; i < lastIndex+1; i++ {
-		current = loadBundleTxOrPanic(current.GetTrunk(), bundle.hash)
-		iotaGoBundle[i] = *current.Tx
+		current = loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bundle.hash)
+		iotaGoBundle[i] = *current.GetTransaction().Tx
+		current.Release()
 	}
 
 	// validate bundle semantics and signatures
@@ -656,7 +684,8 @@ func (bundle *Bundle) IsSolid() bool {
 		if tailTx == nil {
 			return false
 		}
-		if tailTx.IsSolid() {
+		defer tailTx.Release()
+		if tailTx.GetTransaction().IsSolid() {
 			bundle.setSolid(true)
 			return true
 		}
@@ -691,11 +720,13 @@ func (bundle *Bundle) IsConfirmed() bool {
 		defer bundle.txsMu.RUnlock()
 
 		for txHash := range bundle.txs {
-			tx := loadBundleTxOrPanic(txHash, bundle.hash)
-			if confirmed, _ := tx.GetConfirmed(); confirmed {
+			tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+			if confirmed, _ := tx.GetTransaction().GetConfirmed(); confirmed {
 				bundle.setConfirmed(true)
+				tx.Release()
 				return true
 			}
+			tx.Release()
 		}
 		return false
 	} else {
@@ -759,8 +790,11 @@ func (bundle *Bundle) WasRequested() bool {
 	if requested {
 		return true
 	}
-	for _, tx := range bundle.GetTransactions() {
-		if tx.IsRequested() {
+	transactions := bundle.GetTransactions()
+	defer transactions.Release()
+
+	for _, tx := range transactions {
+		if tx.GetTransaction().IsRequested() {
 			// No need to set modified flag, since it is only temporary
 			bundle.statusMutex.Lock()
 			bundle.requested = true
@@ -771,12 +805,24 @@ func (bundle *Bundle) WasRequested() bool {
 	return false
 }
 
-func loadBundleTxOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *hornet.Transaction {
-	tx, err := GetTransaction(txHash)
+func loadBundleTxIfExistsOrNil(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
+	tx, err := GetCachedTransaction(txHash)
 	if err != nil {
 		log.Panicf("error while loading tx %s of bundle %s: %s", txHash, bundleHash, err.Error())
 	}
-	if tx == nil {
+	if !tx.Exists() {
+		tx.Release()
+		return nil
+	}
+	return tx
+}
+
+func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
+	tx, err := GetCachedTransaction(txHash)
+	if err != nil {
+		log.Panicf("error while loading tx %s of bundle %s: %s", txHash, bundleHash, err.Error())
+	}
+	if !tx.Exists() {
 		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash, txHash)
 	}
 	return tx

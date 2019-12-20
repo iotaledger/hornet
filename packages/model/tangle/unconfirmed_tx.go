@@ -20,6 +20,14 @@ func configureUnconfirmedTransactionsDatabase() {
 	}
 }
 
+func databaseKeyForTransactionHash(transactionHash trinary.Hash) []byte {
+	return trinary.MustTrytesToBytes(transactionHash)
+}
+
+func transactionHashFromDatabaseKey(transactionHash []byte) trinary.Hash {
+	return trinary.MustBytesToTrytes(transactionHash, 81)
+}
+
 type UnconfirmedTxHashOperation struct {
 	TxHash                        trinary.Hash
 	FirstSeenLatestMilestoneIndex milestone_index.MilestoneIndex

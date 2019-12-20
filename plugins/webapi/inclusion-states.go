@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/mitchellh/mapstructure"
-	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {
@@ -43,21 +43,22 @@ func getInclusionStates(i interface{}, c *gin.Context) {
 
 	for _, tx := range gis.Transactions {
 		// get tx data
-		t, err := tangle.GetTransaction(tx)
+		t, err := tangle.GetCachedTransaction(tx)
 		if err != nil {
 			e.Error = "Internal error"
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
 
-		if t != nil {
+		if t.Exists() {
 			// check if tx is set as confirmed
-			confirmed, _ := t.GetConfirmed()
+			confirmed, _ := t.GetTransaction().GetConfirmed()
 			inclusionStates = append(inclusionStates, confirmed)
 		} else {
 			// if tx is unknown, return false
 			inclusionStates = append(inclusionStates, false)
 		}
+		t.Release()
 	}
 
 	c.JSON(http.StatusOK, GetInclusionStatesReturn{States: inclusionStates})

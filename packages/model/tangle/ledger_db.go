@@ -10,10 +10,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (

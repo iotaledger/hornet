@@ -6,7 +6,6 @@ import (
 
 	"github.com/gohornet/hornet/packages/bitutils"
 	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/hornet"
 )
 
 var bundleDatabase database.Database
@@ -49,18 +48,22 @@ func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
 			bundle.SetModified(false)
 		}
 
-		for _, tx := range bundleBucket.Transactions() {
+		transactions := bundleBucket.Transactions()
+
+		for _, tx := range transactions {
 			// tails were already stored
-			if tx.IsTail() {
+			if tx.GetTransaction().IsTail() {
 				continue
 			}
 			entry := database.Entry{
-				Key:   databaseKeyForBundle(bundleBucket.GetHash(), tx.GetHash()),
+				Key:   databaseKeyForBundle(bundleBucket.GetHash(), tx.GetTransaction().GetHash()),
 				Value: []byte{},
 				Meta:  byte(0),
 			}
 			entries = append(entries, entry)
 		}
+
+		transactions.Release()
 	}
 
 	// Now batch insert all entries
@@ -121,26 +124,35 @@ func DeleteBundlesInDatabase(bundles map[string]string) error {
 
 func readBundleBucketFromDatabase(bundleHash trinary.Hash) (*BundleBucket, error) {
 
-	var transactions = map[trinary.Hash]*hornet.Transaction{}
+	var transactions = map[trinary.Hash]*CachedTransaction{}
 	metaMap := map[trinary.Hash]bitutils.BitMask{}
 	err := bundleDatabase.ForEachPrefixKeyOnly(databaseKeyPrefixForBundleHash(bundleHash), func(entry database.KeyOnlyEntry) (stop bool) {
 		txHash := trinary.MustBytesToTrytes(entry.Key, 81)
-		tx, _ := GetTransaction(txHash)
-		if tx != nil {
-			if tx.Tx.CurrentIndex == 0 {
-				metaMap[tx.GetHash()] = bitutils.BitMask(entry.Meta)
+		tx, _ := GetCachedTransaction(txHash)
+		if tx.Exists() {
+			if tx.GetTransaction().Tx.CurrentIndex == 0 {
+				metaMap[tx.GetTransaction().GetHash()] = bitutils.BitMask(entry.Meta)
 			}
-			transactions[tx.GetHash()] = tx
+			transactions[tx.GetTransaction().GetHash()] = tx
+		} else {
+			tx.Release()
 		}
 		return false
 	})
 
 	if err != nil {
+		for _, tx := range transactions {
+			tx.Release()
+		}
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to read bundle bucket from database")
 	} else if len(transactions) == 0 {
 		return nil, nil
 	} else {
-		return NewBundleBucketFromDatabase(bundleHash, transactions, metaMap), nil
+		bucket := NewBundleBucketFromDatabase(bundleHash, transactions, metaMap)
+		for _, tx := range transactions {
+			tx.Release()
+		}
+		return bucket, nil
 	}
 }
 

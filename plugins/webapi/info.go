@@ -1,8 +1,8 @@
 package webapi
 
 import (
+	"github.com/iotaledger/iota.go/consts"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -42,9 +42,11 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	}
 
 	if lsmBndl != nil && lsmBndl.GetTail() != nil {
-		info.LatestMilestone = lsmBndl.GetTail().GetHash()
+		tail := lsmBndl.GetTail()
+		info.LatestMilestone = tail.GetTransaction().GetHash()
+		tail.Release()
 	} else {
-		info.LatestMilestone = strings.Repeat("9", 81)
+		info.LatestMilestone = consts.NullHashTrytes
 	}
 
 	// Solid milestone index
@@ -61,9 +63,11 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	}
 
 	if smBndl != nil && smBndl.GetTail() != nil {
-		info.LatestSolidSubtangleMilestone = smBndl.GetTail().GetHash()
+		tail := smBndl.GetTail()
+		info.LatestSolidSubtangleMilestone = tail.GetTransaction().GetHash()
+		tail.Release()
 	} else {
-		info.LatestSolidSubtangleMilestone = strings.Repeat("9", 81)
+		info.LatestSolidSubtangleMilestone = consts.NullHashTrytes
 	}
 
 	// Milestone start index

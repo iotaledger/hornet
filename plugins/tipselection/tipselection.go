@@ -89,33 +89,40 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	// check whether the given reference tx is valid for the walk
 	var refBundle *tangle.Bundle
 	if reference != nil {
-		refTx, err := tangle.GetTransaction(*reference)
+		refTx, err := tangle.GetCachedTransaction(*reference)
 		if err != nil {
 			log.Panic(err)
 		}
-		if refTx == nil {
+		if !refTx.Exists() {
+			refTx.Release()
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction doesn't exist")
 		}
-		if !refTx.IsSolid() {
+		if !refTx.GetTransaction().IsSolid() {
+			refTx.Release()
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
-		if !refTx.IsTail() {
+		if !refTx.GetTransaction().IsTail() {
+			refTx.Release()
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
 		}
 
-		bundleBucket, err := tangle.GetBundleBucket(refTx.Tx.Bundle)
+		bundleBucket, err := tangle.GetBundleBucket(refTx.GetTransaction().Tx.Bundle)
 		if err != nil {
+			refTx.Release()
 			return nil, nil, err
 		}
 
-		bundle := bundleBucket.GetBundleOfTailTransaction(refTx.GetHash())
+		bundle := bundleBucket.GetBundleOfTailTransaction(refTx.GetTransaction().GetHash())
 		if bundle == nil {
 			// this should never happen if Hornet is programmed correctly
-			if refTx.Tx.CurrentIndex == 0 {
+			if refTx.GetTransaction().Tx.CurrentIndex == 0 {
 				log.Panicf("reference transaction is a tail but there's no bundle instance")
 			}
+			refTx.Release()
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle tail not yet known (bundle is complete)")
 		}
+		refTx.Release()
+
 		if !bundle.IsComplete() {
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle is not complete")
 		}
@@ -144,7 +151,9 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			if ms.GetHash() == consts.NullHashTrytes {
 				selected = ms.GetHash()
 			} else {
-				selected = ms.GetTail().GetHash()
+				msTail := ms.GetTail()
+				selected = msTail.GetTransaction().GetHash()
+				msTail.Release()
 			}
 		}
 		for {
@@ -190,29 +199,32 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				walkStats.Evaluated++
 
-				candidateTx, err := tangle.GetTransaction(candidateHash)
+				candidateTx, err := tangle.GetCachedTransaction(candidateHash)
 				if err != nil {
 					return nil, nil, err
 				}
 
-				if !candidateTx.IsSolid() {
+				if !candidateTx.GetTransaction().IsSolid() {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					candidateTx.Release()
 					continue
 				}
 
-				bundleBucket, err := tangle.GetBundleBucket(candidateTx.Tx.Bundle)
+				bundleBucket, err := tangle.GetBundleBucket(candidateTx.GetTransaction().Tx.Bundle)
 				if err != nil {
+					candidateTx.Release()
 					return nil, nil, err
 				}
 
 				// a transaction can be within multiple bundle instances, because it is possible
 				// that transactions are reattached "above" the origin bundle but pointing (via trunk)
 				// to some transactions of the origin bundle.
-				bundles := bundleBucket.GetBundlesOfTransaction(candidateTx.GetHash())
+				bundles := bundleBucket.GetBundlesOfTransaction(candidateTx.GetTransaction().GetHash())
 
 				// isn't in any bundle instance
 				if len(bundles) == 0 {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					candidateTx.Release()
 					continue
 				}
 
@@ -226,35 +238,40 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				if bundle == nil || !bundle.IsComplete() {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					candidateTx.Release()
 					continue
 				}
 
 				if !bundle.IsValid() {
 					tanglePlugin.RefsAnInvalidBundleCache.Set(candidateHash, true)
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					candidateTx.Release()
 					continue
 				}
 
 				if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					candidateTx.Release()
 					continue
 				}
 
 				// if the transaction has already been confirmed by the current solid or previous
 				// milestone, it is automatically consistent with our current walking diff
-				confirmed, at := candidateTx.GetConfirmed()
+				confirmed, at := candidateTx.GetTransaction().GetConfirmed()
 				// TODO: the second condition can be removed once the solidifier ensures, that the entire
 				// ledger update process is write locked
 				if !confirmed {
 					if at > tangle.GetSolidMilestoneIndex() {
-						log.Panicf("transaction %s was confirmed by a newer milestone %d", candidateTx.GetHash(), at)
+						log.Panicf("transaction %s was confirmed by a newer milestone %d", candidateTx.GetTransaction().GetHash(), at)
 					}
 					// check whether the bundle's approved cone is consistent with our current diff
 					if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(bundle.GetTailHash(), approved, diff) {
 						approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+						candidateTx.Release()
 						continue
 					}
 				}
+				candidateTx.Release()
 
 				// cache the hashes of txs which we approve, so we don't recheck them
 				for _, txHash := range bundle.GetTransactionHashes() {

@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 func init() {
@@ -66,7 +66,7 @@ func checkConsistency(i interface{}, c *gin.Context) {
 
 	for _, t := range checkCon.Tails {
 
-		tx, err := tangle.GetTransaction(t)
+		tx, err := tangle.GetCachedTransaction(t)
 		if err != nil {
 			e.Error = fmt.Sprint(err)
 			c.JSON(http.StatusInternalServerError, e)
@@ -74,41 +74,47 @@ func checkConsistency(i interface{}, c *gin.Context) {
 		}
 
 		// Check if TX is known
-		if tx == nil {
+		if !tx.Exists() {
+			tx.Release()
 			info := fmt.Sprint("Transaction not found: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
 		// Check if provided tx is tail
-		if !tx.IsTail() {
+		if !tx.GetTransaction().IsTail() {
+			tx.Release()
 			info := fmt.Sprint("Invalid transaction, not a tail: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
 		// Check if TX is solid
-		if !tx.IsSolid() {
+		if !tx.GetTransaction().IsSolid() {
+			tx.Release()
 			info := fmt.Sprint("Tails are not solid (missing a referenced tx): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
-		bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+		bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
 		if err != nil {
+			tx.Release()
 			e.Error = fmt.Sprint(err)
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
 
 		if bundleBucket == nil {
+			tx.Release()
 			e.Error = "Internal error"
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
 
 		// Check bundle validity
-		bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetHash())
+		bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetTransaction().GetHash())
+		tx.Release()
 
 		if bundle == nil || !bundle.IsValid() {
 			info := fmt.Sprint("tails are not consistent (bundle is invalid): ", t)

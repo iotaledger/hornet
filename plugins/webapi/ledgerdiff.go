@@ -3,9 +3,9 @@ package webapi
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/mitchellh/mapstructure"
 	"net/http"
 )
 

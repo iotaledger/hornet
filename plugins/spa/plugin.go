@@ -16,7 +16,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/node"
@@ -139,7 +138,7 @@ var (
 	}
 )
 
-func getMilestone(index milestone_index.MilestoneIndex) *hornet.Transaction {
+func getMilestone(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
 	msBndl, err := tangle.GetMilestone(index)
 	if err != nil {
 		return nil
@@ -147,7 +146,12 @@ func getMilestone(index milestone_index.MilestoneIndex) *hornet.Transaction {
 	if msBndl == nil {
 		return nil
 	}
-	return msBndl.GetTail()
+	tail := msBndl.GetTail()
+	if !tail.Exists() {
+		tail.Release()
+		return nil
+	}
+	return tail
 }
 
 func preFeed(channel chan interface{}) {
@@ -155,7 +159,8 @@ func preFeed(channel chan interface{}) {
 	start := tangle.GetLatestMilestoneIndex()
 	for i := start - 10; i <= start; i++ {
 		if tailTx := getMilestone(i); tailTx != nil {
-			channel <- &msg{MsgTypeMs, &ms{tailTx.GetHash(), i}}
+			channel <- &msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), i}}
+			tailTx.Release()
 		} else {
 			break
 		}
@@ -318,8 +323,8 @@ func currentNodeStatus() *nodestatus {
 			Capacity: tangle.SpentAddressesCache.GetCapacity(),
 		},
 		Transactions: cache{
-			Size:     tangle.TransactionCache.GetSize(),
-			Capacity: tangle.TransactionCache.GetCapacity(),
+			Size:     tangle.GetTransactionStorageSize(),
+			Capacity: 0,
 		},
 		IncomingTransactionFilter: cache{
 			Size:     gossip.IncomingCache.GetSize(),
