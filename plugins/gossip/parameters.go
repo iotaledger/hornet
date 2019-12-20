@@ -46,7 +46,7 @@ func init() {
 
 	// "Set the URLs and IP addresses of neighbors"
 	parameter.NeighborsConfig.SetDefault("neighbors", []ConfigNeighbor{
-		ConfigNeighbor{
+		{
 			Identity:   "example",
 			Alias:      "default",
 			PreferIPv6: false,
