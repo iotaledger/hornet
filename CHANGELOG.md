@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
     - `addNeighbors` deadlock
-    - No database corrupt message printout (panic)
+    - Message logger caused fatal panic
 
 ## [0.2.8] - 19.12.2019
 
