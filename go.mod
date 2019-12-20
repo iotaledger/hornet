@@ -18,6 +18,7 @@ require (
 	github.com/iotaledger/hive.go v0.0.0-20191219085244-317ae9a463c7
 	github.com/iotaledger/iota.go v1.0.0-beta.12
 	github.com/labstack/echo v3.3.10+incompatible
+	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/shirou/gopsutil v2.19.11+incompatible
