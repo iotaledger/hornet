@@ -58,7 +58,7 @@ func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCa
 				approveeApprovers, _ := tangle.GetApprovers(approveeHash)
 				approveeApprovers.Add(cachedTransaction.GetTransaction().GetHash())
 			}
-
+			approveeTx.Release()
 			break
 		}
 		approveeTx.Release()
