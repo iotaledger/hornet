@@ -1,10 +1,11 @@
 package parameter
 
 import (
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/parameter"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/parameter"
 )
 
 var (
@@ -16,8 +17,8 @@ var (
 	configDirPath       = flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
 
 	// Viper
-	NodeConfig     = viper.New()
-	NeighborConfig = viper.New()
+	NodeConfig      = viper.New()
+	NeighborsConfig = viper.New()
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
@@ -26,17 +27,20 @@ var (
 // and ending with: .json, .toml, .yaml or .yml (in this sequence).
 func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	// flags
-	configName := flag.StringP("config", "c", "config", "Filename of the config file without the file extension")
-	configDirPath := flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
 
-	config, err := parameter.LoadConfigFile(*configDirPath, *configName)
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, false)
 	if err != nil {
 		return err
 	}
 
-	parameter.PrintConfig(config, ignoreSettingsAtPrint...)
+	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
-	NodeConfig = config
+	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, false)
+	if err != nil {
+		return err
+	}
+
+	parameter.PrintConfig(NeighborsConfig, ignoreSettingsAtPrint...)
 
 	return nil
 }

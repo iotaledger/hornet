@@ -1,9 +1,11 @@
 package zeromq
 
-import flag "github.com/spf13/pflag"
+import (
+	"github.com/gohornet/hornet/packages/parameter"
+)
 
 func init() {
-	flag.String("zmq.protocol", "tcp", "protocol used to connect to the zmq feed [unix, tcp, udp, inproc]")
-	flag.String("zmq.host", "127.0.0.1", "host used to connect to the zmq feed")
-	flag.Int("zmq.port", 5556, "port used to connect to the zmq feed")
+	parameter.NodeConfig.SetDefault("zmq.protocol", "tcp")
+	parameter.NodeConfig.SetDefault("zmq.host", "127.0.0.1")
+	parameter.NodeConfig.SetDefault("zmq.port", 5556)
 }

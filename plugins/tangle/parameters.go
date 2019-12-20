@@ -1,9 +1,13 @@
 package tangle
 
-import flag "github.com/spf13/pflag"
+import (
+	"github.com/gohornet/hornet/packages/parameter"
+)
 
 func init() {
-	flag.String("db.path", "mainnetdb", "Path to the database folder")
-	flag.Bool("light", false, "Enable the light mode for nodes with less RAM")
-	flag.Bool("compass.loadLSMIAsLMI", false, "Auto. set LSM as LSMI if enabled")
+	// "Path to the database folder"
+	parameter.NodeConfig.SetDefault("db.path", "mainnetdb")
+
+	// "Auto. set LSM as LSMI if enabled"
+	parameter.NodeConfig.SetDefault("compass.loadLSMIAsLMI", false)
 }

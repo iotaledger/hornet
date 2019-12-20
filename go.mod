@@ -2,7 +2,7 @@ module github.com/gohornet/hornet
 
 go 1.13
 
-replace github.com/iotaledger/hive.go v0.0.0-20191219085244-317ae9a463c7 => github.com/alexsporn/hive.go v0.0.0-20191220132227-ec47eba7168d
+replace github.com/iotaledger/hive.go v0.0.0-20191219085244-317ae9a463c7 => github.com/muXxer/hive.go v0.0.0-20191220180147-0cd9f8429688
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect

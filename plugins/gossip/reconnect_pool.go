@@ -30,7 +30,7 @@ func configureReconnectPool() {
 	reconnectLogger = logger.NewLogger("Reconnect Pool", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	neighborConfig := []NeighborConfig{}
-	if err := parameter.NodeConfig.UnmarshalKey("network.neighbors", &neighborConfig); err != nil {
+	if err := parameter.NeighborsConfig.UnmarshalKey("network.neighbors", &neighborConfig); err != nil {
 		panic(err)
 	}
 	for _, neighConf := range neighborConfig {
