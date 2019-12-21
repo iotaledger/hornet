@@ -41,6 +41,11 @@ If not running via docker-compose, build manually:
 docker build -t hornet:latest .
 ```
 
+Note: for aarch64/arm64 architecture point docker build to the `Dockerfile.arm64`:
+```sh
+docker build -f Dockerfile.arm64 -t hornet:latest .
+```
+
 ## Run
 
 Best is to run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)

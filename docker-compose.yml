@@ -3,6 +3,8 @@ services:
   hornet:
     build:
       context: .
+      # For aarch64/arm64 use Dockerfile.arm64
+      dockerfile: Dockerfile
     image: hornet:latest
     # Best performance via host network:
     network_mode: host
