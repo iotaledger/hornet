@@ -22,6 +22,8 @@ mkdir mainnetdb && chown 39999:39999 mainnetdb
 ```
 ## Docker compose
 
+If you are using an architecture different than amd64 edit the docker-compose.yml and set the correct architecture where noted.
+
 For docker compose: this will build the image and run the process.
 ```sh
 docker-compose up
@@ -41,10 +43,12 @@ If not running via docker-compose, build manually:
 docker build -t hornet:latest .
 ```
 
-Note: for aarch64/arm64 architecture point docker build to the `Dockerfile.arm64`:
+Note: for aarch64/arm64 architecture pass the build argument:
 ```sh
-docker build -f Dockerfile.arm64 -t hornet:latest .
+docker build --build-arg ARCH=arm64 -t hornet:latest .
 ```
+For 32 (armhf) pass `--build-arg ARCH=armhf`.
+
 
 ## Run
 

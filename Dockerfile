@@ -8,11 +8,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./hornet main.go
 # ---[ runtime image ]---
 FROM alpine:latest
 WORKDIR /app
-ENV TINI_VERSION v0.18.0
+
+ARG ARCH=amd64
+ENV TARGET_ARCH=${ARCH:+-$ARCH} \
+    TINI_VERSION=v0.18.0
 
 # Tini is excellent: https://github.com/krallin/tini#why-tini
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static /tini
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static.asc /tini.asc
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static${TARGET_ARCH} /tini
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static${TARGET_ARCH}.asc /tini.asc
 
 COPY --from=builder ["/go/src/github.com/gohornet/hornet/hornet", "/go/src/github.com/gohornet/hornet/config.json", "/app/"]
 RUN apk --no-cache add ca-certificates gnupg\
