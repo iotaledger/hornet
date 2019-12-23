@@ -3,9 +3,9 @@ package tipselection
 import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/node"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (

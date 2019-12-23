@@ -1,12 +1,25 @@
 package spa
 
-import flag "github.com/spf13/pflag"
+import (
+	"github.com/gohornet/hornet/packages/parameter"
+)
 
 func init() {
-	flag.String("dashboard.host", "127.0.0.1", "Set the host to which the Dashboard listens")
-	flag.Int("dashboard.port", 8081, "Set the port to which the Dashboard listens")
-	flag.Bool("dashboard.dev", false, "Activate the dashboard dev mode")
-	flag.Bool("dashboard.basic_auth.enabled", true, "Whether to use HTTP Basic Auth")
-	flag.String("dashboard.basic_auth.username", "hornet", "The HTTP Basic Auth username")
-	flag.String("dashboard.basic_auth.password", "hornet", "The HTTP Basic Auth password")
+	// "Set the host to which the Dashboard listens"
+	parameter.NodeConfig.SetDefault("dashboard.host", "127.0.0.1")
+
+	// "Set the port to which the Dashboard listens"
+	parameter.NodeConfig.SetDefault("dashboard.port", 8081)
+
+	// "Activate the dashboard dev mode"
+	parameter.NodeConfig.SetDefault("dashboard.dev", false)
+
+	// "Whether to use HTTP Basic Auth"
+	parameter.NodeConfig.SetDefault("dashboard.basic_auth.enabled", true)
+
+	// "The HTTP Basic Auth username"
+	parameter.NodeConfig.SetDefault("dashboard.basic_auth.username", "hornet")
+
+	// "The HTTP Basic Auth password"
+	parameter.NodeConfig.SetDefault("dashboard.basic_auth.password", "hornet")
 }

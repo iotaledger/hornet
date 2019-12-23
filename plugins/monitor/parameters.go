@@ -1,13 +1,22 @@
 package monitor
 
 import (
-	flag "github.com/spf13/pflag"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 func init() {
-	flag.String("monitor.TangleMonitorPath", "plugins/monitor/tanglemonitor/frontend", "Path to tanglemonitor frontend files")
-	flag.String("monitor.domain", "", "Set the domain on which TangleMonitor is served")
-	flag.String("monitor.host", "127.0.0.1", "Set the host to which the TangleMonitor listens")
-	flag.Int("monitor.port", 4434, "TangleMonitor webserver port (do not change unless you redirect back to 4434)")
-	flag.Int("monitor.apiPort", 4433, "TangleMonitor API port (do not change unless you redirect back to 4433)")
+	// "Path to tanglemonitor frontend files"
+	parameter.NodeConfig.SetDefault("monitor.TangleMonitorPath", "tanglemonitor/frontend")
+
+	// "Set the domain on which TangleMonitor is served"
+	parameter.NodeConfig.SetDefault("monitor.domain", "")
+
+	// "Set the host to which the TangleMonitor listens"
+	parameter.NodeConfig.SetDefault("monitor.host", "127.0.0.1")
+
+	// "TangleMonitor webserver port (do not change unless you redirect back to 4434)"
+	parameter.NodeConfig.SetDefault("monitor.port", 4434)
+
+	// "TangleMonitor API port (do not change unless you redirect back to 4433)"
+	parameter.NodeConfig.SetDefault("monitor.apiPort", 4433)
 }
