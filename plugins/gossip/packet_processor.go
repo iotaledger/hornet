@@ -12,10 +12,10 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/math"
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/datastructure"
-	"github.com/gohornet/hornet/packages/integerutil"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/queue"
@@ -280,7 +280,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 			return consts.ErrInvalidAddress
 		}
 
-		if uint64(integerutil.Abs(tx.Value)) > compressed.TOTAL_SUPPLY {
+		if uint64(math.Abs(tx.Value)) > compressed.TOTAL_SUPPLY {
 			return consts.ErrInsufficientBalance
 		}
 	}

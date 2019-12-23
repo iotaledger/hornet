@@ -6,8 +6,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/batchhasher"
-
-	"github.com/gohornet/hornet/packages/integerutil"
+	"github.com/iotaledger/hive.go/math"
 )
 
 const (
@@ -95,7 +94,7 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 			return nil, consts.ErrInvalidAddress
 		}
 
-		if uint64(integerutil.Abs(tx.Value)) > TOTAL_SUPPLY {
+		if uint64(math.Abs(tx.Value)) > TOTAL_SUPPLY {
 			return nil, consts.ErrInsufficientBalance
 		}
 	}
