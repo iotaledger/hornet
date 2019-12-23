@@ -128,11 +128,11 @@ func run(plugin *node.Plugin) {
 		}()
 
 		if mqttBroker.config.Port != "" {
-			log.Infof("You can now listen to MQTT via: http://%s:%d", mqttBroker.config.Host, mqttBroker.config.Port)
+			log.Infof("You can now listen to MQTT via: http://%s:%s", mqttBroker.config.Host, mqttBroker.config.Port)
 		}
 
 		if mqttBroker.config.TlsPort != "" {
-			log.Infof("You can now listen to MQTT via: https://%s:%d", mqttBroker.config.TlsHost, mqttBroker.config.TlsPort)
+			log.Infof("You can now listen to MQTT via: https://%s:%s", mqttBroker.config.TlsHost, mqttBroker.config.TlsPort)
 		}
 
 		<-shutdownSignal

@@ -2,13 +2,13 @@ package mqtt
 
 // Topic names
 const (
-	topicLMI           = "lmi"
-	topicLMSI          = "lmsi"
-	topicLMHS          = "lmhs"
-	topicSN            = "sn"
-	topicTxTrytes      = "tx_trytes"
-	topicTX            = "tx"
-	topicPrefixAddress = "addr/"
+	topicLMI      = "lmi"
+	topicLMSI     = "lmsi"
+	topicLMHS     = "lmhs"
+	topicSN       = "sn"
+	topicTxTrytes = "tx_trytes"
+	topicTX       = "tx"
+	//topicPrefixAddress = "addr/"
 )
 
 /*
