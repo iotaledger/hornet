@@ -5,7 +5,8 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/byteutils"
+	"github.com/iotaledger/hive.go/byteutils"
+
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/gossip/server"
