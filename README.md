@@ -40,7 +40,7 @@ git clone https://github.com/unioproject/tanglemonitor.git
     - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
     - Add `"Monitor"` to `"enableplugins"`
     - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
-    - Only change the "port" and the "apiPort" if you redirect them back to the default ports, because they are hardcoded in the frontend
+    - Only change the `"port"` and the `"apiPort"` if you redirect them back to the default ports, because they are hardcoded in the frontend
 ```json
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
@@ -83,11 +83,43 @@ git clone https://github.com/socketio/socket.io-client.git
   },
 ```
 
+#### MQTT Broker
+
+- Modify the `mqtt_config.json` to fit your needs
+    - Change `"host"` to `"0.0.0.0"` if you want to access MQTT from anywhere
+    - Change `"port"` to `""` and `"tlsPort"` to a port number if you want to use TLS (you also need certificate files)
+```json
+{
+  ...
+  "port": "1883",
+	"host": "127.0.0.1",
+  ...
+  "tlsPort": "",
+	"tlsHost": "",
+	"tlsInfo": {
+		"verify": false,
+		"caFile": "tls/ca/cacert.pem",
+		"certFile": "tls/server/cert.pem",
+		"keyFile": "tls/server/key.pem"
+	},
+	"plugins": {}
+}
+```
+- Modify the `config.json`
+    - Add `"MQTT"` to `"enableplugins"`
+```json
+  "node": {
+    "disableplugins": [],
+    "enableplugins": ["MQTT"],
+    "loglevel": 127
+  },
+```
+
 #### Spammer
 
 - Modify the `config.json` to fit your needs
     - Change `"address"`, `"message"` and `"tag"`
-    - `tpsratelimit` defines how much transactions (TX) the spammer should try to send (e.g. 0.1 stands for 0.1 TX per second --> 1 TX every 6 seconds. NOTE: the maximum `tpsratelimit` is limited by your used hardware.
+    - `"tpsratelimit"` defines how many transactions (TX) the spammer should try to send (e.g. 0.1 stands for 0.1 TX per second --> 1 TX every 10 seconds. NOTE: the maximum `"tpsratelimit"` is limited by your used hardware.
     - Add `"Spammer"` to `"enableplugins"`
 ```json
   "spammer": {

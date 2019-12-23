@@ -127,6 +127,9 @@
     "port": 4434,
     "apiPort": 4433
   },
+  "mqtt": {
+    "config": "mqtt_config.json"
+  },
   "network": {
     "address": "0.0.0.0",
     "preferIPv6": false,
