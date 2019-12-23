@@ -104,6 +104,14 @@
   "db": {
     "path": "mainnetdb"
   },
+  "graph": {
+    "webrootPath": "IOTAtangle/webroot",
+    "socketiopath": "socket.io-client/dist/socket.io.js",
+    "domain": "",
+    "host": "127.0.0.1",
+    "port": 8083,
+    "networkName": "meets HORNET"
+  },
   "localsnapshots": {
     "path": "latest-export.gz.bin"
   },
