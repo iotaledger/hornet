@@ -3,14 +3,17 @@ package gossip
 import (
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/batchhasher"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/curl"
 	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/integerutil"
 	"github.com/gohornet/hornet/packages/model/hornet"
@@ -23,7 +26,6 @@ import (
 	"github.com/gohornet/hornet/packages/typeutils"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 )
 
 const (
@@ -31,7 +33,7 @@ const (
 )
 
 var (
-	packetProcessorWorkerCount = curl.CURLP81.GetBatchSize() * curl.CURLP81.GetWorkerCount()
+	packetProcessorWorkerCount = batchhasher.CURLP81.GetBatchSize() * batchhasher.CURLP81.GetWorkerCount()
 	packetProcessorWorkerPool  *workerpool.WorkerPool
 
 	RequestQueue  *queue.RequestQueue
@@ -268,7 +270,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 		return err
 	}
 
-	hashTrits := curl.CURLP81.Hash(txTrits)
+	hashTrits := batchhasher.CURLP81.Hash(txTrits)
 	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
 
 	if tx.Value != 0 {
