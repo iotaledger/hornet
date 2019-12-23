@@ -4,13 +4,10 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/parameter"
 )
 
 var (
-	log = logger.NewLogger("NodeConfig")
-
 	// flags
 	configName          = flag.StringP("config", "c", "config", "Filename of the config file without the file extension")
 	neighborsConfigName = flag.StringP("neighborsConfig", "n", "neighbors", "Filename of the neighbors config file without the file extension")
