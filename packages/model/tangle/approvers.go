@@ -3,7 +3,8 @@ package tangle
 import (
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/iotaledger/hive.go/syncutils"
+
 	"github.com/gohornet/hornet/packages/typeutils"
 )
 

@@ -11,12 +11,12 @@ import (
 
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/iputils"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/plugins/gossip/neighbor"
 )
 

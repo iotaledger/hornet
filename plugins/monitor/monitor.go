@@ -9,12 +9,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	socketio "github.com/googollee/go-socket.io"
+
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/syncutils"
 )
 
 const (

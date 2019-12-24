@@ -1,10 +1,11 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"sort"
 
-	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/iotaledger/hive.go/syncutils"
+
+	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
 type MilestoneQueue struct {

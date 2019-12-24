@@ -173,6 +173,7 @@ github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANyt
 github.com/iotaledger/goshimmer v0.0.0-20191125182838-26e99d88bddb h1:3vTWyyp/K78QCG9xlBq9ggxScyrm7ZOpsRHn3aCeGwY=
 github.com/iotaledger/goshimmer v0.0.0-20191125182838-26e99d88bddb/go.mod h1:MpvVOS5z2FCtbSfoKu/AOJDNoi7ZamZUDyhmXpM/jTI=
 github.com/iotaledger/hive.go v0.0.0-20191113184748-b545de9170d9/go.mod h1:Ks2y/bEyfvb7nUA7l69a+8Epsv16UlGev0BvxggHius=
+github.com/iotaledger/hive.go v0.0.0-20191219224035-9b36d604f45c h1:1LOXdiL9UddRSRZAPUDQ+QGynyN1aNMkf1yJP5iXnWA=
 github.com/iotaledger/iota.go v1.0.0-beta.9/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
 github.com/iotaledger/iota.go v1.0.0-beta.12 h1:p6Pk3N8tmb6Kaj8F45O5XVJQfH5qQYqpvUnXiSMrtiE=
 github.com/iotaledger/iota.go v1.0.0-beta.12/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
