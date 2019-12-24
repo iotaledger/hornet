@@ -14,6 +14,7 @@ import (
 	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 	"github.com/iotaledger/hive.go/math"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/datastructure"
@@ -23,7 +24,6 @@ import (
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/typeutils"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )

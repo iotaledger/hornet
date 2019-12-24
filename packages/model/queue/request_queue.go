@@ -6,11 +6,11 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
-	"github.com/gohornet/hornet/packages/typeutils"
 )
 
 const (

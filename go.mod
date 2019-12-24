@@ -19,10 +19,10 @@ require (
 	github.com/googollee/go-engine.io v1.4.3-0.20190924125625-798118fc0dd2
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
 	github.com/gorilla/websocket v1.4.1
-	github.com/iotaledger/goshimmer v0.0.0-20191125182838-26e99d88bddb
 	github.com/iotaledger/hive.go v0.0.0-20191219085244-317ae9a463c7
 	github.com/iotaledger/iota.go v1.0.0-beta.12
 	github.com/labstack/echo v3.3.10+incompatible
+	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/shirou/gopsutil v2.19.11+incompatible
@@ -30,6 +30,8 @@ require (
 	github.com/spf13/viper v1.5.0
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	go.uber.org/atomic v1.5.1
+	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472 // indirect
 	golang.org/x/net v0.0.0-20191206103017-1ddd1de85cb0
 	golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e // indirect
+	golang.org/x/text v0.3.2 // indirect
 )

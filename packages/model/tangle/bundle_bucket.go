@@ -2,8 +2,10 @@ package tangle
 
 import (
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/typeutils"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/typeutils"
 )
 
 func GetBundleBucket(bundleHash trinary.Hash) (result *BundleBucket, err error) {

@@ -4,8 +4,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/syncutils"
-
-	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/hive.go/typeutils"
 )
 
 type Approvers struct {

@@ -2,8 +2,7 @@ package datastructure
 
 import (
 	"github.com/iotaledger/hive.go/syncutils"
-
-	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/hive.go/typeutils"
 )
 
 type lruCacheElement struct {
