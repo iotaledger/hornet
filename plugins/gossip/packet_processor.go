@@ -3,27 +3,29 @@ package gossip
 import (
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/batchhasher"
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/math"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/curl"
 	"github.com/gohornet/hornet/packages/datastructure"
-	"github.com/gohornet/hornet/packages/integerutil"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/syncutils"
-	"github.com/gohornet/hornet/packages/typeutils"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 )
 
 const (
@@ -31,7 +33,7 @@ const (
 )
 
 var (
-	packetProcessorWorkerCount = curl.CURLP81.GetBatchSize() * curl.CURLP81.GetWorkerCount()
+	packetProcessorWorkerCount = batchhasher.CURLP81.GetBatchSize() * batchhasher.CURLP81.GetWorkerCount()
 	packetProcessorWorkerPool  *workerpool.WorkerPool
 
 	RequestQueue  *queue.RequestQueue
@@ -268,7 +270,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 		return err
 	}
 
-	hashTrits := curl.CURLP81.Hash(txTrits)
+	hashTrits := batchhasher.CURLP81.Hash(txTrits)
 	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
 
 	if tx.Value != 0 {
@@ -278,7 +280,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 			return consts.ErrInvalidAddress
 		}
 
-		if uint64(integerutil.Abs(tx.Value)) > compressed.TOTAL_SUPPLY {
+		if uint64(math.Abs(tx.Value)) > compressed.TOTAL_SUPPLY {
 			return consts.ErrInsufficientBalance
 		}
 	}

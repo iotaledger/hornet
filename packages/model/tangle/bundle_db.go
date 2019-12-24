@@ -1,10 +1,12 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/bitutils"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/bitmask"
+
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 )
@@ -122,13 +124,13 @@ func DeleteBundlesInDatabase(bundles map[string]string) error {
 func readBundleBucketFromDatabase(bundleHash trinary.Hash) (*BundleBucket, error) {
 
 	var transactions = map[trinary.Hash]*hornet.Transaction{}
-	metaMap := map[trinary.Hash]bitutils.BitMask{}
+	metaMap := map[trinary.Hash]bitmask.BitMask{}
 	err := bundleDatabase.ForEachPrefixKeyOnly(databaseKeyPrefixForBundleHash(bundleHash), func(entry database.KeyOnlyEntry) (stop bool) {
 		txHash := trinary.MustBytesToTrytes(entry.Key, 81)
 		tx, _ := GetTransaction(txHash)
 		if tx != nil {
 			if tx.Tx.CurrentIndex == 0 {
-				metaMap[tx.GetHash()] = bitutils.BitMask(entry.Meta)
+				metaMap[tx.GetHash()] = bitmask.BitMask(entry.Meta)
 			}
 			transactions[tx.GetHash()] = tx
 		}

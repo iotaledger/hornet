@@ -3,8 +3,9 @@ package tangle
 import (
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/typeutils"
+
 	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/typeutils"
 )
 
 const (

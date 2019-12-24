@@ -5,8 +5,10 @@ import (
 	"net"
 
 	"github.com/iotaledger/hive.go/events"
+
+	"github.com/iotaledger/hive.go/syncutils"
+
 	"github.com/gohornet/hornet/packages/network"
-	"github.com/gohornet/hornet/packages/syncutils"
 )
 
 type Server struct {

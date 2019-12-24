@@ -10,8 +10,9 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/batchhasher"
+
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/curl"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
@@ -63,7 +64,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 // transactionHash makes a transaction hash from the given transaction.
 func transactionHash(t *transaction.Transaction) trinary.Hash {
 	trits, _ := transaction.TransactionToTrits(t)
-	hashTrits := curl.CURLP81.Hash(trits)
+	hashTrits := batchhasher.CURLP81.Hash(trits)
 	return trinary.MustTritsToTrytes(hashTrits)
 }
 

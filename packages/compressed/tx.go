@@ -5,8 +5,8 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/curl"
-	"github.com/gohornet/hornet/packages/integerutil"
+	"github.com/iotaledger/hive.go/batchhasher"
+	"github.com/iotaledger/hive.go/math"
 )
 
 const (
@@ -78,7 +78,7 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 	// calculate the transaction hash with the batched hasher if not given
 	skipHashCalc := len(txHash) > 0
 	if !skipHashCalc {
-		hashTrits := curl.CURLP81.Hash(txDataTrits)
+		hashTrits := batchhasher.CURLP81.Hash(txDataTrits)
 		txHash = []trinary.Hash{trinary.MustTritsToTrytes(hashTrits)}
 	}
 
@@ -94,7 +94,7 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 			return nil, consts.ErrInvalidAddress
 		}
 
-		if uint64(integerutil.Abs(tx.Value)) > TOTAL_SUPPLY {
+		if uint64(math.Abs(tx.Value)) > TOTAL_SUPPLY {
 			return nil, consts.ErrInsufficientBalance
 		}
 	}

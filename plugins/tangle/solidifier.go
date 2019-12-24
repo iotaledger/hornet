@@ -4,10 +4,12 @@ import (
 	"time"
 
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/syncutils"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip"
 )

@@ -13,10 +13,11 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/syncutils"
-	"github.com/gohornet/hornet/packages/typeutils"
 )
 
 const (

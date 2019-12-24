@@ -3,7 +3,7 @@ package workerpool
 import (
 	"sync"
 
-	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 type WorkerPool struct {
