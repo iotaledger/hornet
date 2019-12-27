@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.10] - 27.12.2019
+
+### Added
+
+    - arm64 and armhv support to the Dockerfile
+
 ## [0.2.9] - 20.12.2019
 
 ### Fixed
