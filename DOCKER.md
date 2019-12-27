@@ -54,6 +54,6 @@ For 32 (armhf) pass `--build-arg ARCH=armhf`.
 
 Best is to run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)
 ```sh
-docker run --rm -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/latest-export.gz.bin:/app/latest-export.gz.bin:ro -v /tmp/db:/app/mainnetdb --name hornet --net=host hornet:latest
+docker run --rm -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/latest-export.gz.bin:/app/latest-export.gz.bin:ro -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host hornet:latest
 ```
 Use CTRL-c to gracefully end the process.
