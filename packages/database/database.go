@@ -6,7 +6,7 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/pb"
 
-	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 const (

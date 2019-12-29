@@ -9,9 +9,10 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/bitutils"
+	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/syncutils"
+
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/syncutils"
 )
 
 const (
@@ -62,9 +63,9 @@ func NewTransactionFromAPI(transaction *transaction.Transaction, transactionByte
 }
 
 func NewTransactionFromGossip(transaction *transaction.Transaction, transactionBytes []byte, requested bool) *Transaction {
-	metadata := bitutils.BitMask(byte(0))
+	metadata := bitmask.BitMask(byte(0))
 	if requested {
-		metadata = metadata.SettingFlag(HORNET_TX_METADATA_REQUESTED)
+		metadata = metadata.SetFlag(HORNET_TX_METADATA_REQUESTED)
 	}
 
 	tx := &Transaction{
@@ -130,7 +131,7 @@ func (tx *Transaction) SetSolid(solid bool) {
 
 	if solid != tx.metadata.HasFlag(HORNET_TX_METADATA_SOLID) {
 		tx.solidificationTimestamp = int32(time.Now().Unix())
-		tx.metadata = tx.metadata.ModifyingFlag(HORNET_TX_METADATA_SOLID, solid)
+		tx.metadata = tx.metadata.ModifyFlag(HORNET_TX_METADATA_SOLID, solid)
 		tx.SetModified(true)
 	}
 }
@@ -147,7 +148,7 @@ func (tx *Transaction) SetConfirmed(confirmed bool, confirmationIndex milestone_
 	defer tx.metadataMutex.Unlock()
 
 	if (confirmed != tx.metadata.HasFlag(HORNET_TX_METADATA_CONFIRMED)) || (tx.confirmationIndex != confirmationIndex) {
-		tx.metadata = tx.metadata.ModifyingFlag(HORNET_TX_METADATA_CONFIRMED, confirmed)
+		tx.metadata = tx.metadata.ModifyFlag(HORNET_TX_METADATA_CONFIRMED, confirmed)
 		tx.confirmationIndex = confirmationIndex
 		tx.SetModified(true)
 	}
@@ -165,7 +166,7 @@ func (tx *Transaction) SetRequested(requested bool) {
 	defer tx.metadataMutex.Unlock()
 
 	if requested != tx.metadata.HasFlag(HORNET_TX_METADATA_REQUESTED) {
-		tx.metadata = tx.metadata.ModifyingFlag(HORNET_TX_METADATA_REQUESTED, requested)
+		tx.metadata = tx.metadata.ModifyFlag(HORNET_TX_METADATA_REQUESTED, requested)
 		tx.SetModified(true)
 	}
 }

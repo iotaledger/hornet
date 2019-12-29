@@ -7,16 +7,17 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/pkg/errors"
+
+	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/iputils"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/syncutils"
 	"github.com/gohornet/hornet/plugins/gossip/neighbor"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
 )
 
 var (
@@ -68,11 +69,11 @@ type reconnectneighbor struct {
 func availableNeighborSlotsFilled() bool {
 	// while this check is not thread-safe, initiated connections will be dropped
 	// when their handshaking was done but already all neighbor slots are filled
-	return len(connectedNeighbors) >= parameter.NodeConfig.GetInt("network.maxNeighbors")
+	return len(connectedNeighbors) >= parameter.NeighborsConfig.GetInt("maxNeighbors")
 }
 
 func configureNeighbors() {
-	autoTetheringEnabled = parameter.NodeConfig.GetBool("network.autoTetheringEnabled")
+	autoTetheringEnabled = parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
 
 	Events.NeighborPutBackIntoReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
 		gossipLogger.Infof("added neighbor %s back into reconnect pool...", neighbor.InitAddress.String())
@@ -244,7 +245,9 @@ func allowNeighborIdentity(neighbor *Neighbor) {
 	for ip := range neighbor.Addresses.IPs {
 		identity := NewNeighborIdentity(ip.String(), neighbor.InitAddress.Port)
 		allowedIdentities[identity] = struct{}{}
+		hostsBlacklistLock.Lock()
 		delete(hostsBlacklist, ip.String())
+		hostsBlacklistLock.Unlock()
 	}
 }
 
@@ -310,7 +313,9 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 
 	if !autoTetheringEnabled {
 		if _, allowedToConnect := allowedIdentities[neighbor.Identity]; !allowedToConnect {
+			hostsBlacklistLock.Lock()
 			hostsBlacklist[neighbor.PrimaryAddress.String()] = struct{}{}
+			hostsBlacklistLock.Unlock()
 			neighborsLock.Unlock()
 			return errors.Wrapf(ErrIdentityUnknown, neighbor.Identity)
 		}
@@ -515,7 +520,9 @@ func RemoveNeighbor(originIdentity string) error {
 		// and add it to the blacklist
 		delete(reconnectPool, identity)
 		delete(allowedIdentities, identity)
+		hostsBlacklistLock.Lock()
 		hostsBlacklist[ip.String()] = struct{}{}
+		hostsBlacklistLock.Unlock()
 	}
 
 	// also remove the neighbor if the origin address matches:
@@ -529,7 +536,9 @@ func RemoveNeighbor(originIdentity string) error {
 			Events.RemovedNeighbor.Trigger(neigh)
 			delete(reconnectPool, neigh.Identity)
 			delete(allowedIdentities, neigh.Identity)
+			hostsBlacklistLock.Lock()
 			hostsBlacklist[neigh.Identity] = struct{}{}
+			hostsBlacklistLock.Unlock()
 		}
 	}
 

@@ -1,8 +1,8 @@
 package datastructure
 
 import (
-	"github.com/gohornet/hornet/packages/syncutils"
-	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
 )
 
 type lruCacheElement struct {
@@ -17,7 +17,7 @@ type LRUCache struct {
 	size             int
 	options          *LRUCacheOptions
 	mutex            syncutils.RWMutex
-	krwMutex         KRWMutex
+	krwMutex         syncutils.KRWMutex
 }
 
 func NewLRUCache(capacity int, options ...*LRUCacheOptions) *LRUCache {
@@ -41,7 +41,7 @@ func NewLRUCache(capacity int, options ...*LRUCacheOptions) *LRUCache {
 		doublyLinkedList: &DoublyLinkedList{},
 		capacity:         capacity,
 		options:          currentOptions,
-		krwMutex:         KRWMutex{keyMutexConsumers: make(map[interface{}]int), keyMutexes: make(map[interface{}]*syncutils.RWMutex)},
+		krwMutex:         *syncutils.NewKRWMutex(),
 	}
 }
 

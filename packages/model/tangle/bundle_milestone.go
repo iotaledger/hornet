@@ -17,7 +17,7 @@ func (bundle *Bundle) SetMilestone(milestone bool) {
 	defer bundle.metadataMutex.Unlock()
 
 	if milestone != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_IS_MILESTONE) {
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_IS_MILESTONE, milestone)
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_IS_MILESTONE, milestone)
 		bundle.SetModified(true)
 	}
 }

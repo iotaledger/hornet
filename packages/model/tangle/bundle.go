@@ -232,7 +232,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 		// create a new bundle instance
 		bndl := &Bundle{
 			txs:      make(map[trinary.Hash]struct{}),
-			metadata: bitutils.BitMask(0),
+			metadata: bitmask.BitMask(0),
 			modified: true,
 			hash:     tx.GetTransaction().Tx.Bundle,
 			tailTx:   tx.GetTransaction().GetHash(),
@@ -407,7 +407,7 @@ type Bundle struct {
 
 	// Metadata
 	metadataMutex syncutils.RWMutex
-	metadata      bitutils.BitMask
+	metadata      bitmask.BitMask
 
 	// Status
 	statusMutex syncutils.RWMutex
@@ -630,8 +630,8 @@ func (bundle *Bundle) setValid(valid bool) {
 	defer bundle.metadataMutex.Unlock()
 
 	if valid != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_VALID) {
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_VALID, valid)
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_VALIDATED, true)
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_VALID, valid)
+		bundle.metadata = bundle.metadata.SetFlag(HORNET_BUNDLE_METADATA_VALIDATED)
 		bundle.SetModified(true)
 	}
 }
@@ -668,7 +668,7 @@ func (bundle *Bundle) setComplete(complete bool) {
 	defer bundle.metadataMutex.Unlock()
 
 	if complete != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_COMPLETE) {
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_COMPLETE, complete)
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_COMPLETE, complete)
 		bundle.SetModified(true)
 	}
 }
@@ -703,7 +703,7 @@ func (bundle *Bundle) setSolid(solid bool) {
 	defer bundle.metadataMutex.Unlock()
 
 	if solid != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_SOLID) {
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_SOLID, solid)
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_SOLID, solid)
 		bundle.SetModified(true)
 	}
 }
@@ -742,7 +742,7 @@ func (bundle *Bundle) setConfirmed(confirmed bool) {
 	defer bundle.metadataMutex.Unlock()
 
 	if confirmed != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_CONFIRMED) {
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_CONFIRMED, confirmed)
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_CONFIRMED, confirmed)
 		bundle.SetModified(true)
 	}
 }
@@ -759,7 +759,7 @@ func (bundle *Bundle) SetConflicting(conflicting bool) {
 	defer bundle.metadataMutex.Unlock()
 
 	if conflicting != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_CONFLICTING) {
-		bundle.metadata = bundle.metadata.ModifyingFlag(HORNET_BUNDLE_METADATA_CONFLICTING, conflicting)
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_CONFLICTING, conflicting)
 		bundle.SetModified(true)
 	}
 }

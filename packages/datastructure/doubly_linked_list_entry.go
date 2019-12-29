@@ -1,7 +1,7 @@
 package datastructure
 
 import (
-	"github.com/gohornet/hornet/packages/syncutils"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 type DoublyLinkedListEntry struct {

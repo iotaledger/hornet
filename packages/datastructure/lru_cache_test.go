@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/iotaledger/goshimmer/packages/datastructure"
-	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/hive.go/typeutils"
 )
 
 func TestLRUCache(t *testing.T) {
@@ -146,7 +145,7 @@ func TestBatchedEvictLRUCache(t *testing.T) {
 
 func TestLRUCache_Eviction(t *testing.T) {
 
-	cache := datastructure.NewLRUCache(100, &datastructure.LRUCacheOptions{
+	cache := NewLRUCache(100, &LRUCacheOptions{
 		EvictionCallback: func(key interface{}, value interface{}) {
 			evictedKey := key.(string)
 			evictedObj := value.(int)
