@@ -245,7 +245,9 @@ func allowNeighborIdentity(neighbor *Neighbor) {
 	for ip := range neighbor.Addresses.IPs {
 		identity := NewNeighborIdentity(ip.String(), neighbor.InitAddress.Port)
 		allowedIdentities[identity] = struct{}{}
+		hostsBlacklistLock.Lock()
 		delete(hostsBlacklist, ip.String())
+		hostsBlacklistLock.Unlock()
 	}
 }
 
@@ -311,7 +313,9 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 
 	if !autoTetheringEnabled {
 		if _, allowedToConnect := allowedIdentities[neighbor.Identity]; !allowedToConnect {
+			hostsBlacklistLock.Lock()
 			hostsBlacklist[neighbor.PrimaryAddress.String()] = struct{}{}
+			hostsBlacklistLock.Unlock()
 			neighborsLock.Unlock()
 			return errors.Wrapf(ErrIdentityUnknown, neighbor.Identity)
 		}
@@ -516,7 +520,9 @@ func RemoveNeighbor(originIdentity string) error {
 		// and add it to the blacklist
 		delete(reconnectPool, identity)
 		delete(allowedIdentities, identity)
+		hostsBlacklistLock.Lock()
 		hostsBlacklist[ip.String()] = struct{}{}
+		hostsBlacklistLock.Unlock()
 	}
 
 	// also remove the neighbor if the origin address matches:
@@ -530,7 +536,9 @@ func RemoveNeighbor(originIdentity string) error {
 			Events.RemovedNeighbor.Trigger(neigh)
 			delete(reconnectPool, neigh.Identity)
 			delete(allowedIdentities, neigh.Identity)
+			hostsBlacklistLock.Lock()
 			hostsBlacklist[neigh.Identity] = struct{}{}
+			hostsBlacklistLock.Unlock()
 		}
 	}
 
