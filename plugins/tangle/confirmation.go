@@ -73,12 +73,12 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, tx.Tx.Bundle)
 			}
 
-			if !bundle.IsValid() {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, tx.Tx.Bundle)
-			}
-
 			if !bundle.IsComplete() {
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not complete: %v", txHash, tx.Tx.Bundle)
+			}
+
+			if !bundle.IsValid() {
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, tx.Tx.Bundle)
 			}
 
 			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
