@@ -1,17 +1,18 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/iotaledger/hive.go/lru_cache"
+
 	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
-	BundleBucketCache *datastructure.LRUCache
+	BundleBucketCache *lru_cache.LRUCache
 )
 
 func InitBundleCache() {
 	opts := profile.GetProfile().Caches.Bundles
-	BundleBucketCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	BundleBucketCache = lru_cache.NewLRUCache(opts.Size, &lru_cache.LRUCacheOptions{
 		EvictionCallback:  onEvictBundles,
 		EvictionBatchSize: opts.EvictionSize,
 	})

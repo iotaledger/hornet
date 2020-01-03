@@ -4,9 +4,13 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/gohornet/hornet/packages/database"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/database"
+
+	hornetDB "github.com/gohornet/hornet/packages/database"
 )
 
 var (
@@ -14,7 +18,7 @@ var (
 )
 
 func configureSpentAddressesDatabase() {
-	if db, err := database.Get(DBPrefixSpentAddresses); err != nil {
+	if db, err := database.Get(DBPrefixSpentAddresses, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		spentAddressesDatabase = db

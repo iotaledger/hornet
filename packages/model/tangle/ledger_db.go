@@ -9,10 +9,11 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/database"
 	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/database"
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/parameter"
 )
@@ -42,7 +43,7 @@ func WriteUnlockLedger() {
 }
 
 func configureLedgerDatabase() {
-	if db, err := database.Get(DBPrefixLedgerState); err != nil {
+	if db, err := database.Get(DBPrefixLedgerState, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		ledgerDatabase = db

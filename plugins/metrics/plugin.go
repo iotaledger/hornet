@@ -3,11 +3,11 @@ package metrics
 import (
 	"time"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/timeutil"
 )
 
 var PLUGIN = node.NewPlugin("Metrics", node.Enabled, configure, run)

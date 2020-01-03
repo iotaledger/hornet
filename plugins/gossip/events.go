@@ -2,11 +2,13 @@ package gossip
 
 import (
 	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/iotaledger/hive.go/events"
-	"github.com/gohornet/hornet/packages/iputils"
+	"github.com/iotaledger/hive.go/iputils"
+	"github.com/iotaledger/hive.go/network"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/network"
 )
 
 var Events = pluginEvents{

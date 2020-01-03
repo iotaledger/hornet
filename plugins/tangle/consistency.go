@@ -3,17 +3,19 @@ package tangle
 import (
 	"errors"
 
-	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/lru_cache"
+
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
 	ErrRefBundleNotValid    = errors.New("a referenced bundle is invalid")
 	ErrRefBundleNotComplete = errors.New("a referenced bundle is not complete")
 
-	RefsAnInvalidBundleCache *datastructure.LRUCache
+	RefsAnInvalidBundleCache *lru_cache.LRUCache
 )
 
 // CheckConsistencyOfConeAndMutateDiff checks whether cone referenced by the given tail transaction is consistent with the current diff.

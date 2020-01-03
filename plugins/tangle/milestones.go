@@ -3,8 +3,9 @@ package tangle
 import (
 	"runtime"
 
+	"github.com/iotaledger/hive.go/workerpool"
+
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
