@@ -3,11 +3,14 @@ package tangle
 import (
 	"encoding/binary"
 
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/database"
+
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/database"
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
@@ -15,7 +18,7 @@ import (
 var transactionDatabase database.Database
 
 func configureTransactionDatabase() {
-	if db, err := database.Get(DBPrefixTransactions); err != nil {
+	if db, err := database.Get(DBPrefixTransactions, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		transactionDatabase = db

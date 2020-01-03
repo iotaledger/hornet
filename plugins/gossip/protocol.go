@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/network"
 	"github.com/iotaledger/hive.go/syncutils"
-
-	"github.com/gohornet/hornet/packages/network"
 )
 
 // region constants and variables //////////////////////////////////////////////////////////////////////////////////////

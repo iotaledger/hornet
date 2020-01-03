@@ -305,11 +305,48 @@ type GetLedgerDiff struct {
 	MilestoneIndex uint64 `json:"milestoneIndex"`
 }
 
+// GetLedgerDiffExt struct
+type GetLedgerDiffExt struct {
+	Command        string `json:"command"`
+	MilestoneIndex uint64 `json:"milestoneIndex"`
+}
+
 // GetLedgerDiffReturn struct
 type GetLedgerDiffReturn struct {
 	Diff           map[string]int64 `json:"diff"`
 	MilestoneIndex uint64           `json:"milestoneIndex"`
 	Duration       int              `json:"duration"`
+}
+
+type TxHashWithValue struct {
+	TxHash     string `json:"txHash"`
+	TailTxHash string `json:"tailTxHash"`
+	BundleHash string `json:"bundleHash"`
+	Address    string `json:"address"`
+	Value      int64  `json:"value"`
+}
+
+type TxWithValue struct {
+	TxHash  string `json:"txHash"`
+	Address string `json:"address"`
+	Index   uint64 `json:"index"`
+	Value   int64  `json:"value"`
+}
+
+type BundleWithValue struct {
+	BundleHash string         `json:"bundleHash"`
+	TailTxHash string         `json:"tailTxHash"`
+	LastIndex  uint64         `json:"lastIndex"`
+	Txs        []*TxWithValue `json:"txs"`
+}
+
+// GetLedgerDiffReturn struct
+type GetLedgerDiffExtReturn struct {
+	ConfirmedTxWithValue      []*TxHashWithValue `json:"confirmedTxWithValue"`
+	ConfirmedBundlesWithValue []*BundleWithValue `json:"confirmedBundlesWithValue"`
+	Diff                      map[string]int64   `json:"diff"`
+	MilestoneIndex            uint64             `json:"milestoneIndex"`
+	Duration                  int                `json:"duration"`
 }
 
 ///////////////////////////////////////////////////////////////////
