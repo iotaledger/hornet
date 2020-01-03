@@ -33,13 +33,16 @@ This way, HORNET is easier to install and runs on low-end devices.
 #### TangleMonitor
 
 - Download the latest TangleMonitor source code
+
 ```bash
 git clone https://github.com/unioproject/tanglemonitor.git
 ```
+
 - Modify the `config.json` to fit your needs
-    - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
-    - Add `"Monitor"` to `"enableplugins"`
-    - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
+  - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
+  - Add `"Monitor"` to `"enableplugins"`
+  - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
+
 ```json
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
@@ -56,8 +59,9 @@ git clone https://github.com/unioproject/tanglemonitor.git
 #### Spammer
 
 - Modify the `config.json` to fit your needs
-    - Change `"address"`, `"message"`, `"tag"` and `"tpsratelimit"`
-    - Add `"Spammer"` to `"enableplugins"`
+  - Change `"address"`, `"message"`, `"tag"` and `"tpsratelimit"`
+  - Add `"Spammer"` to `"enableplugins"`
+
 ```json
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
@@ -77,5 +81,11 @@ git clone https://github.com/unioproject/tanglemonitor.git
 ---
 
 ### Docker
+
+![Docker Pulls](https://img.shields.io/docker/pulls/gohornet/hornet?style=for-the-badge)
+
+Pull HORNET from [Docker Hub](https://hub.docker.com/r/gohornet/hornet)
+
+**Build a Docker image**
 
 - See [Docker](DOCKER.md)
