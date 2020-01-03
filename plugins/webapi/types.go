@@ -329,7 +329,7 @@ type TxHashWithValue struct {
 type TxWithValue struct {
 	TxHash  string `json:"txHash"`
 	Address string `json:"address"`
-	Index   uint64 `json:index`
+	Index   uint64 `json:"index"`
 	Value   int64  `json:"value"`
 }
 
