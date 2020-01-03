@@ -127,5 +127,5 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 		}
 	}
 
-	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Now().Sub(ts))
+	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Since(ts))
 }

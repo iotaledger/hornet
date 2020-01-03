@@ -272,7 +272,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		tips = append(tips, selected)
 	}
 
-	walkStats.Duration = time.Now().Sub(start)
+	walkStats.Duration = time.Since(start)
 	walkStats.GlobalBelowMaxDepthCacheHitRatio = tanglePlugin.BelowDepthMemoizationCache.CacheHitRatio()
 	Events.TipSelPerformed.Trigger(walkStats)
 	return tips, walkStats, nil

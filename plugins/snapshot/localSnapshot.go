@@ -96,7 +96,7 @@ func getApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *
 		}
 	}
 
-	log.Debugf("Milestone walked (%d): approvees: %v, collect: %v", milestoneIndex, len(approvees), time.Now().Sub(ts))
+	log.Debugf("Milestone walked (%d): approvees: %v, collect: %v", milestoneIndex, len(approvees), time.Since(ts))
 	return approvees
 }
 
@@ -293,7 +293,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	}
 
 	os.Rename(filePathTmp, filePath)
-	fmt.Printf("Writing LocalSnapshot, took %v", time.Now().Sub(ts))
+	fmt.Printf("Writing LocalSnapshot, took %v", time.Since(ts))
 
 	return nil
 }
