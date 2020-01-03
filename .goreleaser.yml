@@ -65,7 +65,7 @@ builds:
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
     flags:
-      - -tags=pow_c
+      - -tags=pow_arm_c128
     main: main.go
     goos:
       - linux

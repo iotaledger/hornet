@@ -151,6 +151,8 @@ github.com/iotaledger/hive.go v0.0.0-20191219085244-317ae9a463c7/go.mod h1:7iqun
 github.com/iotaledger/iota.go v1.0.0-beta.9/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
 github.com/iotaledger/iota.go v1.0.0-beta.12 h1:p6Pk3N8tmb6Kaj8F45O5XVJQfH5qQYqpvUnXiSMrtiE=
 github.com/iotaledger/iota.go v1.0.0-beta.12/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
+github.com/iotaledger/iota.go v1.0.0-beta.12.0.20200103112311-834052b57eab h1:Cf14qW+sbWIHWQ624bCkG+VYJ9bdh47rpn5wdqzXamU=
+github.com/iotaledger/iota.go v1.0.0-beta.12.0.20200103112311-834052b57eab/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
 github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0B/fFc00Y+Rasa88328GlI/XbtyysCtTHZS8h7IrBU=
 github.com/joho/godotenv v1.3.0 h1:Zjp+RcGpHhGlrMbJzXTrZZPrWj+1vfm90La1wgB6Bhc=
 github.com/joho/godotenv v1.3.0/go.mod h1:7hK45KPybAkOC6peb+G5yklZfMxEjkZhHbwpqxOKXbg=
