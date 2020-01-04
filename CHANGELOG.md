@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.12] - 04.01.2020
+
+### Fixed
+
+    - Fixes broken ARM7 build with enabled CGO
+
 ## [0.2.11] - 04.01.2020
 
 ### Added
