@@ -153,7 +153,7 @@ func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
 				}
 				bundlesValidated.Inc()
 
-				// Check tx for milestone
+				// Check bundle for a milestone
 				checkForMilestoneWorkerPool.Submit(bundle)
 			}
 		}

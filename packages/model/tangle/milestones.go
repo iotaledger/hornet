@@ -206,6 +206,12 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		}
 	}
 
+	// Check if milestone was already processed
+	msBundle, err := GetMilestone(milestoneIndex)
+	if msBundle != nil {
+		return false, errors.Wrapf(ErrInvalidMilestone, "Exists already, Index: %d", milestoneIndex)
+	}
+
 	// Verify milestone signature
 	valid := validateMilestone(signatureTxs, siblingsTx, milestoneIndex, coordinatorSecurityLevel, numberOfKeysInAMilestone, coordinatorAddress)
 	if !valid {

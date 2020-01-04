@@ -1,8 +1,6 @@
 package tangle
 
 import (
-	"runtime"
-
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -10,7 +8,7 @@ import (
 )
 
 var (
-	checkForMilestoneWorkerCount = runtime.NumCPU()
+	checkForMilestoneWorkerCount = 1
 	checkForMilestoneQueueSize   = 10000
 	checkForMilestoneWorkerPool  *workerpool.WorkerPool
 )
@@ -37,10 +35,10 @@ func processValidMilestone(bundle *tangle.Bundle) {
 		tx.SetRequested(true)
 	}
 
+	tangle.StoreMilestoneInCache(bundle)
+
 	solidMsIndex := tangle.GetSolidMilestoneIndex()
 	bundleMsIndex := bundle.GetMilestoneIndex()
-
-	tangle.StoreMilestoneInCache(bundle)
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	if latestMilestoneIndex < bundleMsIndex {
@@ -62,5 +60,4 @@ func processValidMilestone(bundle *tangle.Bundle) {
 			log.Panicf("Synced too far! Index: %d (%v), PruningIndex: %d", bundleMsIndex, bundle.GetMilestoneHash(), pruningIndex)
 		}
 	}
-
 }
