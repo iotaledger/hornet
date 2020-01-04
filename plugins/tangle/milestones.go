@@ -46,7 +46,7 @@ func processValidMilestone(bundle *tangle.Bundle) {
 	if latestMilestoneIndex < bundleMsIndex {
 		tangle.SetLatestMilestone(bundle)
 		Events.LatestMilestoneChanged.Trigger(bundle)
-		milestoneSolidifierWorkerPool.Submit(bundleMsIndex)
+		milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex)
 	}
 
 	if bundleMsIndex > solidMsIndex {
