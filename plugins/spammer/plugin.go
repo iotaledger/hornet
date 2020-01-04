@@ -4,16 +4,16 @@ import (
 	"runtime"
 	"time"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/node"
+	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/timeutil"
 )
 
 var (

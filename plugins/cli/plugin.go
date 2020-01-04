@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gohornet/hornet/packages/node"
-	"github.com/gohornet/hornet/packages/profile"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/node"
+
+	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
 	// AppVersion version number
-	AppVersion = "0.2.10"
+	AppVersion = "0.2.11"
 
 	// AppName app code name
 	AppName = "HORNET"
@@ -30,11 +31,11 @@ func onAddPlugin(name string, status int) {
 
 func init() {
 
-	for name, status := range parameter.GetPlugins() {
+	for name, status := range node.GetPlugins() {
 		onAddPlugin(name, status)
 	}
 
-	parameter.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
+	node.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
 
 	flag.Usage = printUsage
 }
@@ -50,14 +51,15 @@ func parseParameters() {
 
 func configure(ctx *node.Plugin) {
 
-	fmt.Print(`
+	fmt.Print(fmt.Sprintf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
               ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
               ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-` + "\n\n")
+                                   v%s
+`+"\n\n", AppVersion))
 
 	ignoreSettingsAtPrint := []string{}
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")

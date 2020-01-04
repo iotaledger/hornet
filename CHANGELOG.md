@@ -2,6 +2,107 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.11] - 04.01.2020
+
+### Added
+
+    - Seperate config file for neighbor settings
+    - MQTT broker plugin
+    - IOTA Tangle Visualiser plugin
+    - Print HORNET version at startup
+    - getLedgerDiffExt webapi call for debug purposes
+
+### Removed
+
+    - Almost all command line flags were removed (use the config file instead)
+    - Removed "default" profile (use "auto" instead)
+
+### Changed
+
+    - Switched to hive.go packages to reduce codebase
+    - Several speed improvements (binary/trinary conversion) due to latest iota.go version
+
+### Fixed
+
+    - Fixes possible panic with reattached milestones
+    - Issue were milestoneSolidifierWorkerPool could block processing of tx
+    - Fixes concurrent writes to the host blacklist
+    - Fixes wrong order of bundles checks in solidifier
+
+### Config file changes
+
+New options:
+
+`config.json`
+```json
+  "graph": {
+    "webrootPath": "IOTAtangle/webroot",
+    "socketiopath": "socket.io-client/dist/socket.io.js",
+    "domain": "",
+    "host": "127.0.0.1",
+    "port": 8083,
+    "networkName": "meets HORNET"
+  },
+  "mqtt": {
+    "config": "mqtt_config.json"
+  },
+```
+
+Now there is a seperate file for the neighbor settings:
+
+`neighbors.json`
+```json
+{
+  "autotetheringenabled": false,
+  "maxneighbors": 5,
+  "neighbors": [
+    {
+      "identity": "example1.neighbor.com:15600",
+      "alias": "Example Neighbor 1",
+      "preferIPv6": false
+    },
+    {
+      "identity": "example2.neighbor.com:15600",
+      "alias": "Example Neighbor 2",
+      "preferIPv6": false
+    },
+    {
+      "identity": "example3.neighbor.com:15600",
+      "alias": "Example Neighbor 3",
+      "preferIPv6": false
+    }
+  ]
+}
+```
+
+Removed options:
+
+`config.json`
+```diff
+  "network": {
+    "address": "0.0.0.0",
+-    "autotetheringenabled": false,
+    "preferIPv6": false,
+-    "maxneighbors": 5,
+-    "neighbors": [
+-      {
+-        "identity": "example1.neighbor.com:15600",
+-        "preferIPv6": false
+-      },
+-      {
+-        "identity": "example2.neighbor.com:15600",
+-        "preferIPv6": false
+-      },
+-      {
+-        "identity": "example3.neighbor.com:15600",
+-        "preferIPv6": false
+-      }
+-    ],
+    "port": 15600,
+    "reconnectattemptintervalseconds": 60
+  },
+```
+
 ## [0.2.10] - 27.12.2019
 
 ### Added
@@ -46,24 +147,24 @@ New options:
 
 ```json
 
-"network": {
+  "network": {
     "preferIPv6": false,
-}
+  }
 
-"monitor": {
+  "monitor": {
     "domain": "",
     "host": "127.0.0.1",
     "port": 4434,
     "apiPort": 4433
-}
+  }
 ```
 
 **Changed option (you have to edit it in your config):**
 
 ```json
-"node": {
+  "node": {
     "loglevel": 127
-}
+  }
 ```
 
 ## [0.2.7] - 17.12.2019

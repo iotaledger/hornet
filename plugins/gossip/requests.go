@@ -3,14 +3,14 @@ package gossip
 import (
 	"runtime"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
@@ -85,7 +85,7 @@ func RequestMulti(hashes []trinary.Hash, reqMilestoneIndex milestone_index.Miles
 	added := RequestQueue.AddMulti(hashes, reqMilestoneIndex, false)
 	for x, txHash := range hashes {
 		if added[x] {
-			stingRequestsWorkerPool.Submit(txHash, reqMilestoneIndex)
+			stingRequestsWorkerPool.TrySubmit(txHash, reqMilestoneIndex)
 		}
 	}
 }
@@ -104,7 +104,7 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 		}
 
 		if RequestQueue.Add(txHash, reqMilestoneIndex, false) {
-			stingRequestsWorkerPool.Submit(txHash, reqMilestoneIndex)
+			stingRequestsWorkerPool.TrySubmit(txHash, reqMilestoneIndex)
 		}
 	}
 }
@@ -143,7 +143,7 @@ func RequestApprovees(tx *hornet.Transaction) {
 		reqsAdded := RequestQueue.AddMulti(approvesToAdd, reqMilestoneIndex, false)
 		for i, added := range reqsAdded {
 			if added {
-				stingRequestsWorkerPool.Submit(approvesToAdd[i], reqMilestoneIndex)
+				stingRequestsWorkerPool.TrySubmit(approvesToAdd[i], reqMilestoneIndex)
 			}
 		}
 	}
@@ -175,7 +175,7 @@ func RequestMilestone(milestone *tangle.Bundle) bool {
 		// Tx is unknown, request it!
 		if RequestQueue.Add(approveeHash, reqMilestoneIndex, false) {
 			requested = true
-			stingRequestsWorkerPool.Submit(approveeHash, reqMilestoneIndex)
+			stingRequestsWorkerPool.TrySubmit(approveeHash, reqMilestoneIndex)
 		}
 	}
 

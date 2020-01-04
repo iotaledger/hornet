@@ -104,6 +104,14 @@
   "db": {
     "path": "mainnetdb"
   },
+  "graph": {
+    "webrootPath": "IOTAtangle/webroot",
+    "socketiopath": "socket.io-client/dist/socket.io.js",
+    "domain": "",
+    "host": "127.0.0.1",
+    "port": 8083,
+    "networkName": "meets HORNET"
+  },
   "localsnapshots": {
     "path": "latest-export.gz.bin"
   },
@@ -119,25 +127,12 @@
     "port": 4434,
     "apiPort": 4433
   },
+  "mqtt": {
+    "config": "mqtt_config.json"
+  },
   "network": {
     "address": "0.0.0.0",
-    "autotetheringenabled": false,
     "preferIPv6": false,
-    "maxneighbors": 5,
-    "neighbors": [
-      {
-        "identity": "example1.neighbor.com:15600",
-        "preferIPv6": false
-      },
-      {
-        "identity": "example2.neighbor.com:15600",
-        "preferIPv6": false
-      },
-      {
-        "identity": "example3.neighbor.com:15600",
-        "preferIPv6": false
-      }
-    ],
     "port": 15600,
     "reconnectattemptintervalseconds": 60
   },

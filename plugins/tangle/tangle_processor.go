@@ -6,15 +6,15 @@ import (
 
 	"go.uber.org/atomic"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/node"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 	"github.com/gohornet/hornet/plugins/metrics"
@@ -150,11 +150,11 @@ func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
 							}
 						}
 					}
+
+					// Check bundle for a milestone
+					checkForMilestoneWorkerPool.Submit(bundle)
 				}
 				bundlesValidated.Inc()
-
-				// Check tx for milestone
-				checkForMilestoneWorkerPool.Submit(bundle)
 			}
 		}
 	} else {

@@ -7,10 +7,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gohornet/hornet/packages/node"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/node"
+
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var enabledPlugins []string

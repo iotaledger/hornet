@@ -3,17 +3,19 @@ package tangle
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/iotaledger/hive.go/parameter"
 	"sync"
-
-	"github.com/gohornet/hornet/packages/compressed"
 
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/gohornet/hornet/packages/database"
+
+	"github.com/iotaledger/hive.go/database"
+	"github.com/iotaledger/hive.go/typeutils"
+
+	"github.com/gohornet/hornet/packages/compressed"
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (
@@ -41,7 +43,7 @@ func WriteUnlockLedger() {
 }
 
 func configureLedgerDatabase() {
-	if db, err := database.Get(DBPrefixLedgerState); err != nil {
+	if db, err := database.Get(DBPrefixLedgerState, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		ledgerDatabase = db

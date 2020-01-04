@@ -3,13 +3,14 @@ package tangle
 import (
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/workerpool"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/workerpool"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
 )
 
 const (

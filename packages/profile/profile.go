@@ -6,8 +6,9 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger/v2/options"
-	"github.com/iotaledger/hive.go/parameter"
 	"github.com/shirou/gopsutil/mem"
+
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (
@@ -40,7 +41,7 @@ func GetProfile() *Profile {
 		}
 
 		switch profileName {
-		case "8gb", "default":
+		case "8gb":
 			profile = Profile8GB
 			profile.Name = "8gb"
 		case "4gb":

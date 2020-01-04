@@ -22,7 +22,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
 - Extract the files in a folder of your choice
-- Add neighbors to the config.json file
+- Add neighbors to the `neighbors.json` file
 - Download the latest HORNET snapshot from [dbfiles.iota.org](https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin)
 - Run HORNET: `./hornet -c config`
 
@@ -42,26 +42,87 @@ git clone https://github.com/unioproject/tanglemonitor.git
   - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
   - Add `"Monitor"` to `"enableplugins"`
   - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
-
+  - Only change the `"port"` and the `"apiPort"` if you redirect them back to the default ports, because they are hardcoded in the frontend
 ```json
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
     "domain": "",
-    "host": "127.0.0.1"
+    "host": "127.0.0.1",
+    "port": 4434,
+    "apiPort": 4433
   },
   "node": {
     "disableplugins": [],
     "enableplugins": ["Monitor"],
-    "loglevel": 3
+    "loglevel": 127
+  },
+```
+
+#### IOTA Tangle Visualiser
+
+- Download the latest IOTA Tangle Visualiser and socket.io source code
+```bash
+git clone https://github.com/glumb/IOTAtangle.git
+git clone https://github.com/socketio/socket.io-client.git
+```
+- Modify the `config.json` to fit your needs
+    - `"webrootPath"` has to point to the frontend folder of the IOTA Tangle Visualiser source code
+    - Add `"Graph"` to `"enableplugins"`
+    - Change `"host"` to `"0.0.0.0"` if you want to access IOTA Tangle Visualiser from anywhere
+```json
+  "graph": {
+    "webrootPath": "IOTAtangle/webroot",
+    "socketiopath": "socket.io-client/dist/socket.io.js",
+    "domain": "",
+    "host": "127.0.0.1",
+    "port": 8083,
+    "networkName": "meets HORNET"
+  },
+  "node": {
+    "disableplugins": [],
+    "enableplugins": ["Graph"],
+    "loglevel": 127
+  },
+```
+
+#### MQTT Broker
+
+- Modify the `mqtt_config.json` to fit your needs
+    - Change `"host"` to `"0.0.0.0"` if you want to access MQTT from anywhere
+    - Change `"port"` to `""` and `"tlsPort"` to a port number if you want to use TLS (you also need certificate files)
+```json
+{
+  ...
+  "port": "1883",
+	"host": "127.0.0.1",
+  ...
+  "tlsPort": "",
+	"tlsHost": "",
+	"tlsInfo": {
+		"verify": false,
+		"caFile": "tls/ca/cacert.pem",
+		"certFile": "tls/server/cert.pem",
+		"keyFile": "tls/server/key.pem"
+	},
+	"plugins": {}
+}
+```
+- Modify the `config.json`
+    - Add `"MQTT"` to `"enableplugins"`
+```json
+  "node": {
+    "disableplugins": [],
+    "enableplugins": ["MQTT"],
+    "loglevel": 127
   },
 ```
 
 #### Spammer
 
 - Modify the `config.json` to fit your needs
-  - Change `"address"`, `"message"`, `"tag"` and `"tpsratelimit"`
+  - Change `"address"`, `"message"` and `"tag"`
+  - `"tpsratelimit"` defines how many transactions (TX) the spammer should try to send (e.g. 0.1 stands for 0.1 TX per second --> 1 TX every 10 seconds. NOTE: the maximum `"tpsratelimit"` is limited by your used hardware.
   - Add `"Spammer"` to `"enableplugins"`
-
 ```json
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
@@ -74,7 +135,7 @@ git clone https://github.com/unioproject/tanglemonitor.git
   "node": {
     "disableplugins": [],
     "enableplugins": ["Spammer"],
-    "loglevel": 3
+    "loglevel": 127
   },
 ```
 

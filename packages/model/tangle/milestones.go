@@ -13,10 +13,11 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/syncutils"
-	"github.com/gohornet/hornet/packages/typeutils"
 )
 
 const (
@@ -203,6 +204,12 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		if signatureTx.Tx.BranchTransaction != siblingsTx.Tx.TrunkTransaction {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", txIndex0.GetHash())
 		}
+	}
+
+	// Check if milestone was already processed
+	msBundle, _ := GetMilestone(milestoneIndex)
+	if msBundle != nil {
+		return false, errors.Wrapf(ErrInvalidMilestone, "Exists already, Index: %d", milestoneIndex)
 	}
 
 	// Verify milestone signature

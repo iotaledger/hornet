@@ -6,12 +6,14 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/mitchellh/mapstructure"
+
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 func init() {

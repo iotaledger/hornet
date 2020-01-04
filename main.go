@@ -5,12 +5,15 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/packages/node"
+	"github.com/iotaledger/hive.go/node"
+
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
+	"github.com/gohornet/hornet/plugins/graph"
 	"github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/monitor"
+	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -30,17 +33,21 @@ func main() {
 	go http.ListenAndServe("localhost:6060", nil) // pprof Server for Debbuging Mutexes
 
 	node.Run(
-		cli.PLUGIN,
-		gracefulshutdown.PLUGIN,
-		gossip.PLUGIN,
-		tangle.PLUGIN,
-		tipselection.PLUGIN,
-		metrics.PLUGIN,
-		snapshot.PLUGIN,
-		webapi.PLUGIN,
-		spa.PLUGIN,
-		zeromq.PLUGIN,
-		monitor.PLUGIN,
-		spammer.PLUGIN,
+		node.Plugins(
+			cli.PLUGIN,
+			gracefulshutdown.PLUGIN,
+			gossip.PLUGIN,
+			tangle.PLUGIN,
+			tipselection.PLUGIN,
+			metrics.PLUGIN,
+			snapshot.PLUGIN,
+			webapi.PLUGIN,
+			spa.PLUGIN,
+			zeromq.PLUGIN,
+			mqtt.PLUGIN,
+			graph.PLUGIN,
+			monitor.PLUGIN,
+			spammer.PLUGIN,
+		),
 	)
 }

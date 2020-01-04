@@ -5,16 +5,18 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/database"
+	"github.com/iotaledger/hive.go/database"
+	"github.com/iotaledger/hive.go/typeutils"
+
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/typeutils"
 )
 
 var snapshotDatabase database.Database
 
 func configureSnapshotDatabase() {
-	if db, err := database.Get(DBPrefixSnapshot); err != nil {
+	if db, err := database.Get(DBPrefixSnapshot, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		snapshotDatabase = db

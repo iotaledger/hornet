@@ -1,15 +1,19 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
-	"github.com/gohornet/hornet/packages/database"
+
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/database"
+
+	hornetDB "github.com/gohornet/hornet/packages/database"
 )
 
 var approversDatabase database.Database
 
 func configureApproversDatabase() {
-	if db, err := database.Get(DBPrefixApprovers); err != nil {
+	if db, err := database.Get(DBPrefixApprovers, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		approversDatabase = db
