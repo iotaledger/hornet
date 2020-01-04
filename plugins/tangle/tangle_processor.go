@@ -150,11 +150,11 @@ func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
 							}
 						}
 					}
+
+					// Check bundle for a milestone
+					checkForMilestoneWorkerPool.Submit(bundle)
 				}
 				bundlesValidated.Inc()
-
-				// Check bundle for a milestone
-				checkForMilestoneWorkerPool.Submit(bundle)
 			}
 		}
 	} else {
