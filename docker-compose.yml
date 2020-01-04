@@ -19,5 +19,6 @@ services:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
+      - ./neighbors.json:/app/neighbors.json
       - ./latest-export.gz.bin:/app/latest-export.gz.bin
       - ./mainnetdb:/app/mainnetdb

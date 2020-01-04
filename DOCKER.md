@@ -14,9 +14,11 @@ i. Download the DB file
 curl -LO https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin
 ```
 
-ii. Edit the `config.json` for neighbors and alternative ports if needed.
+ii. Edit the `config.json` for alternative ports if needed.
 
-iii. The docker image runs under user with uid 39999. To make sure no permission issues, create the directory for the database, e.g.:
+iii. Edit `neighbors.json` to your neighbors addresses.
+
+iv. The docker image runs under user with uid 39999. To make sure no permission issues, create the directory for the database, e.g.:
 ```sh
 mkdir mainnetdb && chown 39999:39999 mainnetdb
 ```

@@ -17,7 +17,7 @@ ENV TARGET_ARCH=${ARCH:+-$ARCH} \
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static${TARGET_ARCH} /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static${TARGET_ARCH}.asc /tini.asc
 
-COPY --from=builder ["/go/src/github.com/gohornet/hornet/hornet", "/go/src/github.com/gohornet/hornet/config.json", "/app/"]
+COPY --from=builder ["/go/src/github.com/gohornet/hornet/hornet", "/go/src/github.com/gohornet/hornet/config.json", "/go/src/github.com/gohornet/hornet/neighbors.json", "/app/"]
 RUN apk --no-cache add ca-certificates gnupg\
  && addgroup --gid 39999 hornet\
  && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\
