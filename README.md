@@ -22,7 +22,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
 - Extract the files in a folder of your choice
-- Add neighbors to the config.json file
+- Add neighbors to the `neighbors.json` file
 - Download the latest HORNET snapshot from [dbfiles.iota.org](https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin)
 - Run HORNET: `./hornet -c config`
 
@@ -33,14 +33,16 @@ This way, HORNET is easier to install and runs on low-end devices.
 #### TangleMonitor
 
 - Download the latest TangleMonitor source code
+
 ```bash
 git clone https://github.com/unioproject/tanglemonitor.git
 ```
+
 - Modify the `config.json` to fit your needs
-    - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
-    - Add `"Monitor"` to `"enableplugins"`
-    - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
-    - Only change the `"port"` and the `"apiPort"` if you redirect them back to the default ports, because they are hardcoded in the frontend
+  - `"tanglemonitorpath"` has to point to the frontend folder of the TangleMonitor source code
+  - Add `"Monitor"` to `"enableplugins"`
+  - Change `"host"` to `"0.0.0.0"` if you want to access TangleMonitor from anywhere
+  - Only change the `"port"` and the `"apiPort"` if you redirect them back to the default ports, because they are hardcoded in the frontend
 ```json
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
@@ -118,9 +120,9 @@ git clone https://github.com/socketio/socket.io-client.git
 #### Spammer
 
 - Modify the `config.json` to fit your needs
-    - Change `"address"`, `"message"` and `"tag"`
-    - `"tpsratelimit"` defines how many transactions (TX) the spammer should try to send (e.g. 0.1 stands for 0.1 TX per second --> 1 TX every 10 seconds. NOTE: the maximum `"tpsratelimit"` is limited by your used hardware.
-    - Add `"Spammer"` to `"enableplugins"`
+  - Change `"address"`, `"message"` and `"tag"`
+  - `"tpsratelimit"` defines how many transactions (TX) the spammer should try to send (e.g. 0.1 stands for 0.1 TX per second --> 1 TX every 10 seconds. NOTE: the maximum `"tpsratelimit"` is limited by your used hardware.
+  - Add `"Spammer"` to `"enableplugins"`
 ```json
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
@@ -140,5 +142,11 @@ git clone https://github.com/socketio/socket.io-client.git
 ---
 
 ### Docker
+
+![Docker Pulls](https://img.shields.io/docker/pulls/gohornet/hornet?style=for-the-badge)
+
+Pull HORNET from [Docker Hub](https://hub.docker.com/r/gohornet/hornet)
+
+**Build a Docker image**
 
 - See [Docker](DOCKER.md)

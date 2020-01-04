@@ -3,6 +3,11 @@ services:
   hornet:
     build:
       context: .
+      dockerfile: Dockerfile
+      # For aarch64/arm64 use ARCH=arm64
+      # or for arm32 use ARCH=armhf
+      args:
+        - ARCH=amd64
     image: hornet:latest
     # Best performance via host network:
     network_mode: host
