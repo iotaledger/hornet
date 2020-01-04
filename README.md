@@ -22,7 +22,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
 - Extract the files in a folder of your choice
-- Add neighbors to the config.json file
+- Add neighbors to the `neighbors.json` file
 - Download the latest HORNET snapshot from [dbfiles.iota.org](https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin)
 - Run HORNET: `./hornet -c config`
 
