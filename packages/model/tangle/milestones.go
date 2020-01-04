@@ -207,7 +207,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	}
 
 	// Check if milestone was already processed
-	msBundle, err := GetMilestone(milestoneIndex)
+	msBundle, _ := GetMilestone(milestoneIndex)
 	if msBundle != nil {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Exists already, Index: %d", milestoneIndex)
 	}
