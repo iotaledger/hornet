@@ -124,12 +124,9 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]
 	solidEntryPoints := make(map[string]milestone_index.MilestoneIndex)
 	solidEntryPoints[NullHash] = targetIndex
 
-	// Check if old solid entry points are still valid
-	for _, solidEntryPoint := range tangle.GetSolidEntryPointsHashes() {
-		if isEntryPoint, at := isSolidEntryPoint(solidEntryPoint, targetIndex); isEntryPoint {
-			solidEntryPoints[solidEntryPoint] = at
-		}
-	}
+	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
+	//		 since they should be all found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
+	//		 When local snapshots were introduced in IRI, there was the problem that COO choose really old tx as valid tips, which is not the case anymore.
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - SolidEntryPointCheckThreshold; milestoneIndex <= targetIndex; milestoneIndex++ {
