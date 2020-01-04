@@ -10,6 +10,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/dag"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -140,7 +141,15 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]
 		for _, approvee := range approvees {
 
 			if isEntryPoint, at := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
-				solidEntryPoints[approvee] = at
+				// A solid entry point should only be a tail transaction, otherwise the whole bundle can't be reproduced with a snapshot file
+				tails, err := dag.FindAllTails(approvee)
+				if err != nil {
+					log.Panicf("CreateLocalSnapshot: %v", err)
+				}
+
+				for tailHash := range tails {
+					solidEntryPoints[tailHash] = at
+				}
 			}
 		}
 	}
