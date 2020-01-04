@@ -41,7 +41,7 @@ func GetProfile() *Profile {
 		}
 
 		switch profileName {
-		case "8gb", "default":
+		case "8gb":
 			profile = Profile8GB
 			profile.Name = "8gb"
 		case "4gb":
