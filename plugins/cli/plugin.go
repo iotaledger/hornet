@@ -51,14 +51,15 @@ func parseParameters() {
 
 func configure(ctx *node.Plugin) {
 
-	fmt.Print(`
+	fmt.Print(fmt.Sprintf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
               ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
               ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-` + "\n\n")
+                                   v%s
+`+"\n\n", AppVersion))
 
 	ignoreSettingsAtPrint := []string{}
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")
