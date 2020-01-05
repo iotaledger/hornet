@@ -260,7 +260,7 @@ func neighborMetrics() []*neighbormetric {
 	stats := []*neighbormetric{}
 	for _, info := range infos {
 		m := &neighbormetric{
-			OriginAdrr: info.Address,
+			OriginAdrr: info.DomainWithPort,
 			Info:       info,
 		}
 		if info.Neighbor != nil {
