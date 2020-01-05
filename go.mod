@@ -3,8 +3,11 @@ module github.com/gohornet/hornet
 go 1.13
 
 require (
+	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/dgraph-io/badger/v2 v2.0.1
+	github.com/dgraph-io/badger/v2 v2.0.1-rc1.0.20200102235959-03af216ff00a
+	github.com/dgraph-io/ristretto v0.0.1 // indirect
+	github.com/dgryski/go-farm v0.0.0-20191112170834-c2139c5d712b // indirect
 	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/fhmq/hmq v0.0.0-20191230054231-fb453e8c0f61
 	github.com/gin-contrib/gzip v0.0.1
@@ -26,4 +29,5 @@ require (
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	go.uber.org/atomic v1.5.1
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
+	golang.org/x/sys v0.0.0-20200103143344-a1369afcdac7 // indirect
 )
