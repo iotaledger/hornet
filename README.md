@@ -94,17 +94,17 @@ git clone https://github.com/socketio/socket.io-client.git
 {
   ...
   "port": "1883",
-	"host": "127.0.0.1",
+  "host": "127.0.0.1",
   ...
   "tlsPort": "",
-	"tlsHost": "",
-	"tlsInfo": {
-		"verify": false,
-		"caFile": "tls/ca/cacert.pem",
-		"certFile": "tls/server/cert.pem",
-		"keyFile": "tls/server/key.pem"
-	},
-	"plugins": {}
+  "tlsHost": "",
+  "tlsInfo": {
+    "verify": false,
+    "caFile": "tls/ca/cacert.pem",
+    "certFile": "tls/server/cert.pem",
+    "keyFile": "tls/server/key.pem"
+  },
+  "plugins": {}
 }
 ```
 - Modify the `config.json`
