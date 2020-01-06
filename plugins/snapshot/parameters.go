@@ -8,7 +8,7 @@ func init() {
 	// "Enable local snapshots"
 	parameter.NodeConfig.SetDefault("localSnapshots.enabled", true)
 
-	// "Amount of seen milestones to record in the local snapshot file"
+	// "The depth, respectively the starting point, at which a local snapshot of the ledger is generated."
 	parameter.NodeConfig.SetDefault("localSnapshots.depth", 100)
 
 	// "Interval, in milestone transactions, at which snapshot files are created if the ledger is fully synchronized"
@@ -20,7 +20,7 @@ func init() {
 	// "Path to the local snapshot file"
 	parameter.NodeConfig.SetDefault("localSnapshots.path", "latest-export.gz.bin")
 
-	// "Load global snapshot"
+	// "Whether to load a global snapshot from provided text files."
 	parameter.NodeConfig.SetDefault("globalSnapshot.load", false)
 
 	// "Path to the global snapshot file"
@@ -32,7 +32,7 @@ func init() {
 	// "Milestone index of the global snapshot"
 	parameter.NodeConfig.SetDefault("globalSnapshot.index", 1050000)
 
-	// "Delete old transactions from database"
+	// "Whether to delete old transaction data from the database."
 	parameter.NodeConfig.SetDefault("pruning.enabled", false)
 
 	// "Amount of milestone transactions to keep in the database"

@@ -82,8 +82,8 @@ func run(plugin *node.Plugin) {
 				// TODO: Enable pruning after switch to ObjectStorage
 				//pruneUnconfirmedTransactions(solidMilestoneIndex)
 
-				if localSnapshotsEnabled {
-					checkSnapshotNeeded(solidMilestoneIndex)
+				if localSnapshotsEnabled && shouldTakeSnapshot(solidMilestoneIndex) {
+					createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"))
 				}
 				// TODO: Enable pruning after switch to ObjectStorage
 				/*

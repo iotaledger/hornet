@@ -40,56 +40,58 @@ func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
 	tangle.DeleteMilestoneInDatabase(milestoneIndex)
 }
 
-// pruneMilestone prunes the approvers, bundles, address and transaction metadata from the database for the given txHashes
+// pruneMilestone prunes the approvers, bundles, addresses and transaction metadata from the database
+// if the given txHashes are removed from their corresponding bundle buckets
 func pruneTransactions(txHashes []trinary.Hash) {
 
-	// Prune the approvers of all tx
+	txsToRemove := make(map[trinary.Hash]struct{})
+	bundlesTxsToRemove := make(map[trinary.Hash]trinary.Hash)
 	var approvers []*tangle.Approvers
-	for _, txHash := range txHashes {
-		approver, _ := tangle.GetApprovers(txHash)
-		if approver == nil {
-			continue
-		}
-		tangle.DiscardApproversFromCache(txHash)
-		approvers = append(approvers, approver)
-	}
-	tangle.DeleteApproversInDatabase(approvers)
-
 	var addresses []*tangle.TxHashForAddress
-	bundles := make(map[trinary.Hash]trinary.Hash)
+
 	for _, txHash := range txHashes {
 		tx, _ := tangle.GetTransaction(txHash)
 		if tx == nil {
 			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
 		}
 
-		if tx.IsTail() {
-			bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
-			if err != nil {
-				log.Panicf("pruneTransactions: Bundle bucket not found: %v", tx.Tx.Bundle)
-			}
-
-			bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
-			if bundle == nil {
-				log.Panicf("pruneTransactions: Bundle not found: TailHash: %v", txHash)
-			}
-
-			for _, bundleTxHash := range bundle.GetTransactionHashes() {
-				bundles[tx.Tx.Bundle] = bundleTxHash
-			}
-
-			bundleBucket.RemoveBundleByTailTxHash(txHash)
+		bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+		if err != nil {
+			log.Panicf("pruneTransactions: Bundle bucket not found: %v", tx.Tx.Bundle)
 		}
 
+		for txToRemove := range bundleBucket.RemoveTransactionFromBundle(txHash) {
+			txsToRemove[txToRemove] = struct{}{}
+			bundlesTxsToRemove[tx.Tx.Bundle] = txToRemove
+		}
+	}
+
+	for txHash := range txsToRemove {
+		tx, _ := tangle.GetTransaction(txHash)
+		if tx == nil {
+			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
+		}
+
+		approver, _ := tangle.GetApprovers(txHash)
+		if approver == nil {
+			continue
+		}
+		approvers = append(approvers, approver)
+
 		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: tx.Tx.Address})
+
+		tangle.DiscardApproversFromCache(txHash)
 		tangle.DiscardTransactionFromCache(txHash)
 	}
 
+	// approvers
+	tangle.DeleteApproversInDatabase(approvers)
+
 	// bundles
-	tangle.DeleteBundlesInDatabase(bundles)
+	tangle.DeleteBundlesInDatabase(bundlesTxsToRemove)
 
 	// tx
-	tangle.DeleteTransactionsInDatabase(txHashes)
+	tangle.DeleteTransactionsInDatabase(txsToRemove)
 
 	// address
 	tangle.DeleteTransactionHashesForAddressesInDatabase(addresses)
@@ -122,7 +124,7 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 		}
 
 		// Get all approvees of that milestone
-		approvees := getApprovees(milestoneIndex, ms.GetTail())
+		approvees := getMilestoneApprovees(milestoneIndex, ms.GetTail())
 		pruneTransactions(approvees)
 		pruneMilestone(milestoneIndex)
 	}

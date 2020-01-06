@@ -109,45 +109,54 @@ func (bucket *BundleBucket) GetBundleOfTailTransaction(txHash trinary.Hash) *Bun
 	return bndl
 }
 
-// RemoveBundleByTailTxHash removes the bundle with the given tail transaction
-// and also disassociates the transactions from the bucket if not used in another bundle.
-func (bucket *BundleBucket) RemoveBundleByTailTxHash(txHash trinary.Hash) {
+// RemoveTransactionFromBundle removes the transaction if non-tail and not associated to a bundle instance or
+// if tail, it removes all the transactions of the bundle from the bucket that are not used in another bundle instance.
+func (bucket *BundleBucket) RemoveTransactionFromBundle(txHash trinary.Hash) (txsToRemove map[string]struct{}) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 
-	bndl, ok := bucket.bundleInstances[txHash]
-	if !ok {
-		return
-	}
+	if bndl, isTail := bucket.bundleInstances[txHash]; isTail {
+		// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
+		for bundleTxHash := range bndl.txs {
+			// check if the txs of this bundle are used in another bundle instance
+			contains := false
 
-	txsToRemove := map[string]struct{}{}
-	for bundleTxHash := range bndl.txs {
-		// check if the txs of this bundle are used in another bundle instance
-		contains := false
+			for tailTxHash, bundle := range bucket.bundleInstances {
+				if tailTxHash == txHash {
+					// It is the same bundle instance => skip
+					continue
+				}
 
-		for tailTxHash, bundle := range bucket.bundleInstances {
-			if tailTxHash == txHash {
-				// It's the same bundle => skip
-				continue
+				if _, has := bundle.txs[bundleTxHash]; has {
+					contains = true
+					break
+				}
 			}
 
-			if _, has := bundle.txs[bundleTxHash]; has {
-				contains = true
-				break
+			if !contains {
+				txsToRemove[bundleTxHash] = struct{}{}
+			}
+		}
+		// Remove the actual bundle instance
+		delete(bucket.bundleInstances, txHash)
+
+	} else {
+		// Tx is not a tail => check if the tx is part of a bundle instance, otherwise remove the tx from the bucket
+		for _, bundle := range bucket.bundleInstances {
+			if _, has := bundle.txs[txHash]; has {
+				return nil
 			}
 		}
 
-		if !contains {
-			txsToRemove[bundleTxHash] = struct{}{}
-		}
+		txsToRemove[txHash] = struct{}{}
 	}
 
-	// remove the bundle by first removing its corresponding transactions
-	// from the "all" transaction set and then removing the actual bundle instance.
+	// Remove all corresponding transactions from the "all" transaction set
 	for txHash := range txsToRemove {
 		delete(bucket.txs, txHash)
 	}
-	delete(bucket.bundleInstances, txHash)
+
+	return txsToRemove
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.

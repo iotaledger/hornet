@@ -27,7 +27,7 @@ func loadSpentAddresses(filePathSpent string) error {
 	var line string
 
 	ioReader := bufio.NewReader(spentFile)
-	for err == nil {
+	for {
 		line, err = ioReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -37,9 +37,8 @@ func loadSpentAddresses(filePathSpent string) error {
 		}
 
 		address := line[:len(line)-1]
-		err = trinary.ValidTrytes(address)
-		if err != nil {
-			return nil
+		if err := trinary.ValidTrytes(address); err != nil {
+			return err
 		}
 
 		tangle.MarkAddressAsSpent(address)
@@ -72,7 +71,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 	var balance uint64
 
 	ioReader := bufio.NewReader(ledgerFile)
-	for err == nil {
+	for {
 		line, err = ioReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -87,10 +86,10 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 		}
 
 		address := lineSplitted[0][:81]
-		err = trinary.ValidTrytes(address)
-		if err != nil {
-			return nil
+		if err := trinary.ValidTrytes(address); err != nil {
+			return err
 		}
+
 		balance, err = strconv.ParseUint(lineSplitted[1], 10, 64)
 		if err != nil {
 			return err
@@ -107,8 +106,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 	}
 
 	for _, spent := range filePathSpent {
-		err := loadSpentAddresses(spent)
-		if err != nil {
+		if err := loadSpentAddresses(spent); err != nil {
 			return err
 		}
 	}

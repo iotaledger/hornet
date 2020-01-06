@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -22,7 +21,7 @@ const (
 	SolidEntryPointCheckThreshold = 50
 )
 
-// isSolidEntryPoint checks if the approvers of every approvee of that milestone were confirmed by later milestones
+// isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
 	approvers, _ := tangle.GetApprovers(txHash)
 	if approvers == nil {
@@ -35,11 +34,13 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approver)
 		}
 
-		// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary
+		// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
+		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
+		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
 		confirmed, at := tx.GetConfirmed()
 		if confirmed && (at > targetIndex) {
-			// confirmed by a later milestone than tagetIndex => solidEntryPoint
+			// confirmed by a later milestone than targetIndex => solidEntryPoint
 			return true, at
 		}
 	}
@@ -47,8 +48,8 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 	return false, 0
 }
 
-// getApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction) []trinary.Hash {
+// getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
+func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction) []trinary.Hash {
 	ts := time.Now()
 
 	txsToTraverse := make(map[string]struct{})
@@ -76,12 +77,12 @@ func getApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *
 
 			tx, _ := tangle.GetTransaction(txHash)
 			if tx == nil {
-				log.Panicf("getApprovees: Transaction not found: %v", txHash)
+				log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
 			}
 
 			confirmed, at := tx.GetConfirmed()
 			if !confirmed {
-				log.Panicf("getApprovees: Transaction must be confirmed: %v", txHash)
+				log.Panicf("getMilestoneApprovees: Transaction must be confirmed: %v", txHash)
 			}
 
 			if at < milestoneIndex {
@@ -101,7 +102,7 @@ func getApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *
 	return approvees
 }
 
-func checkSnapshotNeeded(solidMilestoneIndex milestone_index.MilestoneIndex) {
+func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -115,9 +116,7 @@ func checkSnapshotNeeded(solidMilestoneIndex milestone_index.MilestoneIndex) {
 		snapshotInterval = snapshotIntervalUnsynced
 	}
 
-	if (solidMilestoneIndex - snapshotInfo.SnapshotIndex) > (snapshotDepth + snapshotInterval) {
-		createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"))
-	}
+	return (solidMilestoneIndex - snapshotInfo.SnapshotIndex) > (snapshotDepth + snapshotInterval)
 }
 
 func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]milestone_index.MilestoneIndex {
@@ -126,8 +125,8 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]
 	solidEntryPoints[NullHash] = targetIndex
 
 	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
-	//		 since they should be all found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
-	//		 When local snapshots were introduced in IRI, there was the problem that COO choose really old tx as valid tips, which is not the case anymore.
+	//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
+	//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - SolidEntryPointCheckThreshold; milestoneIndex <= targetIndex; milestoneIndex++ {
@@ -137,7 +136,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]
 		}
 
 		// Get all approvees of that milestone
-		approvees := getApprovees(milestoneIndex, ms.GetTail())
+		approvees := getMilestoneApprovees(milestoneIndex, ms.GetTail())
 		for _, approvee := range approvees {
 
 			if isEntryPoint, at := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
@@ -172,10 +171,10 @@ func getSeenMilestones(targetIndex milestone_index.MilestoneIndex) map[string]mi
 	return seenMilestones
 }
 
-func getNewBalances(balances map[trinary.Hash]uint64, targetIndex milestone_index.MilestoneIndex, solidMilestoneIndex milestone_index.MilestoneIndex) map[trinary.Hash]uint64 {
+func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex milestone_index.MilestoneIndex, solidMilestoneIndex milestone_index.MilestoneIndex) map[trinary.Hash]uint64 {
 
 	// Calculate balances for targetIndex
-	for milestoneIndex := solidMilestoneIndex; milestoneIndex >= targetIndex; milestoneIndex-- {
+	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
 		diff, err := tangle.GetLedgerDiffForMilestone(milestoneIndex)
 		if err != nil {
 			log.Panicf("CreateLocalSnapshot: %v", err)
@@ -221,13 +220,14 @@ func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex) error {
 
 func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneIndex, filePath string) error {
 
+	log.Infof("Creating local snapshot for targetIndex %d", targetIndex)
+
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
 	ts := time.Now()
 
-	err := checkSnapshotLimits(targetIndex)
-	if err != nil {
+	if err := checkSnapshotLimits(targetIndex); err != nil {
 		return err
 	}
 
@@ -247,9 +247,13 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		log.Panicf("CreateLocalSnapshot: LedgerMilestone wrong! %d/%d", ledgerMilestone, solidMilestoneIndex)
 	}
 
-	newBalances := getNewBalances(balances, targetIndex, solidMilestoneIndex)
+	newBalances := getLedgerStateAtMilestone(balances, targetIndex, solidMilestoneIndex)
 	solidEntryPoints := getSolidEntryPoints(targetIndex)
 	seenMilestones := getSeenMilestones(targetIndex)
+
+	tangle.ReadLockSpentAddresses()
+	defer tangle.ReadUnlockSpentAddresses()
+
 	spentAddressesCount, err := tangle.CountSpentAddressesEntries()
 	if err != nil {
 		return err
@@ -259,8 +263,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 
 	// Remove old temp file
 	os.Remove(filePathTmp)
-
-	fmt.Printf("Writing LocalSnapshot to file %s", filePath)
 
 	exportFile, err := os.OpenFile(filePathTmp, os.O_WRONLY|os.O_CREATE, 0660)
 	if err != nil {
@@ -281,8 +283,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		spentAddressesCount: spentAddressesCount,
 	}
 
-	err = lsh.WriteToBuffer(gzipWriter)
-	if err != nil {
+	if err := lsh.WriteToBuffer(gzipWriter); err != nil {
 		return err
 	}
 
@@ -293,13 +294,15 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		}
 	*/
 
-	err = tangle.StreamSpentAddressesToWriter(gzipWriter, spentAddressesCount)
-	if err != nil {
+	if err := tangle.StreamSpentAddressesToWriter(gzipWriter, spentAddressesCount); err != nil {
 		return err
 	}
 
-	os.Rename(filePathTmp, filePath)
-	fmt.Printf("Writing LocalSnapshot, took %v", time.Since(ts))
+	if err := os.Rename(filePathTmp, filePath); err != nil {
+		return err
+	}
+
+	log.Infof("Creating local snapshot for targetIndex %d done, took %v", targetIndex, time.Since(ts))
 
 	return nil
 }
@@ -536,7 +539,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		gossip.Request([]trinary.Hash{hash[:81]}, milestone_index.MilestoneIndex(val))
 	}
 
-	log.Info("Importing current ledger")
+	log.Info("Importing ledger state")
 
 	ledgerState := make(map[trinary.Hash]uint64)
 	for i := 0; i < int(ledgerEntriesCount); i++ {

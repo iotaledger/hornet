@@ -48,6 +48,9 @@ func databaseKeyForAddress(address trinary.Hash) []byte {
 }
 
 func spentDatabaseContainsAddress(address trinary.Hash) (bool, error) {
+	ReadLockSpentAddresses()
+	defer ReadUnlockSpentAddresses()
+
 	if contains, err := spentAddressesDatabase.Contains(databaseKeyForAddress(address)); err != nil {
 		return contains, errors.Wrap(NewDatabaseError(err), "failed to check if the address exists in the spent addresses database")
 	} else {
@@ -56,32 +59,13 @@ func spentDatabaseContainsAddress(address trinary.Hash) (bool, error) {
 }
 
 func storeSpentAddressesInDatabase(spent []trinary.Hash) error {
+	WriteLockSpentAddresses()
+	defer WriteUnlockSpentAddresses()
 
 	var entries []database.Entry
 
 	for _, address := range spent {
 		key := databaseKeyForAddress(address)
-
-		entries = append(entries, database.Entry{
-			Key:   key,
-			Value: []byte{},
-		})
-	}
-
-	// Now batch insert/delete all entries
-	if err := spentAddressesDatabase.Apply(entries, []database.Key{}); err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to mark addresses as spent")
-	}
-
-	return nil
-}
-
-func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
-
-	var entries []database.Entry
-
-	for _, addressInBytes := range spentInBytes {
-		key := addressInBytes
 
 		entries = append(entries, database.Entry{
 			Key:   key,
