@@ -18,6 +18,10 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 ---
 
+### Contributing
+
+- See [CONTRIBUTING](/CONTRIBUTING.md)
+
 ### Run HORNET
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
