@@ -97,7 +97,7 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 			// Ignore solid entry points (snapshot milestone included)
 			return
 		}
-		if contains, _ := tangle.ContainsTransaction(txHash); contains {
+		if tangle.ContainsTransaction(txHash) {
 			// Do not request tx that we already know
 			continue
 		}
@@ -136,7 +136,7 @@ func RequestApprovees(tx *tangle.CachedTransaction) {
 				// Ignore solid entry points (snapshot milestone included)
 				continue
 			}
-			if contains, _ := tangle.ContainsTransaction(approveeHash); contains {
+			if tangle.ContainsTransaction(approveeHash) {
 				// Do not request tx that we already know
 				continue
 			}
@@ -172,7 +172,7 @@ func RequestMilestone(milestone *tangle.Bundle) bool {
 			// Ignore solid entry points (snapshot milestone included)
 			continue
 		}
-		if contains, _ := tangle.ContainsTransaction(approveeHash); contains {
+		if tangle.ContainsTransaction(approveeHash) {
 			// Do not request tx that we already know
 			continue
 		}

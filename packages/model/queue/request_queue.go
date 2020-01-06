@@ -59,7 +59,7 @@ func (s *RequestQueue) retryPending() {
 
 	for _, r := range s.pending {
 		if r.isReceived() == false {
-			if contains, _ := tangle.ContainsTransaction(r.hash); !contains {
+			if !tangle.ContainsTransaction(r.hash) {
 				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
 			}
