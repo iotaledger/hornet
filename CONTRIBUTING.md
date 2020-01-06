@@ -30,5 +30,5 @@ You can use this as a guide:
 
 ## Submit a pull request
 
-Push your branch to your `HORNET` fork and open a pull request against the
+Push your branch to your `HORNET` fork and open a pull request to the
 **develop** branch.
