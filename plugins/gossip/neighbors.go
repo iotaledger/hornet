@@ -335,11 +335,17 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 
 	// print protocol error log
 	neighbor.Protocol.Events.Error.Attach(events.NewClosure(func(err error) {
+		if daemon.IsStopped() {
+			return
+		}
 		gossipLogger.Errorf("protocol error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
 	// connection error log
 	neighbor.Protocol.Conn.Events.Error.Attach(events.NewClosure(func(err error) {
+		if daemon.IsStopped() {
+			return
+		}
 		gossipLogger.Errorf("connection error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
@@ -347,6 +353,9 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 	// if not closed on purpose
 	neighbor.Protocol.Conn.Events.Close.Attach(events.NewClosure(func() {
 		gossipLogger.Infof("connection closed to %s", neighbor.IdentityOrAddress())
+		if daemon.IsStopped() {
+			return
+		}
 		neighborsLock.Lock()
 		defer neighborsLock.Unlock()
 		moveNeighborFromConnectedToReconnectPool(neighbor)
