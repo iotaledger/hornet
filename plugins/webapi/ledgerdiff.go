@@ -120,7 +120,7 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 				continue
 			}
 
-			tx, _ := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash)
 			if !tx.Exists() {
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", txHash)
 			}

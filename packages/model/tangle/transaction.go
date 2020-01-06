@@ -65,8 +65,8 @@ func configureTransactionStorage() {
 		objectstorage.PersistenceEnabled(true))
 }
 
-func GetCachedTransaction(transactionHash trinary.Hash) (*CachedTransaction, error) {
-	return &CachedTransaction{txStorage.Load(trinary.MustTrytesToBytes(transactionHash))}, nil
+func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {
+	return &CachedTransaction{txStorage.Load(trinary.MustTrytesToBytes(transactionHash))}
 }
 
 func ContainsTransaction(transactionHash trinary.Hash) (result bool, err error) {

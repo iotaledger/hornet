@@ -50,7 +50,7 @@ func getTrytes(i interface{}, c *gin.Context) {
 	}
 
 	for _, hash := range gt.Hashes {
-		cachedTx, err := tangle.GetCachedTransaction(hash)
+		cachedTx := tangle.GetCachedTransaction(hash)
 		if err != nil {
 			e.Error = "Internal error"
 			c.JSON(http.StatusInternalServerError, e)

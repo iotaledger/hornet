@@ -103,7 +103,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	txHash := incomingTx.GetHash()
-	transaction, _ := tangle.GetCachedTransaction(txHash)
+	transaction := tangle.GetCachedTransaction(txHash)
 	knownTx := transaction.Exists()
 
 	if !knownTx {

@@ -55,10 +55,7 @@ func (bucket *BundleBucket) Transactions() CachedTransactions {
 	txs := make([]*CachedTransaction, 0)
 	for txHash := range bucket.txs {
 		// TODO: the transaction could have been pruned away?
-		tx, err := GetCachedTransaction(txHash)
-		if err != nil {
-			log.Panicf("error while loading bundle tx %s: %s", txHash, err.Error())
-		}
+		tx := GetCachedTransaction(txHash)
 		if !tx.Exists() {
 			tx.Release()
 			continue
@@ -263,10 +260,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 		}
 
 		// load tail of bundle as a starting point for the remap
-		current, err := GetCachedTransaction(tailTxHash)
-		if err != nil {
-			log.Panic(err)
-		}
+		current := GetCachedTransaction(tailTxHash)
 
 		if !current.Exists() {
 			log.Panicf("Tx not found but it should be in storage: %s", tailTxHash)
@@ -451,10 +445,7 @@ func (bundle *Bundle) GetHash() trinary.Hash {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	for txHash := range bundle.txs {
-		tx, err := GetCachedTransaction(txHash)
-		if err != nil {
-			continue
-		}
+		tx := GetCachedTransaction(txHash)
 		if !tx.Exists() {
 			tx.Release()
 			continue
@@ -809,10 +800,7 @@ func (bundle *Bundle) WasRequested() bool {
 }
 
 func loadBundleTxIfExistsOrNil(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	tx, err := GetCachedTransaction(txHash)
-	if err != nil {
-		log.Panicf("error while loading tx %s of bundle %s: %s", txHash, bundleHash, err.Error())
-	}
+	tx := GetCachedTransaction(txHash)
 	if !tx.Exists() {
 		tx.Release()
 		return nil
@@ -821,10 +809,7 @@ func loadBundleTxIfExistsOrNil(txHash trinary.Hash, bundleHash trinary.Hash) *Ca
 }
 
 func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	tx, err := GetCachedTransaction(txHash)
-	if err != nil {
-		log.Panicf("error while loading tx %s of bundle %s: %s", txHash, bundleHash, err.Error())
-	}
+	tx := GetCachedTransaction(txHash)
 	if !tx.Exists() {
 		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash, txHash)
 	}

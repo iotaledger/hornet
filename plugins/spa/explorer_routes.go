@@ -254,11 +254,7 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	tx, err := tangle.GetCachedTransaction(hash)
-	if err != nil {
-		return nil, ErrInternalError
-	}
-
+	tx := tangle.GetCachedTransaction(hash)
 	if !tx.Exists() {
 		tx.Release()
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
@@ -321,7 +317,7 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 	if len(txHashes) != 0 {
 		for i := 0; i < len(txHashes); i++ {
 			txHash := txHashes[i]
-			tx, err := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash)
 			if err != nil {
 				return nil, err
 			}

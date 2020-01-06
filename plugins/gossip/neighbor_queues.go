@@ -287,7 +287,7 @@ func processReplies(reply *replyItem) {
 		if err != nil {
 			return
 		}
-		tx, _ := tangle.GetCachedTransaction(reqHash)
+		tx := tangle.GetCachedTransaction(reqHash)
 		defer tx.Release()
 		if !tx.Exists() {
 			return
@@ -321,7 +321,7 @@ func processReplies(reply *replyItem) {
 				return
 			}
 
-			tx, _ := tangle.GetCachedTransaction(reqHash)
+			tx := tangle.GetCachedTransaction(reqHash)
 			if !tx.Exists() {
 				tx.Release()
 			} else {
@@ -338,7 +338,7 @@ func processReplies(reply *replyItem) {
 			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compress
 			// This reduces the outgoing traffic if we are not sync
 
-			genesis, err := tangle.GetCachedTransaction(consts.NullHashTrytes)
+			genesis := tangle.GetCachedTransaction(consts.NullHashTrytes)
 			if err != nil {
 				log.Panic(err)
 			}

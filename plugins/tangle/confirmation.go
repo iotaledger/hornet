@@ -37,7 +37,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 				continue
 			}
 
-			tx, _ := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash)
 			if !tx.Exists() {
 				log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 			}
@@ -79,15 +79,13 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
 
-            if !bundle.IsComplete() {
-                log.Panicf("confirmMilestone: Tx: %v, Bundle not complete: %v", txHash, txBundle)
-            }
+			if !bundle.IsComplete() {
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not complete: %v", txHash, txBundle)
+			}
 
 			if !bundle.IsValid() {
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, txBundle)
 			}
-
-
 
 			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
 			if !isValueSpamBundle {
@@ -113,7 +111,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 
 	for txHash := range txsToConfirm {
 
-		cachedTx, _ := tangle.GetCachedTransaction(txHash)
+		cachedTx := tangle.GetCachedTransaction(txHash)
 		if !cachedTx.Exists() {
 			log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 		}

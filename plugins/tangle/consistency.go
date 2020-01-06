@@ -112,10 +112,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			tx, err := tangle.GetCachedTransaction(txHash)
-			if err != nil {
-				log.Panic(err)
-			}
+			tx := tangle.GetCachedTransaction(txHash)
 			if !tx.Exists() {
 				log.Panicf("Tx with %v not found", txHash)
 			}

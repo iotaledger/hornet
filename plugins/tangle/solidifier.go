@@ -50,7 +50,7 @@ func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCa
 			continue
 		}
 
-		approveeTx, _ := tangle.GetCachedTransaction(approveeHash)
+		approveeTx := tangle.GetCachedTransaction(approveeHash)
 		if !approveeTx.Exists() || !approveeTx.GetTransaction().IsSolid() {
 			isSolid = false
 
@@ -119,7 +119,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 			delete(txsToTraverse, txHash)
 			isEntryTx := true
 
-			tx, _ := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash)
 			if !tx.Exists() {
 				log.Panicf("solidQueueCheck: Transaction not found: %v", txHash)
 			}
@@ -147,7 +147,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 					continue
 				}
 
-				approveeTx, _ := tangle.GetCachedTransaction(approveeHash)
+				approveeTx := tangle.GetCachedTransaction(approveeHash)
 				if !approveeTx.Exists() {
 					isEntryTx = false
 					txsToRequest[approveeHash] = struct{}{}
@@ -208,7 +208,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 				// Go on with the check
 			}
 
-			entryTx, _ := tangle.GetCachedTransaction(entryTxHash)
+			entryTx := tangle.GetCachedTransaction(entryTxHash)
 			if !entryTx.Exists() {
 				log.Panicf("solidQueueCheck: Transaction not found: %v", entryTxHash)
 			}
@@ -388,7 +388,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 			}
 			delete(txsToTraverse, txHash)
 
-			tx, _ := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash)
 			if !tx.Exists() {
 				log.Panicf("searchMissingMilestone: Transaction not found: %v", txHash)
 			}
@@ -410,7 +410,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 					continue
 				}
 
-				approveeTx, _ := tangle.GetCachedTransaction(approveeHash)
+				approveeTx := tangle.GetCachedTransaction(approveeHash)
 				if !approveeTx.Exists() {
 					log.Panicf("searchMissingMilestone: Transaction not found: %v", approveeHash)
 				}

@@ -129,7 +129,7 @@ func readBundleBucketFromDatabase(bundleHash trinary.Hash) (*BundleBucket, error
 	metaMap := map[trinary.Hash]bitmask.BitMask{}
 	err := bundleDatabase.ForEachPrefixKeyOnly(databaseKeyPrefixForBundleHash(bundleHash), func(entry database.KeyOnlyEntry) (stop bool) {
 		txHash := trinary.MustBytesToTrytes(entry.Key, 81)
-		tx, _ := GetCachedTransaction(txHash)
+		tx := GetCachedTransaction(txHash)
 		if tx.Exists() {
 			if tx.GetTransaction().Tx.CurrentIndex == 0 {
 				metaMap[tx.GetTransaction().GetHash()] = bitmask.BitMask(entry.Meta)

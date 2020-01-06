@@ -178,7 +178,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	signatureTxs = append(signatureTxs, txIndex0)
 
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
-		tx, _ := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction)
+		tx := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction)
 		if !tx.Exists() {
 			tx.Release()
 			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
@@ -193,7 +193,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		signatureTxs = append(signatureTxs, tx)
 	}
 
-	siblingsTx, _ := GetCachedTransaction(signatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction)
+	siblingsTx := GetCachedTransaction(signatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction)
 	defer siblingsTx.Release()
 
 	if !siblingsTx.Exists() {
@@ -234,7 +234,7 @@ func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) (result *Bundle
 			err = dbErr
 			return nil
 		} else if txHash != "" {
-			tx, err := GetCachedTransaction(txHash)
+			tx := GetCachedTransaction(txHash)
 			if err != nil {
 				return nil
 			}

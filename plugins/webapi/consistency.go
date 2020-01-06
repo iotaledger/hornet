@@ -66,7 +66,7 @@ func checkConsistency(i interface{}, c *gin.Context) {
 
 	for _, t := range checkCon.Tails {
 
-		tx, err := tangle.GetCachedTransaction(t)
+		tx := tangle.GetCachedTransaction(t)
 		if err != nil {
 			e.Error = fmt.Sprint(err)
 			c.JSON(http.StatusInternalServerError, e)
