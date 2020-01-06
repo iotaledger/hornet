@@ -3,13 +3,16 @@ package tangle
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/gohornet/hornet/packages/compressed"
+	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/iotaledger/hive.go/database"
+	"github.com/iotaledger/hive.go/typeutils"
 	"sync"
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/typeutils"
 	"github.com/iotaledger/iota.go/trinary"
 )
 

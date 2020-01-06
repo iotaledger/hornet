@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-    "github.com/mitchellh/mapstructure"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
 
-    "github.com/gohornet/hornet/packages/model/tangle"
-    "github.com/iotaledger/hive.go/parameter"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 func init() {

@@ -1,10 +1,10 @@
 package tangle
 
 import (
+	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/syncutils"
 	"log"
 
-	"github.com/gohornet/hornet/packages/bitutils"
-	"github.com/gohornet/hornet/packages/syncutils"
 	iotago_bundle "github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/trinary"
 )
@@ -286,7 +286,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 }
 
 // Maps the given transactions to their corresponding bundle instances within the bucket.
-func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitutils.BitMask) {
+func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitmask.BitMask) {
 	if len(bucket.txs) > 0 || len(bucket.bundleInstances) > 0 {
 		panic("Init called on a not new BundleBucket")
 	}
@@ -428,11 +428,11 @@ func NewBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*Cac
 	return newBundleBucket(bundleHash, transactions, nil)
 }
 
-func NewBundleBucketFromDatabase(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitutils.BitMask) *BundleBucket {
+func NewBundleBucketFromDatabase(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitmask.BitMask) *BundleBucket {
 	return newBundleBucket(bundleHash, transactions, metaMap)
 }
 
-func newBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitutils.BitMask) *BundleBucket {
+func newBundleBucket(bundleHash trinary.Hash, transactions map[trinary.Hash]*CachedTransaction, metaMap map[trinary.Hash]bitmask.BitMask) *BundleBucket {
 
 	bucket := &BundleBucket{
 		bundleInstances: make(map[trinary.Hash]*Bundle),

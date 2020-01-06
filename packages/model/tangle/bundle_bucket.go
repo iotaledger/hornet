@@ -1,7 +1,7 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/typeutils"
+	"github.com/iotaledger/hive.go/typeutils"
 	"github.com/iotaledger/iota.go/trinary"
 )
 

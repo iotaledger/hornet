@@ -46,7 +46,7 @@ type Transaction struct {
 
 	// Metadata
 	metadataMutex syncutils.RWMutex
-	metadata      bitutils.BitMask
+	metadata      bitmask.BitMask
 }
 
 func NewTransactionFromAPI(transaction *transaction.Transaction, transactionBytes []byte) *Transaction {
@@ -56,7 +56,7 @@ func NewTransactionFromAPI(transaction *transaction.Transaction, transactionByte
 		RawBytes:          transactionBytes,
 		timestamp:         getTimestampFromTx(transaction),
 		confirmationIndex: 0,
-		metadata:          bitutils.BitMask(byte(0)),
+		metadata:          bitmask.BitMask(byte(0)),
 	}
 	tx.SetModified(true)
 	return tx
@@ -233,7 +233,7 @@ func (tx *Transaction) UnmarshalBinary(data []byte) error {
 	}
 	tx.Tx = transaction
 
-	tx.metadata = bitutils.BitMask(data[0])
+	tx.metadata = bitmask.BitMask(data[0])
 	tx.confirmationIndex = milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(data[1:5]))
 	tx.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[5:9]))
 	tx.timestamp = getTimestampFromTx(transaction)

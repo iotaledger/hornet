@@ -3,10 +3,13 @@ package tangle
 import (
 	"time"
 
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
