@@ -561,6 +561,7 @@ type NeighborInfo struct {
 	Address                           string    `json:"address"`
 	Port                              uint16    `json:"port,omitempty"`
 	Domain                            string    `json:"domain,omitempty"`
+	DomainWithPort                    string    `json:"-"`
 	NumberOfAllTransactions           uint32    `json:"numberOfAllTransactions"`
 	NumberOfRandomTransactionRequests uint32    `json:"numberOfRandomTransactionRequests"`
 	NumberOfNewTransactions           uint32    `json:"numberOfNewTransactions"`
@@ -597,8 +598,9 @@ func GetNeighbors() []NeighborInfo {
 	for _, neighbor := range connectedNeighbors {
 		result = append(result, NeighborInfo{
 			Neighbor:                          neighbor,
-			Address:                           neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
+			Address:                           neighbor.Identity,
 			Domain:                            neighbor.InitAddress.Addr,
+			DomainWithPort:                    neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
 			NumberOfAllTransactions:           neighbor.Metrics.GetAllTransactionsCount(),
 			NumberOfInvalidTransactions:       neighbor.Metrics.GetInvalidTransactionsCount(),
 			NumberOfStaleTransactions:         neighbor.Metrics.GetStaleTransactionsCount(),
@@ -616,10 +618,18 @@ func GetNeighbors() []NeighborInfo {
 		result = append(result, NeighborInfo{
 			Address:        originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			Domain:         originAddr.Addr,
+			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			ConnectionType: "tcp",
 			Connected:      false,
 		})
 	}
 
 	return result
+}
+
+func GetNeighborsCount() int {
+	neighborsLock.Lock()
+	defer neighborsLock.Unlock()
+
+	return len(connectedNeighbors) + len(reconnectPool)
 }

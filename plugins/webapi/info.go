@@ -27,7 +27,7 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	}
 
 	// Number of neighbors
-	info.Neighbors = uint(len(gossip.GetNeighbors()))
+	info.Neighbors = uint(gossip.GetNeighborsCount())
 
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
