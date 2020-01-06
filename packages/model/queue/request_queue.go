@@ -6,10 +6,10 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/lru_cache"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/typeutils"
 
-	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
 )
@@ -20,7 +20,7 @@ const (
 
 type RequestQueue struct {
 	syncutils.Mutex
-	requestedCache *datastructure.LRUCache
+	requestedCache *lru_cache.LRUCache
 	lifo           []*request
 	pending        []*request
 	ticker         *time.Ticker
@@ -30,7 +30,7 @@ type RequestQueue struct {
 func NewRequestQueue() *RequestQueue {
 
 	queue := &RequestQueue{
-		requestedCache: datastructure.NewLRUCache(profile.GetProfile().Caches.RequestQueue.Size),
+		requestedCache: lru_cache.NewLRUCache(profile.GetProfile().Caches.RequestQueue.Size),
 		ticker:         time.NewTicker(RequestQueueTickerInterval),
 		tickerDone:     make(chan bool),
 	}
@@ -49,7 +49,7 @@ func NewRequestQueue() *RequestQueue {
 	return queue
 }
 
-func (s *RequestQueue) GetCache() *datastructure.LRUCache {
+func (s *RequestQueue) GetCache() *lru_cache.LRUCache {
 	return s.requestedCache
 }
 

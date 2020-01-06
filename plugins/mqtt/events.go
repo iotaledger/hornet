@@ -112,7 +112,7 @@ func publishTxTrytes(tx *hornet.Transaction) error {
 		return err
 	}
 
-	err = mqttBroker.Send(topicTxTrytes, fmt.Sprintf(`{txHash":"%v","trytes":"%v","timestamp":"%s"}`,
+	err = mqttBroker.Send(topicTxTrytes, fmt.Sprintf(`{"txHash":"%v","trytes":"%v","timestamp":"%s"}`,
 		tx.Tx.Hash, // Transaction hash
 		trytes,     // Transaction trytes
 		time.Now().UTC().Format(time.RFC3339)))

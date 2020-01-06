@@ -1,18 +1,19 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/iotaledger/hive.go/lru_cache"
+
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
-	MilestoneCache *datastructure.LRUCache
+	MilestoneCache *lru_cache.LRUCache
 )
 
 func InitMilestoneCache() {
 	opts := profile.GetProfile().Caches.Milestones
-	MilestoneCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	MilestoneCache = lru_cache.NewLRUCache(opts.Size, &lru_cache.LRUCacheOptions{
 		EvictionCallback:  onEvictMilestones,
 		EvictionBatchSize: opts.EvictionSize,
 	})

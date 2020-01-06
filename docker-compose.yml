@@ -3,6 +3,11 @@ services:
   hornet:
     build:
       context: .
+      dockerfile: Dockerfile
+      # For aarch64/arm64 use ARCH=arm64
+      # or for arm32 use ARCH=armhf
+      args:
+        - ARCH=amd64
     image: hornet:latest
     # Best performance via host network:
     network_mode: host
@@ -14,5 +19,6 @@ services:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
+      - ./neighbors.json:/app/neighbors.json
       - ./latest-export.gz.bin:/app/latest-export.gz.bin
       - ./mainnetdb:/app/mainnetdb

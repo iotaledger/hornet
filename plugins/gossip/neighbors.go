@@ -9,11 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/iputils"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -62,8 +62,8 @@ var (
 
 type reconnectneighbor struct {
 	mu         sync.Mutex
-	OriginAddr *iputils.OriginAddress       `json:"origin_addr"`
-	CachedIPs  *iputils.NeighborIPAddresses `json:"cached_ips"`
+	OriginAddr *iputils.OriginAddress `json:"origin_addr"`
+	CachedIPs  *iputils.IPAddresses   `json:"cached_ips"`
 }
 
 func availableNeighborSlotsFilled() bool {
@@ -120,7 +120,7 @@ type Neighbor struct {
 	// The address IP address under which the neighbor is connected
 	PrimaryAddress *iputils.IP
 	// The IP addresses which were looked up during neighbor initialisation
-	Addresses *iputils.NeighborIPAddresses
+	Addresses *iputils.IPAddresses
 	// The protocol instance under which this neighbor operates
 	Protocol *protocol
 	// Events on this neighbor
@@ -154,7 +154,7 @@ func NewNeighborIdentity(ip string, port uint16) string {
 
 func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
 	ip := net.ParseIP(remoteAddr.(*net.TCPAddr).IP.String())
-	addresses := iputils.NewNeighborIPAddresses()
+	addresses := iputils.NewIPAddresses()
 	primaryAddr := &iputils.IP{IP: ip}
 	addresses.Add(primaryAddr)
 
@@ -170,7 +170,7 @@ func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
 	}
 }
 
-func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr *iputils.IP, port uint16, addresses *iputils.NeighborIPAddresses) *Neighbor {
+func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr *iputils.IP, port uint16, addresses *iputils.IPAddresses) *Neighbor {
 	return &Neighbor{
 		InitAddress:    originAddr,
 		Identity:       NewNeighborIdentity(primaryAddr.String(), port),
@@ -335,11 +335,17 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 
 	// print protocol error log
 	neighbor.Protocol.Events.Error.Attach(events.NewClosure(func(err error) {
+		if daemon.IsStopped() {
+			return
+		}
 		gossipLogger.Errorf("protocol error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
 	// connection error log
 	neighbor.Protocol.Conn.Events.Error.Attach(events.NewClosure(func(err error) {
+		if daemon.IsStopped() {
+			return
+		}
 		gossipLogger.Errorf("connection error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
@@ -347,6 +353,9 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 	// if not closed on purpose
 	neighbor.Protocol.Conn.Events.Close.Attach(events.NewClosure(func() {
 		gossipLogger.Infof("connection closed to %s", neighbor.IdentityOrAddress())
+		if daemon.IsStopped() {
+			return
+		}
 		neighborsLock.Lock()
 		defer neighborsLock.Unlock()
 		moveNeighborFromConnectedToReconnectPool(neighbor)
@@ -459,8 +468,8 @@ func AddNeighbor(neighborAddr string, preferIPv6 bool) error {
 	return nil
 }
 
-func possibleIdentitiesFromNeighborAddress(originAddr *iputils.OriginAddress) (*iputils.NeighborIPAddresses, error) {
-	possibleIdentities := iputils.NewNeighborIPAddresses()
+func possibleIdentitiesFromNeighborAddress(originAddr *iputils.OriginAddress) (*iputils.IPAddresses, error) {
+	possibleIdentities := iputils.NewIPAddresses()
 	ip := net.ParseIP(originAddr.Addr)
 	if ip != nil {
 		possibleIdentities.Add(&iputils.IP{IP: ip})
@@ -561,6 +570,7 @@ type NeighborInfo struct {
 	Address                           string    `json:"address"`
 	Port                              uint16    `json:"port,omitempty"`
 	Domain                            string    `json:"domain,omitempty"`
+	DomainWithPort                    string    `json:"-"`
 	NumberOfAllTransactions           uint32    `json:"numberOfAllTransactions"`
 	NumberOfRandomTransactionRequests uint32    `json:"numberOfRandomTransactionRequests"`
 	NumberOfNewTransactions           uint32    `json:"numberOfNewTransactions"`
@@ -597,8 +607,9 @@ func GetNeighbors() []NeighborInfo {
 	for _, neighbor := range connectedNeighbors {
 		result = append(result, NeighborInfo{
 			Neighbor:                          neighbor,
-			Address:                           neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
+			Address:                           neighbor.Identity,
 			Domain:                            neighbor.InitAddress.Addr,
+			DomainWithPort:                    neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
 			NumberOfAllTransactions:           neighbor.Metrics.GetAllTransactionsCount(),
 			NumberOfInvalidTransactions:       neighbor.Metrics.GetInvalidTransactionsCount(),
 			NumberOfStaleTransactions:         neighbor.Metrics.GetStaleTransactionsCount(),
@@ -616,10 +627,18 @@ func GetNeighbors() []NeighborInfo {
 		result = append(result, NeighborInfo{
 			Address:        originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			Domain:         originAddr.Addr,
+			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			ConnectionType: "tcp",
 			Connected:      false,
 		})
 	}
 
 	return result
+}
+
+func GetNeighborsCount() int {
+	neighborsLock.Lock()
+	defer neighborsLock.Unlock()
+
+	return len(connectedNeighbors) + len(reconnectPool)
 }

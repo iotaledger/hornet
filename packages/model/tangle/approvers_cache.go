@@ -1,18 +1,19 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/iotaledger/hive.go/lru_cache"
+
 	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
 	// Transactions that approve a certain TxHash
-	ApproversCache *datastructure.LRUCache
+	ApproversCache *lru_cache.LRUCache
 )
 
 func InitApproversCache() {
 	opts := profile.GetProfile().Caches.Approvers
-	ApproversCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	ApproversCache = lru_cache.NewLRUCache(opts.Size, &lru_cache.LRUCacheOptions{
 		EvictionCallback:  onEvictApprovers,
 		EvictionBatchSize: opts.EvictionSize,
 	})

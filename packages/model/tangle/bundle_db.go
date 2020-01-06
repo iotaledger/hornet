@@ -6,14 +6,16 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/database"
 
-	"github.com/gohornet/hornet/packages/database"
+	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/model/hornet"
 )
 
 var bundleDatabase database.Database
 
 func configureBundleDatabase() {
-	if db, err := database.Get(DBPrefixBundles); err != nil {
+	if db, err := database.Get(DBPrefixBundles, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		bundleDatabase = db
@@ -57,6 +59,7 @@ func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
 			if tx.GetTransaction().IsTail() {
 				continue
 			}
+
 			entry := database.Entry{
 				Key:   databaseKeyForBundle(bundleBucket.GetHash(), tx.GetTransaction().GetHash()),
 				Value: []byte{},

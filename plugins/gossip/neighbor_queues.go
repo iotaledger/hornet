@@ -3,15 +3,21 @@ package gossip
 import (
 	"bytes"
 	"fmt"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
-	"log"
 	"runtime"
+	"strings"
 
+	"github.com/iotaledger/iota.go/transaction"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/workerpool"
+
+	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 

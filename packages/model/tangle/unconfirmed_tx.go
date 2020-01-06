@@ -1,10 +1,13 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/database"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/database"
+
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
@@ -13,7 +16,7 @@ var (
 )
 
 func configureUnconfirmedTransactionsDatabase() {
-	if db, err := database.Get(DBPrefixUnconfirmedTransactions); err != nil {
+	if db, err := database.Get(DBPrefixUnconfirmedTransactions, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		unconfirmedTransactionDatabase = db

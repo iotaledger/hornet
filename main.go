@@ -33,19 +33,21 @@ func main() {
 	go http.ListenAndServe("localhost:6060", nil) // pprof Server for Debbuging Mutexes
 
 	node.Run(
-		cli.PLUGIN,
-		gracefulshutdown.PLUGIN,
-		gossip.PLUGIN,
-		tangle.PLUGIN,
-		tipselection.PLUGIN,
-		metrics.PLUGIN,
-		snapshot.PLUGIN,
-		webapi.PLUGIN,
-		spa.PLUGIN,
-		zeromq.PLUGIN,
-		mqtt.PLUGIN,
-		graph.PLUGIN,
-		monitor.PLUGIN,
-		spammer.PLUGIN,
+		node.Plugins(
+			cli.PLUGIN,
+			gracefulshutdown.PLUGIN,
+			gossip.PLUGIN,
+			tangle.PLUGIN,
+			tipselection.PLUGIN,
+			metrics.PLUGIN,
+			snapshot.PLUGIN,
+			webapi.PLUGIN,
+			spa.PLUGIN,
+			zeromq.PLUGIN,
+			mqtt.PLUGIN,
+			graph.PLUGIN,
+			monitor.PLUGIN,
+			spammer.PLUGIN,
+		),
 	)
 }

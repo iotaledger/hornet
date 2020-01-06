@@ -11,20 +11,20 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/batchhasher"
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/lru_cache"
 	"github.com/iotaledger/hive.go/math"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/typeutils"
+	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/datastructure"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/workerpool"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
@@ -37,14 +37,14 @@ var (
 	packetProcessorWorkerPool  *workerpool.WorkerPool
 
 	RequestQueue  *queue.RequestQueue
-	IncomingCache *datastructure.LRUCache
+	IncomingCache *lru_cache.LRUCache
 
 	ErrTxExpired = errors.New("tx too old")
 )
 
 func configurePacketProcessor() {
 	RequestQueue = queue.NewRequestQueue()
-	IncomingCache = datastructure.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter.Size)
+	IncomingCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.IncomingTransactionFilter.Size)
 
 	gossipLogger.Infof("Configuring packetProcessorWorkerPool with %d workers", packetProcessorWorkerCount)
 	packetProcessorWorkerPool = workerpool.New(func(task workerpool.Task) {

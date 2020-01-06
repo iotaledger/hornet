@@ -1,12 +1,5 @@
-# ---[ build image ]---
-FROM golang:1.13 as builder
-
-WORKDIR /go/src/github.com/gohornet/hornet
-ADD . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./hornet main.go
-
-# ---[ runtime image ]---
-FROM alpine:latest
+# ---[ alpine image with glibc (needed for the CGO build) ]---
+FROM frolvlad/alpine-glibc:alpine-3.10_glibc-2.30
 WORKDIR /app
 
 ARG ARCH=amd64
@@ -17,7 +10,7 @@ ENV TARGET_ARCH=${ARCH:+-$ARCH} \
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static${TARGET_ARCH} /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static${TARGET_ARCH}.asc /tini.asc
 
-COPY --from=builder ["/go/src/github.com/gohornet/hornet/hornet", "/go/src/github.com/gohornet/hornet/config.json", "/go/src/github.com/gohornet/hornet/neighbors.json", "/app/"]
+COPY ["hornet", "/app/"]
 RUN apk --no-cache add ca-certificates gnupg\
  && addgroup --gid 39999 hornet\
  && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\
@@ -39,5 +32,5 @@ RUN apk --no-cache add ca-certificates gnupg\
 # | “userland-proxy” is created for each port.
 # Source: https://docs.docker.com/network/host/
 
-USER hornet
+USER hornet:hornet
 ENTRYPOINT ["/tini", "--", "/app/hornet"]

@@ -1,9 +1,12 @@
 package tangle
 
-import "github.com/gohornet/hornet/packages/database"
+import (
+	"github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/profile"
+)
 
-func ConfigureDatabases(directory string) {
-	database.Settings(directory)
+func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
+	database.Settings(directory, badgerOpts)
 	configureHealthDatabase()
 	configureTransactionStorage()
 	configureBundleDatabase()

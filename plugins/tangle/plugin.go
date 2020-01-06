@@ -3,20 +3,21 @@ package tangle
 import (
 	"time"
 
-	daemon "github.com/iotaledger/hive.go/daemon/ordered"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/datastructure"
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/lru_cache"
+	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/timeutil"
+
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/packages/timeutil"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -31,7 +32,7 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger("Tangle", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
-	RefsAnInvalidBundleCache = datastructure.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
+	RefsAnInvalidBundleCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
 
 	//TODO: find a way to pass onEvictTransactions to the storage
 	tangle.InitBundleCache()
@@ -39,7 +40,7 @@ func configure(plugin *node.Plugin) {
 	tangle.InitMilestoneCache()
 	tangle.InitSpentAddressesCache()
 
-	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"))
+	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
 
 	if tangle.IsDatabaseCorrupted() {
 		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
@@ -77,7 +78,7 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseHealthy()
 
 		log.Info("Syncing database to disk...")
-		database.CloseDatabase()
+		hornetDB.GetBadgerInstance().Close()
 		log.Info("Syncing database to disk... done")
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
@@ -107,6 +108,6 @@ func run(plugin *node.Plugin) {
 
 	// create a db cleanup worker
 	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(database.CleanupBadgerInstance, 5*time.Minute, shutdownSignal)
+		timeutil.Ticker(hornetDB.CleanupBadgerInstance, 5*time.Minute, shutdownSignal)
 	}, shutdown.ShutdownPriorityBadgerGarbageCollection)
 }

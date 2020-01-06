@@ -1,13 +1,15 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/datastructure"
-	"github.com/gohornet/hornet/packages/profile"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/lru_cache"
+
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
-	SpentAddressesCache *datastructure.LRUCache
+	SpentAddressesCache *lru_cache.LRUCache
 )
 
 func WasAddressSpentFrom(address trinary.Hash) (result bool, err error) {
@@ -25,7 +27,7 @@ func MarkAddressAsSpent(address trinary.Hash) {
 
 func InitSpentAddressesCache() {
 	opts := profile.GetProfile().Caches.SpentAddresses
-	SpentAddressesCache = datastructure.NewLRUCache(opts.Size, &datastructure.LRUCacheOptions{
+	SpentAddressesCache = lru_cache.NewLRUCache(opts.Size, &lru_cache.LRUCacheOptions{
 		EvictionCallback:  onEvictSpentAddress,
 		EvictionBatchSize: opts.EvictionSize,
 	})

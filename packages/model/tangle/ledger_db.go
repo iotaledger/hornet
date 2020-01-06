@@ -38,7 +38,7 @@ func WriteUnlockLedger() {
 }
 
 func configureLedgerDatabase() {
-	if db, err := database.Get(DBPrefixLedgerState); err != nil {
+	if db, err := database.Get(DBPrefixLedgerState, hornetDB.GetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		ledgerDatabase = db

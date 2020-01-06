@@ -103,7 +103,7 @@ func removeNeighbors(i interface{}, c *gin.Context) {
 		for _, n := range nb {
 			// Remove connected neighbor
 			if n.Neighbor != nil {
-				if strings.EqualFold(n.Neighbor.Identity, uri) || strings.EqualFold(n.Address, uri) {
+				if strings.EqualFold(n.Neighbor.Identity, uri) || strings.EqualFold(n.DomainWithPort, uri) {
 					err := gossip.RemoveNeighbor(uri)
 					if err != nil {
 						log.Errorf("Can't remove neighbor, Error: %s", err.Error())
@@ -113,8 +113,8 @@ func removeNeighbors(i interface{}, c *gin.Context) {
 					}
 					removedNeighbors++
 				}
-				// Remove unconnected neighbor
 			} else {
+				// Remove unconnected neighbor
 				if strings.EqualFold(n.Address, uri) {
 					err := gossip.RemoveNeighbor(uri)
 					if err != nil {

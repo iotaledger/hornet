@@ -15,7 +15,7 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion = "0.2.9"
+	AppVersion = "0.2.12"
 
 	// AppName app code name
 	AppName = "HORNET"
@@ -51,14 +51,15 @@ func parseParameters() {
 
 func configure(ctx *node.Plugin) {
 
-	fmt.Print(`
+	fmt.Print(fmt.Sprintf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
               ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
               ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-` + "\n\n")
+                                   v%s
+`+"\n\n", AppVersion))
 
 	ignoreSettingsAtPrint := []string{}
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")
