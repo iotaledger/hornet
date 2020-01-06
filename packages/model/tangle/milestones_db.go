@@ -16,7 +16,7 @@ import (
 var milestoneDatabase database.Database
 
 func configureMilestoneDatabase() {
-	if db, err := database.Get(DBPrefixMilestones, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixMilestones, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		milestoneDatabase = db

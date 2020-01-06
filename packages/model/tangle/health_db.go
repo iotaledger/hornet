@@ -18,7 +18,7 @@ var (
 )
 
 func configureHealthDatabase() {
-	if db, err := database.Get(DBPrefixHealth, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixHealth, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		healthDatabase = db

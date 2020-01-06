@@ -25,7 +25,7 @@ func Settings(dir string, options *profile.BadgerOpts) {
 	badgerOpts = options
 }
 
-func GetBadgerInstance() *badger.DB {
+func GetHornetBadgerInstance() *badger.DB {
 	once.Do(func() {
 
 		opts := badger.DefaultOptions(directory)
@@ -71,9 +71,9 @@ func GetBadgerInstance() *badger.DB {
 	return instance
 }
 
-func CleanupBadgerInstance() {
+func CleanupHornetBadgerInstance() {
 
-	db := GetBadgerInstance()
+	db := GetHornetBadgerInstance()
 
 	fmt.Println("Run badger garbage collection")
 

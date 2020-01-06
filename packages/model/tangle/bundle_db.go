@@ -11,7 +11,7 @@ import (
 var bundleDatabase database.Database
 
 func configureBundleDatabase() {
-	if db, err := database.Get(DBPrefixBundles, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixBundles, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		bundleDatabase = db

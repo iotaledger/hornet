@@ -1,7 +1,7 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/database"
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/iotaledger/hive.go/objectstorage"
@@ -57,28 +57,21 @@ func GetTransactionStorageSize() int {
 
 func configureTransactionStorage() {
 
-	txStorage = objectstorage.New(database.GetBadgerInstance(),
+	txStorage = objectstorage.New(
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
+		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(5*time.Second),
 		objectstorage.PersistenceEnabled(true))
 }
 
 func GetCachedTransaction(transactionHash trinary.Hash) (*CachedTransaction, error) {
-	cached, err := txStorage.Load(trinary.MustTrytesToBytes(transactionHash))
-	if err != nil {
-		return nil, err
-	}
-	return &CachedTransaction{cached}, nil
+	return &CachedTransaction{txStorage.Load(trinary.MustTrytesToBytes(transactionHash))}, nil
 }
 
 func ContainsTransaction(transactionHash trinary.Hash) (result bool, err error) {
 
-	cachedObject, err := txStorage.Load(trinary.MustTrytesToBytes(transactionHash))
-	if err != nil {
-		return false, err
-	}
-
+	cachedObject := txStorage.Load(trinary.MustTrytesToBytes(transactionHash))
 	defer cachedObject.Release()
 	return cachedObject.Exists(), nil
 }

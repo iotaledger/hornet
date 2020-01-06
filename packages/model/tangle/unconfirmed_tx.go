@@ -16,7 +16,7 @@ var (
 )
 
 func configureUnconfirmedTransactionsDatabase() {
-	if db, err := database.Get(DBPrefixUnconfirmedTransactions, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixUnconfirmedTransactions, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		unconfirmedTransactionDatabase = db

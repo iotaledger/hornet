@@ -18,7 +18,7 @@ var (
 )
 
 func configureSpentAddressesDatabase() {
-	if db, err := database.Get(DBPrefixSpentAddresses, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixSpentAddresses, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		spentAddressesDatabase = db
