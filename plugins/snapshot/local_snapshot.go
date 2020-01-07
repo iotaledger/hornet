@@ -219,6 +219,31 @@ func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInf
 	return nil
 }
 
+func createSnapshotFile(filePath string, lsh *localSnapshotHeader) error {
+
+	exportFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0660)
+	if err != nil {
+		return err
+	}
+	defer exportFile.Close()
+
+	gzipWriter := gzip.NewWriter(exportFile)
+	defer gzipWriter.Close()
+
+	if err := lsh.WriteToBuffer(gzipWriter); err != nil {
+		return err
+	}
+
+	/*
+		balancesWritten, err := tangle.StreamBalancesToWriter(gzipWriter, balancesCount, totalBalanceDiffs)
+		if err != nil {
+			return err
+		}
+	*/
+
+	return tangle.StreamSpentAddressesToWriter(gzipWriter, lsh.spentAddressesCount)
+}
+
 func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneIndex, filePath string) error {
 
 	log.Infof("Creating local snapshot for targetIndex %d", targetIndex)
@@ -270,20 +295,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
-	filePathTmp := filePath + "_tmp"
-
-	// Remove old temp file
-	os.Remove(filePathTmp)
-
-	exportFile, err := os.OpenFile(filePathTmp, os.O_WRONLY|os.O_CREATE, 0660)
-	if err != nil {
-		return err
-	}
-	defer exportFile.Close()
-
-	gzipWriter := gzip.NewWriter(exportFile)
-	defer gzipWriter.Close()
-
 	lsh := &localSnapshotHeader{
 		msHash:              targetMilestone.GetTailHash(),
 		msIndex:             targetIndex,
@@ -294,18 +305,12 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		spentAddressesCount: spentAddressesCount,
 	}
 
-	if err := lsh.WriteToBuffer(gzipWriter); err != nil {
-		return err
-	}
+	filePathTmp := filePath + "_tmp"
 
-	/*
-		balancesWritten, err := tangle.StreamBalancesToWriter(gzipWriter, balancesCount, totalBalanceDiffs)
-		if err != nil {
-			return err
-		}
-	*/
+	// Remove old temp file
+	os.Remove(filePathTmp)
 
-	if err := tangle.StreamSpentAddressesToWriter(gzipWriter, spentAddressesCount); err != nil {
+	if err := createSnapshotFile(filePathTmp, lsh); err != nil {
 		return err
 	}
 
