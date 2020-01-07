@@ -116,7 +116,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool
 		snapshotInterval = snapshotIntervalUnsynced
 	}
 
-	return (solidMilestoneIndex - snapshotInfo.SnapshotIndex) > (snapshotDepth + snapshotInterval)
+	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) > snapshotInfo.SnapshotIndex
 }
 
 func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]milestone_index.MilestoneIndex {
@@ -164,7 +164,7 @@ func getSeenMilestones(targetIndex milestone_index.MilestoneIndex) map[string]mi
 	for milestoneIndex := targetIndex + 1; milestoneIndex <= lastestMilestone; milestoneIndex++ {
 		ms, _ := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
-			log.Panicf("CreateLocalSnapshot: Milestone (%d) not found!", milestoneIndex)
+			continue
 		}
 		seenMilestones[ms.GetTailHash()] = milestoneIndex
 	}
@@ -222,14 +222,14 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 
 	log.Infof("Creating local snapshot for targetIndex %d", targetIndex)
 
-	tangle.ReadLockLedger()
-	defer tangle.ReadUnlockLedger()
-
 	ts := time.Now()
 
 	if err := checkSnapshotLimits(targetIndex); err != nil {
 		return err
 	}
+
+	tangle.ReadLockLedger()
+	defer tangle.ReadUnlockLedger()
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 
