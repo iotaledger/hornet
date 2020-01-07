@@ -249,7 +249,10 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					continue
 				}
 
-				if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) {
+				bundleTail := bundle.GetTail()
+				IsBelowMaxDepth := tanglePlugin.IsBelowMaxDepth(bundleTail, lowerAllowedSnapshotIndex)
+				bundleTail.Release()
+				if IsBelowMaxDepth {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					candidateTx.Release() //-1
 					continue

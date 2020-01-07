@@ -188,7 +188,7 @@ func onNewMilestone(bundle *tangle.Bundle) {
 
 	confTime := tailTx.GetTransaction().GetTimestamp() * 1000
 
-	transactions := bundle.GetTransactions()
+	transactions := bundle.GetTransactions() //+1
 
 	txRingBufferLock.Lock()
 	for _, tx := range transactions {
@@ -212,7 +212,7 @@ func onNewMilestone(bundle *tangle.Bundle) {
 	}
 	broadcastLock.Unlock()
 
-	transactions.Release()
+	transactions.Release() //-1
 }
 
 func onReattachment(txHash trinary.Hash) {

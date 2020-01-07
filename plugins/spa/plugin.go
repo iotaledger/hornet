@@ -146,9 +146,9 @@ func getMilestone(index milestone_index.MilestoneIndex) *tangle.CachedTransactio
 	if msBndl == nil {
 		return nil
 	}
-	tail := msBndl.GetTail()
+	tail := msBndl.GetTail() //+1
 	if !tail.Exists() {
-		tail.Release()
+		tail.Release() //-1
 		return nil
 	}
 	return tail
@@ -158,9 +158,9 @@ func preFeed(channel chan interface{}) {
 	channel <- &msg{MsgTypeNodeStatus, currentNodeStatus()}
 	start := tangle.GetLatestMilestoneIndex()
 	for i := start - 10; i <= start; i++ {
-		if tailTx := getMilestone(i); tailTx != nil {
+		if tailTx := getMilestone(i); tailTx != nil { //+1
 			channel <- &msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), i}}
-			tailTx.Release()
+			tailTx.Release() //-1
 		} else {
 			break
 		}

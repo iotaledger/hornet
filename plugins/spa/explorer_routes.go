@@ -108,7 +108,7 @@ func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, err
 
 	if bndl != nil {
 		t.BundleComplete = bndl.IsComplete()
-		transactions := bndl.GetTransactions()
+		transactions := bndl.GetTransactions() //+1
 		for _, bndlTx := range transactions {
 			if bndlTx.GetTransaction().Tx.CurrentIndex+1 == t.CurrentIndex {
 				t.Previous = bndlTx.GetTransaction().Tx.Hash
@@ -116,7 +116,7 @@ func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, err
 				t.Next = bndlTx.GetTransaction().Tx.Hash
 			}
 		}
-		transactions.Release()
+		transactions.Release() //-1
 
 		// check whether milestone
 		if bndl.IsMilestone() {

@@ -355,7 +355,7 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 	// now pre compute properties about every bundle
 	for _, bndl := range bucket.Bundles() {
 		bndl.GetLedgerChanges()
-		bndl.GetHead()
+		bndl.GetHead().Release() //+1 -1
 	}
 }
 
@@ -674,15 +674,16 @@ func (bundle *Bundle) IsSolid() bool {
 	bundle.metadataMutex.RUnlock()
 
 	if !solid {
-		tailTx := bundle.GetTail()
+		tailTx := bundle.GetTail() //+1
 		if tailTx == nil {
 			return false
 		}
-		defer tailTx.Release()
 		if tailTx.GetTransaction().IsSolid() {
 			bundle.setSolid(true)
+			tailTx.Release() //-1
 			return true
 		}
+		tailTx.Release() //-1
 		return false
 	} else {
 		return true
@@ -784,8 +785,8 @@ func (bundle *Bundle) WasRequested() bool {
 	if requested {
 		return true
 	}
-	transactions := bundle.GetTransactions()
-	defer transactions.Release()
+	transactions := bundle.GetTransactions() //+1
+	defer transactions.Release()             //-1
 
 	for _, tx := range transactions {
 		if tx.GetTransaction().IsRequested() {

@@ -157,8 +157,8 @@ func RequestApprovees(tx *tangle.CachedTransaction) {
 func RequestMilestone(milestone *tangle.Bundle) bool {
 	var requested bool
 
-	milestoneHeadTx := milestone.GetHead()
-	defer milestoneHeadTx.Release()
+	milestoneHeadTx := milestone.GetHead() //+1
+	defer milestoneHeadTx.Release()        //-1
 
 	reqMilestoneIndex := milestone.GetMilestoneIndex()
 

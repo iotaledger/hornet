@@ -24,9 +24,9 @@ func configureLiveFeed() {
 		case *transaction.Transaction:
 			sendToAllWSClient(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
 		case milestone_index.MilestoneIndex:
-			if tailTx := getMilestone(x); tailTx != nil {
+			if tailTx := getMilestone(x); tailTx != nil { //+1
 				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), x}})
-				tailTx.Release()
+				tailTx.Release() //-1
 			}
 		}
 		task.Return(nil)

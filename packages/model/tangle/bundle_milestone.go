@@ -23,25 +23,25 @@ func (bundle *Bundle) SetMilestone(milestone bool) {
 }
 
 func (bundle *Bundle) GetMilestoneIndex() milestone_index.MilestoneIndex {
-	tail := bundle.GetTail()
-	defer tail.Release()
+	tail := bundle.GetTail() //+1
+	defer tail.Release()     //-1
 	return milestone_index.MilestoneIndex(trinary.TrytesToInt(tail.GetTransaction().Tx.ObsoleteTag))
 }
 
 func (bundle *Bundle) GetMilestoneHash() trinary.Hash {
-	tail := bundle.GetTail()
-	defer tail.Release()
+	tail := bundle.GetTail() //+1
+	defer tail.Release()     //-1
 	return tail.GetTransaction().GetHash()
 }
 
 func (bundle *Bundle) GetTrunk() trinary.Hash {
-	head := bundle.GetHead()
-	defer head.Release()
+	head := bundle.GetHead() //+1
+	defer head.Release()     //-1
 	return head.GetTransaction().GetTrunk()
 }
 
 func (bundle *Bundle) GetBranch() trinary.Hash {
-	head := bundle.GetHead()
-	defer head.Release()
+	head := bundle.GetHead() //+1
+	defer head.Release()     //-1
 	return head.GetTransaction().GetBranch()
 }

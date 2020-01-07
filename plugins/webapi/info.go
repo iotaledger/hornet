@@ -32,6 +32,7 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
 	info.LatestMilestoneIndex = uint32(lmi)
+	info.LatestMilestone = consts.NullHashTrytes
 
 	// Latest milestone hash
 	lsmBndl, err := tangle.GetMilestone(lmi)
@@ -41,17 +42,18 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 		return
 	}
 
-	if lsmBndl != nil && lsmBndl.GetTail() != nil {
-		tail := lsmBndl.GetTail()
-		info.LatestMilestone = tail.GetTransaction().GetHash()
-		tail.Release()
-	} else {
-		info.LatestMilestone = consts.NullHashTrytes
+	if lsmBndl != nil {
+		tail := lsmBndl.GetTail() //+1
+		if tail != nil {
+			info.LatestMilestone = tail.GetTransaction().GetHash()
+		}
+		tail.Release() //-1
 	}
 
 	// Solid milestone index
 	smi := tangle.GetSolidMilestoneIndex()
 	info.LatestSolidSubtangleMilestoneIndex = uint32(smi)
+	info.LatestSolidSubtangleMilestone = consts.NullHashTrytes
 	info.IsSynced = tangle.IsNodeSynced()
 
 	// Solid milestone hash
@@ -62,12 +64,12 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 		return
 	}
 
-	if smBndl != nil && smBndl.GetTail() != nil {
-		tail := smBndl.GetTail()
-		info.LatestSolidSubtangleMilestone = tail.GetTransaction().GetHash()
-		tail.Release()
-	} else {
-		info.LatestSolidSubtangleMilestone = consts.NullHashTrytes
+	if smBndl != nil {
+		tail := smBndl.GetTail() //+1
+		if tail != nil {
+			info.LatestSolidSubtangleMilestone = tail.GetTransaction().GetHash()
+		}
+		tail.Release() //-1
 	}
 
 	// Milestone start index
