@@ -48,7 +48,7 @@ func configure(plugin *node.Plugin) {
 	localSnapshotsEnabled = parameter.NodeConfig.GetBool("localSnapshots.enabled")
 	snapshotDepth = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.depth"))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
-		log.Warningf("Parameter \"localSnapshots.depth\" is too small (%d). Value was changed to %d", snapshotDepth, SolidEntryPointCheckThresholdFuture)
+		log.Warnf("Parameter \"localSnapshots.depth\" is too small (%d). Value was changed to %d", snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
 	snapshotIntervalSynced = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.intervalSynced"))
