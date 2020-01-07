@@ -49,7 +49,7 @@ func addNeighbors(i interface{}, c *gin.Context) {
 		}
 
 		if err := gossip.AddNeighbor(uri, preferIPv6); err != nil {
-			log.Warningf("Can't add neighbor %s, Error: %s", uri, err)
+			log.Warnf("Can't add neighbor %s, Error: %s", uri, err)
 		} else {
 			addedNeighbors++
 			log.Infof("Added neighbor: %s", uri)
@@ -73,7 +73,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 		// TODO: Add alias (neighbor.Alias)
 
 		if err := gossip.AddNeighbor(neighbor.Identity, neighbor.PreferIPv6); err != nil {
-			log.Warningf("Can't add neighbor %s, Error: %s", neighbor.Identity, err)
+			log.Warnf("Can't add neighbor %s, Error: %s", neighbor.Identity, err)
 		} else {
 			addedNeighbors++
 			log.Infof("Added neighbor: %s", neighbor.Identity)

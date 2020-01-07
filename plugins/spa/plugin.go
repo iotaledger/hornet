@@ -44,7 +44,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("SPA", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("SPA")
 
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {

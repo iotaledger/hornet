@@ -185,7 +185,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 			txHashes = append(txHashes, txHash)
 		}
 		gossip.RequestMulti(txHashes, milestoneIndex)
-		log.Warningf("Stopped solidifier due to missing tx -> Requested missing txs (%d)", len(txHashes))
+		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d)", len(txHashes))
 		return false, false
 	}
 

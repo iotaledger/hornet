@@ -28,8 +28,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-
-	log = logger.NewLogger("Tangle", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("Tangle")
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 	RefsAnInvalidBundleCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)

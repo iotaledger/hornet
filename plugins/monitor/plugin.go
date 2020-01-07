@@ -84,7 +84,7 @@ func configureSocketIOServer() error {
 }
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Monitor", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("Monitor")
 
 	initRingBuffer()
 

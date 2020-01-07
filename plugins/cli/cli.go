@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/iotaledger/hive.go/logger"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/node"
@@ -29,6 +30,20 @@ func AddPluginStatus(name string, status int) {
 func getList(a []string) string {
 	sort.Strings(a)
 	return strings.Join(a, " ")
+}
+
+func ParseConfig() {
+	ignoreSettingsAtPrint := []string{}
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "dashboard.basic_auth.password")
+	if err := parameter.FetchConfig(true, ignoreSettingsAtPrint); err != nil {
+		panic(err)
+	}
+	parseParameters()
+
+	if err := logger.InitGlobalLogger(parameter.NodeConfig); err != nil {
+		panic(err)
+	}
 }
 
 // PrintVersion prints out the HORNET version
