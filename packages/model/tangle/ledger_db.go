@@ -149,15 +149,16 @@ func GetBalanceForAddress(address trinary.Hash) (uint64, milestone_index.Milesto
 }
 
 func DeleteLedgerDiffForMilestone(index milestone_index.MilestoneIndex) error {
+
 	WriteLockLedger()
 	defer WriteUnlockLedger()
+
 	return ledgerDatabase.DeletePrefix(databaseKeyPrefixForLedgerDiff(index))
 }
 
-func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex) (map[trinary.Hash]int64, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+// GetLedgerDiffForMilestoneWithoutLocking returns the ledger changes of that specific milestone
+// ReadLockLedger must be held while entering this function
+func GetLedgerDiffForMilestoneWithoutLocking(index milestone_index.MilestoneIndex) (map[trinary.Hash]int64, error) {
 
 	diff := make(map[trinary.Hash]int64)
 
@@ -183,7 +184,17 @@ func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex) (map[trinar
 	return diff, nil
 }
 
-func ApplyLedgerDiff(diff map[trinary.Hash]int64, index milestone_index.MilestoneIndex) error {
+func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex) (map[trinary.Hash]int64, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return GetLedgerDiffForMilestoneWithoutLocking(index)
+}
+
+// ApplyLedgerDiffWithoutLocking applies the changes to the ledger
+// WriteLockLedger must be held while entering this function
+func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone_index.MilestoneIndex) error {
 
 	var diffEntries []database.Entry
 	var balanceChanges []database.Entry
@@ -269,10 +280,9 @@ func StoreBalancesInDatabase(balances map[trinary.Hash]uint64, index milestone_i
 	return nil
 }
 
-func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+// GetAllBalancesWithoutLocking returns all balances for the current solid milestone
+// ReadLockLedger must be held while entering this function
+func GetAllBalancesWithoutLocking() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
 
 	balances := make(map[trinary.Hash]uint64)
 
@@ -296,6 +306,15 @@ func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, 
 	}
 
 	return balances, ledgerMilestoneIndex, err
+}
+
+// GetAllBalances returns all balances for the current solid milestone
+func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return GetAllBalancesWithoutLocking()
 }
 
 /*
