@@ -121,7 +121,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool
 		snapshotInterval = snapshotIntervalUnsynced
 	}
 
-	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) > snapshotInfo.SnapshotIndex
+	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
 func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]milestone_index.MilestoneIndex {
