@@ -34,7 +34,7 @@ const (
 var (
 	PLUGIN = node.NewPlugin("Graph", node.Disabled, configure, run)
 
-	log = logger.NewLogger("Graph")
+	log *logger.Logger
 
 	newTxWorkerCount     = 1
 	newTxWorkerQueueSize = 10000
@@ -82,6 +82,7 @@ func configureSocketIOServer() error {
 }
 
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("Graph")
 	initRingBuffers()
 
 	router = http.NewServeMux()

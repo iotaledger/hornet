@@ -27,7 +27,7 @@ type NeighborConfig struct {
 }
 
 func configureReconnectPool() {
-	reconnectLogger = logger.NewLogger("Reconnect Pool", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	reconnectLogger = logger.NewLogger("Reconnect Pool")
 
 	neighborConfig := []NeighborConfig{}
 	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &neighborConfig); err != nil {

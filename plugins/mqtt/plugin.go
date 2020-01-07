@@ -21,7 +21,7 @@ const (
 var (
 	// MQTT is disabled by default
 	PLUGIN = node.NewPlugin("MQTT", node.Disabled, configure, run)
-	log    = logger.NewLogger("MQTT")
+	log    *logger.Logger
 
 	newTxWorkerCount     = 1
 	newTxWorkerQueueSize = 10000
@@ -46,6 +46,7 @@ var (
 
 // Configure the MQTT plugin
 func configure(plugin *node.Plugin) {
+	log = logger.NewLogger("MQTT")
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*hornet.Transaction))
