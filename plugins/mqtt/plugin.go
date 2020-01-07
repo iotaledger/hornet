@@ -21,7 +21,7 @@ const (
 var (
 	// MQTT is disabled by default
 	PLUGIN = node.NewPlugin("MQTT", node.Disabled, configure, run)
-	log   *logger.Logger
+	log    *logger.Logger
 
 	newTxWorkerCount     = 1
 	newTxWorkerQueueSize = 10000
