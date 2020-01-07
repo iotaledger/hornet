@@ -118,8 +118,8 @@
   },
   "localsnapshots": {
     "enabled": true,
-    "depth": 100,
-    "intervalsynced": 10,
+    "depth": 50,
+    "intervalsynced": 50,
     "intervalunsynced": 1000,
     "path": "latest-export.gz.bin"
   },

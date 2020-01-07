@@ -9,10 +9,10 @@ func init() {
 	parameter.NodeConfig.SetDefault("localSnapshots.enabled", true)
 
 	// "The depth, respectively the starting point, at which a local snapshot of the ledger is generated."
-	parameter.NodeConfig.SetDefault("localSnapshots.depth", 100)
+	parameter.NodeConfig.SetDefault("localSnapshots.depth", 50)
 
 	// "Interval, in milestone transactions, at which snapshot files are created if the ledger is fully synchronized"
-	parameter.NodeConfig.SetDefault("localSnapshots.intervalSynced", 10)
+	parameter.NodeConfig.SetDefault("localSnapshots.intervalSynced", 50)
 
 	// "Interval, in milestone transactions, at which snapshot files are created if the ledger is not fully synchronized"
 	parameter.NodeConfig.SetDefault("localSnapshots.intervalUnsynced", 1000)
