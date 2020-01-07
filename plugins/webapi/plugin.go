@@ -34,7 +34,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("WebAPI", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("WebAPI")
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 

@@ -121,7 +121,7 @@
     "numberofkeysinamilestone": 23
   },
   "monitor": {
-    "tanglemonitorpath": "tanglemonitor/frontend",
+    " tanglemonitorpath": "tanglemonitor/frontend",
     "domain": "",
     "host": "127.0.0.1",
     "port": 4434,
@@ -138,8 +138,22 @@
   },
   "node": {
     "disableplugins": [],
-    "enableplugins": [],
-    "loglevel": 127
+    "enableplugins": []
+  },
+  "logger": {
+    "level": "info",
+    "encoding": "console",
+    "outputPaths": [
+      "stdout"
+    ],
+    "encoderConfig": {
+      "timeKey":        "ts",
+      "LevelKey":       "level",
+      "NameKey":        "logger",
+      "CallerKey":      "",
+      "MessageKey":     "msg",
+      "StacktraceKey":  "stacktrace"
+    }
   },
   "protocol": {
     "mwm": 14
