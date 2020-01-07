@@ -398,7 +398,10 @@ type Bundle struct {
 	// Status
 	statusMutex syncutils.RWMutex
 	modified    bool
-	requested   bool
+
+	// Requested
+	requestedMutex syncutils.RWMutex
+	requested      bool
 
 	// cached fields
 	cachedFieldsMutex syncutils.RWMutex
@@ -763,9 +766,9 @@ func (bundle *Bundle) SetModified(modified bool) {
 }
 
 func (bundle *Bundle) WasRequested() bool {
-	bundle.statusMutex.RLock()
+	bundle.requestedMutex.RLock()
 	requested := bundle.requested
-	bundle.statusMutex.RUnlock()
+	bundle.requestedMutex.RUnlock()
 
 	if requested {
 		return true
@@ -773,9 +776,9 @@ func (bundle *Bundle) WasRequested() bool {
 	for _, tx := range bundle.GetTransactions() {
 		if tx.IsRequested() {
 			// No need to set modified flag, since it is only temporary
-			bundle.statusMutex.Lock()
+			bundle.requestedMutex.Lock()
 			bundle.requested = true
-			bundle.statusMutex.Unlock()
+			bundle.requestedMutex.Unlock()
 			return true
 		}
 	}
