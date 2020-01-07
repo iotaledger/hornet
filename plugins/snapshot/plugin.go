@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
@@ -30,7 +29,6 @@ var (
 	ErrNoSnapshotSpecified      = errors.New("No snapshot file was specified in the config")
 	ErrSnapshotImportWasAborted = errors.New("snapshot import was aborted")
 
-	NullHash                = strings.Repeat("9", 81)
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)
 
@@ -49,6 +47,10 @@ func configure(plugin *node.Plugin) {
 
 	localSnapshotsEnabled = parameter.NodeConfig.GetBool("localSnapshots.enabled")
 	snapshotDepth = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.depth"))
+	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
+		log.Warningf("Parameter \"localSnapshots.depth\" is too small (%d). Value was changed to %d", snapshotDepth, SolidEntryPointCheckThresholdFuture)
+		snapshotDepth = SolidEntryPointCheckThresholdFuture
+	}
 	snapshotIntervalSynced = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.intervalSynced"))
 	snapshotIntervalUnsynced = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.intervalUnsynced"))
 
@@ -131,7 +133,7 @@ func installGenesisTransaction() {
 	// ensure genesis transaction exists
 	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
-	genesis.Hash = NullHash
+	genesis.Hash = consts.NullHashTrytes
 	txBytesTruncated := compressed.TruncateTx(trinary.TritsToBytes(genesisTxTrits))
 	genesisTx := hornet.NewTransactionFromAPI(genesis, txBytesTruncated)
 	tangle.StoreTransactionInCache(genesisTx)

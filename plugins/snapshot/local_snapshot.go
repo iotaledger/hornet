@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/dag"
@@ -20,8 +21,9 @@ import (
 )
 
 const (
-	SpentAddressesImportBatchSize = 100000
-	SolidEntryPointCheckThreshold = 50
+	SpentAddressesImportBatchSize       = 100000
+	SolidEntryPointCheckThresholdPast   = 50
+	SolidEntryPointCheckThresholdFuture = 50
 )
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
@@ -125,14 +127,14 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool
 func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex) map[string]milestone_index.MilestoneIndex {
 
 	solidEntryPoints := make(map[string]milestone_index.MilestoneIndex)
-	solidEntryPoints[NullHash] = targetIndex
+	solidEntryPoints[consts.NullHashTrytes] = targetIndex
 
 	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
 	//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
 	//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
-	for milestoneIndex := targetIndex - SolidEntryPointCheckThreshold; milestoneIndex <= targetIndex; milestoneIndex++ {
+	for milestoneIndex := targetIndex - SolidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
 		ms, _ := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
 			log.Panicf("CreateLocalSnapshot: Milestone (%d) not found!", milestoneIndex)
@@ -178,7 +180,7 @@ func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex mil
 
 	// Calculate balances for targetIndex
 	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
-		diff, err := tangle.GetLedgerDiffForMilestone(milestoneIndex)
+		diff, err := tangle.GetLedgerDiffForMilestoneWithoutLocking(milestoneIndex)
 		if err != nil {
 			log.Panicf("CreateLocalSnapshot: %v", err)
 		}
@@ -198,24 +200,20 @@ func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex mil
 	return balances
 }
 
-func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex) error {
-
-	snapshotInfo := tangle.GetSnapshotInfo()
-	if snapshotInfo == nil {
-		log.Panic("No snapshotInfo found!")
-	}
+func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInfo *tangle.SnapshotInfo) error {
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
-	if targetIndex > (solidMilestoneIndex - snapshotDepth) {
-		return fmt.Errorf("The snapshot target %d is too new. Should be older than %d", targetIndex, solidMilestoneIndex-snapshotDepth)
+
+	if targetIndex > (solidMilestoneIndex - SolidEntryPointCheckThresholdFuture) {
+		return fmt.Errorf("The snapshot target %d is too new. Should be older than %d", targetIndex, solidMilestoneIndex-SolidEntryPointCheckThresholdFuture)
 	}
 
 	if targetIndex <= snapshotInfo.SnapshotIndex {
 		return fmt.Errorf("The snapshot target %d is too old. Should be newer than %d", targetIndex, snapshotInfo.SnapshotIndex)
 	}
 
-	if targetIndex-SolidEntryPointCheckThreshold < snapshotInfo.PruningIndex+1 {
-		return fmt.Errorf("The snapshot target %d is too old. Should be newer than %d", targetIndex, snapshotInfo.PruningIndex+1+SolidEntryPointCheckThreshold)
+	if targetIndex-SolidEntryPointCheckThresholdPast < snapshotInfo.PruningIndex+1 {
+		return fmt.Errorf("The snapshot target %d is too old. Should be newer than %d", targetIndex, snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast)
 	}
 
 	return nil
@@ -227,23 +225,31 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 
 	ts := time.Now()
 
-	if err := checkSnapshotLimits(targetIndex); err != nil {
-		return err
+	snapshotInfo := tangle.GetSnapshotInfo()
+	if snapshotInfo == nil {
+		log.Panic("No snapshotInfo found!")
 	}
 
-	tangle.ReadLockLedger()
-	defer tangle.ReadUnlockLedger()
-
-	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+	if err := checkSnapshotLimits(targetIndex, snapshotInfo); err != nil {
+		return err
+	}
 
 	targetMilestone, _ := tangle.GetMilestone(targetIndex)
 	if targetMilestone == nil {
-		log.Panicf("CreateLocalSnapshot: Milestone (%d) not found!", targetIndex)
+		log.Panicf("CreateLocalSnapshot: Target milestone (%d) not found!", targetIndex)
 	}
 
-	balances, ledgerMilestone, err := tangle.GetAllBalances()
+	tangle.ReadLockLedger()
+
+	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+	solidMilestone, _ := tangle.GetMilestone(solidMilestoneIndex)
+	if solidMilestone == nil {
+		log.Panicf("CreateLocalSnapshot: Solid milestone (%d) not found!", solidMilestoneIndex)
+	}
+
+	balances, ledgerMilestone, err := tangle.GetAllBalancesWithoutLocking()
 	if err != nil {
-		return err
+		log.Panicf("CreateLocalSnapshot: GetAllBalances failed! %v", err)
 	}
 
 	if ledgerMilestone != solidMilestoneIndex {
@@ -251,7 +257,9 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	}
 
 	newBalances := getLedgerStateAtMilestone(balances, targetIndex, solidMilestoneIndex)
-	solidEntryPoints := getSolidEntryPoints(targetIndex)
+	tangle.ReadUnlockLedger()
+
+	newSolidEntryPoints := getSolidEntryPoints(targetIndex)
 	seenMilestones := getSeenMilestones(targetIndex)
 
 	tangle.ReadLockSpentAddresses()
@@ -280,7 +288,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		msHash:              targetMilestone.GetTailHash(),
 		msIndex:             targetIndex,
 		msTimestamp:         targetMilestone.GetTail().GetTimestamp(),
-		solidEntryPoints:    solidEntryPoints,
+		solidEntryPoints:    newSolidEntryPoints,
 		seenMilestones:      seenMilestones,
 		balances:            newBalances,
 		spentAddressesCount: spentAddressesCount,
@@ -304,6 +312,21 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	if err := os.Rename(filePathTmp, filePath); err != nil {
 		return err
 	}
+
+	tangle.WriteLockSolidEntryPoints()
+	tangle.ResetSolidEntryPoints()
+	for solidEntryPoint, index := range newSolidEntryPoints {
+		tangle.SolidEntryPointsAdd(solidEntryPoint, index)
+	}
+	tangle.StoreSolidEntryPoints()
+
+	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
+		Hash:          targetMilestone.GetTailHash(),
+		SnapshotIndex: targetIndex,
+		PruningIndex:  snapshotInfo.PruningIndex,
+		Timestamp:     targetMilestone.GetTail().GetTimestamp(),
+	})
+	tangle.WriteUnlockSolidEntryPoints()
 
 	log.Infof("Creating local snapshot for targetIndex %d done, took %v", targetIndex, time.Since(ts))
 
@@ -445,10 +468,11 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
+	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 
 	// Genesis transaction
-	tangle.SolidEntryPointsAdd(NullHash, 0)
+	tangle.SolidEntryPointsAdd(consts.NullHashTrytes, 0)
 
 	var msIndex int32
 	var msTimestamp int64
@@ -521,6 +545,7 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 
 	tangle.StoreSolidEntryPoints()
+	tangle.WriteUnlockSolidEntryPoints()
 
 	log.Info("Importing seen milestones")
 

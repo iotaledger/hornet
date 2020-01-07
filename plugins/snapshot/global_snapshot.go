@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -51,11 +52,13 @@ func loadSpentAddresses(filePathSpent string) error {
 
 func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
 
+	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 
 	// Genesis transaction
-	tangle.SolidEntryPointsAdd(NullHash, snapshotIndex)
+	tangle.SolidEntryPointsAdd(consts.NullHashTrytes, snapshotIndex)
 	tangle.StoreSolidEntryPoints()
+	tangle.WriteUnlockSolidEntryPoints()
 
 	log.Infof("Importing initial ledger from %v", filePathLedger)
 
@@ -111,7 +114,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 		}
 	}
 
-	tangle.SetSnapshotMilestone(NullHash, snapshotIndex, snapshotIndex, 0)
+	tangle.SetSnapshotMilestone(consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0)
 
 	log.Info("Finished loading snapshot")
 

@@ -98,7 +98,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 	}
 	tc := time.Now()
 
-	err := tangle.ApplyLedgerDiff(totalLedgerChanges, milestoneIndex)
+	err := tangle.ApplyLedgerDiffWithoutLocking(totalLedgerChanges, milestoneIndex)
 	if err != nil {
 		log.Panicf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
 	}

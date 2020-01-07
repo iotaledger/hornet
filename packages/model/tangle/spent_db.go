@@ -104,7 +104,8 @@ func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
 	return nil
 }
 
-// Addresses should be locked between CountSpentAddressesEntries and StreamSpentAddressesToWriter
+// CountSpentAddressesEntries returns the amount of spent addresses
+// ReadLockSpentAddresses must be held while entering this function
 func CountSpentAddressesEntries() (int32, error) {
 
 	var addressesCount int32
@@ -120,6 +121,8 @@ func CountSpentAddressesEntries() (int32, error) {
 	return addressesCount, nil
 }
 
+// StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer
+// ReadLockSpentAddresses must be held while entering this function
 func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32) error {
 
 	var addressesWritten int32
