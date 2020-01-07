@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -12,6 +13,7 @@ import (
 
 var (
 	snapshot                             *SnapshotInfo
+	mutex                                syncutils.RWMutex
 	latestSeenMilestoneIndexFromSnapshot = milestone_index.MilestoneIndex(0)
 )
 
@@ -82,6 +84,9 @@ func SetSnapshotMilestone(milestoneHash trinary.Hash, snapshotIndex milestone_in
 }
 
 func SetSnapshotInfo(sn *SnapshotInfo) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	err := storeSnapshotInfoInDatabase(sn)
 	if err != nil {
 		panic(err)
@@ -90,6 +95,9 @@ func SetSnapshotInfo(sn *SnapshotInfo) {
 }
 
 func GetSnapshotInfo() *SnapshotInfo {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	return snapshot
 }
 
