@@ -70,15 +70,11 @@ func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {
 }
 
 func ContainsTransaction(transactionHash trinary.Hash) bool {
-
-	cachedObject := txStorage.Load(trinary.MustTrytesToBytes(transactionHash))
-	defer cachedObject.Release()
-	return cachedObject.Exists()
+	return txStorage.Contains(trinary.MustTrytesToBytes(transactionHash))
 }
 
 func StoreTransaction(transaction *hornet.Transaction) *CachedTransaction {
-	cached := &CachedTransaction{txStorage.Store(transaction)}
-	return cached
+	return &CachedTransaction{txStorage.Store(transaction)}
 }
 
 func DiscardTransaction(txHash trinary.Hash) {
