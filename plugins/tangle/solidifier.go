@@ -343,6 +343,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 		setSolidifierMilestoneIndex(0)
 
 		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0))
+		milestoneToSolidifyTail.Release()
 		return
 	}
 
