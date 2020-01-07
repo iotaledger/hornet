@@ -5,9 +5,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/dag"
@@ -18,6 +20,7 @@ import (
 )
 
 const (
+	SpentAddressesImportBatchSize = 100000
 	SolidEntryPointCheckThreshold = 50
 )
 
@@ -492,6 +495,10 @@ func LoadSnapshotFromFile(filePath string) error {
 	log.Info("Importing solid entry points")
 
 	for i := 0; i < int(solidEntryPointsCount); i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		var val int32
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
@@ -518,6 +525,10 @@ func LoadSnapshotFromFile(filePath string) error {
 	log.Info("Importing seen milestones")
 
 	for i := 0; i < int(seenMilestonesCount); i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		var val int32
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
@@ -543,6 +554,10 @@ func LoadSnapshotFromFile(filePath string) error {
 
 	ledgerState := make(map[trinary.Hash]uint64)
 	for i := 0; i < int(ledgerEntriesCount); i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
+		}
+
 		var val uint64
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
@@ -567,21 +582,35 @@ func LoadSnapshotFromFile(filePath string) error {
 		return fmt.Errorf("ledgerEntries: %s", err)
 	}
 
-	log.Infof("Importing %d spent addresses\n", spentAddrsCount)
-	for i := 0; i < int(spentAddrsCount); i++ {
-		spentAddrBuf := make([]byte, 49)
+	log.Infof("Importing %d spent addresses. This can take a while...", spentAddrsCount)
 
-		err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
-		if err != nil {
-			return fmt.Errorf("spentAddrs: %s", err)
+	batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
+	for i := 0; i < batchAmount; i++ {
+		if daemon.IsStopped() {
+			return ErrSnapshotImportWasAborted
 		}
 
-		hash, err := trinary.BytesToTrytes(spentAddrBuf)
-		if err != nil {
-			return fmt.Errorf("spentAddrs: %s", err)
+		var batchEntries [][]byte
+		batchStart := int32(i * SpentAddressesImportBatchSize)
+		batchEnd := batchStart + SpentAddressesImportBatchSize
+
+		if batchEnd > spentAddrsCount {
+			batchEnd = spentAddrsCount
 		}
 
-		tangle.MarkAddressAsSpent(hash[:81])
+		for j := batchStart; j < batchEnd; j++ {
+
+			spentAddrBuf := make([]byte, 49)
+			err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
+			if err != nil {
+				return fmt.Errorf("spentAddrs: %s", err)
+			}
+
+			batchEntries = append(batchEntries, spentAddrBuf)
+		}
+
+		tangle.StoreSpentAddressesBytesInDatabase(batchEntries)
+		log.Infof("Processed %d/%d spent addresses", batchEnd, spentAddrsCount)
 	}
 
 	log.Info("Finished loading snapshot")

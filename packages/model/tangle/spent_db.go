@@ -81,6 +81,29 @@ func storeSpentAddressesInDatabase(spent []trinary.Hash) error {
 	return nil
 }
 
+func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
+	WriteLockSpentAddresses()
+	defer WriteUnlockSpentAddresses()
+
+	var entries []database.Entry
+
+	for _, addressInBytes := range spentInBytes {
+		key := addressInBytes
+
+		entries = append(entries, database.Entry{
+			Key:   key,
+			Value: []byte{},
+		})
+	}
+
+	// Now batch insert/delete all entries
+	if err := spentAddressesDatabase.Apply(entries, []database.Key{}); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to mark addresses as spent")
+	}
+
+	return nil
+}
+
 // Addresses should be locked between CountSpentAddressesEntries and StreamSpentAddressesToWriter
 func CountSpentAddressesEntries() (int32, error) {
 
