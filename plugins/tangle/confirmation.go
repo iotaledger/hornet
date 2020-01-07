@@ -50,6 +50,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 
 				// Tx is already confirmed by another milestone => ignore
 				if at < milestoneIndex {
+					tx.Release() //-1
 					continue
 				}
 
