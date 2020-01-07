@@ -142,18 +142,11 @@
   },
   "logger": {
     "level": "info",
+    "disableCaller": true,
     "encoding": "console",
     "outputPaths": [
       "stdout"
-    ],
-    "encoderConfig": {
-      "timeKey":        "ts",
-      "LevelKey":       "level",
-      "NameKey":        "logger",
-      "CallerKey":      "",
-      "MessageKey":     "msg",
-      "StacktraceKey":  "stacktrace"
-    }
+    ]
   },
   "protocol": {
     "mwm": 14
