@@ -16,7 +16,7 @@ import (
 
 var (
 	milestoneSolidifierWorkerCount = 2 // must be two, so a new request can abort another, in case it is an older milestone
-	milestoneSolidifierQueueSize   = 100
+	milestoneSolidifierQueueSize   = 2
 	milestoneSolidifierWorkerPool  *workerpool.WorkerPool
 
 	signalChanMilestoneStopSolidification     chan struct{}
@@ -257,13 +257,15 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 			- don't stop that traversion if older milestone comes in, its only once and helps at startup
 	*/
 
-	solidifierMilestoneIndexLock.RLock()
-	if (solidifierMilestoneIndex != 0) && (msIndexEmptiedQueue != 0) && (solidifierMilestoneIndex < msIndexEmptiedQueue) {
-		// Another older milestone solidification is already running
+	if msIndexEmptiedQueue != 0 {
+		solidifierMilestoneIndexLock.RLock()
+		if (solidifierMilestoneIndex != 0) && (msIndexEmptiedQueue > solidifierMilestoneIndex) {
+			// Another older milestone solidification is already running
+			solidifierMilestoneIndexLock.RUnlock()
+			return
+		}
 		solidifierMilestoneIndexLock.RUnlock()
-		return
 	}
-	solidifierMilestoneIndexLock.RUnlock()
 
 	// Stop possible other newer solidifications
 	abortMilestoneSolidification()
