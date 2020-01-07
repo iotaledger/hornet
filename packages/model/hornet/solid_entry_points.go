@@ -13,8 +13,8 @@ import (
 )
 
 type SolidEntryPoints struct {
-	entryPointsMutex syncutils.RWMutex
-	entryPoints      map[trinary.Hash]milestone_index.MilestoneIndex
+	entryPointsMap   map[trinary.Hash]milestone_index.MilestoneIndex
+	entryPointsSlice []trinary.Hash
 
 	// Status
 	statusMutex syncutils.RWMutex
@@ -23,49 +23,28 @@ type SolidEntryPoints struct {
 
 func NewSolidEntryPoints() *SolidEntryPoints {
 	return &SolidEntryPoints{
-		entryPoints: make(map[trinary.Hash]milestone_index.MilestoneIndex),
+		entryPointsMap: make(map[trinary.Hash]milestone_index.MilestoneIndex),
 	}
 }
 
 func (s *SolidEntryPoints) Hashes() []trinary.Hash {
-	// TODO: cache subsequent calls instead of creating a new slice everytime
-	s.entryPointsMutex.RLock()
-	defer s.entryPointsMutex.RUnlock()
-	var hashes []trinary.Hash
-	for hash := range s.entryPoints {
-		hashes = append(hashes, hash)
-	}
-	return hashes
-}
-
-func (s *SolidEntryPoints) Copy() *SolidEntryPoints {
-	s.entryPointsMutex.RLock()
-	defer s.entryPointsMutex.RUnlock()
-	cpy := NewSolidEntryPoints()
-	cpy.modified = s.modified
-	for hash, index := range s.entryPoints {
-		cpy.entryPoints[hash] = index
-	}
-	return cpy
+	return s.entryPointsSlice
 }
 
 func (s *SolidEntryPoints) Contains(transactionHash trinary.Hash) bool {
-	s.entryPointsMutex.RLock()
-	defer s.entryPointsMutex.RUnlock()
-	return ContainsKeyTrinaryHashMilestoneIndex(s.entryPoints, transactionHash)
+	_, exists := s.entryPointsMap[transactionHash]
+	return exists
 }
 
 func (s *SolidEntryPoints) Add(transactionHash trinary.Hash, milestoneIndex milestone_index.MilestoneIndex) {
-	s.entryPointsMutex.Lock()
-	defer s.entryPointsMutex.Unlock()
-	s.entryPoints[transactionHash] = milestoneIndex
+	s.entryPointsMap[transactionHash] = milestoneIndex
+	s.entryPointsSlice = append(s.entryPointsSlice, transactionHash)
 	s.SetModified(true)
 }
 
 func (s *SolidEntryPoints) Clear() {
-	s.entryPointsMutex.Lock()
-	defer s.entryPointsMutex.Unlock()
-	s.entryPoints = make(map[trinary.Hash]milestone_index.MilestoneIndex)
+	s.entryPointsMap = make(map[trinary.Hash]milestone_index.MilestoneIndex)
+	s.entryPointsSlice = make([]trinary.Hash, 0)
 	s.SetModified(true)
 }
 
@@ -115,9 +94,9 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 func (s *SolidEntryPoints) GetBytes() []byte {
 
-	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPoints)*(49+4)))
+	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(49+4)))
 
-	for hash, msIndex := range s.entryPoints {
+	for hash, msIndex := range s.entryPointsMap {
 		hashBytes, err := trinary.TrytesToBytes(hash)
 		if err != nil {
 			return nil
