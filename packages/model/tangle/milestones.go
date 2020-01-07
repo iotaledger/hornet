@@ -165,12 +165,19 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	// Check the structure of the milestone
 	milestoneIndex := getMilestoneIndex(txIndex0)
 	if milestoneIndex <= GetSolidMilestoneIndex() {
-		// Milestone older than out solid milestone
+		// Milestone older than solid milestone
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0.GetHash())
 	}
 
 	if milestoneIndex >= maxMilestoneIndex {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0.GetHash())
+	}
+
+	// Check if milestone was already processed
+	msBundle, _ := GetMilestone(milestoneIndex)
+	if msBundle != nil {
+		// It could be issued again since several transactions of the same bundle were processed in parallel
+		return false, nil
 	}
 
 	signatureTxs := make([]*hornet.Transaction, 0, coordinatorSecurityLevel)
@@ -204,12 +211,6 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		if signatureTx.Tx.BranchTransaction != siblingsTx.Tx.TrunkTransaction {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", txIndex0.GetHash())
 		}
-	}
-
-	// Check if milestone was already processed
-	msBundle, _ := GetMilestone(milestoneIndex)
-	if msBundle != nil {
-		return false, errors.Wrapf(ErrInvalidMilestone, "Exists already, Index: %d", milestoneIndex)
 	}
 
 	// Verify milestone signature
