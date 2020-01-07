@@ -129,21 +129,25 @@ func readBundleBucketFromDatabase(bundleHash trinary.Hash) (*BundleBucket, error
 	metaMap := map[trinary.Hash]bitmask.BitMask{}
 	err := bundleDatabase.ForEachPrefixKeyOnly(databaseKeyPrefixForBundleHash(bundleHash), func(entry database.KeyOnlyEntry) (stop bool) {
 		txHash := trinary.MustBytesToTrytes(entry.Key, 81)
-		tx := GetCachedTransaction(txHash)
+		tx := GetCachedTransaction(txHash) //+1
 		if tx.Exists() {
 			if tx.GetTransaction().Tx.CurrentIndex == 0 {
 				metaMap[tx.GetTransaction().GetHash()] = bitmask.BitMask(entry.Meta)
 			}
-			transactions[tx.GetTransaction().GetHash()] = tx
+			if _, found := transactions[tx.GetTransaction().GetHash()]; !found {
+				transactions[tx.GetTransaction().GetHash()] = tx
+			} else {
+				tx.Release() //-1
+			}
 		} else {
-			tx.Release()
+			tx.Release() //-1
 		}
 		return false
 	})
 
 	if err != nil {
 		for _, tx := range transactions {
-			tx.Release()
+			tx.Release() //-1
 		}
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to read bundle bucket from database")
 	} else if len(transactions) == 0 {
@@ -151,7 +155,7 @@ func readBundleBucketFromDatabase(bundleHash trinary.Hash) (*BundleBucket, error
 	} else {
 		bucket := NewBundleBucketFromDatabase(bundleHash, transactions, metaMap)
 		for _, tx := range transactions {
-			tx.Release()
+			tx.Release() //-1
 		}
 		return bucket, nil
 	}

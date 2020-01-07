@@ -120,8 +120,9 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 				continue
 			}
 
-			tx := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash) //+1
 			if !tx.Exists() {
+				tx.Release() //-1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", txHash)
 			}
 
@@ -129,11 +130,11 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 			if confirmed {
 				if at != milestoneIndex {
 					// ignore all tx that were confirmed by another milestone
-					tx.Release()
+					tx.Release() //-1
 					continue
 				}
 			} else {
-				tx.Release()
+				tx.Release() //-1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", txHash)
 			}
 
@@ -142,7 +143,7 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
 
 			if !tx.GetTransaction().IsTail() {
-				tx.Release()
+				tx.Release() //-1
 				continue
 			}
 
@@ -150,28 +151,31 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 
 			bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
 			if err != nil {
-				tx.Release()
+				tx.Release() //-1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: BundleBucket not found: %v, Error: %v", txBundle, err)
 			}
 
 			bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
 			if bundle == nil {
+				tx.Release() //-1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
 
-			if !bundle.IsValid() {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", txHash, txBundle)
+			if !bundle.IsComplete() {
+				tx.Release() //-1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not complete: %v", txHash, txBundle)
 			}
 
-			if !bundle.IsComplete() {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not complete: %v", txHash, txBundle)
+			if !bundle.IsValid() {
+				tx.Release() //-1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", txHash, txBundle)
 			}
 
 			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
 			if !isValueSpamBundle {
 				var txsWithValue []*TxWithValue
 
-				txs := bundle.GetTransactions()
+				txs := bundle.GetTransactions() //+1
 				for _, tx := range txs {
 					// hornetTx is being retained during the loop, so safe to use the pointer here
 					hornetTx := tx.GetTransaction()
@@ -180,16 +184,16 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 					}
 					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: hornetTx.GetHash(), Address: hornetTx.Tx.Address, Index: hornetTx.Tx.CurrentIndex, Value: hornetTx.Tx.Value})
 				}
-				txs.Release()
+				txs.Release() //-1
 				for address, change := range ledgerChanges {
 					totalLedgerChanges[address] += change
 				}
 
-				bundleHead := bundle.GetHead()
+				bundleHead := bundle.GetHead() //+1
 				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: tx.GetTransaction().Tx.Bundle, TailTxHash: bundle.GetTailHash(), Txs: txsWithValue, LastIndex: bundleHead.GetTransaction().Tx.CurrentIndex})
-				bundleHead.Release()
+				bundleHead.Release() //-1
 			}
-			tx.Release()
+			tx.Release() //-1
 
 			// we only add the tail transaction to the txsToConfirm set, in order to not
 			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not

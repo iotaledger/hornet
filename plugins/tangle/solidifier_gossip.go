@@ -64,7 +64,7 @@ func runGossipSolidifier() {
 func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
 
 	//Register consumer here, since we will add it to txsToCheck which will release every tx when they are processed
-	transaction.RegisterConsumer()
+	transaction.RegisterConsumer() //+1
 
 	txsToCheck := make(map[string]*tangle.CachedTransaction)
 	txsToCheck[transaction.GetTransaction().GetHash()] = transaction
@@ -78,24 +78,24 @@ func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
 			if solid {
 				if int32(time.Now().Unix())-tx.GetTransaction().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions
-					tx.Release()
+					tx.Release() //-1
 					continue
 				}
 
 				transactionApprovers, _ := tangle.GetApprovers(txHash)
 				for _, approverHash := range transactionApprovers.GetHashes() {
-					approver := tangle.GetCachedTransaction(approverHash)
+					approver := tangle.GetCachedTransaction(approverHash) //+1
 					if approver.Exists() {
 						_, found := txsToCheck[approverHash]
 						if !found {
 							txsToCheck[approverHash] = approver
 						} else {
-							approver.Release()
+							approver.Release() //-1
 						}
 					}
 				}
 			}
-			tx.Release()
+			tx.Release() //-1
 		}
 	}
 }

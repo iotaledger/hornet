@@ -103,12 +103,12 @@ func runTangleProcessor(plugin *node.Plugin) {
 func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	txHash := incomingTx.GetHash()
-	transaction := tangle.GetCachedTransaction(txHash)
+	transaction := tangle.GetCachedTransaction(txHash) //+1
 	knownTx := transaction.Exists()
 
 	if !knownTx {
 		//This updates the transaction object automatically
-		tangle.StoreTransaction(incomingTx).Release()
+		tangle.StoreTransaction(incomingTx).Release() //+1 -1
 	}
 
 	if !knownTx {
@@ -172,7 +172,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 		gossip.RequestApprovees(transaction)
 	}
 
-	transaction.Release()
+	transaction.Release() //-1
 
 	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
 	if queueEmpty {

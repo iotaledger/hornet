@@ -240,13 +240,10 @@ func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
 	if bndl == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
-	tail := bndl.GetTail()
+	tail := bndl.GetTail() //+1
 	tx, err := createExplorerTx(tail.GetTransaction().GetHash(), tail)
-	tail.Release()
-	if err != nil {
-		return nil, err
-	}
-	return tx, nil
+	tail.Release() //-1
+	return tx, err
 }
 
 func findTransaction(hash Hash) (*ExplorerTx, error) {
@@ -254,18 +251,15 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	tx := tangle.GetCachedTransaction(hash)
+	tx := tangle.GetCachedTransaction(hash) //+1
 	if !tx.Exists() {
-		tx.Release()
+		tx.Release() //-1
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
 	t, err := createExplorerTx(hash, tx)
-	tx.Release()
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
+	tx.Release() //-1
+	return t, err
 }
 
 func findBundles(hash Hash) ([][]*ExplorerTx, error) {
@@ -286,15 +280,16 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	expBndls := [][]*ExplorerTx{}
 	for _, bndl := range bndls {
 		sl := []*ExplorerTx{}
-		transactions := bndl.GetTransactions()
+		transactions := bndl.GetTransactions() //+1
 		for _, tx := range transactions {
 			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx)
 			if err != nil {
+				transactions.Release() //-1
 				return nil, err
 			}
 			sl = append(sl, expTx)
 		}
-		transactions.Release()
+		transactions.Release() //-1
 		expBndls = append(expBndls, sl)
 	}
 	return expBndls, nil
@@ -317,16 +312,13 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 	if len(txHashes) != 0 {
 		for i := 0; i < len(txHashes); i++ {
 			txHash := txHashes[i]
-			tx := tangle.GetCachedTransaction(txHash)
-			if err != nil {
-				return nil, err
-			}
+			tx := tangle.GetCachedTransaction(txHash) //+1
 			if !tx.Exists() {
-				tx.Release()
+				tx.Release() //-1
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
 			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx)
-			tx.Release()
+			tx.Release() //-1
 			if err != nil {
 				return nil, err
 			}

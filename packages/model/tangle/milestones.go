@@ -147,13 +147,13 @@ func FindClosestNextMilestone(index milestone_index.MilestoneIndex) (milestone *
 }
 
 func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
-	txIndex0 := bundle.GetTail()
+	txIndex0 := bundle.GetTail() //+1
 	if txIndex0 == nil {
 		return false, nil
 	}
 
 	if !IsMaybeMilestone(txIndex0) {
-		txIndex0.Release()
+		txIndex0.Release() //-1
 		// Transaction is not issued by compass => no milestone
 		return false, nil
 	}
@@ -164,37 +164,39 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	milestoneIndex := getMilestoneIndex(txIndex0)
 	if milestoneIndex <= GetSolidMilestoneIndex() {
 		// Milestone older than out solid milestone
-		defer txIndex0.Release()
+		txIndex0.Release() //-1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0Hash)
 	}
 
 	if milestoneIndex >= maxMilestoneIndex {
-		defer txIndex0.Release()
+		txIndex0.Release() //-1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0Hash)
 	}
 
 	var signatureTxs CachedTransactions
-	defer signatureTxs.Release()
+	defer signatureTxs.Release() //-1
+
 	signatureTxs = append(signatureTxs, txIndex0)
 
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
-		tx := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction)
+		tx := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) //+1
 		if !tx.Exists() {
-			tx.Release()
+			tx.Release() //-1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 		}
 
 		if !IsMaybeMilestone(tx) {
-			tx.Release()
+			tx.Release() //-1
 			// Transaction is not issued by compass => no milestone
 			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", txIndex0Hash)
 		}
 
 		signatureTxs = append(signatureTxs, tx)
+		// tx will be released with signatureTxs
 	}
 
-	siblingsTx := GetCachedTransaction(signatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction)
-	defer siblingsTx.Release()
+	siblingsTx := GetCachedTransaction(signatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) //+1
+	defer siblingsTx.Release()                                                                                        //-1
 
 	if !siblingsTx.Exists() {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
@@ -234,15 +236,13 @@ func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) (result *Bundle
 			err = dbErr
 			return nil
 		} else if txHash != "" {
-			tx := GetCachedTransaction(txHash)
-			if err != nil {
-				return nil
-			}
+			tx := GetCachedTransaction(txHash) //+1
 			if !tx.Exists() {
-				tx.Release()
+				tx.Release() //-1
 				return nil
 			}
 			bundleBucket, err := GetBundleBucket(tx.GetTransaction().Tx.Bundle)
+			tx.Release() //-1
 			if err != nil {
 				return nil
 			}

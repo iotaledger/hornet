@@ -287,8 +287,8 @@ func processReplies(reply *replyItem) {
 		if err != nil {
 			return
 		}
-		tx := tangle.GetCachedTransaction(reqHash)
-		defer tx.Release()
+		tx := tangle.GetCachedTransaction(reqHash) //+1
+		defer tx.Release()                         //-1
 		if !tx.Exists() {
 			return
 		}
@@ -321,9 +321,9 @@ func processReplies(reply *replyItem) {
 				return
 			}
 
-			tx := tangle.GetCachedTransaction(reqHash)
+			tx := tangle.GetCachedTransaction(reqHash) //+1
 			if !tx.Exists() {
-				tx.Release()
+				tx.Release() //-1
 			} else {
 				txToSend = tx
 			}
@@ -338,7 +338,7 @@ func processReplies(reply *replyItem) {
 			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compress
 			// This reduces the outgoing traffic if we are not sync
 
-			genesis := tangle.GetCachedTransaction(consts.NullHashTrytes)
+			genesis := tangle.GetCachedTransaction(consts.NullHashTrytes) //+1
 			if err != nil {
 				log.Panic(err)
 			}
@@ -354,18 +354,20 @@ func processReplies(reply *replyItem) {
 			// We are synced => notify the neighbor
 			ourReqHash, err = trinary.TrytesToBytes(txToSend.GetTransaction().GetHash())
 			if err != nil {
+				txToSend.Release() //-1
 				return
 			}
 		}
 
 		msg := &legacyGossipTransaction{truncatedTxData: txToSend.GetTransaction().RawBytes, reqHash: ourReqHash}
+		txToSend.Release() //-1
+
 		select {
 		case neighborQueue.legacyTxQueue <- msg:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
-		txToSend.Release()
 		return
 	}
 
@@ -384,7 +386,7 @@ func processReplies(reply *replyItem) {
 			return
 		}
 
-		transactions := requestedMilestoneBundle.GetTransactions()
+		transactions := requestedMilestoneBundle.GetTransactions() //+1
 		for _, txToSend := range transactions {
 			select {
 			case neighborQueue.txQueue <- txToSend.GetTransaction().RawBytes:
@@ -393,7 +395,7 @@ func processReplies(reply *replyItem) {
 				server.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
 		}
-		transactions.Release()
+		transactions.Release() //-1
 		return
 	}
 }

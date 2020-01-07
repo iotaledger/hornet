@@ -43,12 +43,7 @@ func getInclusionStates(i interface{}, c *gin.Context) {
 
 	for _, tx := range gis.Transactions {
 		// get tx data
-		t := tangle.GetCachedTransaction(tx)
-		if err != nil {
-			e.Error = "Internal error"
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
+		t := tangle.GetCachedTransaction(tx) //+1
 
 		if t.Exists() {
 			// check if tx is set as confirmed
@@ -58,7 +53,7 @@ func getInclusionStates(i interface{}, c *gin.Context) {
 			// if tx is unknown, return false
 			inclusionStates = append(inclusionStates, false)
 		}
-		t.Release()
+		t.Release() //-1
 	}
 
 	c.JSON(http.StatusOK, GetInclusionStatesReturn{States: inclusionStates})

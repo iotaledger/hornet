@@ -55,9 +55,9 @@ func (bucket *BundleBucket) Transactions() CachedTransactions {
 	txs := make([]*CachedTransaction, 0)
 	for txHash := range bucket.txs {
 		// TODO: the transaction could have been pruned away?
-		tx := GetCachedTransaction(txHash)
+		tx := GetCachedTransaction(txHash) //+1
 		if !tx.Exists() {
-			tx.Release()
+			tx.Release() //-1
 			continue
 		}
 		txs = append(txs, tx)
@@ -151,7 +151,7 @@ func (bucket *BundleBucket) remap(bndl *Bundle, startTx *CachedTransaction, onMa
 	defer bndl.txsMu.Unlock()
 
 	// This will be released while or after the loop as current
-	startTx.RegisterConsumer()
+	startTx.RegisterConsumer() //+1
 
 	current := startTx
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
@@ -165,15 +165,15 @@ func (bucket *BundleBucket) remap(bndl *Bundle, startTx *CachedTransaction, onMa
 
 		// check whether trunk is in bundle instance already
 		if _, trunkAlreadyInBundle := bndl.txs[current.GetTransaction().GetTrunk()]; trunkAlreadyInBundle {
-			trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash)
-			current.Release()
+			trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash) //+1
+			current.Release()                                                                      //-1
 			current = trunkTx
 			continue
 		}
 
-		trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash)
+		trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash) //+1
 		if trunkTx.GetTransaction().Tx.Bundle != startTx.GetTransaction().Tx.Bundle {
-			trunkTx.Release()
+			trunkTx.Release() //-1
 			break
 		}
 
@@ -187,18 +187,18 @@ func (bucket *BundleBucket) remap(bndl *Bundle, startTx *CachedTransaction, onMa
 
 		// call closure
 		if len(onMapped) > 0 {
-			trunkTx.RegisterConsumer()
+			trunkTx.RegisterConsumer() //+1
 			onMapped[0](trunkTx)
-			trunkTx.Release()
+			trunkTx.Release() //-1
 		}
 
 		// modify and advance to perhaps complete the bundle
 		bndl.SetModified(true)
-		current.Release()
+		current.Release() //-1
 		current = trunkTx
 	}
 
-	current.Release()
+	current.Release() //-1
 }
 
 // Returns the hash of the bundle the bucket is managing.
@@ -214,8 +214,8 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 
-	tx.RegisterConsumer()
-	defer tx.Release()
+	tx.RegisterConsumer() //+1
+	defer tx.Release()    //-1
 
 	// add the transaction to the "all" transactions pool
 	bucket.txs[tx.GetTransaction().GetHash()] = struct{}{}
@@ -260,7 +260,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 		}
 
 		// load tail of bundle as a starting point for the remap
-		current := GetCachedTransaction(tailTxHash)
+		current := GetCachedTransaction(tailTxHash) //+1
 
 		if !current.Exists() {
 			log.Panicf("Tx not found but it should be in storage: %s", tailTxHash)
@@ -273,7 +273,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 			}
 		})
 
-		current.Release()
+		current.Release() //-1
 	}
 
 	return addedTo
@@ -298,13 +298,13 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 
 	// go through each tail tx to create a bundle instance
 	for _, tx := range txs {
-		tx.RegisterConsumer()
+		tx.RegisterConsumer() //+1
 		if tx.GetTransaction().Tx.Bundle != bucket.hash {
 			log.Fatalf("tx %s was stored for bundle %s, but its bundle hash is %s", tx.GetTransaction().GetHash(), bucket.hash, tx.GetTransaction().Tx.Bundle)
 		}
 
 		if !tx.GetTransaction().IsTail() {
-			tx.Release()
+			tx.Release() //-1
 			continue
 		}
 
@@ -329,27 +329,27 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 		// fill up this bundle with the transactions.
 		// note that this is different than remap() as it ignores whether the bundle is complete
 		current := tx
-		current.RegisterConsumer()
+		current.RegisterConsumer() //+1
 		for current.GetTransaction().GetHash() != current.GetTransaction().GetTrunk() && !current.GetTransaction().IsHead() {
 
 			if _, ok := bucket.txs[current.GetTransaction().GetTrunk()]; !ok {
 				break
 			}
 
-			trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash)
+			trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash) //+1
 
 			if trunkTx.GetTransaction().IsHead() {
 				bndl.headTx = trunkTx.GetTransaction().GetHash()
 			}
 
 			bndl.txs[trunkTx.GetTransaction().GetHash()] = struct{}{}
-			current.Release()
+			current.Release() //-1
 			current = trunkTx
 		}
-		current.Release()
+		current.Release() //-1
 
 		bucket.bundleInstances[tx.GetTransaction().GetHash()] = bndl
-		tx.Release()
+		tx.Release() //-1
 	}
 
 	// now pre compute properties about every bundle
@@ -445,14 +445,14 @@ func (bundle *Bundle) GetHash() trinary.Hash {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	for txHash := range bundle.txs {
-		tx := GetCachedTransaction(txHash)
+		tx := GetCachedTransaction(txHash) //+1
 		if !tx.Exists() {
-			tx.Release()
+			tx.Release() //-1
 			continue
 		}
 
 		bundle.hash = tx.GetTransaction().Tx.Bundle
-		tx.Release()
+		tx.Release() //-1
 		return bundle.hash
 	}
 	panic("GetHash() called on a bundle without any transactions")
@@ -469,13 +469,13 @@ func (bundle *Bundle) GetLedgerChanges() (map[trinary.Trytes]int64, bool) {
 
 	changes := map[trinary.Trytes]int64{}
 	for txHash := range bundle.txs {
-		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) //+1
 		if tx.GetTransaction().Tx.Value == 0 {
-			tx.Release()
+			tx.Release() //-1
 			continue
 		}
 		changes[tx.GetTransaction().Tx.Address] += tx.GetTransaction().Tx.Value
-		tx.Release()
+		tx.Release() //-1
 	}
 
 	isValueSpamBundle := true
@@ -502,16 +502,16 @@ func (bundle *Bundle) GetHead() *CachedTransaction {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	if bundle.headTx != "" {
-		return loadBundleTxIfExistsOrNil(bundle.headTx, bundle.hash)
+		return loadBundleTxIfExistsOrNil(bundle.headTx, bundle.hash) //+1
 	}
 
 	for txHash := range bundle.txs {
-		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) //+1
 		if tx.GetTransaction().Tx.CurrentIndex == tx.GetTransaction().Tx.LastIndex {
 			bundle.headTx = tx.GetTransaction().Tx.Hash
 			return tx
 		}
-		tx.Release()
+		tx.Release() //-1
 	}
 	return nil
 }
@@ -529,16 +529,16 @@ func (bundle *Bundle) GetTail() *CachedTransaction {
 	bundle.txsMu.RLock()
 	defer bundle.txsMu.RUnlock()
 	if bundle.tailTx != "" {
-		return loadBundleTxIfExistsOrNil(bundle.tailTx, bundle.hash)
+		return loadBundleTxIfExistsOrNil(bundle.tailTx, bundle.hash) //+1
 	}
 
 	for txHash := range bundle.txs {
-		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) //+1
 		if tx.GetTransaction().Tx.CurrentIndex == 0 {
 			bundle.headTx = tx.GetTransaction().Tx.Hash
 			return tx
 		}
-		tx.Release()
+		tx.Release() //-1
 	}
 	return nil
 }
@@ -561,7 +561,7 @@ func (bundle *Bundle) GetTransactions() CachedTransactions {
 
 	var values CachedTransactions
 	for txHash := range bundle.txs {
-		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) //+1
 		values = append(values, tx)
 	}
 
@@ -594,15 +594,15 @@ func (bundle *Bundle) IsValid() bool {
 
 	iotaGoBundle := make(iotago_bundle.Bundle, len(bundle.txs))
 
-	current := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash)
+	current := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) //+1
 	lastIndex := int(current.GetTransaction().Tx.LastIndex)
 	iotaGoBundle[0] = *current.GetTransaction().Tx
-	current.Release()
+	current.Release() //-1
 
 	for i := 1; i < lastIndex+1; i++ {
-		current = loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bundle.hash)
+		current = loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bundle.hash) //+1
 		iotaGoBundle[i] = *current.GetTransaction().Tx
-		current.Release()
+		current.Release() //-1
 	}
 
 	// validate bundle semantics and signatures
@@ -714,13 +714,13 @@ func (bundle *Bundle) IsConfirmed() bool {
 		defer bundle.txsMu.RUnlock()
 
 		for txHash := range bundle.txs {
-			tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash)
+			tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) //+1
 			if confirmed, _ := tx.GetTransaction().GetConfirmed(); confirmed {
 				bundle.setConfirmed(true)
-				tx.Release()
+				tx.Release() //-1
 				return true
 			}
-			tx.Release()
+			tx.Release() //-1
 		}
 		return false
 	} else {
@@ -800,16 +800,16 @@ func (bundle *Bundle) WasRequested() bool {
 }
 
 func loadBundleTxIfExistsOrNil(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	tx := GetCachedTransaction(txHash)
+	tx := GetCachedTransaction(txHash) //+1
 	if !tx.Exists() {
-		tx.Release()
+		tx.Release() //-1
 		return nil
 	}
 	return tx
 }
 
 func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	tx := GetCachedTransaction(txHash)
+	tx := GetCachedTransaction(txHash) //+1
 	if !tx.Exists() {
 		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash, txHash)
 	}

@@ -110,7 +110,7 @@ func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex
 				continue
 			}
 
-			tx := tangle.GetCachedTransaction(txHash)
+			tx := tangle.GetCachedTransaction(txHash) //+1
 
 			// we should have the transaction because the to be checked tail tx is solid
 			// and we passed the point where we checked whether the tx is a solid entry point
@@ -123,20 +123,20 @@ func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex
 			// we are below max depth on this transaction if it is confirmed by a milestone below our threshold
 			if confirmed && int(at) < lowerAllowedSnapshotIndex {
 				BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
-				tx.Release()
+				tx.Release() //-1
 				return true
 			}
 
 			// we don't need to analyze further down if the transaction is confirmed within the threshold of the max depth
 			if confirmed {
-				tx.Release()
+				tx.Release() //-1
 				continue
 			}
 
 			//
 			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
-			tx.Release()
+			tx.Release() //-1
 		}
 	}
 

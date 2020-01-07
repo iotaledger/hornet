@@ -10,6 +10,7 @@ import (
 // confirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
 func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction) {
+
 	milestoneTail.RegisterConsumer() //+1
 	defer milestoneTail.Release()    //-1
 
@@ -112,7 +113,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 
 	for txHash := range txsToConfirm {
 
-		cachedTx := tangle.GetCachedTransaction(txHash)
+		cachedTx := tangle.GetCachedTransaction(txHash) //+1
 		if !cachedTx.Exists() {
 			log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 		}
@@ -128,14 +129,14 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 		if bundle == nil {
 			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, cachedTx.GetTransaction().Tx.Bundle)
 		}
-		cachedTx.Release()
+		cachedTx.Release() //-1
 
-		transactions := bundle.GetTransactions()
+		transactions := bundle.GetTransactions() //+1
 		for _, bndlTx := range transactions {
 			bndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
 			Events.TransactionConfirmed.Trigger(bndlTx, milestoneIndex, milestoneTail.GetTransaction().GetTimestamp())
 		}
-		transactions.Release()
+		transactions.Release() //-1
 	}
 
 	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Now().Sub(ts))
