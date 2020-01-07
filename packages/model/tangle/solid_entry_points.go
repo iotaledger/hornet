@@ -38,7 +38,7 @@ func WriteUnlockSolidEntryPoints() {
 func GetSolidEntryPointsHashes() []trinary.Hash {
 	ReadLockSolidEntryPoints()
 	defer ReadUnlockSolidEntryPoints()
-	
+
 	return solidEntryPoints.Hashes()
 }
 
@@ -53,9 +53,9 @@ func loadSolidEntryPoints() {
 		} else {
 			solidEntryPoints = hornet.NewSolidEntryPoints()
 		}
+	} else {
+		panic(ErrSolidEntryPointsAlreadyInitialized)
 	}
-
-	panic(ErrSolidEntryPointsAlreadyInitialized)
 }
 
 func SolidEntryPointsContain(transactionHash trinary.Hash) bool {
@@ -64,34 +64,34 @@ func SolidEntryPointsContain(transactionHash trinary.Hash) bool {
 
 	if solidEntryPoints != nil {
 		return solidEntryPoints.Contains(transactionHash)
+	} else {
+		panic(ErrSolidEntryPointsNotInitialized)
 	}
-
-	panic(ErrSolidEntryPointsNotInitialized)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
 func SolidEntryPointsAdd(transactionHash trinary.Hash, milestoneIndex milestone_index.MilestoneIndex) {
 	if solidEntryPoints != nil {
 		solidEntryPoints.Add(transactionHash, milestoneIndex)
+	} else {
+		panic(ErrSolidEntryPointsNotInitialized)
 	}
-
-	panic(ErrSolidEntryPointsNotInitialized)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
 func ResetSolidEntryPoints() {
 	if solidEntryPoints != nil {
 		solidEntryPoints.Clear()
+	} else {
+		panic(ErrSolidEntryPointsNotInitialized)
 	}
-
-	panic(ErrSolidEntryPointsNotInitialized)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
 func StoreSolidEntryPoints() {
 	if solidEntryPoints != nil {
 		storeSolidEntryPointsInDatabase(solidEntryPoints)
+	} else {
+		panic(ErrSolidEntryPointsNotInitialized)
 	}
-
-	panic(ErrSolidEntryPointsNotInitialized)
 }
