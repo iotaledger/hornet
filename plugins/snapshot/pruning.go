@@ -106,8 +106,8 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 	}
 
 	targetIndex := solidMilestoneIndex - pruningDelay
-	if targetIndex > (solidMilestoneIndex - snapshotDepth - SolidEntryPointCheckThreshold) {
-		targetIndex = solidMilestoneIndex - snapshotDepth - SolidEntryPointCheckThreshold
+	if targetIndex > (snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - 1) {
+		targetIndex = snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - 1
 	}
 
 	if snapshotInfo.PruningIndex >= targetIndex {
@@ -116,7 +116,8 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 	}
 
 	// Iterate through all milestones that have to be pruned
-	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex < targetIndex; milestoneIndex++ {
+	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
+		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
 		ms, _ := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
@@ -127,6 +128,7 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 		approvees := getMilestoneApprovees(milestoneIndex, ms.GetTail())
 		pruneTransactions(approvees)
 		pruneMilestone(milestoneIndex)
+		log.Infof("Pruning milestone (%d) done!", milestoneIndex)
 	}
 
 	snapshotInfo.PruningIndex = targetIndex
