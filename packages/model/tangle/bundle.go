@@ -355,7 +355,10 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 	// now pre compute properties about every bundle
 	for _, bndl := range bucket.Bundles() {
 		bndl.GetLedgerChanges()
-		bndl.GetHead().Release() //+1 -1
+		head := bndl.GetHead() //+1
+		if head != nil {
+			head.Release() //-1
+		}
 	}
 }
 
