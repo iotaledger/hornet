@@ -259,7 +259,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 
 	if msIndexEmptiedQueue != 0 {
 		solidifierMilestoneIndexLock.RLock()
-		if (solidifierMilestoneIndex != 0) && (msIndexEmptiedQueue > solidifierMilestoneIndex) {
+		if (solidifierMilestoneIndex != 0) && (msIndexEmptiedQueue >= solidifierMilestoneIndex) {
 			// Another older milestone solidification is already running
 			solidifierMilestoneIndexLock.RUnlock()
 			return
