@@ -27,7 +27,7 @@ var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	ErrNoSnapshotSpecified = errors.New("No snapshot file was specified in the config")
+	ErrNoSnapshotSpecified      = errors.New("No snapshot file was specified in the config")
 	ErrSnapshotImportWasAborted = errors.New("snapshot import was aborted")
 
 	NullHash                = strings.Repeat("9", 81)
