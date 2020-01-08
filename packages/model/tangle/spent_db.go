@@ -104,12 +104,18 @@ func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
 	return nil
 }
 
-// CountSpentAddressesEntries returns the amount of spent addresses
-// ReadLockSpentAddresses must be held while entering this function
-func CountSpentAddressesEntries() (int32, error) {
+// CountSpentAddressesEntries returns the amount of spent addresses.
+// ReadLockSpentAddresses must be held while entering this function.
+func CountSpentAddressesEntries(abortSignal <-chan struct{}) (int32, error) {
 
 	var addressesCount int32
 	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
 		addressesCount++
 		return nil
 	})
@@ -121,22 +127,28 @@ func CountSpentAddressesEntries() (int32, error) {
 	return addressesCount, nil
 }
 
-// StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer
-// ReadLockSpentAddresses must be held while entering this function
-func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32) error {
+// StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer.
+// ReadLockSpentAddresses must be held while entering this function.
+func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abortSignal <-chan struct{}) error {
 
 	var addressesWritten int32
 	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
 		addressesWritten++
 		return binary.Write(buf, binary.BigEndian, entry.Key)
 	})
 
-	if addressesWritten != spentAddressesCount {
-		return errors.Wrapf(NewDatabaseError(err), "Amount of spent addresses changed during write %d/%d", addressesWritten, spentAddressesCount)
-	}
-
 	if err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to stream spent addresses from database")
+	}
+
+	if addressesWritten != spentAddressesCount {
+		return errors.Wrapf(NewDatabaseError(err), "Amount of spent addresses changed during write %d/%d", addressesWritten, spentAddressesCount)
 	}
 
 	return nil

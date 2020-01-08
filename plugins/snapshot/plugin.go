@@ -26,8 +26,12 @@ var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	ErrNoSnapshotSpecified      = errors.New("No snapshot file was specified in the config")
-	ErrSnapshotImportWasAborted = errors.New("snapshot import was aborted")
+	ErrNoSnapshotSpecified        = errors.New("no snapshot file was specified in the config")
+	ErrSnapshotImportWasAborted   = errors.New("snapshot import was aborted")
+	ErrSnapshotCreationWasAborted = errors.New("snapshot creation was aborted")
+	ErrSnapshotCreationFailed     = errors.New("snapshot creation failed")
+	ErrTargetIndexTooNew          = errors.New("snapshot target %d is too new. Should be older than %d")
+	ErrTargetIndexTooOld          = errors.New("snapshot target %d is too old. Should be newer than %d")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)
@@ -86,7 +90,9 @@ func run(plugin *node.Plugin) {
 				//pruneUnconfirmedTransactions(solidMilestoneIndex)
 
 				if localSnapshotsEnabled && shouldTakeSnapshot(solidMilestoneIndex) {
-					createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"))
+					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"), shutdownSignal); err != nil {
+						log.Error(ErrSnapshotCreationFailed, err)
+					}
 				}
 				// TODO: Enable pruning after switch to ObjectStorage
 				/*
@@ -101,7 +107,7 @@ func run(plugin *node.Plugin) {
 
 	if tangle.GetSnapshotInfo() != nil {
 		// Check the ledger state
-		tangle.GetAllBalances()
+		tangle.GetAllBalances(nil)
 		return
 	}
 

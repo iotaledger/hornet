@@ -38,7 +38,7 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	ldr := &GetLedgerDiffReturn{}
 
-	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex)
+	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex, abortSignal)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)

@@ -23,7 +23,10 @@ func pruneUnconfirmedTransactions(solidMilestoneIndex milestone_index.MilestoneI
 	}
 
 	pruneTransactions(txHashes)
-	tangle.DeleteUnconfirmedTxHashOperations(txHashes)
+
+	if err := tangle.DeleteUnconfirmedTxHashOperations(txHashes); err != nil {
+		log.Error(err)
+	}
 
 	log.Debugf("Pruned %d unconfirmed transactions", len(txHashes))
 }
@@ -32,12 +35,16 @@ func pruneUnconfirmedTransactions(solidMilestoneIndex milestone_index.MilestoneI
 func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
 
 	// state diffs
-	tangle.DeleteLedgerDiffForMilestone(milestoneIndex)
+	if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
+		log.Error(err)
+	}
 
 	tangle.DiscardMilestoneFromCache(milestoneIndex)
 
 	// milestone
-	tangle.DeleteMilestoneInDatabase(milestoneIndex)
+	if err := tangle.DeleteMilestoneInDatabase(milestoneIndex); err != nil {
+		log.Error(err)
+	}
 }
 
 // pruneMilestone prunes the approvers, bundles, addresses and transaction metadata from the database
@@ -85,16 +92,24 @@ func pruneTransactions(txHashes []trinary.Hash) {
 	}
 
 	// approvers
-	tangle.DeleteApproversInDatabase(approvers)
+	if err := tangle.DeleteApproversInDatabase(approvers); err != nil {
+		log.Error(err)
+	}
 
 	// bundles
-	tangle.DeleteBundlesInDatabase(bundlesTxsToRemove)
+	if err := tangle.DeleteBundlesInDatabase(bundlesTxsToRemove); err != nil {
+		log.Error(err)
+	}
 
 	// tx
-	tangle.DeleteTransactionsInDatabase(txsToRemove)
+	if err := tangle.DeleteTransactionsInDatabase(txsToRemove); err != nil {
+		log.Error(err)
+	}
 
 	// address
-	tangle.DeleteTransactionHashesForAddressesInDatabase(addresses)
+	if err := tangle.DeleteTransactionHashesForAddressesInDatabase(addresses); err != nil {
+		log.Error(err)
+	}
 }
 
 // ToDo: Global pruning Lock needed?
@@ -125,7 +140,11 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 		}
 
 		// Get all approvees of that milestone
-		approvees := getMilestoneApprovees(milestoneIndex, ms.GetTail())
+		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), nil)
+		if err != nil {
+			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)
+			continue
+		}
 		pruneTransactions(approvees)
 		pruneMilestone(milestoneIndex)
 		log.Infof("Pruning milestone (%d) done!", milestoneIndex)

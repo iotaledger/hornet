@@ -156,16 +156,22 @@ func DeleteLedgerDiffForMilestone(index milestone_index.MilestoneIndex) error {
 	return ledgerDatabase.DeletePrefix(databaseKeyPrefixForLedgerDiff(index))
 }
 
-// GetLedgerDiffForMilestoneWithoutLocking returns the ledger changes of that specific milestone
-// ReadLockLedger must be held while entering this function
-func GetLedgerDiffForMilestoneWithoutLocking(index milestone_index.MilestoneIndex) (map[trinary.Hash]int64, error) {
+// GetLedgerDiffForMilestoneWithoutLocking returns the ledger changes of that specific milestone.
+// ReadLockLedger must be held while entering this function.
+func GetLedgerDiffForMilestoneWithoutLocking(index milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[trinary.Hash]int64, error) {
 
 	diff := make(map[trinary.Hash]int64)
 
-	err := ledgerDatabase.ForEachPrefix(databaseKeyPrefixForLedgerDiff(index), func(entry database.Entry) (stop bool) {
+	err := ledgerDatabase.StreamForEachPrefix(databaseKeyPrefixForLedgerDiff(index), func(entry database.Entry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
 		address := trinary.MustBytesToTrytes(entry.Key, 81)
 		diff[address] = diffFromBytes(entry.Value)
-		return false
+		return nil
 	})
 
 	if err != nil {
@@ -184,16 +190,16 @@ func GetLedgerDiffForMilestoneWithoutLocking(index milestone_index.MilestoneInde
 	return diff, nil
 }
 
-func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex) (map[trinary.Hash]int64, error) {
+func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[trinary.Hash]int64, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetLedgerDiffForMilestoneWithoutLocking(index)
+	return GetLedgerDiffForMilestoneWithoutLocking(index, abortSignal)
 }
 
-// ApplyLedgerDiffWithoutLocking applies the changes to the ledger
-// WriteLockLedger must be held while entering this function
+// ApplyLedgerDiffWithoutLocking applies the changes to the ledger.
+// WriteLockLedger must be held while entering this function.
 func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone_index.MilestoneIndex) error {
 
 	var diffEntries []database.Entry
@@ -280,13 +286,19 @@ func StoreBalancesInDatabase(balances map[trinary.Hash]uint64, index milestone_i
 	return nil
 }
 
-// GetAllBalancesWithoutLocking returns all balances for the current solid milestone
-// ReadLockLedger must be held while entering this function
-func GetAllBalancesWithoutLocking() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
+// GetAllBalancesWithoutLocking returns all balances for the current solid milestone.
+// ReadLockLedger must be held while entering this function.
+func GetAllBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
 
 	balances := make(map[trinary.Hash]uint64)
 
 	err := ledgerDatabase.StreamForEachPrefix(balancePrefix, func(entry database.Entry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
 		address := trinary.MustBytesToTrytes(entry.Key, 81)
 		balances[address] = balanceFromBytes(entry.Value)
 		return nil
@@ -308,17 +320,17 @@ func GetAllBalancesWithoutLocking() (map[trinary.Hash]uint64, milestone_index.Mi
 	return balances, ledgerMilestoneIndex, err
 }
 
-// GetAllBalances returns all balances for the current solid milestone
-func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
+// GetAllBalances returns all balances for the current solid milestone.
+func GetAllBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetAllBalancesWithoutLocking()
+	return GetAllBalancesWithoutLocking(abortSignal)
 }
 
 /*
-// Ledger should be locked between CountBalances and StreamBalancesToWriter
+// Ledger should be locked between CountBalances and StreamBalancesToWriter.
 func CountBalanceEntries() (int32, error) {
 
 	var balancesCount int32
@@ -334,7 +346,7 @@ func CountBalanceEntries() (int32, error) {
 	return balancesCount, nil
 }
 
-// Ledger should be locked before
+// Ledger should be locked before.
 func StreamBalancesToWriter(buf io.Writer, balancesCount int32, totalBalanceDiffs map[trinary.Hash]uint64) (int, error) {
 
 	balancesWritten := 0
