@@ -28,8 +28,8 @@ var (
 
 	ErrNoSnapshotSpecified        = errors.New("no snapshot file was specified in the config")
 	ErrSnapshotImportWasAborted   = errors.New("snapshot import was aborted")
-	ErrSnapshotCreationWasAborted = errors.New("snapshot creation was aborted")
-	ErrSnapshotCreationFailed     = errors.New("snapshot creation failed")
+	ErrSnapshotCreationWasAborted = errors.New("operation was aborted")
+	ErrSnapshotCreationFailed     = errors.New("creating snapshot failed: %v")
 	ErrTargetIndexTooNew          = errors.New("snapshot target %d is too new. Should be older than %d")
 	ErrTargetIndexTooOld          = errors.New("snapshot target %d is too old. Should be newer than %d")
 
@@ -91,7 +91,7 @@ func run(plugin *node.Plugin) {
 
 				if localSnapshotsEnabled && shouldTakeSnapshot(solidMilestoneIndex) {
 					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"), shutdownSignal); err != nil {
-						log.Error(ErrSnapshotCreationFailed, err)
+						log.Warnf(ErrSnapshotCreationFailed.Error(), err)
 					}
 				}
 				// TODO: Enable pruning after switch to ObjectStorage

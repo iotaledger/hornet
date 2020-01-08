@@ -15,7 +15,7 @@ const (
 func pruneUnconfirmedTransactions(solidMilestoneIndex milestone_index.MilestoneIndex) {
 	targetIndex := solidMilestoneIndex - PruneUnconfirmedTransactionsDepth
 
-	log.Debugf("Pruning unconfirmed transactions older than milestone %d...", targetIndex)
+	log.Infof("Pruning unconfirmed transactions older than milestone %d...", targetIndex)
 
 	txHashes, err := tangle.ReadUnconfirmedTxHashOperations(targetIndex)
 	if err != nil {
@@ -28,7 +28,7 @@ func pruneUnconfirmedTransactions(solidMilestoneIndex milestone_index.MilestoneI
 		log.Error(err)
 	}
 
-	log.Debugf("Pruned %d unconfirmed transactions", len(txHashes))
+	log.Infof("Pruned %d unconfirmed transactions", len(txHashes))
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
@@ -140,7 +140,7 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 		}
 
 		// Get all approvees of that milestone
-		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), nil)
+		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), false, nil)
 		if err != nil {
 			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)
 			continue
