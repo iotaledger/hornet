@@ -111,9 +111,11 @@ func (bucket *BundleBucket) GetBundleOfTailTransaction(txHash trinary.Hash) *Bun
 
 // RemoveTransactionFromBundle removes the transaction if non-tail and not associated to a bundle instance or
 // if tail, it removes all the transactions of the bundle from the bucket that are not used in another bundle instance.
-func (bucket *BundleBucket) RemoveTransactionFromBundle(txHash trinary.Hash) (txsToRemove map[string]struct{}) {
+func (bucket *BundleBucket) RemoveTransactionFromBundle(txHash trinary.Hash) map[string]struct{} {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
+
+	txsToRemove := make(map[string]struct{})
 
 	if bndl, isTail := bucket.bundleInstances[txHash]; isTail {
 		// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
