@@ -20,8 +20,7 @@ WorkingDirectory=/var/lib/hornet
 TimeoutSec=infinity
 Restart=always
 
-ExecStartPre=-/bin/bash /usr/bin/hornet_download_snapshot.sh
-ExecStart=/usr/bin/hornet -d /etc/hornet
+ExecStart=/bin/bash -c "/usr/bin/hornet_download_snapshot.sh && /usr/bin/hornet -d /etc/hornet"
 
 [Install]
 WantedBy=multi-user.target
