@@ -54,7 +54,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
+func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction, panicOnMissingTx bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
 	ts := time.Now()
 
 	txsToTraverse := make(map[string]struct{})
@@ -88,7 +88,12 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milest
 
 			tx, _ := tangle.GetTransaction(txHash)
 			if tx == nil {
-				log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
+				if panicOnMissingTx {
+					log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
+				}
+
+				// Go on if the tx is missing (needed for pruning of the database)
+				continue
 			}
 
 			confirmed, at := tx.GetConfirmed()
@@ -153,7 +158,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		}
 
 		// Get all approvees of that milestone
-		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), abortSignal)
+		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), true, abortSignal)
 		if err != nil {
 			return nil, err
 		}
