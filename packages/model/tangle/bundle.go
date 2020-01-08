@@ -117,13 +117,21 @@ func (bucket *BundleBucket) RemoveTransactionFromBundle(txHash trinary.Hash) (tx
 
 	if bndl, isTail := bucket.bundleInstances[txHash]; isTail {
 		// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
+
 		for bundleTxHash := range bndl.txs {
 			// check if the txs of this bundle are used in another bundle instance
 			contains := false
 
+			if bundleTxHash == txHash {
+				// Tails can't be in another bundle instance => remove it
+				txsToRemove[bundleTxHash] = struct{}{}
+				continue
+			}
+
 			for tailTxHash, bundle := range bucket.bundleInstances {
 				if tailTxHash == txHash {
 					// It is the same bundle instance => skip
+					txsToRemove[bundleTxHash] = struct{}{}
 					continue
 				}
 
