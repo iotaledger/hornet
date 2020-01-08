@@ -16,7 +16,7 @@ func init() {
 	addEndpoint("createSnapshot", createSnapshot, implementedAPIcalls)
 }
 
-func getSnapshot(i interface{}, c *gin.Context) {
+func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	sn := &GetSnapshot{}
 	e := ErrorReturn{}
 
@@ -42,7 +42,7 @@ func getSnapshot(i interface{}, c *gin.Context) {
 	c.JSON(http.StatusOK, snr)
 }
 
-func createSnapshot(i interface{}, c *gin.Context) {
+func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	sn := &CreateSnapshot{}
 	e := ErrorReturn{}
 

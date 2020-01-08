@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type apiEndpoint func(i interface{}, c *gin.Context)
+type apiEndpoint func(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 
 func addEndpoint(enpointName string, implementation apiEndpoint, avaiableImplementions map[string]apiEndpoint) {
 	ep := strings.ToLower(enpointName)
