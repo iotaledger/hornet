@@ -37,9 +37,11 @@ func (s *SolidEntryPoints) Contains(transactionHash trinary.Hash) bool {
 }
 
 func (s *SolidEntryPoints) Add(transactionHash trinary.Hash, milestoneIndex milestone_index.MilestoneIndex) {
-	s.entryPointsMap[transactionHash] = milestoneIndex
-	s.entryPointsSlice = append(s.entryPointsSlice, transactionHash)
-	s.SetModified(true)
+	if _, exists := s.entryPointsMap[transactionHash]; !exists {
+		s.entryPointsMap[transactionHash] = milestoneIndex
+		s.entryPointsSlice = append(s.entryPointsSlice, transactionHash)
+		s.SetModified(true)
+	}
 }
 
 func (s *SolidEntryPoints) Clear() {
