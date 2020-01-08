@@ -10,6 +10,7 @@ systemctl --system daemon-reload >/dev/null || true
 case "$1" in
     remove)
         deb-systemd-helper mask "${SYSTEMD_SERVICE}" >/dev/null
+        rm -rf /etc/hornet
     ;;
     purge)
         deb-systemd-helper purge "${SYSTEMD_SERVICE}" >/dev/null
