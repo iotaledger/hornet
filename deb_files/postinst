@@ -11,6 +11,12 @@ case "$1" in
         systemctl --system daemon-reload >/dev/null
         if [ -n "$2" ]; then
             deb-systemd-invoke restart "${SYSTEMD_SERVICE}" >/dev/null
+        else 
+            echo "######################################\n"
+            echo "HORNET installation finished\n"
+            echo "######################################\n"
+            echo "Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.\n"
+            echo "To start HORNET the first time, please run:\nsudo systemctl enable hornet && service hornet start\n\n\n"
         fi
 
         adduser --no-create-home --system --group hornet >/dev/null
