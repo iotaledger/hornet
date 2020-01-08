@@ -28,7 +28,9 @@ func NewSolidEntryPoints() *SolidEntryPoints {
 }
 
 func (s *SolidEntryPoints) Hashes() []trinary.Hash {
-	return s.entryPointsSlice
+	solidEntryPointCopy := make([]trinary.Hash, len(s.entryPointsSlice))
+	copy(solidEntryPointCopy, s.entryPointsSlice)
+	return solidEntryPointCopy
 }
 
 func (s *SolidEntryPoints) Contains(transactionHash trinary.Hash) bool {
