@@ -150,7 +150,6 @@ nfpms:
     dependencies:
       - systemd
       - wget
-      - curl
       - bash
     scripts:
       preremove: "deb_files/prerm"

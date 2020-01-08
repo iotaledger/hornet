@@ -1,5 +1,7 @@
 [Unit]
 Description=Hornet
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 LimitNOFILE=4096
@@ -18,7 +20,8 @@ WorkingDirectory=/var/lib/hornet
 TimeoutSec=infinity
 Restart=always
 
-ExecStart=/bin/bash -c "/usr/bin/hornet_download_snapshot.sh && /usr/bin/hornet -d /etc/hornet"
+ExecStartPre=-/bin/bash /usr/bin/hornet_download_snapshot.sh
+ExecStart=/usr/bin/hornet -d /etc/hornet
 
 [Install]
 WantedBy=multi-user.target
