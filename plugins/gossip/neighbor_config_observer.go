@@ -36,7 +36,7 @@ func runConfigObserver() {
 		}
 
 		// Remove Neighbors
-		// FixMe: Removing example neighbors will result in an error, but the neighbour will still be deleted.
+		// FixMe: Removing example neighbors will result in an error, but the neighbor will still be deleted.
 		if len(removed) > 0 {
 			for _, nb := range removed {
 				if err := RemoveNeighbor(nb.Identity); err != nil {
