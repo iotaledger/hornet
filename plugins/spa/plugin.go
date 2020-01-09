@@ -83,7 +83,7 @@ func run(plugin *node.Plugin) {
 		metrics.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		wsSendWorkerPool.StopAndWait()
+		wsSendWorkerPool.Stop()
 		log.Info("Stopping SPA[WSSend] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 
