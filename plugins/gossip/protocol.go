@@ -1,8 +1,6 @@
 package gossip
 
 import (
-	"fmt"
-
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/network"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -107,11 +105,8 @@ func (protocol *protocol) Receive(data []byte) {
 
 	for offset < length && protocol.ReceivingState != nil {
 		if readBytes, err := protocol.ReceivingState.Receive(data, offset, length); err != nil {
-			println(fmt.Sprintf("ReceivingState error: %s", err.Error()))
-			Events.Error.Trigger(err)
-
+			protocol.Events.Error.Trigger(err)
 			_ = protocol.Conn.Close()
-
 			return
 		} else {
 			offset += readBytes
@@ -130,12 +125,8 @@ func (protocol *protocol) send(data interface{}) error {
 	if protocol.SendState != nil {
 		if err := protocol.SendState.Send(data); err != nil {
 			protocol.SendState = nil
-
-			_ = protocol.Conn.Close()
-
-			println(fmt.Sprintf("SendState error: %s", err.Error()))
 			protocol.Events.Error.Trigger(err)
-
+			_ = protocol.Conn.Close()
 			return err
 		}
 	}
