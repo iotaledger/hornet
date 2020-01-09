@@ -110,13 +110,8 @@ func run(plugin *node.Plugin) {
 
 		go func() {
 			log.Infof("You can now access the API using: http://%s", serveAddress)
-			err := server.ListenAndServe()
-			if err != nil {
-				if err == http.ErrServerClosed {
-					log.Info("Stopping WebAPI server ... done")
-				} else {
-					log.Error("Stopping WebAPI server due to an error ... done")
-				}
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Error("Stopping WebAPI server due to an error ... done")
 			}
 		}()
 

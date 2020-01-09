@@ -131,6 +131,8 @@ type Neighbor struct {
 	ConnectionOrigin ConnectionOrigin
 	// Whether to place this neighbor back into the reconnect pool when the connection is closed
 	MoveBackToReconnectPool bool
+	// Whether the neighbor is a duplicate, as it is already connected
+	Duplicate bool
 	// The neighbors latest heartbeat message
 	LatestHeartbeat *Heartbeat
 }
@@ -338,6 +340,9 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 		if daemon.IsStopped() {
 			return
 		}
+		if errors.Cause(err) == ErrNeighborAlreadyConnected {
+			neighbor.Duplicate = true
+		}
 		gossipLogger.Errorf("protocol error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
@@ -346,12 +351,19 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 		if daemon.IsStopped() {
 			return
 		}
+		if neighbor.Duplicate {
+			return
+		}
 		gossipLogger.Errorf("connection error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
 	// automatically put the disconnected neighbor back into the reconnect pool
 	// if not closed on purpose
 	neighbor.Protocol.Conn.Events.Close.Attach(events.NewClosure(func() {
+		if neighbor.Duplicate {
+			gossipLogger.Infof("duplicate connection closed to %s", neighbor.IdentityOrAddress())
+			return
+		}
 		gossipLogger.Infof("connection closed to %s", neighbor.IdentityOrAddress())
 		if daemon.IsStopped() {
 			return
