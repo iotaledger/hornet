@@ -132,6 +132,11 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool
 		snapshotInterval = snapshotIntervalUnsynced
 	}
 
+	if (solidMilestoneIndex - snapshotDepth) < snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast {
+		// Not enough history to calculate solid entry points
+		return false
+	}
+
 	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
