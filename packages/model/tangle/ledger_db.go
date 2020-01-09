@@ -153,7 +153,23 @@ func DeleteLedgerDiffForMilestone(index milestone_index.MilestoneIndex) error {
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	return ledgerDatabase.DeletePrefix(databaseKeyPrefixForLedgerDiff(index))
+	var deletions []database.Key
+
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(databaseKeyPrefixForLedgerDiff(index), func(entry database.KeyOnlyEntry) error {
+		deletions = append(deletions, entry.Key)
+		return nil
+	})
+
+	if err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to delete txs for addresses")
+	}
+
+	// Now batch delete all entries
+	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to delete txs for addresses")
+	}
+
+	return nil
 }
 
 // GetLedgerDiffForMilestoneWithoutLocking returns the ledger changes of that specific milestone.

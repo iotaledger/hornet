@@ -31,7 +31,7 @@ func loadSnapshotInfo() {
 	}
 	snapshot = info
 	if info != nil {
-		println(fmt.Sprintf("SnapshotInfo: %d (%v) Timestamp: %v", info.SnapshotIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second)))
+		println(fmt.Sprintf("SnapshotInfo: PruningIndex: %d, SnapshotIndex: %d (%v) Timestamp: %v", info.PruningIndex, info.SnapshotIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second)))
 	}
 }
 
