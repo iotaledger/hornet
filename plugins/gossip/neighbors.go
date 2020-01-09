@@ -571,6 +571,7 @@ type NeighborInfo struct {
 	Port                              uint16    `json:"port,omitempty"`
 	Domain                            string    `json:"domain,omitempty"`
 	DomainWithPort                    string    `json:"-"`
+	PreferIPv6                        bool      `json:"-"`
 	NumberOfAllTransactions           uint32    `json:"numberOfAllTransactions"`
 	NumberOfRandomTransactionRequests uint32    `json:"numberOfRandomTransactionRequests"`
 	NumberOfNewTransactions           uint32    `json:"numberOfNewTransactions"`
@@ -619,6 +620,7 @@ func GetNeighbors() []NeighborInfo {
 			NumberOfRandomTransactionRequests: neighbor.Metrics.GetRandomTransactionRequestsCount(),
 			ConnectionType:                    "tcp",
 			Connected:                         true,
+			PreferIPv6:                        neighbor.InitAddress.PreferIPv6,
 		})
 	}
 
@@ -630,6 +632,7 @@ func GetNeighbors() []NeighborInfo {
 			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			ConnectionType: "tcp",
 			Connected:      false,
+			PreferIPv6:     originAddr.PreferIPv6,
 		})
 	}
 
