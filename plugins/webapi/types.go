@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -366,3 +367,17 @@ type CreateSnapshot struct {
 type CreateSnapshotReturn struct {
 	Duration int `json:"duration"`
 }
+
+///////////////////// getRequests /////////////////////////////////
+
+// GetRequests struct
+type GetRequests struct {
+	Command string `json:"command"`
+}
+
+// GetRequestsReturn struct
+type GetRequestsReturn struct {
+	Requests []*queue.DebugRequest `json:"requests"`
+}
+
+///////////////////////////////////////////////////////////////////

@@ -27,6 +27,17 @@ type RequestQueue struct {
 	tickerDone     chan bool
 }
 
+// Request struct
+type DebugRequest struct {
+	Hash        string `json:"hash"`
+	IsReceived  bool   `json:received`
+	IsProcessed bool   `json:processed`
+	InCache     bool   `json:inCache`
+	InPending   bool   `json:inPending`
+	InLifo      bool   `json:inLifo`
+	TxExists    bool   `json:txExists`
+}
+
 func NewRequestQueue() *RequestQueue {
 
 	queue := &RequestQueue{
@@ -259,4 +270,41 @@ func (s *RequestQueue) CurrentMilestoneIndexAndSize() (index milestone_index.Mil
 	}
 
 	return 0, 0
+}
+
+func (s *RequestQueue) DebugRequests() []*DebugRequest {
+	s.Lock()
+	defer s.Unlock()
+
+	var requests []*DebugRequest
+
+	for _, req := range s.lifo {
+		contains, _ := s.Contains(req.hash)
+		exists, _ := tangle.ContainsTransaction(req.hash)
+		requests = append(requests, &DebugRequest{
+			Hash:        req.hash,
+			InCache:     contains,
+			InLifo:      true,
+			InPending:   false,
+			IsProcessed: req.isProcessed(),
+			IsReceived:  req.isReceived(),
+			TxExists:    exists,
+		})
+	}
+
+	for _, req := range s.pending {
+		contains, _ := s.Contains(req.hash)
+		exists, _ := tangle.ContainsTransaction(req.hash)
+		requests = append(requests, &DebugRequest{
+			Hash:        req.hash,
+			InCache:     contains,
+			InLifo:      false,
+			InPending:   true,
+			IsProcessed: req.isProcessed(),
+			IsReceived:  req.isReceived(),
+			TxExists:    exists,
+		})
+	}
+
+	return requests
 }
