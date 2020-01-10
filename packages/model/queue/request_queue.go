@@ -30,12 +30,12 @@ type RequestQueue struct {
 // Request struct
 type DebugRequest struct {
 	Hash        string `json:"hash"`
-	IsReceived  bool   `json:received`
-	IsProcessed bool   `json:processed`
-	InCache     bool   `json:inCache`
-	InPending   bool   `json:inPending`
-	InLifo      bool   `json:inLifo`
-	TxExists    bool   `json:txExists`
+	IsReceived  bool   `json:"received"`
+	IsProcessed bool   `json:"processed"`
+	InCache     bool   `json:"inCache"`
+	InPending   bool   `json:"inPending"`
+	InLifo      bool   `json:"inLifo"`
+	TxExists    bool   `json:"txExists"`
 }
 
 func NewRequestQueue() *RequestQueue {
