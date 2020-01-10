@@ -113,7 +113,7 @@
     "networkName": "meets HORNET"
   },
   "pruning": {
-    "enabled": false,
+    "enabled": true,
     "delay": 40000
   },
   "localsnapshots": {

@@ -60,6 +60,11 @@ func configure(plugin *node.Plugin) {
 
 	pruningEnabled = parameter.NodeConfig.GetBool("pruning.enabled")
 	pruningDelay = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("pruning.delay"))
+	pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
+	if pruningDelay < pruningDelayMin {
+		log.Warnf("Parameter \"pruning.delay\" is too small (%d). Value was changed to %d", pruningDelay, pruningDelayMin)
+		pruningDelay = pruningDelayMin
+	}
 }
 
 func run(plugin *node.Plugin) {
@@ -86,20 +91,17 @@ func run(plugin *node.Plugin) {
 
 			case solidMilestoneIndex := <-newSolidMilestoneSignal:
 				localSnapshotLock.Lock()
-				// TODO: Enable pruning after switch to ObjectStorage
-				//pruneUnconfirmedTransactions(solidMilestoneIndex)
 
 				if localSnapshotsEnabled && shouldTakeSnapshot(solidMilestoneIndex) {
 					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"), shutdownSignal); err != nil {
 						log.Warnf(ErrSnapshotCreationFailed.Error(), err)
 					}
 				}
-				// TODO: Enable pruning after switch to ObjectStorage
-				/*
-					if pruningEnabled {
-						pruneDatabase(solidMilestoneIndex)
-					}
-				*/
+
+				if pruningEnabled {
+					pruneDatabase(solidMilestoneIndex)
+				}
+
 				localSnapshotLock.Unlock()
 			}
 		}

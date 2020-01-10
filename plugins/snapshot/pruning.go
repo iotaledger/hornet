@@ -8,27 +8,26 @@ import (
 )
 
 const (
-	PruneUnconfirmedTransactionsDepth = 50
+	// AdditionalPruningThreshold is needed, because the transactions in the getMilestoneApprovees call in getSolidEntryPoints
+	// can reference older transactions as well
+	AdditionalPruningThreshold = 50
 )
 
-// pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone - PruneUnconfirmedTransactionsDepth
-func pruneUnconfirmedTransactions(solidMilestoneIndex milestone_index.MilestoneIndex) {
-	targetIndex := solidMilestoneIndex - PruneUnconfirmedTransactionsDepth
-
-	log.Infof("Pruning unconfirmed transactions older than milestone %d...", targetIndex)
+// pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
+func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) int {
 
 	txHashes, err := tangle.ReadUnconfirmedTxHashOperations(targetIndex)
 	if err != nil {
 		log.Panicf("pruneUnconfirmedTransactions: %v", err.Error())
 	}
 
-	pruneTransactions(txHashes)
+	txCount := pruneTransactions(txHashes)
 
 	if err := tangle.DeleteUnconfirmedTxHashOperations(txHashes); err != nil {
 		log.Error(err)
 	}
 
-	log.Infof("Pruned %d unconfirmed transactions", len(txHashes))
+	return txCount
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
@@ -49,7 +48,7 @@ func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
 
 // pruneMilestone prunes the approvers, bundles, addresses and transaction metadata from the database
 // if the given txHashes are removed from their corresponding bundle buckets
-func pruneTransactions(txHashes []trinary.Hash) {
+func pruneTransactions(txHashes []trinary.Hash) int {
 
 	txsToRemove := make(map[trinary.Hash]struct{})
 	bundlesTxsToRemove := make(map[trinary.Hash]trinary.Hash)
@@ -110,6 +109,8 @@ func pruneTransactions(txHashes []trinary.Hash) {
 	if err := tangle.DeleteTransactionHashesForAddressesInDatabase(addresses); err != nil {
 		log.Error(err)
 	}
+
+	return len(txsToRemove)
 }
 
 // ToDo: Global pruning Lock needed?
@@ -121,8 +122,9 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 	}
 
 	targetIndex := solidMilestoneIndex - pruningDelay
-	if targetIndex > (snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - 1) {
-		targetIndex = snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - 1
+	targetIndexMax := (snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1)
+	if targetIndex > targetIndexMax {
+		targetIndex = targetIndexMax
 	}
 
 	if snapshotInfo.PruningIndex >= targetIndex {
@@ -133,6 +135,8 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
+
+		txCount := pruneUnconfirmedTransactions(milestoneIndex)
 
 		ms, _ := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
@@ -145,9 +149,9 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)
 			continue
 		}
-		pruneTransactions(approvees)
+		txCount += pruneTransactions(approvees)
 		pruneMilestone(milestoneIndex)
-		log.Infof("Pruning milestone (%d) done!", milestoneIndex)
+		log.Infof("Pruning milestone (%d) done! Pruned %d transactions.", milestoneIndex, txCount)
 	}
 
 	snapshotInfo.PruningIndex = targetIndex
