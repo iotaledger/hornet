@@ -38,7 +38,7 @@ func loadSnapshotInfo() {
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
 	if len(bytes) != 65 {
-		return nil, fmt.Errorf("Invalid length %d != 61", len(bytes))
+		return nil, fmt.Errorf("Invalid length %d != 65", len(bytes))
 	}
 
 	hash := trinary.MustBytesToTrytes(bytes[:49])
@@ -55,7 +55,7 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 }
 
 func (i *SnapshotInfo) GetBytes() []byte {
-	bytes := trinary.MustTrytesToBytes(i.Hash)
+	bytes := trinary.MustTrytesToBytes(i.Hash)[:49]
 
 	snapshotIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(snapshotIndexBytes, uint32(i.SnapshotIndex))
