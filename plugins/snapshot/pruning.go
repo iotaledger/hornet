@@ -1,6 +1,8 @@
 package snapshot
 
 import (
+	"time"
+
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -138,7 +140,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 }
 
 // ToDo: Global pruning Lock needed?
-func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
+func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSignal <-chan struct{}) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -158,8 +160,16 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
+		select {
+		case <-abortSignal:
+			// Stop pruning the next milestone
+			return
+		default:
+		}
+
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
+		ts := time.Now()
 		txCount := pruneUnconfirmedTransactions(milestoneIndex)
 
 		ms, _ := tangle.GetMilestone(milestoneIndex)
@@ -173,9 +183,12 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex) {
 			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)
 			continue
 		}
+
 		txCount += pruneTransactions(approvees)
+
 		pruneMilestone(milestoneIndex)
-		log.Infof("Pruning milestone (%d) done! Pruned %d transactions.", milestoneIndex, txCount)
+
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d transactions. ", milestoneIndex, time.Since(ts), txCount)
 	}
 
 	snapshotInfo.PruningIndex = targetIndex
