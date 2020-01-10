@@ -107,6 +107,12 @@ func SetLatestMilestone(milestone *Bundle) {
 		latestMilestoneLock.Unlock()
 		return
 	}
+
+	if latestMilestone == nil {
+		// Milestone was 0 before, so we have to fix all entries for all first seen tx until now
+		FixFirstSeenTxHashOperations(index)
+	}
+
 	latestMilestone = milestone
 	latestMilestoneLock.Unlock()
 
