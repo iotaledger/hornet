@@ -90,19 +90,21 @@ func run(plugin *node.Plugin) {
 				return
 
 			case solidMilestoneIndex := <-newSolidMilestoneSignal:
-				localSnapshotLock.Lock()
+				if localSnapshotsEnabled {
+					localSnapshotLock.Lock()
 
-				if localSnapshotsEnabled && shouldTakeSnapshot(solidMilestoneIndex) {
-					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"), shutdownSignal); err != nil {
-						log.Warnf(ErrSnapshotCreationFailed.Error(), err)
+					if shouldTakeSnapshot(solidMilestoneIndex) {
+						if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"), shutdownSignal); err != nil {
+							log.Warnf(ErrSnapshotCreationFailed.Error(), err)
+						}
 					}
-				}
 
-				if pruningEnabled {
-					pruneDatabase(solidMilestoneIndex)
-				}
+					if pruningEnabled {
+						pruneDatabase(solidMilestoneIndex, shutdownSignal)
+					}
 
-				localSnapshotLock.Unlock()
+					localSnapshotLock.Unlock()
+				}
 			}
 		}
 	}, shutdown.ShutdownPriorityLocalSnapshots)
