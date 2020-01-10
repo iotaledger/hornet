@@ -99,10 +99,12 @@ func configureFirstSeenTransactionPersister() {
 func runFirstSeenTransactionPersister() {
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
-			TxHash:                        transaction.GetHash(),
-			FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
-		})
+		if !transaction.IsRequested() {
+			firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
+				TxHash:                        transaction.GetHash(),
+				FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
+			})
+		}
 	})
 
 	daemon.BackgroundWorker("FirstSeenTxPersister", func(shutdownSignal <-chan struct{}) {
