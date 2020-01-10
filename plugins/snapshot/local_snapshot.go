@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
@@ -248,15 +250,15 @@ func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInf
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 
 	if targetIndex > (solidMilestoneIndex - SolidEntryPointCheckThresholdFuture) {
-		return fmt.Errorf(ErrTargetIndexTooNew.Error(), targetIndex, solidMilestoneIndex-SolidEntryPointCheckThresholdFuture)
+		return errors.Wrapf(ErrTargetIndexTooNew, "maximum: %d, actual: %d", solidMilestoneIndex-SolidEntryPointCheckThresholdFuture, targetIndex)
 	}
 
 	if targetIndex <= snapshotInfo.SnapshotIndex {
-		return fmt.Errorf(ErrTargetIndexTooOld.Error(), targetIndex, snapshotInfo.SnapshotIndex)
+		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", snapshotInfo.SnapshotIndex, targetIndex)
 	}
 
 	if targetIndex-SolidEntryPointCheckThresholdPast < snapshotInfo.PruningIndex+1 {
-		return fmt.Errorf(ErrTargetIndexTooOld.Error(), targetIndex, snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast)
+		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast, targetIndex)
 	}
 
 	return nil
@@ -604,17 +606,17 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
 		if err != nil {
-			return fmt.Errorf("solidEntryPoints: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 
 		err = binary.Read(gzipReader, binary.BigEndian, &val)
 		if err != nil {
-			return fmt.Errorf("solidEntryPoints: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 
 		hash, err := trinary.BytesToTrytes(hashBuf)
 		if err != nil {
-			return fmt.Errorf("solidEntryPoints: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 		//ls.solidEntryPoints[hash[:81]] = val
 
@@ -635,17 +637,17 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
 		if err != nil {
-			return fmt.Errorf("seenMilestones: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
 		err = binary.Read(gzipReader, binary.BigEndian, &val)
 		if err != nil {
-			return fmt.Errorf("seenMilestones: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
 		hash, err := trinary.BytesToTrytes(hashBuf)
 		if err != nil {
-			return fmt.Errorf("seenMilestones: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
 		tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone_index.MilestoneIndex(val))
@@ -664,24 +666,24 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
 		if err != nil {
-			return fmt.Errorf("ledgerEntries: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 
 		err = binary.Read(gzipReader, binary.BigEndian, &val)
 		if err != nil {
-			return fmt.Errorf("ledgerEntries: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 
 		hash, err := trinary.BytesToTrytes(hashBuf)
 		if err != nil {
-			return fmt.Errorf("ledgerEntries: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 		ledgerState[hash[:81]] = val
 	}
 
 	err = tangle.StoreBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
 	if err != nil {
-		return fmt.Errorf("ledgerEntries: %s", err)
+		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 	}
 
 	log.Infof("Importing %d spent addresses. This can take a while...", spentAddrsCount)
@@ -705,7 +707,7 @@ func LoadSnapshotFromFile(filePath string) error {
 			spentAddrBuf := make([]byte, 49)
 			err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
 			if err != nil {
-				return fmt.Errorf("spentAddrs: %s", err)
+				return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
 			}
 
 			batchEntries = append(batchEntries, spentAddrBuf)
@@ -713,7 +715,7 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		err = tangle.StoreSpentAddressesBytesInDatabase(batchEntries)
 		if err != nil {
-			return fmt.Errorf("spentAddrs: %s", err)
+			return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
 		}
 
 		log.Infof("Processed %d/%d spent addresses", batchEnd, spentAddrsCount)

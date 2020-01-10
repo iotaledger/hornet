@@ -42,7 +42,11 @@ func processValidMilestone(bundle *tangle.Bundle) {
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	if latestMilestoneIndex < bundleMsIndex {
-		tangle.SetLatestMilestone(bundle)
+		err := tangle.SetLatestMilestone(bundle)
+		if err != nil {
+			log.Error(err)
+		}
+
 		Events.LatestMilestoneChanged.Trigger(bundle)
 		milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex)
 	}

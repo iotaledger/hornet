@@ -99,6 +99,8 @@ func configureFirstSeenTransactionPersister() {
 func runFirstSeenTransactionPersister() {
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+		// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
+		// This is only used to delete unconfirmed transactions from the database at pruning
 		if !transaction.IsRequested() {
 			firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
 				TxHash:                        transaction.GetHash(),

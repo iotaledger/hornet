@@ -2,11 +2,12 @@ package snapshot
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
@@ -64,7 +65,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 
 	ledgerFile, err := os.OpenFile(filePathLedger, os.O_RDONLY, 0666)
 	if err != nil {
-		return err
+		return errors.Wrapf(ErrSnapshotImportFailed, "OpenFile: %v", err)
 	}
 	defer ledgerFile.Close()
 
@@ -80,22 +81,22 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 			if err == io.EOF {
 				break
 			}
-			return err
+			return errors.Wrapf(ErrSnapshotImportFailed, "ReadString: %v", err)
 		}
 
 		lineSplitted := strings.Split(line[:len(line)-1], ";")
 		if len(lineSplitted) != 2 {
-			return fmt.Errorf("Wrong format in %v", filePathLedger)
+			return errors.Wrapf(ErrSnapshotImportFailed, "Wrong format in %v", filePathLedger)
 		}
 
 		address := lineSplitted[0][:81]
 		if err := trinary.ValidTrytes(address); err != nil {
-			return err
+			return errors.Wrapf(ErrSnapshotImportFailed, "ValidTrytes: %v", err)
 		}
 
 		balance, err = strconv.ParseUint(lineSplitted[1], 10, 64)
 		if err != nil {
-			return err
+			return errors.Wrapf(ErrSnapshotImportFailed, "ParseUint: %v", err)
 		}
 
 		ledgerState[address] = balance
@@ -105,12 +106,12 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 
 	err = tangle.StoreBalancesInDatabase(ledgerState, snapshotIndex)
 	if err != nil {
-		return fmt.Errorf("ledgerEntries: %s", err)
+		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %s", err)
 	}
 
 	for _, spent := range filePathSpent {
 		if err := loadSpentAddresses(spent); err != nil {
-			return err
+			return errors.Wrapf(ErrSnapshotImportFailed, "loadSpentAddresses: %v", err)
 		}
 	}
 

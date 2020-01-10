@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -15,6 +17,8 @@ var (
 	snapshot                             *SnapshotInfo
 	mutex                                syncutils.RWMutex
 	latestSeenMilestoneIndexFromSnapshot = milestone_index.MilestoneIndex(0)
+
+	ErrParseSnapshotInfoFailed = errors.New("Parsing of snapshot info failed")
 )
 
 type SnapshotInfo struct {
@@ -38,7 +42,7 @@ func loadSnapshotInfo() {
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
 	if len(bytes) != 65 {
-		return nil, fmt.Errorf("Invalid length %d != 65", len(bytes))
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 65", len(bytes))
 	}
 
 	hash := trinary.MustBytesToTrytes(bytes[:49])

@@ -98,25 +98,28 @@ func GetSolidMilestoneIndex() milestone_index.MilestoneIndex {
 	return 0
 }
 
-func SetLatestMilestone(milestone *Bundle) {
+func SetLatestMilestone(milestone *Bundle) error {
 	latestMilestoneLock.Lock()
 
 	index := milestone.GetMilestoneIndex()
 
 	if latestMilestone != nil && latestMilestone.GetMilestoneIndex() >= index {
 		latestMilestoneLock.Unlock()
-		return
+		return nil
 	}
 
+	var err error
 	if latestMilestone == nil {
 		// Milestone was 0 before, so we have to fix all entries for all first seen tx until now
-		FixFirstSeenTxHashOperations(index)
+		err = FixFirstSeenTxHashOperations(index)
 	}
 
 	latestMilestone = milestone
 	latestMilestoneLock.Unlock()
 
 	updateNodeSynced(GetSolidMilestoneIndex(), index)
+
+	return err
 }
 
 func GetLatestMilestone() *Bundle {

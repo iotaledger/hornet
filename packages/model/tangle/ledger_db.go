@@ -119,7 +119,10 @@ func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
 			return errors.Wrap(NewDatabaseError(err), "failed to retrieve ledger milestone bundle")
 		}
 		if solidMsBundle != nil {
-			SetLatestMilestone(solidMsBundle)
+			err = SetLatestMilestone(solidMsBundle)
+			if err != nil {
+				return errors.Wrap(NewDatabaseError(err), "failed to set the latest milestone")
+			}
 		}
 	}
 
@@ -161,12 +164,12 @@ func DeleteLedgerDiffForMilestone(index milestone_index.MilestoneIndex) error {
 	})
 
 	if err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to delete txs for addresses")
+		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
 	}
 
 	// Now batch delete all entries
 	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to delete txs for addresses")
+		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
 	}
 
 	return nil

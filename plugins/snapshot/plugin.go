@@ -28,10 +28,11 @@ var (
 
 	ErrNoSnapshotSpecified        = errors.New("no snapshot file was specified in the config")
 	ErrSnapshotImportWasAborted   = errors.New("snapshot import was aborted")
+	ErrSnapshotImportFailed		  = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted = errors.New("operation was aborted")
 	ErrSnapshotCreationFailed     = errors.New("creating snapshot failed: %v")
-	ErrTargetIndexTooNew          = errors.New("snapshot target %d is too new. Should be older than %d")
-	ErrTargetIndexTooOld          = errors.New("snapshot target %d is too old. Should be newer than %d")
+	ErrTargetIndexTooNew          = errors.New("snapshot target is too new.")
+	ErrTargetIndexTooOld          = errors.New("snapshot target is too old.")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)

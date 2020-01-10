@@ -1,11 +1,15 @@
 package dag
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
+)
+
+var (
+	ErrFindAllTailsFailed = errors.New("Unable to find all tails")
 )
 
 func FindAllTails(txHash trinary.Hash) (map[string]struct{}, error) {
@@ -36,7 +40,7 @@ func FindAllTails(txHash trinary.Hash) (map[string]struct{}, error) {
 
 			tx, _ := tangle.GetTransaction(txHash)
 			if tx == nil {
-				return nil, fmt.Errorf("FindAllTails: Transaction not found: %v", txHash)
+				return nil, errors.Wrapf(ErrFindAllTailsFailed, "Transaction not found: %v", txHash)
 			}
 
 			if tx.IsTail() {
