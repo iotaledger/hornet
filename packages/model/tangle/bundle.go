@@ -133,7 +133,6 @@ func (bucket *BundleBucket) RemoveTransactionFromBundle(txHash trinary.Hash) map
 			for tailTxHash, bundle := range bucket.bundleInstances {
 				if tailTxHash == txHash {
 					// It is the same bundle instance => skip
-					txsToRemove[bundleTxHash] = struct{}{}
 					continue
 				}
 
