@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
@@ -58,8 +59,10 @@ func (s *RequestQueue) retryPending() {
 
 	for _, r := range s.pending {
 		if r.isReceived() == false {
-			// We haven't received any answer for this request, so re-add it to our lifo queue
-			s.lifo = append(s.lifo, r)
+			if contains, _ := tangle.ContainsTransaction(r.hash); !contains {
+				// We haven't received any answer for this request, so re-add it to our lifo queue
+				s.lifo = append(s.lifo, r)
+			}
 		}
 	}
 
