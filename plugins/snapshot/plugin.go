@@ -28,7 +28,7 @@ var (
 
 	ErrNoSnapshotSpecified        = errors.New("no snapshot file was specified in the config")
 	ErrSnapshotImportWasAborted   = errors.New("snapshot import was aborted")
-	ErrSnapshotImportFailed		  = errors.New("snapshot import failed")
+	ErrSnapshotImportFailed       = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted = errors.New("operation was aborted")
 	ErrSnapshotCreationFailed     = errors.New("creating snapshot failed: %v")
 	ErrTargetIndexTooNew          = errors.New("snapshot target is too new.")
