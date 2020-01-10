@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
@@ -24,6 +25,17 @@ type RequestQueue struct {
 	pending        []*request
 	ticker         *time.Ticker
 	tickerDone     chan bool
+}
+
+// Request struct
+type DebugRequest struct {
+	Hash        string `json:"hash"`
+	IsReceived  bool   `json:"received"`
+	IsProcessed bool   `json:"processed"`
+	InCache     bool   `json:"inCache"`
+	InPending   bool   `json:"inPending"`
+	InLifo      bool   `json:"inLifo"`
+	TxExists    bool   `json:"txExists"`
 }
 
 func NewRequestQueue() *RequestQueue {
@@ -58,8 +70,10 @@ func (s *RequestQueue) retryPending() {
 
 	for _, r := range s.pending {
 		if r.isReceived() == false {
-			// We haven't received any answer for this request, so re-add it to our lifo queue
-			s.lifo = append(s.lifo, r)
+			if contains, _ := tangle.ContainsTransaction(r.hash); !contains {
+				// We haven't received any answer for this request, so re-add it to our lifo queue
+				s.lifo = append(s.lifo, r)
+			}
 		}
 	}
 
@@ -256,4 +270,41 @@ func (s *RequestQueue) CurrentMilestoneIndexAndSize() (index milestone_index.Mil
 	}
 
 	return 0, 0
+}
+
+func (s *RequestQueue) DebugRequests() []*DebugRequest {
+	s.Lock()
+	defer s.Unlock()
+
+	var requests []*DebugRequest
+
+	for _, req := range s.lifo {
+		contains, _ := s.Contains(req.hash)
+		exists, _ := tangle.ContainsTransaction(req.hash)
+		requests = append(requests, &DebugRequest{
+			Hash:        req.hash,
+			InCache:     contains,
+			InLifo:      true,
+			InPending:   false,
+			IsProcessed: req.isProcessed(),
+			IsReceived:  req.isReceived(),
+			TxExists:    exists,
+		})
+	}
+
+	for _, req := range s.pending {
+		contains, _ := s.Contains(req.hash)
+		exists, _ := tangle.ContainsTransaction(req.hash)
+		requests = append(requests, &DebugRequest{
+			Hash:        req.hash,
+			InCache:     contains,
+			InLifo:      false,
+			InPending:   true,
+			IsProcessed: req.isProcessed(),
+			IsReceived:  req.isReceived(),
+			TxExists:    exists,
+		})
+	}
+
+	return requests
 }

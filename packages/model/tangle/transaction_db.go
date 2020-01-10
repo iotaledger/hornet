@@ -78,10 +78,10 @@ func StoreTransactionsInDatabase(transactions []*hornet.Transaction) error {
 	return nil
 }
 
-func DeleteTransactionsInDatabase(transactionHashes []trinary.Hash) error {
+func DeleteTransactionsInDatabase(transactionHashes map[trinary.Hash]struct{}) error {
 	var deletions []database.Key
 
-	for _, transactionHash := range transactionHashes {
+	for transactionHash := range transactionHashes {
 		deletions = append(deletions, databaseKeyForTransactionHash(transactionHash))
 	}
 

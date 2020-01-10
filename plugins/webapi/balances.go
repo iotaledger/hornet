@@ -5,8 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iotaledger/iota.go/address"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/iotaledger/iota.go/address"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -15,7 +16,7 @@ func init() {
 	addEndpoint("getBalances", getBalances, implementedAPIcalls)
 }
 
-func getBalances(i interface{}, c *gin.Context) {
+func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	gb := &GetBalances{}
 	e := ErrorReturn{}
 

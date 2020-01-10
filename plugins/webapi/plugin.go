@@ -23,14 +23,15 @@ var (
 	PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	server              *http.Server
-	permitedEndpoints   = make(map[string]string)
-	implementedAPIcalls = make(map[string]apiEndpoint)
-	features            []string
-	api                 *gin.Engine
-	webAPIBase          = ""
-	auth                string
-	maxDepth            int
+	server               *http.Server
+	permitedEndpoints    = make(map[string]string)
+	implementedAPIcalls  = make(map[string]apiEndpoint)
+	features             []string
+	api                  *gin.Engine
+	webAPIBase           = ""
+	auth                 string
+	maxDepth             int
+	serverShutdownSignal <-chan struct{}
 )
 
 func configure(plugin *node.Plugin) {
@@ -99,6 +100,8 @@ func run(plugin *node.Plugin) {
 	log.Info("Starting WebAPI server ...")
 
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
+		serverShutdownSignal = shutdownSignal
+
 		log.Info("Starting WebAPI server ... done")
 
 		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.host"), parameter.NodeConfig.GetInt("api.port"))

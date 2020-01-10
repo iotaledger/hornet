@@ -22,7 +22,7 @@ func init() {
 	addEndpoint("storeTransactions", storeTransactions, implementedAPIcalls)
 }
 
-func broadcastTransactions(i interface{}, c *gin.Context) {
+func broadcastTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	bt := &BroadcastTransactions{}
 	e := ErrorReturn{}
@@ -59,7 +59,7 @@ func broadcastTransactions(i interface{}, c *gin.Context) {
 	c.JSON(http.StatusOK, BradcastTransactionsReturn{})
 }
 
-func findTransactions(i interface{}, c *gin.Context) {
+func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	ft := &FindTransactions{}
 	e := ErrorReturn{}
 
@@ -123,6 +123,6 @@ func findTransactions(i interface{}, c *gin.Context) {
 }
 
 // redirect to broadcastTransactions
-func storeTransactions(i interface{}, c *gin.Context) {
-	broadcastTransactions(i, c)
+func storeTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+	broadcastTransactions(i, c, abortSignal)
 }

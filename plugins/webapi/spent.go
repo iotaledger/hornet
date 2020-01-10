@@ -5,16 +5,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/iotaledger/iota.go/address"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/iotaledger/iota.go/address"
+
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {
 	addEndpoint("wereAddressesSpentFrom", wereAddressesSpentFrom, implementedAPIcalls)
 }
 
-func wereAddressesSpentFrom(i interface{}, c *gin.Context) {
+func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	sp := &WereAddressesSpentFrom{}
 	e := ErrorReturn{}
 

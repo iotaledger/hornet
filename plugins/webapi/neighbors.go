@@ -17,7 +17,7 @@ func init() {
 	addEndpoint("getNeighbors", getNeighbors, implementedAPIcalls)
 }
 
-func addNeighbors(i interface{}, c *gin.Context) {
+func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	// Check if HORNET style addNeighbors call was made
 	han := &AddNeighborsHornet{}
@@ -83,7 +83,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
 }
 
-func removeNeighbors(i interface{}, c *gin.Context) {
+func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	rn := &RemoveNeighbors{}
 	e := ErrorReturn{}
@@ -133,7 +133,7 @@ func removeNeighbors(i interface{}, c *gin.Context) {
 	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})
 }
 
-func getNeighbors(i interface{}, c *gin.Context) {
+func getNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	nb := &GetNeighborsReturn{}
 	nb.Neighbors = gossip.GetNeighbors()

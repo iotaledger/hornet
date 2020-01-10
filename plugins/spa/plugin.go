@@ -287,7 +287,7 @@ func currentNodeStatus() *nodestatus {
 	// node status
 	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 	status.Version = cli.AppVersion
-	status.Uptime = time.Now().Sub(nodeStartAt).Milliseconds()
+	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
 	status.MsRequestQueueSize = requestCount
