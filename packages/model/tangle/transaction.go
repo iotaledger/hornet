@@ -61,7 +61,7 @@ func configureTransactionStorage() {
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
-		objectstorage.CacheTime(5*time.Second),
+		objectstorage.CacheTime(1500*time.Millisecond),
 		objectstorage.PersistenceEnabled(true))
 }
 
