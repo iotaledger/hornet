@@ -1,0 +1,14 @@
+%post
+adduser --no-create-home --shell /sbin/nologin --system --group hornet >/dev/null
+systemctl daemon-reload
+
+cat <<EOF
+######################################
+HORNET installation finished
+######################################
+Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.
+To start HORNET the first time, please run:
+
+sudo systemctl enable hornet && sudo service hornet start
+
+EOF
