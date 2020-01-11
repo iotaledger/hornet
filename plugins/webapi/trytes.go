@@ -20,7 +20,7 @@ func init() {
 	addEndpoint("getTrytes", getTrytes, implementedAPIcalls)
 }
 
-func getTrytes(i interface{}, c *gin.Context) {
+func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	maxGetTrytes := parameter.NodeConfig.GetInt("api.maxGetTrytes")
 

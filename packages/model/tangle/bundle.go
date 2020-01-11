@@ -104,45 +104,63 @@ func (bucket *BundleBucket) GetBundleOfTailTransaction(txHash trinary.Hash) *Bun
 	return bndl
 }
 
-// RemoveBundleByTailTxHash removes the bundle with the given tail transaction
-// and also disassociates the transactions from the bucket if not used in another bundle.
-func (bucket *BundleBucket) RemoveBundleByTailTxHash(txHash trinary.Hash) {
+// RemoveTransactionFromBundle removes the transaction if non-tail and not associated to a bundle instance or
+// if tail, it removes all the transactions of the bundle from the bucket that are not used in another bundle instance.
+func (bucket *BundleBucket) RemoveTransactionFromBundle(txHash trinary.Hash) map[string]struct{} {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 
-	bndl, ok := bucket.bundleInstances[txHash]
-	if !ok {
-		return
-	}
+	txsToRemove := make(map[string]struct{})
 
-	txsToRemove := map[string]struct{}{}
-	for bundleTxHash := range bndl.txs {
-		// check if the txs of this bundle are used in another bundle instance
-		contains := false
+	if bndl, isTail := bucket.bundleInstances[txHash]; isTail {
+		// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
 
-		for tailTxHash, bundle := range bucket.bundleInstances {
-			if tailTxHash == txHash {
-				// It's the same bundle => skip
+		for bundleTxHash := range bndl.txs {
+			// check if the txs of this bundle are used in another bundle instance
+			contains := false
+
+			if bundleTxHash == txHash {
+				// Tails can't be in another bundle instance => remove it
+				txsToRemove[bundleTxHash] = struct{}{}
 				continue
 			}
 
-			if _, has := bundle.txs[bundleTxHash]; has {
-				contains = true
-				break
+			for tailTxHash, bundle := range bucket.bundleInstances {
+				if tailTxHash == txHash {
+					// It is the same bundle instance => skip
+					continue
+				}
+
+				if _, has := bundle.txs[bundleTxHash]; has {
+					contains = true
+					break
+				}
+			}
+
+			if !contains {
+				txsToRemove[bundleTxHash] = struct{}{}
+			}
+		}
+		// Remove the actual bundle instance
+		delete(bucket.bundleInstances, txHash)
+
+	} else {
+		// Tx is not a tail => check if the tx is part of a bundle instance, otherwise remove the tx from the bucket
+		for _, bundle := range bucket.bundleInstances {
+			if _, has := bundle.txs[txHash]; has {
+				return nil
 			}
 		}
 
-		if !contains {
-			txsToRemove[bundleTxHash] = struct{}{}
-		}
+		txsToRemove[txHash] = struct{}{}
 	}
 
-	// remove the bundle by first removing its corresponding transactions
-	// from the "all" transaction set and then removing the actual bundle instance.
+	// Remove all corresponding transactions from the "all" transaction set
 	for txHash := range txsToRemove {
 		delete(bucket.txs, txHash)
 	}
-	delete(bucket.bundleInstances, txHash)
+
+	return txsToRemove
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.
@@ -409,7 +427,10 @@ type Bundle struct {
 	// Status
 	statusMutex syncutils.RWMutex
 	modified    bool
-	requested   bool
+
+	// Requested
+	requestedMutex syncutils.RWMutex
+	requested      bool
 
 	// cached fields
 	cachedFieldsMutex syncutils.RWMutex
@@ -781,9 +802,9 @@ func (bundle *Bundle) SetModified(modified bool) {
 }
 
 func (bundle *Bundle) WasRequested() bool {
-	bundle.statusMutex.RLock()
+	bundle.requestedMutex.RLock()
 	requested := bundle.requested
-	bundle.statusMutex.RUnlock()
+	bundle.requestedMutex.RUnlock()
 
 	if requested {
 		return true
@@ -794,9 +815,9 @@ func (bundle *Bundle) WasRequested() bool {
 	for _, tx := range transactions {
 		if tx.GetTransaction().IsRequested() {
 			// No need to set modified flag, since it is only temporary
-			bundle.statusMutex.Lock()
+			bundle.requestedMutex.Lock()
 			bundle.requested = true
-			bundle.statusMutex.Unlock()
+			bundle.requestedMutex.Unlock()
 			return true
 		}
 	}

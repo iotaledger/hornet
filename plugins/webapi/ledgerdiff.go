@@ -17,7 +17,7 @@ func init() {
 	addEndpoint("getLedgerDiffExt", getLedgerDiffExt, implementedAPIcalls)
 }
 
-func getLedgerDiff(i interface{}, c *gin.Context) {
+func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	ld := &GetLedgerDiff{}
 	e := ErrorReturn{}
 
@@ -38,7 +38,7 @@ func getLedgerDiff(i interface{}, c *gin.Context) {
 
 	ldr := &GetLedgerDiffReturn{}
 
-	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex)
+	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex, abortSignal)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -51,7 +51,7 @@ func getLedgerDiff(i interface{}, c *gin.Context) {
 	c.JSON(http.StatusOK, ldr)
 }
 
-func getLedgerDiffExt(i interface{}, c *gin.Context) {
+func getLedgerDiffExt(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	ld := &GetLedgerDiffExt{}
 	e := ErrorReturn{}
 

@@ -106,7 +106,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 	}
 	tc := time.Now()
 
-	err := tangle.ApplyLedgerDiff(totalLedgerChanges, milestoneIndex)
+	err := tangle.ApplyLedgerDiffWithoutLocking(totalLedgerChanges, milestoneIndex)
 	if err != nil {
 		log.Panicf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
 	}
@@ -139,5 +139,5 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 		transactions.Release() //-1
 	}
 
-	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Now().Sub(ts))
+	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Since(ts))
 }

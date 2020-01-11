@@ -42,6 +42,6 @@ func webAPIRoute() {
 			return
 		}
 
-		implementation(&request, c)
+		implementation(&request, c, serverShutdownSignal)
 	})
 }

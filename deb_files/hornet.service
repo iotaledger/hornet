@@ -1,0 +1,26 @@
+[Unit]
+Description=Hornet
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+LimitNOFILE=4096
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=hornet
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+
+User=hornet
+Group=hornet
+StateDirectory=hornet
+WorkingDirectory=/var/lib/hornet
+TimeoutSec=infinity
+Restart=always
+
+ExecStart=/bin/bash -c "/usr/bin/hornet_download_snapshot.sh && /usr/bin/hornet -d /etc/hornet"
+
+[Install]
+WantedBy=multi-user.target

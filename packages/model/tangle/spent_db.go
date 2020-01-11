@@ -3,6 +3,7 @@ package tangle
 import (
 	"encoding/binary"
 	"io"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -14,8 +15,25 @@ import (
 )
 
 var (
-	spentAddressesDatabase database.Database
+	spentAddressesDatabase                database.Database
+	spentAddressesDatabaseTransactionLock sync.RWMutex
 )
+
+func ReadLockSpentAddresses() {
+	spentAddressesDatabaseTransactionLock.RLock()
+}
+
+func ReadUnlockSpentAddresses() {
+	spentAddressesDatabaseTransactionLock.RUnlock()
+}
+
+func WriteLockSpentAddresses() {
+	spentAddressesDatabaseTransactionLock.Lock()
+}
+
+func WriteUnlockSpentAddresses() {
+	spentAddressesDatabaseTransactionLock.Unlock()
+}
 
 func configureSpentAddressesDatabase() {
 	if db, err := database.Get(DBPrefixSpentAddresses, hornetDB.GetHornetBadgerInstance()); err != nil {
@@ -30,6 +48,9 @@ func databaseKeyForAddress(address trinary.Hash) []byte {
 }
 
 func spentDatabaseContainsAddress(address trinary.Hash) (bool, error) {
+	ReadLockSpentAddresses()
+	defer ReadUnlockSpentAddresses()
+
 	if contains, err := spentAddressesDatabase.Contains(databaseKeyForAddress(address)); err != nil {
 		return contains, errors.Wrap(NewDatabaseError(err), "failed to check if the address exists in the spent addresses database")
 	} else {
@@ -38,6 +59,8 @@ func spentDatabaseContainsAddress(address trinary.Hash) (bool, error) {
 }
 
 func storeSpentAddressesInDatabase(spent []trinary.Hash) error {
+	WriteLockSpentAddresses()
+	defer WriteUnlockSpentAddresses()
 
 	var entries []database.Entry
 
@@ -59,6 +82,8 @@ func storeSpentAddressesInDatabase(spent []trinary.Hash) error {
 }
 
 func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
+	WriteLockSpentAddresses()
+	defer WriteUnlockSpentAddresses()
 
 	var entries []database.Entry
 
@@ -79,14 +104,52 @@ func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
 	return nil
 }
 
-func StreamSpentAddressesToWriter(buf io.Writer) error {
+// CountSpentAddressesEntries returns the amount of spent addresses.
+// ReadLockSpentAddresses must be held while entering this function.
+func CountSpentAddressesEntries(abortSignal <-chan struct{}) (int32, error) {
 
+	var addressesCount int32
 	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
+		addressesCount++
+		return nil
+	})
+
+	if err != nil {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to count spent addresses in database")
+	}
+
+	return addressesCount, nil
+}
+
+// StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer.
+// ReadLockSpentAddresses must be held while entering this function.
+func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abortSignal <-chan struct{}) error {
+
+	var addressesWritten int32
+	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
+		addressesWritten++
 		return binary.Write(buf, binary.BigEndian, entry.Key)
 	})
 
 	if err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to stream spent addresses from database")
 	}
+
+	if addressesWritten != spentAddressesCount {
+		return errors.Wrapf(NewDatabaseError(err), "Amount of spent addresses changed during write %d/%d", addressesWritten, spentAddressesCount)
+	}
+
 	return nil
 }

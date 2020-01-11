@@ -1,17 +1,22 @@
 package webapi
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/mitchellh/mapstructure"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
+
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/plugins/snapshot"
 )
 
 func init() {
 	addEndpoint("getSnapshot", getSnapshot, implementedAPIcalls)
+	addEndpoint("createSnapshot", createSnapshot, implementedAPIcalls)
 }
 
-func getSnapshot(i interface{}, c *gin.Context) {
+func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	sn := &GetSnapshot{}
 	e := ErrorReturn{}
 
@@ -24,7 +29,7 @@ func getSnapshot(i interface{}, c *gin.Context) {
 
 	snr := &GetSnapshotReturn{}
 
-	balances, index, err := tangle.GetAllBalances()
+	balances, index, err := tangle.GetAllBalances(abortSignal)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -33,6 +38,29 @@ func getSnapshot(i interface{}, c *gin.Context) {
 
 	snr.Balances = balances
 	snr.MilestoneIndex = uint64(index)
+
+	c.JSON(http.StatusOK, snr)
+}
+
+func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+	sn := &CreateSnapshot{}
+	e := ErrorReturn{}
+
+	err := mapstructure.Decode(i, sn)
+	if err != nil {
+		e.Error = "Internal error"
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	snr := &CreateSnapshotReturn{}
+
+	err = snapshot.CreateLocalSnapshot(milestone_index.MilestoneIndex(sn.TargetIndex), sn.FilePath, abortSignal)
+	if err != nil {
+		e.Error = err.Error()
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
 
 	c.JSON(http.StatusOK, snr)
 }

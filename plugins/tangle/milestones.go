@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	checkForMilestoneWorkerCount = 1
+	checkForMilestoneWorkerCount = 1 // This must not be done in parallel
 	checkForMilestoneQueueSize   = 10000
 	checkForMilestoneWorkerPool  *workerpool.WorkerPool
 )
@@ -30,7 +30,7 @@ func processValidMilestone(bundle *tangle.Bundle) {
 	Events.ReceivedNewMilestone.Trigger(bundle)
 
 	// Mark all tx of a valid milestone as requested, so they get stored on eviction
-	// Warp sync milestone txs are not requested by default => they would get lost
+	// Warp sync milestone txs (via STING) are not requested by default => they would get lost
 	transactions := bundle.GetTransactions() //+1
 	for _, tx := range transactions {
 		tx.GetTransaction().SetRequested(true)
@@ -44,7 +44,11 @@ func processValidMilestone(bundle *tangle.Bundle) {
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	if latestMilestoneIndex < bundleMsIndex {
-		tangle.SetLatestMilestone(bundle)
+		err := tangle.SetLatestMilestone(bundle)
+		if err != nil {
+			log.Error(err)
+		}
+
 		Events.LatestMilestoneChanged.Trigger(bundle)
 		milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex)
 	}

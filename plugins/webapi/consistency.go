@@ -6,18 +6,20 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/mitchellh/mapstructure"
+
+	"github.com/gohornet/hornet/packages/model/tangle"
+	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 func init() {
 	addEndpoint("checkConsistency", checkConsistency, implementedAPIcalls)
 }
 
-func checkConsistency(i interface{}, c *gin.Context) {
+func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	checkCon := &CheckConsistency{}
 	e := ErrorReturn{}
 

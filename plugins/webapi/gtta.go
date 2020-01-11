@@ -1,19 +1,22 @@
 package webapi
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/mitchellh/mapstructure"
-	"net/http"
+
+	"github.com/gohornet/hornet/plugins/tipselection"
 )
 
 func init() {
 	addEndpoint("getTransactionsToApprove", getTransactionsToApprove, implementedAPIcalls)
 }
 
-func getTransactionsToApprove(i interface{}, c *gin.Context) {
+func getTransactionsToApprove(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &GetTransactionsToApprove{}
 	result := GetTransactionsToApproveReturn{}

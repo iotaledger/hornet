@@ -2,9 +2,9 @@ package tangle
 
 import (
 	"fmt"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/typeutils"
+
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
@@ -12,7 +12,12 @@ import (
 	"github.com/iotaledger/iota.go/signing"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/typeutils"
+
+	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
 const (
@@ -87,25 +92,34 @@ func GetSolidMilestoneIndex() milestone_index.MilestoneIndex {
 	}
 
 	if snapshot != nil {
-		return snapshot.LedgerIndex
+		return snapshot.SnapshotIndex
 	}
 
 	return 0
 }
 
-func SetLatestMilestone(milestone *Bundle) {
+func SetLatestMilestone(milestone *Bundle) error {
 	latestMilestoneLock.Lock()
 
 	index := milestone.GetMilestoneIndex()
 
 	if latestMilestone != nil && latestMilestone.GetMilestoneIndex() >= index {
 		latestMilestoneLock.Unlock()
-		return
+		return nil
 	}
+
+	var err error
+	if latestMilestone == nil {
+		// Milestone was 0 before, so we have to fix all entries for all first seen tx until now
+		err = FixFirstSeenTxHashOperations(index)
+	}
+
 	latestMilestone = milestone
 	latestMilestoneLock.Unlock()
 
 	updateNodeSynced(GetSolidMilestoneIndex(), index)
+
+	return err
 }
 
 func GetLatestMilestone() *Bundle {
@@ -163,7 +177,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	// Check the structure of the milestone
 	milestoneIndex := getMilestoneIndex(txIndex0)
 	if milestoneIndex <= GetSolidMilestoneIndex() {
-		// Milestone older than out solid milestone
+		// Milestone older than solid milestone
 		txIndex0.Release() //-1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0Hash)
 	}
@@ -173,10 +187,16 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0Hash)
 	}
 
-	var signatureTxs CachedTransactions
-	defer signatureTxs.Release() //-1
+	// Check if milestone was already processed
+	msBundle, _ := GetMilestone(milestoneIndex)
+	if msBundle != nil {
+		// It could be issued again since several transactions of the same bundle were processed in parallel
+		return false, nil
+	}
 
-	signatureTxs = append(signatureTxs, txIndex0)
+    var signatureTxs CachedTransactions
+    defer signatureTxs.Release() //-1
+    signatureTxs = append(signatureTxs, txIndex0)
 
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
 		tx := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) //+1
@@ -211,12 +231,6 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		if signatureTx.GetTransaction().Tx.BranchTransaction != siblingsTx.GetTransaction().Tx.TrunkTransaction {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", txIndex0Hash)
 		}
-	}
-
-	// Check if milestone was already processed
-	msBundle, _ := GetMilestone(milestoneIndex)
-	if msBundle != nil {
-		return false, errors.Wrapf(ErrInvalidMilestone, "Exists already, Index: %d", milestoneIndex)
 	}
 
 	// Verify milestone signature

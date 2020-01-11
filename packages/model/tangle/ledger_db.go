@@ -117,7 +117,10 @@ func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
 			return errors.Wrap(NewDatabaseError(err), "failed to retrieve ledger milestone bundle")
 		}
 		if solidMsBundle != nil {
-			SetLatestMilestone(solidMsBundle)
+			err = SetLatestMilestone(solidMsBundle)
+			if err != nil {
+				return errors.Wrap(NewDatabaseError(err), "failed to set the latest milestone")
+			}
 		}
 	}
 
@@ -147,22 +150,45 @@ func GetBalanceForAddress(address trinary.Hash) (uint64, milestone_index.Milesto
 }
 
 func DeleteLedgerDiffForMilestone(index milestone_index.MilestoneIndex) error {
+
 	WriteLockLedger()
 	defer WriteUnlockLedger()
-	return ledgerDatabase.DeletePrefix(databaseKeyPrefixForLedgerDiff(index))
+
+	var deletions []database.Key
+
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(databaseKeyPrefixForLedgerDiff(index), func(entry database.KeyOnlyEntry) error {
+		deletions = append(deletions, entry.Key)
+		return nil
+	})
+
+	if err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
+	}
+
+	// Now batch delete all entries
+	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
+	}
+
+	return nil
 }
 
-func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex) (map[trinary.Hash]int64, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+// GetLedgerDiffForMilestoneWithoutLocking returns the ledger changes of that specific milestone.
+// ReadLockLedger must be held while entering this function.
+func GetLedgerDiffForMilestoneWithoutLocking(index milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[trinary.Hash]int64, error) {
 
 	diff := make(map[trinary.Hash]int64)
 
-	err := ledgerDatabase.ForEachPrefix(databaseKeyPrefixForLedgerDiff(index), func(entry database.Entry) (stop bool) {
+	err := ledgerDatabase.StreamForEachPrefix(databaseKeyPrefixForLedgerDiff(index), func(entry database.Entry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
 		address := trinary.MustBytesToTrytes(entry.Key, 81)
 		diff[address] = diffFromBytes(entry.Value)
-		return false
+		return nil
 	})
 
 	if err != nil {
@@ -181,7 +207,17 @@ func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex) (map[trinar
 	return diff, nil
 }
 
-func ApplyLedgerDiff(diff map[trinary.Hash]int64, index milestone_index.MilestoneIndex) error {
+func GetLedgerDiffForMilestone(index milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[trinary.Hash]int64, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return GetLedgerDiffForMilestoneWithoutLocking(index, abortSignal)
+}
+
+// ApplyLedgerDiffWithoutLocking applies the changes to the ledger.
+// WriteLockLedger must be held while entering this function.
+func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone_index.MilestoneIndex) error {
 
 	var diffEntries []database.Entry
 	var balanceChanges []database.Entry
@@ -267,17 +303,22 @@ func StoreBalancesInDatabase(balances map[trinary.Hash]uint64, index milestone_i
 	return nil
 }
 
-func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+// GetAllBalancesWithoutLocking returns all balances for the current solid milestone.
+// ReadLockLedger must be held while entering this function.
+func GetAllBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
 
 	balances := make(map[trinary.Hash]uint64)
 
-	err := ledgerDatabase.ForEachPrefix(balancePrefix, func(entry database.Entry) (stop bool) {
+	err := ledgerDatabase.StreamForEachPrefix(balancePrefix, func(entry database.Entry) error {
+		select {
+		case <-abortSignal:
+			return ErrOperationAborted
+		default:
+		}
+
 		address := trinary.MustBytesToTrytes(entry.Key, 81)
 		balances[address] = balanceFromBytes(entry.Value)
-		return false
+		return nil
 	})
 
 	if err != nil {
@@ -295,3 +336,62 @@ func GetAllBalances() (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, 
 
 	return balances, ledgerMilestoneIndex, err
 }
+
+// GetAllBalances returns all balances for the current solid milestone.
+func GetAllBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone_index.MilestoneIndex, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return GetAllBalancesWithoutLocking(abortSignal)
+}
+
+/*
+// Ledger should be locked between CountBalances and StreamBalancesToWriter.
+func CountBalanceEntries() (int32, error) {
+
+	var balancesCount int32
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(balancePrefix, func(entry database.KeyOnlyEntry) error {
+		balancesCount++
+		return nil
+	})
+
+	if err != nil {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to count balances in database")
+	}
+
+	return balancesCount, nil
+}
+
+// Ledger should be locked before.
+func StreamBalancesToWriter(buf io.Writer, balancesCount int32, totalBalanceDiffs map[trinary.Hash]uint64) (int, error) {
+
+	balancesWritten := 0
+
+	var total uint64
+	err := ledgerDatabase.StreamForEachPrefix(balancePrefix, func(entry database.Entry) error {
+
+
+		err := binary.Write(buf, binary.BigEndian, entry.Key[:49])
+		if err != nil {
+			return err
+		}
+
+		balance := balanceFromBytes(entry.Value)
+		total += balance
+		balancesWritten++
+
+		return binary.Write(buf, binary.BigEndian, balance)
+	})
+
+	if err != nil {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to stream balances from database")
+	}
+
+	if total != compressed.TOTAL_SUPPLY {
+		panic(fmt.Sprintf("StreamBalancesToWriter() Total does not match supply: %d != %d", total, compressed.TOTAL_SUPPLY))
+	}
+
+	return balancesWritten, nil
+}
+*/

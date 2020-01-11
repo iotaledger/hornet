@@ -16,6 +16,7 @@ const (
 	ShutdownPriorityNeighborTCPServer
 	ShutdownPriorityNeighborReconnecter
 	ShutdownPriorityBadgerGarbageCollection
+	ShutdownPriorityLocalSnapshots
 	ShutdownPriorityMetricsUpdater
 	ShutdownPrioritySPA
 	ShutdownPriorityAPI

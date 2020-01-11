@@ -14,7 +14,7 @@ import (
 
 var (
 	milestoneSolidifierWorkerCount = 2 // must be two, so a new request can abort another, in case it is an older milestone
-	milestoneSolidifierQueueSize   = 100
+	milestoneSolidifierQueueSize   = 2
 	milestoneSolidifierWorkerPool  *workerpool.WorkerPool
 
 	signalChanMilestoneStopSolidification     chan struct{}
@@ -236,7 +236,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 	// Subtangle is solid if all tx were deleted from the map
 	queueSolid := len(entryTxs) == 0
 
-	log.Infof("Solidifier finished (%d): passed: %v, tx: %d, collect: %v, total: %v, entryTx: %d", loopCnt, queueSolid, len(txsChecked), tc.Sub(ts), time.Now().Sub(ts), len(entryTxs))
+	log.Infof("Solidifier finished (%d): passed: %v, tx: %d, collect: %v, total: %v, entryTx: %d", loopCnt, queueSolid, len(txsChecked), tc.Sub(ts), time.Since(ts), len(entryTxs))
 	return queueSolid, false
 }
 
@@ -269,13 +269,15 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 			- don't stop that traversion if older milestone comes in, its only once and helps at startup
 	*/
 
-	solidifierMilestoneIndexLock.RLock()
-	if (solidifierMilestoneIndex != 0) && (msIndexEmptiedQueue != 0) && (solidifierMilestoneIndex < msIndexEmptiedQueue) {
-		// Another older milestone solidification is already running
+	if msIndexEmptiedQueue != 0 {
+		solidifierMilestoneIndexLock.RLock()
+		if (solidifierMilestoneIndex != 0) && (msIndexEmptiedQueue >= solidifierMilestoneIndex) {
+			// Another older milestone solidification is already running
+			solidifierMilestoneIndexLock.RUnlock()
+			return
+		}
 		solidifierMilestoneIndexLock.RUnlock()
-		return
 	}
-	solidifierMilestoneIndexLock.RUnlock()
 
 	// Stop possible other newer solidifications
 	abortMilestoneSolidification()
@@ -461,7 +463,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 		}
 	}
 
-	log.Infof("searchMissingMilestone finished (%d): found: %v, checked txs: %d, total: %v", loopCnt, milestoneFound, len(txsChecked), time.Now().Sub(ts))
+	log.Infof("searchMissingMilestone finished (%d): found: %v, checked txs: %d, total: %v", loopCnt, milestoneFound, len(txsChecked), time.Since(ts))
 	return milestoneFound, false
 }
 

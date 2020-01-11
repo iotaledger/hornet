@@ -5,16 +5,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/iotaledger/iota.go/guards"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/iotaledger/iota.go/guards"
+
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {
 	addEndpoint("getInclusionStates", getInclusionStates, implementedAPIcalls)
 }
 
-func getInclusionStates(i interface{}, c *gin.Context) {
+func getInclusionStates(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	gis := &GetInclusionStates{}
 	e := ErrorReturn{}
 

@@ -82,7 +82,7 @@ func run(plugin *node.Plugin) {
 		metrics.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		wsSendWorkerPool.StopAndWait()
+		wsSendWorkerPool.Stop()
 		log.Info("Stopping SPA[WSSend] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 
@@ -292,7 +292,7 @@ func currentNodeStatus() *nodestatus {
 	// node status
 	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 	status.Version = cli.AppVersion
-	status.Uptime = time.Now().Sub(nodeStartAt).Milliseconds()
+	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
 	status.MsRequestQueueSize = requestCount
