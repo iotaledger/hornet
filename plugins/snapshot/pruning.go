@@ -137,7 +137,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	}
 
 	// tx
-	for txToRemove, _ := range txsToRemove {
+	for txToRemove := range txsToRemove {
 		tangle.DiscardTransaction(txToRemove)
 	}
 
