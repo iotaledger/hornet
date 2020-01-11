@@ -15,9 +15,8 @@ ProtectHome=yes
 
 User=hornet
 Group=hornet
-StateDirectory=hornet
 WorkingDirectory=/var/lib/hornet
-TimeoutSec=infinity
+TimeoutSec=1200
 Restart=always
 
 ExecStart=/bin/bash -c "/usr/bin/hornet_download_snapshot.sh && /usr/bin/hornet -d /etc/hornet"

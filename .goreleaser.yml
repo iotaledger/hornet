@@ -164,8 +164,10 @@ nfpms:
           amd64: x86_64
         name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
         scripts:
+          preinstall: "nfpm/rpm_files/preinst"
           postinstall: "nfpm/rpm_files/postinst"
           preremove: "nfpm/rpm_files/prerm"
+          postremove: "nfpm/rpm_files/postrm"
 
 # Checksum
 checksum:

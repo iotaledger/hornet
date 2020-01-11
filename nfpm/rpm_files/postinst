@@ -1,8 +1,7 @@
-%post
-adduser --no-create-home --shell /sbin/nologin --system --group hornet >/dev/null
-systemctl daemon-reload
-
-cat <<EOF
+if [ $1 -eq 1 ]; then
+    /usr/bin/systemctl preset hornet.service >/dev/null 2>&1 ||:
+    # print site info
+    cat <<EOF
 ######################################
 HORNET installation finished
 ######################################
@@ -12,3 +11,9 @@ To start HORNET the first time, please run:
 sudo systemctl enable hornet && sudo service hornet start
 
 EOF
+
+    mkdir -p /var/lib/hornet
+    chmod 700 /var/lib/hornet
+    chown hornet:hornet /var/lib/hornet
+
+fi

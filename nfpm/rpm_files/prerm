@@ -1,12 +1,4 @@
-%preun
-if [ $1 == 0 ]; then #uninstall
-    systemctl unmask %{name}.service
-    systemctl stop %{name}.service
-    systemctl disable %{name}.service
-fi
-
-%postun
-if [ $1 == 0 ]; then #uninstall
-    systemctl daemon-reload
-    systemctl reset-failed
+if [ $1 -eq 0 ]; then
+    /usr/bin/systemctl --no-reload disable hornet.service >/dev/null 2>&1 ||:
+    /usr/bin/systemctl stop hornet.service >/dev/null 2>&1 ||:
 fi
