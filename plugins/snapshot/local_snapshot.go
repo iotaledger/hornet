@@ -16,7 +16,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/dag"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -36,8 +35,9 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 	}
 
 	for _, approver := range approvers.GetHashes() {
-		tx, _ := tangle.GetTransaction(approver)
-		if tx == nil {
+		tx := tangle.GetCachedTransaction(approver) //+1
+		if !tx.Exists() {
+			tx.Release() //-1
 			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approver)
 		}
 
@@ -45,7 +45,8 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
 		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
-		confirmed, at := tx.GetConfirmed()
+		confirmed, at := tx.GetTransaction().GetConfirmed()
+		tx.Release() //-1
 		if confirmed && (at > targetIndex) {
 			// confirmed by a later milestone than targetIndex => solidEntryPoint
 			return true, at
@@ -56,13 +57,17 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction, panicOnMissingTx bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
+func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction, panicOnMissingTx bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
+
+	milestoneTail.RegisterConsumer() //+1
+	defer milestoneTail.Release()    //-1
+
 	ts := time.Now()
 
 	txsToTraverse := make(map[string]struct{})
 	txsChecked := make(map[string]struct{})
 	var approvees []trinary.Hash
-	txsToTraverse[milestoneTail.GetHash()] = struct{}{}
+	txsToTraverse[milestoneTail.GetTransaction().GetHash()] = struct{}{}
 
 	// Collect all tx by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -88,8 +93,9 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milest
 				continue
 			}
 
-			tx, _ := tangle.GetTransaction(txHash)
-			if tx == nil {
+			tx := tangle.GetCachedTransaction(txHash) //+1
+			if !tx.Exists() {
+				tx.Release() //-1
 				if panicOnMissingTx {
 					log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
 				}
@@ -98,21 +104,25 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milest
 				continue
 			}
 
-			confirmed, at := tx.GetConfirmed()
+			confirmed, at := tx.GetTransaction().GetConfirmed()
 			if !confirmed {
+				tx.Release() //-1
 				log.Panicf("getMilestoneApprovees: Transaction must be confirmed: %v", txHash)
 			}
 
 			if at < milestoneIndex {
 				// Ignore Tx that were confirmed by older milestones
+				tx.Release() //-1
 				continue
 			}
 
 			approvees = append(approvees, txHash)
 
 			// Traverse the approvee
-			txsToTraverse[tx.GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetBranch()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
+
+			tx.Release() //-1
 		}
 	}
 
@@ -165,7 +175,9 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		}
 
 		// Get all approvees of that milestone
-		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), true, abortSignal)
+		msTail := ms.GetTail() //+1
+		approvees, err := getMilestoneApprovees(milestoneIndex, msTail, true, abortSignal)
+		msTail.Release() //-1
 		if err != nil {
 			return nil, err
 		}
@@ -350,10 +362,12 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
+	targetMilestoneTail := targetMilestone.GetTail() //+1
+
 	lsh := &localSnapshotHeader{
 		msHash:              targetMilestone.GetTailHash(),
 		msIndex:             targetIndex,
-		msTimestamp:         targetMilestone.GetTail().GetTimestamp(),
+		msTimestamp:         targetMilestoneTail.GetTransaction().GetTimestamp(),
 		solidEntryPoints:    newSolidEntryPoints,
 		seenMilestones:      seenMilestones,
 		balances:            newBalances,
@@ -386,8 +400,10 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		Hash:          targetMilestone.GetTailHash(),
 		SnapshotIndex: targetIndex,
 		PruningIndex:  snapshotInfo.PruningIndex,
-		Timestamp:     targetMilestone.GetTail().GetTimestamp(),
+		Timestamp:     targetMilestoneTail.GetTransaction().GetTimestamp(),
 	})
+	
+	targetMilestoneTail.Release() //-1
 
 	log.Infof("Creating local snapshot for targetIndex %d done, took %v", targetIndex, time.Since(ts))
 

@@ -15,8 +15,7 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/typeutils"
-
-	"github.com/gohornet/hornet/packages/model/hornet"
+	
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
@@ -194,9 +193,9 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		return false, nil
 	}
 
-    var signatureTxs CachedTransactions
-    defer signatureTxs.Release() //-1
-    signatureTxs = append(signatureTxs, txIndex0)
+	var signatureTxs CachedTransactions
+	defer signatureTxs.Release() //-1
+	signatureTxs = append(signatureTxs, txIndex0)
 
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
 		tx := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) //+1
