@@ -39,8 +39,9 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	if err != nil {
 		return
 	}
+	
 	durationGTTA := time.Since(timeGTTA)
-        durGTTA := durationGTTA.Truncate(time.Millisecond)
+	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
 	txCount++
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
@@ -55,7 +56,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	durationPOW :=  time.Since(timeStart.Add(durationGTTA))
-        durPOW := durationPOW.Truncate(time.Millisecond)
+	durPOW := durationPOW.Truncate(time.Millisecond)
 
 	for _, tx := range b {
 		err = broadcastTransaction(&tx)
@@ -65,7 +66,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-        log.Infof("Sent Spam Transaction # %v GTTA: %v POW: %v Total: %v", txCount, durGTTA, durPOW, durTotal)
+	log.Infof("Sent Spam Transaction # %v GTTA: %v POW: %v Total: %v", txCount, durGTTA, durPOW, durTotal)
 
 	
 }
