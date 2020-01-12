@@ -361,7 +361,6 @@ func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransa
 
 // Checks if the the tx could be part of a milestone
 func IsMaybeMilestone(transaction *CachedTransaction) bool {
-	transaction.Consume()
 	transaction.RegisterConsumer() //+1
 	defer transaction.Release()    //-1
 	return (transaction.GetTransaction().Tx.Value == 0) && (transaction.GetTransaction().Tx.Address == coordinatorAddress)
