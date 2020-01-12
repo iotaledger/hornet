@@ -99,7 +99,9 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 
 func onNewTx(tx *tangle.CachedTransaction) {
 
+	tx.RegisterConsumer() //+1
 	iotaTx := tx.GetTransaction().Tx
+	tx.Release() //-1
 
 	wsTx := &wsTransaction{
 		Hash:       iotaTx.Hash,
@@ -144,7 +146,9 @@ func onNewTx(tx *tangle.CachedTransaction) {
 
 func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
+	tx.RegisterConsumer() //+1
 	iotaTx := tx.GetTransaction().Tx
+	tx.Release() //-1
 
 	if iotaTx.CurrentIndex == 0 {
 		// Tail Tx => Check if there are other bundles (Reattachments)
@@ -183,10 +187,9 @@ func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.Milesto
 
 func onNewMilestone(bundle *tangle.Bundle) {
 
-	tailTx := bundle.GetTail()
-	defer tailTx.Release()
-
+	tailTx := bundle.GetTail() //+1
 	confTime := tailTx.GetTransaction().GetTimestamp() * 1000
+	tailTx.Release() //-1
 
 	transactions := bundle.GetTransactions() //+1
 

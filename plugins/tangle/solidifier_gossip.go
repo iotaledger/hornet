@@ -25,12 +25,12 @@ var (
 func configureGossipSolidifier() {
 	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		// Check solidity of gossip txs if the node is synced
-		tx := task.Param(0).(*tangle.CachedTransaction)
+		tx := task.Param(0).(*tangle.CachedTransaction) //1
 		if tangle.IsNodeSynced() {
 			checkSolidityAndPropagate(tx)
 		}
 		// Release the consumer, since it was registered before adding to the pool
-		tx.Release()
+		tx.Release() //-1
 
 		task.Return(nil)
 	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize))
@@ -42,7 +42,7 @@ func runGossipSolidifier() {
 
 	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if tangle.IsNodeSynced() {
-			transaction.RegisterConsumer()
+			transaction.RegisterConsumer() //+1
 			gossipSolidifierWorkerPool.Submit(transaction)
 		}
 	})

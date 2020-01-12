@@ -5,8 +5,9 @@ import (
 )
 
 func addTransactionToBundleBucket(transaction *tangle.CachedTransaction) []*tangle.Bundle {
-	transaction.RegisterConsumer()
-	defer transaction.Release()
+
+	transaction.RegisterConsumer() //+1
+	defer transaction.Release()    //-1
 
 	bundleBucket, err := tangle.GetBundleBucket(transaction.GetTransaction().Tx.Bundle)
 	if err != nil {

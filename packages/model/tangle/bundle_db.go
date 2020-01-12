@@ -48,7 +48,7 @@ func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
 			bundle.SetModified(false)
 		}
 
-		transactions := bundleBucket.Transactions()
+		transactions := bundleBucket.Transactions() //+1
 
 		for _, tx := range transactions {
 			// tails were already stored
@@ -64,7 +64,7 @@ func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
 			entries = append(entries, entry)
 		}
 
-		transactions.Release()
+		transactions.Release() //-1
 	}
 
 	// Now batch insert all entries

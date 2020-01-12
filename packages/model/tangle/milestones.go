@@ -296,11 +296,8 @@ func StoreMilestoneInDatabase(milestone *Bundle) error {
 // Validates if the milestone has the correct signature
 func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransaction, milestoneIndex milestone_index.MilestoneIndex, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
-	signatureTxs.RegisterConsumer()
-	defer signatureTxs.Release()
-
-	siblingsTx.RegisterConsumer()
-	defer siblingsTx.Release()
+	signatureTxs.RegisterConsumer() //+1
+	siblingsTx.RegisterConsumer()   //+1
 
 	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
 
@@ -326,15 +323,21 @@ func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransa
 		copy(digests[i*consts.HashTrinarySize:], digest)
 	}
 
+	signatureTxs.Release() //-1
+
 	addressTrits, err := signing.Address(digests, kerl.NewKerl())
 	if err != nil {
+		siblingsTx.Release() //-1
 		return false
 	}
 
 	siblingsTrits, err := transaction.TransactionToTrits(siblingsTx.GetTransaction().Tx)
 	if err != nil {
+		siblingsTx.Release() //-1
 		return false
 	}
+
+	siblingsTx.Release() //-1
 
 	// validate Merkle path
 	merkleRoot, err := merkle.MerkleRoot(
@@ -358,14 +361,15 @@ func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransa
 
 // Checks if the the tx could be part of a milestone
 func IsMaybeMilestone(transaction *CachedTransaction) bool {
-	transaction.RegisterConsumer()
-	defer transaction.Release()
+	transaction.Consume()
+	transaction.RegisterConsumer() //+1
+	defer transaction.Release()    //-1
 	return (transaction.GetTransaction().Tx.Value == 0) && (transaction.GetTransaction().Tx.Address == coordinatorAddress)
 }
 
 // Returns Milestone index of the milestone
 func getMilestoneIndex(transaction *CachedTransaction) (milestoneIndex milestone_index.MilestoneIndex) {
-	transaction.RegisterConsumer()
-	defer transaction.Release()
+	transaction.RegisterConsumer() //+1
+	defer transaction.Release()    //-1
 	return milestone_index.MilestoneIndex(trinary.TrytesToInt(transaction.GetTransaction().Tx.ObsoleteTag))
 }

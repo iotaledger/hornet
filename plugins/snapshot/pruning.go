@@ -102,7 +102,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 			txsToRemove[txToRemove] = struct{}{}
 			bundlesTxsToRemove[tx.GetTransaction().Tx.Bundle] = txToRemove
 		}
-		tx.Release()
+		tx.Release() //-1
 	}
 
 	for txHash := range txsToRemove {

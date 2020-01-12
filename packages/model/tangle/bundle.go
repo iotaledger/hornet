@@ -229,12 +229,13 @@ func (bucket *BundleBucket) GetHash() trinary.Hash {
 // It returns a slice of Bundles to which the transaction was added to. Adding a tail
 // transaction will ever only return one Bundle within the slice.
 func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
-	bucket.mu.Lock()
-	defer bucket.mu.Unlock()
 
 	tx.RegisterConsumer() //+1
 	defer tx.Release()    //-1
 
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+	
 	// add the transaction to the "all" transactions pool
 	bucket.txs[tx.GetTransaction().GetHash()] = struct{}{}
 

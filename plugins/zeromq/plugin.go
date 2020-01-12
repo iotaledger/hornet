@@ -52,16 +52,16 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger("ZeroMQ")
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		tx := task.Param(0).(*tanglePackage.CachedTransaction)
+		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
 		onNewTx(tx)
-		tx.Release()
+		tx.Release() //-1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		tx := task.Param(0).(*tanglePackage.CachedTransaction)
+		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
 		onConfirmedTx(tx, task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64))
-		tx.Release()
+		tx.Release() //-1
 		task.Return(nil)
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize))
 
@@ -90,10 +90,10 @@ func run(plugin *node.Plugin) {
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			transaction.RegisterConsumer()
+			transaction.RegisterConsumer() //+1
 			_, added := newTxWorkerPool.TrySubmit(transaction)
 			if !added {
-				transaction.Release()
+				transaction.Release() //-1
 			}
 		}
 	})
@@ -103,10 +103,10 @@ func run(plugin *node.Plugin) {
 			return
 		}
 
-		transaction.RegisterConsumer()
+		transaction.RegisterConsumer() //+1
 		_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
 		if !added {
-			transaction.Release()
+			transaction.Release() //-1
 		}
 	})
 
