@@ -55,7 +55,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
-	durationPOW :=  time.Since(timeStart.Add(durationGTTA))
+	durationPOW := time.Since(timeStart.Add(durationGTTA))
 	durPOW := durationPOW.Truncate(time.Millisecond)
 
 	for _, tx := range b {
