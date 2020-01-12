@@ -19,7 +19,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -105,12 +104,16 @@ func configure(plugin *node.Plugin) {
 	router.Handle("/socket.io/", socketioServer)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*hornet.Transaction))
+		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
+		onNewTx(tx)
+		tx.Release() //-1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*hornet.Transaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64))
+		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
+		onConfirmedTx(tx, task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64))
+		tx.Release() //-1
 		task.Return(nil)
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize))
 
@@ -123,7 +126,7 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
@@ -133,16 +136,24 @@ func run(plugin *node.Plugin) {
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			newTxWorkerPool.TrySubmit(transaction)
+			transaction.RegisterConsumer() //+1
+			_, added := newTxWorkerPool.TrySubmit(transaction)
+			if !added {
+				transaction.Release() //-1
+			}
 		}
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(transaction *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+	notifyConfirmedTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		if !wasSyncBefore {
 			return
 		}
 
-		confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
+		transaction.RegisterConsumer() //+1
+		_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
+		if !added {
+			transaction.Release() //-1
+		}
 	})
 
 	notifyNewMilestone := events.NewClosure(func(bundle *tanglePackage.Bundle) {
