@@ -7,7 +7,6 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -17,22 +16,32 @@ var (
 	prevLMI milestone_index.MilestoneIndex = 0
 )
 
-func onNewTx(tx *hornet.Transaction) {
+func onNewTx(tx *tangle.CachedTransaction) {
+
+	tx.RegisterConsumer() //+1
+	iotaTx := tx.GetTransaction().Tx
+	tx.Release()
+
 	// tx topic
-	err := publishTx(tx)
+	err := publishTx(iotaTx)
 	if err != nil {
 		log.Error(err.Error())
 	}
 
 	// tx_trytes topic
-	err = publishTxTrytes(tx)
+	err = publishTxTrytes(iotaTx)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func onConfirmedTx(tx *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
-	err := publishConfTx(tx, msIndex)
+func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+
+	tx.RegisterConsumer() //+1
+	iotaTx := tx.GetTransaction().Tx
+	tx.Release()
+
+	err := publishConfTx(iotaTx, msIndex)
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -92,48 +101,48 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(tx *hornet.Transaction, ms milestone_index.MilestoneIndex) error {
+func publishConfTx(iotaTx *transaction.Transaction, ms milestone_index.MilestoneIndex) error {
 
 	return mqttBroker.Send(topicSN, fmt.Sprintf(`{"msIndex":"%d","txHash":"%v","address":"%v","trunk":"%v","branch":"%v","bundle":"%v","timestamp":"%s"}`,
-		ms,                      // Index of the milestone that confirmed the transaction
-		tx.Tx.Hash,              // Transaction hash
-		tx.Tx.Address,           // Address
-		tx.Tx.TrunkTransaction,  // Trunk transaction hash
-		tx.Tx.BranchTransaction, // Branch transaction hash
-		tx.Tx.Bundle,            // Bundle hash
+		ms,                       // Index of the milestone that confirmed the transaction
+		iotaTx.Hash,              // Transaction hash
+		iotaTx.Address,           // Address
+		iotaTx.TrunkTransaction,  // Trunk transaction hash
+		iotaTx.BranchTransaction, // Branch transaction hash
+		iotaTx.Bundle,            // Bundle hash
 		time.Now().UTC().Format(time.RFC3339)))
 }
 
 // Publish transaction trytes of an tx that has recently been added to the ledger
-func publishTxTrytes(tx *hornet.Transaction) error {
+func publishTxTrytes(iotaTx *transaction.Transaction) error {
 
-	trytes, err := transaction.TransactionToTrytes(tx.Tx)
+	trytes, err := transaction.TransactionToTrytes(iotaTx)
 	if err != nil {
 		return err
 	}
 
 	err = mqttBroker.Send(topicTxTrytes, fmt.Sprintf(`{"txHash":"%v","trytes":"%v","timestamp":"%s"}`,
-		tx.Tx.Hash, // Transaction hash
-		trytes,     // Transaction trytes
+		iotaTx.Hash, // Transaction hash
+		trytes,      // Transaction trytes
 		time.Now().UTC().Format(time.RFC3339)))
 	return err
 }
 
 // Publish a transaction that has recently been added to the ledger
-func publishTx(tx *hornet.Transaction) error {
+func publishTx(iotaTx *transaction.Transaction) error {
 
 	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":"%d","obsoleteTag":"%v","txTimestamp":"%d","currentIndex":"%d","lastIndex":"%d","bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":"%d","tag":"%v""timestamp":"%s"}`,
-		tx.Tx.Hash,              // Transaction hash
-		tx.Tx.Address,           // Address
-		tx.Tx.Value,             // Value
-		tx.Tx.ObsoleteTag,       // Obsolete tag
-		tx.Tx.Timestamp,         // Timestamp
-		tx.Tx.CurrentIndex,      // Index of the transaction in the bundle
-		tx.Tx.LastIndex,         // Last transaction index of the bundle
-		tx.Tx.Bundle,            // Bundle hash
-		tx.Tx.TrunkTransaction,  // Trunk transaction hash
-		tx.Tx.BranchTransaction, // Branch transaction hash
-		time.Now().Unix(),       // Unix timestamp for when the transaction was received
-		tx.Tx.Tag,               // Tag
+		iotaTx.Hash,              // Transaction hash
+		iotaTx.Address,           // Address
+		iotaTx.Value,             // Value
+		iotaTx.ObsoleteTag,       // Obsolete tag
+		iotaTx.Timestamp,         // Timestamp
+		iotaTx.CurrentIndex,      // Index of the transaction in the bundle
+		iotaTx.LastIndex,         // Last transaction index of the bundle
+		iotaTx.Bundle,            // Bundle hash
+		iotaTx.TrunkTransaction,  // Trunk transaction hash
+		iotaTx.BranchTransaction, // Branch transaction hash
+		time.Now().Unix(),        // Unix timestamp for when the transaction was received
+		iotaTx.Tag,               // Tag
 		time.Now().UTC().Format(time.RFC3339)))
 }
