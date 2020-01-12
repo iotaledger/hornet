@@ -144,7 +144,7 @@ nfpms:
       rpm:
         replacements:
           amd64: x86_64
-        name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
+        name_template: "{{ tolower .ProjectName }}-{{ .Version }}-{{ .Arch }}"
         scripts:
           preinstall: "nfpm/rpm_files/preinst"
           postinstall: "nfpm/rpm_files/postinst"
