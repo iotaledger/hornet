@@ -134,7 +134,9 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 		transactions := bundle.GetTransactions() //+1
 		for _, bndlTx := range transactions {
 			bndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
+			bndlTx.RegisterConsumer() //+1
 			Events.TransactionConfirmed.Trigger(bndlTx, milestoneIndex, milestoneTail.GetTransaction().GetTimestamp())
+			bndlTx.Release() //-1
 		}
 		transactions.Release() //-1
 	}

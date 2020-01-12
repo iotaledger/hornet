@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -122,11 +121,4 @@ func runFirstSeenTransactionPersister() {
 		firstSeenTxWorkerPool.StopAndWait()
 		log.Info("Stopping FirstSeenTxPersister ... done")
 	}, shutdown.ShutdownPriorityPersisters)
-}
-
-// Tx stored event
-func onEvictTransactions(evicted []*hornet.Transaction) {
-	for _, tx := range evicted {
-		Events.TransactionStored.Trigger(tx)
-	}
 }

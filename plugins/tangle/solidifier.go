@@ -68,8 +68,9 @@ func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCa
 	if isSolid {
 		// update the solidity flags of this transaction and its approvers
 		cachedTransaction.GetTransaction().SetSolid(true)
-		//TODO: change events to use the CachedTransaction?
-		Events.TransactionSolid.Trigger(cachedTransaction.GetTransaction())
+		cachedTransaction.RegisterConsumer() //+1
+		Events.TransactionSolid.Trigger(cachedTransaction)
+		cachedTransaction.Release() //-1
 	}
 
 	return isSolid, isSolid

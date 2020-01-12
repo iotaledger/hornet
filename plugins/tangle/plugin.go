@@ -33,7 +33,6 @@ func configure(plugin *node.Plugin) {
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 	RefsAnInvalidBundleCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
 
-	//TODO: find a way to pass onEvictTransactions to the storage
 	tangle.InitBundleCache()
 	tangle.InitApproversCache()
 	tangle.InitMilestoneCache()
