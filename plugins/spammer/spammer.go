@@ -34,15 +34,17 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 	}
 
-	timeGTTA := time.Now()
+	timeStart := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
 	if err != nil {
 		return
 	}
-	durationGTTA := time.Since(timeGTTA)
+	durationGTTA := time.Since(timeStart)
+	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
 	txCount++
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
+
 	b, err := createBundle(address, message, tagSubstring, txCount, infoMsg)
 	if err != nil {
 		return
@@ -53,12 +55,18 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
+	durationPOW :=  time.Since(timeStart.Add(durationGTTA))
+	durPOW := durationPOW.Truncate(time.Millisecond)
+
 	for _, tx := range b {
 		err = broadcastTransaction(&tx)
 		if err != nil {
 			return
 		}
 	}
+
+	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
+	log.Infof("Sent Spam Transaction # %v GTTA: %v POW: %v Total: %v", txCount, durGTTA, durPOW, durTotal)
 }
 
 // transactionHash makes a transaction hash from the given transaction.
