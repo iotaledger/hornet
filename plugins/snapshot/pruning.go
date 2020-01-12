@@ -188,7 +188,9 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		}
 
 		// Get all approvees of that milestone
-		approvees, err := getMilestoneApprovees(milestoneIndex, ms.GetTail(), false, nil)
+		msTail := ms.GetTail() //+1
+		approvees, err := getMilestoneApprovees(milestoneIndex, msTail, false, nil)
+		msTail.Release() //-1
 		if err != nil {
 			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)
 			continue
