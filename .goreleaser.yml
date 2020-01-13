@@ -9,22 +9,6 @@ env:
 
 # Builds
 builds:
-  # macOS AMD64
-  - id: hornet-darwin-amd64
-    binary: hornet
-    env:
-      - CGO_ENABLED=1
-      - CC=o64-clang
-      - CXX=o64-clang++
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
-    main: main.go
-    goos:
-      - darwin
-    goarch:
-      - amd64
   # Linux AMD64
   - id: hornet-linux-amd64
     binary: hornet
@@ -39,14 +23,15 @@ builds:
       - linux
     goarch:
       - amd64
-  # Linux ARM(v7)
+  # Linux ARM(v7) statically linked
   - id: hornet-linux-arm
     binary: hornet
     env:
       - CGO_ENABLED=1
-      - CC=arm-linux-gnueabi-gcc
+      - CC=/etc/musl/armv7l-linux-musleabihf-cross/bin/armv7l-linux-musleabihf-gcc-9.2.1
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+      - -w -extldflags "-static"
     flags:
       - -tags=pow_c
     main: main.go
@@ -56,14 +41,15 @@ builds:
       - arm
     goarm:
       - 7
-  # Linux ARM64
+  # Linux ARM64 statically linked
   - id: hornet-linux-arm64
     binary: hornet
     env:
       - CGO_ENABLED=1
-      - CC=aarch64-linux-gnu-gcc
+      - CC=/etc/musl/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc-9.2.1
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+      - -w -extldflags "-static"
     flags:
       - -tags=pow_arm_c128
     main: main.go
@@ -96,12 +82,8 @@ dockers:
     image_templates:
       - "gohornet/hornet:latest"
       - "gohornet/hornet:{{ .Tag }}"
-    build_flag_templates:
-      - "--build-arg=ARCH=amd64"
     binaries:
       - hornet
-    extra_files:
-      - config.json
     dockerfile: Dockerfile.goreleaser
 
 # Archives
@@ -130,7 +112,7 @@ archives:
       - config.json
       - neighbors.json
 
-# Additional packages (i.e. deb)
+# DEB and RPM packages
 nfpms:
   - id: nfpm
     package_name: hornet
@@ -162,7 +144,7 @@ nfpms:
       rpm:
         replacements:
           amd64: x86_64
-        name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
+        name_template: "{{ tolower .ProjectName }}-{{ .Version }}-{{ .Arch }}"
         scripts:
           preinstall: "nfpm/rpm_files/preinst"
           postinstall: "nfpm/rpm_files/postinst"
