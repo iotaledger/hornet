@@ -84,6 +84,7 @@ class ServerMetrics {
     dropped_sent_packets: number;
     rec_tx_req: number;
     sent_tx_req: number;
+    spent_addrs_count: number;
     ts: number;
 }
 
@@ -562,6 +563,21 @@ export class NodeStore {
                 all, invalid, stale, random, sent, newTx, droppedSent
             ],
         };
+    }
+
+    @computed
+    get spentAddrsSeries() {
+        let spentAddrs = Object.assign({}, chartSeriesOpts,
+            series("Spent Addresses", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_server_metrics.length; i++) {
+            let metric: ServerMetrics = this.collected_server_metrics[i];
+            labels.push(metric.spent_addrs_count);
+        }
+
+        return {labels: labels, datasets: [spentAddrs],};
     }
 
     @computed
