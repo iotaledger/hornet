@@ -27,16 +27,24 @@ func runConfigObserver() {
 
 		// Modify neighbors
 		if len(modified) > 0 {
-			modifyNeighbors(modified)
+			for _, nb := range modified {
+				if err := RemoveNeighbor(nb.Identity); err != nil {
+					gossipLogger.Error(err)
+				}
+			}
+			if err := addNewNeighbors(modified); err != nil {
+				gossipLogger.Error(err)
+			}
 		}
 
 		// Add neighbors
 		if len(added) > 0 {
-			addNewNeighbors(added)
+			if err := addNewNeighbors(added); err != nil {
+				gossipLogger.Error(err)
+			}
 		}
 
 		// Remove Neighbors
-		// FixMe: Removing example neighbors will result in an error, but the neighbor will still be deleted.
 		if len(removed) > 0 {
 			for _, nb := range removed {
 				if err := RemoveNeighbor(nb.Identity); err != nil {
@@ -86,7 +94,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	return
 }
 
-func addNewNeighbors(neighbors []NeighborConfig) {
+func addNewNeighbors(neighbors []NeighborConfig) error {
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
 	for _, nb := range neighbors {
@@ -96,56 +104,18 @@ func addNewNeighbors(neighbors []NeighborConfig) {
 
 		// check whether already in reconnect pool
 		if _, exists := reconnectPool[nb.Identity]; exists {
-			gossipLogger.Errorf("Add new neighbor from config failed with: %v", errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in the reconnect pool", nb.Identity))
+			return errors.Errorf("Add new neighbor from config failed with: %v", errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in the reconnect pool", nb.Identity))
 		}
 
 		originAddr, err := iputils.ParseOriginAddress(nb.Identity)
 		if err != nil {
-			gossipLogger.Errorf("Add new neighbor from config failed with: %v", errors.Wrapf(err, "invalid neighbor address %s", nb.Identity))
+			return errors.Errorf("Add new neighbor from config failed with: %v", errors.Wrapf(err, "invalid neighbor address %s", nb.Identity))
 		}
 		originAddr.PreferIPv6 = nb.PreferIPv6
 
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
-		gossipLogger.Infof("Add new neighbor (%s) from config was successful", nb.Identity)
+		return errors.Errorf("Add new neighbor (%s) from config was successful", nb.Identity)
 	}
 	wakeupReconnectPool()
-}
-
-func modifyNeighbors(neighbors []NeighborConfig) {
-	neighborsLock.Lock()
-	defer neighborsLock.Unlock()
-	for _, nb := range neighbors {
-		if nb.Identity == "" {
-			continue
-		}
-
-		neighbor, exists := GetNeighbor(nb.Identity)
-		if !exists {
-			gossipLogger.Infof("Modify neighbor (%s) due to config change failed. Not found", nb.Identity)
-		}
-
-		if neighbor, exists := connectedNeighbors[neighbor.IdentityOrAddress()]; exists {
-			neighbor.InitAddress.PreferIPv6 = nb.PreferIPv6
-			moveNeighborFromConnectedToReconnectPool(neighbor)
-			gossipLogger.Infof("Modify neighbor (%s) due to config change was successful", nb.Identity)
-			continue
-		}
-
-		if neighbor, exists := inFlightNeighbors[neighbor.IdentityOrAddress()]; exists {
-			neighbor.InitAddress.PreferIPv6 = nb.PreferIPv6
-			moveFromInFlightToReconnectPool(neighbor)
-			gossipLogger.Infof("Modify neighbor (%s) due to config change was successful", nb.Identity)
-			continue
-		}
-
-		if neighbor, exists := reconnectPool[neighbor.IdentityOrAddress()]; exists {
-			neighbor.OriginAddr.PreferIPv6 = nb.PreferIPv6
-			gossipLogger.Infof("Modify neighbor (%s) due to config change was successful", nb.Identity)
-			continue
-		}
-
-		gossipLogger.Infof("Modify neighbor (%s) due to config change failed. Not found", nb.Identity)
-
-	}
-	wakeupReconnectPool()
+	return nil
 }
