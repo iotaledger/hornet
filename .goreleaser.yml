@@ -140,10 +140,11 @@ nfpms:
     description: HORNET is a lightweight alternative to IOTA's fullnode software “IRI”.
     formats:
       - deb
+      - rpm
     bindir: /usr/bin
     files:
-      "deb_files/hornet.service": "/lib/systemd/system/hornet.service"
-      "deb_files/download_snapshot.sh": "/usr/bin/hornet_download_snapshot.sh"
+      "nfpm/shared_files/hornet.service": "/lib/systemd/system/hornet.service"
+      "nfpm/shared_files/download_snapshot.sh": "/usr/bin/hornet_download_snapshot.sh"
     config_files:
       "config.json": "/etc/hornet/config.json"
       "neighbors.json": "/etc/hornet/neighbors.json"
@@ -152,11 +153,21 @@ nfpms:
       - wget
       - bash
     scripts:
-      preremove: "deb_files/prerm"
-      postremove: "deb_files/postrm"
-      postinstall: "deb_files/postinst"
+      preremove: "nfpm/deb_files/prerm"
+      postremove: "nfpm/deb_files/postrm"
+      postinstall: "nfpm/deb_files/postinst"
     replacements:
       arm: armhf
+    overrides:
+      rpm:
+        replacements:
+          amd64: x86_64
+        name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
+        scripts:
+          preinstall: "nfpm/rpm_files/preinst"
+          postinstall: "nfpm/rpm_files/postinst"
+          preremove: "nfpm/rpm_files/prerm"
+          postremove: "nfpm/rpm_files/postrm"
 
 # Checksum
 checksum:

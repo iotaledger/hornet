@@ -76,7 +76,7 @@ func reconnect() {
 		return
 	}
 
-	gossipLogger.Info("starting reconnect attempts to %d neighbors...", len(reconnectPool))
+	gossipLogger.Infof("starting reconnect attempts to %d neighbors...", len(reconnectPool))
 
 	// try to lookup each address and if we fail to do so, keep the address in the reconnect pool
 next:

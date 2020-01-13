@@ -5,16 +5,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/iotaledger/iota.go/address"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/iotaledger/iota.go/address"
+
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {
 	addEndpoint("wereAddressesSpentFrom", wereAddressesSpentFrom, implementedAPIcalls)
 }
 
-func wereAddressesSpentFrom(i interface{}, c *gin.Context) {
+func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	sp := &WereAddressesSpentFrom{}
 	e := ErrorReturn{}
 
@@ -45,15 +47,8 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context) {
 			return
 		}
 
-		spent, err := tangle.WasAddressSpentFrom(addr[:81])
-		if err != nil {
-			e.Error = "Spent addresses db invalid"
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
-
 		// State
-		spr.States = append(spr.States, spent)
+		spr.States = append(spr.States, tangle.WasAddressSpentFrom(addr[:81]))
 	}
 
 	c.JSON(http.StatusOK, spr)

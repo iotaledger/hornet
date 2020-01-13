@@ -1,0 +1,4 @@
+if [ $1 -eq 0 ]; then
+    /usr/bin/systemctl --no-reload disable hornet.service >/dev/null 2>&1 ||:
+    /usr/bin/systemctl stop hornet.service >/dev/null 2>&1 ||:
+fi

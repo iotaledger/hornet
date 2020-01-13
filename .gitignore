@@ -28,3 +28,6 @@ mainnetdb/
 *node_modules
 *build
 plugins/monitor/tanglemonitor
+
+# dist packages
+dist/

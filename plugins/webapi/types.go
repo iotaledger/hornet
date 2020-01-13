@@ -1,6 +1,9 @@
 package webapi
 
-import "github.com/gohornet/hornet/plugins/gossip"
+import (
+	"github.com/gohornet/hornet/packages/model/queue"
+	"github.com/gohornet/hornet/plugins/gossip"
+)
 
 //////////////////// addNeighbors /////////////////////////////////
 
@@ -347,6 +350,34 @@ type GetLedgerDiffExtReturn struct {
 	Diff                      map[string]int64   `json:"diff"`
 	MilestoneIndex            uint64             `json:"milestoneIndex"`
 	Duration                  int                `json:"duration"`
+}
+
+///////////////////////////////////////////////////////////////////
+
+/////////////////// createSnapshot ////////////////////////
+
+// CreateSnapshot struct
+type CreateSnapshot struct {
+	Command     string `json:"command"`
+	TargetIndex uint64 `json:"targetIndex"`
+	FilePath    string `json:"filePath"`
+}
+
+// GetSnapshotReturn struct
+type CreateSnapshotReturn struct {
+	Duration int `json:"duration"`
+}
+
+///////////////////// getRequests /////////////////////////////////
+
+// GetRequests struct
+type GetRequests struct {
+	Command string `json:"command"`
+}
+
+// GetRequestsReturn struct
+type GetRequestsReturn struct {
+	Requests []*queue.DebugRequest `json:"requests"`
 }
 
 ///////////////////////////////////////////////////////////////////
