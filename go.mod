@@ -11,6 +11,7 @@ require (
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/fhmq/hmq v0.0.0-20191230054231-fb453e8c0f61
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-zeromq/zmq4 v0.7.0
