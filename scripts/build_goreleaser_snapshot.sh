@@ -7,7 +7,7 @@
 trap 'cd $(dirs -l -0)' EXIT INT QUIT TERM
 cd ..
 
-GORELEASER_IMAGE=iotmod/goreleaser-cgo-cross-compiler:1.13.5
+GORELEASER_IMAGE=iotmod/goreleaser-cgo-cross-compiler:1.13.5-musl
 REPO_PATH="/build"
 
 docker pull "${GORELEASER_IMAGE}"
