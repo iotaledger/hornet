@@ -73,7 +73,6 @@ Removed options:
     "disableplugins": [],
     "enableplugins": [],
 -   "loglevel": 127
-    "enableplugins": []
   },
 ```
 
