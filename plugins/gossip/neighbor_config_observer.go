@@ -34,6 +34,8 @@ func runConfigObserver() {
 			}
 			if err := addNewNeighbors(modified); err != nil {
 				gossipLogger.Error(err)
+			} else {
+				gossipLogger.Infof("Modify neighbors due to config change was successful")
 			}
 		}
 
@@ -41,6 +43,8 @@ func runConfigObserver() {
 		if len(added) > 0 {
 			if err := addNewNeighbors(added); err != nil {
 				gossipLogger.Error(err)
+			} else {
+				gossipLogger.Infof("Add neighbors due to config change was successful")
 			}
 		}
 
@@ -104,17 +108,16 @@ func addNewNeighbors(neighbors []NeighborConfig) error {
 
 		// check whether already in reconnect pool
 		if _, exists := reconnectPool[nb.Identity]; exists {
-			return errors.Errorf("Add new neighbor from config failed with: %v", errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in the reconnect pool", nb.Identity))
+			return errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in the reconnect pool", nb.Identity)
 		}
 
 		originAddr, err := iputils.ParseOriginAddress(nb.Identity)
 		if err != nil {
-			return errors.Errorf("Add new neighbor from config failed with: %v", errors.Wrapf(err, "invalid neighbor address %s", nb.Identity))
+			return errors.Wrapf(err, "invalid neighbor address %s", nb.Identity)
 		}
 		originAddr.PreferIPv6 = nb.PreferIPv6
 
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
-		return errors.Errorf("Add new neighbor (%s) from config was successful", nb.Identity)
 	}
 	wakeupReconnectPool()
 	return nil
