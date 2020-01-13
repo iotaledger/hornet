@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
     - RPM and DEB packages
     - Local Snapshots
+    - Spammer log
 
 ### Removed
 
