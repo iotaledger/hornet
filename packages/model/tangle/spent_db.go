@@ -1,13 +1,10 @@
 package tangle
 
 import (
-	"encoding/binary"
-	"io"
 	"sync"
 
 	"github.com/pkg/errors"
-
-	"github.com/iotaledger/iota.go/trinary"
+	cuckoo "github.com/seiflotfy/cuckoofilter"
 
 	"github.com/iotaledger/hive.go/database"
 
@@ -15,24 +12,25 @@ import (
 )
 
 var (
-	spentAddressesDatabase                database.Database
-	spentAddressesDatabaseTransactionLock sync.RWMutex
+	spentAddressesDatabase database.Database
+	spentAddressesLock     sync.RWMutex
+	cfKey                  = []byte("cf_3")
 )
 
 func ReadLockSpentAddresses() {
-	spentAddressesDatabaseTransactionLock.RLock()
+	spentAddressesLock.RLock()
 }
 
 func ReadUnlockSpentAddresses() {
-	spentAddressesDatabaseTransactionLock.RUnlock()
+	spentAddressesLock.RUnlock()
 }
 
 func WriteLockSpentAddresses() {
-	spentAddressesDatabaseTransactionLock.Lock()
+	spentAddressesLock.Lock()
 }
 
 func WriteUnlockSpentAddresses() {
-	spentAddressesDatabaseTransactionLock.Unlock()
+	spentAddressesLock.Unlock()
 }
 
 func configureSpentAddressesDatabase() {
@@ -43,113 +41,55 @@ func configureSpentAddressesDatabase() {
 	}
 }
 
-func databaseKeyForAddress(address trinary.Hash) []byte {
-	return trinary.MustTrytesToBytes(address)
-}
-
-func spentDatabaseContainsAddress(address trinary.Hash) (bool, error) {
-	ReadLockSpentAddresses()
-	defer ReadUnlockSpentAddresses()
-
-	if contains, err := spentAddressesDatabase.Contains(databaseKeyForAddress(address)); err != nil {
-		return contains, errors.Wrap(NewDatabaseError(err), "failed to check if the address exists in the spent addresses database")
-	} else {
-		return contains, nil
+func loadSpentAddressesCuckooFilter() *cuckoo.Filter {
+	entry, err := spentAddressesDatabase.Get(cfKey)
+	switch err {
+	case database.ErrKeyNotFound:
+		return cuckoo.NewFilter(CuckooFilterSize)
+	case nil:
+		cf, err := cuckoo.Decode(entry.Value)
+		if err != nil {
+			panic(err)
+		}
+		return cf
+	default:
+		panic(err)
 	}
 }
 
-func storeSpentAddressesInDatabase(spent []trinary.Hash) error {
-	WriteLockSpentAddresses()
-	defer WriteUnlockSpentAddresses()
+// Serializes the cuckoo filter holding the spent addresses to its byte representation.
+// The spent addresses lock should be held while calling this function.
+func SerializedSpentAddressesCuckooFilter() []byte {
+	return SpentAddressesCuckooFilter.Encode()
+}
 
-	var entries []database.Entry
-
-	for _, address := range spent {
-		key := databaseKeyForAddress(address)
-
-		entries = append(entries, database.Entry{
-			Key:   key,
-			Value: []byte{},
-		})
+// Imports the given cuckoo filter into the database.
+func ImportSpentAddressesCuckooFilter(cf *cuckoo.Filter) error {
+	spentAddressesLock.Lock()
+	defer spentAddressesLock.Unlock()
+	if err := spentAddressesDatabase.Set(database.Entry{Key: cfKey, Value: cf.Encode()}); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to import spent addresses cuckoo filter")
 	}
-
-	// Now batch insert/delete all entries
-	if err := spentAddressesDatabase.Apply(entries, []database.Key{}); err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to mark addresses as spent")
-	}
-
 	return nil
 }
 
-func StoreSpentAddressesBytesInDatabase(spentInBytes [][]byte) error {
-	WriteLockSpentAddresses()
-	defer WriteUnlockSpentAddresses()
-
-	var entries []database.Entry
-
-	for _, addressInBytes := range spentInBytes {
-		key := addressInBytes
-
-		entries = append(entries, database.Entry{
-			Key:   key,
-			Value: []byte{},
-		})
+// Stores the package local cuckoo filter in the database.
+func StoreSpentAddressesCuckooFilterInDatabase() error {
+	spentAddressesLock.Lock()
+	defer spentAddressesLock.Unlock()
+	if err := spentAddressesDatabase.Set(database.Entry{
+		Key:   cfKey,
+		Value: SpentAddressesCuckooFilter.Encode(),
+	}); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to store spent addresses cuckoo filter")
 	}
-
-	// Now batch insert/delete all entries
-	if err := spentAddressesDatabase.Apply(entries, []database.Key{}); err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to mark addresses as spent")
-	}
-
 	return nil
 }
 
 // CountSpentAddressesEntries returns the amount of spent addresses.
 // ReadLockSpentAddresses must be held while entering this function.
-func CountSpentAddressesEntries(abortSignal <-chan struct{}) (int32, error) {
-
-	var addressesCount int32
-	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
-		select {
-		case <-abortSignal:
-			return ErrOperationAborted
-		default:
-		}
-
-		addressesCount++
-		return nil
-	})
-
-	if err != nil {
-		return 0, errors.Wrap(NewDatabaseError(err), "failed to count spent addresses in database")
-	}
-
-	return addressesCount, nil
-}
-
-// StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer.
-// ReadLockSpentAddresses must be held while entering this function.
-func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abortSignal <-chan struct{}) error {
-
-	var addressesWritten int32
-	err := spentAddressesDatabase.StreamForEachKeyOnly(func(entry database.KeyOnlyEntry) error {
-		select {
-		case <-abortSignal:
-			return ErrOperationAborted
-		default:
-		}
-
-		addressesWritten++
-		return binary.Write(buf, binary.BigEndian, entry.Key)
-	})
-
-	if err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to stream spent addresses from database")
-	}
-
-	if addressesWritten != spentAddressesCount {
-		return errors.Wrapf(NewDatabaseError(err), "Amount of spent addresses changed during write %d/%d", addressesWritten, spentAddressesCount)
-	}
-
-	return nil
+func CountSpentAddressesEntries() int32 {
+	spentAddressesLock.RLock()
+	defer spentAddressesLock.RUnlock()
+	return int32(SpentAddressesCuckooFilter.Count())
 }

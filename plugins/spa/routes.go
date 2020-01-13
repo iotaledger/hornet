@@ -145,11 +145,11 @@ func websocketRoute(c echo.Context) error {
 		<-msgRateLimiter.C
 		msg := <-channel
 		if err := ws.WriteJSON(msg); err != nil {
-			log.Errorf("error while writing to web socket client %s: %s", c.RealIP(), err.Error())
+			log.Warnf("error while writing to web socket client %s: %s", c.RealIP(), err.Error())
 			break
 		}
 		if err := ws.SetWriteDeadline(time.Now().Add(webSocketWriteTimeout)); err != nil {
-			log.Errorf("error while setting write deadline on web socket client %s: %s", c.RealIP(), err.Error())
+			log.Warnf("error while setting write deadline on web socket client %s: %s", c.RealIP(), err.Error())
 			break
 		}
 	}
