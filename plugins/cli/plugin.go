@@ -14,7 +14,7 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion = "0.2.12"
+	AppVersion = "0.3.0"
 
 	// AppName app code name
 	AppName = "HORNET"
