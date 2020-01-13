@@ -60,7 +60,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	for _, boundNeighbor := range boundNeighbors {
 		found := false
 		for _, configNeighbor := range configNeighbors {
-			if strings.EqualFold(boundNeighbor.Address, configNeighbor.Identity) {
+			if strings.EqualFold(boundNeighbor.Address, configNeighbor.Identity) || strings.EqualFold(boundNeighbor.DomainWithPort, configNeighbor.Identity) {
 				found = true
 				if boundNeighbor.PreferIPv6 != configNeighbor.PreferIPv6 {
 					modified = append(modified, configNeighbor)
@@ -75,7 +75,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	for _, configNeighbor := range configNeighbors {
 		found := false
 		for _, boundNeighbor := range boundNeighbors {
-			if strings.EqualFold(boundNeighbor.Address, configNeighbor.Identity) {
+			if strings.EqualFold(boundNeighbor.Address, configNeighbor.Identity) || strings.EqualFold(boundNeighbor.DomainWithPort, configNeighbor.Identity) {
 				found = true
 			}
 		}
@@ -119,21 +119,26 @@ func modifyNeighbors(neighbors []NeighborConfig) {
 			continue
 		}
 
-		if neighbor, exists := connectedNeighbors[nb.Identity]; exists {
+		neighbor, exists := GetNeighbor(nb.Identity)
+		if !exists {
+			gossipLogger.Infof("Modify neighbor (%s) due to config change failed. Not found", nb.Identity)
+		}
+
+		if neighbor, exists := connectedNeighbors[neighbor.IdentityOrAddress()]; exists {
 			neighbor.InitAddress.PreferIPv6 = nb.PreferIPv6
 			moveNeighborFromConnectedToReconnectPool(neighbor)
 			gossipLogger.Infof("Modify neighbor (%s) due to config change was successful", nb.Identity)
 			continue
 		}
 
-		if neighbor, exists := inFlightNeighbors[nb.Identity]; exists {
+		if neighbor, exists := inFlightNeighbors[neighbor.IdentityOrAddress()]; exists {
 			neighbor.InitAddress.PreferIPv6 = nb.PreferIPv6
 			moveFromInFlightToReconnectPool(neighbor)
 			gossipLogger.Infof("Modify neighbor (%s) due to config change was successful", nb.Identity)
 			continue
 		}
 
-		if neighbor, exists := reconnectPool[nb.Identity]; exists {
+		if neighbor, exists := reconnectPool[neighbor.IdentityOrAddress()]; exists {
 			neighbor.OriginAddr.PreferIPv6 = nb.PreferIPv6
 			gossipLogger.Infof("Modify neighbor (%s) due to config change was successful", nb.Identity)
 			continue
