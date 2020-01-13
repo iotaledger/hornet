@@ -42,6 +42,8 @@ func configure(plugin *node.Plugin) {
 
 	tangle.InitSpentAddressesCuckooFilter()
 
+	log.Infof("spent addresses Cuckoo filter contains %d addresses", tangle.CountSpentAddressesEntries())
+
 	if tangle.IsDatabaseCorrupted() {
 		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
 	}
