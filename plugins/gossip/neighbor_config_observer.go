@@ -92,7 +92,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	return
 }
 
-func addNewNeighbors(neighbors []NeighborConfig) error {
+func addNewNeighbors(neighbors []NeighborConfig) {
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
 	for _, nb := range neighbors {
@@ -116,5 +116,4 @@ func addNewNeighbors(neighbors []NeighborConfig) error {
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
 	}
 	wakeupReconnectPool()
-	return nil
 }
