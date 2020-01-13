@@ -211,6 +211,7 @@ type servermetrics struct {
 	DroppedSentPackets uint32 `json:"dropped_sent_packets"`
 	RecTxReq           uint32 `json:"rec_tx_req"`
 	SentTxReq          uint32 `json:"sent_tx_req"`
+	SpentAddrsCount    int32  `json:"spent_addrs_count"`
 }
 
 type memmetrics struct {
@@ -313,10 +314,6 @@ func currentNodeStatus() *nodestatus {
 			Size:     tangle.MilestoneCache.GetSize(),
 			Capacity: tangle.MilestoneCache.GetCapacity(),
 		},
-		SpentAddresses: cache{
-			Size:     tangle.SpentAddressesCache.GetSize(),
-			Capacity: tangle.SpentAddressesCache.GetCapacity(),
-		},
 		Transactions: cache{
 			Size:     tangle.TransactionCache.GetSize(),
 			Capacity: tangle.TransactionCache.GetCapacity(),
@@ -344,6 +341,7 @@ func currentNodeStatus() *nodestatus {
 		SentMsReq:          server.SharedServerMetrics.GetSentMilestoneRequestsCount(),
 		RecTxReq:           server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
 		SentTxReq:          server.SharedServerMetrics.GetSentTransactionRequestCount(),
+		SpentAddrsCount:    tangle.CountSpentAddressesEntries(),
 	}
 
 	// memory metrics

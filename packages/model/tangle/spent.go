@@ -2,51 +2,33 @@ package tangle
 
 import (
 	"github.com/iotaledger/iota.go/trinary"
+	cuckoo "github.com/seiflotfy/cuckoofilter"
+)
 
-	"github.com/iotaledger/hive.go/lru_cache"
-
-	"github.com/gohornet/hornet/packages/profile"
+const (
+	CuckooFilterSize = 50000000
 )
 
 var (
-	SpentAddressesCache *lru_cache.LRUCache
+	SpentAddressesCuckooFilter *cuckoo.Filter
 )
 
-func WasAddressSpentFrom(address trinary.Hash) (result bool, err error) {
-	if SpentAddressesCache.Contains(address) {
-		result = true
-	} else {
-		result, err = spentDatabaseContainsAddress(address)
-	}
-	return
+// Checks whether an address was persisted and might return a false-positive.
+func WasAddressSpentFrom(address trinary.Hash) bool {
+	spentAddressesLock.RLock()
+	defer spentAddressesLock.RUnlock()
+	return SpentAddressesCuckooFilter.Lookup(trinary.MustTrytesToBytes(address))
 }
 
-func MarkAddressAsSpent(address trinary.Hash) {
-	SpentAddressesCache.Set(address, true)
+// Marks an address in the cuckoo filter as spent.
+func MarkAddressAsSpent(address trinary.Hash) bool {
+	spentAddressesLock.Lock()
+	defer spentAddressesLock.Unlock()
+	return SpentAddressesCuckooFilter.Insert(trinary.MustTrytesToBytes(address))
 }
 
-func InitSpentAddressesCache() {
-	opts := profile.GetProfile().Caches.SpentAddresses
-	SpentAddressesCache = lru_cache.NewLRUCache(opts.Size, &lru_cache.LRUCacheOptions{
-		EvictionCallback:  onEvictSpentAddress,
-		EvictionBatchSize: opts.EvictionSize,
-	})
-}
-
-func onEvictSpentAddress(keys interface{}, _ interface{}) {
-	keyT := keys.([]interface{})
-
-	var addresses []trinary.Hash
-	for _, obj := range keyT {
-		addresses = append(addresses, obj.(trinary.Hash))
-	}
-
-	err := storeSpentAddressesInDatabase(addresses)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func FlushSpentAddressesCache() {
-	SpentAddressesCache.DeleteAll()
+// Initializes the cuckoo filter by loading it from the database (if available) or initializing
+// a new one with the default size.
+func InitSpentAddressesCuckooFilter() {
+	SpentAddressesCuckooFilter = loadSpentAddressesCuckooFilter()
 }
