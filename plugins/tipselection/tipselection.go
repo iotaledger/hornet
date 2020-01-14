@@ -110,7 +110,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 		bundle := bundleBucket.GetBundleOfTailTransaction(refTx.GetHash())
 		if bundle == nil {
-			// this should never happen if Hornet is programmed correctly
+			// this should never happen if HORNET is programmed correctly
 			if refTx.Tx.CurrentIndex == 0 {
 				log.Panicf("reference transaction is a tail but there's no bundle instance")
 			}

@@ -21,11 +21,6 @@ var (
 	reconnectLogger *logger.Logger
 )
 
-type NeighborConfig struct {
-	Identity   string `json:"identity"`
-	PreferIPv6 bool   `json:"prefer_ipv6"`
-}
-
 func configureReconnectPool() {
 	reconnectLogger = logger.NewLogger("Reconnect Pool")
 

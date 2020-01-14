@@ -4,8 +4,9 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/iotaledger/hive.go/iputils"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/iputils"
 
 	"github.com/gohornet/hornet/packages/parameter"
 )
@@ -16,6 +17,10 @@ func configureConfigObserver() {
 
 func runConfigObserver() {
 	parameter.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
+		if !parameter.IsNeighborsConfigHotReloadAllowed() {
+			return
+		}
+
 		// auto tethering
 		autoTetheringEnabledRead := parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
 		if autoTetheringEnabled != autoTetheringEnabledRead {

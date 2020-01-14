@@ -551,7 +551,7 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 
 	if fileVersion != SupportedLocalSnapshotFileVersion {
-		return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this Hornet version only supports %d", fileVersion, SupportedLocalSnapshotFileVersion)
+		return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %d", fileVersion, SupportedLocalSnapshotFileVersion)
 	}
 
 	hashBuf := make([]byte, 49)
