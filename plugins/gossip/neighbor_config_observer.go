@@ -17,7 +17,7 @@ func configureConfigObserver() {
 
 func runConfigObserver() {
 	parameter.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
-		if !parameter.IsNeighborsConfigHotReload() {
+		if !parameter.IsNeighborsConfigHotReloadAllowed() {
 			return
 		}
 
