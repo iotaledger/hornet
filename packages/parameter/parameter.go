@@ -46,13 +46,13 @@ func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	return nil
 }
 
-func EnableNeighborsConfigHotReload() {
+func AllowNeighborsConfigHotReload() {
 	neighborsConfigHotReloadLock.Lock()
 	defer neighborsConfigHotReloadLock.Unlock()
 	neighborsConfigHotReloadAllowed = true
 }
 
-func DisableNeighborsConfigHotReload() {
+func DenyNeighborsConfigHotReload() {
 	neighborsConfigHotReloadLock.Lock()
 	defer neighborsConfigHotReloadLock.Unlock()
 	neighborsConfigHotReloadAllowed = false

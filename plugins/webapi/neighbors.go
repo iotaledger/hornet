@@ -81,10 +81,10 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	if added {
-		parameter.DisableNeighborsConfigHotReload()
+		parameter.DenyNeighborsConfigHotReload()
 		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
 		parameter.NeighborsConfig.WriteConfig()
-		parameter.EnableNeighborsConfigHotReload()
+		parameter.AllowNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
@@ -136,10 +136,10 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	}
 
 	if added {
-		parameter.DisableNeighborsConfigHotReload()
+		parameter.DenyNeighborsConfigHotReload()
 		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
 		parameter.NeighborsConfig.WriteConfig()
-		parameter.EnableNeighborsConfigHotReload()
+		parameter.AllowNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
@@ -212,10 +212,10 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 	}
 
 	if removed {
-		parameter.DisableNeighborsConfigHotReload()
+		parameter.DenyNeighborsConfigHotReload()
 		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
 		parameter.NeighborsConfig.WriteConfig()
-		parameter.EnableNeighborsConfigHotReload()
+		parameter.AllowNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})
