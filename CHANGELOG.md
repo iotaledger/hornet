@@ -6,9 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+    - Local Snapshots + database pruning
     - RPM and DEB packages
-    - Local Snapshots
-    - Spammer log
+    - Spammer log messages
+    - `neighbors.json` hot reload during runtime
+      - Changes in the file are recognized and updated
+      - Changes via webapi are stored to the file
 
 ### Removed
 
@@ -20,6 +23,7 @@ All notable changes to this project will be documented in this file.
     - Update to latest hive.go
     - Use Cuckoo filter instead of the spent addresses database
     - Statically link ARMv7 and ARM64 binaries
+    - Removed "spent addresses" from database (breaking change)
 
 ### Fixed
 
@@ -27,6 +31,7 @@ All notable changes to this project will be documented in this file.
     - Broken `tx_trytes` MQTT JSON
     - getNeighbors address field always displays FQDN
     - Wrong inbound duplicate neighbor handling
+    - Slow synching due to stalled requests in request queue
 
 ### Config file changes
 
