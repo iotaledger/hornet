@@ -21,21 +21,21 @@ var (
 	addressPersisterBatchCollectionTimeout = 1000 * time.Millisecond
 	addressPersisterWorkerPool             *batchworkerpool.BatchWorkerPool
 
-	unconfirmedTxWorkerCount            = 1
-	unconfirmedTxQueueSize              = 10000
-	unconfirmedTxBatchSize              = 1000
-	unconfirmedTxBatchCollectionTimeout = 1000 * time.Millisecond
-	unconfirmedTxWorkerPool             *batchworkerpool.BatchWorkerPool
+	firstSeenTxWorkerCount            = 1
+	firstSeenTxQueueSize              = 10000
+	firstSeenTxBatchSize              = 1000
+	firstSeenTxBatchCollectionTimeout = 1000 * time.Millisecond
+	firstSeenTxWorkerPool             *batchworkerpool.BatchWorkerPool
 )
 
 func configurePersisters() {
 	configureAddressPersister()
-	configureUnconfirmedTransactionPersister()
+	configureFirstSeenTransactionPersister()
 }
 
 func runPersisters() {
 	runAddressPersister()
-	runUnconfirmedTransactionPersister()
+	runFirstSeenTransactionPersister()
 }
 
 // Address persister
@@ -75,17 +75,17 @@ func addressPersisterSubmit(address trinary.Hash, transactionHash trinary.Hash) 
 	addressPersisterWorkerPool.Submit(&tangle.TxHashForAddress{Address: address, TxHash: transactionHash})
 }
 
-// Unconfirmed Tx persister
-func configureUnconfirmedTransactionPersister() {
+// FirstSeen Tx persister
+func configureFirstSeenTransactionPersister() {
 
-	unconfirmedTxWorkerPool = batchworkerpool.New(func(tasks []batchworkerpool.Task) {
+	firstSeenTxWorkerPool = batchworkerpool.New(func(tasks []batchworkerpool.Task) {
 
-		var operations []*tangle.UnconfirmedTxHashOperation
+		var operations []*tangle.FirstSeenTxHashOperation
 		for _, task := range tasks {
-			operations = append(operations, task.Param(0).(*tangle.UnconfirmedTxHashOperation))
+			operations = append(operations, task.Param(0).(*tangle.FirstSeenTxHashOperation))
 		}
 
-		err := tangle.StoreUnconfirmedTxHashOperations(operations)
+		err := tangle.StoreFirstSeenTxHashOperations(operations)
 		if err != nil {
 			panic(err)
 		}
@@ -93,36 +93,31 @@ func configureUnconfirmedTransactionPersister() {
 		for _, task := range tasks {
 			task.Return(nil)
 		}
-	}, batchworkerpool.BatchCollectionTimeout(unconfirmedTxBatchCollectionTimeout), batchworkerpool.BatchSize(unconfirmedTxBatchSize), batchworkerpool.WorkerCount(unconfirmedTxWorkerCount), batchworkerpool.QueueSize(unconfirmedTxQueueSize), batchworkerpool.FlushTasksAtShutdown(true))
+	}, batchworkerpool.BatchCollectionTimeout(firstSeenTxBatchCollectionTimeout), batchworkerpool.BatchSize(firstSeenTxBatchSize), batchworkerpool.WorkerCount(firstSeenTxWorkerCount), batchworkerpool.QueueSize(firstSeenTxQueueSize), batchworkerpool.FlushTasksAtShutdown(true))
 }
 
-func runUnconfirmedTransactionPersister() {
+func runFirstSeenTransactionPersister() {
 
 	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		unconfirmedTxWorkerPool.Submit(&tangle.UnconfirmedTxHashOperation{
-			TxHash:                        transaction.GetHash(),
-			FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
-		})
+		// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
+		// This is only used to delete unconfirmed transactions from the database at pruning
+		if !transaction.IsRequested() {
+			firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
+				TxHash:                        transaction.GetHash(),
+				FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
+			})
+		}
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(transaction *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
-		unconfirmedTxWorkerPool.Submit(&tangle.UnconfirmedTxHashOperation{
-			TxHash:    transaction.GetHash(),
-			Confirmed: true,
-		})
-	})
-
-	daemon.BackgroundWorker("UnconfirmedTxPersister", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting UnconfirmedTxPersister ... done")
+	daemon.BackgroundWorker("FirstSeenTxPersister", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting FirstSeenTxPersister ... done")
 		Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		Events.TransactionConfirmed.Attach(notifyConfirmedTx)
-		unconfirmedTxWorkerPool.Start()
+		firstSeenTxWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping UnconfirmedTxPersister ...")
+		log.Info("Stopping FirstSeenTxPersister ...")
 		Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		Events.TransactionConfirmed.Detach(notifyConfirmedTx)
-		unconfirmedTxWorkerPool.StopAndWait()
-		log.Info("Stopping UnconfirmedTxPersister ... done")
+		firstSeenTxWorkerPool.StopAndWait()
+		log.Info("Stopping FirstSeenTxPersister ... done")
 	}, shutdown.ShutdownPriorityPersisters)
 }
 

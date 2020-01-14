@@ -63,7 +63,7 @@ func sendLegacyTransaction(protocol *protocol, truncatedTxData []byte, reqHash [
 		}
 		protocol.Neighbor.Metrics.IncrSentTransactionsCount()
 	} else {
-		gossipLogger.Warning("SendState was not in headerState. Message dropped")
+		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 
@@ -86,7 +86,7 @@ func sendTransaction(protocol *protocol, truncatedTxData []byte) {
 		}
 		protocol.Neighbor.Metrics.IncrSentTransactionsCount()
 	} else {
-		gossipLogger.Warning("SendState was not in headerState. Message dropped")
+		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 
@@ -108,7 +108,7 @@ func sendTransactionRequest(protocol *protocol, reqHash []byte) {
 			return
 		}
 	} else {
-		gossipLogger.Warning("SendState was not in headerState. Message dropped")
+		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 
@@ -130,7 +130,7 @@ func sendHeartbeat(protocol *protocol, hb *Heartbeat) {
 			return
 		}
 	} else {
-		gossipLogger.Warning("SendState was not in headerState. Message dropped")
+		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 
@@ -153,7 +153,7 @@ func sendMilestoneRequest(protocol *protocol, reqMilestoneIndex milestone_index.
 		}
 		//gossipLogger.Infof("REQUESTED MS: %d", reqMilestoneIndex)
 	} else {
-		gossipLogger.Warning("SendState was not in headerState. Message dropped")
+		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 

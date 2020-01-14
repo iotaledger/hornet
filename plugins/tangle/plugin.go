@@ -28,8 +28,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-
-	log = logger.NewLogger("Tangle", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("Tangle")
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 	RefsAnInvalidBundleCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
@@ -38,9 +37,12 @@ func configure(plugin *node.Plugin) {
 	tangle.InitBundleCache()
 	tangle.InitApproversCache()
 	tangle.InitMilestoneCache()
-	tangle.InitSpentAddressesCache()
 
 	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
+
+	tangle.InitSpentAddressesCuckooFilter()
+
+	log.Infof("spent addresses Cuckoo filter contains %d addresses", tangle.CountSpentAddressesEntries())
 
 	if tangle.IsDatabaseCorrupted() {
 		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
@@ -72,7 +74,9 @@ func configure(plugin *node.Plugin) {
 		tangle.FlushBundleCache()
 		tangle.FlushTransactionCache()
 		tangle.FlushApproversCache()
-		tangle.FlushSpentAddressesCache()
+		if err := tangle.StoreSpentAddressesCuckooFilterInDatabase(); err != nil {
+			log.Panicf("couldn't persist spent addresses cuckoo filter: %s", err.Error())
+		}
 		log.Info("Flushing caches to database... done")
 
 		tangle.MarkDatabaseHealthy()

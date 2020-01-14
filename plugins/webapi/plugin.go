@@ -23,18 +23,19 @@ var (
 	PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	server              *http.Server
-	permitedEndpoints   = make(map[string]string)
-	implementedAPIcalls = make(map[string]apiEndpoint)
-	features            []string
-	api                 *gin.Engine
-	webAPIBase          = ""
-	auth                string
-	maxDepth            int
+	server               *http.Server
+	permitedEndpoints    = make(map[string]string)
+	implementedAPIcalls  = make(map[string]apiEndpoint)
+	features             []string
+	api                  *gin.Engine
+	webAPIBase           = ""
+	auth                 string
+	maxDepth             int
+	serverShutdownSignal <-chan struct{}
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("WebAPI", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("WebAPI")
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 
@@ -99,6 +100,8 @@ func run(plugin *node.Plugin) {
 	log.Info("Starting WebAPI server ...")
 
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
+		serverShutdownSignal = shutdownSignal
+
 		log.Info("Starting WebAPI server ... done")
 
 		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.host"), parameter.NodeConfig.GetInt("api.port"))
@@ -110,13 +113,8 @@ func run(plugin *node.Plugin) {
 
 		go func() {
 			log.Infof("You can now access the API using: http://%s", serveAddress)
-			err := server.ListenAndServe()
-			if err != nil {
-				if err == http.ErrServerClosed {
-					log.Info("Stopping WebAPI server ... done")
-				} else {
-					log.Error("Stopping WebAPI server due to an error ... done")
-				}
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Error("Stopping WebAPI server due to an error ... done")
 			}
 		}()
 

@@ -29,7 +29,7 @@ type tipselevents struct {
 }
 
 func configure(node *node.Plugin) {
-	log = logger.NewLogger("Tip-Sel", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("Tip-Sel")
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 }

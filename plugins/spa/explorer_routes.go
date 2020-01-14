@@ -327,11 +327,6 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 		}
 	}
 
-	spent, err := tangle.WasAddressSpentFrom(hash)
-	if err != nil {
-		return nil, ErrInternalError
-	}
-
 	balance, _, err := tangle.GetBalanceForAddress(hash)
 	if err != nil {
 		return nil, err
@@ -341,5 +336,5 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
 	}
 
-	return &ExplorerAdress{Balance: balance, Txs: txs, Spent: spent}, nil
+	return &ExplorerAdress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash)}, nil
 }

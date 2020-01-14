@@ -92,25 +92,34 @@ func GetSolidMilestoneIndex() milestone_index.MilestoneIndex {
 	}
 
 	if snapshot != nil {
-		return snapshot.LedgerIndex
+		return snapshot.SnapshotIndex
 	}
 
 	return 0
 }
 
-func SetLatestMilestone(milestone *Bundle) {
+func SetLatestMilestone(milestone *Bundle) error {
 	latestMilestoneLock.Lock()
 
 	index := milestone.GetMilestoneIndex()
 
 	if latestMilestone != nil && latestMilestone.GetMilestoneIndex() >= index {
 		latestMilestoneLock.Unlock()
-		return
+		return nil
 	}
+
+	var err error
+	if latestMilestone == nil {
+		// Milestone was 0 before, so we have to fix all entries for all first seen tx until now
+		err = FixFirstSeenTxHashOperations(index)
+	}
+
 	latestMilestone = milestone
 	latestMilestoneLock.Unlock()
 
 	updateNodeSynced(GetSolidMilestoneIndex(), index)
+
+	return err
 }
 
 func GetLatestMilestone() *Bundle {
@@ -165,12 +174,19 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	// Check the structure of the milestone
 	milestoneIndex := getMilestoneIndex(txIndex0)
 	if milestoneIndex <= GetSolidMilestoneIndex() {
-		// Milestone older than out solid milestone
+		// Milestone older than solid milestone
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0.GetHash())
 	}
 
 	if milestoneIndex >= maxMilestoneIndex {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0.GetHash())
+	}
+
+	// Check if milestone was already processed
+	msBundle, _ := GetMilestone(milestoneIndex)
+	if msBundle != nil {
+		// It could be issued again since several transactions of the same bundle were processed in parallel
+		return false, nil
 	}
 
 	signatureTxs := make([]*hornet.Transaction, 0, coordinatorSecurityLevel)
@@ -204,12 +220,6 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		if signatureTx.Tx.BranchTransaction != siblingsTx.Tx.TrunkTransaction {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", txIndex0.GetHash())
 		}
-	}
-
-	// Check if milestone was already processed
-	msBundle, _ := GetMilestone(milestoneIndex)
-	if msBundle != nil {
-		return false, errors.Wrapf(ErrInvalidMilestone, "Exists already, Index: %d", milestoneIndex)
 	}
 
 	// Verify milestone signature

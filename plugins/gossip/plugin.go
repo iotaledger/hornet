@@ -3,8 +3,6 @@ package gossip
 import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
-
-	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (
@@ -13,7 +11,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	gossipLogger = logger.NewLogger("Gossip", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	gossipLogger = logger.NewLogger("Gossip")
 
 	configureProtocol()
 	configureNeighbors()
@@ -22,6 +20,7 @@ func configure(plugin *node.Plugin) {
 	configureBroadcastQueue()
 	configurePacketProcessor()
 	configureSTINGRequestsProcessor()
+	configureConfigObserver()
 }
 
 func run(plugin *node.Plugin) {
@@ -30,4 +29,5 @@ func run(plugin *node.Plugin) {
 	runBroadcastQueue()
 	runPacketProcessor()
 	runSTINGRequestsProcessor()
+	runConfigObserver()
 }

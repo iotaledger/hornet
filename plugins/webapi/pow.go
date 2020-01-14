@@ -31,7 +31,7 @@ var (
 	powLock = &sync.Mutex{}
 )
 
-func attachToTangle(i interface{}, c *gin.Context) {
+func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	mwm := parameter.NodeConfig.GetInt("protocol.mwm")
 

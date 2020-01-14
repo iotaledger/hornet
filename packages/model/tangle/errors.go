@@ -1,5 +1,13 @@
 package tangle
 
+import (
+	"github.com/pkg/errors"
+)
+
+var (
+	ErrOperationAborted = errors.New("operation was aborted")
+)
+
 func NewDatabaseError(cause error) *ErrDatabaseError {
 	return &ErrDatabaseError{Inner: cause}
 }

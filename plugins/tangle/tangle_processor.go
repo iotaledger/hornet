@@ -141,18 +141,19 @@ func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
 					// in a value spam bundle, the address' mutation to the ledger is zero,
 					// thereby it is sufficient to simply check for negative balance mutations
 					// while iterating over the ledger changes for this bundle
-					ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
-					if !isValueSpamBundle {
+					ledgerChanges, isZeroValueBundle := bundle.GetLedgerChanges()
+					if !isZeroValueBundle {
 						for addr, change := range ledgerChanges {
 							if change < 0 {
 								tangle.MarkAddressAsSpent(addr)
 								markedSpentAddrs.Inc()
 							}
 						}
+					} else {
+						// Milestone bundles itself do not mutate the ledger
+						// => Check bundle for a milestone
+						checkForMilestoneWorkerPool.Submit(bundle)
 					}
-
-					// Check bundle for a milestone
-					checkForMilestoneWorkerPool.Submit(bundle)
 				}
 				bundlesValidated.Inc()
 			}

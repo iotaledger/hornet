@@ -18,7 +18,7 @@ func init() {
 	addEndpoint("getNodeAPIConfiguration", getNodeAPIConfiguration, implementedAPIcalls)
 }
 
-func getNodeInfo(i interface{}, c *gin.Context) {
+func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
 	// Basic info data
 	info := GetNodeInfoReturn{
@@ -27,7 +27,7 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	}
 
 	// Number of neighbors
-	info.Neighbors = uint(len(gossip.GetNeighbors()))
+	info.Neighbors = uint(gossip.GetNeighborsCount())
 
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
@@ -89,7 +89,7 @@ func getNodeInfo(i interface{}, c *gin.Context) {
 	c.JSON(http.StatusOK, info)
 }
 
-func getNodeAPIConfiguration(i interface{}, c *gin.Context) {
+func getNodeAPIConfiguration(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	config := GetNodeAPIConfigurationReturn{
 		MaxFindTransactions: parameter.NodeConfig.GetInt("api.maxFindTransactions"),

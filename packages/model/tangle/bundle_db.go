@@ -52,13 +52,14 @@ func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
 			bundle.SetModified(false)
 		}
 
-		for _, tx := range bundleBucket.Transactions() {
+		for _, txHash := range bundleBucket.TransactionHashes() {
 			// tails were already stored
-			if tx.IsTail() {
+			if _, isTail := bundleBucket.bundleInstances[txHash]; isTail {
 				continue
 			}
+
 			entry := database.Entry{
-				Key:   databaseKeyForBundle(bundleBucket.GetHash(), tx.GetHash()),
+				Key:   databaseKeyForBundle(bundleBucket.GetHash(), txHash),
 				Value: []byte{},
 				Meta:  byte(0),
 			}

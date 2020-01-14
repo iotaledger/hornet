@@ -2,6 +2,86 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 13.01.2020
+
+### Added
+
+    - Local Snapshots + database pruning
+    - RPM and DEB packages
+    - Spammer log messages
+    - `neighbors.json` hot reload during runtime
+      - Changes in the file are recognized and updated
+      - Changes via webapi are stored to the file
+
+### Removed
+
+    - macOS binary
+
+### Changed
+
+    - Disable transactions load up during bundle eviction
+    - Update to latest hive.go
+    - Use Cuckoo filter instead of the spent addresses database
+    - Statically link ARMv7 and ARM64 binaries
+    - Removed "spent addresses" from database (breaking change)
+
+### Fixed
+
+    - Omit neighbor connection errors on shutdown
+    - Broken `tx_trytes` MQTT JSON
+    - getNeighbors address field always displays FQDN
+    - Wrong inbound duplicate neighbor handling
+    - Slow synching due to stalled requests in request queue
+
+### Config file changes
+
+New options:
+
+`config.json`
+
+```diff
++  "pruning": {
++    "enabled": true,
++    "delay": 40000
++  },
+   "localsnapshots": {
++    "enabled": true,
++    "depth": 50,
++    "intervalsynced": 50,
++    "intervalunsynced": 1000,
+     "path": "latest-export.gz.bin"
+   },
++  "globalsnapshot": {
++    "load": false,
++    "path": "snapshotMainnet.txt",
++    "spentaddressespaths": ["previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"],
++    "index": 1050000
++  },
++  "privatetangle": {
++    "ledgerstatepath": "balances.txt"
++  },
++  "logger": {
++    "level": "info",
++    "disableCaller": true,
++    "encoding": "console",
++    "outputPaths": [
++      "stdout"
++    ]
++  },
+```
+
+Removed options:
+
+`config.json`
+
+```diff
+  "node": {
+    "disableplugins": [],
+    "enableplugins": [],
+-   "loglevel": 127
+  },
+```
+
 ## [0.2.12] - 04.01.2020
 
 ### Fixed
@@ -40,6 +120,7 @@ All notable changes to this project will be documented in this file.
 New options:
 
 `config.json`
+
 ```json
   "graph": {
     "webrootPath": "IOTAtangle/webroot",
@@ -57,6 +138,7 @@ New options:
 Now there is a seperate file for the neighbor settings:
 
 `neighbors.json`
+
 ```json
 {
   "autotetheringenabled": false,
@@ -84,6 +166,7 @@ Now there is a seperate file for the neighbor settings:
 Removed options:
 
 `config.json`
+
 ```diff
   "network": {
     "address": "0.0.0.0",

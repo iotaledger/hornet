@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/packages/parameter"
@@ -15,7 +14,7 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion = "0.2.12"
+	AppVersion = "0.3.0"
 
 	// AppName app code name
 	AppName = "HORNET"
@@ -60,14 +59,6 @@ func configure(ctx *node.Plugin) {
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
                                    v%s
 `+"\n\n", AppVersion))
-
-	ignoreSettingsAtPrint := []string{}
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "dashboard.basic_auth.password")
-	parameter.FetchConfig(true, ignoreSettingsAtPrint)
-	parseParameters()
-
-	ctx.Node.Logger.ChangeLogLevel(logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
 
 	if parameter.NodeConfig.GetString("useProfile") == "auto" {
 		ctx.Node.Logger.Infof("Profile mode 'auto', Using profile '%s'", profile.GetProfile().Name)

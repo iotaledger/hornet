@@ -4,11 +4,11 @@ import (
 	"github.com/gohornet/hornet/packages/parameter"
 )
 
-// ConfigNeighbor struct
-type ConfigNeighbor struct {
+// NeighborConfig struct
+type NeighborConfig struct {
 	Identity   string `json:"identity"`
 	Alias      string `json:"alias"`
-	PreferIPv6 bool   `json:"preferIPv6"`
+	PreferIPv6 bool   `json:"prefer_ipv6"`
 }
 
 func init() {
@@ -45,7 +45,7 @@ func init() {
 	parameter.NeighborsConfig.SetDefault("maxNeighbors", 5)
 
 	// "Set the URLs and IP addresses of neighbors"
-	parameter.NeighborsConfig.SetDefault("neighbors", []ConfigNeighbor{
+	parameter.NeighborsConfig.SetDefault("neighbors", []NeighborConfig{
 		{
 			Identity:   "example1.neighbor.com:15600",
 			Alias:      "Example Neighbor 1",

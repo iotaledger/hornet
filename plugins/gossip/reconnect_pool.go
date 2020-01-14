@@ -21,13 +21,8 @@ var (
 	reconnectLogger *logger.Logger
 )
 
-type NeighborConfig struct {
-	Identity   string `json:"identity"`
-	PreferIPv6 bool   `json:"prefer_ipv6"`
-}
-
 func configureReconnectPool() {
-	reconnectLogger = logger.NewLogger("Reconnect Pool", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	reconnectLogger = logger.NewLogger("Reconnect Pool")
 
 	neighborConfig := []NeighborConfig{}
 	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &neighborConfig); err != nil {
@@ -71,8 +66,16 @@ func reconnect() {
 	neighborsLock.Lock()
 	newlyInFlight := make([]*Neighbor, 0)
 
+	if len(reconnectPool) == 0 {
+		neighborsLock.Unlock()
+		return
+	}
+
+	gossipLogger.Infof("starting reconnect attempts to %d neighbors...", len(reconnectPool))
+
 	// try to lookup each address and if we fail to do so, keep the address in the reconnect pool
-	for _, recNeigh := range reconnectPool {
+next:
+	for k, recNeigh := range reconnectPool {
 		originAddr := recNeigh.OriginAddr
 		neighborAddrs, err := possibleIdentitiesFromNeighborAddress(originAddr)
 		if err != nil {
@@ -86,6 +89,21 @@ func reconnect() {
 		recNeigh.mu.Unlock()
 
 		prefIP := neighborAddrs.GetPreferredAddress(originAddr.PreferIPv6)
+
+		// don't do any new connection attempts, if the neighbor is already connected or in-flight
+		for ip := range neighborAddrs.IPs {
+			id := NewNeighborIdentity(ip.String(), originAddr.Port)
+			if _, alreadyConnected := connectedNeighbors[id]; alreadyConnected {
+				gossipLogger.Infof("neighbor %s already connected, removing it from reconnect pool...")
+				delete(reconnectPool, k)
+				continue next
+			}
+			if _, alreadyInFlight := inFlightNeighbors[id]; alreadyInFlight {
+				gossipLogger.Infof("neighbor %s already in-fight, removing it from reconnect pool...")
+				delete(reconnectPool, k)
+				continue next
+			}
+		}
 		newlyInFlight = append(newlyInFlight, NewOutboundNeighbor(originAddr, prefIP, originAddr.Port, neighborAddrs))
 	}
 	neighborsLock.Unlock()

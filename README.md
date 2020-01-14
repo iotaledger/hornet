@@ -18,6 +18,10 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 ---
 
+### Contributing
+
+- See [CONTRIBUTING](/CONTRIBUTING.md)
+
 ### Run HORNET
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
@@ -94,17 +98,17 @@ git clone https://github.com/socketio/socket.io-client.git
 {
   ...
   "port": "1883",
-	"host": "127.0.0.1",
+  "host": "127.0.0.1",
   ...
   "tlsPort": "",
-	"tlsHost": "",
-	"tlsInfo": {
-		"verify": false,
-		"caFile": "tls/ca/cacert.pem",
-		"certFile": "tls/server/cert.pem",
-		"keyFile": "tls/server/key.pem"
-	},
-	"plugins": {}
+  "tlsHost": "",
+  "tlsInfo": {
+    "verify": false,
+    "caFile": "tls/ca/cacert.pem",
+    "certFile": "tls/server/cert.pem",
+    "keyFile": "tls/server/key.pem"
+  },
+  "plugins": {}
 }
 ```
 - Modify the `config.json`

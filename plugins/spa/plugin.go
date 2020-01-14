@@ -45,7 +45,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("SPA", logger.LogLevel(parameter.NodeConfig.GetInt("node.logLevel")))
+	log = logger.NewLogger("SPA")
 
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
@@ -83,7 +83,7 @@ func run(plugin *node.Plugin) {
 		metrics.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		wsSendWorkerPool.StopAndWait()
+		wsSendWorkerPool.Stop()
 		log.Info("Stopping SPA[WSSend] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 
@@ -211,6 +211,7 @@ type servermetrics struct {
 	DroppedSentPackets uint32 `json:"dropped_sent_packets"`
 	RecTxReq           uint32 `json:"rec_tx_req"`
 	SentTxReq          uint32 `json:"sent_tx_req"`
+	SpentAddrsCount    int32  `json:"spent_addrs_count"`
 }
 
 type memmetrics struct {
@@ -260,7 +261,7 @@ func neighborMetrics() []*neighbormetric {
 	stats := []*neighbormetric{}
 	for _, info := range infos {
 		m := &neighbormetric{
-			OriginAdrr: info.Address,
+			OriginAdrr: info.DomainWithPort,
 			Info:       info,
 		}
 		if info.Neighbor != nil {
@@ -287,7 +288,7 @@ func currentNodeStatus() *nodestatus {
 	// node status
 	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 	status.Version = cli.AppVersion
-	status.Uptime = time.Now().Sub(nodeStartAt).Milliseconds()
+	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
 	status.MsRequestQueueSize = requestCount
@@ -312,10 +313,6 @@ func currentNodeStatus() *nodestatus {
 		Milestones: cache{
 			Size:     tangle.MilestoneCache.GetSize(),
 			Capacity: tangle.MilestoneCache.GetCapacity(),
-		},
-		SpentAddresses: cache{
-			Size:     tangle.SpentAddressesCache.GetSize(),
-			Capacity: tangle.SpentAddressesCache.GetCapacity(),
 		},
 		Transactions: cache{
 			Size:     tangle.TransactionCache.GetSize(),
@@ -344,6 +341,7 @@ func currentNodeStatus() *nodestatus {
 		SentMsReq:          server.SharedServerMetrics.GetSentMilestoneRequestsCount(),
 		RecTxReq:           server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
 		SentTxReq:          server.SharedServerMetrics.GetSentTransactionRequestCount(),
+		SpentAddrsCount:    tangle.CountSpentAddressesEntries(),
 	}
 
 	// memory metrics
