@@ -89,7 +89,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	// check whether the given reference tx is valid for the walk
 	var refBundle *tangle.Bundle
 	if reference != nil {
-		refTx := tangle.GetCachedTransaction(*reference) //+!
+		refTx := tangle.GetCachedTransaction(*reference) //+1
 		if err != nil {
 			log.Panic(err)
 		}
