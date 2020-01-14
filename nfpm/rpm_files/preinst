@@ -1,0 +1,7 @@
+getent group hornet >/dev/null || groupadd -r hornet 2>/dev/null
+getent passwd hornet >/dev/null || \
+    useradd -r -g hornet -G hornet -d /var/lib/hornet \
+    -s /sbin/nologin -c "hornet user" hornet 2>/dev/null
+
+# explicitly exit 0
+exit 0

@@ -1,15 +1,17 @@
 package snapshot
 
 import (
+	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"time"
 
 	"github.com/pkg/errors"
+	cuckoo "github.com/seiflotfy/cuckoofilter"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/consts"
@@ -22,10 +24,13 @@ import (
 )
 
 const (
-	SpentAddressesImportBatchSize       = 100000
-	SolidEntryPointCheckThresholdPast   = 50
-	SolidEntryPointCheckThresholdFuture = 50
+	SpentAddressesImportBatchSize            = 100000
+	SolidEntryPointCheckThresholdPast        = 50
+	SolidEntryPointCheckThresholdFuture      = 50
+	SupportedLocalSnapshotFileVersion   byte = 3
 )
+
+var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
@@ -278,6 +283,17 @@ func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInf
 
 func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) error {
 
+	var buf bytes.Buffer
+	if err := lsh.WriteToBuffer(&buf, abortSignal); err != nil {
+		return err
+	}
+
+	// write sha256 hash
+	sha256Hash := sha256.Sum256(buf.Bytes())
+	if err := binary.Write(&buf, binary.LittleEndian, sha256Hash); err != nil {
+		return err
+	}
+
 	exportFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0660)
 	if err != nil {
 		return err
@@ -287,18 +303,10 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	gzipWriter := gzip.NewWriter(exportFile)
 	defer gzipWriter.Close()
 
-	if err := lsh.WriteToBuffer(gzipWriter, abortSignal); err != nil {
+	if _, err = io.Copy(gzipWriter, &buf); err != nil {
 		return err
 	}
-
-	/*
-		balancesWritten, err := tangle.StreamBalancesToWriter(gzipWriter, balancesCount, totalBalanceDiffs)
-		if err != nil {
-			return err
-		}
-	*/
-
-	return tangle.StreamSpentAddressesToWriter(gzipWriter, lsh.spentAddressesCount, abortSignal)
+	return nil
 }
 
 func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneIndex, filePath string, abortSignal <-chan struct{}) error {
@@ -357,11 +365,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	tangle.ReadLockSpentAddresses()
 	defer tangle.ReadUnlockSpentAddresses()
 
-	spentAddressesCount, err := tangle.CountSpentAddressesEntries(abortSignal)
-	if err != nil {
-		return err
-	}
-
 	targetMilestoneTail := targetMilestone.GetTail() //+1
 
 	lsh := &localSnapshotHeader{
@@ -371,7 +374,8 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		solidEntryPoints:    newSolidEntryPoints,
 		seenMilestones:      seenMilestones,
 		balances:            newBalances,
-		spentAddressesCount: spentAddressesCount,
+		spentAddressesCount: tangle.CountSpentAddressesEntries(),
+		cuckooFilterBytes:   tangle.SerializedSpentAddressesCuckooFilter(),
 	}
 
 	filePathTmp := filePath + "_tmp"
@@ -424,48 +428,46 @@ type localSnapshotHeader struct {
 	seenMilestones      map[string]milestone_index.MilestoneIndex
 	balances            map[string]uint64
 	spentAddressesCount int32
+	cuckooFilterBytes   []byte
 }
 
 func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan struct{}) error {
 	var err error
+
+	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersion); err != nil {
+		return err
+	}
 
 	msHashBytes, err := trinary.TrytesToBytes(ls.msHash)
 	if err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, msHashBytes[:49])
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, msHashBytes[:49]); err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, ls.msIndex)
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, ls.msIndex); err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, ls.msTimestamp)
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, ls.msTimestamp); err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, int32(len(ls.solidEntryPoints)))
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.solidEntryPoints))); err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, int32(len(ls.seenMilestones)))
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.seenMilestones))); err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, int32(len(ls.balances)))
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.balances))); err != nil {
 		return err
 	}
 
-	err = binary.Write(buf, binary.BigEndian, ls.spentAddressesCount)
-	if err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, ls.spentAddressesCount); err != nil {
 		return err
 	}
 
@@ -481,13 +483,11 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 			return err
 		}
 
-		err = binary.Write(buf, binary.BigEndian, addrBytes[:49])
-		if err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, addrBytes[:49]); err != nil {
 			return err
 		}
 
-		err = binary.Write(buf, binary.BigEndian, val)
-		if err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, val); err != nil {
 			return err
 		}
 	}
@@ -504,13 +504,11 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 			return err
 		}
 
-		err = binary.Write(buf, binary.BigEndian, addrBytes[:49])
-		if err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, addrBytes[:49]); err != nil {
 			return err
 		}
 
-		err = binary.Write(buf, binary.BigEndian, val)
-		if err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, val); err != nil {
 			return err
 		}
 	}
@@ -528,15 +526,20 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 			return err
 		}
 
-		err = binary.Write(buf, binary.BigEndian, addrBytes[:49])
-		if err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, addrBytes[:49]); err != nil {
 			return err
 		}
 
-		err = binary.Write(buf, binary.BigEndian, val)
-		if err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, val); err != nil {
 			return err
 		}
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, int32(len(ls.cuckooFilterBytes))); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.LittleEndian, ls.cuckooFilterBytes); err != nil {
+		return err
 	}
 
 	return nil
@@ -557,9 +560,18 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 	defer gzipReader.Close()
 
+	// check file version
+	var fileVersion byte
+	if err := binary.Read(gzipReader, binary.LittleEndian, &fileVersion); err != nil {
+		return err
+	}
+
+	if fileVersion != SupportedLocalSnapshotFileVersion {
+		return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %d", fileVersion, SupportedLocalSnapshotFileVersion)
+	}
+
 	hashBuf := make([]byte, 49)
-	_, err = gzipReader.Read(hashBuf)
-	if err != nil {
+	if _, err := gzipReader.Read(hashBuf); err != nil {
 		return err
 	}
 
@@ -578,36 +590,30 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	err = binary.Read(gzipReader, binary.BigEndian, &msIndex)
-	if err != nil {
+	if err := binary.Read(gzipReader, binary.LittleEndian, &msIndex); err != nil {
 		return err
 	}
 
-	err = binary.Read(gzipReader, binary.BigEndian, &msTimestamp)
-	if err != nil {
+	if err := binary.Read(gzipReader, binary.LittleEndian, &msTimestamp); err != nil {
 		return err
 	}
 
 	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp)
 	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
 
-	err = binary.Read(gzipReader, binary.BigEndian, &solidEntryPointsCount)
-	if err != nil {
+	if err := binary.Read(gzipReader, binary.LittleEndian, &solidEntryPointsCount); err != nil {
 		return err
 	}
 
-	err = binary.Read(gzipReader, binary.BigEndian, &seenMilestonesCount)
-	if err != nil {
+	if err := binary.Read(gzipReader, binary.LittleEndian, &seenMilestonesCount); err != nil {
 		return err
 	}
 
-	err = binary.Read(gzipReader, binary.BigEndian, &ledgerEntriesCount)
-	if err != nil {
+	if err := binary.Read(gzipReader, binary.LittleEndian, &ledgerEntriesCount); err != nil {
 		return err
 	}
 
-	err = binary.Read(gzipReader, binary.BigEndian, &spentAddrsCount)
-	if err != nil {
+	if err := binary.Read(gzipReader, binary.LittleEndian, &spentAddrsCount); err != nil {
 		return err
 	}
 
@@ -620,13 +626,11 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		var val int32
 
-		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
-		if err != nil {
+		if err := binary.Read(gzipReader, binary.LittleEndian, hashBuf); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 
-		err = binary.Read(gzipReader, binary.BigEndian, &val)
-		if err != nil {
+		if err := binary.Read(gzipReader, binary.LittleEndian, &val); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 
@@ -651,13 +655,11 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		var val int32
 
-		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
-		if err != nil {
+		if err := binary.Read(gzipReader, binary.LittleEndian, hashBuf); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
-		err = binary.Read(gzipReader, binary.BigEndian, &val)
-		if err != nil {
+		if err := binary.Read(gzipReader, binary.LittleEndian, &val); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
@@ -680,13 +682,11 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		var val uint64
 
-		err = binary.Read(gzipReader, binary.BigEndian, hashBuf)
-		if err != nil {
+		if err := binary.Read(gzipReader, binary.LittleEndian, hashBuf); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 
-		err = binary.Read(gzipReader, binary.BigEndian, &val)
-		if err != nil {
+		if err := binary.Read(gzipReader, binary.LittleEndian, &val); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 
@@ -702,42 +702,30 @@ func LoadSnapshotFromFile(filePath string) error {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 	}
 
-	log.Infof("Importing %d spent addresses. This can take a while...", spentAddrsCount)
+	log.Infof("Deserializing spent addresses cuckoo filter containing %d addresses.", spentAddrsCount)
 
-	batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
-	for i := 0; i < batchAmount; i++ {
-		if daemon.IsStopped() {
-			return ErrSnapshotImportWasAborted
-		}
-
-		var batchEntries [][]byte
-		batchStart := int32(i * SpentAddressesImportBatchSize)
-		batchEnd := batchStart + SpentAddressesImportBatchSize
-
-		if batchEnd > spentAddrsCount {
-			batchEnd = spentAddrsCount
-		}
-
-		for j := batchStart; j < batchEnd; j++ {
-
-			spentAddrBuf := make([]byte, 49)
-			err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
-			if err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
-			}
-
-			batchEntries = append(batchEntries, spentAddrBuf)
-		}
-
-		err = tangle.StoreSpentAddressesBytesInDatabase(batchEntries)
-		if err != nil {
-			return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
-		}
-
-		log.Infof("Processed %d/%d spent addresses", batchEnd, spentAddrsCount)
+	// read serialized cuckoo filter byte size
+	var cuckooFilterSize int32
+	if err := binary.Read(gzipReader, binary.LittleEndian, &cuckooFilterSize); err != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "couldn't deserialize cuckoo filter size: %v", err)
 	}
 
-	log.Info("Finished loading snapshot")
+	cuckooFilterData := make([]byte, cuckooFilterSize)
+	if err := binary.Read(gzipReader, binary.LittleEndian, &cuckooFilterData); err != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "couldn't read serialized cuckoo filter bytes: %v", err)
+	}
 
+	cuckooFilter, err := cuckoo.Decode(cuckooFilterData)
+	if err != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "couldn't reconstruct the cuckoo filter from the data within the snapshot file: %v", err)
+	}
+
+	if err := tangle.ImportSpentAddressesCuckooFilter(cuckooFilter); err != nil {
+		return err
+	}
+
+	tangle.InitSpentAddressesCuckooFilter()
+
+	log.Info("Finished loading snapshot")
 	return nil
 }

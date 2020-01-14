@@ -47,15 +47,8 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan st
 			return
 		}
 
-		spent, err := tangle.WasAddressSpentFrom(addr[:81])
-		if err != nil {
-			e.Error = "Spent addresses db invalid"
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
-
 		// State
-		spr.States = append(spr.States, spent)
+		spr.States = append(spr.States, tangle.WasAddressSpentFrom(addr[:81]))
 	}
 
 	c.JSON(http.StatusOK, spr)

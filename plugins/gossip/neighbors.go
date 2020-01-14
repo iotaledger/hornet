@@ -503,7 +503,7 @@ func possibleIdentitiesFromNeighborAddress(originAddr *iputils.OriginAddress) (*
 func RemoveNeighbor(originIdentity string) error {
 	originAddr, err := iputils.ParseOriginAddress(originIdentity)
 	if err != nil {
-		panic(errors.Wrapf(err, "invalid neighbor address %s", originIdentity))
+		return errors.Wrapf(err, "invalid neighbor address %s", originIdentity)
 	}
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
@@ -511,39 +511,37 @@ func RemoveNeighbor(originIdentity string) error {
 	// always remove the neighbor from the reconnect pool through its origin identity
 	delete(reconnectPool, originIdentity)
 
-	possibleIdentities, err := possibleIdentitiesFromNeighborAddress(originAddr)
-	if err != nil {
-		return err
-	}
+	if possibleIdentities, err := possibleIdentitiesFromNeighborAddress(originAddr); err == nil {
 
-	// make sure the neighbor is removed by all its possible identities by going
-	// through each resolved IP address from the lookup
-	for ip := range possibleIdentities.IPs {
-		identity := NewNeighborIdentity(ip.String(), originAddr.Port)
+		// make sure the neighbor is removed by all its possible identities by going
+		// through each resolved IP address from the lookup
+		for ip := range possibleIdentities.IPs {
+			identity := NewNeighborIdentity(ip.String(), originAddr.Port)
 
-		// close the connection of the neighbor and remove it from the connected pool
-		if neigh, exists := connectedNeighbors[identity]; exists {
-			neigh.MoveBackToReconnectPool = false
-			delete(connectedNeighbors, identity)
-			neigh.Protocol.Conn.Close()
-			Events.RemovedNeighbor.Trigger(neigh)
-			// if the neighbor is in-flight, also close the connection and remove it from the pool
-		} else if neigh, exists := inFlightNeighbors[identity]; exists {
-			delete(inFlightNeighbors, identity)
-			neigh.MoveBackToReconnectPool = false
-			if neigh.Protocol != nil && neigh.Protocol.Conn != nil {
+			// close the connection of the neighbor and remove it from the connected pool
+			if neigh, exists := connectedNeighbors[identity]; exists {
+				neigh.MoveBackToReconnectPool = false
+				delete(connectedNeighbors, identity)
 				neigh.Protocol.Conn.Close()
+				Events.RemovedNeighbor.Trigger(neigh)
+				// if the neighbor is in-flight, also close the connection and remove it from the pool
+			} else if neigh, exists := inFlightNeighbors[identity]; exists {
+				delete(inFlightNeighbors, identity)
+				neigh.MoveBackToReconnectPool = false
+				if neigh.Protocol != nil && neigh.Protocol.Conn != nil {
+					neigh.Protocol.Conn.Close()
+				}
+				Events.RemovedNeighbor.Trigger(neigh)
 			}
-			Events.RemovedNeighbor.Trigger(neigh)
-		}
 
-		// remove the neighbor from the reconnect pool and allowed identities
-		// and add it to the blacklist
-		delete(reconnectPool, identity)
-		delete(allowedIdentities, identity)
-		hostsBlacklistLock.Lock()
-		hostsBlacklist[ip.String()] = struct{}{}
-		hostsBlacklistLock.Unlock()
+			// remove the neighbor from the reconnect pool and allowed identities
+			// and add it to the blacklist
+			delete(reconnectPool, identity)
+			delete(allowedIdentities, identity)
+			hostsBlacklistLock.Lock()
+			hostsBlacklist[ip.String()] = struct{}{}
+			hostsBlacklistLock.Unlock()
+		}
 	}
 
 	// also remove the neighbor if the origin address matches:
@@ -583,6 +581,7 @@ type NeighborInfo struct {
 	Port                              uint16    `json:"port,omitempty"`
 	Domain                            string    `json:"domain,omitempty"`
 	DomainWithPort                    string    `json:"-"`
+	PreferIPv6                        bool      `json:"-"`
 	NumberOfAllTransactions           uint32    `json:"numberOfAllTransactions"`
 	NumberOfRandomTransactionRequests uint32    `json:"numberOfRandomTransactionRequests"`
 	NumberOfNewTransactions           uint32    `json:"numberOfNewTransactions"`
@@ -631,6 +630,7 @@ func GetNeighbors() []NeighborInfo {
 			NumberOfRandomTransactionRequests: neighbor.Metrics.GetRandomTransactionRequestsCount(),
 			ConnectionType:                    "tcp",
 			Connected:                         true,
+			PreferIPv6:                        neighbor.InitAddress.PreferIPv6,
 		})
 	}
 
@@ -642,6 +642,7 @@ func GetNeighbors() []NeighborInfo {
 			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			ConnectionType: "tcp",
 			Connected:      false,
+			PreferIPv6:     originAddr.PreferIPv6,
 		})
 	}
 

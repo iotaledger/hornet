@@ -22,8 +22,8 @@ type AddNeighborsHornet struct {
 // Neighbor struct
 type Neighbor struct {
 	Identity   string `json:"identity"`
-	PreferIPv6 bool   `json:"preferIPv6"`
 	Alias      string `json:"alias"`
+	PreferIPv6 bool   `json:"prefer_ipv6"`
 }
 
 // AddNeighborsResponse struct

@@ -20,6 +20,7 @@ func configure(plugin *node.Plugin) {
 	configureBroadcastQueue()
 	configurePacketProcessor()
 	configureSTINGRequestsProcessor()
+	configureConfigObserver()
 }
 
 func run(plugin *node.Plugin) {
@@ -28,4 +29,5 @@ func run(plugin *node.Plugin) {
 	runBroadcastQueue()
 	runPacketProcessor()
 	runSTINGRequestsProcessor()
+	runConfigObserver()
 }
