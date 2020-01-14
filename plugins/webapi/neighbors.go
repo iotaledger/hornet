@@ -40,12 +40,36 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
+	added := false
+
+	configNeighbors := []gossip.NeighborConfig{}
+	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+		log.Error(err)
+	}
+
 	for _, uri := range an.Uris {
 
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
 		} else if strings.Contains(uri, "://") {
 			continue
+		}
+
+		contains := false
+		for _, cn := range configNeighbors {
+			if cn.Identity == uri {
+				contains = true
+				break
+			}
+		}
+
+		if !contains {
+			configNeighbors = append(configNeighbors, gossip.NeighborConfig{
+				Identity:   uri,
+				Alias:      uri,
+				PreferIPv6: preferIPv6,
+			})
+			added = true
 		}
 
 		if err := gossip.AddNeighbor(uri, preferIPv6); err != nil {
@@ -56,11 +80,25 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		}
 	}
 
+	if added {
+		parameter.DisableNeighborsConfigHotReload()
+		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
+		parameter.NeighborsConfig.WriteConfig()
+		parameter.EnableNeighborsConfigHotReload()
+	}
+
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
 }
 
 func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	addedNeighbors := 0
+
+	added := false
+
+	configNeighbors := []gossip.NeighborConfig{}
+	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+		log.Error(err)
+	}
 
 	for _, neighbor := range s.Neighbors {
 
@@ -68,6 +106,23 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 			neighbor.Identity = neighbor.Identity[6:]
 		} else if strings.Contains(neighbor.Identity, "://") {
 			continue
+		}
+
+		contains := false
+		for _, cn := range configNeighbors {
+			if cn.Identity == neighbor.Identity {
+				contains = true
+				break
+			}
+		}
+
+		if !contains {
+			configNeighbors = append(configNeighbors, gossip.NeighborConfig{
+				Identity:   neighbor.Identity,
+				Alias:      neighbor.Alias,
+				PreferIPv6: neighbor.PreferIPv6,
+			})
+			added = true
 		}
 
 		// TODO: Add alias (neighbor.Alias)
@@ -78,6 +133,13 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 			addedNeighbors++
 			log.Infof("Added neighbor: %s", neighbor.Identity)
 		}
+	}
+
+	if added {
+		parameter.DisableNeighborsConfigHotReload()
+		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
+		parameter.NeighborsConfig.WriteConfig()
+		parameter.EnableNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
@@ -95,12 +157,31 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 		return
 	}
 
+	removed := false
+
+	configNeighbors := []gossip.NeighborConfig{}
+	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+		log.Error(err)
+	}
+
 	nb := gossip.GetNeighbors()
 	for _, uri := range rn.Uris {
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
 		}
 		for _, n := range nb {
+
+			for i, cn := range configNeighbors {
+				if strings.EqualFold(cn.Identity, uri) {
+					removed = true
+
+					// Delete item
+					configNeighbors[i] = configNeighbors[len(configNeighbors)-1]
+					configNeighbors = configNeighbors[:len(configNeighbors)-1]
+					break
+				}
+			}
+
 			// Remove connected neighbor
 			if n.Neighbor != nil {
 				if strings.EqualFold(n.Neighbor.Identity, uri) || strings.EqualFold(n.DomainWithPort, uri) {
@@ -128,6 +209,13 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 				}
 			}
 		}
+	}
+
+	if removed {
+		parameter.DisableNeighborsConfigHotReload()
+		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
+		parameter.NeighborsConfig.WriteConfig()
+		parameter.EnableNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})

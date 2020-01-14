@@ -1,6 +1,7 @@
 package parameter
 
 import (
+	"github.com/iotaledger/hive.go/syncutils"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
@@ -16,6 +17,9 @@ var (
 	// Viper
 	NodeConfig      = viper.New()
 	NeighborsConfig = viper.New()
+
+	neighborsConfigHotReload     = true
+	neighborsConfigHotReloadLock syncutils.RWMutex
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
@@ -40,4 +44,22 @@ func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	parameter.PrintConfig(NeighborsConfig)
 
 	return nil
+}
+
+func EnableNeighborsConfigHotReload() {
+	neighborsConfigHotReloadLock.Lock()
+	defer neighborsConfigHotReloadLock.Unlock()
+	neighborsConfigHotReload = true
+}
+
+func DisableNeighborsConfigHotReload() {
+	neighborsConfigHotReloadLock.Lock()
+	defer neighborsConfigHotReloadLock.Unlock()
+	neighborsConfigHotReload = false
+}
+
+func IsNeighborsConfigHotReload() bool {
+	neighborsConfigHotReloadLock.RLock()
+	defer neighborsConfigHotReloadLock.RUnlock()
+	return neighborsConfigHotReload
 }

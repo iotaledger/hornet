@@ -16,6 +16,10 @@ func configureConfigObserver() {
 
 func runConfigObserver() {
 	parameter.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
+		if !parameter.IsNeighborsConfigHotReload() {
+			return
+		}
+
 		// auto tethering
 		autoTetheringEnabledRead := parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
 		if autoTetheringEnabled != autoTetheringEnabledRead {
