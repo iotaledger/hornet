@@ -4,8 +4,9 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/iotaledger/hive.go/iputils"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/iputils"
 
 	"github.com/gohornet/hornet/packages/parameter"
 )

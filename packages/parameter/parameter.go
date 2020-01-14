@@ -1,11 +1,11 @@
 package parameter
 
 import (
-	"github.com/iotaledger/hive.go/syncutils"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
