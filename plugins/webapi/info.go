@@ -77,7 +77,12 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	info.Time = time.Now().Unix() * 1000
 
 	// Features
-	info.Features = features
+	// Workaround until https://github.com/golang/go/issues/27589 is fixed
+	if len(features) != 0 {
+		info.Features = features
+	} else {
+		info.Features = []string{}
+	}
 
 	// TX to request
 	_, info.TransactionsToRequest = gossip.RequestQueue.CurrentMilestoneIndexAndSize()
