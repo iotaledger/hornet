@@ -67,11 +67,9 @@ func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 		return
 	}
 
-	bundleSize := len(txs)
-
 	// Reject bundles with invalid tx amount
-	if uint64(bundleSize) != txs[0].LastIndex+1 {
-		e.Error = fmt.Sprintf("Invalid bundle length. Received txs: %v, Bundle requires: %v", bundleSize, txs[0].LastIndex+1)
+	if uint64(len(txs)) != txs[0].LastIndex+1 {
+		e.Error = fmt.Sprintf("Invalid bundle length. Received txs: %v, Bundle requires: %v", len(txs), txs[0].LastIndex+1)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
@@ -82,7 +80,7 @@ func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 	})
 
 	// Check transaction indexes
-	for i, j := uint64(0), uint64(bundleSize-1); j > 0; i, j = i+1, j-1 {
+	for i, j := uint64(0), uint64(len(txs)-1); j > 0; i, j = i+1, j-1 {
 		if txs[i].CurrentIndex != j {
 			e.Error = fmt.Sprintf("Invalid transaction index.")
 			c.JSON(http.StatusBadRequest, e)
@@ -91,7 +89,7 @@ func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 	}
 
 	var prev trinary.Hash
-	for i := 0; i < bundleSize; i++ {
+	for i := 0; i < len(txs); i++ {
 
 		switch {
 		case i == 0:
@@ -145,7 +143,7 @@ func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 	}
 
 	// Reverse the transactions the same way IRI does (for whatever reason)
-	for i, j := 0, bundleSize-1; i < j; i, j = i+1, j-1 {
+	for i, j := 0, len(txs)-1; i < j; i, j = i+1, j-1 {
 		txs[i], txs[j] = txs[j], txs[i]
 	}
 
