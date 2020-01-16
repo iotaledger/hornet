@@ -2,11 +2,11 @@ name: Build Docker
 on:
   push:
     paths:
-      - "Dockerfile"
+      - "docker/Dockerfile"
       - "docker-compose.yml"
   pull_request:
     paths:
-      - "Dockerfile"
+      - "docker/Dockerfile"
       - "docker-compose.yml"
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build HORNET Docker image
-        run: docker build . --file Dockerfile --tag hornet:latest
+        run: docker build . --file docker/Dockerfile --tag hornet:latest
 
       - name: Test HORNET Docker image
         run: docker run --rm --name hornet hornet:latest --help 2>/dev/null | grep -q "help requested"
