@@ -3,6 +3,7 @@ package webapi
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -64,6 +65,27 @@ func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 		e.Error = fmt.Sprint(err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
+	}
+
+	// Reject bundles with invalid tx amount
+	if uint64(len(txs)) != txs[0].LastIndex+1 {
+		e.Error = fmt.Sprintf("Invalid bundle length. Received txs: %v, Bundle requires: %v", len(txs), txs[0].LastIndex+1)
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	// Sort transactions (highest to lowest index)
+	sort.Slice(txs, func(i, j int) bool {
+		return txs[i].CurrentIndex > txs[j].CurrentIndex
+	})
+
+	// Check transaction indexes
+	for i, j := uint64(0), uint64(len(txs)-1); j > 0; i, j = i+1, j-1 {
+		if txs[i].CurrentIndex != j {
+			e.Error = fmt.Sprintf("Invalid transaction index.")
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
 	}
 
 	var prev trinary.Hash
