@@ -30,6 +30,7 @@ Clone the repository
 ```sh
 git clone https://github.com/gohornet/hornet && cd hornet
 ```
+The rest of the document assumes you are executing commands from the root directory of the repository.
 
 ### Prepare
 
