@@ -68,7 +68,7 @@ docker-compose down -t 1200
 If not running via docker-compose, build the image manually:
 
 ```sh
-docker build -t hornet:latest .
+docker build -f docker/Dockerfile -t hornet:latest .
 ```
 Or pull it from dockerhub (only available for amd64/x86_64):
 
@@ -78,7 +78,7 @@ docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:l
 
 Note: for architectures other than amd64/x86_64 pass the corresponding Dockerfile, e.g.:
 ```sh
-docker build -f Dockerfile.arm64 -t hornet:latest .
+docker build -f docker/Dockerfile.arm64 -t hornet:latest .
 ```
 
 
@@ -116,5 +116,5 @@ docker run --rm -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshot:/ap
 ## Build Specific Version
 By default the Dockerfile builds the image using Hornet's latest version. To build an image with a specific version you can pass it via the build argument `TAG`, e.g.:
 ```sh
-docker build -t hornet:v0.3.0 --build-arg TAG=v0.3.0 .
+docker build -f docker/Dockerfile -t hornet:v0.3.0 --build-arg TAG=v0.3.0 .
 ```
