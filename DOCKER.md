@@ -11,6 +11,7 @@
      * [Build Image](#build-image)
      * [Run](#run)
    * [Local Snapshots](#local-snapshots)
+   * [Build Specific Version](#build-specific-version)
 <!--te-->
 
 ## Requirements
@@ -110,4 +111,10 @@ sed -i 's#"path": "latest-export.gz.bin"#"path": "snapshot/latest-export.gz.bin"
 iii. To run docker you should mount the new `snapshot` directory with read-write mode. This allows Hornet to update the `latest-export.gz.bin` file:
 ```sh
 docker run --rm -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshot:/app/snapshot:rw -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host hornet:latest
+```
+
+## Build Specific Version
+By default the Dockerfile builds the image using Hornet's latest version. To build an image with a specific version you can pass it via the build argument `TAG`, e.g.:
+```sh
+docker build -t hornet:v0.3.0 --build-arg TAG=v0.3.0 .
 ```
