@@ -2,7 +2,7 @@ FROM alpine:latest
 
 ARG REPO="gohornet/hornet"
 ARG TAG=latest
-ARG ARCH=x86_64
+ARG ARCH=ARM64
 ARG OS=Linux
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
