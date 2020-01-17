@@ -1,11 +1,12 @@
 package webapi
 
 import (
-	"github.com/iotaledger/iota.go/consts"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/iotaledger/iota.go/consts"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"

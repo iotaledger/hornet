@@ -5,13 +5,15 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/labstack/echo"
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	. "github.com/iotaledger/iota.go/trinary"
-	"github.com/labstack/echo"
-	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 type ExplorerTx struct {
@@ -45,7 +47,7 @@ type ExplorerTx struct {
 }
 
 func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, error) {
-	
+
 	tx.RegisterConsumer() //+1
 	defer tx.Release()    //-1
 

@@ -2,16 +2,16 @@ package hornet
 
 import (
 	"encoding/binary"
-	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/iotaledger/hive.go/objectstorage"
 	"time"
 
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 

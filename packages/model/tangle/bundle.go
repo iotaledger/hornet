@@ -1,12 +1,13 @@
 package tangle
 
 import (
-	"github.com/iotaledger/hive.go/bitmask"
-	"github.com/iotaledger/hive.go/syncutils"
 	"log"
 
 	iotago_bundle "github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/trinary"
+	
+	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 func BundleCaller(handler interface{}, params ...interface{}) {
@@ -235,7 +236,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	
+
 	// add the transaction to the "all" transactions pool
 	bucket.txs[tx.GetTransaction().GetHash()] = struct{}{}
 

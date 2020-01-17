@@ -13,9 +13,10 @@ import (
 	"github.com/pkg/errors"
 	cuckoo "github.com/seiflotfy/cuckoofilter"
 
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/daemon"
 
 	"github.com/gohornet/hornet/packages/dag"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -406,7 +407,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		PruningIndex:  snapshotInfo.PruningIndex,
 		Timestamp:     targetMilestoneTail.GetTransaction().GetTimestamp(),
 	})
-	
+
 	targetMilestoneTail.Release() //-1
 
 	log.Infof("Creating local snapshot for targetIndex %d done, took %v", targetIndex, time.Since(ts))

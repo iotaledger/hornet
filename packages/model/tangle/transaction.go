@@ -1,12 +1,15 @@
 package tangle
 
 import (
+	"time"
+
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/objectstorage"
+
 	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/iota.go/trinary"
-	"time"
 )
 
 var txStorage *objectstorage.ObjectStorage
