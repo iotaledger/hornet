@@ -385,10 +385,12 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	os.Remove(filePathTmp)
 
 	if err := createSnapshotFile(filePathTmp, lsh, abortSignal); err != nil {
+		targetMilestoneTail.Release() //-1
 		return err
 	}
 
 	if err := os.Rename(filePathTmp, filePath); err != nil {
+		targetMilestoneTail.Release() //-1
 		return err
 	}
 
