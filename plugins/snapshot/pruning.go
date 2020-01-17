@@ -122,7 +122,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: tx.GetTransaction().Tx.Address})
 
 		tangle.DiscardApproversFromCache(txHash)
-		tangle.DiscardTransaction(txHash)
+		tangle.DeleteTransaction(txHash)
 		tx.Release() //-1
 	}
 
@@ -138,7 +138,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 
 	// tx
 	for txToRemove := range txsToRemove {
-		tangle.DiscardTransaction(txToRemove)
+		tangle.DeleteTransaction(txToRemove)
 	}
 
 	// address

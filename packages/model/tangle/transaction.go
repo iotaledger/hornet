@@ -80,7 +80,7 @@ func StoreTransaction(transaction *hornet.Transaction) *CachedTransaction {
 	return &CachedTransaction{txStorage.Store(transaction)}
 }
 
-func DiscardTransaction(txHash trinary.Hash) {
+func DeleteTransaction(txHash trinary.Hash) {
 	txStorage.Delete(trinary.MustTrytesToBytes(txHash))
 }
 
