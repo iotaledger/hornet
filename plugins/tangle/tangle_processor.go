@@ -109,9 +109,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 	if !knownTx {
 		//This updates the transaction object automatically
 		tangle.StoreTransaction(incomingTx).Release() //+1 -1
-	}
 
-	if !knownTx {
 		server.SharedServerMetrics.IncrNewTransactionsCount()
 		// ToDo: Bundle should be added before storing the tx in cache, so that the solidifier can't solidify
 		//		 txs, which bundles don't exist yet. But if we create the bundle, the tx has to exist in the cache as well.
