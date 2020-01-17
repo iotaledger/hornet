@@ -48,7 +48,7 @@ func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.Milesto
 
 	addresses := GetAddressTopics()
 	for _, addr := range addresses {
-		if strings.ToUpper(iotaTx.Address) == strings.ToUpper(addr) {
+		if strings.EqualFold(iotaTx.Address, addr) {
 			err := publishConfTxForAddress(iotaTx, msIndex)
 			if err != nil {
 				log.Error(err.Error())

@@ -229,7 +229,6 @@ func (tx *Transaction) UnmarshalBinary(data []byte) error {
 	transaction, err := compressed.TransactionFromCompressedBytes(tx.RawBytes, transactionHash)
 	if err != nil {
 		panic(err)
-		return err
 	}
 	tx.Tx = transaction
 
