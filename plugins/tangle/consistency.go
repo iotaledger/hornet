@@ -114,7 +114,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 
 			tx := tangle.GetCachedTransaction(txHash) //+1
 			if !tx.Exists() {
-				log.Panicf("Tx with %v not found", txHash)
+				log.Panicf("Tx with hash %v not found", txHash)
 			}
 
 			// ledger update process is write locked
