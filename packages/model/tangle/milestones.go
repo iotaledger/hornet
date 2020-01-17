@@ -189,6 +189,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	// Check if milestone was already processed
 	msBundle, _ := GetMilestone(milestoneIndex)
 	if msBundle != nil {
+		txIndex0.Release() //-1
 		// It could be issued again since several transactions of the same bundle were processed in parallel
 		return false, nil
 	}
