@@ -3,11 +3,9 @@ services:
   hornet:
     build:
       context: .
-      dockerfile: Dockerfile
-      # For aarch64/arm64 use ARCH=arm64
-      # or for arm32 use ARCH=armhf
-      args:
-        - ARCH=amd64
+      # For aarch64/arm64 use Dockerfile.arm64
+      # or Dockerfile.armhf for arm32/armhf
+      dockerfile: docker/Dockerfile
     image: hornet:latest
     # Best performance via host network:
     network_mode: host
@@ -17,6 +15,10 @@ services:
     #  - "15600:15600"
     cap_drop:
       - ALL
+    # Note: for local snapshots to work please
+    # read the DOCKER.md on how to mount a new
+    # path where latest-export.gz.bin should be
+    # placed in.
     volumes:
       - ./config.json:/app/config.json:ro
       - ./neighbors.json:/app/neighbors.json

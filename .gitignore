@@ -31,3 +31,6 @@ plugins/monitor/tanglemonitor
 
 # dist packages
 dist/
+
+# Snapshot directory (for docker running in main path)
+snapshot/
