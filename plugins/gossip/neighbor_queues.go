@@ -339,9 +339,6 @@ func processReplies(reply *replyItem) {
 			// This reduces the outgoing traffic if we are not sync
 
 			genesis := tangle.GetCachedTransaction(consts.NullHashTrytes) //+1
-			if err != nil {
-				log.Panic(err)
-			}
 
 			if !genesis.Exists() {
 				log.Panicf("Genesis tx not found. cachedObject: %p", genesis.CachedObject)
