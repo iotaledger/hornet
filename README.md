@@ -153,4 +153,4 @@ Pull HORNET from [Docker Hub](https://hub.docker.com/r/gohornet/hornet)
 
 **Build a Docker image**
 
-- See [Docker](DOCKER.md)
+- See [Docker](docker/DOCKER.md)
