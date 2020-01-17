@@ -48,23 +48,19 @@ func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
 			bundle.SetModified(false)
 		}
 
-		transactions := bundleBucket.Transactions() //+1
-
-		for _, tx := range transactions {
+		for _, txHash := range bundleBucket.TransactionHashes() {
 			// tails were already stored
-			if tx.GetTransaction().IsTail() {
+			if _, isTail := bundleBucket.bundleInstances[txHash]; isTail {
 				continue
 			}
 
 			entry := database.Entry{
-				Key:   databaseKeyForBundle(bundleBucket.GetHash(), tx.GetTransaction().GetHash()),
+				Key:   databaseKeyForBundle(bundleBucket.GetHash(), txHash),
 				Value: []byte{},
 				Meta:  byte(0),
 			}
 			entries = append(entries, entry)
 		}
-
-		transactions.Release() //-1
 	}
 
 	// Now batch insert all entries
