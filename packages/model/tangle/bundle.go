@@ -5,7 +5,7 @@ import (
 
 	iotago_bundle "github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/trinary"
-	
+
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/syncutils"
 )
