@@ -120,10 +120,10 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 		approvers = append(approvers, approver)
 
 		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: tx.GetTransaction().Tx.Address})
+		tx.Release() //-1
 
 		tangle.DiscardApproversFromCache(txHash)
 		tangle.DeleteTransaction(txHash)
-		tx.Release() //-1
 	}
 
 	// approvers
