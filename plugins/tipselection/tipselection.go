@@ -113,15 +113,17 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		}
 
 		bundle := bundleBucket.GetBundleOfTailTransaction(refTx.GetTransaction().GetHash())
-		refTx.Release() //-1
 
 		if bundle == nil {
 			// this should never happen if HORNET is programmed correctly
 			if refTx.GetTransaction().Tx.CurrentIndex == 0 {
 				log.Panicf("reference transaction is a tail but there's no bundle instance")
 			}
+			refTx.Release() //-1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle tail not yet known (bundle is complete)")
 		}
+
+		refTx.Release() //-1
 
 		if !bundle.IsComplete() {
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle is not complete")
