@@ -92,6 +92,8 @@ func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
 						} else {
 							approver.Release() //-1
 						}
+					} else {
+						approver.Release() //-1
 					}
 				}
 			}
