@@ -1,15 +1,13 @@
 package tangle
 
 import (
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
-func addTransactionToBundleBucket(transaction *tangle.CachedTransaction) []*tangle.Bundle {
+func addTransactionToBundleBucket(transaction *hornet.Transaction) (bundles []*tangle.Bundle, alreadyAdded bool) {
 
-	transaction.RegisterConsumer() //+1
-	defer transaction.Release()    //-1
-
-	bundleBucket, err := tangle.GetBundleBucket(transaction.GetTransaction().Tx.Bundle)
+	bundleBucket, err := tangle.GetBundleBucket(transaction.Tx.Bundle)
 	if err != nil {
 		log.Panic(err)
 	}
