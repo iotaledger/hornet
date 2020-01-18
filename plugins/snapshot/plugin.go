@@ -47,7 +47,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Snapshot")
+	log = logger.NewLogger(plugin.Name)
 	installGenesisTransaction()
 
 	localSnapshotsEnabled = parameter.NodeConfig.GetBool("localSnapshots.enabled")

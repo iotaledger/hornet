@@ -30,7 +30,10 @@ class ReqQMetric {
 class Status {
     lsmi: number;
     lmi: number;
+    snapshot_index: number;
+    pruning_index: number;
     version: string;
+    latest_version: string;
     uptime: number;
     current_requested_ms: number;
     ms_request_queue_size: number;
@@ -302,6 +305,11 @@ export class NodeStore {
     isNodeSync = (): boolean => {
         if (this.status.lmi == 0) return false;
         return this.status.lsmi == this.status.lmi;
+    };
+
+    isLatestVersion = (): boolean => {
+        if (!this.status.latest_version) return true;
+        return this.status.version == this.status.latest_version;
     };
 
     @computed
