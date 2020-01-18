@@ -19,7 +19,7 @@ export default class LatestMilestone extends React.Component<Props, any> {
                 {' '}
                 {
                     this.props.nodeStore.isNodeSync() ?
-                        <Badge variant="light">Synced</Badge>
+                        <Badge variant="success">Synced</Badge>
                         :
                         <Badge variant="warning">Not Synced</Badge>
                 }
