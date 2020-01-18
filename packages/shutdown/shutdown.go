@@ -23,4 +23,5 @@ const (
 	ShutdownPriorityMetricsPublishers
 	ShutdownPrioritySpammer
 	ShutdownPriorityStatusReport
+	ShutdownPriorityUpdateCheck
 )

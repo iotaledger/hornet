@@ -30,7 +30,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Spammer")
+	log = logger.NewLogger(plugin.Name)
 
 	address = trinary.Pad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = parameter.NodeConfig.GetString("spammer.message")

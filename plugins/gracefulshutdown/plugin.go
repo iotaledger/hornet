@@ -21,7 +21,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Graceful Shutdown")
+	log = logger.NewLogger(plugin.Name)
 
 	gracefulStop := make(chan os.Signal)
 
