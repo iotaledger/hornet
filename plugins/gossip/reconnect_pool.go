@@ -38,7 +38,7 @@ func configureReconnectPool() {
 			panic(errors.Wrapf(err, "invalid neighbor address %s", neighConf.Identity))
 		}
 		originAddr.PreferIPv6 = neighConf.PreferIPv6
-
+		originAddr.Alias = neighConf.Alias
 		// no need to lock the neighbors in the configure stage
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
 	}

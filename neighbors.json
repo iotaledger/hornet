@@ -5,17 +5,17 @@
     {
       "identity": "example1.neighbor.com:15600",
       "alias": "Example Neighbor 1",
-      "preferIPv6": false
+      "prefer_ipv6": false
     },
     {
       "identity": "example2.neighbor.com:15600",
       "alias": "Example Neighbor 2",
-      "preferIPv6": false
+      "prefer_ipv6": false
     },
     {
       "identity": "example3.neighbor.com:15600",
       "alias": "Example Neighbor 3",
-      "preferIPv6": false
+      "prefer_ipv6": false
     }
   ]
 }

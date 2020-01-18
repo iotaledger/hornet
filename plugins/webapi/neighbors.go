@@ -125,9 +125,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 			added = true
 		}
 
-		// TODO: Add alias (neighbor.Alias)
-
-		if err := gossip.AddNeighbor(neighbor.Identity, neighbor.PreferIPv6); err != nil {
+		if err := gossip.AddNeighbor(neighbor.Identity, neighbor.PreferIPv6, neighbor.Alias); err != nil {
 			log.Warnf("Can't add neighbor %s, Error: %s", neighbor.Identity, err)
 		} else {
 			addedNeighbors++
