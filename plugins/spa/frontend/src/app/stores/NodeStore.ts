@@ -48,7 +48,6 @@ class CacheMetrics {
     request_queue: CacheMetric;
     bundles: CacheMetric;
     milestones: CacheMetric;
-    spent_addresses: CacheMetric;
     transactions: CacheMetric;
     incoming_transaction_filter: CacheMetric;
     refs_invalid_bundle: CacheMetric;
@@ -493,17 +492,14 @@ export class NodeStore {
         let milestones = Object.assign({}, chartSeriesOpts,
             series("Milestones", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
         );
-        let spentAddrs = Object.assign({}, chartSeriesOpts,
-            series("Spent Addresses", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
-        );
         let txs = Object.assign({}, chartSeriesOpts,
-            series("Transactions", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
+            series("Transactions", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
         );
         let incomingTxsFilter = Object.assign({}, chartSeriesOpts,
-            series("Incoming Txs Filter", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
+            series("Incoming Txs Filter", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
         );
         let refsInvalidBundle = Object.assign({}, chartSeriesOpts,
-            series("Ref. Invalid Bundle (Tip-Sel)", 'rgba(138, 245, 66,1)', 'rgba(138, 245, 66,0.4)')
+            series("Ref. Invalid Bundle (Tip-Sel)", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
         );
 
         let labels = [];
@@ -514,7 +510,6 @@ export class NodeStore {
             approvers.data.push(metric.approvers.size);
             bundles.data.push(metric.bundles.size);
             milestones.data.push(metric.milestones.size);
-            spentAddrs.data.push(metric.spent_addresses.size);
             txs.data.push(metric.transactions.size);
             incomingTxsFilter.data.push(metric.incoming_transaction_filter.size);
             refsInvalidBundle.data.push(metric.refs_invalid_bundle.size);
@@ -523,7 +518,7 @@ export class NodeStore {
         return {
             labels: labels,
             datasets: [
-                reqQ, approvers, bundles, milestones, spentAddrs, txs, incomingTxsFilter, refsInvalidBundle
+                reqQ, approvers, bundles, milestones, txs, incomingTxsFilter, refsInvalidBundle
             ],
         };
     }
