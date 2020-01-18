@@ -197,6 +197,7 @@ type nodestatus struct {
 	SnapshotIndex      milestone_index.MilestoneIndex `json:"snapshot_index"`
 	PruningIndex       milestone_index.MilestoneIndex `json:"pruning_index"`
 	Version            string                         `json:"version"`
+	LatestVersion      string                         `json:"latest_version"`
 	Uptime             int64                          `json:"uptime"`
 	CurrentRequestedMs milestone_index.MilestoneIndex `json:"current_requested_ms"`
 	MsRequestQueueSize int                            `json:"ms_request_queue_size"`
@@ -295,6 +296,7 @@ func currentNodeStatus() *nodestatus {
 	// node status
 	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 	status.Version = cli.AppVersion
+	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
