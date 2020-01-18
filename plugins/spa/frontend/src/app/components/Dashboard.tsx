@@ -5,6 +5,8 @@ import Col from "react-bootstrap/Col";
 import Uptime from "app/components/Uptime";
 import Version from "app/components/Version";
 import LatestMilestone from "app/components/LatestMilestone";
+import PruningIndex from "app/components/PruningIndex";
+import SnapshotIndex from "app/components/SnapshotIndex";
 import RequestQueue from "app/components/RequestQueue";
 import TPSChart from "app/components/TPSChart";
 import RequestQueueChart from "app/components/RequestQueueChart";
@@ -36,12 +38,14 @@ export class Dashboard extends React.Component<Props, any> {
                                         <ListGroup variant={"flush"}>
                                             <ListGroup.Item><Uptime/></ListGroup.Item>
                                             <ListGroup.Item><LatestMilestone/></ListGroup.Item>
+                                            <ListGroup.Item><SnapshotIndex/></ListGroup.Item>
                                         </ListGroup>
                                     </Col>
                                     <Col>
                                         <ListGroup variant={"flush"}>
                                             <ListGroup.Item><Version/></ListGroup.Item>
                                             <ListGroup.Item><RequestQueue/></ListGroup.Item>
+                                            <ListGroup.Item><PruningIndex/></ListGroup.Item>
                                         </ListGroup>
                                     </Col>
                                 </Row>
