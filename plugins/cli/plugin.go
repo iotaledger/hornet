@@ -4,24 +4,35 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/tcnksm/go-latest"
+
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/profile"
+	"github.com/gohornet/hornet/packages/shutdown"
 )
 
 var (
 	// AppVersion version number
-	AppVersion = "0.3.0"
+	AppVersion          = "0.3.0"
+	LatestGithubVersion = AppVersion
 
 	// AppName app code name
 	AppName = "HORNET"
+
+	githubTag *latest.GithubTag
 )
 
 var (
 	PLUGIN = node.NewPlugin("CLI", node.Enabled, configure, run)
+	log    *logger.Logger
 )
 
 func onAddPlugin(name string, status int) {
@@ -29,7 +40,6 @@ func onAddPlugin(name string, status int) {
 }
 
 func init() {
-
 	for name, status := range node.GetPlugins() {
 		onAddPlugin(name, status)
 	}
@@ -48,7 +58,15 @@ func parseParameters() {
 	}
 }
 
-func configure(ctx *node.Plugin) {
+func configure(plugin *node.Plugin) {
+
+	log = logger.NewLogger(plugin.Name)
+
+	githubTag = &latest.GithubTag{
+		Owner:             "gohornet",
+		Repository:        "hornet",
+		FixVersionStrFunc: latest.DeleteFrontV(),
+	}
 
 	fmt.Print(fmt.Sprintf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
@@ -60,15 +78,31 @@ func configure(ctx *node.Plugin) {
                                    v%s
 `+"\n\n", AppVersion))
 
+	checkLatestVersion()
+
 	if parameter.NodeConfig.GetString("useProfile") == "auto" {
-		ctx.Node.Logger.Infof("Profile mode 'auto', Using profile '%s'", profile.GetProfile().Name)
+		log.Infof("Profile mode 'auto', Using profile '%s'", profile.GetProfile().Name)
 	} else {
-		ctx.Node.Logger.Infof("Using profile '%s'", profile.GetProfile().Name)
+		log.Infof("Using profile '%s'", profile.GetProfile().Name)
 	}
 
-	ctx.Node.Logger.Info("Loading plugins ...")
+	log.Info("Loading plugins ...")
 }
 
-func run(ctx *node.Plugin) {
-	// do nothing; everything is handled in the configure step
+func checkLatestVersion() {
+
+	res, _ := latest.Check(githubTag, AppVersion)
+
+	if res.Outdated {
+		log.Infof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
+		LatestGithubVersion = res.Current
+	}
+}
+
+func run(plugin *node.Plugin) {
+
+	// create a background worker that checks for latest version every hour
+	daemon.BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
+		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
+	}, shutdown.ShutdownPriorityUpdateCheck)
 }

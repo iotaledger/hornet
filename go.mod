@@ -19,6 +19,7 @@ require (
 	github.com/googollee/go-engine.io v1.4.3-0.20190924125625-798118fc0dd2
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
 	github.com/gorilla/websocket v1.4.1
+	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20200107205115-986a54f82a30
 	github.com/iotaledger/iota.go v1.0.0-beta.13
 	github.com/labstack/echo v3.3.10+incompatible
@@ -29,6 +30,7 @@ require (
 	github.com/shirou/gopsutil v2.19.12+incompatible
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.1
+	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	go.uber.org/atomic v1.5.1
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
