@@ -49,7 +49,7 @@ var (
 
 // Configure the zeromq plugin
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("ZeroMQ")
+	log = logger.NewLogger(plugin.Name)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
