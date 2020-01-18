@@ -16,7 +16,7 @@ import (
 var snapshotDatabase database.Database
 
 func configureSnapshotDatabase() {
-	if db, err := database.Get(DBPrefixSnapshot, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixSnapshot, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		snapshotDatabase = db

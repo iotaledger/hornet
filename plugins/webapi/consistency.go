@@ -68,49 +68,50 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 
 	for _, t := range checkCon.Tails {
 
-		tx, err := tangle.GetTransaction(t)
-		if err != nil {
-			e.Error = fmt.Sprint(err)
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
+		tx := tangle.GetCachedTransaction(t) //+1
 
 		// Check if TX is known
-		if tx == nil {
+		if !tx.Exists() {
+			tx.Release() //-1
 			info := fmt.Sprint("Transaction not found: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
 		// Check if provided tx is tail
-		if !tx.IsTail() {
+		if !tx.GetTransaction().IsTail() {
+			tx.Release() //-1
 			info := fmt.Sprint("Invalid transaction, not a tail: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
 		// Check if TX is solid
-		if !tx.IsSolid() {
+		if !tx.GetTransaction().IsSolid() {
+			tx.Release() //-1
 			info := fmt.Sprint("Tails are not solid (missing a referenced tx): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
-		bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+		bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
 		if err != nil {
+			tx.Release() //-1
 			e.Error = fmt.Sprint(err)
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
 
 		if bundleBucket == nil {
+			tx.Release() //-1
 			e.Error = "Internal error"
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
 
 		// Check bundle validity
-		bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetHash())
+		bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetTransaction().GetHash())
+		tx.Release() //-1
 
 		if bundle == nil || !bundle.IsValid() {
 			info := fmt.Sprint("tails are not consistent (bundle is invalid): ", t)
@@ -124,7 +125,10 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		}
 
 		// Check below max depth
-		if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) {
+		bundleTail := bundle.GetTail() //+1
+		IsBelowMaxDepth := tanglePlugin.IsBelowMaxDepth(bundleTail, lowerAllowedSnapshotIndex)
+		bundleTail.Release() //-1
+		if IsBelowMaxDepth {
 			info := fmt.Sprint("tails are not consistent (below max depth): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return

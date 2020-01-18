@@ -9,7 +9,6 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -120,18 +119,23 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 	socketioServer.LeaveAllRooms(s)
 }
 
-func onNewTx(tx *hornet.Transaction) {
+func onNewTx(tx *tangle.CachedTransaction) {
+
+	tx.RegisterConsumer() //+1
+	iotaTx := tx.GetTransaction().Tx
+	tx.Release() //-1
+
 	wsTx := &wsTransaction{
-		Hash:              tx.GetHash(),
-		Address:           tx.Tx.Address,
-		Value:             strconv.FormatInt(tx.Tx.Value, 10),
-		Tag:               tx.Tx.Tag,
-		Timestamp:         strconv.FormatInt(int64(tx.Tx.Timestamp), 10),
-		CurrentIndex:      strconv.FormatInt(int64(tx.Tx.CurrentIndex), 10),
-		LastIndex:         strconv.FormatInt(int64(tx.Tx.LastIndex), 10),
-		Bundle:            tx.Tx.Bundle,
-		TrunkTransaction:  tx.Tx.TrunkTransaction,
-		BranchTransaction: tx.Tx.BranchTransaction,
+		Hash:              iotaTx.Hash,
+		Address:           iotaTx.Address,
+		Value:             strconv.FormatInt(iotaTx.Value, 10),
+		Tag:               iotaTx.Tag,
+		Timestamp:         strconv.FormatInt(int64(iotaTx.Timestamp), 10),
+		CurrentIndex:      strconv.FormatInt(int64(iotaTx.CurrentIndex), 10),
+		LastIndex:         strconv.FormatInt(int64(iotaTx.LastIndex), 10),
+		Bundle:            iotaTx.Bundle,
+		TrunkTransaction:  iotaTx.TrunkTransaction,
+		BranchTransaction: iotaTx.BranchTransaction,
 	}
 
 	txRingBufferLock.Lock()
@@ -144,13 +148,18 @@ func onNewTx(tx *hornet.Transaction) {
 	broadcastLock.Unlock()
 }
 
-func onConfirmedTx(tx *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+
+	tx.RegisterConsumer() //+1
+	iotaTx := tx.GetTransaction().Tx
+	tx.Release() //-1
+
 	snTx := &wsTransactionSn{
-		Hash:              tx.GetHash(),
-		Address:           tx.Tx.Address,
-		TrunkTransaction:  tx.Tx.TrunkTransaction,
-		BranchTransaction: tx.Tx.BranchTransaction,
-		Bundle:            tx.Tx.Bundle,
+		Hash:              iotaTx.Hash,
+		Address:           iotaTx.Address,
+		TrunkTransaction:  iotaTx.TrunkTransaction,
+		BranchTransaction: iotaTx.BranchTransaction,
+		Bundle:            iotaTx.Bundle,
 	}
 
 	snRingBufferLock.Lock()

@@ -70,7 +70,7 @@ func (s *RequestQueue) retryPending() {
 
 	for _, r := range s.pending {
 		if r.isReceived() == false {
-			if contains, _ := tangle.ContainsTransaction(r.hash); !contains {
+			if !tangle.ContainsTransaction(r.hash) {
 				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
 			}
@@ -280,7 +280,7 @@ func (s *RequestQueue) DebugRequests() []*DebugRequest {
 
 	for _, req := range s.lifo {
 		contains, _ := s.Contains(req.hash)
-		exists, _ := tangle.ContainsTransaction(req.hash)
+		exists := tangle.ContainsTransaction(req.hash)
 		requests = append(requests, &DebugRequest{
 			Hash:        req.hash,
 			InCache:     contains,
@@ -294,7 +294,7 @@ func (s *RequestQueue) DebugRequests() []*DebugRequest {
 
 	for _, req := range s.pending {
 		contains, _ := s.Contains(req.hash)
-		exists, _ := tangle.ContainsTransaction(req.hash)
+		exists := tangle.ContainsTransaction(req.hash)
 		requests = append(requests, &DebugRequest{
 			Hash:        req.hash,
 			InCache:     contains,

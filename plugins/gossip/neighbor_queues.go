@@ -3,18 +3,15 @@ package gossip
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"runtime"
-	"strings"
-
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -71,7 +68,6 @@ func newNeighborQueue(p *protocol) *neighborQueue {
 }
 
 var (
-	genesisTx           *hornet.Transaction
 	neighborQueues      = make(map[string]*neighborQueue)
 	neighborQueuesMutex syncutils.RWMutex
 	broadcastQueue      = make(chan *broadcastTransaction, BROADCAST_QUEUE_SIZE)
@@ -89,8 +85,6 @@ func DebugPrintQueueStats() {
 }
 
 func configureBroadcastQueue() {
-	genesisIotaTx, _ := transaction.AsTransactionObject(strings.Repeat("9", TX_TRYTES_SIZE), strings.Repeat("9", 81))
-	genesisTx = hornet.NewTransactionFromGossip(genesisIotaTx, compressed.TruncateTx(trinary.MustTrytesToBytes(strings.Repeat("9", TX_TRYTES_SIZE))), false)
 
 	replyWorkerPool = workerpool.New(func(task workerpool.Task) {
 		processReplies(task.Param(0).(*replyItem))
@@ -293,12 +287,13 @@ func processReplies(reply *replyItem) {
 		if err != nil {
 			return
 		}
-		tx, _ := tangle.GetTransaction(reqHash)
-		if tx == nil {
+		tx := tangle.GetCachedTransaction(reqHash) //+1
+		defer tx.Release()                         //-1
+		if !tx.Exists() {
 			return
 		}
 		select {
-		case neighborQueue.txQueue <- tx.RawBytes:
+		case neighborQueue.txQueue <- tx.GetTransaction().RawBytes:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
@@ -318,7 +313,7 @@ func processReplies(reply *replyItem) {
 		}
 
 		var err error
-		txToSend := (*hornet.Transaction)(nil)
+		var txToSend *tangle.CachedTransaction
 
 		if !neighborSynced {
 			reqHash, err := trinary.BytesToTrytes(reply.neighborRequest.reqHashBytes, 81)
@@ -326,8 +321,10 @@ func processReplies(reply *replyItem) {
 				return
 			}
 
-			tx, _ := tangle.GetTransaction(reqHash)
-			if tx != nil {
+			tx := tangle.GetCachedTransaction(reqHash) //+1
+			if !tx.Exists() {
+				tx.Release() //-1
+			} else {
 				txToSend = tx
 			}
 		}
@@ -340,18 +337,28 @@ func processReplies(reply *replyItem) {
 
 			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compress
 			// This reduces the outgoing traffic if we are not sync
-			txToSend = genesisTx
+
+			genesis := tangle.GetCachedTransaction(consts.NullHashTrytes) //+1
+
+			if !genesis.Exists() {
+				log.Panicf("Genesis tx not found. cachedObject: %p", genesis.CachedObject)
+			}
+
+			txToSend = genesis
 		}
 
 		if ourReqHash == nil {
 			// We are synced => notify the neighbor
-			ourReqHash, err = trinary.TrytesToBytes(txToSend.GetHash())
+			ourReqHash, err = trinary.TrytesToBytes(txToSend.GetTransaction().GetHash())
 			if err != nil {
+				txToSend.Release() //-1
 				return
 			}
 		}
 
-		msg := &legacyGossipTransaction{truncatedTxData: txToSend.RawBytes, reqHash: ourReqHash}
+		msg := &legacyGossipTransaction{truncatedTxData: txToSend.GetTransaction().RawBytes, reqHash: ourReqHash}
+		txToSend.Release() //-1
+
 		select {
 		case neighborQueue.legacyTxQueue <- msg:
 		default:
@@ -376,14 +383,16 @@ func processReplies(reply *replyItem) {
 			return
 		}
 
-		for _, txToSend := range requestedMilestoneBundle.GetTransactions() {
+		transactions := requestedMilestoneBundle.GetTransactions() //+1
+		for _, txToSend := range transactions {
 			select {
-			case neighborQueue.txQueue <- txToSend.RawBytes:
+			case neighborQueue.txQueue <- txToSend.GetTransaction().RawBytes:
 			default:
 				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 				server.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
 		}
+		transactions.Release() //-1
 		return
 	}
 }
@@ -422,15 +431,4 @@ func startNeighborSendQueue(neighbor *Neighbor, neighborQueue *neighborQueue) {
 			}
 		}
 	}, shutdown.ShutdownPriorityNeighborSendQueue)
-}
-
-func getLatestMilestoneTailOrGenesisTx() *hornet.Transaction {
-	latestMilestone := tangle.GetLatestMilestone()
-	if latestMilestone != nil {
-		latestMilestoneTail := latestMilestone.GetTail()
-		if latestMilestoneTail != nil {
-			return latestMilestoneTail
-		}
-	}
-	return genesisTx
 }

@@ -1,11 +1,8 @@
 package tangle
 
 import (
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/typeutils"
-
-	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 func GetBundleBucket(bundleHash trinary.Hash) (result *BundleBucket, err error) {
@@ -16,7 +13,7 @@ func GetBundleBucket(bundleHash trinary.Hash) (result *BundleBucket, err error) 
 		} else if dbErr == nil {
 			// Start with an empty bucket.
 			// This won't get saved into the db until new tx are appended and the modified flag is changed
-			return NewBundleBucket(bundleHash, map[trinary.Hash]*hornet.Transaction{})
+			return NewBundleBucket(bundleHash, map[trinary.Hash]*CachedTransaction{})
 		} else {
 			err = dbErr
 			return nil

@@ -3,12 +3,10 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -31,16 +29,19 @@ var (
 )
 
 // checkSolidity checks if a single transaction is solid
-func checkSolidity(transaction *hornet.Transaction, addToApproversCache bool) (solid bool, newlySolid bool) {
-	if transaction.IsSolid() {
+func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCache bool) (solid bool, newlySolid bool) {
+	cachedTransaction.RegisterConsumer() //+1
+	defer cachedTransaction.Release()    //-1
+
+	if cachedTransaction.GetTransaction().IsSolid() {
 		return true, false
 	}
 
 	isSolid := true
 
-	approveeHashes := []trinary.Hash{transaction.GetTrunk()}
-	if transaction.GetTrunk() != transaction.GetBranch() {
-		approveeHashes = append(approveeHashes, transaction.GetBranch())
+	approveeHashes := []trinary.Hash{cachedTransaction.GetTransaction().GetTrunk()}
+	if cachedTransaction.GetTransaction().GetTrunk() != cachedTransaction.GetTransaction().GetBranch() {
+		approveeHashes = append(approveeHashes, cachedTransaction.GetTransaction().GetBranch())
 	}
 
 	for _, approveeHash := range approveeHashes {
@@ -49,24 +50,27 @@ func checkSolidity(transaction *hornet.Transaction, addToApproversCache bool) (s
 			continue
 		}
 
-		approveeTx, _ := tangle.GetTransaction(approveeHash)
-		if approveeTx == nil || !approveeTx.IsSolid() {
+		approveeTx := tangle.GetCachedTransaction(approveeHash) //+1
+		if !approveeTx.Exists() || !approveeTx.GetTransaction().IsSolid() {
 			isSolid = false
 
 			if addToApproversCache {
 				// Add this Transaction as approver to the approvee if it is unknown or not solid yet
 				approveeApprovers, _ := tangle.GetApprovers(approveeHash)
-				approveeApprovers.Add(transaction.GetHash())
+				approveeApprovers.Add(cachedTransaction.GetTransaction().GetHash())
 			}
-
+			approveeTx.Release() //-1
 			break
 		}
+		approveeTx.Release() //-1
 	}
 
 	if isSolid {
 		// update the solidity flags of this transaction and its approvers
-		transaction.SetSolid(true)
-		Events.TransactionSolid.Trigger(transaction)
+		cachedTransaction.GetTransaction().SetSolid(true)
+		cachedTransaction.RegisterConsumer() //+1
+		Events.TransactionSolid.Trigger(cachedTransaction)
+		cachedTransaction.Release() //-1
 	}
 
 	return isSolid, isSolid
@@ -87,7 +91,11 @@ func registerApproverOfApprovee(approver trinary.Hash, approveeHash trinary.Hash
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
-func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction, abortSignal chan struct{}) (solid bool, aborted bool) {
+func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction, abortSignal chan struct{}) (solid bool, aborted bool) {
+
+	milestoneTail.RegisterConsumer() //+1
+	defer milestoneTail.Release()    //-1
+
 	ts := time.Now()
 
 	txsChecked := make(map[string]bool) // isSolid
@@ -95,7 +103,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 	approvers := make(map[string]map[string]struct{})
 	entryTxs := make(map[string]struct{})
 	txsToRequest := make(map[string]struct{})
-	txsToTraverse[milestoneTail.GetHash()] = struct{}{}
+	txsToTraverse[milestoneTail.GetTransaction().GetHash()] = struct{}{}
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -112,14 +120,14 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 			delete(txsToTraverse, txHash)
 			isEntryTx := true
 
-			tx, _ := tangle.GetTransaction(txHash)
-			if tx == nil {
+			tx := tangle.GetCachedTransaction(txHash) //+1
+			if !tx.Exists() {
 				log.Panicf("solidQueueCheck: Transaction not found: %v", txHash)
 			}
 
-			approveeHashes := []trinary.Hash{tx.GetTrunk()}
-			if tx.GetTrunk() != tx.GetBranch() {
-				approveeHashes = append(approveeHashes, tx.GetBranch())
+			approveeHashes := []trinary.Hash{tx.GetTransaction().GetTrunk()}
+			if tx.GetTransaction().GetTrunk() != tx.GetTransaction().GetBranch() {
+				approveeHashes = append(approveeHashes, tx.GetTransaction().GetBranch())
 			}
 
 			for _, approveeHash := range approveeHashes {
@@ -130,7 +138,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 
 				// we add each transaction's approvers to the map, whether the approvee
 				// exists or not, as we will not start any concrete solidifiction if any approvee is missing
-				registerApproverOfApprovee(tx.GetHash(), approveeHash, approvers)
+				registerApproverOfApprovee(tx.GetTransaction().GetHash(), approveeHash, approvers)
 
 				if isSolid, checked := txsChecked[approveeHash]; checked {
 					// Tx was already checked
@@ -140,31 +148,34 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 					continue
 				}
 
-				approveeTx, _ := tangle.GetTransaction(approveeHash)
-				if approveeTx == nil {
+				approveeTx := tangle.GetCachedTransaction(approveeHash) //+1
+				if !approveeTx.Exists() {
 					isEntryTx = false
 					txsToRequest[approveeHash] = struct{}{}
 
 					// Mark the tx as checked
 					txsChecked[approveeHash] = false
+					approveeTx.Release() //-1
 					continue
 				}
 
 				// Mark the tx as checked
-				txsChecked[approveeHash] = approveeTx.IsSolid()
+				txsChecked[approveeHash] = approveeTx.GetTransaction().IsSolid()
 
-				if !approveeTx.IsSolid() {
+				if !approveeTx.GetTransaction().IsSolid() {
 					isEntryTx = false
 
 					// Traverse this approvee
 					txsToTraverse[approveeHash] = struct{}{}
 				}
+				approveeTx.Release() //-1
 			}
 
 			if isEntryTx {
 				// Trunk and branch are solid, this tx is an entry point to start the solidify walk
-				entryTxs[tx.GetHash()] = struct{}{}
+				entryTxs[tx.GetTransaction().GetHash()] = struct{}{}
 			}
+			tx.Release() //-1
 		}
 	}
 	tc := time.Now()
@@ -198,8 +209,8 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 				// Go on with the check
 			}
 
-			entryTx, _ := tangle.GetTransaction(entryTxHash)
-			if entryTx == nil {
+			entryTx := tangle.GetCachedTransaction(entryTxHash) //+1
+			if !entryTx.Exists() {
 				log.Panicf("solidQueueCheck: Transaction not found: %v", entryTxHash)
 			}
 
@@ -211,6 +222,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 
 				if newlySolid && tangle.IsNodeSynced() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
+					entryTx.RegisterConsumer() //+1
 					gossipSolidifierWorkerPool.Submit(entryTx)
 				}
 
@@ -218,6 +230,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 				delete(entryTxs, entryTxHash)
 				newSolidTxFound = true
 			}
+			entryTx.Release() //-1
 		}
 	}
 
@@ -295,7 +308,9 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 	signalChanMilestoneStopSolidificationLock.Unlock()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, milestoneToSolidify.GetTail(), signalChanMilestoneStopSolidification); !becameSolid {
+	milestoneToSolidifyTail := milestoneToSolidify.GetTail() //+1
+
+	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, milestoneToSolidifyTail, signalChanMilestoneStopSolidification); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -304,6 +319,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 			log.Infof("Milestone couldn't be solidified! %d", milestoneIndexToSolidify)
 		}
 		setSolidifierMilestoneIndex(0)
+		milestoneToSolidifyTail.Release() //-1
 		return
 	}
 
@@ -316,7 +332,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 			log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, milestoneIndexToSolidify)
 
 			// No Milestones found in between => search an older milestone in the solid cone
-			if found, aborted := searchMissingMilestone(currentSolidIndex, milestoneIndexToSolidify, milestoneToSolidify.GetTail(), maxMissingMilestoneSearchDepth, signalChanMilestoneStopSolidification); !found {
+			if found, aborted := searchMissingMilestone(currentSolidIndex, milestoneIndexToSolidify, milestoneToSolidifyTail, maxMissingMilestoneSearchDepth, signalChanMilestoneStopSolidification); !found {
 				if aborted {
 					log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, milestoneIndexToSolidify)
 				} else {
@@ -330,12 +346,14 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 		setSolidifierMilestoneIndex(0)
 
 		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0))
+		milestoneToSolidifyTail.Release() //-1
 		return
 	}
 
 	tangle.WriteLockLedger()
 	defer tangle.WriteUnlockLedger()
-	confirmMilestone(milestoneIndexToSolidify, milestoneToSolidify.GetTail())
+	confirmMilestone(milestoneIndexToSolidify, milestoneToSolidifyTail)
+	milestoneToSolidifyTail.Release() //-1
 
 	tangle.SetSolidMilestone(milestoneToSolidify)
 	tangle.StoreMilestoneInDatabase(milestoneToSolidify)
@@ -348,7 +366,11 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0))
 }
 
-func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, milestoneTail *hornet.Transaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {
+func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {
+
+	milestoneTail.RegisterConsumer() //+1
+	defer milestoneTail.Release()    //-1
+
 	var loopCnt int
 	var milestoneFound bool
 
@@ -356,7 +378,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 
 	txsChecked := make(map[string]struct{})
 	txsToTraverse := make(map[string]struct{})
-	txsToTraverse[milestoneTail.GetHash()] = struct{}{}
+	txsToTraverse[milestoneTail.GetTransaction().GetHash()] = struct{}{}
 
 	// Search milestones by traversing the tangle
 	for loopCnt = 0; (len(txsToTraverse) != 0) && (loopCnt < maxSearchDepth); loopCnt++ {
@@ -370,15 +392,16 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 			}
 			delete(txsToTraverse, txHash)
 
-			tx, _ := tangle.GetTransaction(txHash)
-			if tx == nil {
+			tx := tangle.GetCachedTransaction(txHash) //+1
+			if !tx.Exists() {
 				log.Panicf("searchMissingMilestone: Transaction not found: %v", txHash)
 			}
 
-			approveeHashes := []trinary.Hash{tx.GetTrunk()}
-			if tx.GetTrunk() != tx.GetBranch() {
-				approveeHashes = append(approveeHashes, tx.GetBranch())
+			approveeHashes := []trinary.Hash{tx.GetTransaction().GetTrunk()}
+			if tx.GetTransaction().GetTrunk() != tx.GetTransaction().GetBranch() {
+				approveeHashes = append(approveeHashes, tx.GetTransaction().GetBranch())
 			}
+			tx.Release() //-1
 
 			for _, approveeHash := range approveeHashes {
 				if tangle.SolidEntryPointsContain(approveeHash) {
@@ -391,25 +414,26 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 					continue
 				}
 
-				approveeTx, _ := tangle.GetTransaction(approveeHash)
-				if approveeTx == nil {
+				approveeTx := tangle.GetCachedTransaction(approveeHash) //+1
+				if !approveeTx.Exists() {
 					log.Panicf("searchMissingMilestone: Transaction not found: %v", approveeHash)
 				}
 
-				if !approveeTx.IsTail() {
+				if !approveeTx.GetTransaction().IsTail() {
+					approveeTx.Release() //-1
 					continue
 				}
 
 				if tangle.IsMaybeMilestone(approveeTx) {
 					// This tx could belong to a milestone
 					// => load bundle, and start the milestone check
-					bundleBucket, err := tangle.GetBundleBucket(approveeTx.Tx.Bundle)
+					bundleBucket, err := tangle.GetBundleBucket(approveeTx.GetTransaction().Tx.Bundle)
 					if err != nil {
 						log.Panic(err)
 					}
-					bundle := bundleBucket.GetBundleOfTailTransaction(approveeTx.Tx.Hash)
+					bundle := bundleBucket.GetBundleOfTailTransaction(approveeTx.GetTransaction().Tx.Hash)
 					if bundle == nil {
-						log.Panicf("searchMissingMilestone: Tx: %v, Bundle not found: %v", approveeHash, approveeTx.Tx.Bundle)
+						log.Panicf("searchMissingMilestone: Tx: %v, Bundle not found: %v", approveeHash, approveeTx.GetTransaction().Tx.Bundle)
 					}
 
 					isMilestone, err := tangle.CheckIfMilestone(bundle)
@@ -423,10 +447,13 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 							// Milestone found!
 							milestoneFound = true
 							processValidMilestone(bundle)
+							approveeTx.Release() //-1
 							break
 						}
 					}
 				}
+
+				approveeTx.Release() //-1
 
 				// Traverse this approvee
 				txsToTraverse[approveeHash] = struct{}{}

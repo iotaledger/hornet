@@ -13,7 +13,7 @@ import (
 var approversDatabase database.Database
 
 func configureApproversDatabase() {
-	if db, err := database.Get(DBPrefixApprovers, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixApprovers, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		approversDatabase = db

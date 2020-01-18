@@ -147,12 +147,13 @@ func installGenesisTransaction() {
 	genesis.Hash = consts.NullHashTrytes
 	txBytesTruncated := compressed.TruncateTx(trinary.TritsToBytes(genesisTxTrits))
 	genesisTx := hornet.NewTransactionFromAPI(genesis, txBytesTruncated)
-	tangle.StoreTransactionInCache(genesisTx)
+	transaction := tangle.StoreTransaction(genesisTx) //+1
 
 	// ensure the bundle is also existent for the genesis tx
 	genesisBundleBucket, err := tangle.GetBundleBucket(genesis.Bundle)
 	if err != nil {
 		log.Panic(err)
 	}
-	genesisBundleBucket.AddTransaction(genesisTx)
+	genesisBundleBucket.AddTransaction(transaction)
+	transaction.Release() //-1
 }

@@ -22,10 +22,6 @@
           "size": 5000,
           "evictionSize": 1000
         },
-        "transactions": {
-          "size": 50000,
-          "evictionSize": 1000
-        },
         "incomingTransactionFilter": {
           "size": 5000
         },

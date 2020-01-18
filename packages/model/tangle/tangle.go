@@ -8,7 +8,7 @@ import (
 func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	database.Settings(directory, badgerOpts)
 	configureHealthDatabase()
-	configureTransactionDatabase()
+	configureTransactionStorage()
 	configureBundleDatabase()
 	configureTransactionHashesForAddressDatabase()
 	configureApproversDatabase()

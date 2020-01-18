@@ -2,10 +2,11 @@ package webapi
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/iotaledger/iota.go/consts"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -32,6 +33,7 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
 	info.LatestMilestoneIndex = uint32(lmi)
+	info.LatestMilestone = consts.NullHashTrytes
 
 	// Latest milestone hash
 	lsmBndl, err := tangle.GetMilestone(lmi)
@@ -41,15 +43,18 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	if lsmBndl != nil && lsmBndl.GetTail() != nil {
-		info.LatestMilestone = lsmBndl.GetTail().GetHash()
-	} else {
-		info.LatestMilestone = strings.Repeat("9", 81)
+	if lsmBndl != nil {
+		tail := lsmBndl.GetTail() //+1
+		if tail != nil {
+			info.LatestMilestone = tail.GetTransaction().GetHash()
+		}
+		tail.Release() //-1
 	}
 
 	// Solid milestone index
 	smi := tangle.GetSolidMilestoneIndex()
 	info.LatestSolidSubtangleMilestoneIndex = uint32(smi)
+	info.LatestSolidSubtangleMilestone = consts.NullHashTrytes
 	info.IsSynced = tangle.IsNodeSynced()
 
 	// Solid milestone hash
@@ -60,10 +65,12 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	if smBndl != nil && smBndl.GetTail() != nil {
-		info.LatestSolidSubtangleMilestone = smBndl.GetTail().GetHash()
-	} else {
-		info.LatestSolidSubtangleMilestone = strings.Repeat("9", 81)
+	if smBndl != nil {
+		tail := smBndl.GetTail() //+1
+		if tail != nil {
+			info.LatestSolidSubtangleMilestone = tail.GetTransaction().GetHash()
+		}
+		tail.Release() //-1
 	}
 
 	// Milestone start index

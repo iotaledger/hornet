@@ -15,7 +15,7 @@ var (
 )
 
 func configureTransactionHashesForAddressDatabase() {
-	if db, err := database.Get(DBPrefixAddresses, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixAddresses, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		transactionsHashesForAddressDatabase = db
