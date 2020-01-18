@@ -122,7 +122,7 @@ func publishTxTrytes(tx *hornet.Transaction) error {
 // Publish a transaction that has recently been added to the ledger
 func publishTx(tx *hornet.Transaction) error {
 
-	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":"%d","obsoleteTag":"%v","txTimestamp":"%d","currentIndex":"%d","lastIndex":"%d","bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":"%d","tag":"%v""timestamp":"%s"}`,
+	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":"%d","obsoleteTag":"%v","txTimestamp":"%d","currentIndex":"%d","lastIndex":"%d","bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":"%d","tag":"%v","timestamp":"%s"}`,
 		tx.Tx.Hash,              // Transaction hash
 		tx.Tx.Address,           // Address
 		tx.Tx.Value,             // Value
