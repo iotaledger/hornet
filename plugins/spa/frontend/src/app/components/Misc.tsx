@@ -111,7 +111,7 @@ export class Misc extends React.Component<Props, any> {
                     <Col>
                         <Card>
                             <Card.Body>
-                                <Card.Title>Spent Adddresses</Card.Title>
+                                <Card.Title>Spent Addresses</Card.Title>
                                 <small>
                                     Shows the approximate amount of spent addresses persisted in the Cuckoo filter of
                                     the node.
