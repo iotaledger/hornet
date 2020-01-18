@@ -53,7 +53,7 @@
     "chartjs-plugin-streaming": "^1.8.0",
     "classnames": "^2.2.6",
     "dateformat": "^3.0.3",
-    "favicons-webpack-plugin": "^1.0.2",
+    "favicons-webpack-plugin": "^2.1.0",
     "mobx": "^5.15.0",
     "mobx-react": "^5.4.3",
     "mobx-react-router": "^4.0.5",
