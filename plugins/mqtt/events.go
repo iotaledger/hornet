@@ -131,7 +131,7 @@ func publishTxTrytes(iotaTx *transaction.Transaction) error {
 // Publish a transaction that has recently been added to the ledger
 func publishTx(iotaTx *transaction.Transaction) error {
 
-	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":"%d","obsoleteTag":"%v","txTimestamp":"%d","currentIndex":"%d","lastIndex":"%d","bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":"%d","tag":"%v""timestamp":"%s"}`,
+	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":"%d","obsoleteTag":"%v","txTimestamp":"%d","currentIndex":"%d","lastIndex":"%d","bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":"%d","tag":"%v","timestamp":"%s"}`,
 		iotaTx.Hash,              // Transaction hash
 		iotaTx.Address,           // Address
 		iotaTx.Value,             // Value
