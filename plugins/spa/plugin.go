@@ -194,6 +194,8 @@ type ms struct {
 type nodestatus struct {
 	LSMI               milestone_index.MilestoneIndex `json:"lsmi"`
 	LMI                milestone_index.MilestoneIndex `json:"lmi"`
+	SnapshotIndex      milestone_index.MilestoneIndex `json:"snapshot_index"`
+	PruningIndex       milestone_index.MilestoneIndex `json:"pruning_index"`
 	Version            string                         `json:"version"`
 	Uptime             int64                          `json:"uptime"`
 	CurrentRequestedMs milestone_index.MilestoneIndex `json:"current_requested_ms"`
@@ -296,6 +298,12 @@ func currentNodeStatus() *nodestatus {
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
+
+	snapshotInfo := tangle.GetSnapshotInfo()
+	if snapshotInfo != nil {
+		status.SnapshotIndex = snapshotInfo.SnapshotIndex
+		status.PruningIndex = snapshotInfo.PruningIndex
+	}
 	status.MsRequestQueueSize = requestCount
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueSize = requestCount

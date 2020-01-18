@@ -30,6 +30,8 @@ class ReqQMetric {
 class Status {
     lsmi: number;
     lmi: number;
+    snapshot_index: number;
+    pruning_index: number;
     version: string;
     uptime: number;
     current_requested_ms: number;
