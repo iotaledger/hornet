@@ -577,10 +577,16 @@ export class NodeStore {
         let labels = [];
         for (let i = 0; i < this.collected_server_metrics.length; i++) {
             let metric: ServerMetrics = this.collected_server_metrics[i];
-            labels.push(metric.spent_addrs_count);
+            labels.push(metric.ts);
+            spentAddrs.data.push(metric.spent_addrs_count);
         }
 
-        return {labels: labels, datasets: [spentAddrs],};
+        return {
+            labels: labels,
+            datasets: [
+                spentAddrs
+            ],
+        };
     }
 
     @computed
