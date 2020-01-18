@@ -11,7 +11,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	gossipLogger = logger.NewLogger("Gossip")
+	gossipLogger = logger.NewLogger(plugin.Name)
 
 	configureProtocol()
 	configureNeighbors()
