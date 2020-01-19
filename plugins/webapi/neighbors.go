@@ -72,7 +72,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 			added = true
 		}
 
-		if err := gossip.AddNeighbor(uri, preferIPv6); err != nil {
+		if err := gossip.AddNeighbor(uri, preferIPv6, uri); err != nil {
 			log.Warnf("Can't add neighbor %s, Error: %s", uri, err)
 		} else {
 			addedNeighbors++
