@@ -238,6 +238,7 @@ type memmetrics struct {
 
 type neighbormetric struct {
 	Identity         string                  `json:"identity"`
+	Alias            string                  `json:"alias" omitempty`
 	OriginAdrr       string                  `json:"origin_addr"`
 	ConnectionOrigin gossip.ConnectionOrigin `json:"connection_origin"`
 	ProtocolVersion  byte                    `json:"protocol_version"`
@@ -274,6 +275,7 @@ func neighborMetrics() []*neighbormetric {
 		}
 		if info.Neighbor != nil {
 			m.Identity = info.Neighbor.Identity
+			m.Alias = info.Alias
 			m.ConnectionOrigin = info.Neighbor.ConnectionOrigin
 			m.ProtocolVersion = info.Neighbor.Protocol.Version
 			m.BytesRead = info.Neighbor.Protocol.Conn.BytesRead
