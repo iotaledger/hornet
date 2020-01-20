@@ -104,19 +104,19 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	txHash := incomingTx.GetHash()
 	transaction := tangle.GetCachedTransaction(txHash) //+1
-	knownTx := transaction.Exists()
 
-	if !knownTx {
-		//This updates the transaction object automatically
-		tangle.StoreTransaction(incomingTx).Release() //+1 -1
+	// The tx will be added to the storage inside this function, so the transaction object automatically updates
+	bundlesAddedTo, alreadyAdded := addTransactionToBundleBucket(incomingTx)
+
+	if !alreadyAdded {
+
+		if !transaction.Exists() {
+			log.Panic("Transaction should have been added to storage!")
+		}
 
 		server.SharedServerMetrics.IncrNewTransactionsCount()
-		// ToDo: Bundle should be added before storing the tx in cache, so that the solidifier can't solidify
-		//		 txs, which bundles don't exist yet. But if we create the bundle, the tx has to exist in the cache as well.
-		//		 Maybe only one worker?
 
 		addressPersisterSubmit(transaction.GetTransaction().Tx.Address, transaction.GetTransaction().GetHash())
-		bundlesAddedTo := addTransactionToBundleBucket(transaction)
 		latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {

@@ -8,6 +8,8 @@ import (
 
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/syncutils"
+
+	"github.com/gohornet/hornet/packages/model/hornet"
 )
 
 func BundleCaller(handler interface{}, params ...interface{}) {
@@ -229,13 +231,20 @@ func (bucket *BundleBucket) GetHash() trinary.Hash {
 // assigning the transaction to an existing Bundle or to the unassigned pool.
 // It returns a slice of Bundles to which the transaction was added to. Adding a tail
 // transaction will ever only return one Bundle within the slice.
-func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
-
-	tx.RegisterConsumer() //+1
-	defer tx.Release()    //-1
+func (bucket *BundleBucket) AddTransaction(hornetTx *hornet.Transaction) (bundles []*Bundle, alreadyAdded bool) {
 
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
+
+	tx := GetCachedTransaction(hornetTx.GetHash())
+	defer tx.Release()
+
+	if tx.Exists() {
+		return nil, true
+	}
+
+	// Store the tx in the storage, this will update the tx reference automatically
+	StoreTransaction(hornetTx).Release()
 
 	// add the transaction to the "all" transactions pool
 	bucket.txs[tx.GetTransaction().GetHash()] = struct{}{}
@@ -243,7 +252,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 	if tx.GetTransaction().Tx.CurrentIndex == 0 {
 		// don't need to do anything if the tail transaction already is indexed
 		if bndl, ok := bucket.bundleInstances[tx.GetTransaction().GetHash()]; ok {
-			return []*Bundle{bndl}
+			return []*Bundle{bndl}, false
 		}
 
 		// create a new bundle instance
@@ -267,7 +276,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 
 		// add the new bundle to the bucket
 		bucket.bundleInstances[tx.GetTransaction().GetHash()] = bndl
-		return []*Bundle{bndl}
+		return []*Bundle{bndl}, false
 	}
 
 	// try a remap on every non complete bundle in the bucket.
@@ -296,7 +305,7 @@ func (bucket *BundleBucket) AddTransaction(tx *CachedTransaction) []*Bundle {
 		current.Release() //-1
 	}
 
-	return addedTo
+	return addedTo, false
 }
 
 // Maps the given transactions to their corresponding bundle instances within the bucket.
