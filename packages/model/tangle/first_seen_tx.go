@@ -32,7 +32,7 @@ func databaseKeyPrefixForFirstSeenTransaction(milestoneIndex milestone_index.Mil
 }
 
 func databaseKeyForFirstSeenTransaction(milestoneIndex milestone_index.MilestoneIndex, txHash trinary.Hash) []byte {
-	return append(databaseKeyPrefixForFirstSeenTransaction(milestoneIndex), trinary.MustTrytesToBytes(txHash)...)
+	return append(databaseKeyPrefixForFirstSeenTransaction(milestoneIndex), trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
 func transactionHashFromDatabaseKey(transactionHash []byte) trinary.Hash {

@@ -42,7 +42,7 @@ func storeMilestoneInDatabase(milestone *Bundle) error {
 
 	if err := milestoneDatabase.Set(database.Entry{
 		Key:   databaseKeyForMilestone(milestone),
-		Value: trinary.MustTrytesToBytes(milestone.GetMilestoneHash()),
+		Value: trinary.MustTrytesToBytes(milestone.GetMilestoneHash())[:49],
 	}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store milestone")
 	}
@@ -57,7 +57,7 @@ func StoreMilestonesInDatabase(milestones []*Bundle) error {
 	for _, milestone := range milestones {
 		entry := database.Entry{
 			Key:   databaseKeyForMilestone(milestone),
-			Value: trinary.MustTrytesToBytes(milestone.GetMilestoneHash()),
+			Value: trinary.MustTrytesToBytes(milestone.GetMilestoneHash())[:49],
 		}
 		entries = append(entries, entry)
 	}

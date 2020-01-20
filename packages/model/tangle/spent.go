@@ -17,14 +17,14 @@ var (
 func WasAddressSpentFrom(address trinary.Hash) bool {
 	spentAddressesLock.RLock()
 	defer spentAddressesLock.RUnlock()
-	return SpentAddressesCuckooFilter.Lookup(trinary.MustTrytesToBytes(address))
+	return SpentAddressesCuckooFilter.Lookup(trinary.MustTrytesToBytes(address)[:49])
 }
 
 // Marks an address in the cuckoo filter as spent.
 func MarkAddressAsSpent(address trinary.Hash) bool {
 	spentAddressesLock.Lock()
 	defer spentAddressesLock.Unlock()
-	return SpentAddressesCuckooFilter.Insert(trinary.MustTrytesToBytes(address))
+	return SpentAddressesCuckooFilter.Insert(trinary.MustTrytesToBytes(address)[:49])
 }
 
 // Initializes the cuckoo filter by loading it from the database (if available) or initializing
