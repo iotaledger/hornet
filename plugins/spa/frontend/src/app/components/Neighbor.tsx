@@ -88,7 +88,22 @@ export class Neighbor extends React.Component<Props, any> {
                     <Card>
                         <Card.Body>
                             <Card.Title>
-                                <h5>{last.origin_addr}</h5>
+                                <h5>
+                                    {last.origin_addr}
+                                    {' '}
+                                    {
+                                        last.protocol_version == 1 ?
+                                            <Badge variant="secondary">Legacy</Badge>
+                                            :
+                                            last.heartbeat.solid_milestone_index < this.props.nodeStore.status.lmi ?
+                                                <Badge variant="warning">Unsynced</Badge>
+                                                :
+                                                last.heartbeat.pruned_milestone_index > this.props.nodeStore.status.lsmi ?
+                                                    <Badge variant="danger">Milestones Pruned</Badge>
+                                                    :
+                                                    <Badge variant="success">STING</Badge>
+                                    }
+                                </h5>
                             </Card.Title>
                             <Row className={"mb-3"}>
                                 <Col>
