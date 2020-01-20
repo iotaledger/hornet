@@ -14,7 +14,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.5.0
-	github.com/go-zeromq/zmq4 v0.7.0
+	github.com/go-zeromq/zmq4 v0.7.1-0.20200120145353-018f24d5c483
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/googollee/go-engine.io v1.4.3-0.20190924125625-798118fc0dd2
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
@@ -35,4 +35,5 @@ require (
 	go.uber.org/atomic v1.5.1
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
 	golang.org/x/sys v0.0.0-20200103143344-a1369afcdac7 // indirect
+	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 )
