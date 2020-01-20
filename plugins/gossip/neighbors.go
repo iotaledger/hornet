@@ -441,13 +441,14 @@ func wakeupReconnectPool() {
 	}
 }
 
-func AddNeighbor(neighborAddr string, preferIPv6 bool) error {
+func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string) error {
 	originAddr, err := iputils.ParseOriginAddress(neighborAddr)
 	if err != nil {
 		return errors.Wrapf(err, "invalid neighbor address %s", neighborAddr)
 	}
 
 	originAddr.PreferIPv6 = preferIPv6
+	originAddr.Alias = alias
 
 	// check whether the neighbor is already connected, in-flight or in the reconnect pool
 	// given any of the IP addresses to which the neighbor address resolved to
@@ -581,6 +582,7 @@ type NeighborInfo struct {
 	Port                              uint16    `json:"port,omitempty"`
 	Domain                            string    `json:"domain,omitempty"`
 	DomainWithPort                    string    `json:"-"`
+	Alias                             string    `json:"alias,omitempty"`
 	PreferIPv6                        bool      `json:"-"`
 	NumberOfAllTransactions           uint32    `json:"numberOfAllTransactions"`
 	NumberOfRandomTransactionRequests uint32    `json:"numberOfRandomTransactionRequests"`
@@ -621,6 +623,7 @@ func GetNeighbors() []NeighborInfo {
 			Address:                           neighbor.Identity,
 			Domain:                            neighbor.InitAddress.Addr,
 			DomainWithPort:                    neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
+			Alias:                             neighbor.InitAddress.Alias,
 			NumberOfAllTransactions:           neighbor.Metrics.GetAllTransactionsCount(),
 			NumberOfInvalidTransactions:       neighbor.Metrics.GetInvalidTransactionsCount(),
 			NumberOfStaleTransactions:         neighbor.Metrics.GetStaleTransactionsCount(),
@@ -640,6 +643,7 @@ func GetNeighbors() []NeighborInfo {
 			Address:        originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			Domain:         originAddr.Addr,
 			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
+			Alias:          originAddr.Alias,
 			ConnectionType: "tcp",
 			Connected:      false,
 			PreferIPv6:     originAddr.PreferIPv6,

@@ -73,7 +73,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 		for _, configNeighbor := range configNeighbors {
 			if strings.EqualFold(boundNeighbor.Address, configNeighbor.Identity) || strings.EqualFold(boundNeighbor.DomainWithPort, configNeighbor.Identity) {
 				found = true
-				if boundNeighbor.PreferIPv6 != configNeighbor.PreferIPv6 {
+				if (boundNeighbor.PreferIPv6 != configNeighbor.PreferIPv6) || (boundNeighbor.Alias != configNeighbor.Alias) {
 					modified = append(modified, configNeighbor)
 				}
 			}
@@ -117,6 +117,7 @@ func addNewNeighbors(neighbors []NeighborConfig) {
 			continue
 		}
 		originAddr.PreferIPv6 = nb.PreferIPv6
+		originAddr.Alias = nb.Alias
 
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
 	}
