@@ -110,6 +110,7 @@ var Profile8GB = &Profile{
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
 		ZSTDCompressionLevel:    10,
+		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
@@ -160,6 +161,7 @@ var Profile4GB = &Profile{
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
 		ZSTDCompressionLevel:    10,
+		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
@@ -210,6 +212,7 @@ var Profile2GB = &Profile{
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
 		ZSTDCompressionLevel:    10,
+		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
@@ -260,6 +263,7 @@ var Profile1GB = &Profile{
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
 		ZSTDCompressionLevel:    10,
+		CompressionType:         options.None,
 		ValueLogFileSize:        33554431,
 		ValueLogMaxEntries:      250000,
 		ValueThreshold:          32,
@@ -308,6 +312,7 @@ type BadgerOpts struct {
 	VerifyValueChecksum     bool                    `json:"verifyValueChecksum"`
 	MaxCacheSize            int64                   `json:"maxCacheSize"`
 	ZSTDCompressionLevel    int                     `json:"ZSTDCompressionLevel"`
+	CompressionType         options.CompressionType `json:"CompressionType"`
 	ValueLogFileSize        int64                   `json:"valueLogFileSize"`
 	ValueLogMaxEntries      uint32                  `json:"valueLogMaxEntries"`
 	ValueThreshold          int                     `json:"valueThreshold"`
