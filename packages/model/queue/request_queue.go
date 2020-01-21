@@ -240,13 +240,6 @@ func (s *RequestQueue) MarkReceived(txHash trinary.Hash) bool {
 		return true
 	}
 
-	// If this was already evicted from our cache, check if it is still in the pending queue
-	for _, req := range s.pending {
-		if req.hash == txHash {
-			req.markReceived()
-			return true
-		}
-	}
 	return false
 }
 
@@ -260,14 +253,6 @@ func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) bool {
 	if cachedRequest.Exists() {
 		request := cachedRequest.GetRequest()
 		request.markProcessed()
-	} else {
-		// If this was already evicted from our cache, check if it is still in the pending queue
-		for _, req := range s.pending {
-			if req.hash == txHash {
-				req.markProcessed()
-				break
-			}
-		}
 	}
 
 	// First check if we still have tx waiting to be requested
