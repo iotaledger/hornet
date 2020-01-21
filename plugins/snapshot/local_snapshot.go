@@ -35,27 +35,30 @@ var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file ve
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
-	approvers, _ := tangle.GetApprovers(txHash)
-	if approvers == nil {
-		return false, 0
-	}
 
-	for _, approver := range approvers.GetHashes() {
-		tx := tangle.GetCachedTransaction(approver) //+1
-		if !tx.Exists() {
+	approvers := tangle.GetCachedApprovers(txHash) //+1
+	defer approvers.Release()                      //-1
+
+	for _, approver := range approvers {
+		if approver.Exists() {
+			approverHash := approver.GetApprover().GetHash()
+			tx := tangle.GetCachedTransaction(approverHash) //+1
+			if !tx.Exists() {
+				tx.Release() //-1
+				log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
+			}
+
+			// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
+			//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
+			//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
+
+			confirmed, at := tx.GetTransaction().GetConfirmed()
 			tx.Release() //-1
-			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approver)
-		}
+			if confirmed && (at > targetIndex) {
+				// confirmed by a later milestone than targetIndex => solidEntryPoint
 
-		// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
-		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
-		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
-
-		confirmed, at := tx.GetTransaction().GetConfirmed()
-		tx.Release() //-1
-		if confirmed && (at > targetIndex) {
-			// confirmed by a later milestone than targetIndex => solidEntryPoint
-			return true, at
+				return true, at
+			}
 		}
 	}
 

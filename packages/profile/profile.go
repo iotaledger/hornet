@@ -71,10 +71,6 @@ func GetProfile() *Profile {
 
 var Profile8GB = &Profile{
 	Caches: Caches{
-		Approvers: CacheOpts{
-			Size:         100000,
-			EvictionSize: 1000,
-		},
 		Bundles: CacheOpts{
 			Size:         20000,
 			EvictionSize: 1000,
@@ -125,10 +121,6 @@ var Profile8GB = &Profile{
 
 var Profile4GB = &Profile{
 	Caches: Caches{
-		Approvers: CacheOpts{
-			Size:         100000,
-			EvictionSize: 1000,
-		},
 		Bundles: CacheOpts{
 			Size:         20000,
 			EvictionSize: 1000,
@@ -179,10 +171,6 @@ var Profile4GB = &Profile{
 
 var Profile2GB = &Profile{
 	Caches: Caches{
-		Approvers: CacheOpts{
-			Size:         50000,
-			EvictionSize: 1000,
-		},
 		Bundles: CacheOpts{
 			Size:         10000,
 			EvictionSize: 1000,
@@ -233,10 +221,6 @@ var Profile2GB = &Profile{
 
 var Profile1GB = &Profile{
 	Caches: Caches{
-		Approvers: CacheOpts{
-			Size:         10000,
-			EvictionSize: 1000,
-		},
 		Bundles: CacheOpts{
 			Size:         5000,
 			EvictionSize: 1000,
@@ -292,7 +276,6 @@ type Profile struct {
 }
 
 type Caches struct {
-	Approvers                 CacheOpts `json:"approvers"`
 	Bundles                   CacheOpts `json:"bundles"`
 	Milestones                CacheOpts `json:"milestones"`
 	SpentAddresses            CacheOpts `json:"spentAddresses"`

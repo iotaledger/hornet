@@ -124,16 +124,8 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 		}
 		Events.ReceivedNewTransaction.Trigger(transaction, latestMilestoneIndex, solidMilestoneIndex)
 
-		approvers, err := tangle.GetApprovers(transaction.GetTransaction().GetTrunk())
-		if err != nil {
-			log.Panic(err)
-		}
-		approvers.Add(transaction.GetTransaction().GetHash())
-		approvers, err = tangle.GetApprovers(transaction.GetTransaction().GetBranch())
-		if err != nil {
-			log.Panic(err)
-		}
-		approvers.Add(transaction.GetTransaction().GetHash())
+		tangle.StoreApprover(transaction.GetTransaction().GetTrunk(), transaction.GetTransaction().GetHash()).Release()
+		tangle.StoreApprover(transaction.GetTransaction().GetBranch(), transaction.GetTransaction().GetHash()).Release()
 
 		for _, bundle := range bundlesAddedTo {
 			// this iteration might be true concurrently between different processIncomingTx()
