@@ -93,8 +93,8 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 
 		bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
 		if err != nil {
-			log.Panicf("pruneTransactions: Bundle bucket not found: %v", tx.GetTransaction().Tx.Bundle)
 			tx.Release() //-1
+			log.Panicf("pruneTransactions: Bundle bucket not found: %v", tx.GetTransaction().Tx.Bundle)
 		}
 
 		for txToRemove := range bundleBucket.RemoveTransactionFromBundle(txHash) {
@@ -111,14 +111,6 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
 		}
 
-		approvers := tangle.GetCachedApprovers(txHash) //+1
-		if len(approvers) == 0 {
-			approvers.Release() //-1
-			tx.Release()        //-1
-			continue
-		}
-		approvers.Release() //-1
-
 		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: tx.GetTransaction().Tx.Address})
 		tx.Release() //-1
 
@@ -129,11 +121,6 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	// bundles
 	if err := tangle.DeleteBundlesInDatabase(bundlesTxsToRemove); err != nil {
 		log.Error(err)
-	}
-
-	// tx
-	for txToRemove := range txsToRemove {
-		tangle.DeleteTransaction(txToRemove)
 	}
 
 	// address
