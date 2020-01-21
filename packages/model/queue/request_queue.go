@@ -62,8 +62,8 @@ func NewRequestQueue() *RequestQueue {
 	return queue
 }
 
-func (s *RequestQueue) GetStorage() *objectstorage.ObjectStorage {
-	return s.requestedStorage
+func (s *RequestQueue) GetStorageSize() int {
+	return s.requestedStorage.GetSize()
 }
 
 // +1

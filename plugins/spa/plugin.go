@@ -313,14 +313,13 @@ func currentNodeStatus() *nodestatus {
 	status.RequestQueueSize = requestCount
 
 	// cache metrics
-	reqQueueStorage := gossip.RequestQueue.GetStorage()
 	status.Caches = &cachesmetric{
 		Approvers: cache{
 			Size:     tangle.ApproversCache.GetSize(),
 			Capacity: tangle.ApproversCache.GetCapacity(),
 		},
 		RequestQueue: cache{
-			Size:     reqQueueStorage.GetSize(),
+			Size:     gossip.RequestQueue.GetStorageSize(),
 			Capacity: 0,
 		},
 		Bundles: cache{
