@@ -98,6 +98,9 @@ func (s *RequestQueue) retryPending() {
 			if !tangle.ContainsTransaction(r.hash) {
 				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
+			} else {
+				r.cachedRequest.Release() // -1
+				s.DeleteRequest(r.hash)   // +-0
 			}
 		}
 	}
