@@ -27,13 +27,13 @@ func GetProfile() *Profile {
 				panic(err)
 			}
 
-			if v.Total >= 8000000000 {
+			if v.Total >= 8000000000*0.95 {
 				profileName = "8gb"
-			} else if v.Total >= 4000000000 {
+			} else if v.Total >= 4000000000*0.95 {
 				profileName = "4gb"
-			} else if v.Total >= 2000000000 {
+			} else if v.Total >= 2000000000*0.95 {
 				profileName = "2gb"
-			} else if v.Total >= 1000000000 {
+			} else if v.Total >= 1000000000*0.95 {
 				profileName = "1gb"
 			} else {
 				panic(ErrNotEnoughMemory)
