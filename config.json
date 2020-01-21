@@ -41,7 +41,7 @@
         "keepL0InMemory": false,
         "verifyValueChecksum": false,
         "maxCacheSize": 50000000,
-        "ZSTDCompressionLevel": 10,
+        "ZSTDCompressionLevel": 1,
         "CompressionType": 0,
         "valueLogFileSize": 1073741823,
         "valueLogMaxEntries": 1000000,
@@ -116,7 +116,11 @@
   "globalsnapshot": {
     "load": false,
     "path": "snapshotMainnet.txt",
-    "spentaddressespaths": ["previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"],
+    "spentaddressespaths": [
+      "previousEpochsSpentAddresses1.txt",
+      "previousEpochsSpentAddresses2.txt",
+      "previousEpochsSpentAddresses3.txt"
+    ],
     "index": 1050000
   },
   "privatetangle": {
