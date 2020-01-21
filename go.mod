@@ -14,7 +14,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.5.0
-	github.com/go-zeromq/zmq4 v0.7.1-0.20200120145353-018f24d5c483
+	github.com/go-zeromq/zmq4 v0.7.1-0.20200121125308-d4ccb1637116
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/googollee/go-engine.io v1.4.3-0.20190924125625-798118fc0dd2
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
