@@ -82,7 +82,6 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 
 	txsToRemove := make(map[trinary.Hash]struct{})
 	bundlesTxsToRemove := make(map[trinary.Hash]trinary.Hash)
-	var approvers []*tangle.Approvers
 	var addresses []*tangle.TxHashForAddress
 
 	for _, txHash := range txHashes {
@@ -112,23 +111,19 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
 		}
 
-		approver, _ := tangle.GetApprovers(txHash)
-		if approver == nil {
-			tx.Release() //-1
+		approvers := tangle.GetCachedApprovers(txHash) //+1
+		if len(approvers) == 0 {
+			approvers.Release() //-1
+			tx.Release()        //-1
 			continue
 		}
-		approvers = append(approvers, approver)
+		approvers.Release() //-1
 
 		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: tx.GetTransaction().Tx.Address})
 		tx.Release() //-1
 
-		tangle.DiscardApproversFromCache(txHash)
+		tangle.DeleteApprovers(txHash)
 		tangle.DeleteTransaction(txHash)
-	}
-
-	// approvers
-	if err := tangle.DeleteApproversInDatabase(approvers); err != nil {
-		log.Error(err)
 	}
 
 	// bundles

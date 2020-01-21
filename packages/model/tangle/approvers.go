@@ -1,77 +1,94 @@
 package tangle
 
 import (
+	"time"
+
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/typeutils"
+	"github.com/iotaledger/hive.go/objectstorage"
+
+	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/model/hornet"
 )
 
-type Approvers struct {
-	hash        trinary.Trytes
-	hashes      map[trinary.Trytes]bool
-	hashesMutex syncutils.RWMutex
+var approversStorage *objectstorage.ObjectStorage
+
+type CachedApprover struct {
+	*objectstorage.CachedObject
 }
 
-func NewApprovers(hash trinary.Hash) *Approvers {
-	return &Approvers{
-		hash:   hash,
-		hashes: make(map[trinary.Trytes]bool),
+type CachedAppprovers []*CachedApprover
+
+func (cachedApprovers CachedAppprovers) RegisterConsumer() {
+	for _, cachedApprover := range cachedApprovers {
+		cachedApprover.RegisterConsumer()
 	}
 }
 
-func GetApprovers(hash trinary.Hash) (result *Approvers, err error) {
-	if cacheResult := ApproversCache.ComputeIfAbsent(hash, func() interface{} {
-		approvers, dbErr := readApproversForTransactionFromDatabase(hash)
-		if dbErr == nil {
-			return approvers
-		}
-		err = dbErr
-		return nil
-	}); !typeutils.IsInterfaceNil(cacheResult) {
-		result = cacheResult.(*Approvers)
+func (cachedApprovers CachedAppprovers) Release() {
+	for _, cachedApprover := range cachedApprovers {
+		cachedApprover.Release()
 	}
-	return
 }
 
-func DiscardApproversFromCache(hash trinary.Hash) {
-	ApproversCache.DeleteWithoutEviction(hash)
+func (c *CachedApprover) GetApprover() *hornet.Approver {
+	return c.Get().(*hornet.Approver)
 }
 
-func (approvers *Approvers) Add(transactionHash trinary.Hash) {
-	approvers.hashesMutex.Lock()
-	if _, exists := approvers.hashes[transactionHash]; !exists {
-		approvers.hashes[transactionHash] = true
+func approversFactory(key []byte) objectstorage.StorableObject {
+	return &hornet.Approver{
+		TxHash: key[:49],
+		Hash:   key[49:],
 	}
-	approvers.hashesMutex.Unlock()
 }
 
-func (approvers *Approvers) Remove(approverHash trinary.Hash) {
-	approvers.hashesMutex.Lock()
-	delete(approvers.hashes, approverHash)
-	approvers.hashesMutex.Unlock()
+func GetApproversStorageSize() int {
+	return approversStorage.GetSize()
 }
 
-func (approvers *Approvers) GetHashes() (result []trinary.Hash) {
-	approvers.hashesMutex.RLock()
+func configureApproversStorage() {
 
-	result = make([]trinary.Hash, len(approvers.hashes))
+	approversStorage = objectstorage.New(
+		[]byte{DBPrefixApprovers},
+		approversFactory,
+		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
+		objectstorage.CacheTime(1500*time.Millisecond),
+		objectstorage.PersistenceEnabled(true))
+}
 
-	counter := 0
-	for hash := range approvers.hashes {
-		result[counter] = hash
-		counter++
+func GetCachedApprovers(transactionHash trinary.Hash) CachedAppprovers {
+	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+
+	approvers := CachedAppprovers{}
+
+	approversStorage.ForEach(func(key []byte, cachedObject *objectstorage.CachedObject) bool {
+		approvers = append(approvers, &CachedApprover{cachedObject})
+		return true
+	}, txHash)
+
+	return approvers
+}
+
+func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *CachedApprover {
+
+	approver := &hornet.Approver{
+		TxHash: trinary.MustTrytesToBytes(transactionHash)[:49],
+		Hash:   trinary.MustTrytesToBytes(approverHash)[:49],
 	}
 
-	approvers.hashesMutex.RUnlock()
-
-	return
+	return &CachedApprover{approversStorage.Store(approver)}
 }
 
-func (approvers *Approvers) GetHash() (result trinary.Hash) {
-	approvers.hashesMutex.RLock()
-	result = approvers.hash
-	approvers.hashesMutex.RUnlock()
+func DeleteApprovers(transactionHash trinary.Hash) {
 
-	return
+	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+
+	approversStorage.ForEach(func(key []byte, cachedObject *objectstorage.CachedObject) bool {
+		approversStorage.Delete(key)
+		return true
+	}, txHash)
+}
+
+func FlushApproversStorage() {
+	approversStorage.Flush()
 }

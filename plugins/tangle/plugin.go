@@ -34,7 +34,6 @@ func configure(plugin *node.Plugin) {
 	RefsAnInvalidBundleCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
 
 	tangle.InitBundleCache()
-	tangle.InitApproversCache()
 	tangle.InitMilestoneCache()
 
 	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
@@ -72,7 +71,7 @@ func configure(plugin *node.Plugin) {
 		tangle.FlushMilestoneCache()
 		tangle.FlushBundleCache()
 		tangle.FlushTransactionStorage()
-		tangle.FlushApproversCache()
+		tangle.FlushApproversStorage()
 		if err := tangle.StoreSpentAddressesCuckooFilterInDatabase(); err != nil {
 			log.Panicf("couldn't persist spent addresses cuckoo filter: %s", err.Error())
 		}

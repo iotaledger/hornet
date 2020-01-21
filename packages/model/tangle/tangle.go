@@ -11,7 +11,7 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	configureTransactionStorage()
 	configureBundleDatabase()
 	configureTransactionHashesForAddressDatabase()
-	configureApproversDatabase()
+	configureApproversStorage()
 	configureMilestoneDatabase()
 	configureLedgerDatabase()
 	configureSnapshotDatabase()

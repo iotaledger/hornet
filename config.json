@@ -3,10 +3,6 @@
   "profiles": {
     "custom": {
       "caches": {
-        "approvers": {
-          "size": 100000,
-          "evictionSize": 1000
-        },
         "bundles": {
           "size": 20000,
           "evictionSize": 1000

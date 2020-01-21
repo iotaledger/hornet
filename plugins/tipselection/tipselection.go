@@ -164,16 +164,21 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		for {
 			walkStats.StepsTaken++
 			previousSelected := selected
-			approvers, err := tangle.GetApprovers(selected)
-			if err != nil {
-				return nil, nil, err
-			}
+			approvers := tangle.GetCachedApprovers(selected) //+1
 
-			if len(approvers.GetHashes()) == 0 {
+			if len(approvers) == 0 {
+				approvers.Release() //-1
 				break
 			}
 
-			approverHashes := approvers.GetHashes()
+			var approverHashes []trinary.Hash
+			for _, approver := range approvers {
+				if approver.Exists() {
+					approverHashes = append(approverHashes, approver.GetApprover().GetHash())
+				}
+			}
+			approvers.Release() //-1
+
 			for len(approverHashes) != 0 {
 				b := make([]byte, 1)
 				_, err := rand.Read(b)

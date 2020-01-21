@@ -56,8 +56,7 @@ func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCa
 
 			if addToApproversCache {
 				// Add this Transaction as approver to the approvee if it is unknown or not solid yet
-				approveeApprovers, _ := tangle.GetApprovers(approveeHash)
-				approveeApprovers.Add(cachedTransaction.GetTransaction().GetHash())
+				tangle.StoreApprover(approveeHash, cachedTransaction.GetTransaction().GetHash()).Release()
 			}
 			approveeTx.Release() //-1
 			break
