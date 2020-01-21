@@ -206,6 +206,7 @@ class NeighborMetrics {
 
 class NeighborMetric {
     identity: string;
+    alias: string;
     origin_addr: string;
     connection_origin: number;
     protocol_version: number;
