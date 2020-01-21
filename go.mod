@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/dgraph-io/badger/v2 v2.0.1-rc1.0.20200102235959-03af216ff00a
+	github.com/dgraph-io/badger/v2 v2.0.1
 	github.com/dgraph-io/ristretto v0.0.1 // indirect
 	github.com/dgryski/go-farm v0.0.0-20191112170834-c2139c5d712b // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
@@ -20,8 +20,8 @@ require (
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200118180335-d4e7449f2b6d
-	github.com/iotaledger/iota.go v1.0.0-beta.13
+	github.com/iotaledger/hive.go v0.0.0-20200121002816-3019cb9d3e7a
+	github.com/iotaledger/iota.go v1.0.0-beta.14
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2

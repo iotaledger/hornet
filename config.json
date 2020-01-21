@@ -3,9 +3,6 @@
   "profiles": {
     "custom": {
       "caches": {
-        "requestQueue": {
-          "size": 100000
-        },
         "approvers": {
           "size": 100000,
           "evictionSize": 1000

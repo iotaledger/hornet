@@ -622,7 +622,7 @@ func GetNeighbors() []NeighborInfo {
 			Neighbor:                          neighbor,
 			Address:                           neighbor.Identity,
 			Domain:                            neighbor.InitAddress.Addr,
-			DomainWithPort:                    neighbor.InitAddress.Addr + ":" + strconv.FormatInt(int64(neighbor.InitAddress.Port), 10),
+			DomainWithPort:                    neighbor.InitAddress.String(),
 			Alias:                             neighbor.InitAddress.Alias,
 			NumberOfAllTransactions:           neighbor.Metrics.GetAllTransactionsCount(),
 			NumberOfInvalidTransactions:       neighbor.Metrics.GetInvalidTransactionsCount(),

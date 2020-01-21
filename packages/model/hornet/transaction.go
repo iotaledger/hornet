@@ -51,7 +51,7 @@ type Transaction struct {
 
 func NewTransactionFromAPI(transaction *transaction.Transaction, transactionBytes []byte) *Transaction {
 	tx := &Transaction{
-		TxHash:            trinary.MustTrytesToBytes(transaction.Hash),
+		TxHash:            trinary.MustTrytesToBytes(transaction.Hash)[:49],
 		Tx:                transaction,
 		RawBytes:          transactionBytes,
 		timestamp:         getTimestampFromTx(transaction),
@@ -69,7 +69,7 @@ func NewTransactionFromGossip(transaction *transaction.Transaction, transactionB
 	}
 
 	tx := &Transaction{
-		TxHash:            trinary.MustTrytesToBytes(transaction.Hash),
+		TxHash:            trinary.MustTrytesToBytes(transaction.Hash)[:49],
 		Tx:                transaction,
 		RawBytes:          transactionBytes,
 		timestamp:         getTimestampFromTx(transaction),

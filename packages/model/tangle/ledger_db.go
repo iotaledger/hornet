@@ -55,7 +55,7 @@ func configureLedgerDatabase() {
 }
 
 func databaseKeyForAddressBalance(address trinary.Hash) []byte {
-	return append(balancePrefix, trinary.MustTrytesToBytes(address)...)
+	return append(balancePrefix, trinary.MustTrytesToBytes(address)[:49]...)
 }
 
 func databaseKeyPrefixForLedgerDiff(milestoneIndex milestone_index.MilestoneIndex) []byte {
@@ -63,7 +63,7 @@ func databaseKeyPrefixForLedgerDiff(milestoneIndex milestone_index.MilestoneInde
 }
 
 func databaseKeyForLedgerDiffAndAddress(milestoneIndex milestone_index.MilestoneIndex, address trinary.Hash) []byte {
-	return append(databaseKeyPrefixForLedgerDiff(milestoneIndex), trinary.MustTrytesToBytes(address)...)
+	return append(databaseKeyPrefixForLedgerDiff(milestoneIndex), trinary.MustTrytesToBytes(address)[:49]...)
 }
 
 func bytesFromBalance(balance uint64) []byte {

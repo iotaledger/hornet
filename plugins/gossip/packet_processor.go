@@ -289,7 +289,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 		return consts.ErrInvalidTransactionHash
 	}
 
-	txBytesTruncated := compressed.TruncateTx(trinary.TritsToBytes(txTrits))
+	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	hornetTx := hornet.NewTransactionFromAPI(tx, txBytesTruncated)
 
 	if timeValid, _ := checkTimestamp(hornetTx); !timeValid {
@@ -297,7 +297,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 	}
 
 	Events.ReceivedTransaction.Trigger(hornetTx)
-	BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.TritsToBytes(hashTrits))
+	BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTritsToBytes(hashTrits))
 
 	return nil
 }

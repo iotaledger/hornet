@@ -19,11 +19,11 @@ func configureBundleDatabase() {
 }
 
 func databaseKeyForBundle(bundleHash trinary.Hash, txHash trinary.Hash) []byte {
-	return append(databaseKeyPrefixForBundleHash(bundleHash), trinary.MustTrytesToBytes(txHash)...)
+	return append(databaseKeyPrefixForBundleHash(bundleHash), trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
 func databaseKeyPrefixForBundleHash(bundleHash trinary.Hash) []byte {
-	return trinary.MustTrytesToBytes(bundleHash)
+	return trinary.MustTrytesToBytes(bundleHash)[:49]
 }
 
 func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
