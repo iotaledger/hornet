@@ -32,9 +32,9 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	address = trinary.Pad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
+	address = trinary.MustPad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = parameter.NodeConfig.GetString("spammer.message")
-	tagSubstring = trinary.Pad(parameter.NodeConfig.GetString("spammer.tag"), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
+	tagSubstring = trinary.MustPad(parameter.NodeConfig.GetString("spammer.tag"), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
 	depth = parameter.NodeConfig.GetUint("spammer.depth")
 	rateLimit = parameter.NodeConfig.GetFloat64("spammer.tpsRateLimit")
 	mwm = parameter.NodeConfig.GetInt("protocol.mwm")

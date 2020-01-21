@@ -29,13 +29,13 @@ func finalizeInsecure(bundle bundle.Bundle) (bundle.Bundle, error) {
 	var timestampTrits = make([]trinary.Trits, len(bundle))
 	var currentIndexTrits = make([]trinary.Trits, len(bundle))
 	var obsoleteTagTrits = make([]trinary.Trits, len(bundle))
-	var lastIndexTrits = trinary.PadTrits(trinary.IntToTrits(int64(bundle[0].LastIndex)), 27)
+	var lastIndexTrits = trinary.MustPadTrits(trinary.IntToTrits(int64(bundle[0].LastIndex)), 27)
 
 	for i := range bundle {
-		valueTrits[i] = trinary.PadTrits(trinary.IntToTrits(bundle[i].Value), 81)
-		timestampTrits[i] = trinary.PadTrits(trinary.IntToTrits(int64(bundle[i].Timestamp)), 27)
-		currentIndexTrits[i] = trinary.PadTrits(trinary.IntToTrits(int64(bundle[i].CurrentIndex)), 27)
-		obsoleteTagTrits[i] = trinary.PadTrits(trinary.MustTrytesToTrits(bundle[i].ObsoleteTag), 81)
+		valueTrits[i] = trinary.MustPadTrits(trinary.IntToTrits(bundle[i].Value), 81)
+		timestampTrits[i] = trinary.MustPadTrits(trinary.IntToTrits(int64(bundle[i].Timestamp)), 27)
+		currentIndexTrits[i] = trinary.MustPadTrits(trinary.IntToTrits(int64(bundle[i].CurrentIndex)), 27)
+		obsoleteTagTrits[i] = trinary.MustPadTrits(trinary.MustTrytesToTrits(bundle[i].ObsoleteTag), 81)
 	}
 
 	var bundleHash trinary.Hash
@@ -98,7 +98,7 @@ func createBundle(address string, msg string, tagSubstring string, txCount int, 
 		Tag:                       tag,
 		Timestamp:                 timestamp,
 		Length:                    uint64(1),
-		SignatureMessageFragments: []trinary.Trytes{trinary.Pad(message, consts.SignatureMessageFragmentSizeInTrytes)},
+		SignatureMessageFragments: []trinary.Trytes{trinary.MustPad(message, consts.SignatureMessageFragmentSizeInTrytes)},
 	}
 	b = bundle.AddEntry(b, outEntry)
 
