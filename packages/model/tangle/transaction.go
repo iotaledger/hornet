@@ -85,5 +85,5 @@ func DeleteTransaction(txHash trinary.Hash) {
 }
 
 func FlushTransactionStorage() {
-	txStorage.WaitForWritesToFlush()
+	txStorage.Flush()
 }

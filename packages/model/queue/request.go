@@ -1,16 +1,21 @@
 package queue
 
 import (
-	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"time"
 
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/objectstorage"
+
+	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
 type request struct {
-	hash    trinary.Hash
-	bytes   []byte
-	msIndex milestone_index.MilestoneIndex
+	objectstorage.StorableObjectFlags
+
+	hash      trinary.Hash
+	hashBytes []byte
+	msIndex   milestone_index.MilestoneIndex
 
 	received  bool
 	processed bool
@@ -19,21 +24,49 @@ type request struct {
 	timeLastRequest  time.Time
 
 	index int // The index of the item in the heap.
+
+	cachedRequest *CachedRequest
+}
+
+// ObjectStorage interface
+
+func (r *request) Update(other objectstorage.StorableObject) {
+	if obj, ok := other.(*request); !ok {
+		panic("invalid object passed to request.Update()")
+	} else {
+		r.hash = obj.hash
+		r.hashBytes = obj.hashBytes
+		r.msIndex = obj.msIndex
+
+		r.received = obj.received
+		r.processed = obj.processed
+
+		r.timeFirstRequest = obj.timeFirstRequest
+		r.timeLastRequest = obj.timeLastRequest
+
+		r.index = obj.index
+	}
+}
+
+func (r *request) GetStorageKey() []byte {
+	return r.hashBytes
+}
+
+func (r *request) MarshalBinary() (data []byte, err error) {
+	return nil, nil
+}
+
+func (r *request) UnmarshalBinary(data []byte) error {
+	return nil
 }
 
 func newRequest(txHash trinary.Hash, ms milestone_index.MilestoneIndex, requested bool) *request {
-	txHashTrits := trinary.MustTrytesToTrits(txHash)
-	/*
-		if trinary.TrailingZeros(txHashTrits) < int64(ownMWM) {
-			panic(fmt.Sprintf("Invalid hash requested: %v (invalid PoW). This should never happen!", txHash))
-		}
-	*/
-	txHashBytes := trinary.TritsToBytes(txHashTrits)[:49]
+	txHashBytes := trinary.MustTrytesToBytes(txHash)[:49]
 
 	r := &request{
-		hash:    txHash,
-		bytes:   txHashBytes,
-		msIndex: ms,
+		hash:      txHash,
+		hashBytes: txHashBytes,
+		msIndex:   ms,
 	}
 
 	if requested {
@@ -64,5 +97,19 @@ func (r *request) updateTimes() {
 	r.timeLastRequest = time.Now()
 	if r.timeFirstRequest.IsZero() {
 		r.timeFirstRequest = r.timeLastRequest
+	}
+}
+
+type CachedRequest struct {
+	*objectstorage.CachedObject
+}
+
+func (c *CachedRequest) GetRequest() *request {
+	return c.Get().(*request)
+}
+
+func requestFactory(key []byte) objectstorage.StorableObject {
+	return &request{
+		hashBytes: key,
 	}
 }
