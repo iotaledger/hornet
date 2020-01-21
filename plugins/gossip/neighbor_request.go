@@ -58,7 +58,6 @@ func (p *PendingNeighborRequests) Update(other objectstorage.StorableObject) {
 		panic("invalid object passed to PendingNeighborRequests.Update()")
 	} else {
 		// data
-		p.dataLock = obj.dataLock
 		p.recTxBytes = obj.recTxBytes
 		p.recHashBytes = obj.recHashBytes
 		p.recHash = obj.recHash

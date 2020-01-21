@@ -161,8 +161,9 @@ func ProcessReceivedLegacyTransactionGossipData(protocol *protocol, data []byte)
 
 	txData := data[:txDataLen]
 	cachedRequest := GetCachedPendingNeighborRequest(txData) // +1
-	defer cachedRequest.Release()
 	pending = cachedRequest.GetRequest()
+	cachedRequest.Release() // -1
+
 	pending.AddLegacyTxRequest(protocol, reqHashBytes)
 	pending.process()
 }
@@ -174,9 +175,10 @@ func ProcessReceivedTransactionGossipData(protocol *protocol, txData []byte) {
 	protocol.Neighbor.Metrics.IncrAllTransactionsCount()
 
 	var pending *PendingNeighborRequests
-	cachedRequest := GetCachedPendingNeighborRequest(txData)
-	defer cachedRequest.Release()
+	cachedRequest := GetCachedPendingNeighborRequest(txData) // +1
 	pending = cachedRequest.GetRequest()
+	cachedRequest.Release() // -1
+
 	pending.BlockFeedback(protocol)
 	pending.process()
 
