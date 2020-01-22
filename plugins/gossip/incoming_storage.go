@@ -30,10 +30,6 @@ func GetIncomingStorageSize() int {
 // +1
 func GetCachedPendingNeighborRequest(recTxBytes []byte) *CachedNeighborRequest {
 	return &CachedNeighborRequest{
-		incomingStorage.ComputeIfAbsent(recTxBytes, func(key []byte) objectstorage.StorableObject {
-			return &PendingNeighborRequests{
-				recTxBytes: key,
-				requests:   make([]*NeighborRequest, 0),
-			}
-		})}
+		incomingStorage.ComputeIfAbsent(recTxBytes, incomingFactory),
+	}
 }
