@@ -335,8 +335,8 @@ func currentNodeStatus() *nodestatus {
 			Capacity: 0,
 		},
 		IncomingTransactionFilter: cache{
-			Size:     gossip.IncomingCache.GetSize(),
-			Capacity: gossip.IncomingCache.GetCapacity(),
+			Size:     gossip.GetIncomingStorageSize(),
+			Capacity: 0,
 		},
 		RefsInvalidBundle: cache{
 			Size:     tangle_plugin.RefsAnInvalidBundleCache.GetSize(),

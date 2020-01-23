@@ -9,6 +9,7 @@ import (
 
 	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var approversStorage *objectstorage.ObjectStorage
@@ -48,11 +49,13 @@ func GetApproversStorageSize() int {
 
 func configureApproversStorage() {
 
+	opts := profile.GetProfile().Caches.Approvers
+
 	approversStorage = objectstorage.New(
 		[]byte{DBPrefixApprovers},
 		approversFactory,
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
-		objectstorage.CacheTime(1500*time.Millisecond),
+		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true))
 }
 

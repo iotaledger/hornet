@@ -10,6 +10,7 @@ import (
 	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var txStorage *objectstorage.ObjectStorage
@@ -60,11 +61,13 @@ func GetTransactionStorageSize() int {
 
 func configureTransactionStorage() {
 
+	opts := profile.GetProfile().Caches.Transactions
+
 	txStorage = objectstorage.New(
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
-		objectstorage.CacheTime(1500*time.Millisecond),
+		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true))
 }
 

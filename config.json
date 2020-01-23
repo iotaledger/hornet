@@ -3,6 +3,9 @@
   "profiles": {
     "custom": {
       "caches": {
+        "approvers": {
+          "cacheTimeMs": 5000
+        },
         "bundles": {
           "size": 20000,
           "evictionSize": 1000
@@ -15,8 +18,11 @@
           "size": 5000,
           "evictionSize": 1000
         },
+        "transactions": {
+          "cacheTimeMs": 5000
+        },
         "incomingTransactionFilter": {
-          "size": 5000
+          "cacheTimeMs": 5000
         },
         "refsInvalidBundle": {
           "size": 10000

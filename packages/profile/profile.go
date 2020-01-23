@@ -71,6 +71,9 @@ func GetProfile() *Profile {
 
 var Profile8GB = &Profile{
 	Caches: Caches{
+		Approvers: CacheOpts{
+			CacheTimeMs: 60000,
+		},
 		Bundles: CacheOpts{
 			Size:         20000,
 			EvictionSize: 1000,
@@ -83,8 +86,11 @@ var Profile8GB = &Profile{
 			Size:         5000,
 			EvictionSize: 1000,
 		},
+		Transactions: CacheOpts{
+			CacheTimeMs: 60000,
+		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 5000,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -122,6 +128,9 @@ var Profile8GB = &Profile{
 
 var Profile4GB = &Profile{
 	Caches: Caches{
+		Approvers: CacheOpts{
+			CacheTimeMs: 30000,
+		},
 		Bundles: CacheOpts{
 			Size:         20000,
 			EvictionSize: 1000,
@@ -134,8 +143,11 @@ var Profile4GB = &Profile{
 			Size:         5000,
 			EvictionSize: 1000,
 		},
+		Transactions: CacheOpts{
+			CacheTimeMs: 30000,
+		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 5000,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -173,6 +185,9 @@ var Profile4GB = &Profile{
 
 var Profile2GB = &Profile{
 	Caches: Caches{
+		Approvers: CacheOpts{
+			CacheTimeMs: 5000,
+		},
 		Bundles: CacheOpts{
 			Size:         10000,
 			EvictionSize: 1000,
@@ -185,8 +200,11 @@ var Profile2GB = &Profile{
 			Size:         2000,
 			EvictionSize: 1000,
 		},
+		Transactions: CacheOpts{
+			CacheTimeMs: 5000,
+		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 2500,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -224,6 +242,9 @@ var Profile2GB = &Profile{
 
 var Profile1GB = &Profile{
 	Caches: Caches{
+		Approvers: CacheOpts{
+			CacheTimeMs: 1500,
+		},
 		Bundles: CacheOpts{
 			Size:         5000,
 			EvictionSize: 1000,
@@ -236,8 +257,11 @@ var Profile1GB = &Profile{
 			Size:         2000,
 			EvictionSize: 1000,
 		},
+		Transactions: CacheOpts{
+			CacheTimeMs: 1500,
+		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 1500,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -281,8 +305,10 @@ type Profile struct {
 
 type Caches struct {
 	Bundles                   CacheOpts `json:"bundles"`
+	Approvers                 CacheOpts `json:"approvers"`
 	Milestones                CacheOpts `json:"milestones"`
 	SpentAddresses            CacheOpts `json:"spentAddresses"`
+	Transactions              CacheOpts `json:"transactions"`
 	IncomingTransactionFilter CacheOpts `json:"incomingTransactionFilter"`
 	RefsInvalidBundle         CacheOpts `json:"refsInvalidBundle"`
 }
@@ -290,6 +316,7 @@ type Caches struct {
 type CacheOpts struct {
 	Size         int    `json:"size"`
 	EvictionSize uint64 `json:"evictionSize"`
+	CacheTimeMs  uint64 `json:"cacheTimeMs"`
 }
 
 type BadgerOpts struct {
