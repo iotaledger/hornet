@@ -5,8 +5,6 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/lru_cache"
-
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -14,8 +12,6 @@ import (
 var (
 	ErrRefBundleNotValid    = errors.New("a referenced bundle is invalid")
 	ErrRefBundleNotComplete = errors.New("a referenced bundle is not complete")
-
-	RefsAnInvalidBundleCache *lru_cache.LRUCache
 )
 
 // CheckConsistencyOfConeAndMutateDiff checks whether cone referenced by the given tail transaction is consistent with the current diff.
@@ -35,7 +31,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 		if err == ErrRefBundleNotValid {
 			// memorize for a certain time that this transaction references an invalid bundle
 			// to short circuit validation during a subsequent tip-sel on it again
-			RefsAnInvalidBundleCache.Set(tailTxHash, true)
+			PutInvalidBundleReference(tailTxHash)
 		}
 		return false
 	}
@@ -108,7 +104,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			visited[txHash] = struct{}{}
 
 			// check whether we previously checked that this referenced tx references an invalid bundle
-			if RefsAnInvalidBundleCache.Contains(txHash) {
+			if ContainsInvalidBundleReference(txHash) {
 				return nil, ErrRefBundleNotValid
 			}
 

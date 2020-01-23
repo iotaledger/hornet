@@ -202,7 +202,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				// check whether we determined by a previous tip-sel whether this
 				// transaction references an invalid bundle
-				if tanglePlugin.RefsAnInvalidBundleCache.Contains(candidateHash) {
+				if tanglePlugin.ContainsInvalidBundleReference(candidateHash) {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					continue
 				}
@@ -250,7 +250,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				}
 
 				if !bundle.IsValid() {
-					tanglePlugin.RefsAnInvalidBundleCache.Set(candidateHash, true)
+					tanglePlugin.PutInvalidBundleReference(candidateHash)
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					candidateTx.Release() //-1
 					continue
