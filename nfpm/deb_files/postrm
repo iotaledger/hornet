@@ -8,21 +8,20 @@ SYSTEMD_SERVICE="${SERVICE_NAME}.service"
 systemctl --system daemon-reload >/dev/null || true
 
 case "$1" in
-    remove)
-        deb-systemd-helper mask "${SYSTEMD_SERVICE}" >/dev/null
-        rm -rf /var/lib/hornet/*
+remove)
+    deb-systemd-helper mask "${SYSTEMD_SERVICE}" >/dev/null
+    rm -rf /var/lib/hornet/*
     ;;
-    purge)
-        deb-systemd-helper purge "${SYSTEMD_SERVICE}" >/dev/null
-        deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null
-        rm -rf /var/lib/hornet
-        deluser hornet >/dev/null
+purge)
+    deb-systemd-helper purge "${SYSTEMD_SERVICE}" >/dev/null
+    deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null
+    rm -rf /var/lib/hornet
+    deluser hornet >/dev/null
     ;;
-    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-    ;;
-    *)
-        echo "postrm called with unknown argument \`$1'" >&2
-        exit 1
+upgrade | failed-upgrade | abort-install | abort-upgrade | disappear) ;;
+
+*)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
     ;;
 esac
-

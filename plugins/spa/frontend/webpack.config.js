@@ -1,6 +1,8 @@
 let webpack = require('webpack');
 let path = require('path');
 
+const statements = require('tsx-control-statements').default;
+
 // variables
 let isProduction =
     process.argv.indexOf('-p') >= 0 || process.env.NODE_ENV === 'production';
@@ -44,7 +46,12 @@ module.exports = {
                         loader: 'babel-loader',
                         options: {plugins: ['react-hot-loader/babel']}
                     },
-                    'ts-loader'
+                    {
+                        loader: 'ts-loader',
+                        options: {
+                            getCustomTransformers: () => ({ before: [statements()] })
+                        }
+                    }
                 ].filter(Boolean)
             },
             // css

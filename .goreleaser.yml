@@ -84,7 +84,7 @@ dockers:
       - "gohornet/hornet:{{ .Tag }}"
     binaries:
       - hornet
-    dockerfile: Dockerfile.goreleaser
+    dockerfile: docker/Dockerfile.goreleaser
 
 # Archives
 archives:

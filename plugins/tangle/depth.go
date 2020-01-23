@@ -4,10 +4,9 @@ import (
 	"math"
 	"sync"
 
-	"github.com/iotaledger/iota.go/trinary"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 // keeps track of whether a tx is below the max depth for the given milestone
@@ -61,21 +60,24 @@ var BelowDepthMemoizationCache = belowDepthMemoizationCache{memoizationCache: ma
 // within the range of allowed milestones. if not, it is checked whether any referenced (directly/indirectly) tx
 // is confirmed by a milestone below the allowed threshold until a limit is reached of analyzed txs, in which case
 // the given tail transaction is also deemed being below max depth.
-func IsBelowMaxDepth(tailTx *hornet.Transaction, lowerAllowedSnapshotIndex int) bool {
+func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex int) bool {
+
+	tailTx.RegisterConsumer() //+1
+	defer tailTx.Release()    //-1
 
 	// if the tx is already confirmed we don't need to check it for max depth
-	if confirmed, at := tailTx.GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
+	if confirmed, at := tailTx.GetTransaction().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
 		return false
 	}
 
 	// no need to evaluate whether the tx is above/below the max depth if already checked
-	if is := BelowDepthMemoizationCache.IsBelowMaxDepth(tailTx.GetHash()); is != nil {
+	if is := BelowDepthMemoizationCache.IsBelowMaxDepth(tailTx.GetTransaction().GetHash()); is != nil {
 		return *is
 	}
 
 	// if the transaction is unconfirmed
 	txsToTraverse := make(map[string]struct{})
-	txsToTraverse[tailTx.GetHash()] = struct{}{}
+	txsToTraverse[tailTx.GetTransaction().GetHash()] = struct{}{}
 	analyzedTxs := make(map[string]struct{})
 
 	for len(txsToTraverse) != 0 {
@@ -85,7 +87,7 @@ func IsBelowMaxDepth(tailTx *hornet.Transaction, lowerAllowedSnapshotIndex int) 
 			// if we analyzed the limit we flag the tx automatically as below the max depth
 			// TODO: check whether a fast tangle would hit this limit naturally
 			if len(analyzedTxs) == belowMaxDepthTransactionLimit {
-				BelowDepthMemoizationCache.Set(tailTx.GetHash(), true)
+				BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
 				return true
 			}
 
@@ -102,39 +104,39 @@ func IsBelowMaxDepth(tailTx *hornet.Transaction, lowerAllowedSnapshotIndex int) 
 			// we don't need to analyze further down if we already memoized this particular tx's max depth validity
 			if is := BelowDepthMemoizationCache.IsBelowMaxDepth(txHash); is != nil {
 				if *is {
-					BelowDepthMemoizationCache.Set(tailTx.GetHash(), true)
+					BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
 					return true
 				}
 				continue
 			}
 
-			tx, err := tangle.GetTransaction(txHash)
-			if err != nil {
-				log.Panic(err)
-			}
+			tx := tangle.GetCachedTransaction(txHash) //+1
 
 			// we should have the transaction because the to be checked tail tx is solid
 			// and we passed the point where we checked whether the tx is a solid entry point
-			if tx == nil {
+			if !tx.Exists() {
 				log.Panicf("missing transaction %s for below max depth check", txHash)
 			}
 
-			confirmed, at := tx.GetConfirmed()
+			confirmed, at := tx.GetTransaction().GetConfirmed()
 
 			// we are below max depth on this transaction if it is confirmed by a milestone below our threshold
 			if confirmed && int(at) < lowerAllowedSnapshotIndex {
-				BelowDepthMemoizationCache.Set(tailTx.GetHash(), true)
+				BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
+				tx.Release() //-1
 				return true
 			}
 
 			// we don't need to analyze further down if the transaction is confirmed within the threshold of the max depth
 			if confirmed {
+				tx.Release() //-1
 				continue
 			}
 
 			//
-			txsToTraverse[tx.GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetBranch()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
+			tx.Release() //-1
 		}
 	}
 

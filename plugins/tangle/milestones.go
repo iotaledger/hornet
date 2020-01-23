@@ -31,9 +31,11 @@ func processValidMilestone(bundle *tangle.Bundle) {
 
 	// Mark all tx of a valid milestone as requested, so they get stored on eviction
 	// Warp sync milestone txs (via STING) are not requested by default => they would get lost
-	for _, tx := range bundle.GetTransactions() {
-		tx.SetRequested(true)
+	transactions := bundle.GetTransactions() //+1
+	for _, tx := range transactions {
+		tx.GetTransaction().SetRequested(true)
 	}
+	transactions.Release() //-1
 
 	tangle.StoreMilestoneInCache(bundle)
 

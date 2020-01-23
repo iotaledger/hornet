@@ -18,7 +18,7 @@ var (
 )
 
 func configureFirstSeenTransactionsDatabase() {
-	if db, err := database.Get(DBPrefixFirstSeenTransactions, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixFirstSeenTransactions, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		firstSeenTransactionDatabase = db
@@ -32,7 +32,11 @@ func databaseKeyPrefixForFirstSeenTransaction(milestoneIndex milestone_index.Mil
 }
 
 func databaseKeyForFirstSeenTransaction(milestoneIndex milestone_index.MilestoneIndex, txHash trinary.Hash) []byte {
-	return append(databaseKeyPrefixForFirstSeenTransaction(milestoneIndex), trinary.MustTrytesToBytes(txHash)...)
+	return append(databaseKeyPrefixForFirstSeenTransaction(milestoneIndex), trinary.MustTrytesToBytes(txHash)[:49]...)
+}
+
+func transactionHashFromDatabaseKey(transactionHash []byte) trinary.Hash {
+	return trinary.MustBytesToTrytes(transactionHash, 81)
 }
 
 type FirstSeenTxHashOperation struct {

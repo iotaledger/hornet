@@ -100,19 +100,23 @@ func runTangleProcessor(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
+func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
-	txHash := transaction.GetHash()
-	known, _ := tangle.ContainsTransaction(txHash)
+	txHash := incomingTx.GetHash()
+	transaction := tangle.GetCachedTransaction(txHash) //+1
 
-	if !known {
+	// The tx will be added to the storage inside this function, so the transaction object automatically updates
+	bundlesAddedTo, alreadyAdded := addTransactionToBundleBucket(incomingTx)
+
+	if !alreadyAdded {
+
+		if !transaction.Exists() {
+			log.Panic("Transaction should have been added to storage!")
+		}
+
 		server.SharedServerMetrics.IncrNewTransactionsCount()
-		// ToDo: Bundle should be added before storing the tx in cache, so that the solidifier can't solidify
-		//		 txs, which bundles don't exist yet. But if we create the bundle, the tx has to exist in the cache as well.
-		//		 Maybe only one worker?
-		tangle.StoreTransactionInCache(transaction)
-		addressPersisterSubmit(transaction.Tx.Address, transaction.GetHash())
-		bundlesAddedTo := addTransactionToBundleBucket(transaction)
+
+		addressPersisterSubmit(transaction.GetTransaction().Tx.Address, transaction.GetTransaction().GetHash())
 		latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
@@ -120,16 +124,8 @@ func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
 		}
 		Events.ReceivedNewTransaction.Trigger(transaction, latestMilestoneIndex, solidMilestoneIndex)
 
-		approvers, err := tangle.GetApprovers(transaction.GetTrunk())
-		if err != nil {
-			log.Panic(err)
-		}
-		approvers.Add(transaction.GetHash())
-		approvers, err = tangle.GetApprovers(transaction.GetBranch())
-		if err != nil {
-			log.Panic(err)
-		}
-		approvers.Add(transaction.GetHash())
+		tangle.StoreApprover(transaction.GetTransaction().GetTrunk(), transaction.GetTransaction().GetHash()).Release()
+		tangle.StoreApprover(transaction.GetTransaction().GetBranch(), transaction.GetTransaction().GetHash()).Release()
 
 		for _, bundle := range bundlesAddedTo {
 			// this iteration might be true concurrently between different processIncomingTx()
@@ -162,10 +158,12 @@ func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
 		Events.ReceivedKnownTransaction.Trigger(transaction)
 	}
 
-	if transaction.IsRequested() {
+	if transaction.GetTransaction().IsRequested() {
 		// Add new requests to the requestQueue (needed for sync)
 		gossip.RequestApprovees(transaction)
 	}
+
+	transaction.Release() //-1
 
 	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
 	if queueEmpty {

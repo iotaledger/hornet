@@ -28,14 +28,12 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Tangle")
+	log = logger.NewLogger(plugin.Name)
 
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 	RefsAnInvalidBundleCache = lru_cache.NewLRUCache(profile.GetProfile().Caches.RefsInvalidBundle.Size)
 
-	tangle.InitTransactionCache(onEvictTransactions)
 	tangle.InitBundleCache()
-	tangle.InitApproversCache()
 	tangle.InitMilestoneCache()
 
 	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
@@ -72,8 +70,8 @@ func configure(plugin *node.Plugin) {
 		log.Info("Flushing caches to database...")
 		tangle.FlushMilestoneCache()
 		tangle.FlushBundleCache()
-		tangle.FlushTransactionCache()
-		tangle.FlushApproversCache()
+		tangle.FlushTransactionStorage()
+		tangle.FlushApproversStorage()
 		if err := tangle.StoreSpentAddressesCuckooFilterInDatabase(); err != nil {
 			log.Panicf("couldn't persist spent addresses cuckoo filter: %s", err.Error())
 		}
@@ -82,7 +80,7 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseHealthy()
 
 		log.Info("Syncing database to disk...")
-		hornetDB.GetBadgerInstance().Close()
+		hornetDB.GetHornetBadgerInstance().Close()
 		log.Info("Syncing database to disk... done")
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
@@ -112,6 +110,6 @@ func run(plugin *node.Plugin) {
 
 	// create a db cleanup worker
 	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(hornetDB.CleanupBadgerInstance, 5*time.Minute, shutdownSignal)
+		timeutil.Ticker(hornetDB.CleanupHornetBadgerInstance, 5*time.Minute, shutdownSignal)
 	}, shutdown.ShutdownPriorityBadgerGarbageCollection)
 }

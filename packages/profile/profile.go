@@ -71,12 +71,8 @@ func GetProfile() *Profile {
 
 var Profile8GB = &Profile{
 	Caches: Caches{
-		RequestQueue: CacheOpts{
-			Size: 100000,
-		},
 		Approvers: CacheOpts{
-			Size:         100000,
-			EvictionSize: 1000,
+			CacheTimeMs: 60000,
 		},
 		Bundles: CacheOpts{
 			Size:         20000,
@@ -91,11 +87,10 @@ var Profile8GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
-			Size:         50000,
-			EvictionSize: 1000,
+			CacheTimeMs: 60000,
 		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 5000,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -120,7 +115,8 @@ var Profile8GB = &Profile{
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
-		ZSTDCompressionLevel:    10,
+		ZSTDCompressionLevel:    1,
+		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
@@ -132,12 +128,8 @@ var Profile8GB = &Profile{
 
 var Profile4GB = &Profile{
 	Caches: Caches{
-		RequestQueue: CacheOpts{
-			Size: 100000,
-		},
 		Approvers: CacheOpts{
-			Size:         100000,
-			EvictionSize: 1000,
+			CacheTimeMs: 30000,
 		},
 		Bundles: CacheOpts{
 			Size:         20000,
@@ -152,11 +144,10 @@ var Profile4GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
-			Size:         50000,
-			EvictionSize: 1000,
+			CacheTimeMs: 30000,
 		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 5000,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -181,7 +172,8 @@ var Profile4GB = &Profile{
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
-		ZSTDCompressionLevel:    10,
+		ZSTDCompressionLevel:    1,
+		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
@@ -193,12 +185,8 @@ var Profile4GB = &Profile{
 
 var Profile2GB = &Profile{
 	Caches: Caches{
-		RequestQueue: CacheOpts{
-			Size: 100000,
-		},
 		Approvers: CacheOpts{
-			Size:         50000,
-			EvictionSize: 1000,
+			CacheTimeMs: 5000,
 		},
 		Bundles: CacheOpts{
 			Size:         10000,
@@ -213,11 +201,10 @@ var Profile2GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
-			Size:         25000,
-			EvictionSize: 1000,
+			CacheTimeMs: 5000,
 		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 2500,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -242,7 +229,8 @@ var Profile2GB = &Profile{
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
-		ZSTDCompressionLevel:    10,
+		ZSTDCompressionLevel:    1,
+		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
 		ValueLogMaxEntries:      1000000,
 		ValueThreshold:          32,
@@ -254,12 +242,8 @@ var Profile2GB = &Profile{
 
 var Profile1GB = &Profile{
 	Caches: Caches{
-		RequestQueue: CacheOpts{
-			Size: 100000,
-		},
 		Approvers: CacheOpts{
-			Size:         10000,
-			EvictionSize: 1000,
+			CacheTimeMs: 1500,
 		},
 		Bundles: CacheOpts{
 			Size:         5000,
@@ -274,11 +258,10 @@ var Profile1GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
-			Size:         10000,
-			EvictionSize: 1000,
+			CacheTimeMs: 1500,
 		},
 		IncomingTransactionFilter: CacheOpts{
-			Size: 5000,
+			CacheTimeMs: 1500,
 		},
 		RefsInvalidBundle: CacheOpts{
 			Size: 10000,
@@ -303,7 +286,8 @@ var Profile1GB = &Profile{
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
 		MaxCacheSize:            50000000,
-		ZSTDCompressionLevel:    10,
+		ZSTDCompressionLevel:    1,
+		CompressionType:         options.None,
 		ValueLogFileSize:        33554431,
 		ValueLogMaxEntries:      250000,
 		ValueThreshold:          32,
@@ -320,9 +304,8 @@ type Profile struct {
 }
 
 type Caches struct {
-	RequestQueue              CacheOpts `json:"requestQueue"`
-	Approvers                 CacheOpts `json:"approvers"`
 	Bundles                   CacheOpts `json:"bundles"`
+	Approvers                 CacheOpts `json:"approvers"`
 	Milestones                CacheOpts `json:"milestones"`
 	SpentAddresses            CacheOpts `json:"spentAddresses"`
 	Transactions              CacheOpts `json:"transactions"`
@@ -333,6 +316,7 @@ type Caches struct {
 type CacheOpts struct {
 	Size         int    `json:"size"`
 	EvictionSize uint64 `json:"evictionSize"`
+	CacheTimeMs  uint64 `json:"cacheTimeMs"`
 }
 
 type BadgerOpts struct {
@@ -355,6 +339,7 @@ type BadgerOpts struct {
 	VerifyValueChecksum     bool                    `json:"verifyValueChecksum"`
 	MaxCacheSize            int64                   `json:"maxCacheSize"`
 	ZSTDCompressionLevel    int                     `json:"ZSTDCompressionLevel"`
+	CompressionType         options.CompressionType `json:"CompressionType"`
 	ValueLogFileSize        int64                   `json:"valueLogFileSize"`
 	ValueLogMaxEntries      uint32                  `json:"valueLogMaxEntries"`
 	ValueThreshold          int                     `json:"valueThreshold"`

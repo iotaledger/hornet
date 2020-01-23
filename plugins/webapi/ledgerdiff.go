@@ -120,64 +120,80 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 				continue
 			}
 
-			tx, _ := tangle.GetTransaction(txHash)
-			if tx == nil {
+			tx := tangle.GetCachedTransaction(txHash) //+1
+			if !tx.Exists() {
+				tx.Release() //-1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", txHash)
 			}
 
-			confirmed, at := tx.GetConfirmed()
+			confirmed, at := tx.GetTransaction().GetConfirmed()
 			if confirmed {
 				if at != milestoneIndex {
 					// ignore all tx that were confirmed by another milestone
+					tx.Release() //-1
 					continue
 				}
 			} else {
+				tx.Release() //-1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", txHash)
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[tx.GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetBranch()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
 
-			if !tx.IsTail() {
+			if !tx.GetTransaction().IsTail() {
+				tx.Release() //-1
 				continue
 			}
 
-			bundleBucket, err := tangle.GetBundleBucket(tx.Tx.Bundle)
+			txBundle := tx.GetTransaction().Tx.Bundle
+
+			bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: BundleBucket not found: %v, Error: %v", tx.Tx.Bundle, err)
+				tx.Release() //-1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: BundleBucket not found: %v, Error: %v", txBundle, err)
 			}
 
 			bundle := bundleBucket.GetBundleOfTailTransaction(txHash)
 			if bundle == nil {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, tx.Tx.Bundle)
-			}
-
-			if !bundle.IsValid() {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", txHash, tx.Tx.Bundle)
+				tx.Release() //-1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
 
 			if !bundle.IsComplete() {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not complete: %v", txHash, tx.Tx.Bundle)
+				tx.Release() //-1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not complete: %v", txHash, txBundle)
+			}
+
+			if !bundle.IsValid() {
+				tx.Release() //-1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", txHash, txBundle)
 			}
 
 			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
 			if !isValueSpamBundle {
 				var txsWithValue []*TxWithValue
 
-				txs := bundle.GetTransactions()
+				txs := bundle.GetTransactions() //+1
 				for _, tx := range txs {
-					if tx.Tx.Value != 0 {
-						confirmedTxWithValue = append(confirmedTxWithValue, &TxHashWithValue{TxHash: tx.GetHash(), TailTxHash: bundle.GetTailHash(), BundleHash: tx.Tx.Bundle, Address: tx.Tx.Address, Value: tx.Tx.Value})
+					// hornetTx is being retained during the loop, so safe to use the pointer here
+					hornetTx := tx.GetTransaction()
+					if hornetTx.Tx.Value != 0 {
+						confirmedTxWithValue = append(confirmedTxWithValue, &TxHashWithValue{TxHash: hornetTx.GetHash(), TailTxHash: bundle.GetTailHash(), BundleHash: hornetTx.Tx.Bundle, Address: hornetTx.Tx.Address, Value: hornetTx.Tx.Value})
 					}
-					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: tx.GetHash(), Address: tx.Tx.Address, Index: tx.Tx.CurrentIndex, Value: tx.Tx.Value})
+					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: hornetTx.GetHash(), Address: hornetTx.Tx.Address, Index: hornetTx.Tx.CurrentIndex, Value: hornetTx.Tx.Value})
 				}
+				txs.Release() //-1
 				for address, change := range ledgerChanges {
 					totalLedgerChanges[address] += change
 				}
 
-				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: tx.Tx.Bundle, TailTxHash: bundle.GetTailHash(), Txs: txsWithValue, LastIndex: bundle.GetHead().Tx.CurrentIndex})
+				bundleHead := bundle.GetHead() //+1
+				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: tx.GetTransaction().Tx.Bundle, TailTxHash: bundle.GetTailHash(), Txs: txsWithValue, LastIndex: bundleHead.GetTransaction().Tx.CurrentIndex})
+				bundleHead.Release() //-1
 			}
+			tx.Release() //-1
 
 			// we only add the tail transaction to the txsToConfirm set, in order to not
 			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not

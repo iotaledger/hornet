@@ -47,7 +47,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Snapshot")
+	log = logger.NewLogger(plugin.Name)
 	installGenesisTransaction()
 
 	localSnapshotsEnabled = parameter.NodeConfig.GetBool("localSnapshots.enabled")
@@ -145,9 +145,8 @@ func installGenesisTransaction() {
 	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
 	genesis.Hash = consts.NullHashTrytes
-	txBytesTruncated := compressed.TruncateTx(trinary.TritsToBytes(genesisTxTrits))
+	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(genesisTxTrits))
 	genesisTx := hornet.NewTransactionFromAPI(genesis, txBytesTruncated)
-	tangle.StoreTransactionInCache(genesisTx)
 
 	// ensure the bundle is also existent for the genesis tx
 	genesisBundleBucket, err := tangle.GetBundleBucket(genesis.Bundle)

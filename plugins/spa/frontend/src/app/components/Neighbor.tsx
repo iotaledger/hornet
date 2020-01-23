@@ -10,6 +10,7 @@ import Badge from "react-bootstrap/Badge";
 import Table from "react-bootstrap/Table";
 import {defaultChartOptions} from "app/misc/Chart";
 import {Line} from "react-chartjs-2";
+import {Choose, If, Otherwise, When} from 'tsx-control-statements/components';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -88,7 +89,34 @@ export class Neighbor extends React.Component<Props, any> {
                     <Card>
                         <Card.Body>
                             <Card.Title>
-                                <h5>{last.origin_addr}</h5>
+                                <If condition={!!last.alias}>
+                                    <h4>
+                                        {last.alias}
+                                    </h4>
+                                </If>
+                                <h5>
+                                    {last.origin_addr}
+                                    {' '}
+                                    <Choose>
+                                        <When condition={last.protocol_version === 1}>
+                                            <Badge variant="secondary">Legacy</Badge>
+                                        </When>
+                                        <When condition={!last.heartbeat}>
+                                            <Badge variant="warning">Waiting</Badge>
+                                        </When>
+                                        <When
+                                            condition={last.heartbeat.solid_milestone_index < this.props.nodeStore.status.lmi}>
+                                            <Badge variant="warning">Unsynced</Badge>
+                                        </When>
+                                        <When
+                                            condition={last.heartbeat.pruned_milestone_index > this.props.nodeStore.status.lsmi}>
+                                            <Badge variant="danger">Milestones Pruned</Badge>
+                                        </When>
+                                        <Otherwise>
+                                            <Badge variant="success">STING</Badge>
+                                        </Otherwise>
+                                    </Choose>
+                                </h5>
                             </Card.Title>
                             <Row className={"mb-3"}>
                                 <Col>
@@ -97,13 +125,12 @@ export class Neighbor extends React.Component<Props, any> {
                                             Connected via Protocol Version: {last.protocol_version} {' '}
                                             (Origin: {last.connection_origin === 0 ? "Inbound" : "Outbound"})
                                         </ListGroup.Item>
-                                        {
-                                            last.heartbeat &&
+                                        <If condition={!!last.heartbeat}>
                                             <ListGroup.Item>
                                                 Latest Solid Milestone Index: {' '}
                                                 {last.heartbeat.solid_milestone_index}
                                             </ListGroup.Item>
-                                        }
+                                        </If>
                                     </ListGroup>
                                 </Col>
                                 <Col>
@@ -111,13 +138,12 @@ export class Neighbor extends React.Component<Props, any> {
                                         <ListGroup.Item>
                                             Identity: {last.identity}
                                         </ListGroup.Item>
-                                        {
-                                            last.heartbeat &&
+                                        <If condition={!!last.heartbeat}>
                                             <ListGroup.Item>
                                                 Pruned Milestone Index: {' '}
                                                 {last.heartbeat.pruned_milestone_index}
                                             </ListGroup.Item>
-                                        }
+                                        </If>
                                     </ListGroup>
                                 </Col>
                             </Row>

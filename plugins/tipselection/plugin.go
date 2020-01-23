@@ -28,8 +28,8 @@ type tipselevents struct {
 	TipSelPerformed *events.Event
 }
 
-func configure(node *node.Plugin) {
-	log = logger.NewLogger("Tip-Sel")
+func configure(plugin *node.Plugin) {
+	log = logger.NewLogger(plugin.Name)
 
 	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
 }

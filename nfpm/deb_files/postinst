@@ -6,24 +6,29 @@ SERVICE_NAME="hornet"
 SYSTEMD_SERVICE="${SERVICE_NAME}.service"
 
 case "$1" in
-    configure|abort-upgrade|abort-remove|abort-deconfigure)
-        deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null || true
-        systemctl --system daemon-reload >/dev/null
-        if [ -n "$2" ]; then
-            deb-systemd-invoke restart "${SYSTEMD_SERVICE}" >/dev/null
-        else 
-            echo "######################################\n"
-            echo "HORNET installation finished\n"
-            echo "######################################\n"
-            echo "Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.\n"
-            echo "To start HORNET the first time, please run:\nsudo systemctl enable hornet && service hornet start\n\n\n"
-        fi
+configure | abort-upgrade | abort-remove | abort-deconfigure)
+    deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null || true
+    systemctl --system daemon-reload >/dev/null
+    if [ -n "$2" ]; then
+        deb-systemd-invoke restart "${SYSTEMD_SERVICE}" >/dev/null
+    else
+        echo "######################################\n"
+        echo "HORNET installation finished\n"
+        echo "######################################\n"
+        echo "Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.\n"
+        echo "To start HORNET the first time, please run:\nsudo systemctl enable hornet && service hornet start\n"
+    fi
 
-        adduser --no-create-home --system --group hornet >/dev/null
+    adduser --no-create-home --system --group hornet >/dev/null
+
+    mkdir -p /var/lib/hornet
+    chmod -R 700 /var/lib/hornet
+    chmod -R 700 /etc/hornet
+    chown -R hornet:hornet /etc/hornet
+    chown -R hornet:hornet /var/lib/hornet
     ;;
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
+*)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
     ;;
 esac
-

@@ -38,7 +38,7 @@ func configureReconnectPool() {
 			panic(errors.Wrapf(err, "invalid neighbor address %s", neighConf.Identity))
 		}
 		originAddr.PreferIPv6 = neighConf.PreferIPv6
-
+		originAddr.Alias = neighConf.Alias
 		// no need to lock the neighbors in the configure stage
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
 	}
@@ -94,12 +94,12 @@ next:
 		for ip := range neighborAddrs.IPs {
 			id := NewNeighborIdentity(ip.String(), originAddr.Port)
 			if _, alreadyConnected := connectedNeighbors[id]; alreadyConnected {
-				gossipLogger.Infof("neighbor %s already connected, removing it from reconnect pool...")
+				gossipLogger.Infof("neighbor %s already connected, removing it from reconnect pool...", connectedNeighbors[id].InitAddress.String())
 				delete(reconnectPool, k)
 				continue next
 			}
 			if _, alreadyInFlight := inFlightNeighbors[id]; alreadyInFlight {
-				gossipLogger.Infof("neighbor %s already in-fight, removing it from reconnect pool...")
+				gossipLogger.Infof("neighbor %s already in-fight, removing it from reconnect pool...", connectedNeighbors[id].InitAddress.String())
 				delete(reconnectPool, k)
 				continue next
 			}

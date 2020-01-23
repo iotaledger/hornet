@@ -3,13 +3,11 @@ package spa
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/transaction"
-
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/transaction"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tangle_model "github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -26,8 +24,9 @@ func configureLiveFeed() {
 		case *transaction.Transaction:
 			sendToAllWSClient(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
 		case milestone_index.MilestoneIndex:
-			if tailTx := getMilestone(x); tailTx != nil {
-				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetHash(), x}})
+			if tailTx := getMilestone(x); tailTx != nil { //+1
+				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), x}})
+				tailTx.Release() //-1
 			}
 		}
 		task.Return(nil)
@@ -38,13 +37,13 @@ func runLiveFeed() {
 
 	newTxRateLimiter := time.NewTicker(time.Second / 10)
 
-	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(transaction *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !tangle_model.IsNodeSynced() {
 			return
 		}
 		select {
 		case <-newTxRateLimiter.C:
-			liveFeedWorkerPool.TrySubmit(transaction.Tx)
+			liveFeedWorkerPool.TrySubmit(transaction.GetTransaction().Tx)
 		default:
 		}
 	})

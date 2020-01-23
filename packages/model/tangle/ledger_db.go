@@ -3,19 +3,17 @@ package tangle
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/gohornet/hornet/packages/compressed"
+	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/iotaledger/hive.go/database"
+	"github.com/iotaledger/hive.go/typeutils"
 	"sync"
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/iota.go/trinary"
-
-	"github.com/iotaledger/hive.go/database"
-	"github.com/iotaledger/hive.go/typeutils"
-
-	"github.com/gohornet/hornet/packages/compressed"
-	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -43,7 +41,7 @@ func WriteUnlockLedger() {
 }
 
 func configureLedgerDatabase() {
-	if db, err := database.Get(DBPrefixLedgerState, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixLedgerState, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		ledgerDatabase = db
@@ -57,7 +55,7 @@ func configureLedgerDatabase() {
 }
 
 func databaseKeyForAddressBalance(address trinary.Hash) []byte {
-	return append(balancePrefix, trinary.MustTrytesToBytes(address)...)
+	return append(balancePrefix, trinary.MustTrytesToBytes(address)[:49]...)
 }
 
 func databaseKeyPrefixForLedgerDiff(milestoneIndex milestone_index.MilestoneIndex) []byte {
@@ -65,7 +63,7 @@ func databaseKeyPrefixForLedgerDiff(milestoneIndex milestone_index.MilestoneInde
 }
 
 func databaseKeyForLedgerDiffAndAddress(milestoneIndex milestone_index.MilestoneIndex, address trinary.Hash) []byte {
-	return append(databaseKeyPrefixForLedgerDiff(milestoneIndex), trinary.MustTrytesToBytes(address)...)
+	return append(databaseKeyPrefixForLedgerDiff(milestoneIndex), trinary.MustTrytesToBytes(address)[:49]...)
 }
 
 func bytesFromBalance(balance uint64) []byte {

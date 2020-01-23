@@ -17,7 +17,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -45,7 +44,7 @@ var (
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("SPA")
+	log = logger.NewLogger(plugin.Name)
 
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
@@ -139,7 +138,7 @@ var (
 	}
 )
 
-func getMilestone(index milestone_index.MilestoneIndex) *hornet.Transaction {
+func getMilestone(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
 	msBndl, err := tangle.GetMilestone(index)
 	if err != nil {
 		return nil
@@ -147,15 +146,21 @@ func getMilestone(index milestone_index.MilestoneIndex) *hornet.Transaction {
 	if msBndl == nil {
 		return nil
 	}
-	return msBndl.GetTail()
+	tail := msBndl.GetTail() //+1
+	if !tail.Exists() {
+		tail.Release() //-1
+		return nil
+	}
+	return tail
 }
 
 func preFeed(channel chan interface{}) {
 	channel <- &msg{MsgTypeNodeStatus, currentNodeStatus()}
 	start := tangle.GetLatestMilestoneIndex()
 	for i := start - 10; i <= start; i++ {
-		if tailTx := getMilestone(i); tailTx != nil {
-			channel <- &msg{MsgTypeMs, &ms{tailTx.GetHash(), i}}
+		if tailTx := getMilestone(i); tailTx != nil { //+1
+			channel <- &msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), i}}
+			tailTx.Release() //-1
 		} else {
 			break
 		}
@@ -189,7 +194,10 @@ type ms struct {
 type nodestatus struct {
 	LSMI               milestone_index.MilestoneIndex `json:"lsmi"`
 	LMI                milestone_index.MilestoneIndex `json:"lmi"`
+	SnapshotIndex      milestone_index.MilestoneIndex `json:"snapshot_index"`
+	PruningIndex       milestone_index.MilestoneIndex `json:"pruning_index"`
 	Version            string                         `json:"version"`
+	LatestVersion      string                         `json:"latest_version"`
 	Uptime             int64                          `json:"uptime"`
 	CurrentRequestedMs milestone_index.MilestoneIndex `json:"current_requested_ms"`
 	MsRequestQueueSize int                            `json:"ms_request_queue_size"`
@@ -230,6 +238,7 @@ type memmetrics struct {
 
 type neighbormetric struct {
 	Identity         string                  `json:"identity"`
+	Alias            string                  `json:"alias" omitempty`
 	OriginAdrr       string                  `json:"origin_addr"`
 	ConnectionOrigin gossip.ConnectionOrigin `json:"connection_origin"`
 	ProtocolVersion  byte                    `json:"protocol_version"`
@@ -266,6 +275,7 @@ func neighborMetrics() []*neighbormetric {
 		}
 		if info.Neighbor != nil {
 			m.Identity = info.Neighbor.Identity
+			m.Alias = info.Alias
 			m.ConnectionOrigin = info.Neighbor.ConnectionOrigin
 			m.ProtocolVersion = info.Neighbor.Protocol.Version
 			m.BytesRead = info.Neighbor.Protocol.Conn.BytesRead
@@ -288,23 +298,29 @@ func currentNodeStatus() *nodestatus {
 	// node status
 	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 	status.Version = cli.AppVersion
+	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
+
+	snapshotInfo := tangle.GetSnapshotInfo()
+	if snapshotInfo != nil {
+		status.SnapshotIndex = snapshotInfo.SnapshotIndex
+		status.PruningIndex = snapshotInfo.PruningIndex
+	}
 	status.MsRequestQueueSize = requestCount
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueSize = requestCount
 
 	// cache metrics
-	reqQueueCache := gossip.RequestQueue.GetCache()
 	status.Caches = &cachesmetric{
 		Approvers: cache{
-			Size:     tangle.ApproversCache.GetSize(),
-			Capacity: tangle.ApproversCache.GetCapacity(),
+			Size:     tangle.GetApproversStorageSize(),
+			Capacity: 0,
 		},
 		RequestQueue: cache{
-			Size:     reqQueueCache.GetSize(),
-			Capacity: reqQueueCache.GetCapacity(),
+			Size:     gossip.RequestQueue.GetStorageSize(),
+			Capacity: 0,
 		},
 		Bundles: cache{
 			Size:     tangle.BundleBucketCache.GetSize(),
@@ -315,12 +331,12 @@ func currentNodeStatus() *nodestatus {
 			Capacity: tangle.MilestoneCache.GetCapacity(),
 		},
 		Transactions: cache{
-			Size:     tangle.TransactionCache.GetSize(),
-			Capacity: tangle.TransactionCache.GetCapacity(),
+			Size:     tangle.GetTransactionStorageSize(),
+			Capacity: 0,
 		},
 		IncomingTransactionFilter: cache{
-			Size:     gossip.IncomingCache.GetSize(),
-			Capacity: gossip.IncomingCache.GetCapacity(),
+			Size:     gossip.GetIncomingStorageSize(),
+			Capacity: 0,
 		},
 		RefsInvalidBundle: cache{
 			Size:     tangle_plugin.RefsAnInvalidBundleCache.GetSize(),

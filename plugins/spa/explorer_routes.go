@@ -5,14 +5,15 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/labstack/echo"
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	. "github.com/iotaledger/iota.go/trinary"
-	"github.com/labstack/echo"
-	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 type ExplorerTx struct {
@@ -45,9 +46,13 @@ type ExplorerTx struct {
 	MilestoneIndex milestone_index.MilestoneIndex `json:"milestone_index"`
 }
 
-func createExplorerTx(hash Hash, tx *hornet.Transaction) (*ExplorerTx, error) {
-	originTx := tx.Tx
-	confirmed, by := tx.GetConfirmed()
+func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, error) {
+
+	tx.RegisterConsumer() //+1
+	defer tx.Release()    //-1
+
+	originTx := tx.GetTransaction().Tx
+	confirmed, by := tx.GetTransaction().GetConfirmed()
 	t := &ExplorerTx{
 		Hash:                          hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
@@ -69,7 +74,7 @@ func createExplorerTx(hash Hash, tx *hornet.Transaction) (*ExplorerTx, error) {
 			State     bool                           `json:"state"`
 			Milestone milestone_index.MilestoneIndex `json:"milestone_index"`
 		}{confirmed, by},
-		Solid: tx.IsSolid(),
+		Solid: tx.GetTransaction().IsSolid(),
 	}
 
 	// compute mwm
@@ -95,7 +100,7 @@ func createExplorerTx(hash Hash, tx *hornet.Transaction) (*ExplorerTx, error) {
 
 	// get previous/next hash
 	var bndl *tangle.Bundle
-	if tx.IsTail() {
+	if tx.GetTransaction().IsTail() {
 		bndl = bucket.GetBundleOfTailTransaction(hash)
 	} else {
 		bndls := bucket.GetBundlesOfTransaction(hash)
@@ -106,13 +111,15 @@ func createExplorerTx(hash Hash, tx *hornet.Transaction) (*ExplorerTx, error) {
 
 	if bndl != nil {
 		t.BundleComplete = bndl.IsComplete()
-		for _, bndlTx := range bndl.GetTransactions() {
-			if bndlTx.Tx.CurrentIndex+1 == t.CurrentIndex {
-				t.Previous = bndlTx.Tx.Hash
-			} else if bndlTx.Tx.CurrentIndex-1 == t.CurrentIndex {
-				t.Next = bndlTx.Tx.Hash
+		transactions := bndl.GetTransactions() //+1
+		for _, bndlTx := range transactions {
+			if bndlTx.GetTransaction().Tx.CurrentIndex+1 == t.CurrentIndex {
+				t.Previous = bndlTx.GetTransaction().Tx.Hash
+			} else if bndlTx.GetTransaction().Tx.CurrentIndex-1 == t.CurrentIndex {
+				t.Next = bndlTx.GetTransaction().Tx.Hash
 			}
 		}
+		transactions.Release() //-1
 
 		// check whether milestone
 		if bndl.IsMilestone() {
@@ -236,12 +243,10 @@ func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
 	if bndl == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
-	tail := bndl.GetTail()
-	tx, err := createExplorerTx(tail.GetHash(), tail)
-	if err != nil {
-		return nil, err
-	}
-	return tx, nil
+	tail := bndl.GetTail() //+1
+	tx, err := createExplorerTx(tail.GetTransaction().GetHash(), tail)
+	tail.Release() //-1
+	return tx, err
 }
 
 func findTransaction(hash Hash) (*ExplorerTx, error) {
@@ -249,20 +254,15 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	tx, err := tangle.GetTransaction(hash)
-	if err != nil {
-		return nil, ErrInternalError
-	}
-
-	if tx == nil {
+	tx := tangle.GetCachedTransaction(hash) //+1
+	if !tx.Exists() {
+		tx.Release() //-1
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
 	t, err := createExplorerTx(hash, tx)
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
+	tx.Release() //-1
+	return t, err
 }
 
 func findBundles(hash Hash) ([][]*ExplorerTx, error) {
@@ -283,13 +283,16 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	expBndls := [][]*ExplorerTx{}
 	for _, bndl := range bndls {
 		sl := []*ExplorerTx{}
-		for _, tx := range bndl.GetTransactions() {
-			expTx, err := createExplorerTx(tx.GetHash(), tx)
+		transactions := bndl.GetTransactions() //+1
+		for _, tx := range transactions {
+			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx)
 			if err != nil {
+				transactions.Release() //-1
 				return nil, err
 			}
 			sl = append(sl, expTx)
 		}
+		transactions.Release() //-1
 		expBndls = append(expBndls, sl)
 	}
 	return expBndls, nil
@@ -312,14 +315,13 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 	if len(txHashes) != 0 {
 		for i := 0; i < len(txHashes); i++ {
 			txHash := txHashes[i]
-			tx, err := tangle.GetTransaction(txHash)
-			if err != nil {
-				return nil, err
-			}
-			if tx == nil {
+			tx := tangle.GetCachedTransaction(txHash) //+1
+			if !tx.Exists() {
+				tx.Release() //-1
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
-			expTx, err := createExplorerTx(tx.GetHash(), tx)
+			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx)
+			tx.Release() //-1
 			if err != nil {
 				return nil, err
 			}

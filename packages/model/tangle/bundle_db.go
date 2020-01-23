@@ -1,21 +1,17 @@
 package tangle
 
 import (
-	"github.com/pkg/errors"
-
-	"github.com/iotaledger/iota.go/trinary"
-
+	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/database"
-
-	hornetDB "github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/iotaledger/iota.go/trinary"
+	"github.com/pkg/errors"
 )
 
 var bundleDatabase database.Database
 
 func configureBundleDatabase() {
-	if db, err := database.Get(DBPrefixBundles, hornetDB.GetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixBundles, hornetDB.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		bundleDatabase = db
@@ -23,11 +19,11 @@ func configureBundleDatabase() {
 }
 
 func databaseKeyForBundle(bundleHash trinary.Hash, txHash trinary.Hash) []byte {
-	return append(databaseKeyPrefixForBundleHash(bundleHash), trinary.MustTrytesToBytes(txHash)...)
+	return append(databaseKeyPrefixForBundleHash(bundleHash), trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
 func databaseKeyPrefixForBundleHash(bundleHash trinary.Hash) []byte {
-	return trinary.MustTrytesToBytes(bundleHash)
+	return trinary.MustTrytesToBytes(bundleHash)[:49]
 }
 
 func StoreBundleBucketsInDatabase(bundleBuckets []*BundleBucket) error {
@@ -125,26 +121,39 @@ func DeleteBundlesInDatabase(bundles map[string]string) error {
 
 func readBundleBucketFromDatabase(bundleHash trinary.Hash) (*BundleBucket, error) {
 
-	var transactions = map[trinary.Hash]*hornet.Transaction{}
+	var transactions = map[trinary.Hash]*CachedTransaction{}
 	metaMap := map[trinary.Hash]bitmask.BitMask{}
 	err := bundleDatabase.ForEachPrefixKeyOnly(databaseKeyPrefixForBundleHash(bundleHash), func(entry database.KeyOnlyEntry) (stop bool) {
 		txHash := trinary.MustBytesToTrytes(entry.Key, 81)
-		tx, _ := GetTransaction(txHash)
-		if tx != nil {
-			if tx.Tx.CurrentIndex == 0 {
-				metaMap[tx.GetHash()] = bitmask.BitMask(entry.Meta)
+		tx := GetCachedTransaction(txHash) //+1
+		if tx.Exists() {
+			if tx.GetTransaction().Tx.CurrentIndex == 0 {
+				metaMap[tx.GetTransaction().GetHash()] = bitmask.BitMask(entry.Meta)
 			}
-			transactions[tx.GetHash()] = tx
+			if _, found := transactions[tx.GetTransaction().GetHash()]; !found {
+				transactions[tx.GetTransaction().GetHash()] = tx
+			} else {
+				tx.Release() //-1
+			}
+		} else {
+			tx.Release() //-1
 		}
 		return false
 	})
 
 	if err != nil {
+		for _, tx := range transactions {
+			tx.Release() //-1
+		}
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to read bundle bucket from database")
 	} else if len(transactions) == 0 {
 		return nil, nil
 	} else {
-		return NewBundleBucketFromDatabase(bundleHash, transactions, metaMap), nil
+		bucket := NewBundleBucketFromDatabase(bundleHash, transactions, metaMap)
+		for _, tx := range transactions {
+			tx.Release() //-1
+		}
+		return bucket, nil
 	}
 }
 
