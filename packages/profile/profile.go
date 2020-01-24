@@ -93,7 +93,7 @@ var Profile8GB = &Profile{
 			CacheTimeMs: 5000,
 		},
 		RefsInvalidBundle: CacheOpts{
-			Size: 10000,
+			CacheTimeMs: 180000,
 		},
 	},
 	Badger: BadgerOpts{
@@ -150,7 +150,7 @@ var Profile4GB = &Profile{
 			CacheTimeMs: 5000,
 		},
 		RefsInvalidBundle: CacheOpts{
-			Size: 10000,
+			CacheTimeMs: 180000,
 		},
 	},
 	Badger: BadgerOpts{
@@ -207,7 +207,7 @@ var Profile2GB = &Profile{
 			CacheTimeMs: 2500,
 		},
 		RefsInvalidBundle: CacheOpts{
-			Size: 10000,
+			CacheTimeMs: 180000,
 		},
 	},
 	Badger: BadgerOpts{
@@ -264,7 +264,7 @@ var Profile1GB = &Profile{
 			CacheTimeMs: 1500,
 		},
 		RefsInvalidBundle: CacheOpts{
-			Size: 10000,
+			CacheTimeMs: 180000,
 		},
 	},
 	Badger: BadgerOpts{

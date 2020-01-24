@@ -25,7 +25,7 @@
           "cacheTimeMs": 5000
         },
         "refsInvalidBundle": {
-          "size": 10000
+          "cacheTimeMs": 180000
         }
       },
       "badger": {

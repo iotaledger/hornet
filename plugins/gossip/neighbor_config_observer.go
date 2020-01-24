@@ -35,7 +35,7 @@ func runConfigObserver() {
 			gossipLogger.Infof("Modify neighbors due to config change")
 			for _, nb := range modified {
 				if err := RemoveNeighbor(nb.Identity); err != nil {
-					gossipLogger.Error(err)
+					gossipLogger.Warn(err)
 				}
 			}
 			addNewNeighbors(modified)
@@ -51,7 +51,7 @@ func runConfigObserver() {
 		if len(removed) > 0 {
 			for _, nb := range removed {
 				if err := RemoveNeighbor(nb.Identity); err != nil {
-					gossipLogger.Errorf("Remove neighbor due to config change failed with: %v", err)
+					gossipLogger.Warnf("Remove neighbor due to config change failed with: %v", err)
 				} else {
 					gossipLogger.Infof("Remove neighbor (%s) due to config change was successful", nb.Identity)
 				}

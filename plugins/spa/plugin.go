@@ -339,8 +339,8 @@ func currentNodeStatus() *nodestatus {
 			Capacity: 0,
 		},
 		RefsInvalidBundle: cache{
-			Size:     tangle_plugin.RefsAnInvalidBundleCache.GetSize(),
-			Capacity: tangle_plugin.RefsAnInvalidBundleCache.GetCapacity(),
+			Size:     tangle_plugin.GetRefsAnInvalidBundleStorageSize(),
+			Capacity: 0,
 		},
 	}
 

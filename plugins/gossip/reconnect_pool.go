@@ -79,7 +79,7 @@ next:
 		originAddr := recNeigh.OriginAddr
 		neighborAddrs, err := possibleIdentitiesFromNeighborAddress(originAddr)
 		if err != nil {
-			gossipLogger.Error(err.Error())
+			gossipLogger.Warn(err.Error())
 			continue
 		}
 
@@ -116,7 +116,7 @@ next:
 		neighborsLock.Unlock()
 
 		if err := Connect(neighbor); err != nil {
-			gossipLogger.Errorf("connection attempt to %s failed: %s", neighbor.InitAddress.String(), err.Error())
+			gossipLogger.Warnf("connection attempt to %s failed: %s", neighbor.InitAddress.String(), err.Error())
 			neighborsLock.Lock()
 			moveFromInFlightToReconnectPool(neighbor)
 			neighborsLock.Unlock()
@@ -136,7 +136,7 @@ func cleanReconnectPool(neighbor *Neighbor) {
 		if recNeigh.CachedIPs == nil {
 			ips, err := possibleIdentitiesFromNeighborAddress(recNeigh.OriginAddr)
 			if err != nil {
-				gossipLogger.Errorf("can't check reconnect pool existence on %s, as IP lookups failed: %s", recNeigh.OriginAddr.String(), err.Error())
+				gossipLogger.Warnf("can't check reconnect pool existence on %s, as IP lookups failed: %s", recNeigh.OriginAddr.String(), err.Error())
 				recNeigh.mu.Unlock()
 				continue
 			}

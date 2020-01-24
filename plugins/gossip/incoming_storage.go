@@ -1,7 +1,11 @@
 package gossip
 
 import (
+	"time"
+
 	"github.com/iotaledger/hive.go/objectstorage"
+
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 var (
@@ -21,6 +25,15 @@ func incomingFactory(key []byte) objectstorage.StorableObject {
 		recTxBytes: key,
 		requests:   make([]*NeighborRequest, 0),
 	}
+}
+
+func configureIncomingStorage() {
+	opts := profile.GetProfile().Caches.IncomingTransactionFilter
+
+	incomingStorage = objectstorage.New(nil,
+		incomingFactory,
+		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.PersistenceEnabled(false))
 }
 
 func GetIncomingStorageSize() int {
