@@ -87,6 +87,6 @@ func DeleteTransaction(txHash trinary.Hash) {
 	txStorage.Delete(trinary.MustTrytesToBytes(txHash)[:49])
 }
 
-func FlushTransactionStorage() {
-	txStorage.Flush()
+func ShutdownTransactionStorage() {
+	txStorage.Shutdown()
 }
