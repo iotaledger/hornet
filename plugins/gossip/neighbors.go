@@ -343,7 +343,7 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 		if errors.Cause(err) == ErrNeighborAlreadyConnected {
 			neighbor.Duplicate = true
 		}
-		gossipLogger.Errorf("protocol error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
+		gossipLogger.Warnf("protocol error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
 	// connection error log
@@ -354,7 +354,7 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 		if neighbor.Duplicate {
 			return
 		}
-		gossipLogger.Errorf("connection error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
+		gossipLogger.Warnf("connection error on neighbor %s: %s", neighbor.IdentityOrAddress(), err.Error())
 	}))
 
 	// automatically put the disconnected neighbor back into the reconnect pool
