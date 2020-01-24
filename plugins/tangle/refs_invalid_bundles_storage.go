@@ -46,7 +46,12 @@ func invalidBundleFactory(key []byte) objectstorage.StorableObject {
 
 func configureRefsAnInvalidBundleStorage() {
 	opts := profile.GetProfile().Caches.RefsInvalidBundle
-	refsAnInvalidBundleStorage = objectstorage.New(nil, invalidBundleFactory, objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond), objectstorage.PersistenceEnabled(false))
+
+	refsAnInvalidBundleStorage = objectstorage.New(
+		nil,
+		invalidBundleFactory,
+		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.PersistenceEnabled(false))
 }
 
 func GetRefsAnInvalidBundleStorageSize() int {

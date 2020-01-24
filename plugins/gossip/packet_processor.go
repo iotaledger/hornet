@@ -13,14 +13,12 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/math"
-	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )
@@ -39,10 +37,9 @@ var (
 )
 
 func configurePacketProcessor() {
-	opts := profile.GetProfile().Caches.IncomingTransactionFilter
 
 	RequestQueue = queue.NewRequestQueue()
-	incomingStorage = objectstorage.New(nil, incomingFactory, objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond), objectstorage.PersistenceEnabled(false))
+	configureIncomingStorage()
 
 	gossipLogger.Infof("Configuring packetProcessorWorkerPool with %d workers", packetProcessorWorkerCount)
 	packetProcessorWorkerPool = workerpool.New(func(task workerpool.Task) {
