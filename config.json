@@ -14,10 +14,6 @@
           "size": 1000,
           "evictionSize": 100
         },
-        "spentAddresses": {
-          "size": 5000,
-          "evictionSize": 1000
-        },
         "transactions": {
           "cacheTimeMs": 5000
         },

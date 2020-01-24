@@ -82,10 +82,6 @@ var Profile8GB = &Profile{
 			Size:         1000,
 			EvictionSize: 100,
 		},
-		SpentAddresses: CacheOpts{
-			Size:         5000,
-			EvictionSize: 1000,
-		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 60000,
 		},
@@ -138,10 +134,6 @@ var Profile4GB = &Profile{
 		Milestones: CacheOpts{
 			Size:         1000,
 			EvictionSize: 100,
-		},
-		SpentAddresses: CacheOpts{
-			Size:         5000,
-			EvictionSize: 1000,
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 30000,
@@ -196,10 +188,6 @@ var Profile2GB = &Profile{
 			Size:         1000,
 			EvictionSize: 100,
 		},
-		SpentAddresses: CacheOpts{
-			Size:         2000,
-			EvictionSize: 1000,
-		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 5000,
 		},
@@ -253,10 +241,6 @@ var Profile1GB = &Profile{
 			Size:         150,
 			EvictionSize: 100,
 		},
-		SpentAddresses: CacheOpts{
-			Size:         2000,
-			EvictionSize: 1000,
-		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 1500,
 		},
@@ -307,7 +291,6 @@ type Caches struct {
 	Bundles                   CacheOpts `json:"bundles"`
 	Approvers                 CacheOpts `json:"approvers"`
 	Milestones                CacheOpts `json:"milestones"`
-	SpentAddresses            CacheOpts `json:"spentAddresses"`
 	Transactions              CacheOpts `json:"transactions"`
 	IncomingTransactionFilter CacheOpts `json:"incomingTransactionFilter"`
 	RefsInvalidBundle         CacheOpts `json:"refsInvalidBundle"`
