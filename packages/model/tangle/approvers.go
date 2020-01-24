@@ -56,7 +56,8 @@ func configureApproversStorage() {
 		approversFactory,
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
-		objectstorage.PersistenceEnabled(true))
+		objectstorage.PersistenceEnabled(true),
+		objectstorage.PartitionKey(49, 49))
 }
 
 func GetCachedApprovers(transactionHash trinary.Hash) CachedAppprovers {
@@ -92,6 +93,6 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 	}, txHash)
 }
 
-func FlushApproversStorage() {
-	approversStorage.Flush()
+func ShutdownApproversStorage() {
+	approversStorage.Shutdown()
 }

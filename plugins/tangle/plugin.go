@@ -70,8 +70,8 @@ func configure(plugin *node.Plugin) {
 		log.Info("Flushing caches to database...")
 		tangle.FlushMilestoneCache()
 		tangle.FlushBundleCache()
-		tangle.FlushTransactionStorage()
-		tangle.FlushApproversStorage()
+		tangle.ShutdownTransactionStorage()
+		tangle.ShutdownApproversStorage()
 		if err := tangle.StoreSpentAddressesCuckooFilterInDatabase(); err != nil {
 			log.Panicf("couldn't persist spent addresses cuckoo filter: %s", err.Error())
 		}
