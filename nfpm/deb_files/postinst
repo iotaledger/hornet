@@ -20,8 +20,8 @@ case "$1" in
         fi
 
         adduser --no-create-home --system --group hornet >/dev/null
-        mkdir /var/lib/hornet
-        chown hornet:hornet /var/lib/hornet
+        mkdir -p /var/lib/hornet
+        chown -R hornet:hornet /var/lib/hornet
     ;;
     *)
         echo "postinst called with unknown argument \`$1'" >&2
