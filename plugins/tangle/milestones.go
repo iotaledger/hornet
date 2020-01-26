@@ -37,7 +37,7 @@ func processValidMilestone(bundle *tangle.Bundle) {
 	}
 	transactions.Release() //-1
 
-	tangle.StoreMilestoneInCache(bundle)
+	tangle.StoreMilestone(bundle).Release()
 
 	solidMsIndex := tangle.GetSolidMilestoneIndex()
 	bundleMsIndex := bundle.GetMilestoneIndex()

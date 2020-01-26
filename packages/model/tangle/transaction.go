@@ -13,7 +13,9 @@ import (
 	"github.com/gohornet/hornet/packages/profile"
 )
 
-var txStorage *objectstorage.ObjectStorage
+var (
+	txStorage *objectstorage.ObjectStorage
+)
 
 func TransactionCaller(handler interface{}, params ...interface{}) {
 	handler.(func(tx *CachedTransaction))(params[0].(*CachedTransaction))

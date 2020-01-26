@@ -139,18 +139,17 @@ var (
 )
 
 func getMilestone(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
-	msBndl, err := tangle.GetMilestone(index)
-	if err != nil {
-		return nil
-	}
+	msBndl := tangle.GetMilestone(index)
 	if msBndl == nil {
 		return nil
 	}
+
 	tail := msBndl.GetTail() //+1
 	if !tail.Exists() {
 		tail.Release() //-1
 		return nil
 	}
+
 	return tail
 }
 
@@ -327,8 +326,8 @@ func currentNodeStatus() *nodestatus {
 			Capacity: tangle.BundleBucketCache.GetCapacity(),
 		},
 		Milestones: cache{
-			Size:     tangle.MilestoneCache.GetSize(),
-			Capacity: tangle.MilestoneCache.GetCapacity(),
+			Size:     tangle.GetMilestoneStorageSize(),
+			Capacity: 0,
 		},
 		Transactions: cache{
 			Size:     tangle.GetTransactionStorageSize(),

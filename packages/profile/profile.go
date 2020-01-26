@@ -79,8 +79,7 @@ var Profile8GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Milestones: CacheOpts{
-			Size:         1000,
-			EvictionSize: 100,
+			CacheTimeMs: 60000,
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 60000,
@@ -132,8 +131,7 @@ var Profile4GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Milestones: CacheOpts{
-			Size:         1000,
-			EvictionSize: 100,
+			CacheTimeMs: 30000,
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 30000,
@@ -185,8 +183,7 @@ var Profile2GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Milestones: CacheOpts{
-			Size:         1000,
-			EvictionSize: 100,
+			CacheTimeMs: 5000,
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 5000,
@@ -238,8 +235,7 @@ var Profile1GB = &Profile{
 			EvictionSize: 1000,
 		},
 		Milestones: CacheOpts{
-			Size:         150,
-			EvictionSize: 100,
+			CacheTimeMs: 1500,
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 1500,

@@ -178,7 +178,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		default:
 		}
 
-		ms, _ := tangle.GetMilestone(milestoneIndex)
+		ms := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
 			log.Panicf("CreateLocalSnapshot: Milestone (%d) not found!", milestoneIndex)
 		}
@@ -227,7 +227,7 @@ func getSeenMilestones(targetIndex milestone_index.MilestoneIndex, abortSignal <
 		default:
 		}
 
-		ms, _ := tangle.GetMilestone(milestoneIndex)
+		ms := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
 			continue
 		}
@@ -328,7 +328,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
-	targetMilestone, _ := tangle.GetMilestone(targetIndex)
+	targetMilestone := tangle.GetMilestone(targetIndex)
 	if targetMilestone == nil {
 		log.Panicf("CreateLocalSnapshot: Target milestone (%d) not found!", targetIndex)
 	}
@@ -336,7 +336,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	tangle.ReadLockLedger()
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
-	solidMilestone, _ := tangle.GetMilestone(solidMilestoneIndex)
+	solidMilestone := tangle.GetMilestone(solidMilestoneIndex)
 	if solidMilestone == nil {
 		log.Panicf("CreateLocalSnapshot: Solid milestone (%d) not found!", solidMilestoneIndex)
 	}

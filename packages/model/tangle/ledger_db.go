@@ -3,12 +3,13 @@ package tangle
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	hornetDB "github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/iotaledger/hive.go/database"
 	"github.com/iotaledger/hive.go/typeutils"
-	"sync"
 
 	"github.com/pkg/errors"
 
@@ -112,10 +113,7 @@ func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
 	// Set the solid milestone index based on the ledger milestone
 	setSolidMilestoneIndex(ledgerMilestoneIndex)
 	if setLSMIAsLMI && ledgerMilestoneIndex != 0 {
-		solidMsBundle, err := GetMilestone(ledgerMilestoneIndex)
-		if err != nil {
-			return errors.Wrap(NewDatabaseError(err), "failed to retrieve ledger milestone bundle")
-		}
+		solidMsBundle := GetMilestone(ledgerMilestoneIndex)
 		if solidMsBundle != nil {
 			err = SetLatestMilestone(solidMsBundle)
 			if err != nil {

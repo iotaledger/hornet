@@ -52,9 +52,9 @@ func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
-	lsm, err := tangle.GetMilestone(tangle.GetSolidMilestoneIndex())
-	if err != nil {
-		e.Error = "Ledger state invalid - Milestone db error"
+	lsm := tangle.GetMilestone(tangle.GetSolidMilestoneIndex())
+	if lsm == nil {
+		e.Error = "Ledger state invalid - Milestone not found"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
