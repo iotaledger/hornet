@@ -96,7 +96,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			refTx.Release() //-1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
-		
+
 		if !refTx.GetTransaction().IsTail() {
 			refTx.Release() //-1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
