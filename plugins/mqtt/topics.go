@@ -6,7 +6,7 @@ const (
 	topicLMSI     = "lmsi"
 	topicLMHS     = "lmhs"
 	topicSN       = "sn"
-	topicTxTrytes = "tx_trytes"
+	topicTxTrytes = "trytes"
 	topicTX       = "tx"
 	//topicPrefixAddress = "addr/"
 )

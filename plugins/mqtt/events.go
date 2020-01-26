@@ -28,7 +28,7 @@ func onNewTx(tx *tangle.CachedTransaction) {
 		log.Error(err.Error())
 	}
 
-	// tx_trytes topic
+	// trytes topic
 	err = publishTxTrytes(iotaTx)
 	if err != nil {
 		log.Error(err.Error())
