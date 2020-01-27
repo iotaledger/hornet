@@ -4,8 +4,7 @@
 # Allows building of dirty git state and will not push results to github.
 
 # make script executable independent of path
-trap 'cd $(dirs -l -0)' EXIT INT QUIT TERM
-cd ..
+cd $(dirname "$0")/../
 
 GORELEASER_IMAGE=iotmod/goreleaser-cgo-cross-compiler:1.13.5-musl
 REPO_PATH="/build"
