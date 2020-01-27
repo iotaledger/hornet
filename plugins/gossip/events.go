@@ -18,6 +18,7 @@ var Events = pluginEvents{
 	NeighborPutIntoInFlightPool:      events.NewEvent(neighborCaller),
 	NeighborPutBackIntoReconnectPool: events.NewEvent(neighborCaller),
 	NeighborPutIntoReconnectPool:     events.NewEvent(originAddrCaller),
+	NeighborConnectionClosed:         events.NewEvent(neighborCaller),
 
 	// low level network events
 	IncomingConnection: events.NewEvent(connectionCaller),
@@ -40,6 +41,7 @@ type pluginEvents struct {
 	NeighborPutIntoInFlightPool      *events.Event
 	NeighborPutBackIntoReconnectPool *events.Event
 	NeighborPutIntoReconnectPool     *events.Event
+	NeighborConnectionClosed         *events.Event
 
 	// low level network events
 	IncomingConnection *events.Event

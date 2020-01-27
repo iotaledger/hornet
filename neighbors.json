@@ -6,16 +6,6 @@
       "identity": "example1.neighbor.com:15600",
       "alias": "Example Neighbor 1",
       "prefer_ipv6": false
-    },
-    {
-      "identity": "example2.neighbor.com:15600",
-      "alias": "Example Neighbor 2",
-      "prefer_ipv6": false
-    },
-    {
-      "identity": "example3.neighbor.com:15600",
-      "alias": "Example Neighbor 3",
-      "prefer_ipv6": false
     }
   ]
 }

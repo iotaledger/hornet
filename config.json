@@ -71,7 +71,7 @@
       "storeTransactions",
       "getTrytes"
     ],
-    "host": "0.0.0.0",
+    "bindAddress": "0.0.0.0",
     "maxbodylength": 1000000,
     "maxfindtransactions": 100000,
     "maxgettrytes": 1000,
@@ -83,7 +83,7 @@
     "loadLSMIAsLMI": false
   },
   "dashboard": {
-    "host": "127.0.0.1",
+    "bindAddress": "127.0.0.1",
     "port": 8081,
     "dev": false,
     "basic_auth": {
@@ -99,7 +99,7 @@
     "webrootPath": "IOTAtangle/webroot",
     "socketiopath": "socket.io-client/dist/socket.io.js",
     "domain": "",
-    "host": "127.0.0.1",
+    "bindAddress": "127.0.0.1",
     "port": 8083,
     "networkName": "meets HORNET"
   },
@@ -135,15 +135,22 @@
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
     "domain": "",
-    "host": "127.0.0.1",
+    "bindAddress": "127.0.0.1",
     "port": 4434,
     "apiPort": 4433
   },
   "mqtt": {
     "config": "mqtt_config.json"
   },
+  "autopeering": {
+    "entryNodes": [
+      "V8LYtWWcPYYDTTXLeIEFjJEuWlsjDiI0+Pq/Cx9ai6g=@116.202.49.178:14626"
+    ],
+    "port": 14626
+  },
   "network": {
-    "address": "0.0.0.0",
+    "bindAddress": "0.0.0.0",
+    "externalAddress": "auto",
     "preferIPv6": false,
     "port": 15600,
     "reconnectattemptintervalseconds": 60
@@ -176,7 +183,7 @@
     "maxdepth": 15
   },
   "zmq": {
-    "host": "127.0.0.1",
+    "bindAddress": "127.0.0.1",
     "port": 5556
   }
 }

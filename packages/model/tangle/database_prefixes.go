@@ -11,4 +11,5 @@ const (
 	DBPrefixSnapshot              byte = 7
 	DBPrefixFirstSeenTransactions byte = 8
 	DBPrefixSpentAddresses        byte = 9
+	DBPrefixAutopeering           byte = 10
 )

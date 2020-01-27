@@ -14,6 +14,7 @@ func configure(plugin *node.Plugin) {
 	gossipLogger = logger.NewLogger(plugin.Name)
 
 	configureProtocol()
+	configureAutopeering()
 	configureNeighbors()
 	configureReconnectPool()
 	configureServer()

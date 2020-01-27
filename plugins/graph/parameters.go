@@ -16,7 +16,7 @@ func init() {
 	parameter.NodeConfig.SetDefault("graph.domain", "")
 
 	// "Set the host to which the IOTA Tangle Visualiser listens"
-	parameter.NodeConfig.SetDefault("graph.host", "127.0.0.1")
+	parameter.NodeConfig.SetDefault("graph.bindAddress", "127.0.0.1")
 
 	// "IOTA Tangle Visualiser webserver port"
 	parameter.NodeConfig.SetDefault("graph.port", 8083)

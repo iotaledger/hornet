@@ -16,7 +16,7 @@ func init() {
 	parameter.NodeConfig.SetDefault("network.preferIPv6", false)
 
 	// "Bind the TCP server socket for the gossip protocol to an address"
-	parameter.NodeConfig.SetDefault("network.address", "0.0.0.0")
+	parameter.NodeConfig.SetDefault("network.bindAddress", "0.0.0.0")
 
 	// "Bind the TCP server socket for the gossip protocol to a port"
 	parameter.NodeConfig.SetDefault("network.port", 15600)

@@ -104,7 +104,12 @@ next:
 				continue next
 			}
 		}
-		newlyInFlight = append(newlyInFlight, NewOutboundNeighbor(originAddr, prefIP, originAddr.Port, neighborAddrs))
+		neighbor := NewOutboundNeighbor(originAddr, prefIP, originAddr.Port, neighborAddrs)
+		// inject autopeering info
+		if recNeigh.Autopeering != nil {
+			neighbor.Autopeering = recNeigh.Autopeering
+		}
+		newlyInFlight = append(newlyInFlight, neighbor)
 	}
 	neighborsLock.Unlock()
 
@@ -115,6 +120,9 @@ next:
 		moveNeighborFromReconnectToInFlightPool(neighbor)
 		neighborsLock.Unlock()
 
+		if neighbor.Autopeering != nil {
+			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", neighbor.Autopeering.Address(), neighbor.Autopeering.ID())
+		}
 		if err := Connect(neighbor); err != nil {
 			gossipLogger.Warnf("connection attempt to %s failed: %s", neighbor.InitAddress.String(), err.Error())
 			neighborsLock.Lock()
@@ -185,7 +193,7 @@ func spawnReconnecter() {
 
 func Connect(neighbor *Neighbor) error {
 	addr := neighbor.PrimaryAddress.ToString() + ":" + strconv.Itoa(int(neighbor.InitAddress.Port))
-	conn, err := net.DialTimeout("tcp", addr, time.Duration(5)*time.Second)
+	conn, err := net.DialTimeout("tcp", addr, time.Duration(3)*time.Second)
 	if err != nil {
 		return errors.Wrapf(NewConnectionFailureError(err), "error when connecting to neighbor %s", neighbor.Identity)
 	}

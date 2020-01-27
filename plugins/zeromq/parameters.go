@@ -9,7 +9,7 @@ func init() {
 	parameter.NodeConfig.SetDefault("zmq.protocol", "tcp")
 
 	// "host used to connect to the zmq feed"
-	parameter.NodeConfig.SetDefault("zmq.host", "127.0.0.1")
+	parameter.NodeConfig.SetDefault("zmq.bindAddress", "127.0.0.1")
 
 	// "port used to connect to the zmq feed"
 	parameter.NodeConfig.SetDefault("zmq.port", 5556)

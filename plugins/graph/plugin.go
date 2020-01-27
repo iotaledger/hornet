@@ -88,7 +88,7 @@ func configure(plugin *node.Plugin) {
 
 	// socket.io and web server
 	server = &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("graph.host"), parameter.NodeConfig.GetInt("graph.port")),
+		Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port")),
 		Handler: router,
 	}
 
@@ -198,7 +198,7 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
-		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s:%d", parameter.NodeConfig.GetString("graph.host"), parameter.NodeConfig.GetInt("graph.port"))
+		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port"))
 
 		<-shutdownSignal
 		log.Info("Stopping Graph ...")
