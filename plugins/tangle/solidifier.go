@@ -355,7 +355,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 	milestoneToSolidifyTail.Release() //-1
 
 	tangle.SetSolidMilestone(milestoneToSolidify)
-	tangle.StoreMilestoneInDatabase(milestoneToSolidify)
+	tangle.StoreMilestone(milestoneToSolidify).Release()
 	Events.SolidMilestoneChanged.Trigger(milestoneToSolidify)
 	log.Infof("New solid milestone: %d", milestoneIndexToSolidify)
 

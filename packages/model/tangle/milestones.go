@@ -14,7 +14,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/typeutils"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
@@ -30,12 +29,12 @@ var (
 	latestMilestoneLock syncutils.RWMutex
 	isNodeSynced        bool
 
-	emptyHash                trinary.Hash = "999999999999999999999999999999999999999999999999999999999999999999999999999999999"
 	coordinatorAddress       string
 	coordinatorSecurityLevel int
 	numberOfKeysInAMilestone uint64
 	maxMilestoneIndex        milestone_index.MilestoneIndex
-	ErrInvalidMilestone      = errors.New("invalid milestone")
+
+	ErrInvalidMilestone = errors.New("invalid milestone")
 )
 
 func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
@@ -47,6 +46,32 @@ func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
 	coordinatorSecurityLevel = cooSecLvl
 	numberOfKeysInAMilestone = numOfKeysInMS
 	maxMilestoneIndex = 1 << numberOfKeysInAMilestone
+}
+
+func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *Bundle {
+
+	cachedMilestone := GetCachedMilestone(milestoneIndex) // cachedMilestone +1
+	defer cachedMilestone.Release()                       // cachedMilestone -1
+
+	if !cachedMilestone.Exists() {
+		return nil
+	}
+
+	ms := cachedMilestone.GetMilestone()
+
+	tx := GetCachedTransaction(ms.Hash) // tx +1
+	defer tx.Release()                  // tx -1
+
+	if !tx.Exists() {
+		return nil
+	}
+
+	bundleBucket, err := GetBundleBucket(tx.GetTransaction().Tx.Bundle)
+	if err != nil {
+		return nil
+	}
+
+	return bundleBucket.GetBundleOfTailTransaction(ms.Hash)
 }
 
 func IsNodeSynced() bool {
@@ -152,7 +177,7 @@ func FindClosestNextMilestone(index milestone_index.MilestoneIndex) (milestone *
 			return nil
 		}
 
-		ms, _ := GetMilestone(index)
+		ms := GetMilestone(index)
 		if ms != nil {
 			return ms
 		}
@@ -187,7 +212,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	}
 
 	// Check if milestone was already processed
-	msBundle, _ := GetMilestone(milestoneIndex)
+	msBundle := GetMilestone(milestoneIndex)
 	if msBundle != nil {
 		txIndex0.Release() //-1
 		// It could be issued again since several transactions of the same bundle were processed in parallel
@@ -222,7 +247,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 	}
 
-	if (siblingsTx.GetTransaction().Tx.Value != 0) || (siblingsTx.GetTransaction().Tx.Address != emptyHash) {
+	if (siblingsTx.GetTransaction().Tx.Value != 0) || (siblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
 		// Transaction is not issued by compass => no milestone
 		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", txIndex0Hash)
 	}
@@ -242,57 +267,6 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	bundle.SetMilestone(true)
 
 	return true, nil
-}
-
-func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) (result *Bundle, err error) {
-	if cacheResult := MilestoneCache.ComputeIfAbsent(milestoneIndex, func() interface{} {
-		if txHash, dbErr := readMilestoneTransactionHashFromDatabase(milestoneIndex); dbErr != nil {
-			err = dbErr
-			return nil
-		} else if txHash != "" {
-			tx := GetCachedTransaction(txHash) //+1
-			if !tx.Exists() {
-				tx.Release() //-1
-				return nil
-			}
-			bundleBucket, err := GetBundleBucket(tx.GetTransaction().Tx.Bundle)
-			tx.Release() //-1
-			if err != nil {
-				return nil
-			}
-
-			return bundleBucket.GetBundleOfTailTransaction(txHash)
-		} else {
-			return nil
-		}
-	}); !typeutils.IsInterfaceNil(cacheResult) {
-		result = cacheResult.(*Bundle)
-	}
-
-	return
-}
-
-func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) (result bool, err error) {
-	if MilestoneCache.Contains(milestoneIndex) {
-		result = true
-	} else {
-		result, err = databaseContainsMilestone(milestoneIndex)
-	}
-	return
-}
-
-func StoreMilestoneInCache(milestone *Bundle) {
-	if milestone.IsMilestone() {
-		MilestoneCache.Set(milestone.GetMilestoneIndex(), milestone)
-	}
-}
-
-func StoreMilestoneInDatabase(milestone *Bundle) error {
-	if milestone.IsMilestone() {
-		return storeMilestoneInDatabase(milestone)
-	} else {
-		return errors.New("Trying to store an invalid milestone")
-	}
 }
 
 // Validates if the milestone has the correct signature

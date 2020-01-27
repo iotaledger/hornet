@@ -68,12 +68,7 @@ func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
 		log.Error(err)
 	}
 
-	tangle.DiscardMilestoneFromCache(milestoneIndex)
-
-	// milestone
-	if err := tangle.DeleteMilestoneInDatabase(milestoneIndex); err != nil {
-		log.Error(err)
-	}
+	tangle.DeleteMilestone(milestoneIndex)
 }
 
 // pruneMilestone prunes the approvers, bundles, addresses and transaction metadata from the database
@@ -164,7 +159,7 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		ts := time.Now()
 		txCount := pruneUnconfirmedTransactions(milestoneIndex)
 
-		ms, _ := tangle.GetMilestone(milestoneIndex)
+		ms := tangle.GetMilestone(milestoneIndex)
 		if ms == nil {
 			log.Panicf("Milestone (%d) not found!", milestoneIndex)
 		}

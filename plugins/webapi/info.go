@@ -20,7 +20,6 @@ func init() {
 }
 
 func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	e := ErrorReturn{}
 	// Basic info data
 	info := GetNodeInfoReturn{
 		AppName:    cli.AppName,
@@ -36,13 +35,7 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	info.LatestMilestone = consts.NullHashTrytes
 
 	// Latest milestone hash
-	lsmBndl, err := tangle.GetMilestone(lmi)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
+	lsmBndl := tangle.GetMilestone(lmi)
 	if lsmBndl != nil {
 		tail := lsmBndl.GetTail() //+1
 		if tail != nil {
@@ -58,13 +51,7 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	info.IsSynced = tangle.IsNodeSynced()
 
 	// Solid milestone hash
-	smBndl, err := tangle.GetMilestone(smi)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
+	smBndl := tangle.GetMilestone(smi)
 	if smBndl != nil {
 		tail := smBndl.GetTail() //+1
 		if tail != nil {

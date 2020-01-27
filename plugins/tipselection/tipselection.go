@@ -60,11 +60,8 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	if msWalkStartIndex > lastSolidIndex {
 		msWalkStartIndex = lastSolidIndex
 	}
-	ms, err := tangle.GetMilestone(msWalkStartIndex)
-	if err != nil {
-		return nil, nil, err
-	}
 
+	ms := tangle.GetMilestone(msWalkStartIndex)
 	if ms == nil {
 		return nil, nil, errors.Wrapf(ErrMilestoneNotFound, "index: %d", msWalkStartIndex)
 	}
@@ -90,17 +87,16 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	var refBundle *tangle.Bundle
 	if reference != nil {
 		refTx := tangle.GetCachedTransaction(*reference) //+1
-		if err != nil {
-			log.Panic(err)
-		}
 		if !refTx.Exists() {
 			refTx.Release() //-1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction doesn't exist")
 		}
+
 		if !refTx.GetTransaction().IsSolid() {
 			refTx.Release() //-1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
+
 		if !refTx.GetTransaction().IsTail() {
 			refTx.Release() //-1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")

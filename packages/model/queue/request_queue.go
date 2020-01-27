@@ -92,10 +92,10 @@ func (s *RequestQueue) retryPending() {
 
 	for _, r := range s.pending {
 		if r.isReceived() {
-			r.cachedRequest.Release() // -1
+			r.cachedRequest.Release() // -1		// Request done, release consumer and delete
 			s.DeleteRequest(r.hash)   // +-0
 		} else {
-			if !tangle.ContainsTransaction(r.hash) {
+			if s.ContainsRequest(r.hash) { // Check if the request is still in the storage (there was a problem that deleted requests are still in pending)
 				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
 			} else {
@@ -127,7 +127,7 @@ func (s *RequestQueue) GetNext() ([]byte, trinary.Hash, milestone_index.Mileston
 			if request.isReceived() || request.isProcessed() {
 				// Remove from lifo since we received an answer for the request
 				s.lifo = append(s.lifo[:i], s.lifo[i+1:]...)
-				request.cachedRequest.Release() // -1
+				request.cachedRequest.Release() // -1		// Request done, release consumer and delete
 				s.DeleteRequest(request.hash)   // +-0
 				continue
 			}
@@ -153,7 +153,7 @@ func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex,
 			if request.isReceived() || request.isProcessed() {
 				// Remove from lifo since we received an answer for the request
 				s.lifo = append(s.lifo[:i], s.lifo[i+1:]...)
-				request.cachedRequest.Release() // -1
+				request.cachedRequest.Release() // -1		// Request done, release consumer and delete
 				s.DeleteRequest(request.hash)   // +-0
 				continue
 			} else if request.msIndex < startIndex || request.msIndex > endIndex {
@@ -194,7 +194,7 @@ func (s *RequestQueue) add(txHash trinary.Hash, ms milestone_index.MilestoneInde
 
 	request := newRequest(txHash, ms, markRequested)
 
-	request.cachedRequest = s.PutRequest(request) // +1
+	request.cachedRequest = s.PutRequest(request) // +1		Consumer stays registered until request is done
 	if markRequested {
 		s.pending = append(s.pending, request)
 	} else {

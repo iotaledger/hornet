@@ -11,8 +11,7 @@
           "evictionSize": 1000
         },
         "milestones": {
-          "size": 1000,
-          "evictionSize": 100
+          "cacheTimeMs": 5000
         },
         "transactions": {
           "cacheTimeMs": 5000

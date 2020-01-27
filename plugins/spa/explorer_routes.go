@@ -236,16 +236,15 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 }
 
 func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
-	bndl, err := tangle.GetMilestone(index)
-	if err != nil {
-		return nil, err
-	}
+	bndl := tangle.GetMilestone(index)
 	if bndl == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
+
 	tail := bndl.GetTail() //+1
 	tx, err := createExplorerTx(tail.GetTransaction().GetHash(), tail)
 	tail.Release() //-1
+
 	return tx, err
 }
 

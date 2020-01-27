@@ -33,7 +33,6 @@ func configure(plugin *node.Plugin) {
 	configureRefsAnInvalidBundleStorage()
 
 	tangle.InitBundleCache()
-	tangle.InitMilestoneCache()
 
 	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
 
@@ -67,7 +66,7 @@ func configure(plugin *node.Plugin) {
 		<-shutdownSignal
 
 		log.Info("Flushing caches to database...")
-		tangle.FlushMilestoneCache()
+		tangle.ShutdownMilestoneStorage()
 		tangle.FlushBundleCache()
 		tangle.ShutdownTransactionStorage()
 		tangle.ShutdownApproversStorage()
