@@ -114,7 +114,7 @@ func StoreMilestone(milestone *Bundle) *CachedMilestone {
 			Index: milestone.GetMilestoneIndex(),
 			Hash:  milestone.GetMilestoneHash()})}
 	}
-	return nil
+	panic("Bundle is not a milestone")
 }
 
 // +-0
