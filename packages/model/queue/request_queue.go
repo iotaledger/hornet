@@ -98,6 +98,9 @@ func (s *RequestQueue) retryPending() {
 			if s.ContainsRequest(r.hash) { // Check if the request is still in the storage (there was a problem that deleted requests are still in pending)
 				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
+			} else {
+				r.cachedRequest.Release() // -1
+				s.DeleteRequest(r.hash)   // +-0
 			}
 		}
 	}
