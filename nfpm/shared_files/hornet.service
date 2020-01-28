@@ -4,6 +4,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
+EnvironmentFile=-/etc/default/hornet
 LimitNOFILE=4096
 StandardOutput=syslog
 StandardError=syslog
@@ -18,8 +19,7 @@ Group=hornet
 WorkingDirectory=/var/lib/hornet
 TimeoutSec=1200
 Restart=always
-
-ExecStart=/bin/bash -c "/usr/bin/hornet_download_snapshot.sh && /usr/bin/hornet -d /etc/hornet"
+ExecStart=/bin/bash -c "/usr/bin/hornet_download_snapshot.sh $REMOTE_FILE && /usr/bin/hornet -d /etc/hornet $OPTIONS"
 
 [Install]
 WantedBy=multi-user.target

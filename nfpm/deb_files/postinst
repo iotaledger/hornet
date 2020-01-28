@@ -16,14 +16,14 @@ configure | abort-upgrade | abort-remove | abort-deconfigure)
         echo "HORNET installation finished\n"
         echo "######################################\n"
         echo "Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.\n"
-        echo "To start HORNET the first time, please run:\nsudo systemctl enable hornet && service hornet start\n"
+        echo "To start HORNET the first time, please run:\nsudo systemctl enable hornet && sudo service hornet start\n"
     fi
 
     adduser --no-create-home --system --group hornet >/dev/null
 
     mkdir -p /var/lib/hornet
-    chmod -R 700 /var/lib/hornet
-    chmod -R 700 /etc/hornet
+    chmod 700 /var/lib/hornet
+    chmod 700 /etc/hornet
     chown -R hornet:hornet /etc/hornet
     chown -R hornet:hornet /var/lib/hornet
     ;;
