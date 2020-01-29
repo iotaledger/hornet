@@ -37,9 +37,7 @@ func configure(*node.Plugin) {
 }
 
 func run(*node.Plugin) {
-	if err := daemon.BackgroundWorker(name, start, shutdown.ShutdownPriorityAutopeering); err != nil {
-		log.Errorf("Failed to start as daemon: %s", err)
-	}
+	daemon.BackgroundWorker(name, start, shutdown.ShutdownPriorityAutopeering)
 }
 
 func configureEvents() {
@@ -49,30 +47,32 @@ func configureEvents() {
 		if neighbor.Autopeering == nil {
 			return
 		}
+		gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
+		log.Infof("removing: %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		Selection.RemoveNeighbor(neighbor.Autopeering.ID())
 	}))
 
 	discover.Events.PeerDiscovered.Attach(events.NewClosure(func(ev *discover.DiscoveredEvent) {
-		log.Infof("Discovered: %s / %s", ev.Peer.Address(), ev.Peer.ID())
+		log.Infof("discovered: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 	}))
 	discover.Events.PeerDeleted.Attach(events.NewClosure(func(ev *discover.DeletedEvent) {
-		log.Infof("Removed offline: %s / %s", ev.Peer.Address(), ev.Peer.ID())
+		log.Infof("removed offline: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 	}))
 
 	selection.Events.SaltUpdated.Attach(events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
-		log.Infof("Salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
+		log.Infof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
 	}))
 	selection.Events.OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if ev.Status {
-			log.Infof("Peering chosen: %s / %s", ev.Peer.Address(), ev.Peer.ID())
+			log.Infof("peering chosen: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 		}
 	}))
 	selection.Events.IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if ev.Status {
-			log.Infof("Peering accepted: %s / %s", ev.Peer.Address(), ev.Peer.ID())
+			log.Infof("peering accepted: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 		}
 	}))
 	selection.Events.Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
-		log.Infof("Peering dropped: %s", ev.DroppedID.String())
+		log.Infof("peering dropped: %s", ev.DroppedID.String())
 	}))
 }

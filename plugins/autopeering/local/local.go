@@ -71,7 +71,7 @@ func configureLocal() *peer.Local {
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
 	}
-	
+
 	peerDB, err := peer.NewDB(db)
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
