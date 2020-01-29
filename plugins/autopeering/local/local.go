@@ -49,7 +49,10 @@ func configureLocal() *peer.Local {
 	// announce the peering service
 	services := service.New()
 	services.Update(service.PeeringKey, "udp", net.JoinHostPort(externalIP.String(), peeringPort))
-	services.Update(service.GossipKey, "tcp", net.JoinHostPort(externalIP.String(), parameter.NodeConfig.GetString("network.port")))
+
+	if !parameter.NodeConfig.GetBool(CFB_ACT_AS_ENTRY_NODE) {
+		services.Update(service.GossipKey, "tcp", net.JoinHostPort(externalIP.String(), parameter.NodeConfig.GetString("network.port")))
+	}
 
 	// set the private key from the seed provided in the config
 	var seed [][]byte

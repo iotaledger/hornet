@@ -143,6 +143,7 @@
     "config": "mqtt_config.json"
   },
   "autopeering": {
+    "actAsEntryNode": false,
     "entryNodes": [
       "V8LYtWWcPYYDTTXLeIEFjJEuWlsjDiI0+Pq/Cx9ai6g=@116.202.49.178:14626"
     ],
