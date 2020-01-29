@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/events"
 )
@@ -41,23 +42,25 @@ func configureAutopeering() {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
-		apLog.Infof("[incoming peering] whitelisting %s / %s", ev.Peer.Address(), ev.Peer.ID())
+		gossipAddr := ev.Peer.Services().Get(service.GossipKey).String()
+		apLog.Infof("[incoming peering] whitelisting %s / %s / %s", ev.Peer.Address(), gossipAddr, ev.Peer.ID())
 		// whitelist the given peer
 		neighborsLock.Lock()
 		defer neighborsLock.Unlock()
 		// will be grabbed later by the incoming connection
-		allowedIdentities[ev.Peer.Address()] = ev.Peer
+		allowedIdentities[gossipAddr] = ev.Peer
 		hostsBlacklistLock.Lock()
-		delete(hostsBlacklist, ev.Peer.Address())
+		delete(hostsBlacklist, gossipAddr)
 		hostsBlacklistLock.Unlock()
 	}))
 	selection.Events.OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
-		apLog.Infof("[outgoing peering] adding autopeering neighbor %s / %s", ev.Peer.Address(), ev.Peer.ID())
-		if err := AddNeighbor(ev.Peer.Address(), false, "", ev.Peer); err != nil {
-			apLog.Warnf("couldn't add autopeering neighbor %s / %s: %s", ev.Peer.Address(), ev.Peer.ID(), err)
+		gossipAddr := ev.Peer.Services().Get(service.GossipKey).String()
+		apLog.Infof("[outgoing peering] adding autopeering neighbor %s / %s / %s", ev.Peer.Address(), gossipAddr, ev.Peer.ID())
+		if err := AddNeighbor(gossipAddr, false, "", ev.Peer); err != nil {
+			apLog.Warnf("couldn't add autopeering neighbor %s", err)
 		}
 	}))
 }

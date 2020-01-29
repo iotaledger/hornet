@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -121,7 +122,8 @@ next:
 		neighborsLock.Unlock()
 
 		if neighbor.Autopeering != nil {
-			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", neighbor.Autopeering.Address(), neighbor.Autopeering.ID())
+			gossipAddr := neighbor.Autopeering.Services().Get(service.GossipKey).String()
+			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		}
 		if err := Connect(neighbor); err != nil {
 			gossipLogger.Warnf("connection attempt to %s failed: %s", neighbor.InitAddress.String(), err.Error())

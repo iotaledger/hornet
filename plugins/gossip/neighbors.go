@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
+	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -304,7 +305,8 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 		// grab autopeering information from whitelist
 		neighbor.Autopeering = allowedIdentities[neighbor.Identity]
 		if neighbor.Autopeering != nil {
-			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", neighbor.Autopeering.Address(), neighbor.Autopeering.ID())
+			gossipAddr := neighbor.Autopeering.Services().Get(service.GossipKey).String()
+			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		}
 	case Outbound:
 		expectedPort := neighbor.InitAddress.Port
@@ -613,6 +615,11 @@ type NeighborInfo struct {
 	NumberOfDroppedSentPackets        uint32    `json:"numberOfDroppedSentPackets"`
 	ConnectionType                    string    `json:"connectionType"`
 	Connected                         bool      `json:"connected"`
+	AutopeeringID                     string    `json:"autopeering_id"`
+}
+
+type AutopeeringInfo struct {
+	ID string `json:"string"`
 }
 
 func GetNeighbor(identifier string) (*Neighbor, bool) {
@@ -638,7 +645,7 @@ func GetNeighbors() []NeighborInfo {
 
 	result := []NeighborInfo{}
 	for _, neighbor := range connectedNeighbors {
-		result = append(result, NeighborInfo{
+		info := NeighborInfo{
 			Neighbor:                          neighbor,
 			Address:                           neighbor.Identity,
 			Domain:                            neighbor.InitAddress.Addr,
@@ -654,12 +661,16 @@ func GetNeighbors() []NeighborInfo {
 			ConnectionType:                    "tcp",
 			Connected:                         true,
 			PreferIPv6:                        neighbor.InitAddress.PreferIPv6,
-		})
+		}
+		if neighbor.Autopeering != nil {
+			info.AutopeeringID = neighbor.Autopeering.ID().String()
+		}
+		result = append(result, info)
 	}
 
 	for _, recNeigh := range reconnectPool {
 		originAddr := recNeigh.OriginAddr
-		result = append(result, NeighborInfo{
+		info := NeighborInfo{
 			Address:        originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			Domain:         originAddr.Addr,
 			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
@@ -667,7 +678,11 @@ func GetNeighbors() []NeighborInfo {
 			ConnectionType: "tcp",
 			Connected:      false,
 			PreferIPv6:     originAddr.PreferIPv6,
-		})
+		}
+		if recNeigh.Autopeering != nil {
+			info.AutopeeringID = recNeigh.Autopeering.ID().String()
+		}
+		result = append(result, )
 	}
 
 	return result
