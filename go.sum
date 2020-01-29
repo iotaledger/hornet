@@ -175,6 +175,8 @@ github.com/iotaledger/hive.go v0.0.0-20200121002816-3019cb9d3e7a h1:lpIs4hdzITt+
 github.com/iotaledger/hive.go v0.0.0-20200121002816-3019cb9d3e7a/go.mod h1:S+v90R3u4Rqe4VoOg4DhiZrAKlKZhz2UFKuK/Neqa2o=
 github.com/iotaledger/hive.go v0.0.0-20200123171556-feae13d59500 h1:mlslXplqM9euFzMHIyD+/fNYmktLS72oRwC6Trj11XY=
 github.com/iotaledger/hive.go v0.0.0-20200123171556-feae13d59500/go.mod h1:S+v90R3u4Rqe4VoOg4DhiZrAKlKZhz2UFKuK/Neqa2o=
+github.com/iotaledger/hive.go v0.0.0-20200129100606-5cce48ce2513 h1:G88LwnWx1s4CuppdDmdcp4P+OO5B/FvB1NjrKSwiqOc=
+github.com/iotaledger/hive.go v0.0.0-20200129100606-5cce48ce2513/go.mod h1:S+v90R3u4Rqe4VoOg4DhiZrAKlKZhz2UFKuK/Neqa2o=
 github.com/iotaledger/iota.go v1.0.0-beta.9/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
 github.com/iotaledger/iota.go v1.0.0-beta.14 h1:Oeb28MfBuJEeXcGrLhTCJFtbsnc8y1u7xidsAmiOD5A=
 github.com/iotaledger/iota.go v1.0.0-beta.14/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=

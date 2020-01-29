@@ -90,7 +90,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			transaction.RegisterConsumer() //+1
+			transaction.Retain() //+1
 			_, added := newTxWorkerPool.TrySubmit(transaction)
 			if !added {
 				transaction.Release() //-1
@@ -103,7 +103,7 @@ func run(plugin *node.Plugin) {
 			return
 		}
 
-		transaction.RegisterConsumer() //+1
+		transaction.Retain() //+1
 		_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
 		if !added {
 			transaction.Release() //-1

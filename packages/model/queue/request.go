@@ -101,7 +101,7 @@ func (r *request) updateTimes() {
 }
 
 type CachedRequest struct {
-	*objectstorage.CachedObject
+	objectstorage.CachedObject
 }
 
 func (c *CachedRequest) GetRequest() *request {

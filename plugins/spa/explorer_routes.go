@@ -48,7 +48,7 @@ type ExplorerTx struct {
 
 func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, error) {
 
-	tx.RegisterConsumer() //+1
+	tx.Retain() //+1
 	defer tx.Release()    //-1
 
 	originTx := tx.GetTransaction().Tx

@@ -18,7 +18,7 @@ var (
 
 func onNewTx(tx *tangle.CachedTransaction) {
 
-	tx.RegisterConsumer() //+1
+	tx.Retain() //+1
 	iotaTx := tx.GetTransaction().Tx
 	tx.Release()
 
@@ -37,7 +37,7 @@ func onNewTx(tx *tangle.CachedTransaction) {
 
 func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	tx.RegisterConsumer() //+1
+	tx.Retain() //+1
 	iotaTx := tx.GetTransaction().Tx
 	tx.Release()
 

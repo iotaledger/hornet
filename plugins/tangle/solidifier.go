@@ -30,7 +30,7 @@ var (
 
 // checkSolidity checks if a single transaction is solid
 func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCache bool) (solid bool, newlySolid bool) {
-	cachedTransaction.RegisterConsumer() //+1
+	cachedTransaction.Retain() //+1
 	defer cachedTransaction.Release()    //-1
 
 	if cachedTransaction.GetTransaction().IsSolid() {
@@ -67,7 +67,7 @@ func checkSolidity(cachedTransaction *tangle.CachedTransaction, addToApproversCa
 	if isSolid {
 		// update the solidity flags of this transaction and its approvers
 		cachedTransaction.GetTransaction().SetSolid(true)
-		cachedTransaction.RegisterConsumer() //+1
+		cachedTransaction.Retain() //+1
 		Events.TransactionSolid.Trigger(cachedTransaction)
 		cachedTransaction.Release() //-1
 	}
@@ -92,7 +92,7 @@ func registerApproverOfApprovee(approver trinary.Hash, approveeHash trinary.Hash
 // Can be aborted with abortSignal
 func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction, abortSignal chan struct{}) (solid bool, aborted bool) {
 
-	milestoneTail.RegisterConsumer() //+1
+	milestoneTail.Retain() //+1
 	defer milestoneTail.Release()    //-1
 
 	ts := time.Now()
@@ -221,7 +221,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, milestoneTai
 
 				if newlySolid && tangle.IsNodeSynced() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					entryTx.RegisterConsumer() //+1
+					entryTx.Retain() //+1
 					gossipSolidifierWorkerPool.Submit(entryTx)
 				}
 
@@ -367,7 +367,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 
 func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {
 
-	milestoneTail.RegisterConsumer() //+1
+	milestoneTail.Retain() //+1
 	defer milestoneTail.Release()    //-1
 
 	var loopCnt int

@@ -30,14 +30,14 @@ func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {
 }
 
 type CachedTransaction struct {
-	*objectstorage.CachedObject
+	objectstorage.CachedObject
 }
 
 type CachedTransactions []*CachedTransaction
 
-func (cachedTxs CachedTransactions) RegisterConsumer() {
+func (cachedTxs CachedTransactions) Retain() {
 	for _, cachedTx := range cachedTxs {
-		cachedTx.RegisterConsumer()
+		cachedTx.Retain()
 	}
 }
 
@@ -70,7 +70,8 @@ func configureTransactionStorage() {
 		transactionFactory,
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
-		objectstorage.PersistenceEnabled(true))
+		objectstorage.PersistenceEnabled(true),
+		objectstorage.EnableLeakDetection())
 }
 
 func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {

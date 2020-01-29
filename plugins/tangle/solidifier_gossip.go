@@ -42,7 +42,7 @@ func runGossipSolidifier() {
 
 	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if tangle.IsNodeSynced() {
-			transaction.RegisterConsumer() //+1
+			transaction.Retain() //+1
 			gossipSolidifierWorkerPool.Submit(transaction)
 		}
 	})
@@ -64,7 +64,7 @@ func runGossipSolidifier() {
 func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
 
 	//Register consumer here, since we will add it to txsToCheck which will release every tx when they are processed
-	transaction.RegisterConsumer() //+1
+	transaction.Retain() //+1
 
 	txsToCheck := make(map[string]*tangle.CachedTransaction)
 	txsToCheck[transaction.GetTransaction().GetHash()] = transaction

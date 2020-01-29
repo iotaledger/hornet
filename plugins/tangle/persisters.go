@@ -99,7 +99,7 @@ func runFirstSeenTransactionPersister() {
 
 	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 
-		transaction.RegisterConsumer() //+1
+		transaction.Retain() //+1
 		// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 		// This is only used to delete unconfirmed transactions from the database at pruning
 		if !transaction.GetTransaction().IsRequested() {

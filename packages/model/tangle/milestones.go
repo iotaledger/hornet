@@ -272,8 +272,8 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 // Validates if the milestone has the correct signature
 func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransaction, milestoneIndex milestone_index.MilestoneIndex, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
-	signatureTxs.RegisterConsumer() //+1
-	siblingsTx.RegisterConsumer()   //+1
+	signatureTxs.Retain() //+1
+	siblingsTx.Retain()   //+1
 
 	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
 
@@ -337,14 +337,14 @@ func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransa
 
 // Checks if the the tx could be part of a milestone
 func IsMaybeMilestone(transaction *CachedTransaction) bool {
-	transaction.RegisterConsumer() //+1
-	defer transaction.Release()    //-1
+	transaction.Retain()        //+1
+	defer transaction.Release() //-1
 	return (transaction.GetTransaction().Tx.Value == 0) && (transaction.GetTransaction().Tx.Address == coordinatorAddress)
 }
 
 // Returns Milestone index of the milestone
 func getMilestoneIndex(transaction *CachedTransaction) (milestoneIndex milestone_index.MilestoneIndex) {
-	transaction.RegisterConsumer() //+1
-	defer transaction.Release()    //-1
+	transaction.Retain()        //+1
+	defer transaction.Release() //-1
 	return milestone_index.MilestoneIndex(trinary.TrytesToInt(transaction.GetTransaction().Tx.ObsoleteTag))
 }

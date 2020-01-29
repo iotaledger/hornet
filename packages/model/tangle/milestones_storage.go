@@ -41,7 +41,8 @@ func configureMilestoneStorage() {
 		milestoneFactory,
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
-		objectstorage.PersistenceEnabled(true))
+		objectstorage.PersistenceEnabled(true),
+		objectstorage.EnableLeakDetection())
 }
 
 // Storable Object
@@ -84,7 +85,7 @@ func (ms *Milestone) UnmarshalBinary(data []byte) error {
 
 // Cached Object
 type CachedMilestone struct {
-	*objectstorage.CachedObject
+	objectstorage.CachedObject
 }
 
 func (c *CachedMilestone) GetMilestone() *Milestone {

@@ -11,7 +11,7 @@ import (
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
 func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction) {
 
-	milestoneTail.RegisterConsumer() //+1
+	milestoneTail.Retain() //+1
 	defer milestoneTail.Release()    //-1
 
 	ts := time.Now()
