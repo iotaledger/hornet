@@ -165,7 +165,8 @@
     "disableCaller": true,
     "encoding": "console",
     "outputPaths": [
-      "stdout"
+      "stdout",
+      "hornet.log"
     ]
   },
   "protocol": {
