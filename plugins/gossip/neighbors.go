@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gohornet/hornet/plugins/autopeering"
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/pkg/errors"
 
@@ -305,7 +305,7 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 		// grab autopeering information from whitelist
 		neighbor.Autopeering = allowedIdentities[neighbor.Identity]
 		if neighbor.Autopeering != nil {
-			gossipAddr := neighbor.Autopeering.Services().Get(autopeering.GossipServiceKey).String()
+			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
 			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		}
 	case Outbound:

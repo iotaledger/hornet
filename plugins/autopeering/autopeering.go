@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/autopeering/local"
 	"github.com/iotaledger/hive.go/autopeering/discover"
@@ -52,7 +53,7 @@ func configureAP() {
 // isValidNeighbor checks whether a peer is a valid neighbor.
 func isValidNeighbor(p *peer.Peer) bool {
 	// gossip must be supported
-	gossipAddr := p.Services().Get(GossipServiceKey)
+	gossipAddr := p.Services().Get(services.GossipServiceKey())
 	if gossipAddr == nil {
 		return false
 	}

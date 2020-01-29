@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gohornet/hornet/plugins/autopeering"
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -122,7 +122,7 @@ next:
 		neighborsLock.Unlock()
 
 		if neighbor.Autopeering != nil {
-			gossipAddr := neighbor.Autopeering.Services().Get(autopeering.GossipServiceKey).String()
+			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
 			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		}
 		if err := Connect(neighbor); err != nil {

@@ -1,7 +1,7 @@
 package gossip
 
 import (
-	"github.com/gohornet/hornet/plugins/autopeering"
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/events"
 )
@@ -42,7 +42,7 @@ func configureAutopeering() {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
-		gossipAddr := ev.Peer.Services().Get(autopeering.GossipServiceKey).String()
+		gossipAddr := ev.Peer.Services().Get(services.GossipServiceKey()).String()
 		apLog.Infof("[incoming peering] whitelisting %s / %s / %s", ev.Peer.Address(), gossipAddr, ev.Peer.ID())
 		// whitelist the given peer
 		neighborsLock.Lock()
@@ -57,7 +57,7 @@ func configureAutopeering() {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
-		gossipAddr := ev.Peer.Services().Get(autopeering.GossipServiceKey).String()
+		gossipAddr := ev.Peer.Services().Get(services.GossipServiceKey()).String()
 		apLog.Infof("[outgoing peering] adding autopeering neighbor %s / %s / %s", ev.Peer.Address(), gossipAddr, ev.Peer.ID())
 		if err := AddNeighbor(gossipAddr, false, "", ev.Peer); err != nil {
 			apLog.Warnf("couldn't add autopeering neighbor %s", err)

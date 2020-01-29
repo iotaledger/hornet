@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
-	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/logger"
@@ -48,10 +48,10 @@ func configureLocal() *peer.Local {
 	peeringPort := strconv.Itoa(parameter.NodeConfig.GetInt(CFG_PORT))
 
 	// announce the peering service
-	services := service.New()
-	services.Update(service.PeeringKey, "udp", net.JoinHostPort(externalIP.String(), peeringPort))
+	ownServices := service.New()
+	ownServices.Update(service.PeeringKey, "udp", net.JoinHostPort(externalIP.String(), peeringPort))
 	if !parameter.NodeConfig.GetBool(CFG_ACT_AS_ENTRY_NODE) {
-		services.Update(autopeering.GossipServiceKey, "tcp", net.JoinHostPort(externalIP.String(), parameter.NodeConfig.GetString("network.port")))
+		ownServices.Update(services.GossipServiceKey(), "tcp", net.JoinHostPort(externalIP.String(), parameter.NodeConfig.GetString("network.port")))
 	}
 
 	// set the private key from the seed provided in the config
@@ -75,7 +75,7 @@ func configureLocal() *peer.Local {
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
 	}
-	local, err := peer.NewLocal(services, peerDB, seed...)
+	local, err := peer.NewLocal(ownServices, peerDB, seed...)
 	if err != nil {
 		log.Fatalf("Error creating local: %s", err)
 	}

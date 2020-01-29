@@ -3,11 +3,10 @@ package autopeering
 import (
 	"time"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/iotaledger/hive.go/autopeering/discover"
-	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -29,10 +28,9 @@ func init() {
 const name = "Autopeering" // name of the plugin
 
 var PLUGIN = node.NewPlugin(name, node.Enabled, configure, run)
-var GossipServiceKey service.Key
 
 func configure(*node.Plugin) {
-	GossipServiceKey = service.Key(parameter.NodeConfig.GetString("milestones.coordinator")[:10])
+	services.GossipServiceKey()
 	log = logger.NewLogger(name)
 	configureEvents()
 	configureAP()
