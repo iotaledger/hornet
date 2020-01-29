@@ -9,7 +9,7 @@ import (
 // Incoming: Whitelist the peer and don't initiate any connection
 // Outgoing: Put the neighbor into the reconnect pool with the autopeering info
 func configureAutopeering() {
-	apLog := gossipLogger.Named ("Autopeering")
+	apLog := gossipLogger.Named("Autopeering")
 	// called whenever the autopeering logic wants to drop a neighborhood peer
 	selection.Events.Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
 		apLog.Infof("[dropped event] trying to remove connection to %s", ev.DroppedID)
