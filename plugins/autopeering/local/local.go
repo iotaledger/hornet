@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/logger"
@@ -49,9 +50,8 @@ func configureLocal() *peer.Local {
 	// announce the peering service
 	services := service.New()
 	services.Update(service.PeeringKey, "udp", net.JoinHostPort(externalIP.String(), peeringPort))
-
-	if !parameter.NodeConfig.GetBool(CFB_ACT_AS_ENTRY_NODE) {
-		services.Update(service.GossipKey, "tcp", net.JoinHostPort(externalIP.String(), parameter.NodeConfig.GetString("network.port")))
+	if !parameter.NodeConfig.GetBool(CFG_ACT_AS_ENTRY_NODE) {
+		services.Update(autopeering.GossipServiceKey, "tcp", net.JoinHostPort(externalIP.String(), parameter.NodeConfig.GetString("network.port")))
 	}
 
 	// set the private key from the seed provided in the config

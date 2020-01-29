@@ -25,21 +25,21 @@ var (
 	// Selection is the peer selection protocol.
 	Selection *selection.Protocol
 
-	ErrParsingMasterNode = errors.New("can't parse master node")
+	ErrParsingEntryNode = errors.New("can't parse entry node")
 
 	log *logger.Logger
 )
 
 func configureAP() {
-	masterPeers, err := parseEntryNodes()
+	entryNodes, err := parseEntryNodes()
 	if err != nil {
 		log.Errorf("Invalid entry nodes; ignoring: %v", err)
 	}
-	log.Debugf("Master peers: %v", masterPeers)
+	log.Debugf("Entry node peers: %v", entryNodes)
 
 	Discovery = discover.New(local.GetInstance(), discover.Config{
 		Log:         log.Named("disc"),
-		MasterPeers: masterPeers,
+		MasterPeers: entryNodes,
 	})
 
 	// enable peer selection only when gossip is enabled
@@ -52,7 +52,7 @@ func configureAP() {
 // isValidNeighbor checks whether a peer is a valid neighbor.
 func isValidNeighbor(p *peer.Peer) bool {
 	// gossip must be supported
-	gossipAddr := p.Services().Get(service.GossipKey)
+	gossipAddr := p.Services().Get(GossipServiceKey)
 	if gossipAddr == nil {
 		return false
 	}
@@ -135,11 +135,11 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 
 		parts := strings.Split(entryNodeDefinition, "@")
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("%w: master node parts must be 2, is %d", ErrParsingMasterNode, len(parts))
+			return nil, fmt.Errorf("%w: entry node parts must be 2, is %d", ErrParsingEntryNode, len(parts))
 		}
 		pubKey, err := base64.StdEncoding.DecodeString(parts[0])
 		if err != nil {
-			return nil, fmt.Errorf("%w: can't decode public key: %s", ErrParsingMasterNode, err)
+			return nil, fmt.Errorf("%w: can't decode public key: %s", ErrParsingEntryNode, err)
 		}
 
 		services := service.New()

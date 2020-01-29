@@ -9,7 +9,7 @@ const (
 	CFG_EXTERNAL          = "network.externalAddress"
 	CFG_PORT              = "autopeering.port"
 	CFG_SEED              = "autopeering.seed"
-	CFB_ACT_AS_ENTRY_NODE = "autopeering.actAsEntryNode"
+	CFG_ACT_AS_ENTRY_NODE = "autopeering.actAsEntryNode"
 )
 
 func init() {
@@ -17,5 +17,5 @@ func init() {
 	flag.String(CFG_EXTERNAL, "auto", "external IP address under which the node is reachable; or 'auto' to determine it automatically")
 	flag.Int(CFG_PORT, 14626, "UDP port for incoming peering requests")
 	flag.BytesBase64(CFG_SEED, nil, "private key seed used to derive the node identity; optional Base64 encoded 256-bit string")
-	flag.Bool(CFB_ACT_AS_ENTRY_NODE, false, "whether the node should act as an autopeering entry node")
+	flag.Bool(CFG_ACT_AS_ENTRY_NODE, false, "whether the node should act as an autopeering entry node")
 }
