@@ -682,7 +682,7 @@ func GetNeighbors() []NeighborInfo {
 		if recNeigh.Autopeering != nil {
 			info.AutopeeringID = recNeigh.Autopeering.ID().String()
 		}
-		result = append(result, )
+		result = append(result, info)
 	}
 
 	return result
