@@ -105,12 +105,6 @@ func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 
 // +1
 func StoreMilestone(milestone *Bundle) *CachedMilestone {
-	// Be sure the bundle is already saved in the db
-	// TODO: Remove that with object storage for bundles
-	if err := StoreBundleInDatabase(milestone); err != nil {
-		panic(err)
-	}
-
 	if milestone.IsMilestone() {
 		return &CachedMilestone{milestoneStorage.Store(&Milestone{
 			Index: milestone.GetMilestoneIndex(),

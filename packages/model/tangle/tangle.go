@@ -9,7 +9,7 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	database.Settings(directory, badgerOpts)
 	configureHealthDatabase()
 	configureTransactionStorage()
-	configureBundleDatabase()
+	configureBundleTransactionsStorage()
 	configureTransactionHashesForAddressDatabase()
 	configureApproversStorage()
 	configureMilestoneStorage()

@@ -417,11 +417,8 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 				if tangle.IsMaybeMilestone(approveeTx.Retain()) { //Pass +1
 					// This tx could belong to a milestone
 					// => load bundle, and start the milestone check
-					bundleBucket, err := tangle.GetBundleBucket(approveeTx.GetTransaction().Tx.Bundle)
-					if err != nil {
-						log.Panic(err)
-					}
-					bundle := bundleBucket.GetBundleOfTailTransaction(approveeTx.GetTransaction().Tx.Hash)
+
+					bundle := tangle.GetBundleOfTailTransaction(approveeTx.GetTransaction().Tx.Bundle, approveeTx.GetTransaction().Tx.Hash)
 					if bundle == nil {
 						log.Panicf("searchMissingMilestone: Tx: %v, Bundle not found: %v", approveeHash, approveeTx.GetTransaction().Tx.Bundle)
 					}

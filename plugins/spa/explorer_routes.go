@@ -92,18 +92,12 @@ func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, err
 	}
 	t.MWM = mwm
 
-	// compute previous and next in bundle
-	bucket, err := tangle.GetBundleBucket(t.Bundle)
-	if err != nil {
-		return nil, ErrInternalError
-	}
-
 	// get previous/next hash
 	var bndl *tangle.Bundle
 	if tx.GetTransaction().IsTail() {
-		bndl = bucket.GetBundleOfTailTransaction(hash)
+		bndl = tangle.GetBundleOfTailTransaction(t.Bundle, hash)
 	} else {
-		bndls := bucket.GetBundlesOfTransaction(hash)
+		bndls := tangle.GetBundlesOfTransaction(t.Bundle, hash)
 		if len(bndls) > 0 {
 			bndl = bndls[0]
 		}
@@ -269,12 +263,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	bucket, err := tangle.GetBundleBucket(hash)
-	if err != nil {
-		return nil, ErrInternalError
-	}
-
-	bndls := bucket.Bundles()
+	bndls := tangle.GetBundles(hash)
 	if len(bndls) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "bundle %s unknown", hash)
 	}

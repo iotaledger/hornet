@@ -7,8 +7,7 @@
           "cacheTimeMs": 5000
         },
         "bundles": {
-          "size": 20000,
-          "evictionSize": 1000
+          "cacheTimeMs": 5000
         },
         "milestones": {
           "cacheTimeMs": 5000

@@ -102,14 +102,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
 		}
 
-		bundleBucket, err := tangle.GetBundleBucket(refTx.GetTransaction().Tx.Bundle)
-		if err != nil {
-			refTx.Release() //-1
-			return nil, nil, err
-		}
-
-		bundle := bundleBucket.GetBundleOfTailTransaction(refTx.GetTransaction().GetHash())
-
+		bundle := tangle.GetBundleOfTailTransaction(refTx.GetTransaction().Tx.Bundle, refTx.GetTransaction().GetHash())
 		if bundle == nil {
 			// this should never happen if HORNET is programmed correctly
 			if refTx.GetTransaction().Tx.CurrentIndex == 0 {
@@ -210,16 +203,10 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					continue
 				}
 
-				bundleBucket, err := tangle.GetBundleBucket(candidateTx.GetTransaction().Tx.Bundle)
-				if err != nil {
-					candidateTx.Release() //-1
-					return nil, nil, err
-				}
-
 				// a transaction can be within multiple bundle instances, because it is possible
 				// that transactions are reattached "above" the origin bundle but pointing (via trunk)
 				// to some transactions of the origin bundle.
-				bundles := bundleBucket.GetBundlesOfTransaction(candidateTx.GetTransaction().GetHash())
+				bundles := tangle.GetBundlesOfTransaction(candidateTx.GetTransaction().Tx.Bundle, candidateTx.GetTransaction().GetHash())
 
 				// isn't in any bundle instance
 				if len(bundles) == 0 {

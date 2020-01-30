@@ -75,8 +75,7 @@ var Profile8GB = &Profile{
 			CacheTimeMs: 60000,
 		},
 		Bundles: CacheOpts{
-			Size:         20000,
-			EvictionSize: 1000,
+			CacheTimeMs: 60000,
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 60000,
@@ -127,8 +126,7 @@ var Profile4GB = &Profile{
 			CacheTimeMs: 30000,
 		},
 		Bundles: CacheOpts{
-			Size:         20000,
-			EvictionSize: 1000,
+			CacheTimeMs: 30000,
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 30000,
@@ -179,8 +177,7 @@ var Profile2GB = &Profile{
 			CacheTimeMs: 5000,
 		},
 		Bundles: CacheOpts{
-			Size:         10000,
-			EvictionSize: 1000,
+			CacheTimeMs: 5000,
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 5000,
@@ -231,8 +228,7 @@ var Profile1GB = &Profile{
 			CacheTimeMs: 1500,
 		},
 		Bundles: CacheOpts{
-			Size:         5000,
-			EvictionSize: 1000,
+			CacheTimeMs: 1500,
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 1500,
@@ -293,8 +289,6 @@ type Caches struct {
 }
 
 type CacheOpts struct {
-	Size         int    `json:"size"`
-	EvictionSize uint64 `json:"evictionSize"`
 	CacheTimeMs  uint64 `json:"cacheTimeMs"`
 }
 

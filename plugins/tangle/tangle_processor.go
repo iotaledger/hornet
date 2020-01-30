@@ -106,7 +106,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 	transaction := tangle.GetCachedTransaction(txHash) //+1
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	bundlesAddedTo, alreadyAdded := addTransactionToBundleBucket(incomingTx)
+	bundlesAddedTo, alreadyAdded := tangle.AddTransactionToBundles(incomingTx)
 
 	if !alreadyAdded {
 

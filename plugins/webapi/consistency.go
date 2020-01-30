@@ -94,23 +94,7 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		bundleBucket, err := tangle.GetBundleBucket(tx.GetTransaction().Tx.Bundle)
-		if err != nil {
-			tx.Release() //-1
-			e.Error = fmt.Sprint(err)
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
-
-		if bundleBucket == nil {
-			tx.Release() //-1
-			e.Error = "Internal error"
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
-
-		// Check bundle validity
-		bundle := bundleBucket.GetBundleOfTailTransaction(tx.GetTransaction().GetHash())
+		bundle := tangle.GetBundleOfTailTransaction(tx.GetTransaction().Tx.Bundle, tx.GetTransaction().GetHash())
 		tx.Release() //-1
 
 		if bundle == nil || !bundle.IsValid() {

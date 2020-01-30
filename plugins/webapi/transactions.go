@@ -92,14 +92,8 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		bundleBucket, err := tangle.GetBundleBucket(bdl)
-		if err != nil {
-			e.Error = "Internal error"
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
 
-		txHashes = append(txHashes, bundleBucket.TransactionHashes()...)
+		txHashes = append(txHashes, tangle.GetTransactionHashes(bdl, maxFindTransactions)...)
 	}
 
 	// Searching for transactions that contains the given address

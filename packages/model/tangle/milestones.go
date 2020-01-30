@@ -66,12 +66,7 @@ func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *Bundle {
 		return nil
 	}
 
-	bundleBucket, err := GetBundleBucket(tx.GetTransaction().Tx.Bundle)
-	if err != nil {
-		return nil
-	}
-
-	return bundleBucket.GetBundleOfTailTransaction(ms.Hash)
+	return GetBundleOfTailTransaction(tx.GetTransaction().Tx.Bundle, ms.Hash)
 }
 
 func IsNodeSynced() bool {
