@@ -259,7 +259,7 @@ type cachesmetric struct {
 }
 
 type cache struct {
-	Size     int `json:"size"`
+	Size int `json:"size"`
 }
 
 func neighborMetrics() []*neighbormetric {
@@ -312,25 +312,25 @@ func currentNodeStatus() *nodestatus {
 	// cache metrics
 	status.Caches = &cachesmetric{
 		Approvers: cache{
-			Size:     tangle.GetApproversStorageSize(),
+			Size: tangle.GetApproversStorageSize(),
 		},
 		RequestQueue: cache{
-			Size:     gossip.RequestQueue.GetStorageSize(),
+			Size: gossip.RequestQueue.GetStorageSize(),
 		},
 		Bundles: cache{
-			Size:     tangle.GetBundleTransactionsStorageSize(),
+			Size: tangle.GetBundleTransactionsStorageSize(),
 		},
 		Milestones: cache{
-			Size:     tangle.GetMilestoneStorageSize(),
+			Size: tangle.GetMilestoneStorageSize(),
 		},
 		Transactions: cache{
-			Size:     tangle.GetTransactionStorageSize(),
+			Size: tangle.GetTransactionStorageSize(),
 		},
 		IncomingTransactionFilter: cache{
-			Size:     gossip.GetIncomingStorageSize(),
+			Size: gossip.GetIncomingStorageSize(),
 		},
 		RefsInvalidBundle: cache{
-			Size:     tangle_plugin.GetRefsAnInvalidBundleStorageSize(),
+			Size: tangle_plugin.GetRefsAnInvalidBundleStorageSize(),
 		},
 	}
 
