@@ -71,7 +71,7 @@ func isValidNeighbor(p *peer.Peer) bool {
 }
 
 func start(shutdownSignal <-chan struct{}) {
-	defer log.Info("Stopping " + name + " ... done")
+	defer log.Info("Stopping Autopeering ... done")
 
 	lPeer := local.GetInstance()
 	// use the port of the peering service
@@ -125,7 +125,7 @@ func start(shutdownSignal <-chan struct{}) {
 	log.Infof(name+" started: ID=%s PublicKey=%s", lPeer.ID(), base64.StdEncoding.EncodeToString(lPeer.PublicKey()))
 
 	<-shutdownSignal
-	log.Info("Stopping " + name + " ...")
+	log.Info("Stopping Autopeering ...")
 }
 
 func parseEntryNodes() (result []*peer.Peer, err error) {

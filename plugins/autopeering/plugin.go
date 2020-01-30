@@ -20,8 +20,8 @@ func init() {
 		InboundNeighborSize:        2,
 		OutboundNeighborSize:       2,
 		SaltLifetime:               30 * time.Minute,
-		OutboundUpdateInterval:     1 * time.Minute,
-		FullOutboundUpdateInterval: 1 * time.Minute,
+		OutboundUpdateInterval:     30 * time.Second,
+		FullOutboundUpdateInterval: 30 * time.Second,
 	})
 }
 

@@ -24,7 +24,7 @@ func configureAutopeering() {
 			selected = neighbor
 			break
 		}
-		defer neighborsLock.Unlock()
+		neighborsLock.Unlock()
 
 		if selected == nil {
 			apLog.Warnf("didn't find autopeered neighbor %s for removal", ev.DroppedID)
