@@ -4,6 +4,7 @@ import (
 	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/iputils"
 )
 
 // sets up the glue code between the autopeering module and Hornet:
@@ -49,8 +50,10 @@ func configureAutopeering() {
 		defer neighborsLock.Unlock()
 		// will be grabbed later by the incoming connection
 		allowedIdentities[gossipAddr] = ev.Peer
+		// remove from host blacklist
 		hostsBlacklistLock.Lock()
-		delete(hostsBlacklist, gossipAddr)
+		originAddr, _ := iputils.ParseOriginAddress(gossipAddr)
+		delete(hostsBlacklist, originAddr.Addr)
 		hostsBlacklistLock.Unlock()
 	}))
 	selection.Events.OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {

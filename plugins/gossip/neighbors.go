@@ -579,7 +579,7 @@ func RemoveNeighbor(originIdentity string) error {
 			delete(reconnectPool, neigh.Identity)
 			delete(allowedIdentities, neigh.Identity)
 			hostsBlacklistLock.Lock()
-			hostsBlacklist[neigh.Identity] = struct{}{}
+			hostsBlacklist[neigh.PrimaryAddress.String()] = struct{}{}
 			hostsBlacklistLock.Unlock()
 		}
 	}
