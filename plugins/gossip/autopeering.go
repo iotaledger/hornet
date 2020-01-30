@@ -35,7 +35,7 @@ func configureAutopeering() {
 		if err := RemoveNeighbor(selected.Identity); err != nil {
 			apLog.Errorf("couldn't remove autopeered neighbor %s: %s", selected.InitAddress.String(), err)
 		} else {
-			apLog.Errorf("disconnected autopeered neighbor %s: %s", selected.InitAddress.String(), err)
+			apLog.Infof("disconnected autopeered neighbor %s", selected.InitAddress.String())
 		}
 	}))
 	selection.Events.IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
