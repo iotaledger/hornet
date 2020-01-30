@@ -235,6 +235,7 @@ class NeighborInfo {
     numberOfSentTransactions: number;
     numberOfDroppedSentPackets: number;
     connectionType: string;
+    autopeering_id: string;
     connected: boolean;
 }
 
