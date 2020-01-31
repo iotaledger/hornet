@@ -46,8 +46,8 @@ var (
 	hostsBlacklist     = make(map[string]struct{})
 	hostsBlacklistLock = sync.Mutex{}
 
-	handshakeFinalisationLock = syncutils.Mutex{}
-	autoTetheringEnabled      bool
+	handshakeFinalisationLock   = syncutils.Mutex{}
+	acceptAnyNeighborConnection bool
 )
 
 var (
@@ -76,7 +76,7 @@ func availableNeighborSlotsFilled() bool {
 }
 
 func configureNeighbors() {
-	autoTetheringEnabled = parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
+	acceptAnyNeighborConnection = parameter.NeighborsConfig.GetBool("acceptAnyNeighborConnection")
 
 	Events.NeighborPutBackIntoReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
 		gossipLogger.Infof("added neighbor %s back into reconnect pool...", neighbor.InitAddress.String())
@@ -272,7 +272,7 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 	neighbor := protocol.Neighbor
 
 	// drop the connection if in the meantime the available neighbor slots were filled
-	if autoTetheringEnabled && availableNeighborSlotsFilled() {
+	if acceptAnyNeighborConnection && availableNeighborSlotsFilled() {
 		return ErrNeighborSlotsFilled
 	}
 
@@ -330,7 +330,7 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 		}
 	}
 
-	if !autoTetheringEnabled {
+	if !acceptAnyNeighborConnection {
 		if _, allowedToConnect := allowedIdentities[neighbor.Identity]; !allowedToConnect {
 			hostsBlacklistLock.Lock()
 			hostsBlacklist[neighbor.PrimaryAddress.String()] = struct{}{}

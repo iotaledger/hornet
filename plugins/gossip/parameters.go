@@ -39,7 +39,7 @@ func init() {
 	///////////////////////////////////////// NeighborsConfig /////////////////////////////////////////
 
 	// "Enable new connections from unknown neighbors"
-	parameter.NeighborsConfig.SetDefault("autoTetheringEnabled", false)
+	parameter.NeighborsConfig.SetDefault("acceptAnyNeighborConnection", false)
 
 	// "Set the maximum number of neighbors"
 	parameter.NeighborsConfig.SetDefault("maxNeighbors", 5)
