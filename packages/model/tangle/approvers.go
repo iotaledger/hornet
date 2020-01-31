@@ -20,12 +20,6 @@ type CachedApprover struct {
 
 type CachedAppprovers []*CachedApprover
 
-func (cachedApprovers CachedAppprovers) Retain() {
-	for _, cachedApprover := range cachedApprovers {
-		cachedApprover.Retain()
-	}
-}
-
 func (cachedApprovers CachedAppprovers) Release() {
 	for _, cachedApprover := range cachedApprovers {
 		cachedApprover.Release()

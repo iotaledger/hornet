@@ -160,7 +160,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	if transaction.GetTransaction().IsRequested() {
 		// Add new requests to the requestQueue (needed for sync)
-		gossip.RequestApprovees(transaction)
+		gossip.RequestApprovees(transaction.Retain()) //Pass +1
 	}
 
 	transaction.Release() //-1

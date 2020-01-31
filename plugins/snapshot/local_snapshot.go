@@ -68,8 +68,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
 func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction, panicOnMissingTx bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
 
-	milestoneTail.Retain() //+1
-	defer milestoneTail.Release()    //-1
+	defer milestoneTail.Release() //-1
 
 	ts := time.Now()
 

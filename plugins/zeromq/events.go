@@ -5,10 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 var (
@@ -16,45 +18,41 @@ var (
 	prevLMI milestone_index.MilestoneIndex = 0
 )
 
-func onNewTx(tx *tangle.CachedTransaction) {
+func onNewTx(transaction *tangle.CachedTransaction) {
 
-	tx.Retain() //+1
-	iotaTx := tx.GetTransaction().Tx
-	tx.Release() //-1
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		// tx topic
+		err := publishTx(tx.Tx)
+		if err != nil {
+			log.Error(err.Error())
+		}
 
-	// tx topic
-	err := publishTx(iotaTx)
-	if err != nil {
-		log.Error(err.Error())
-	}
-
-	// trytes topic
-	err = publishTxTrytes(iotaTx)
-	if err != nil {
-		log.Error(err.Error())
-	}
+		// trytes topic
+		err = publishTxTrytes(tx.Tx)
+		if err != nil {
+			log.Error(err.Error())
+		}
+	})
 }
 
-func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	tx.Retain() //+1
-	iotaTx := tx.GetTransaction().Tx
-	tx.Release() //-1
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		err := publishConfTx(tx.Tx, msIndex)
+		if err != nil {
+			log.Error(err.Error())
+		}
 
-	err := publishConfTx(iotaTx, msIndex)
-	if err != nil {
-		log.Error(err.Error())
-	}
-
-	addresses := GetAddressTopics()
-	for _, addr := range addresses {
-		if strings.EqualFold(iotaTx.Address, addr) {
-			err := publishConfTxForAddress(iotaTx, msIndex)
-			if err != nil {
-				log.Error(err.Error())
+		addresses := GetAddressTopics()
+		for _, addr := range addresses {
+			if strings.EqualFold(tx.Tx.Address, addr) {
+				err := publishConfTxForAddress(tx.Tx, msIndex)
+				if err != nil {
+					log.Error(err.Error())
+				}
 			}
 		}
-	}
+	})
 }
 
 func onNewLatestMilestone(bundle *tangle.Bundle) {

@@ -129,10 +129,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		}
 		refBundle = bundle
 
-		bundleTail := bundle.GetTail() //+1
-		IsBelowMaxDepth := tanglePlugin.IsBelowMaxDepth(bundleTail, lowerAllowedSnapshotIndex)
-		bundleTail.Release() //-1
-		if IsBelowMaxDepth {
+		if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is below max depth")
 		}
 		walkStats.Reference = reference
@@ -251,11 +248,8 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					candidateTx.Release() //-1
 					continue
 				}
-
-				bundleTail := bundle.GetTail() //+1
-				IsBelowMaxDepth := tanglePlugin.IsBelowMaxDepth(bundleTail, lowerAllowedSnapshotIndex)
-				bundleTail.Release() //-1
-				if IsBelowMaxDepth {
+				
+				if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					candidateTx.Release() //-1
 					continue

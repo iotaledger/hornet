@@ -48,8 +48,7 @@ type ExplorerTx struct {
 
 func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, error) {
 
-	tx.Retain() //+1
-	defer tx.Release()    //-1
+	defer tx.Release() //-1
 
 	originTx := tx.GetTransaction().Tx
 	confirmed, by := tx.GetTransaction().GetConfirmed()
@@ -241,9 +240,9 @@ func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
 
-	tail := bndl.GetTail() //+1
-	tx, err := createExplorerTx(tail.GetTransaction().GetHash(), tail)
-	tail.Release() //-1
+	tail := bndl.GetTail()                                                      //+1
+	tx, err := createExplorerTx(tail.GetTransaction().GetHash(), tail.Retain()) //Pass +1
+	tail.Release()                                                              //-1
 
 	return tx, err
 }
@@ -259,8 +258,8 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
-	t, err := createExplorerTx(hash, tx)
-	tx.Release() //-1
+	t, err := createExplorerTx(hash, tx.Retain()) //Pass +1
+	tx.Release()
 	return t, err
 }
 
@@ -284,7 +283,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		sl := []*ExplorerTx{}
 		transactions := bndl.GetTransactions() //+1
 		for _, tx := range transactions {
-			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx)
+			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx.Retain()) //Pass +1
 			if err != nil {
 				transactions.Release() //-1
 				return nil, err
@@ -319,8 +318,8 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 				tx.Release() //-1
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
-			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx)
-			tx.Release() //-1
+			expTx, err := createExplorerTx(tx.GetTransaction().GetHash(), tx.Retain()) //Pass +1
+			tx.Release()                                                               //-1
 			if err != nil {
 				return nil, err
 			}

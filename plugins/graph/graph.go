@@ -9,6 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -119,57 +120,54 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 	socketioServer.LeaveAllRooms(s)
 }
 
-func onNewTx(tx *tangle.CachedTransaction) {
+func onNewTx(transaction *tangle.CachedTransaction) {
 
-	tx.Retain() //+1
-	iotaTx := tx.GetTransaction().Tx
-	tx.Release() //-1
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
 
-	wsTx := &wsTransaction{
-		Hash:              iotaTx.Hash,
-		Address:           iotaTx.Address,
-		Value:             strconv.FormatInt(iotaTx.Value, 10),
-		Tag:               iotaTx.Tag,
-		Timestamp:         strconv.FormatInt(int64(iotaTx.Timestamp), 10),
-		CurrentIndex:      strconv.FormatInt(int64(iotaTx.CurrentIndex), 10),
-		LastIndex:         strconv.FormatInt(int64(iotaTx.LastIndex), 10),
-		Bundle:            iotaTx.Bundle,
-		TrunkTransaction:  iotaTx.TrunkTransaction,
-		BranchTransaction: iotaTx.BranchTransaction,
-	}
+		wsTx := &wsTransaction{
+			Hash:              tx.Tx.Hash,
+			Address:           tx.Tx.Address,
+			Value:             strconv.FormatInt(tx.Tx.Value, 10),
+			Tag:               tx.Tx.Tag,
+			Timestamp:         strconv.FormatInt(int64(tx.Tx.Timestamp), 10),
+			CurrentIndex:      strconv.FormatInt(int64(tx.Tx.CurrentIndex), 10),
+			LastIndex:         strconv.FormatInt(int64(tx.Tx.LastIndex), 10),
+			Bundle:            tx.Tx.Bundle,
+			TrunkTransaction:  tx.Tx.TrunkTransaction,
+			BranchTransaction: tx.Tx.BranchTransaction,
+		}
 
-	txRingBufferLock.Lock()
-	txRingBuffer.Value = wsTx
-	txRingBuffer = txRingBuffer.Next()
-	txRingBufferLock.Unlock()
+		txRingBufferLock.Lock()
+		txRingBuffer.Value = wsTx
+		txRingBuffer = txRingBuffer.Next()
+		txRingBufferLock.Unlock()
 
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "tx", wsTx)
-	broadcastLock.Unlock()
+		broadcastLock.Lock()
+		socketioServer.BroadcastToRoom("broadcast", "tx", wsTx)
+		broadcastLock.Unlock()
+	})
 }
 
-func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	tx.Retain() //+1
-	iotaTx := tx.GetTransaction().Tx
-	tx.Release() //-1
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		snTx := &wsTransactionSn{
+			Hash:              tx.Tx.Hash,
+			Address:           tx.Tx.Address,
+			TrunkTransaction:  tx.Tx.TrunkTransaction,
+			BranchTransaction: tx.Tx.BranchTransaction,
+			Bundle:            tx.Tx.Bundle,
+		}
 
-	snTx := &wsTransactionSn{
-		Hash:              iotaTx.Hash,
-		Address:           iotaTx.Address,
-		TrunkTransaction:  iotaTx.TrunkTransaction,
-		BranchTransaction: iotaTx.BranchTransaction,
-		Bundle:            iotaTx.Bundle,
-	}
+		snRingBufferLock.Lock()
+		snRingBuffer.Value = snTx
+		snRingBuffer = snRingBuffer.Next()
+		snRingBufferLock.Unlock()
 
-	snRingBufferLock.Lock()
-	snRingBuffer.Value = snTx
-	snRingBuffer = snRingBuffer.Next()
-	snRingBufferLock.Unlock()
-
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "sn", snTx)
-	broadcastLock.Unlock()
+		broadcastLock.Lock()
+		socketioServer.BroadcastToRoom("broadcast", "sn", snTx)
+		broadcastLock.Unlock()
+	})
 }
 
 func onNewMilestone(bundle *tangle.Bundle) {
