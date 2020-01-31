@@ -12,7 +12,6 @@ import (
 func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction) {
 
 	defer milestoneTail.Release()
-	
 	ts := time.Now()
 
 	txsToConfirm := make(map[string]struct{})
