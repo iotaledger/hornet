@@ -84,7 +84,11 @@ func configureTransactionStorage() {
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.EnableLeakDetection())
+		//objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{
+		//	MaxConsumersPerObject: 20,
+		//	MaxConsumerHoldTime:   100 * time.Second,
+		//}),
+	)
 }
 
 func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {

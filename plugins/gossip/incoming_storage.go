@@ -34,7 +34,8 @@ func configureIncomingStorage() {
 		incomingFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),
-		objectstorage.EnableLeakDetection())
+		//objectstorage.EnableLeakDetection(),
+	)
 }
 
 func GetIncomingStorageSize() int {

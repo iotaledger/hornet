@@ -42,7 +42,8 @@ func configureMilestoneStorage() {
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.EnableLeakDetection())
+		//objectstorage.EnableLeakDetection(),
+	)
 }
 
 // Storable Object

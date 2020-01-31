@@ -52,7 +52,8 @@ func configureApproversStorage() {
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),
-		objectstorage.EnableLeakDetection())
+		//objectstorage.EnableLeakDetection(),
+	)
 }
 
 func GetCachedApprovers(transactionHash trinary.Hash) CachedAppprovers {
