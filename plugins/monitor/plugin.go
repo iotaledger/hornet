@@ -218,13 +218,13 @@ func run(plugin *node.Plugin) {
 
 		// socket.io and web server
 		server = &http.Server{
-			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.port")),
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.bindAddress"), parameter.NodeConfig.GetInt("monitor.port")),
 			Handler: router,
 		}
 
 		// REST api server
 		apiServer = &http.Server{
-			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.apiPort")),
+			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.bindAddress"), parameter.NodeConfig.GetInt("monitor.apiPort")),
 			Handler: api,
 		}
 
@@ -242,7 +242,7 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
-		log.Infof("You can now access TangleMonitor using: http://%s:%d", parameter.NodeConfig.GetString("monitor.host"), parameter.NodeConfig.GetInt("monitor.port"))
+		log.Infof("You can now access TangleMonitor using: http://%s:%d", parameter.NodeConfig.GetString("monitor.bindAddress"), parameter.NodeConfig.GetInt("monitor.port"))
 
 		<-shutdownSignal
 		log.Info("Stopping Monitor ...")

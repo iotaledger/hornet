@@ -7,7 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/profile"
 )
@@ -48,7 +48,7 @@ func configureApproversStorage() {
 	approversStorage = objectstorage.New(
 		[]byte{DBPrefixApprovers},
 		approversFactory,
-		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
+		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),

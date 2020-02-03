@@ -38,7 +38,7 @@ func runServer() {
 	daemon.BackgroundWorker("Gossip TCP Server", func(shutdownSignal <-chan struct{}) {
 		gossipLogger.Infof("Starting TCP Server (port %d) ... done", parameter.NodeConfig.GetInt("network.port"))
 
-		go TCPServer.Listen(parameter.NodeConfig.GetString("network.address"), parameter.NodeConfig.GetInt("network.port"))
+		go TCPServer.Listen(parameter.NodeConfig.GetString("network.bindAddress"), parameter.NodeConfig.GetInt("network.port"))
 		<-shutdownSignal
 		gossipLogger.Info("Stopping TCP Server ...")
 		TCPServer.Shutdown()

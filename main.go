@@ -7,6 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
@@ -38,6 +39,7 @@ func main() {
 			gracefulshutdown.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
+			autopeering.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,
 			snapshot.PLUGIN,

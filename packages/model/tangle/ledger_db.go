@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/compressed"
-	hornetDB "github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/parameter"
-	"github.com/iotaledger/hive.go/database"
-	"github.com/iotaledger/hive.go/typeutils"
-
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/iotaledger/hive.go/typeutils"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (
@@ -42,7 +41,7 @@ func WriteUnlockLedger() {
 }
 
 func configureLedgerDatabase() {
-	if db, err := database.Get(DBPrefixLedgerState, hornetDB.GetHornetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixLedgerState, database.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		ledgerDatabase = db

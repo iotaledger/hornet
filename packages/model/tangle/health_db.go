@@ -3,10 +3,9 @@ package tangle
 import (
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/database"
 	"github.com/iotaledger/hive.go/typeutils"
 
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 )
 
 const (
@@ -18,7 +17,7 @@ var (
 )
 
 func configureHealthDatabase() {
-	if db, err := database.Get(DBPrefixHealth, hornetDB.GetHornetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixHealth, database.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		healthDatabase = db

@@ -7,9 +7,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/database"
-
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
@@ -18,7 +16,7 @@ var (
 )
 
 func configureFirstSeenTransactionsDatabase() {
-	if db, err := database.Get(DBPrefixFirstSeenTransactions, hornetDB.GetHornetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixFirstSeenTransactions, database.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		firstSeenTransactionDatabase = db

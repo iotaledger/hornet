@@ -16,7 +16,7 @@ func init() {
 	parameter.NodeConfig.SetDefault("network.preferIPv6", false)
 
 	// "Bind the TCP server socket for the gossip protocol to an address"
-	parameter.NodeConfig.SetDefault("network.address", "0.0.0.0")
+	parameter.NodeConfig.SetDefault("network.bindAddress", "0.0.0.0")
 
 	// "Bind the TCP server socket for the gossip protocol to a port"
 	parameter.NodeConfig.SetDefault("network.port", 15600)
@@ -39,7 +39,7 @@ func init() {
 	///////////////////////////////////////// NeighborsConfig /////////////////////////////////////////
 
 	// "Enable new connections from unknown neighbors"
-	parameter.NeighborsConfig.SetDefault("autoTetheringEnabled", false)
+	parameter.NeighborsConfig.SetDefault("acceptAnyNeighborConnection", false)
 
 	// "Set the maximum number of neighbors"
 	parameter.NeighborsConfig.SetDefault("maxNeighbors", 5)
@@ -49,16 +49,6 @@ func init() {
 		{
 			Identity:   "example1.neighbor.com:15600",
 			Alias:      "Example Neighbor 1",
-			PreferIPv6: false,
-		},
-		{
-			Identity:   "example2.neighbor.com:15600",
-			Alias:      "Example Neighbor 2",
-			PreferIPv6: false,
-		},
-		{
-			Identity:   "example3.neighbor.com:15600",
-			Alias:      "Example Neighbor 3",
 			PreferIPv6: false,
 		},
 	})

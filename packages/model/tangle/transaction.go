@@ -7,7 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
@@ -81,7 +81,7 @@ func configureTransactionStorage() {
 	txStorage = objectstorage.New(
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
-		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
+		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		//objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{

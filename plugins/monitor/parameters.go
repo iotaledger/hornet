@@ -12,7 +12,7 @@ func init() {
 	parameter.NodeConfig.SetDefault("monitor.domain", "")
 
 	// "Set the host to which the TangleMonitor listens"
-	parameter.NodeConfig.SetDefault("monitor.host", "127.0.0.1")
+	parameter.NodeConfig.SetDefault("monitor.bindAddress", "127.0.0.1")
 
 	// "TangleMonitor webserver port (do not change unless you redirect back to 4434)"
 	parameter.NodeConfig.SetDefault("monitor.port", 4434)

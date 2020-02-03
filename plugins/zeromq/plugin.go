@@ -123,7 +123,7 @@ func run(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("ZeroMQ Publisher", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ Publisher ... done")
-		log.Infof("You can now listen to ZMQ via: %s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.host"), parameter.NodeConfig.GetInt("zmq.port"))
+		log.Infof("You can now listen to ZMQ via: %s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.bindAddress"), parameter.NodeConfig.GetInt("zmq.port"))
 
 		go startPublisher()
 

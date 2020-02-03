@@ -6,7 +6,7 @@ import (
 
 func init() {
 	// "Set the host to which the Dashboard listens"
-	parameter.NodeConfig.SetDefault("dashboard.host", "127.0.0.1")
+	parameter.NodeConfig.SetDefault("dashboard.bindAddress", "127.0.0.1")
 
 	// "Set the port to which the Dashboard listens"
 	parameter.NodeConfig.SetDefault("dashboard.port", 8081)

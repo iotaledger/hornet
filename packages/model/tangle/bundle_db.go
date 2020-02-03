@@ -1,17 +1,18 @@
 package tangle
 
 import (
-	hornetDB "github.com/gohornet/hornet/packages/database"
-	"github.com/iotaledger/hive.go/bitmask"
-	"github.com/iotaledger/hive.go/database"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/packages/database"
 )
 
 var bundleDatabase database.Database
 
 func configureBundleDatabase() {
-	if db, err := database.Get(DBPrefixBundles, hornetDB.GetHornetBadgerInstance()); err != nil {
+	if db, err := database.Get(DBPrefixBundles, database.GetHornetBadgerInstance()); err != nil {
 		panic(err)
 	} else {
 		bundleDatabase = db

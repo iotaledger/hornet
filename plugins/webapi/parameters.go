@@ -9,7 +9,7 @@ func init() {
 	parameter.NodeConfig.SetDefault("api.port", 14265)
 
 	// "Set the host to which the API listens"
-	parameter.NodeConfig.SetDefault("api.host", "0.0.0.0")
+	parameter.NodeConfig.SetDefault("api.bindAddress", "0.0.0.0")
 
 	// "Allow remote access to certain API commands"
 	parameter.NodeConfig.SetDefault(

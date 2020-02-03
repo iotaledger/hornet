@@ -104,7 +104,7 @@ func run(plugin *node.Plugin) {
 
 		log.Info("Starting WebAPI server ... done")
 
-		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.host"), parameter.NodeConfig.GetInt("api.port"))
+		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.bindAddress"), parameter.NodeConfig.GetInt("api.port"))
 
 		server = &http.Server{
 			Addr:    serveAddress,

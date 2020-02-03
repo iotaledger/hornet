@@ -97,25 +97,31 @@ export class Neighbor extends React.Component<Props, any> {
                                 <h5>
                                     {last.origin_addr}
                                     {' '}
-                                    <Choose>
-                                        <When condition={last.protocol_version === 1}>
-                                            <Badge variant="secondary">Legacy</Badge>
-                                        </When>
-                                        <When condition={!last.heartbeat}>
-                                            <Badge variant="warning">Waiting</Badge>
-                                        </When>
-                                        <When
-                                            condition={last.heartbeat.solid_milestone_index < this.props.nodeStore.status.lmi}>
-                                            <Badge variant="warning">Unsynced</Badge>
-                                        </When>
-                                        <When
-                                            condition={last.heartbeat.pruned_milestone_index > this.props.nodeStore.status.lsmi}>
-                                            <Badge variant="danger">Milestones Pruned</Badge>
-                                        </When>
-                                        <Otherwise>
-                                            <Badge variant="success">STING</Badge>
-                                        </Otherwise>
-                                    </Choose>
+                                    <If condition={!!last.info.autopeering_id}>
+                                        {' / '}{last.info.autopeering_id}
+                                        {' '}
+                                    </If>
+                                    <small>
+                                        <Choose>
+                                            <When condition={last.protocol_version === 1}>
+                                                <Badge variant="secondary">Legacy</Badge>
+                                            </When>
+                                            <When condition={!last.heartbeat}>
+                                                <Badge variant="warning">Waiting</Badge>
+                                            </When>
+                                            <When
+                                                condition={last.heartbeat.solid_milestone_index < this.props.nodeStore.status.lmi}>
+                                                <Badge variant="warning">Unsynced</Badge>
+                                            </When>
+                                            <When
+                                                condition={last.heartbeat.pruned_milestone_index > this.props.nodeStore.status.lsmi}>
+                                                <Badge variant="danger">Milestones Pruned</Badge>
+                                            </When>
+                                            <Otherwise>
+                                                <Badge variant="success">STING</Badge>
+                                            </Otherwise>
+                                        </Choose>
+                                    </small>
                                 </h5>
                             </Card.Title>
                             <Row className={"mb-3"}>
@@ -123,7 +129,10 @@ export class Neighbor extends React.Component<Props, any> {
                                     <ListGroup variant={"flush"} as={"small"}>
                                         <ListGroup.Item>
                                             Connected via Protocol Version: {last.protocol_version} {' '}
-                                            (Origin: {last.connection_origin === 0 ? "Inbound" : "Outbound"})
+                                            (Origin:
+                                            {' '}
+                                            {last.connection_origin === 0 ? "Inbound" : "Outbound"}
+                                            {!!last.info.autopeering_id ? " / autopeered)" : ")"}
                                         </ListGroup.Item>
                                         <If condition={!!last.heartbeat}>
                                             <ListGroup.Item>

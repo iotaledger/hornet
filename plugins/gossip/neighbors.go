@@ -9,11 +9,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -36,7 +38,7 @@ var (
 	reconnectPoolWakeup = make(chan struct{})
 
 	// a set containing identities which are allowed to connect
-	allowedIdentities = make(map[string]struct{})
+	allowedIdentities = make(map[string]*peer.Peer)
 
 	// a set containing IPs which are blacklisted
 	// TODO: if there's multiple nodes from the same IP but one of them gets removed
@@ -44,8 +46,8 @@ var (
 	hostsBlacklist     = make(map[string]struct{})
 	hostsBlacklistLock = sync.Mutex{}
 
-	handshakeFinalisationLock = syncutils.Mutex{}
-	autoTetheringEnabled      bool
+	handshakeFinalisationLock   = syncutils.Mutex{}
+	acceptAnyNeighborConnection bool
 )
 
 var (
@@ -61,9 +63,10 @@ var (
 )
 
 type reconnectneighbor struct {
-	mu         sync.Mutex
-	OriginAddr *iputils.OriginAddress `json:"origin_addr"`
-	CachedIPs  *iputils.IPAddresses   `json:"cached_ips"`
+	mu          sync.Mutex
+	OriginAddr  *iputils.OriginAddress `json:"origin_addr"`
+	CachedIPs   *iputils.IPAddresses   `json:"cached_ips"`
+	Autopeering *peer.Peer             `json:"peer"`
 }
 
 func availableNeighborSlotsFilled() bool {
@@ -73,7 +76,7 @@ func availableNeighborSlotsFilled() bool {
 }
 
 func configureNeighbors() {
-	autoTetheringEnabled = parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
+	acceptAnyNeighborConnection = parameter.NeighborsConfig.GetBool("acceptAnyNeighborConnection")
 
 	Events.NeighborPutBackIntoReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
 		gossipLogger.Infof("added neighbor %s back into reconnect pool...", neighbor.InitAddress.String())
@@ -135,6 +138,8 @@ type Neighbor struct {
 	Duplicate bool
 	// The neighbors latest heartbeat message
 	LatestHeartbeat *Heartbeat
+	// Holds the peer information if this neighbor was added via autopeering
+	Autopeering *peer.Peer
 }
 
 // IdentityOrAddress gets the identity if set or the address otherwise.
@@ -204,6 +209,9 @@ func moveNeighborFromReconnectToInFlightPool(neighbor *Neighbor) {
 func moveFromInFlightToReconnectPool(neighbor *Neighbor) {
 	// neighbors lock must be held by caller
 	delete(inFlightNeighbors, neighbor.Identity)
+	if neighbor.Autopeering != nil {
+		return
+	}
 	reconnectPool[neighbor.InitAddress.String()] = &reconnectneighbor{
 		OriginAddr: neighbor.InitAddress,
 		CachedIPs:  neighbor.Addresses,
@@ -224,10 +232,13 @@ func moveNeighborToConnected(neighbor *Neighbor) {
 
 func moveNeighborFromConnectedToReconnectPool(neighbor *Neighbor) {
 	// neighbors lock must be held by caller
-	if !neighbor.MoveBackToReconnectPool {
+
+	// check whether manually removed or autopeered neighbor
+	if !neighbor.MoveBackToReconnectPool || neighbor.Autopeering != nil {
 		return
 	}
 
+	// prevents non handshaked connections to be put back into the reconnect pool
 	if _, ok := connectedNeighbors[neighbor.Identity]; !ok {
 		return
 	}
@@ -246,7 +257,7 @@ func moveNeighborFromConnectedToReconnectPool(neighbor *Neighbor) {
 func allowNeighborIdentity(neighbor *Neighbor) {
 	for ip := range neighbor.Addresses.IPs {
 		identity := NewNeighborIdentity(ip.String(), neighbor.InitAddress.Port)
-		allowedIdentities[identity] = struct{}{}
+		allowedIdentities[identity] = nil
 		hostsBlacklistLock.Lock()
 		delete(hostsBlacklist, ip.String())
 		hostsBlacklistLock.Unlock()
@@ -261,7 +272,7 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 	neighbor := protocol.Neighbor
 
 	// drop the connection if in the meantime the available neighbor slots were filled
-	if availableNeighborSlotsFilled() {
+	if acceptAnyNeighborConnection && availableNeighborSlotsFilled() {
 		return ErrNeighborSlotsFilled
 	}
 
@@ -291,6 +302,12 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 			Addr: remoteIPStr,
 			Port: handshake.ServerSocketPort,
 		}
+		// grab autopeering information from whitelist
+		neighbor.Autopeering = allowedIdentities[neighbor.Identity]
+		if neighbor.Autopeering != nil {
+			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
+			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
+		}
 	case Outbound:
 		expectedPort := neighbor.InitAddress.Port
 		if handshake.ServerSocketPort != expectedPort {
@@ -313,7 +330,7 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 		}
 	}
 
-	if !autoTetheringEnabled {
+	if !acceptAnyNeighborConnection {
 		if _, allowedToConnect := allowedIdentities[neighbor.Identity]; !allowedToConnect {
 			hostsBlacklistLock.Lock()
 			hostsBlacklist[neighbor.PrimaryAddress.String()] = struct{}{}
@@ -348,6 +365,8 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 
 	// connection error log
 	neighbor.Protocol.Conn.Events.Error.Attach(events.NewClosure(func(err error) {
+		// trigger global closed event
+		Events.NeighborConnectionClosed.Trigger(neighbor)
 		if daemon.IsStopped() {
 			return
 		}
@@ -441,7 +460,7 @@ func wakeupReconnectPool() {
 	}
 }
 
-func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string) error {
+func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string, autoPeer ...*peer.Peer) error {
 	originAddr, err := iputils.ParseOriginAddress(neighborAddr)
 	if err != nil {
 		return errors.Wrapf(err, "invalid neighbor address %s", neighborAddr)
@@ -474,6 +493,9 @@ func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string) error {
 		}
 	}
 	recNeigh := &reconnectneighbor{OriginAddr: originAddr, CachedIPs: possibleIdentities}
+	if len(autoPeer) > 0 {
+		recNeigh.Autopeering = autoPeer[0]
+	}
 	addNeighborToReconnectPool(recNeigh)
 
 	// force reconnect attempts now
@@ -557,7 +579,7 @@ func RemoveNeighbor(originIdentity string) error {
 			delete(reconnectPool, neigh.Identity)
 			delete(allowedIdentities, neigh.Identity)
 			hostsBlacklistLock.Lock()
-			hostsBlacklist[neigh.Identity] = struct{}{}
+			hostsBlacklist[neigh.PrimaryAddress.String()] = struct{}{}
 			hostsBlacklistLock.Unlock()
 		}
 	}
@@ -593,6 +615,11 @@ type NeighborInfo struct {
 	NumberOfDroppedSentPackets        uint32    `json:"numberOfDroppedSentPackets"`
 	ConnectionType                    string    `json:"connectionType"`
 	Connected                         bool      `json:"connected"`
+	AutopeeringID                     string    `json:"autopeering_id"`
+}
+
+type AutopeeringInfo struct {
+	ID string `json:"string"`
 }
 
 func GetNeighbor(identifier string) (*Neighbor, bool) {
@@ -618,7 +645,7 @@ func GetNeighbors() []NeighborInfo {
 
 	result := []NeighborInfo{}
 	for _, neighbor := range connectedNeighbors {
-		result = append(result, NeighborInfo{
+		info := NeighborInfo{
 			Neighbor:                          neighbor,
 			Address:                           neighbor.Identity,
 			Domain:                            neighbor.InitAddress.Addr,
@@ -634,12 +661,16 @@ func GetNeighbors() []NeighborInfo {
 			ConnectionType:                    "tcp",
 			Connected:                         true,
 			PreferIPv6:                        neighbor.InitAddress.PreferIPv6,
-		})
+		}
+		if neighbor.Autopeering != nil {
+			info.AutopeeringID = neighbor.Autopeering.ID().String()
+		}
+		result = append(result, info)
 	}
 
 	for _, recNeigh := range reconnectPool {
 		originAddr := recNeigh.OriginAddr
-		result = append(result, NeighborInfo{
+		info := NeighborInfo{
 			Address:        originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
 			Domain:         originAddr.Addr,
 			DomainWithPort: originAddr.Addr + ":" + strconv.FormatInt(int64(originAddr.Port), 10),
@@ -647,7 +678,11 @@ func GetNeighbors() []NeighborInfo {
 			ConnectionType: "tcp",
 			Connected:      false,
 			PreferIPv6:     originAddr.PreferIPv6,
-		})
+		}
+		if recNeigh.Autopeering != nil {
+			info.AutopeeringID = recNeigh.Autopeering.ID().String()
+		}
+		result = append(result, info)
 	}
 
 	return result

@@ -17,7 +17,22 @@ var (
 	once       sync.Once
 	directory  = "mainnetdb"
 	badgerOpts *profile.BadgerOpts
+
+	ErrKeyNotFound = database.ErrKeyNotFound
 )
+
+type (
+	Database     = database.Database
+	KeyPrefix    = database.KeyPrefix
+	Key          = database.Key
+	Value        = database.Value
+	KeyOnlyEntry = database.KeyOnlyEntry
+	Entry        = database.Entry
+)
+
+func Get(dbPrefix byte, optionalBadger ...*badger.DB) (Database, error) {
+	return database.Get(dbPrefix, optionalBadger...)
+}
 
 // Settings sets DB dir and the badger options
 func Settings(dir string, options *profile.BadgerOpts) {

@@ -109,7 +109,7 @@ func run(plugin *node.Plugin) {
 	}
 
 	setupRoutes(e)
-	addr := parameter.NodeConfig.GetString("dashboard.host")
+	addr := parameter.NodeConfig.GetString("dashboard.bindAddress")
 	port := parameter.NodeConfig.GetInt("dashboard.port")
 
 	log.Infof("You can now access the dashboard using: http://%s:%d", addr, port)

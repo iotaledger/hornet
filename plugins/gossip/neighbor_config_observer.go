@@ -21,11 +21,11 @@ func runConfigObserver() {
 			return
 		}
 
-		// auto tethering
-		autoTetheringEnabledRead := parameter.NeighborsConfig.GetBool("autoTetheringEnabled")
-		if autoTetheringEnabled != autoTetheringEnabledRead {
-			gossipLogger.Infof("Set autoTetheringEnabled to <%v> due to config change", autoTetheringEnabledRead)
-			autoTetheringEnabled = autoTetheringEnabledRead
+		// whether to accept any incoming neighbor connection
+		acceptAnyNeighborConnectionRead := parameter.NeighborsConfig.GetBool("acceptAnyNeighborConnection")
+		if acceptAnyNeighborConnection != acceptAnyNeighborConnectionRead {
+			gossipLogger.Infof("Set acceptAnyNeighborConnection to <%v> due to config change", acceptAnyNeighborConnectionRead)
+			acceptAnyNeighborConnection = acceptAnyNeighborConnectionRead
 		}
 
 		modified, added, removed := getNeighborConfigDiff()

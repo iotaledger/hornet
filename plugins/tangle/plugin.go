@@ -11,7 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -78,7 +78,7 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseHealthy()
 
 		log.Info("Syncing database to disk...")
-		hornetDB.GetHornetBadgerInstance().Close()
+		database.GetHornetBadgerInstance().Close()
 		log.Info("Syncing database to disk... done")
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
@@ -108,6 +108,6 @@ func run(plugin *node.Plugin) {
 
 	// create a db cleanup worker
 	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(hornetDB.CleanupHornetBadgerInstance, 5*time.Minute, shutdownSignal)
+		timeutil.Ticker(database.CleanupHornetBadgerInstance, 5*time.Minute, shutdownSignal)
 	}, shutdown.ShutdownPriorityBadgerGarbageCollection)
 }
