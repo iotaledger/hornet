@@ -8,14 +8,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
+
+	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (

@@ -7,9 +7,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/parameter"
-	"github.com/gohornet/hornet/plugins/autopeering/local"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -18,6 +15,10 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/transport"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
+
+	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/plugins/autopeering/local"
 )
 
 var (

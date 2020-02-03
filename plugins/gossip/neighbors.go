@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"

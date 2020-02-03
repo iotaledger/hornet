@@ -3,8 +3,9 @@ package tangle
 import (
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/database"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/packages/database"
 )
 
 var (

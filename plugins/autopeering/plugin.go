@@ -3,15 +3,16 @@ package autopeering
 import (
 	"time"
 
-	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+
+	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 func init() {

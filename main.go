@@ -5,9 +5,9 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"

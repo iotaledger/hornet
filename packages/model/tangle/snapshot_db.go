@@ -5,10 +5,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/typeutils"
+
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/iotaledger/hive.go/typeutils"
 )
 
 var snapshotDatabase database.Database

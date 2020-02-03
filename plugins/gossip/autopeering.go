@@ -1,10 +1,11 @@
 package gossip
 
 import (
-	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
+
+	"github.com/gohornet/hornet/packages/autopeering/services"
 )
 
 // sets up the glue code between the autopeering module and Hornet:
@@ -12,6 +13,7 @@ import (
 // Outgoing: Put the neighbor into the reconnect pool with the autopeering info
 func configureAutopeering() {
 	apLog := gossipLogger.Named("Autopeering")
+
 	// called whenever the autopeering logic wants to drop a neighborhood peer
 	selection.Events.Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
 		apLog.Infof("[dropped event] trying to remove connection to %s", ev.DroppedID)
@@ -39,6 +41,7 @@ func configureAutopeering() {
 			apLog.Infof("disconnected autopeered neighbor %s", selected.InitAddress.String())
 		}
 	}))
+
 	selection.Events.IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
@@ -56,6 +59,7 @@ func configureAutopeering() {
 		delete(hostsBlacklist, originAddr.Addr)
 		hostsBlacklistLock.Unlock()
 	}))
+
 	selection.Events.OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
