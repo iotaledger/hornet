@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -97,92 +98,88 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 	socketioServer.LeaveAllRooms(s)
 }
 
-func onNewTx(tx *tangle.CachedTransaction) {
+func onNewTx(transaction *tangle.CachedTransaction) {
 
-	tx.RegisterConsumer() //+1
-	iotaTx := tx.GetTransaction().Tx
-	tx.Release() //-1
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		wsTx := &wsTransaction{
+			Hash:       tx.Tx.Hash,
+			Address:    tx.Tx.Address,
+			Value:      tx.Tx.Value,
+			Tag:        tx.Tx.Tag,
+			Bundle:     tx.Tx.Bundle,
+			ReceivedAt: time.Now().Unix() * 1000,
+			ConfTime:   1111111111111,
+			Milestone:  "f",
+			//TrunkTransaction:  tx.Tx.TrunkTransaction,
+			//BranchTransaction: tx.Tx.BranchTransaction,
+		}
 
-	wsTx := &wsTransaction{
-		Hash:       iotaTx.Hash,
-		Address:    iotaTx.Address,
-		Value:      iotaTx.Value,
-		Tag:        iotaTx.Tag,
-		Bundle:     iotaTx.Bundle,
-		ReceivedAt: time.Now().Unix() * 1000,
-		ConfTime:   1111111111111,
-		Milestone:  "f",
-		//TrunkTransaction:  tx.Tx.TrunkTransaction,
-		//BranchTransaction: tx.Tx.BranchTransaction,
-	}
+		txRingBufferLock.Lock()
 
-	txRingBufferLock.Lock()
+		if _, exists := txPointerMap[tx.Tx.Hash]; exists {
+			// Tx already exists => ignore
+			txRingBufferLock.Unlock()
+			return
+		}
 
-	if _, exists := txPointerMap[iotaTx.Hash]; exists {
-		// Tx already exists => ignore
+		// Delete old element from map
+		if txRingBuffer.Value != nil {
+			oldTx := txRingBuffer.Value.(*wsTransaction)
+			delete(txPointerMap, oldTx.Hash)
+		}
+
+		// Set new element in ringbuffer
+		txRingBuffer.Value = wsTx
+		txRingBuffer = txRingBuffer.Next()
+
+		// Add new element to map
+		txPointerMap[wsTx.Hash] = wsTx
+
 		txRingBufferLock.Unlock()
-		return
-	}
 
-	// Delete old element from map
-	if txRingBuffer.Value != nil {
-		oldTx := txRingBuffer.Value.(*wsTransaction)
-		delete(txPointerMap, oldTx.Hash)
-	}
-
-	// Set new element in ringbuffer
-	txRingBuffer.Value = wsTx
-	txRingBuffer = txRingBuffer.Next()
-
-	// Add new element to map
-	txPointerMap[wsTx.Hash] = wsTx
-
-	txRingBufferLock.Unlock()
-
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "newTX", wsTx)
-	broadcastLock.Unlock()
+		broadcastLock.Lock()
+		socketioServer.BroadcastToRoom("broadcast", "newTX", wsTx)
+		broadcastLock.Unlock()
+	})
 }
 
-func onConfirmedTx(tx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	tx.RegisterConsumer() //+1
-	iotaTx := tx.GetTransaction().Tx
-	tx.Release() //-1
-
-	if iotaTx.CurrentIndex == 0 {
-		// Tail Tx => Check if there are other bundles (Reattachments)
-		bundleBucket, _ := tangle.GetBundleBucket(iotaTx.Bundle)
-		bundles := bundleBucket.Bundles()
-		if bundleBucket != nil && (len(bundles) > 1) {
-			ledgerChanges, _ := bundles[0].GetLedgerChanges()
-			isValue := len(ledgerChanges) > 0
-			if isValue {
-				// Mark all different Txs in all bundles as reattachment
-				for _, bundle := range bundleBucket.Bundles() {
-					for _, txHash := range bundle.GetTransactionHashes() {
-						reattachmentWorkerPool.TrySubmit(txHash)
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		if tx.Tx.CurrentIndex == 0 {
+			// Tail Tx => Check if there are other bundles (Reattachments)
+			bundleBucket, _ := tangle.GetBundleBucket(tx.Tx.Bundle)
+			bundles := bundleBucket.Bundles()
+			if bundleBucket != nil && (len(bundles) > 1) {
+				ledgerChanges, _ := bundles[0].GetLedgerChanges()
+				isValue := len(ledgerChanges) > 0
+				if isValue {
+					// Mark all different Txs in all bundles as reattachment
+					for _, bundle := range bundleBucket.Bundles() {
+						for _, txHash := range bundle.GetTransactionHashes() {
+							reattachmentWorkerPool.TrySubmit(txHash)
+						}
 					}
 				}
 			}
 		}
-	}
 
-	txRingBufferLock.Lock()
-	if wsTx, exists := txPointerMap[iotaTx.Hash]; exists {
-		wsTx.Confirmed = true
-		wsTx.ConfTime = confTime * 1000
-	}
-	txRingBufferLock.Unlock()
+		txRingBufferLock.Lock()
+		if wsTx, exists := txPointerMap[tx.Tx.Hash]; exists {
+			wsTx.Confirmed = true
+			wsTx.ConfTime = confTime * 1000
+		}
+		txRingBufferLock.Unlock()
 
-	update := wsUpdate{
-		Hash:     iotaTx.Hash,
-		ConfTime: confTime * 1000,
-	}
+		update := wsUpdate{
+			Hash:     tx.Tx.Hash,
+			ConfTime: confTime * 1000,
+		}
 
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "update", update)
-	broadcastLock.Unlock()
+		broadcastLock.Lock()
+		socketioServer.BroadcastToRoom("broadcast", "update", update)
+		broadcastLock.Unlock()
+	})
 }
 
 func onNewMilestone(bundle *tangle.Bundle) {

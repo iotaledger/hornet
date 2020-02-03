@@ -62,8 +62,7 @@ var BelowDepthMemoizationCache = belowDepthMemoizationCache{memoizationCache: ma
 // the given tail transaction is also deemed being below max depth.
 func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex int) bool {
 
-	tailTx.RegisterConsumer() //+1
-	defer tailTx.Release()    //-1
+	defer tailTx.Release() //-1
 
 	// if the tx is already confirmed we don't need to check it for max depth
 	if confirmed, at := tailTx.GetTransaction().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {

@@ -20,7 +20,7 @@ require (
 	github.com/googollee/go-socket.io v1.4.3-0.20191204093753-683f8725b6d0
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200123171556-feae13d59500
+	github.com/iotaledger/hive.go v0.0.0-20200131012304-86b174a7439d
 	github.com/iotaledger/iota.go v1.0.0-beta.14
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.3.0 // indirect

@@ -171,10 +171,9 @@ func (bucket *BundleBucket) remap(bndl *Bundle, startTx *CachedTransaction, onMa
 	bndl.txsMu.Lock()
 	defer bndl.txsMu.Unlock()
 
-	// This will be released while or after the loop as current
-	startTx.RegisterConsumer() //+1
-
+	// This is passed with a +1 reference and will be released while or after the loop as current
 	current := startTx
+
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
 	for current.GetTransaction().GetHash() != current.GetTransaction().GetTrunk() && !bndl.isComplete() && !current.GetTransaction().IsHead() {
 
@@ -208,9 +207,7 @@ func (bucket *BundleBucket) remap(bndl *Bundle, startTx *CachedTransaction, onMa
 
 		// call closure
 		if len(onMapped) > 0 {
-			trunkTx.RegisterConsumer() //+1
-			onMapped[0](trunkTx)
-			trunkTx.Release() //-1
+			onMapped[0](trunkTx.Retain())
 		}
 
 		// modify and advance to perhaps complete the bundle
@@ -271,7 +268,7 @@ func (bucket *BundleBucket) AddTransaction(hornetTx *hornet.Transaction) (bundle
 			bndl.headTx = tx.GetTransaction().GetHash()
 		} else {
 			// lets try to complete the bundle by assigning txs into this bundle
-			bucket.remap(bndl, tx)
+			bucket.remap(bndl, tx.Retain())
 		}
 
 		// add the new bundle to the bucket
@@ -296,10 +293,12 @@ func (bucket *BundleBucket) AddTransaction(hornetTx *hornet.Transaction) (bundle
 		}
 
 		// try to add the new transaction to the bundle
-		bucket.remap(bndl, current, func(mapped *CachedTransaction) {
-			if mapped.GetTransaction().GetHash() == tx.GetTransaction().GetHash() {
-				addedTo = append(addedTo, bndl)
-			}
+		bucket.remap(bndl, current.Retain(), func(mapped *CachedTransaction) {
+			mapped.ConsumeTransaction(func(mappedTx *hornet.Transaction) {
+				if mappedTx.GetHash() == tx.GetTransaction().GetHash() {
+					addedTo = append(addedTo, bndl)
+				}
+			})
 		})
 
 		current.Release() //-1
@@ -327,13 +326,11 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 
 	// go through each tail tx to create a bundle instance
 	for _, tx := range txs {
-		tx.RegisterConsumer() //+1
 		if tx.GetTransaction().Tx.Bundle != bucket.hash {
 			log.Fatalf("tx %s was stored for bundle %s, but its bundle hash is %s", tx.GetTransaction().GetHash(), bucket.hash, tx.GetTransaction().Tx.Bundle)
 		}
 
 		if !tx.GetTransaction().IsTail() {
-			tx.Release() //-1
 			continue
 		}
 
@@ -357,8 +354,7 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 
 		// fill up this bundle with the transactions.
 		// note that this is different than remap() as it ignores whether the bundle is complete
-		current := tx
-		current.RegisterConsumer() //+1
+		current := tx.Retain() //+1
 		for current.GetTransaction().GetHash() != current.GetTransaction().GetTrunk() && !current.GetTransaction().IsHead() {
 
 			if _, ok := bucket.txs[current.GetTransaction().GetTrunk()]; !ok {
@@ -378,7 +374,6 @@ func (bucket *BundleBucket) Init(txs map[trinary.Hash]*CachedTransaction, metaMa
 		current.Release() //-1
 
 		bucket.bundleInstances[tx.GetTransaction().GetHash()] = bndl
-		tx.Release() //-1
 	}
 
 	// now pre compute properties about every bundle

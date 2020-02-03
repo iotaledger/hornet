@@ -7,6 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -109,47 +110,46 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 }
 
 // RequestApproveesAndRemove add the approvees of a tx to the queue and removes the tx from the queue
-func RequestApprovees(tx *tangle.CachedTransaction) {
+func RequestApprovees(transaction *tangle.CachedTransaction) {
 
-	tx.RegisterConsumer() //+1
-	defer tx.Release()    //-1
+	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		txHash := tx.GetHash()
 
-	txHash := tx.GetTransaction().GetHash()
-
-	if tangle.SolidEntryPointsContain(txHash) {
-		// Ignore solid entry points (snapshot milestone included)
-		return
-	}
-
-	contains, reqMilestoneIndex := RequestQueue.Contains(txHash)
-	if contains {
-		// Tx was requested => request trunk and branch tx
-
-		approveeHashes := []trinary.Hash{tx.GetTransaction().GetTrunk()}
-		if tx.GetTransaction().GetTrunk() != tx.GetTransaction().GetBranch() {
-			approveeHashes = append(approveeHashes, tx.GetTransaction().GetBranch())
+		if tangle.SolidEntryPointsContain(txHash) {
+			// Ignore solid entry points (snapshot milestone included)
+			return
 		}
 
-		approvesToAdd := trinary.Hashes{}
-		for _, approveeHash := range approveeHashes {
-			if tangle.SolidEntryPointsContain(approveeHash) {
-				// Ignore solid entry points (snapshot milestone included)
-				continue
-			}
-			if tangle.ContainsTransaction(approveeHash) {
-				// Do not request tx that we already know
-				continue
-			}
-			approvesToAdd = append(approvesToAdd, approveeHash)
-		}
+		contains, reqMilestoneIndex := RequestQueue.Contains(txHash)
+		if contains {
+			// Tx was requested => request trunk and branch tx
 
-		reqsAdded := RequestQueue.AddMulti(approvesToAdd, reqMilestoneIndex, false)
-		for i, added := range reqsAdded {
-			if added {
-				stingRequestsWorkerPool.TrySubmit(approvesToAdd[i], reqMilestoneIndex)
+			approveeHashes := []trinary.Hash{tx.GetTrunk()}
+			if tx.GetTrunk() != tx.GetBranch() {
+				approveeHashes = append(approveeHashes, tx.GetBranch())
+			}
+
+			approvesToAdd := trinary.Hashes{}
+			for _, approveeHash := range approveeHashes {
+				if tangle.SolidEntryPointsContain(approveeHash) {
+					// Ignore solid entry points (snapshot milestone included)
+					continue
+				}
+				if tangle.ContainsTransaction(approveeHash) {
+					// Do not request tx that we already know
+					continue
+				}
+				approvesToAdd = append(approvesToAdd, approveeHash)
+			}
+
+			reqsAdded := RequestQueue.AddMulti(approvesToAdd, reqMilestoneIndex, false)
+			for i, added := range reqsAdded {
+				if added {
+					stingRequestsWorkerPool.TrySubmit(approvesToAdd[i], reqMilestoneIndex)
+				}
 			}
 		}
-	}
+	})
 }
 
 // RequestMilestone requests trunk and branch of a milestone if they are missing

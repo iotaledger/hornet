@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -99,16 +100,16 @@ func runFirstSeenTransactionPersister() {
 
 	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 
-		transaction.RegisterConsumer() //+1
-		// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
-		// This is only used to delete unconfirmed transactions from the database at pruning
-		if !transaction.GetTransaction().IsRequested() {
-			firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
-				TxHash:                        transaction.GetTransaction().GetHash(),
-				FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
-			})
-		}
-		transaction.Release() //-1
+		transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+			// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
+			// This is only used to delete unconfirmed transactions from the database at pruning
+			if !tx.IsRequested() {
+				firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
+					TxHash:                        tx.GetHash(),
+					FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
+				})
+			}
+		})
 	})
 
 	daemon.BackgroundWorker("FirstSeenTxPersister", func(shutdownSignal <-chan struct{}) {

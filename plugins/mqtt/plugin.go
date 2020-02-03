@@ -48,16 +48,12 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
-		onNewTx(tx)
-		tx.Release() //-1
+		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) //Pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		tx := task.Param(0).(*tanglePackage.CachedTransaction) //1
-		onConfirmedTx(tx, task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64))
-		tx.Release() //-1
+		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) //Pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize))
 
@@ -87,36 +83,35 @@ func run(plugin *node.Plugin) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
+				transaction.Release() //-1
 				return
 			}
 			wasSyncBefore = true
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			transaction.RegisterConsumer() //+1
-			_, added := newTxWorkerPool.TrySubmit(transaction)
-			if !added {
-				transaction.Release() //-1
+			_, added := newTxWorkerPool.TrySubmit(transaction) //Pass +1
+			if added {
+				return //Avoid Release()
 			}
 		}
+		transaction.Release() //-1
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
-		if !wasSyncBefore {
-			return
+		if wasSyncBefore {
+			_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
+			if added {
+				return //Avoid Release()
+			}
 		}
-		transaction.RegisterConsumer() //+1
-		_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
-		if !added {
-			transaction.Release() //-1
-		}
+		transaction.Release() //-1
 	})
 
 	notifyNewLatestMilestone := events.NewClosure(func(bundle *tanglePackage.Bundle) {
 		if !wasSyncBefore {
 			return
 		}
-
 		newLatestMilestoneWorkerPool.TrySubmit(bundle)
 	})
 

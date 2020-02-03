@@ -13,7 +13,7 @@ var (
 )
 
 type CachedNeighborRequest struct {
-	*objectstorage.CachedObject
+	objectstorage.CachedObject
 }
 
 func (c *CachedNeighborRequest) GetRequest() *PendingNeighborRequests {
@@ -33,7 +33,9 @@ func configureIncomingStorage() {
 	incomingStorage = objectstorage.New(nil,
 		incomingFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
-		objectstorage.PersistenceEnabled(false))
+		objectstorage.PersistenceEnabled(false),
+		//objectstorage.EnableLeakDetection(),
+	)
 }
 
 func GetIncomingStorageSize() int {

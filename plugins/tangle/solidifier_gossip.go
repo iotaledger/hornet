@@ -27,10 +27,10 @@ func configureGossipSolidifier() {
 		// Check solidity of gossip txs if the node is synced
 		tx := task.Param(0).(*tangle.CachedTransaction) //1
 		if tangle.IsNodeSynced() {
-			checkSolidityAndPropagate(tx)
+			checkSolidityAndPropagate(tx) //Pass +1
+		} else {
+			tx.Release() //-1
 		}
-		// Release the consumer, since it was registered before adding to the pool
-		tx.Release() //-1
 
 		task.Return(nil)
 	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize))
@@ -42,8 +42,9 @@ func runGossipSolidifier() {
 
 	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if tangle.IsNodeSynced() {
-			transaction.RegisterConsumer() //+1
-			gossipSolidifierWorkerPool.Submit(transaction)
+			gossipSolidifierWorkerPool.Submit(transaction) //Pass +1
+		} else {
+			transaction.Release() //-1
 		}
 	})
 
@@ -63,18 +64,15 @@ func runGossipSolidifier() {
 // Checks and updates the solid flag of a transaction and its approvers (future cone).
 func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
 
-	//Register consumer here, since we will add it to txsToCheck which will release every tx when they are processed
-	transaction.RegisterConsumer() //+1
-
 	txsToCheck := make(map[string]*tangle.CachedTransaction)
-	txsToCheck[transaction.GetTransaction().GetHash()] = transaction
+	txsToCheck[transaction.GetTransaction().GetHash()] = transaction //1
 
 	// Loop as long as new transactions are added in every loop cycle
 	for len(txsToCheck) != 0 {
 		for txHash, tx := range txsToCheck {
 			delete(txsToCheck, txHash)
 
-			solid, _ := checkSolidity(tx, true)
+			solid, _ := checkSolidity(tx.Retain(), true)
 			if solid {
 				if int32(time.Now().Unix())-tx.GetTransaction().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions

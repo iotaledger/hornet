@@ -51,7 +51,9 @@ func configureRefsAnInvalidBundleStorage() {
 		nil,
 		invalidBundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
-		objectstorage.PersistenceEnabled(false))
+		objectstorage.PersistenceEnabled(false),
+		//objectstorage.EnableLeakDetection(),
+	)
 }
 
 func GetRefsAnInvalidBundleStorageSize() int {
