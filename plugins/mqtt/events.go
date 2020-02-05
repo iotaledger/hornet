@@ -63,6 +63,12 @@ func onNewSolidMilestone(bundle *tangle.Bundle) {
 	}
 }
 
+func onSpentAddress(addr trinary.Hash) {
+	if err := publishSpentAddress(addr); err != nil {
+		log.Error(err.Error())
+	}
+}
+
 // Publish latest milestone index
 func publishLMI(lmi milestone_index.MilestoneIndex) error {
 
@@ -143,4 +149,8 @@ func publishTx(iotaTx *transaction.Transaction) error {
 		time.Now().Unix(),        // Unix timestamp for when the transaction was received
 		iotaTx.Tag,               // Tag
 		time.Now().UTC().Format(time.RFC3339)))
+}
+
+func publishSpentAddress(addr trinary.Hash) error {
+	return mqttBroker.Send(topicSpentAddress, addr)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
@@ -42,6 +43,10 @@ var (
 	newSolidMilestoneWorkerQueueSize = 100
 	newSolidMilestoneWorkerPool      *workerpool.WorkerPool
 
+	spentAddressWorkerCount     = 1
+	spentAddressWorkerQueueSize = 100
+	spentAddressWorkerPool      *workerpool.WorkerPool
+
 	wasSyncBefore = false
 
 	publisher *Publisher
@@ -70,6 +75,11 @@ func configure(plugin *node.Plugin) {
 		onNewSolidMilestone(task.Param(0).(*tanglePackage.Bundle))
 		task.Return(nil)
 	}, workerpool.WorkerCount(newSolidMilestoneWorkerCount), workerpool.QueueSize(newSolidMilestoneWorkerQueueSize))
+
+	spentAddressWorkerPool = workerpool.New(func(task workerpool.Task) {
+		onSpentAddress(task.Param(0).(trinary.Hash))
+		task.Return(nil)
+	}, workerpool.WorkerCount(spentAddressWorkerCount), workerpool.QueueSize(spentAddressWorkerQueueSize))
 }
 
 // Start the zeromq plugin
@@ -121,11 +131,19 @@ func run(plugin *node.Plugin) {
 		newSolidMilestoneWorkerPool.TrySubmit(bundle)
 	})
 
+	notifySpentAddress := events.NewClosure(func(addr trinary.Hash) {
+		spentAddressWorkerPool.TrySubmit(addr)
+	})
+
 	daemon.BackgroundWorker("ZeroMQ Publisher", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ Publisher ... done")
 		log.Infof("You can now listen to ZMQ via: %s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.bindAddress"), parameter.NodeConfig.GetInt("zmq.port"))
 
-		go startPublisher()
+		go func() {
+			if err := startPublisher(); err != nil {
+				log.Fatal(err)
+			}
+		}()
 
 		<-shutdownSignal
 		log.Info("Stopping ZeroMQ Publisher ...")
@@ -183,6 +201,17 @@ func run(plugin *node.Plugin) {
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewSolidMilestoneWorker] ... done")
+	}, shutdown.ShutdownPriorityMetricsPublishers)
+
+	daemon.BackgroundWorker("ZeroMQ[SpentAddress]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZeroMQ[SpentAddress] ... done")
+		tangle.Events.AddressSpent.Attach(notifySpentAddress)
+		spentAddressWorkerPool.Start()
+		<-shutdownSignal
+		log.Info("Stopping ZeroMQ[SpentAddress] ...")
+		tangle.Events.AddressSpent.Detach(notifySpentAddress)
+		spentAddressWorkerPool.StopAndWait()
+		log.Info("Stopping ZeroMQ[SpentAddress] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 }
 

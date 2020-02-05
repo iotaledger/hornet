@@ -143,6 +143,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 							if change < 0 {
 								tangle.MarkAddressAsSpent(addr)
 								markedSpentAddrs.Inc()
+								Events.AddressSpent.Trigger(addr)
 							}
 						}
 					} else {

@@ -73,6 +73,12 @@ func onNewSolidMilestone(bundle *tangle.Bundle) {
 	}
 }
 
+func onSpentAddress(addr trinary.Hash) {
+	if err := publishSpentAddress(addr); err != nil {
+		log.Error(err.Error())
+	}
+}
+
 // Publish latest milestone index
 func publishLMI(lmi milestone_index.MilestoneIndex) error {
 
@@ -173,4 +179,8 @@ func publishConfTxForAddress(iotaTx *transaction.Transaction, msIndex milestone_
 	}
 
 	return publisher.Send(addr, messages)
+}
+
+func publishSpentAddress(addr trinary.Hash) error {
+	return publisher.Send(topicSpentAddress, []string{addr})
 }
