@@ -120,7 +120,6 @@ func run(plugin *node.Plugin) {
 	if parameter.NodeConfig.GetBool("globalSnapshot.load") {
 		err = LoadGlobalSnapshot(
 			parameter.NodeConfig.GetString("globalSnapshot.path"),
-			parameter.NodeConfig.GetStringSlice("globalSnapshot.spentAddressesPaths"),
 			milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("globalSnapshot.index")),
 		)
 

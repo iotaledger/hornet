@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/plugins/permaspent"
+	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
-
-	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 func init() {
@@ -27,11 +27,13 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan st
 		return
 	}
 
+	/*
 	if !tangle.IsNodeSynced() {
 		e.Error = "Node not synced"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
+	*/
 
 	if len(sp.Addresses) == 0 {
 		e.Error = "No addresses provided"
@@ -40,16 +42,24 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan st
 
 	spr := &WereAddressesSpentFromReturn{}
 
-	for _, addr := range sp.Addresses {
+	addrs := make(trinary.Hashes, len(sp.Addresses))
+	for i, addr := range sp.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
 			e.Error = fmt.Sprintf("Provided address invalid: %s", addr)
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
+		addrs[i] = addr[:81]
 
-		// State
-		spr.States = append(spr.States, tangle.WasAddressSpentFrom(addr[:81]))
 	}
+	// State
+	states, err := permaspent.WereAddressesSpentFrom(addrs...)
+	if err != nil {
+		e.Error = fmt.Sprintf("unable to query spent state: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+	spr.States = states
 
 	c.JSON(http.StatusOK, spr)
 }

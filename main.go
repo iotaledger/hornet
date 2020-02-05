@@ -5,6 +5,7 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
+	"github.com/gohornet/hornet/plugins/permaspent"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/plugins/autopeering"
@@ -39,6 +40,7 @@ func main() {
 			gracefulshutdown.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
+			permaspent.PLUGIN,
 			autopeering.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,

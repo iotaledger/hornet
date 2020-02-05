@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/plugins/permaspent"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -77,6 +78,10 @@ func configure(plugin *node.Plugin) {
 	// Check for features
 	if _, ok := permitedEndpoints["attachtotangle"]; ok {
 		features = append(features, "RemotePOW")
+	}
+	
+	if !node.IsSkipped(permaspent.PLUGIN) {
+		features = append(features, "WereAddressesSpentFrom")
 	}
 
 	// Set basic auth if enabled

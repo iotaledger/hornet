@@ -26,9 +26,6 @@ func init() {
 	// "Path to the global snapshot file"
 	parameter.NodeConfig.SetDefault("globalSnapshot.path", "snapshotMainnet.txt")
 
-	// "Paths to the spent addresses files"
-	parameter.NodeConfig.SetDefault("globalSnapshot.spentAddressesPaths", []string{"previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"})
-
 	// "Milestone index of the global snapshot"
 	parameter.NodeConfig.SetDefault("globalSnapshot.index", 1050000)
 

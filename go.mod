@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
+	github.com/OneOfOne/xxhash v1.2.2
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/dgraph-io/badger/v2 v2.0.1
 	github.com/dgraph-io/ristretto v0.0.1 // indirect
