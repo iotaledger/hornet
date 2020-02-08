@@ -233,7 +233,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	defer cachedSignatureTxs.Release() // tx -1
 
 	cachedSiblingsTx := GetCachedTransaction(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) // tx +1
-	defer cachedSiblingsTx.Release()                                                                                        // tx -1
+	defer cachedSiblingsTx.Release()                                                                                              // tx -1
 
 	if !cachedSiblingsTx.Exists() {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
