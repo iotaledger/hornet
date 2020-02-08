@@ -10,6 +10,7 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	configureHealthDatabase()
 	configureTransactionStorage()
 	configureBundleTransactionsStorage()
+	configureBundleStorage()
 	configureTransactionHashesForAddressDatabase()
 	configureApproversStorage()
 	configureMilestoneStorage()

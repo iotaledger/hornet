@@ -61,6 +61,7 @@ func configure(plugin *node.Plugin) {
 
 		log.Info("Flushing caches to database...")
 		tangle.ShutdownMilestoneStorage()
+		tangle.ShutdownBundleStorage()
 		tangle.ShutdownBundleTransactionsStorage()
 		tangle.ShutdownTransactionStorage()
 		tangle.ShutdownApproversStorage()

@@ -108,19 +108,19 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			tx := tangle.GetCachedTransaction(txHash) //+1
-			if !tx.Exists() {
+			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
+			if !cachedTx.Exists() {
 				log.Panicf("Tx with hash %v not found", txHash)
 			}
 
 			// ledger update process is write locked
-			confirmed, at := tx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
 			if confirmed {
 				if at > latestSolidMilestoneIndex {
-					log.Panicf("transaction %s was confirmed by a newer milestone %d", tx.GetTransaction().GetHash(), at)
+					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
 				}
 				// only take transactions into account that have not been confirmed by the referenced or older milestones
-				tx.Release() //-1
+				cachedTx.Release() // tx -1
 				continue
 			}
 
@@ -128,34 +128,38 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			// check the same bundle twice, however, we still add the trunk and branch of the
 			// bundle transaction to ensure, that if a transaction within the bundle would reference
 			// another trunk (as seen from the view of the bundle), we'd get that cone too.
-			if !tx.GetTransaction().IsTail() {
-				txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
-				txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
-				tx.Release() //-1
+			if !cachedTx.GetTransaction().IsTail() {
+				txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
+				txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+				cachedTx.Release() // tx -1
 				continue
 			}
 
-			bundle := tangle.GetBundleOfTailTransaction(tx.GetTransaction().Tx.Bundle, tx.GetTransaction().GetHash())
-			if bundle == nil || !bundle.IsComplete() {
-				tx.Release() //-1
+			cachedBndl := tangle.GetBundleOfTailTransaction(cachedTx.GetTransaction().GetHash()) // bundle +1
+			if cachedBndl == nil {
+				cachedTx.Release() // tx -1
 				return nil, ErrRefBundleNotComplete
 			}
 
-			if !bundle.IsValid() {
-				tx.Release() //-1
+			if !cachedBndl.GetBundle().IsValid() {
+				cachedTx.Release()   // tx -1
+				cachedBndl.Release() // bundle -1
 				return nil, ErrRefBundleNotValid
 			}
 
-			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
-			if !isValueSpamBundle {
+			if !cachedBndl.GetBundle().IsValueSpam() {
+
+				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
 				for addr, change := range ledgerChanges {
 					coneDiff[addr] += change
 				}
 			}
 
-			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
-			tx.Release() //-1
+			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+
+			cachedTx.Release()   // tx -1
+			cachedBndl.Release() // bundle -1
 		}
 	}
 

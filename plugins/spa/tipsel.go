@@ -20,9 +20,9 @@ func configureTipSelMetric() {
 		case *tipselection.TipSelStats:
 			sendToAllWSClient(&msg{MsgTypeTipSelMetric, x})
 		case milestone_index.MilestoneIndex:
-			if tailTx := getMilestone(x); tailTx != nil { //+1
-				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), x}})
-				tailTx.Release() //-1
+			if cachedMsTailTx := getMilestoneTail(x); cachedMsTailTx != nil { // tx +1
+				sendToAllWSClient(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), x}})
+				cachedMsTailTx.Release() // tx -1
 			}
 		}
 		task.Return(nil)

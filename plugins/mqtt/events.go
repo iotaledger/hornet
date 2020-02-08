@@ -105,10 +105,10 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(iotaTx *transaction.Transaction, ms milestone_index.MilestoneIndex) error {
+func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone_index.MilestoneIndex) error {
 
 	return mqttBroker.Send(topicSN, fmt.Sprintf(`{"msIndex":"%d","txHash":"%v","address":"%v","trunk":"%v","branch":"%v","bundle":"%v","timestamp":"%s"}`,
-		ms,                       // Index of the milestone that confirmed the transaction
+		msIndex,                  // Index of the milestone that confirmed the transaction
 		iotaTx.Hash,              // Transaction hash
 		iotaTx.Address,           // Address
 		iotaTx.TrunkTransaction,  // Trunk transaction hash

@@ -61,14 +61,15 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		msWalkStartIndex = lastSolidIndex
 	}
 
-	ms := tangle.GetMilestone(msWalkStartIndex)
-	if ms == nil {
+	cachedMs := tangle.GetMilestone(msWalkStartIndex) // bundle +1
+	if cachedMs == nil {
 		return nil, nil, errors.Wrapf(ErrMilestoneNotFound, "index: %d", msWalkStartIndex)
 	}
+	defer cachedMs.Release() // bundle -1
 
 	// record stats
 	start := time.Now()
-	walkStats := &TipSelStats{EntryPoint: ms.GetTailHash()}
+	walkStats := &TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash()}
 
 	// compute the range in which we allow approvers to reference transactions in
 	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
@@ -84,45 +85,44 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	tanglePlugin.BelowDepthMemoizationCache.ResetIfNewerMilestone(tangle.GetSolidMilestoneIndex())
 
 	// check whether the given reference tx is valid for the walk
-	var refBundle *tangle.Bundle
+	var cachedRefBundle *tangle.CachedBundle
 	if reference != nil {
-		refTx := tangle.GetCachedTransaction(*reference) //+1
-		if !refTx.Exists() {
-			refTx.Release() //-1
+		cachedRefTx := tangle.GetCachedTransaction(*reference) // tx +1
+		if !cachedRefTx.Exists() {
+			cachedRefTx.Release() // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction doesn't exist")
 		}
 
-		if !refTx.GetTransaction().IsSolid() {
-			refTx.Release() //-1
+		if !cachedRefTx.GetTransaction().IsSolid() {
+			cachedRefTx.Release() // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
 
-		if !refTx.GetTransaction().IsTail() {
-			refTx.Release() //-1
+		if !cachedRefTx.GetTransaction().IsTail() {
+			cachedRefTx.Release() // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
 		}
 
-		bundle := tangle.GetBundleOfTailTransaction(refTx.GetTransaction().Tx.Bundle, refTx.GetTransaction().GetHash())
-		if bundle == nil {
+		cachedBndl := tangle.GetBundleOfTailTransaction(cachedRefTx.GetTransaction().GetHash()) // bundle +1
+		if cachedBndl == nil {
 			// this should never happen if HORNET is programmed correctly
-			if refTx.GetTransaction().Tx.CurrentIndex == 0 {
+			if cachedRefTx.GetTransaction().Tx.CurrentIndex == 0 {
 				log.Panicf("reference transaction is a tail but there's no bundle instance")
 			}
-			refTx.Release() //-1
+			cachedRefTx.Release() // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle tail not yet known (bundle is complete)")
 		}
 
-		refTx.Release() //-1
+		cachedRefTx.Release() // tx -1
 
-		if !bundle.IsComplete() {
-			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle is not complete")
-		}
-		if !bundle.IsValid() {
+		if !cachedBndl.GetBundle().IsValid() {
+			cachedBndl.Release() // bundle -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle is invalid")
 		}
-		refBundle = bundle
+		cachedRefBundle = cachedBndl
 
-		if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
+			cachedBndl.Release() // bundle -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is below max depth")
 		}
 		walkStats.Reference = reference
@@ -134,36 +134,38 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		// on the second walk, use the given reference as a starting point
 		if i == 1 && reference != nil {
 			// check whether the reference transaction itself is consistent with the first walk's diff
-			if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(refBundle.GetTailHash(), approved, diff) {
+			if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedRefBundle.GetBundle().GetTailHash(), approved, diff) {
+				cachedRefBundle.Release() // bundle -1
 				return nil, nil, errors.Wrapf(ErrReferenceNotConsistent, "with milestone %d", tangle.GetSolidMilestoneIndex())
 			}
+			cachedRefBundle.Release() // bundle -1
 			selected = *reference
 		} else {
-			if ms.GetHash() == consts.NullHashTrytes {
-				selected = ms.GetHash()
+			if cachedMs.GetBundle().GetHash() == consts.NullHashTrytes {
+				selected = cachedMs.GetBundle().GetHash()
 			} else {
-				msTail := ms.GetTail() //+1
-				selected = msTail.GetTransaction().GetHash()
-				msTail.Release() //-1
+				cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
+				selected = cachedMsTailTx.GetTransaction().GetHash()
+				cachedMsTailTx.Release() // tx -1
 			}
 		}
 		for {
 			walkStats.StepsTaken++
 			previousSelected := selected
-			approvers := tangle.GetCachedApprovers(selected) //+1
+			cachedApprovers := tangle.GetCachedApprovers(selected) // approvers +1
 
-			if len(approvers) == 0 {
-				approvers.Release() //-1
+			if len(cachedApprovers) == 0 {
+				cachedApprovers.Release() // approvers -1
 				break
 			}
 
 			var approverHashes []trinary.Hash
-			for _, approver := range approvers {
-				if approver.Exists() {
-					approverHashes = append(approverHashes, approver.GetApprover().GetHash())
+			for _, cachedApprover := range cachedApprovers {
+				if cachedApprover.Exists() {
+					approverHashes = append(approverHashes, cachedApprover.GetApprover().GetHash())
 				}
 			}
-			approvers.Release() //-1
+			cachedApprovers.Release() // approvers -1
 
 			for len(approverHashes) != 0 {
 				b := make([]byte, 1)
@@ -195,77 +197,84 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				walkStats.Evaluated++
 
-				candidateTx := tangle.GetCachedTransaction(candidateHash) //+1
+				cachedCandidateTx := tangle.GetCachedTransaction(candidateHash) // tx +1
 
-				if !candidateTx.Exists() || !candidateTx.GetTransaction().IsSolid() {
+				if !cachedCandidateTx.Exists() || !cachedCandidateTx.GetTransaction().IsSolid() {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
-					candidateTx.Release() //-1
+					cachedCandidateTx.Release() // tx -1
 					continue
 				}
 
 				// a transaction can be within multiple bundle instances, because it is possible
 				// that transactions are reattached "above" the origin bundle but pointing (via trunk)
 				// to some transactions of the origin bundle.
-				bundles := tangle.GetBundlesOfTransaction(candidateTx.GetTransaction().Tx.Bundle, candidateTx.GetTransaction().GetHash())
+				cachedBndls := tangle.GetBundlesOfTransaction(cachedCandidateTx.GetTransaction().GetHash()) // bundle +1
 
 				// isn't in any bundle instance
-				if len(bundles) == 0 {
+				if len(cachedBndls) == 0 {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
-					candidateTx.Release() //-1
+					cachedCandidateTx.Release() // tx -1
+					cachedBndls.Release()       // bundle -1
 					continue
 				}
 
 				// randomly select a bundle to which this transaction belongs to
-				var bundle *tangle.Bundle
-				if len(bundles) == 1 {
-					bundle = bundles[0]
+				var cachedBndl *tangle.CachedBundle
+				if len(cachedBndls) == 1 {
+					cachedBndl = cachedBndls[0]
 				} else {
-					bundle = bundles[int(b[0])%len(bundles)]
+					cachedBndl = cachedBndls[int(b[0])%len(cachedBndls)]
+					cachedBndl.Retain()   // bundle +1
+					cachedBndls.Release() // bundle -1
 				}
 
-				if bundle == nil || !bundle.IsComplete() {
+				if cachedBndl == nil {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
-					candidateTx.Release() //-1
+					cachedCandidateTx.Release() // tx -1
 					continue
 				}
 
-				if !bundle.IsValid() {
+				if !cachedBndl.GetBundle().IsValid() {
 					tanglePlugin.PutInvalidBundleReference(candidateHash)
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
-					candidateTx.Release() //-1
+					cachedCandidateTx.Release() // tx -1
+					cachedBndl.Release()        // bundle -1
 					continue
 				}
-				if tanglePlugin.IsBelowMaxDepth(bundle.GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
+				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
-					candidateTx.Release() //-1
+					cachedCandidateTx.Release() // tx -1
+					cachedBndl.Release()        // bundle -1
 					continue
 				}
 
 				// if the transaction has already been confirmed by the current solid or previous
 				// milestone, it is automatically consistent with our current walking diff
-				confirmed, at := candidateTx.GetTransaction().GetConfirmed()
+				confirmed, at := cachedCandidateTx.GetTransaction().GetConfirmed()
 				// TODO: the second condition can be removed once the solidifier ensures, that the entire
 				// ledger update process is write locked
 				if !confirmed {
 					if at > tangle.GetSolidMilestoneIndex() {
-						log.Panicf("transaction %s was confirmed by a newer milestone %d", candidateTx.GetTransaction().GetHash(), at)
+						log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedCandidateTx.GetTransaction().GetHash(), at)
 					}
 					// check whether the bundle's approved cone is consistent with our current diff
-					if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(bundle.GetTailHash(), approved, diff) {
+					if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedBndl.GetBundle().GetTailHash(), approved, diff) {
 						approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
-						candidateTx.Release() //-1
+						cachedCandidateTx.Release() // tx -1
+						cachedBndl.Release()        // bundle -1
 						continue
 					}
 				}
-				candidateTx.Release() //-1
+				cachedCandidateTx.Release() // tx -1
 
 				// cache the hashes of txs which we approve, so we don't recheck them
-				for _, txHash := range bundle.GetTransactionHashes() {
+				for _, txHash := range cachedBndl.GetBundle().GetTransactionHashes() {
 					approved[txHash] = struct{}{}
 				}
 
 				// auto jump to tail of bundle
-				selected = bundle.GetTailHash()
+				selected = cachedBndl.GetBundle().GetTailHash()
+				cachedBndl.Release() // bundle -1
 				break
 			}
 			if previousSelected == selected {

@@ -117,15 +117,15 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(iotaTx *transaction.Transaction, ms milestone_index.MilestoneIndex) error {
+func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone_index.MilestoneIndex) error {
 
 	messages := []string{
-		strconv.FormatInt(int64(ms), 10), // Index of the milestone that confirmed the transaction
-		iotaTx.Hash,                      // Transaction hash
-		iotaTx.Address,                   // Address
-		iotaTx.TrunkTransaction,          // Trunk transaction hash
-		iotaTx.BranchTransaction,         // Branch transaction hash
-		iotaTx.Bundle,                    // Bundle hash
+		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
+		iotaTx.Hash,                           // Transaction hash
+		iotaTx.Address,                        // Address
+		iotaTx.TrunkTransaction,               // Trunk transaction hash
+		iotaTx.BranchTransaction,              // Branch transaction hash
+		iotaTx.Bundle,                         // Bundle hash
 	}
 
 	return publisher.Send(topicSN, messages)

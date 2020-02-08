@@ -112,9 +112,10 @@ func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
 	// Set the solid milestone index based on the ledger milestone
 	setSolidMilestoneIndex(ledgerMilestoneIndex)
 	if setLSMIAsLMI && ledgerMilestoneIndex != 0 {
-		solidMsBundle := GetMilestone(ledgerMilestoneIndex)
-		if solidMsBundle != nil {
-			err = SetLatestMilestone(solidMsBundle)
+		cachedSolidMs := GetMilestone(ledgerMilestoneIndex) // bundle +1
+		if cachedSolidMs != nil {
+			err = SetLatestMilestone(cachedSolidMs.GetBundle())
+			cachedSolidMs.Release() // bundle -1
 			if err != nil {
 				return errors.Wrap(NewDatabaseError(err), "failed to set the latest milestone")
 			}

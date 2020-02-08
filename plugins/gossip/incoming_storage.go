@@ -42,7 +42,7 @@ func GetIncomingStorageSize() int {
 	return incomingStorage.GetSize()
 }
 
-// +1
+// neighborReq +1
 func GetCachedPendingNeighborRequest(recTxBytes []byte) *CachedNeighborRequest {
 	return &CachedNeighborRequest{
 		incomingStorage.ComputeIfAbsent(recTxBytes, incomingFactory),

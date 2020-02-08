@@ -36,20 +36,20 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 				continue
 			}
 
-			tx := tangle.GetCachedTransaction(txHash) //+1
-			if !tx.Exists() {
+			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
+			if !cachedTx.Exists() {
 				log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 			}
 
-			confirmed, at := tx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
 			if confirmed {
 				if at > milestoneIndex {
-					log.Panicf("transaction %s was already confirmed by a newer milestone %d", tx.GetTransaction().GetHash(), at)
+					log.Panicf("transaction %s was already confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
 				}
 
 				// Tx is already confirmed by another milestone => ignore
 				if at < milestoneIndex {
-					tx.Release() //-1
+					cachedTx.Release() // tx -1
 					continue
 				}
 
@@ -58,36 +58,34 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
+			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
 
-			if !tx.GetTransaction().IsTail() {
-				tx.Release() //-1
+			if !cachedTx.GetTransaction().IsTail() {
+				cachedTx.Release() // tx -1
 				continue
 			}
 
-			txBundle := tx.GetTransaction().Tx.Bundle
-			tx.Release() //-1
+			txBundle := cachedTx.GetTransaction().Tx.Bundle
+			cachedTx.Release() // tx -1
 
-			bundle := tangle.GetBundleOfTailTransaction(txBundle, txHash)
-			if bundle == nil {
+			cachedBndl := tangle.GetBundleOfTailTransaction(txHash) // bundle +1
+			if cachedBndl == nil {
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
 
-			if !bundle.IsComplete() {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not complete: %v", txHash, txBundle)
-			}
-
-			if !bundle.IsValid() {
+			if !cachedBndl.GetBundle().IsValid() {
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, txBundle)
 			}
 
-			ledgerChanges, isValueSpamBundle := bundle.GetLedgerChanges()
-			if !isValueSpamBundle {
+			if !cachedBndl.GetBundle().IsValueSpam() {
+				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
 				for address, change := range ledgerChanges {
 					totalLedgerChanges[address] += change
 				}
 			}
+
+			cachedBndl.Release()
 
 			// we only add the tail transaction to the txsToConfirm set, in order to not
 			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not
@@ -106,25 +104,26 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 
 	for txHash := range txsToConfirm {
 
-		cachedTx := tangle.GetCachedTransaction(txHash) //+1
+		cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
 		if !cachedTx.Exists() {
 			log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 		}
 
 		// confirm all txs of the bundle
 		// we are only iterating over tail txs
-		bundle := tangle.GetBundleOfTailTransaction(cachedTx.GetTransaction().Tx.Bundle, txHash)
-		if bundle == nil {
+		cachedBndl := tangle.GetBundleOfTailTransaction(txHash) // bundle +1
+		if cachedBndl == nil {
 			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, cachedTx.GetTransaction().Tx.Bundle)
 		}
-		cachedTx.Release() //-1
+		cachedTx.Release() // tx -1
 
-		transactions := bundle.GetTransactions() //+1
-		for _, bndlTx := range transactions {
-			bndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
-			Events.TransactionConfirmed.Trigger(bndlTx, milestoneIndex, milestoneTail.GetTransaction().GetTimestamp())
+		cachedTxs := cachedBndl.GetBundle().GetTransactions() // txs +1
+		for _, cachedBndlTx := range cachedTxs {
+			cachedBndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
+			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, milestoneTail.GetTransaction().GetTimestamp())
 		}
-		transactions.Release() //-1
+		cachedTxs.Release()  // txs -1
+		cachedBndl.Release() //bundle -1
 	}
 
 	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Since(ts))

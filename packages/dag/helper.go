@@ -38,23 +38,23 @@ func FindAllTails(txHash trinary.Hash) (map[string]struct{}, error) {
 				continue
 			}
 
-			tx := tangle.GetCachedTransaction(txHash) //+1
+			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
 
-			if !tx.Exists() {
-				tx.Release() //-1
+			if !cachedTx.Exists() {
+				cachedTx.Release() // tx -1
 				return nil, errors.Wrapf(ErrFindAllTailsFailed, "Transaction not found: %v", txHash)
 			}
 
-			if tx.GetTransaction().IsTail() {
+			if cachedTx.GetTransaction().IsTail() {
 				tails[txHash] = struct{}{}
-				tx.Release() //-1
+				cachedTx.Release() // tx -1
 				continue
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
-			tx.Release() //-1
+			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+			cachedTx.Release() // tx -1
 		}
 	}
 	return tails, nil

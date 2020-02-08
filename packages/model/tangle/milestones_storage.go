@@ -93,17 +93,17 @@ func (c *CachedMilestone) GetMilestone() *Milestone {
 	return c.Get().(*Milestone)
 }
 
-// +1
+// milestone +1
 func GetCachedMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
 	return &CachedMilestone{milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex))}
 }
 
-// +-0
+// milestone +-0
 func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-// +1
+// milestone +1
 func StoreMilestone(milestone *Bundle) *CachedMilestone {
 	if milestone.IsMilestone() {
 		return &CachedMilestone{milestoneStorage.Store(&Milestone{

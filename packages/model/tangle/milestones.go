@@ -48,7 +48,8 @@ func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
 	maxMilestoneIndex = 1 << numberOfKeysInAMilestone
 }
 
-func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *Bundle {
+// bundle +1
+func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedBundle {
 
 	cachedMilestone := GetCachedMilestone(milestoneIndex) // cachedMilestone +1
 	defer cachedMilestone.Release()                       // cachedMilestone -1
@@ -57,16 +58,7 @@ func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *Bundle {
 		return nil
 	}
 
-	ms := cachedMilestone.GetMilestone()
-
-	tx := GetCachedTransaction(ms.Hash) // tx +1
-	defer tx.Release()                  // tx -1
-
-	if !tx.Exists() {
-		return nil
-	}
-
-	return GetBundleOfTailTransaction(tx.GetTransaction().Tx.Bundle, ms.Hash)
+	return GetBundleOfTailTransaction(cachedMilestone.GetMilestone().Hash)
 }
 
 func IsNodeSynced() bool {
@@ -158,7 +150,8 @@ func GetLatestMilestoneIndex() milestone_index.MilestoneIndex {
 	return 0
 }
 
-func FindClosestNextMilestone(index milestone_index.MilestoneIndex) (milestone *Bundle) {
+// bundle +1
+func FindClosestNextMilestone(index milestone_index.MilestoneIndex) (milestone *CachedBundle) {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// No milestone received yet, check the next 100 milestones as a workaround
@@ -172,119 +165,120 @@ func FindClosestNextMilestone(index milestone_index.MilestoneIndex) (milestone *
 			return nil
 		}
 
-		ms := GetMilestone(index)
-		if ms != nil {
-			return ms
+		cachedMs := GetMilestone(index) // bundle +1
+		if cachedMs != nil {
+			return cachedMs
 		}
 	}
 }
 
 func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
-	txIndex0 := bundle.GetTail() //+1
-	if txIndex0 == nil {
+	cachedTxIndex0 := bundle.GetTail() // tx +1
+	if cachedTxIndex0 == nil {
 		return false, nil
 	}
 
-	if !IsMaybeMilestone(txIndex0.Retain()) { //Pass +1
-		txIndex0.Release() //-1
+	if !IsMaybeMilestone(cachedTxIndex0.Retain()) { //Pass +1
+		cachedTxIndex0.Release() // tx -1
 		// Transaction is not issued by compass => no milestone
 		return false, nil
 	}
 
-	txIndex0Hash := txIndex0.GetTransaction().GetHash()
+	txIndex0Hash := cachedTxIndex0.GetTransaction().GetHash()
 
 	// Check the structure of the milestone
-	milestoneIndex := getMilestoneIndex(txIndex0.Retain()) //Pass +1
+	milestoneIndex := getMilestoneIndex(cachedTxIndex0.Retain()) //Pass +1
 	if milestoneIndex <= GetSolidMilestoneIndex() {
 		// Milestone older than solid milestone
-		txIndex0.Release() //-1
+		cachedTxIndex0.Release() // tx -1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0Hash)
 	}
 
 	if milestoneIndex >= maxMilestoneIndex {
-		txIndex0.Release() //-1
+		cachedTxIndex0.Release() // tx -1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0Hash)
 	}
 
 	// Check if milestone was already processed
-	msBundle := GetMilestone(milestoneIndex)
-	if msBundle != nil {
-		txIndex0.Release() //-1
+	cachedMs := GetMilestone(milestoneIndex) // bundle +1
+	if cachedMs != nil {
+		cachedTxIndex0.Release() // tx -1
+		cachedMs.Release()       // bundle -1
 		// It could be issued again since several transactions of the same bundle were processed in parallel
 		return false, nil
 	}
 
-	signatureTxs := CachedTransactions{}
-	signatureTxs = append(signatureTxs, txIndex0)
+	cachedSignatureTxs := CachedTransactions{}
+	cachedSignatureTxs = append(cachedSignatureTxs, cachedTxIndex0)
 
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
-		tx := GetCachedTransaction(signatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) //+1
-		if !tx.Exists() {
-			tx.Release()           //-1
-			signatureTxs.Release() //-1
+		cachedTx := GetCachedTransaction(cachedSignatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) // tx +1
+		if !cachedTx.Exists() {
+			cachedTx.Release()           // tx -1
+			cachedSignatureTxs.Release() // tx -1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 		}
 
-		if !IsMaybeMilestone(tx.Retain()) { //Pass +1
-			tx.Release() //-1
+		if !IsMaybeMilestone(cachedTx.Retain()) { //Pass +1
+			cachedTx.Release() // tx -1
 			// Transaction is not issued by compass => no milestone
-			signatureTxs.Release() //-1
+			cachedSignatureTxs.Release() // tx -1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", txIndex0Hash)
 		}
 
-		signatureTxs = append(signatureTxs, tx)
-		// tx will be released with signatureTxs
+		cachedSignatureTxs = append(cachedSignatureTxs, cachedTx)
+		// tx will be released with cachedSignatureTxs
 	}
 
-	defer signatureTxs.Release() //-1
+	defer cachedSignatureTxs.Release() // tx -1
 
-	siblingsTx := GetCachedTransaction(signatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) //+1
-	defer siblingsTx.Release()                                                                                        //-1
+	cachedSiblingsTx := GetCachedTransaction(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) // tx +1
+	defer cachedSiblingsTx.Release()                                                                                        // tx -1
 
-	if !siblingsTx.Exists() {
+	if !cachedSiblingsTx.Exists() {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 	}
 
-	if (siblingsTx.GetTransaction().Tx.Value != 0) || (siblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
+	if (cachedSiblingsTx.GetTransaction().Tx.Value != 0) || (cachedSiblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
 		// Transaction is not issued by compass => no milestone
 		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", txIndex0Hash)
 	}
 
-	for _, signatureTx := range signatureTxs {
-		if signatureTx.GetTransaction().Tx.BranchTransaction != siblingsTx.GetTransaction().Tx.TrunkTransaction {
+	for _, signatureTx := range cachedSignatureTxs {
+		if signatureTx.GetTransaction().Tx.BranchTransaction != cachedSiblingsTx.GetTransaction().Tx.TrunkTransaction {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", txIndex0Hash)
 		}
 	}
 
 	// Verify milestone signature
-	valid := validateMilestone(signatureTxs.Retain(), siblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, numberOfKeysInAMilestone, coordinatorAddress) //Pass +1 +1
+	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, numberOfKeysInAMilestone, coordinatorAddress) //Pass +1 +1
 	if !valid {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", txIndex0Hash)
 	}
 
-	bundle.SetMilestone(true)
+	bundle.setMilestone(true)
 
 	return true, nil
 }
 
 // Validates if the milestone has the correct signature
-func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransaction, milestoneIndex milestone_index.MilestoneIndex, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
+func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone_index.MilestoneIndex, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
-	defer signatureTxs.Release() //-1
-	defer siblingsTx.Release()   //-1
+	defer cachedSignatureTxs.Release() // tx -1
+	defer cachedSiblingsTx.Release()   // tx -1
 
 	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
 
 	// milestones sign the normalized hash of the sibling transaction.
-	normalizeBundleHash := signing.NormalizedBundleHash(siblingsTx.GetTransaction().GetHash())
+	normalizeBundleHash := signing.NormalizedBundleHash(cachedSiblingsTx.GetTransaction().GetHash())
 
 	for i := 0; i < int(securityLvl); i++ {
 		normalizedBundleHashFragments[i] = normalizeBundleHash[i*consts.KeySegmentsPerFragment : (i+1)*consts.KeySegmentsPerFragment]
 	}
 
-	digests := make(trinary.Trits, len(signatureTxs)*consts.HashTrinarySize)
-	for i := 0; i < len(signatureTxs); i++ {
-		signatureMessageFragmentTrits, err := trinary.TrytesToTrits(signatureTxs[i].GetTransaction().Tx.SignatureMessageFragment)
+	digests := make(trinary.Trits, len(cachedSignatureTxs)*consts.HashTrinarySize)
+	for i := 0; i < len(cachedSignatureTxs); i++ {
+		signatureMessageFragmentTrits, err := trinary.TrytesToTrits(cachedSignatureTxs[i].GetTransaction().Tx.SignatureMessageFragment)
 		if err != nil {
 			return false
 		}
@@ -302,7 +296,7 @@ func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransa
 		return false
 	}
 
-	siblingsTrits, err := transaction.TransactionToTrits(siblingsTx.GetTransaction().Tx)
+	siblingsTrits, err := transaction.TransactionToTrits(cachedSiblingsTx.GetTransaction().Tx)
 	if err != nil {
 		return false
 	}
@@ -328,15 +322,23 @@ func validateMilestone(signatureTxs CachedTransactions, siblingsTx *CachedTransa
 }
 
 // Checks if the the tx could be part of a milestone
-func IsMaybeMilestone(transaction *CachedTransaction) bool {
-	value := (transaction.GetTransaction().Tx.Value == 0) && (transaction.GetTransaction().Tx.Address == coordinatorAddress)
-	transaction.Release() //-1
+func IsMaybeMilestone(cachedTx *CachedTransaction) bool {
+	value := (cachedTx.GetTransaction().Tx.Value == 0) && (cachedTx.GetTransaction().Tx.Address == coordinatorAddress)
+	cachedTx.Release() // tx -1
+	return value
+}
+
+// Checks if the the tx could be part of a milestone
+func IsMaybeMilestoneTx(cachedTx *CachedTransaction) bool {
+	tx := cachedTx.GetTransaction().Tx
+	value := (tx.Value == 0) && ((tx.Address == coordinatorAddress) || (tx.Address == consts.NullHashTrytes))
+	cachedTx.Release() // tx -1
 	return value
 }
 
 // Returns Milestone index of the milestone
-func getMilestoneIndex(transaction *CachedTransaction) (milestoneIndex milestone_index.MilestoneIndex) {
-	value := milestone_index.MilestoneIndex(trinary.TrytesToInt(transaction.GetTransaction().Tx.ObsoleteTag))
-	transaction.Release() //-1
+func getMilestoneIndex(cachedTx *CachedTransaction) (milestoneIndex milestone_index.MilestoneIndex) {
+	value := milestone_index.MilestoneIndex(trinary.TrytesToInt(cachedTx.GetTransaction().Tx.ObsoleteTag))
+	cachedTx.Release() // tx -1
 	return value
 }

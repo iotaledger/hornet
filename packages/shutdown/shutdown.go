@@ -5,7 +5,7 @@ const (
 	ShutdownPriorityPersisters
 	ShutdownPriorityRequestsProcessor
 	ShutdownPriorityMilestoneSolidifier
-	ShutdownPriorityMilestoneChecker
+	ShutdownPriorityMilestoneProcessor
 	ShutdownPrioritySolidifierGossip
 	ShutdownPriorityReceiveTxWorker
 	ShutdownPriorityReplyProcessor

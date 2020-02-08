@@ -66,22 +66,22 @@ func (s *RequestQueue) GetStorageSize() int {
 	return s.requestedStorage.GetSize()
 }
 
-// +1
+// request +1
 func (s *RequestQueue) GetCachedRequest(transactionHash trinary.Hash) *CachedRequest {
 	return &CachedRequest{s.requestedStorage.Get(trinary.MustTrytesToBytes(transactionHash)[:49])}
 }
 
-// +-0
+// request +-0
 func (s *RequestQueue) ContainsRequest(transactionHash trinary.Hash) bool {
 	return s.requestedStorage.Contains(trinary.MustTrytesToBytes(transactionHash)[:49])
 }
 
-// +1
+// request +1
 func (s *RequestQueue) PutRequest(request *request) *CachedRequest {
 	return &CachedRequest{s.requestedStorage.Put(request)}
 }
 
-// +-0
+// request +-0
 func (s *RequestQueue) DeleteRequest(txHash trinary.Hash) {
 	s.requestedStorage.Delete(trinary.MustTrytesToBytes(txHash)[:49])
 }
@@ -92,15 +92,15 @@ func (s *RequestQueue) retryPending() {
 
 	for _, r := range s.pending {
 		if r.isReceived() {
-			r.cachedRequest.Release() // -1		// Request done, release consumer and delete
-			s.DeleteRequest(r.hash)   // +-0
+			r.cachedRequest.Release() // request -1		// Request done, release consumer and delete
+			s.DeleteRequest(r.hash)
 		} else {
 			if s.ContainsRequest(r.hash) { // Check if the request is still in the storage (there was a problem that deleted requests are still in pending)
 				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
 			} else {
-				r.cachedRequest.Release() // -1
-				s.DeleteRequest(r.hash)   // +-0
+				r.cachedRequest.Release() // request -1
+				s.DeleteRequest(r.hash)
 			}
 		}
 	}
@@ -127,8 +127,8 @@ func (s *RequestQueue) GetNext() ([]byte, trinary.Hash, milestone_index.Mileston
 			if request.isReceived() || request.isProcessed() {
 				// Remove from lifo since we received an answer for the request
 				s.lifo = append(s.lifo[:i], s.lifo[i+1:]...)
-				request.cachedRequest.Release() // -1		// Request done, release consumer and delete
-				s.DeleteRequest(request.hash)   // +-0
+				request.cachedRequest.Release() // request -1		// Request done, release consumer and delete
+				s.DeleteRequest(request.hash)
 				continue
 			}
 			request.updateTimes()
@@ -153,8 +153,8 @@ func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex,
 			if request.isReceived() || request.isProcessed() {
 				// Remove from lifo since we received an answer for the request
 				s.lifo = append(s.lifo[:i], s.lifo[i+1:]...)
-				request.cachedRequest.Release() // -1		// Request done, release consumer and delete
-				s.DeleteRequest(request.hash)   // +-0
+				request.cachedRequest.Release() // request -1		// Request done, release consumer and delete
+				s.DeleteRequest(request.hash)
 				continue
 			} else if request.msIndex < startIndex || request.msIndex > endIndex {
 				// Not in range, skip it
@@ -171,8 +171,8 @@ func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex,
 }
 
 func (s *RequestQueue) Contains(txHash trinary.Hash) (bool, milestone_index.MilestoneIndex) {
-	cachedRequest := s.GetCachedRequest(txHash) // +1
-	defer cachedRequest.Release()               // -1
+	cachedRequest := s.GetCachedRequest(txHash) // request +1
+	defer cachedRequest.Release()               // request -1
 
 	if !cachedRequest.Exists() {
 		return false, 0
@@ -182,7 +182,7 @@ func (s *RequestQueue) Contains(txHash trinary.Hash) (bool, milestone_index.Mile
 	return true, request.msIndex
 }
 
-func (s *RequestQueue) add(txHash trinary.Hash, ms milestone_index.MilestoneIndex, markRequested bool) bool {
+func (s *RequestQueue) add(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, markRequested bool) bool {
 
 	if len(txHash) == 0 {
 		return false
@@ -192,9 +192,9 @@ func (s *RequestQueue) add(txHash trinary.Hash, ms milestone_index.MilestoneInde
 		return false
 	}
 
-	request := newRequest(txHash, ms, markRequested)
+	request := newRequest(txHash, msIndex, markRequested)
 
-	request.cachedRequest = s.PutRequest(request) // +1		Consumer stays registered until request is done
+	request.cachedRequest = s.PutRequest(request) // request +1		Consumer stays registered until request is done
 	if markRequested {
 		s.pending = append(s.pending, request)
 	} else {
@@ -204,7 +204,7 @@ func (s *RequestQueue) add(txHash trinary.Hash, ms milestone_index.MilestoneInde
 	return true
 }
 
-func (s *RequestQueue) AddMulti(hashes trinary.Hashes, ms milestone_index.MilestoneIndex, markRequested bool) []bool {
+func (s *RequestQueue) AddMulti(hashes trinary.Hashes, msIndex milestone_index.MilestoneIndex, markRequested bool) []bool {
 	if len(hashes) == 0 {
 		return nil
 	}
@@ -214,16 +214,16 @@ func (s *RequestQueue) AddMulti(hashes trinary.Hashes, ms milestone_index.Milest
 
 	added := make([]bool, len(hashes))
 	for i, hash := range hashes {
-		added[i] = s.add(hash, ms, markRequested)
+		added[i] = s.add(hash, msIndex, markRequested)
 	}
 	return added
 }
 
-func (s *RequestQueue) Add(txHash trinary.Hash, ms milestone_index.MilestoneIndex, markRequested bool) bool {
+func (s *RequestQueue) Add(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, markRequested bool) bool {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.add(txHash, ms, markRequested)
+	return s.add(txHash, msIndex, markRequested)
 }
 
 func (s *RequestQueue) MarkReceived(txHash trinary.Hash) bool {
@@ -231,8 +231,8 @@ func (s *RequestQueue) MarkReceived(txHash trinary.Hash) bool {
 	s.Lock()
 	defer s.Unlock()
 
-	cachedRequest := s.GetCachedRequest(txHash) // +1
-	defer cachedRequest.Release()               // -1
+	cachedRequest := s.GetCachedRequest(txHash) // request +1
+	defer cachedRequest.Release()               // request -1
 
 	if cachedRequest.Exists() {
 		request := cachedRequest.GetRequest()
@@ -247,8 +247,8 @@ func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) bool {
 	s.Lock()
 	defer s.Unlock()
 
-	cachedRequest := s.GetCachedRequest(txHash) // +1
-	defer cachedRequest.Release()               // -1
+	cachedRequest := s.GetCachedRequest(txHash) // request +1
+	defer cachedRequest.Release()               // request -1
 
 	if cachedRequest.Exists() {
 		request := cachedRequest.GetRequest()

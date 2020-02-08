@@ -43,10 +43,10 @@ func configureTangleProcessor(plugin *node.Plugin) {
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
-	checkForMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		checkBundleForMilestone(task.Param(0).(*tangle.Bundle))
+	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+		processValidMilestone(task.Param(0).(*tangle.Bundle))
 		task.Return(nil)
-	}, workerpool.WorkerCount(checkForMilestoneWorkerCount), workerpool.QueueSize(checkForMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
+	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex))
@@ -58,6 +58,10 @@ func configureTangleProcessor(plugin *node.Plugin) {
 		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	}))
+
+	Events.TransactionSolid.Attach(events.NewClosure(onTransactionSolidEvent))
+	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
+	tangle.Events.ReceivedNewMilestone.Attach(events.NewClosure(onReceivedNewMilestone))
 }
 
 func runTangleProcessor(plugin *node.Plugin) {
@@ -81,14 +85,14 @@ func runTangleProcessor(plugin *node.Plugin) {
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.ShutdownPriorityReceiveTxWorker)
 
-	daemon.BackgroundWorker("TangleProcessor[CheckForMilestone]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting TangleProcessor[CheckForMilestone] ... done")
-		checkForMilestoneWorkerPool.Start()
+	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
+		processValidMilestoneWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping TangleProcessor[CheckForMilestone] ...")
-		checkForMilestoneWorkerPool.StopAndWait()
-		log.Info("Stopping TangleProcessor[CheckForMilestone] ... done")
-	}, shutdown.ShutdownPriorityMilestoneChecker)
+		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
+		processValidMilestoneWorkerPool.StopAndWait()
+		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
+	}, shutdown.ShutdownPriorityMilestoneProcessor)
 
 	daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
@@ -103,15 +107,19 @@ func runTangleProcessor(plugin *node.Plugin) {
 func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	txHash := incomingTx.GetHash()
-	transaction := tangle.GetCachedTransaction(txHash) //+1
+	transaction := tangle.GetCachedTransaction(txHash) // tx +1
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	bundlesAddedTo, alreadyAdded := tangle.AddTransactionToBundles(incomingTx)
-
+	alreadyAdded := tangle.AddTransactionToStorage(incomingTx)
 	if !alreadyAdded {
 
 		if !transaction.Exists() {
 			log.Panic("Transaction should have been added to storage!")
+		}
+
+		if transaction.GetTransaction().IsRequested() {
+			// Add new requests to the requestQueue (needed for sync)
+			gossip.RequestApprovees(transaction.Retain()) //Pass +1
 		}
 
 		server.SharedServerMetrics.IncrNewTransactionsCount()
@@ -124,51 +132,30 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 		}
 		Events.ReceivedNewTransaction.Trigger(transaction, latestMilestoneIndex, solidMilestoneIndex)
 
-		tangle.StoreApprover(transaction.GetTransaction().GetTrunk(), transaction.GetTransaction().GetHash()).Release()
-		tangle.StoreApprover(transaction.GetTransaction().GetBranch(), transaction.GetTransaction().GetHash()).Release()
-
-		for _, bundle := range bundlesAddedTo {
-			// this iteration might be true concurrently between different processIncomingTx()
-			// for the same bundle instance and bucket
-			if bundle.IsComplete() {
-
-				// validate the bundle
-				if bundle.IsValid() {
-					// in a value spam bundle, the address' mutation to the ledger is zero,
-					// thereby it is sufficient to simply check for negative balance mutations
-					// while iterating over the ledger changes for this bundle
-					ledgerChanges, isZeroValueBundle := bundle.GetLedgerChanges()
-					if !isZeroValueBundle {
-						for addr, change := range ledgerChanges {
-							if change < 0 {
-								seenSpentAddrs.Inc()
-								Events.AddressSpent.Trigger(addr)
-							}
-						}
-					} else {
-						// Milestone bundles itself do not mutate the ledger
-						// => Check bundle for a milestone
-						checkForMilestoneWorkerPool.Submit(bundle)
-					}
-				}
-				bundlesValidated.Inc()
-			}
-		}
 	} else {
 		Events.ReceivedKnownTransaction.Trigger(transaction)
 	}
 
-	if transaction.GetTransaction().IsRequested() {
-		// Add new requests to the requestQueue (needed for sync)
-		gossip.RequestApprovees(transaction.Retain()) //Pass +1
-	}
-
-	transaction.Release() //-1
+	transaction.Release() // tx -1
 
 	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
 	if queueEmpty {
 		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0))
 	}
+}
+
+func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
+	if cachedTx.GetTransaction().IsTail() {
+		tangle.OnTailTransactionSolid(cachedTx)
+	}
+}
+
+func onReceivedInvalidMilestone(err error) {
+	log.Info(err)
+}
+
+func onReceivedNewMilestone(bundle *tangle.Bundle) {
+	processValidMilestoneWorkerPool.Submit(bundle)
 }
 
 func printStatus() {

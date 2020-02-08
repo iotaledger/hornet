@@ -27,9 +27,10 @@ func SendMilestoneRequests(solidMilestoneIndex milestone_index.MilestoneIndex, k
 	msIndexesToRequest := []milestone_index.MilestoneIndex{}
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := solidMilestoneIndex + milestone_index.MilestoneIndex(i)
-		ms := tangle.GetMilestone(toReq)
+		cachedMs := tangle.GetMilestone(toReq) // bundle +1
 		// don't need to request as we have the milestone
-		if ms != nil {
+		if cachedMs != nil {
+			cachedMs.Release() // bundle -1
 			continue
 		}
 		msIndexesToRequest = append(msIndexesToRequest, toReq)

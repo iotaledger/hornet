@@ -157,14 +157,14 @@ func RequestApprovees(transaction *tangle.CachedTransaction) {
 func RequestMilestone(milestone *tangle.Bundle) bool {
 	var requested bool
 
-	milestoneHeadTx := milestone.GetHead() //+1
-	defer milestoneHeadTx.Release()        //-1
+	cachedMsHeadTx := milestone.GetHead() // tx +1
+	defer cachedMsHeadTx.Release()        // tx -1
 
 	reqMilestoneIndex := milestone.GetMilestoneIndex()
 
-	approveeHashes := []trinary.Hash{milestoneHeadTx.GetTransaction().GetTrunk()}
-	if milestoneHeadTx.GetTransaction().GetTrunk() != milestoneHeadTx.GetTransaction().GetBranch() {
-		approveeHashes = append(approveeHashes, milestoneHeadTx.GetTransaction().GetBranch())
+	approveeHashes := []trinary.Hash{cachedMsHeadTx.GetTransaction().GetTrunk()}
+	if cachedMsHeadTx.GetTransaction().GetTrunk() != cachedMsHeadTx.GetTransaction().GetBranch() {
+		approveeHashes = append(approveeHashes, cachedMsHeadTx.GetTransaction().GetBranch())
 	}
 
 	for _, approveeHash := range approveeHashes {

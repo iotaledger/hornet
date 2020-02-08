@@ -90,33 +90,33 @@ func run(plugin *node.Plugin) {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.config.Port)
 
-	notifyNewTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
-				transaction.Release() //-1
+				cachedTx.Release() // tx -1
 				return
 			}
 			wasSyncBefore = true
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(transaction) //Pass +1
+			_, added := newTxWorkerPool.TrySubmit(cachedTx) //Pass +1
 			if added {
 				return //Avoid Release()
 			}
 		}
-		transaction.Release() //-1
+		cachedTx.Release() // tx -1
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
+			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime)
 			if added {
 				return //Avoid Release()
 			}
 		}
-		transaction.Release() //-1
+		cachedTx.Release() // tx -1
 	})
 
 	notifyNewLatestMilestone := events.NewClosure(func(bundle *tanglePackage.Bundle) {
@@ -214,11 +214,11 @@ func run(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("MQTT[SpentAddress]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[SpentAddress] ... done")
-		tangle.Events.AddressSpent.Attach(notifySpentAddress)
+		tanglePackage.Events.AddressSpent.Attach(notifySpentAddress)
 		spentAddressWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping MQTT[SpentAddress] ...")
-		tangle.Events.AddressSpent.Detach(notifySpentAddress)
+		tanglePackage.Events.AddressSpent.Detach(notifySpentAddress)
 		spentAddressWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[SpentAddress] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)

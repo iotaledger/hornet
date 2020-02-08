@@ -60,13 +60,13 @@ func (r *request) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func newRequest(txHash trinary.Hash, ms milestone_index.MilestoneIndex, requested bool) *request {
+func newRequest(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, requested bool) *request {
 	txHashBytes := trinary.MustTrytesToBytes(txHash)[:49]
 
 	r := &request{
 		hash:      txHash,
 		hashBytes: txHashBytes,
-		msIndex:   ms,
+		msIndex:   msIndex,
 	}
 
 	if requested {

@@ -8,36 +8,22 @@ import (
 )
 
 var (
-	checkForMilestoneWorkerCount = 1 // This must not be done in parallel
-	checkForMilestoneQueueSize   = 10000
-	checkForMilestoneWorkerPool  *workerpool.WorkerPool
+	processValidMilestoneWorkerCount = 1 // This must not be done in parallel
+	processValidMilestoneQueueSize   = 10000
+	processValidMilestoneWorkerPool  *workerpool.WorkerPool
 )
-
-func checkBundleForMilestone(bundle *tangle.Bundle) {
-	isMilestone, err := tangle.CheckIfMilestone(bundle)
-	if err != nil {
-		log.Infof("Invalid milestone detected! Err: %s", err.Error())
-		return
-	}
-	if !isMilestone {
-		return
-	}
-
-	processValidMilestone(bundle)
-}
 
 func processValidMilestone(bundle *tangle.Bundle) {
 	Events.ReceivedNewMilestone.Trigger(bundle)
 
+	// ToDo: Is this still a thing?
 	// Mark all tx of a valid milestone as requested, so they get stored on eviction
 	// Warp sync milestone txs (via STING) are not requested by default => they would get lost
-	transactions := bundle.GetTransactions() //+1
-	for _, tx := range transactions {
-		tx.GetTransaction().SetRequested(true)
+	cachedTxs := bundle.GetTransactions() // tx +1
+	for _, cachedTx := range cachedTxs {
+		cachedTx.GetTransaction().SetRequested(true)
 	}
-	transactions.Release() //-1
-
-	tangle.StoreMilestone(bundle).Release()
+	cachedTxs.Release() // tx -1
 
 	solidMsIndex := tangle.GetSolidMilestoneIndex()
 	bundleMsIndex := bundle.GetMilestoneIndex()
