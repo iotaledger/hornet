@@ -18,15 +18,15 @@ var (
 )
 
 func TransactionCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx *CachedTransaction))(params[0].(*CachedTransaction).Retain())
+	handler.(func(cachedTx *CachedTransaction))(params[0].(*CachedTransaction).Retain())
 }
 
 func NewTransactionCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx *CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex))(params[0].(*CachedTransaction).Retain(), params[1].(milestone_index.MilestoneIndex), params[2].(milestone_index.MilestoneIndex))
+	handler.(func(cachedTx *CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex))(params[0].(*CachedTransaction).Retain(), params[1].(milestone_index.MilestoneIndex), params[2].(milestone_index.MilestoneIndex))
 }
 
 func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx *CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64))(params[0].(*CachedTransaction).Retain(), params[1].(milestone_index.MilestoneIndex), params[2].(int64))
+	handler.(func(cachedTx *CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64))(params[0].(*CachedTransaction).Retain(), params[1].(milestone_index.MilestoneIndex), params[2].(int64))
 }
 
 type CachedTransaction struct {
@@ -36,11 +36,11 @@ type CachedTransaction struct {
 type CachedTransactions []*CachedTransaction
 
 func (cachedTxs CachedTransactions) Retain() CachedTransactions {
-	result := CachedTransactions{}
+	cachedResult := CachedTransactions{}
 	for _, cachedTx := range cachedTxs {
-		result = append(result, cachedTx.Retain())
+		cachedResult = append(cachedResult, cachedTx.Retain())
 	}
-	return result
+	return cachedResult
 }
 
 func (cachedTxs CachedTransactions) Release() {

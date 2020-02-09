@@ -98,9 +98,9 @@ func configureFirstSeenTransactionPersister() {
 
 func runFirstSeenTransactionPersister() {
 
-	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 
-		transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 			// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 			// This is only used to delete unconfirmed transactions from the database at pruning
 			if !tx.IsRequested() {

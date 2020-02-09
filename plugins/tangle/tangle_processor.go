@@ -107,36 +107,36 @@ func runTangleProcessor(plugin *node.Plugin) {
 func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	txHash := incomingTx.GetHash()
-	transaction := tangle.GetCachedTransaction(txHash) // tx +1
+	cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
 	alreadyAdded := tangle.AddTransactionToStorage(incomingTx)
 	if !alreadyAdded {
 
-		if !transaction.Exists() {
+		if !cachedTx.Exists() {
 			log.Panic("Transaction should have been added to storage!")
 		}
 
-		if transaction.GetTransaction().IsRequested() {
+		if cachedTx.GetTransaction().IsRequested() {
 			// Add new requests to the requestQueue (needed for sync)
-			gossip.RequestApprovees(transaction.Retain()) //Pass +1
+			gossip.RequestApprovees(cachedTx.Retain()) //Pass +1
 		}
 
 		server.SharedServerMetrics.IncrNewTransactionsCount()
 
-		addressPersisterSubmit(transaction.GetTransaction().Tx.Address, transaction.GetTransaction().GetHash())
+		addressPersisterSubmit(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash())
 		latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = solidMilestoneIndex
 		}
-		Events.ReceivedNewTransaction.Trigger(transaction, latestMilestoneIndex, solidMilestoneIndex)
+		Events.ReceivedNewTransaction.Trigger(cachedTx, latestMilestoneIndex, solidMilestoneIndex)
 
 	} else {
-		Events.ReceivedKnownTransaction.Trigger(transaction)
+		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
-	transaction.Release() // tx -1
+	cachedTx.Release() // tx -1
 
 	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
 	if queueEmpty {

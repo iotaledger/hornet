@@ -247,15 +247,15 @@ func (bundle *Bundle) validate() bool {
 	// check all tx
 	iotaGoBundle := make(iotago_bundle.Bundle, len(bundle.txs))
 
-	cachedTxCurrent := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
-	lastIndex := int(cachedTxCurrent.GetTransaction().Tx.LastIndex)
-	iotaGoBundle[0] = *cachedTxCurrent.GetTransaction().Tx
-	cachedTxCurrent.Release() // tx -1
+	cachedCurrentTx := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
+	lastIndex := int(cachedCurrentTx.GetTransaction().Tx.LastIndex)
+	iotaGoBundle[0] = *cachedCurrentTx.GetTransaction().Tx
+	cachedCurrentTx.Release() // tx -1
 
 	for i := 1; i < lastIndex+1; i++ {
-		cachedTxCurrent = loadBundleTxIfExistsOrPanic(cachedTxCurrent.GetTransaction().GetTrunk(), bundle.hash) // tx +1
-		iotaGoBundle[i] = *cachedTxCurrent.GetTransaction().Tx
-		cachedTxCurrent.Release() // tx -1
+		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bundle.hash) // tx +1
+		iotaGoBundle[i] = *cachedCurrentTx.GetTransaction().Tx
+		cachedCurrentTx.Release() // tx -1
 	}
 
 	// validate bundle semantics and signatures

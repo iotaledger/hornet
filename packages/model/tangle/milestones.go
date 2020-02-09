@@ -151,7 +151,7 @@ func GetLatestMilestoneIndex() milestone_index.MilestoneIndex {
 }
 
 // bundle +1
-func FindClosestNextMilestone(index milestone_index.MilestoneIndex) (milestone *CachedBundle) {
+func FindClosestNextMilestone(index milestone_index.MilestoneIndex) *CachedBundle {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// No milestone received yet, check the next 100 milestones as a workaround

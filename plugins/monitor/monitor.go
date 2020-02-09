@@ -98,9 +98,9 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 	socketioServer.LeaveAllRooms(s)
 }
 
-func onNewTx(transaction *tangle.CachedTransaction) {
+func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		wsTx := &wsTransaction{
 			Hash:       tx.Tx.Hash,
 			Address:    tx.Tx.Address,
@@ -143,9 +143,9 @@ func onNewTx(transaction *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		if tx.Tx.CurrentIndex == 0 {
 			// Tail Tx => Check if this is a value Tx
 			cachedBndl := tangle.GetBundleOfTailTransaction(tx.Tx.Hash) // bundle +1

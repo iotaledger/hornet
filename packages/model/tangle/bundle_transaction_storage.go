@@ -112,11 +112,11 @@ type CachedBundleTransaction struct {
 type CachedBundleTransactions []*CachedBundleTransaction
 
 func (cachedBundleTransactions CachedBundleTransactions) Retain() CachedBundleTransactions {
-	result := CachedBundleTransactions{}
+	cachedResult := CachedBundleTransactions{}
 	for _, cachedBundleTransaction := range cachedBundleTransactions {
-		result = append(result, cachedBundleTransaction.Retain())
+		cachedResult = append(cachedResult, cachedBundleTransaction.Retain())
 	}
-	return result
+	return cachedResult
 }
 
 func (cachedBundleTransactions CachedBundleTransactions) Release() {
@@ -307,30 +307,30 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 		DeleteBundleTransaction(tx.Bundle, tx.Hash, true)
 		txsToRemove[tx.Hash] = struct{}{}
 
-		cachedTxCurrent := loadBundleTxIfExistsOrPanic(tx.Hash, tx.Bundle) // tx +1
+		cachedCurrentTx := loadBundleTxIfExistsOrPanic(tx.Hash, tx.Bundle) // tx +1
 
 		// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-		for !cachedTxCurrent.GetTransaction().IsHead() && cachedTxCurrent.GetTransaction().GetHash() != cachedTxCurrent.GetTransaction().GetTrunk() {
+		for !cachedCurrentTx.GetTransaction().IsHead() && cachedCurrentTx.GetTransaction().GetHash() != cachedCurrentTx.GetTransaction().GetTrunk() {
 
 			// check whether the trunk transaction is known to the bundle storage.
 			// this also ensures that the transaction has to be in the database
-			if !ContainsBundleTransaction(tx.Bundle, cachedTxCurrent.GetTransaction().GetTrunk(), false) {
-				panic(fmt.Sprintf("bundle %s has a reference to a non persisted transaction: %s", tx.Bundle, cachedTxCurrent.GetTransaction().GetTrunk()))
+			if !ContainsBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false) {
+				panic(fmt.Sprintf("bundle %s has a reference to a non persisted transaction: %s", tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()))
 			}
 
 			// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the bucket
-			if existApproversFromSameBundle(tx.Bundle, cachedTxCurrent.GetTransaction().GetTrunk()) {
-				cachedTxCurrent.Release() // tx -1
+			if existApproversFromSameBundle(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()) {
+				cachedCurrentTx.Release() // tx -1
 				return txsToRemove
 			}
 
-			DeleteBundleTransaction(tx.Bundle, cachedTxCurrent.GetTransaction().GetTrunk(), false)
-			txsToRemove[cachedTxCurrent.GetTransaction().GetTrunk()] = struct{}{}
-			cachedTxCurrent.Release() // tx -1
+			DeleteBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false)
+			txsToRemove[cachedCurrentTx.GetTransaction().GetTrunk()] = struct{}{}
+			cachedCurrentTx.Release() // tx -1
 
-			cachedTxCurrent = loadBundleTxIfExistsOrPanic(cachedTxCurrent.GetTransaction().GetTrunk(), tx.Bundle) // tx +1
+			cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), tx.Bundle) // tx +1
 		}
-		cachedTxCurrent.Release() // tx -1
+		cachedCurrentTx.Release() // tx -1
 
 	} else {
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the storage

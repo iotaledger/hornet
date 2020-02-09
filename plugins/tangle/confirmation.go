@@ -9,15 +9,15 @@ import (
 
 // confirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTail *tangle.CachedTransaction) {
+func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction) {
 
-	defer milestoneTail.Release()
+	defer cachedMsTailTx.Release()
 	ts := time.Now()
 
 	txsToConfirm := make(map[string]struct{})
 	txsToTraverse := make(map[string]struct{})
 	totalLedgerChanges := make(map[string]int64)
-	txsToTraverse[milestoneTail.GetTransaction().GetHash()] = struct{}{}
+	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -120,7 +120,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, milestoneTa
 		cachedTxs := cachedBndl.GetBundle().GetTransactions() // txs +1
 		for _, cachedBndlTx := range cachedTxs {
 			cachedBndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
-			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, milestoneTail.GetTransaction().GetTimestamp())
+			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
 		}
 		cachedTxs.Release()  // txs -1
 		cachedBndl.Release() //bundle -1

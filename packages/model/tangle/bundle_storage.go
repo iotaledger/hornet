@@ -152,11 +152,11 @@ type CachedBundle struct {
 type CachedBundles []*CachedBundle
 
 func (cachedBundles CachedBundles) Retain() CachedBundles {
-	result := CachedBundles{}
+	cachedResult := CachedBundles{}
 	for _, cachedBundle := range cachedBundles {
-		result = append(result, cachedBundle.Retain())
+		cachedResult = append(cachedResult, cachedBundle.Retain())
 	}
-	return result
+	return cachedResult
 }
 
 func (cachedBundles CachedBundles) Release() {
@@ -303,7 +303,7 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 	cachedTx = StoreTransaction(hornetTx)
 	defer cachedTx.Release()
 
-	// Store the tx in the bundleStorage
+	// Store the tx in the bundleTransactionsStorage
 	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release()
 
 	StoreApprover(cachedTx.GetTransaction().GetTrunk(), cachedTx.GetTransaction().GetHash()).Release()
@@ -390,31 +390,31 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.
-func constructBundle(bndl *Bundle, startTx *CachedTransaction) bool {
+func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
 	// This will be released while or after the loop as current
-	startTx.Retain() // tx +1
+	cachedStartTx.Retain() // tx +1
 
-	current := startTx
+	cachedCurrentTx := cachedStartTx
 
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-	for current.GetTransaction().GetHash() != current.GetTransaction().GetTrunk() && !bndl.isComplete() && !current.GetTransaction().IsHead() {
+	for cachedCurrentTx.GetTransaction().GetHash() != cachedCurrentTx.GetTransaction().GetTrunk() && !bndl.isComplete() && !cachedCurrentTx.GetTransaction().IsHead() {
 
 		// check whether the trunk transaction is known to the transaction storage.
-		if !ContainsTransaction(current.GetTransaction().GetTrunk()) {
-			current.Release() // tx -1
+		if !ContainsTransaction(cachedCurrentTx.GetTransaction().GetTrunk()) {
+			cachedCurrentTx.Release() // tx -1
 			return false
 		}
 
-		trunkTx := loadBundleTxIfExistsOrPanic(current.GetTransaction().GetTrunk(), bndl.hash) // tx +1
+		trunkTx := loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bndl.hash) // tx +1
 
 		// check whether trunk is in bundle instance already
-		if _, trunkAlreadyInBundle := bndl.txs[current.GetTransaction().GetTrunk()]; trunkAlreadyInBundle {
-			current.Release() // tx -1
-			current = trunkTx
+		if _, trunkAlreadyInBundle := bndl.txs[cachedCurrentTx.GetTransaction().GetTrunk()]; trunkAlreadyInBundle {
+			cachedCurrentTx.Release() // tx -1
+			cachedCurrentTx = trunkTx
 			continue
 		}
 
-		if trunkTx.GetTransaction().Tx.Bundle != startTx.GetTransaction().Tx.Bundle {
+		if trunkTx.GetTransaction().Tx.Bundle != cachedStartTx.GetTransaction().Tx.Bundle {
 			trunkTx.Release() // tx -1
 
 			// Tx has invalid structure, but is "complete"
@@ -431,11 +431,11 @@ func constructBundle(bndl *Bundle, startTx *CachedTransaction) bool {
 
 		// modify and advance to perhaps complete the bundle
 		bndl.SetModified(true)
-		current.Release() // tx -1
-		current = trunkTx
+		cachedCurrentTx.Release() // tx -1
+		cachedCurrentTx = trunkTx
 	}
 
-	current.Release() // tx -1
+	cachedCurrentTx.Release() // tx -1
 	return true
 }
 
