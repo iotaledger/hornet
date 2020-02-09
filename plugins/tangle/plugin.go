@@ -74,10 +74,11 @@ func configure(plugin *node.Plugin) {
 		log.Info("Syncing database to disk... done")
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
-	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(msBundle *tangle.Bundle) {
+	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		// notify neighbors about our new solid milestone index
 		gossip.SendHeartbeat()
-		gossip.SendMilestoneRequests(msBundle.GetMilestoneIndex(), tangle.GetLatestMilestoneIndex())
+		gossip.SendMilestoneRequests(cachedBndl.GetBundle().GetMilestoneIndex(), tangle.GetLatestMilestoneIndex())
+		cachedBndl.Release() // bundle -1
 	}))
 
 	Events.SnapshotMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone_index.MilestoneIndex) {

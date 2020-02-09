@@ -218,7 +218,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 
 				if newlySolid && tangle.IsNodeSynced() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) //Pass +1
+					gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
 				}
 
 				// Delete the tx from the map since it is solid
@@ -306,7 +306,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
 
-	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), signalChanMilestoneStopSolidification); !becameSolid { //Pass +1
+	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -327,7 +327,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 			log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, milestoneIndexToSolidify)
 
 			// No Milestones found in between => search an older milestone in the solid cone
-			if found, aborted := searchMissingMilestone(currentSolidIndex, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), maxMissingMilestoneSearchDepth, signalChanMilestoneStopSolidification); !found { //Pass +1
+			if found, aborted := searchMissingMilestone(currentSolidIndex, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), maxMissingMilestoneSearchDepth, signalChanMilestoneStopSolidification); !found { // tx pass +1
 				if aborted {
 					log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, milestoneIndexToSolidify)
 				} else {
@@ -347,10 +347,10 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex) {
 
 	tangle.WriteLockLedger()
 	defer tangle.WriteUnlockLedger()
-	confirmMilestone(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail()) //Pass +1
+	confirmMilestone(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail()) // tx pass +1
 
-	tangle.SetSolidMilestone(cachedMsToSolidify.GetBundle())
-	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify)
+	tangle.SetSolidMilestone(cachedMsToSolidify.Retain())    // bundle pass +1
+	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 	log.Infof("New solid milestone: %d", milestoneIndexToSolidify)
 
 	// Run check for next milestone
@@ -416,7 +416,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 					continue
 				}
 
-				if tangle.IsMaybeMilestone(cachedApproveeTx.Retain()) { //Pass +1
+				if tangle.IsMaybeMilestone(cachedApproveeTx.Retain()) { // tx pass +1
 					// This tx could belong to a milestone
 					// => load bundle, and start the milestone check
 
@@ -425,7 +425,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 						log.Panicf("searchMissingMilestone: Tx: %v, Bundle not found: %v", approveeHash, cachedApproveeTx.GetTransaction().Tx.Bundle)
 					}
 
-					isMilestone, err := tangle.CheckIfMilestone(cachedBndl.GetBundle())
+					isMilestone, err := tangle.CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
 					if err != nil {
 						log.Infof("searchMissingMilestone: Milestone check failed: %s", err.Error())
 					}
@@ -435,9 +435,9 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 						if (msIndex > solidMilestoneIndex) && (msIndex < startMilestoneIndex) {
 							// Milestone found!
 							milestoneFound = true
-							processValidMilestone(cachedBndl.GetBundle())
-							cachedApproveeTx.Release() // tx -1
-							cachedBndl.Release()       // bundle -1
+							processValidMilestone(cachedBndl.Retain()) // bundle pass +1
+							cachedApproveeTx.Release()                 // tx -1
+							cachedBndl.Release()                       // bundle -1
 							break
 						}
 					}

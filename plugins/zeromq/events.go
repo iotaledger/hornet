@@ -55,22 +55,24 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 	})
 }
 
-func onNewLatestMilestone(bundle *tangle.Bundle) {
-	err := publishLMI(bundle.GetMilestoneIndex())
+func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
+	err := publishLMI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
 		log.Error(err.Error())
 	}
-	err = publishLMHS(bundle.GetMilestoneHash())
+	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash())
 	if err != nil {
 		log.Error(err.Error())
 	}
+	cachedBndl.Release() // bundle -1
 }
 
-func onNewSolidMilestone(bundle *tangle.Bundle) {
-	err := publishLMSI(bundle.GetMilestoneIndex())
+func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
+	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
 		log.Error(err.Error())
 	}
+	cachedBndl.Release() // bundle -1
 }
 
 func onSpentAddress(addr trinary.Hash) {

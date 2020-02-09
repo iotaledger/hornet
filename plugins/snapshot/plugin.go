@@ -70,11 +70,12 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	notifyNewSolidMilestone := events.NewClosure(func(bundle *tangle.Bundle) {
+	notifyNewSolidMilestone := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		select {
-		case newSolidMilestoneSignal <- bundle.GetMilestoneIndex():
+		case newSolidMilestoneSignal <- cachedBndl.GetBundle().GetMilestoneIndex():
 		default:
 		}
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {

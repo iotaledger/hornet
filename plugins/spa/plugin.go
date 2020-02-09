@@ -68,8 +68,9 @@ func run(plugin *node.Plugin) {
 		wsSendWorkerPool.TrySubmit(tpsMetrics)
 	})
 
-	notifyNewMs := events.NewClosure(func(bndl *tangle.Bundle) {
-		wsSendWorkerPool.TrySubmit(bndl)
+	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {

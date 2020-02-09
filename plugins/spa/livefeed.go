@@ -51,8 +51,9 @@ func runLiveFeed() {
 		})
 	})
 
-	notifyLMChanged := events.NewClosure(func(bndl *tangle_model.Bundle) {
-		liveFeedWorkerPool.TrySubmit(bndl.GetMilestoneIndex())
+	notifyLMChanged := events.NewClosure(func(cachedBndl *tangle_model.CachedBundle) {
+		liveFeedWorkerPool.TrySubmit(cachedBndl.GetBundle().GetMilestoneIndex())
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("SPA[TxUpdater]", func(shutdownSignal <-chan struct{}) {

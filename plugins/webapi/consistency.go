@@ -117,7 +117,7 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		}
 
 		// Check below max depth
-		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { // tx pass +1
 			info := fmt.Sprint("tails are not consistent (below max depth): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			cachedBndl.Release() // bundle -1

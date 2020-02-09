@@ -25,6 +25,7 @@ func databaseKeyForBundle(tailTxHash trinary.Hash) []byte {
 func bundleFactory(key []byte) objectstorage.StorableObject {
 	return &Bundle{
 		tailTx: trinary.MustBytesToTrytes(key[:49], 81),
+		txs:    make(map[trinary.Hash]struct{}),
 	}
 }
 
@@ -42,7 +43,11 @@ func configureBundleStorage() {
 		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.EnableLeakDetection())
+		objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{
+			MaxConsumersPerObject: 20,
+			MaxConsumerHoldTime:   100 * time.Second,
+		}),
+	)
 }
 
 // ObjectStorage interface
@@ -131,6 +136,10 @@ func (bundle *Bundle) UnmarshalBinary(data []byte) error {
 	for i := 0; i < txCount; i++ {
 		bundle.txs[trinary.MustBytesToTrytes(data[offset:offset+49], 81)] = struct{}{}
 		offset += 49
+	}
+
+	if ledgerChangesCount > 0 {
+		bundle.ledgerChanges = make(map[trinary.Trytes]int64)
 	}
 
 	for i := 0; i < ledgerChangesCount; i++ {
@@ -311,14 +320,15 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 
 	// If the transaction is part of a milestone, the bundle must be created here
 	// Otherwise, bundles are created if tailTx become solid
-	if IsMaybeMilestoneTx(cachedTx) {
-		tryConstructBundle(cachedTx, false)
+	if IsMaybeMilestoneTx(cachedTx.Retain()) { // tx pass +1
+		tryConstructBundle(cachedTx.Retain(), false)
 	}
 
 	return false
 }
 
 func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
+	defer cachedTx.Release() // tx -1
 
 	if !isSolidTail && !cachedTx.GetTransaction().IsTail() {
 		// If Tx is not a tail, search all tailTx that reference this tx and try to create the bundles
@@ -326,11 +336,12 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		for _, tailTxHash := range tailTxHashes {
 			cachedTailTx := GetCachedTransaction(tailTxHash) // tx +1
 			if !cachedTailTx.Exists() {
-				cachedTailTx.Release()
+				cachedTailTx.Release() // tx -1
 				continue
 			}
 
-			tryConstructBundle(cachedTailTx, false)
+			tryConstructBundle(cachedTailTx.Retain(), false) // tx pass +1
+			cachedTailTx.Release()                           // tx -1
 		}
 		return
 	}
@@ -351,20 +362,22 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		bndl.headTx = cachedTx.GetTransaction().GetHash()
 	} else {
 		// lets try to complete the bundle by assigning txs into this bundle
-		if !constructBundle(bndl, cachedTx) {
+		if !constructBundle(bndl, cachedTx.Retain()) { // tx pass +1
 			if isSolidTail {
 				panic("Can't create bundle, but tailTx is solid")
 			}
-			cachedTx.Release() // tx -1
 			return
 		}
 	}
 
-	if bndl.validate() {
-		bndl.calcLedgerChanges()
+	cachedBndl := StoreBundle(bndl) // bundle +1
+	defer cachedBndl.Release()      // bundle -1
 
-		if !bndl.IsValueSpam() {
-			for addr, change := range bndl.GetLedgerChanges() {
+	if cachedBndl.GetBundle().validate() {
+		cachedBndl.GetBundle().calcLedgerChanges()
+
+		if !cachedBndl.GetBundle().IsValueSpam() {
+			for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
 				if change < 0 {
 					Events.AddressSpent.Trigger(addr)
 
@@ -373,26 +386,21 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 				}
 			}
 		} else {
-			if IsMaybeMilestone(bndl.GetTail()) {
-				isMilestone, err := CheckIfMilestone(bndl)
+			if IsMaybeMilestone(cachedBndl.GetBundle().GetTail()) { // tx pass +1
+				isMilestone, err := CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
 				if err != nil {
 					Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
 				} else if isMilestone {
-					StoreMilestone(bndl).Release()
-					Events.ReceivedNewMilestone.Trigger(bndl)
+					StoreMilestone(cachedBndl.Retain()).Release()     // bundle pass +1
+					Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
 				}
 			}
 		}
 	}
-
-	StoreBundle(bndl).Release()
-	cachedTx.Release() // tx -1
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.
 func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
-	// This will be released while or after the loop as current
-	cachedStartTx.Retain() // tx +1
 
 	cachedCurrentTx := cachedStartTx
 

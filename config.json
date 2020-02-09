@@ -4,35 +4,38 @@
     "custom": {
       "caches": {
         "approvers": {
-          "cacheTimeMs": 5000
+          "cacheTimeMs": 1500
         },
         "bundles": {
-          "cacheTimeMs": 5000
+          "cacheTimeMs": 1500
+        },
+        "bundletransactions": {
+          "cacheTimeMs": 500
         },
         "milestones": {
-          "cacheTimeMs": 5000
+          "cacheTimeMs": 1500
         },
         "transactions": {
-          "cacheTimeMs": 5000
+          "cacheTimeMs": 1500
         },
         "incomingTransactionFilter": {
-          "cacheTimeMs": 5000
+          "cacheTimeMs": 1500
         },
         "refsInvalidBundle": {
           "cacheTimeMs": 180000
         }
       },
       "badger": {
-        "levelOneSize": 268435456,
+        "levelOneSize": 67108864,
         "levelSizeMultiplier": 10,
-        "tableLoadingMode": 2,
-        "valueLogLoadingMode": 2,
-        "maxLevels": 7,
-        "maxTableSize": 67108864,
-        "numCompactors": 2,
-        "numLevelZeroTables": 5,
-        "numLevelZeroTablesStall": 10,
-        "numMemtables": 5,
+        "tableLoadingMode": 0,
+        "valueLogLoadingMode": 0,
+        "maxLevels": 5,
+        "maxTableSize": 16777216,
+        "numCompactors": 1,
+        "numLevelZeroTables": 1,
+        "numLevelZeroTablesStall": 2,
+        "numMemtables": 1,
         "bloomFalsePositive": 0.01,
         "blockSize": 4096,
         "syncWrites": false,
@@ -43,8 +46,8 @@
         "maxCacheSize": 50000000,
         "ZSTDCompressionLevel": 1,
         "CompressionType": 0,
-        "valueLogFileSize": 1073741823,
-        "valueLogMaxEntries": 1000000,
+        "valueLogFileSize": 33554431,
+        "valueLogMaxEntries": 250000,
         "valueThreshold": 32,
         "withTruncate": false,
         "logRotatesToFlush": 2,

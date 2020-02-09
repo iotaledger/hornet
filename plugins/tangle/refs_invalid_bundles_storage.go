@@ -52,7 +52,10 @@ func configureRefsAnInvalidBundleStorage() {
 		invalidBundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),
-		//objectstorage.EnableLeakDetection(),
+		objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{
+			MaxConsumersPerObject: 20,
+			MaxConsumerHoldTime:   100 * time.Second,
+		}),
 	)
 }
 

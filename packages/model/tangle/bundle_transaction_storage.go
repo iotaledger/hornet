@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -9,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/profile"
 )
 
 const (
@@ -47,14 +49,20 @@ func GetBundleTransactionsStorageSize() int {
 
 func configureBundleTransactionsStorage() {
 
+	opts := profile.GetProfile().Caches.BundleTransactions
+
 	bundleTransactionsStorage = objectstorage.New(
 		[]byte{DBPrefixBundleTransactions},
 		bundleTransactionFactory,
 		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
-		objectstorage.CacheTime(0),
+		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 1, 49), // BundleHash, IsTail, TxHash
-		objectstorage.EnableLeakDetection())
+		objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{
+			MaxConsumersPerObject: 20,
+			MaxConsumerHoldTime:   100 * time.Second,
+		}),
+	)
 }
 
 // Storable Object

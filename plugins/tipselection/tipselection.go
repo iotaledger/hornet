@@ -121,7 +121,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		}
 		cachedRefBundle = cachedBndl
 
-		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { // tx pass +1
 			cachedBndl.Release() // bundle -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is below max depth")
 		}
@@ -211,7 +211,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				cachedBndls := tangle.GetBundlesOfTransaction(cachedCandidateTx.GetTransaction().GetHash()) // bundle +1
 
 				// isn't in any bundle instance
-				if len(cachedBndls) == 0 {
+				if cachedBndls == nil {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndls.Release()       // bundle -1
@@ -223,9 +223,15 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				if len(cachedBndls) == 1 {
 					cachedBndl = cachedBndls[0]
 				} else {
-					cachedBndl = cachedBndls[int(b[0])%len(cachedBndls)]
-					cachedBndl.Retain()   // bundle +1
-					cachedBndls.Release() // bundle -1
+					randomIndex := int(b[0]) % len(cachedBndls)
+					cachedBndl = cachedBndls[randomIndex]
+
+					// Release unused bundles
+					for i := 0; i < len(cachedBndls); i++ {
+						if i != randomIndex {
+							cachedBndls[i].Release() // bundle -1
+						}
+					}
 				}
 
 				if cachedBndl == nil {
@@ -241,7 +247,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					cachedBndl.Release()        // bundle -1
 					continue
 				}
-				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { //Pass +1
+				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { // tx pass +1
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndl.Release()        // bundle -1

@@ -3,6 +3,7 @@ package profile
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/dgraph-io/badger/v2/options"
@@ -20,7 +21,7 @@ var (
 
 func GetProfile() *Profile {
 	once.Do(func() {
-		profileName := parameter.NodeConfig.GetString("useProfile")
+		profileName := strings.ToLower(parameter.NodeConfig.GetString("useProfile"))
 		if profileName == "auto" {
 			v, err := mem.VirtualMemory()
 			if err != nil {
@@ -77,6 +78,9 @@ var Profile8GB = &Profile{
 		Bundles: CacheOpts{
 			CacheTimeMs: 60000,
 		},
+		BundleTransactions: CacheOpts{
+			CacheTimeMs: 5000,
+		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 60000,
 		},
@@ -127,6 +131,9 @@ var Profile4GB = &Profile{
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 30000,
+		},
+		BundleTransactions: CacheOpts{
+			CacheTimeMs: 2500,
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 30000,
@@ -179,6 +186,9 @@ var Profile2GB = &Profile{
 		Bundles: CacheOpts{
 			CacheTimeMs: 5000,
 		},
+		BundleTransactions: CacheOpts{
+			CacheTimeMs: 500,
+		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 5000,
 		},
@@ -229,6 +239,9 @@ var Profile1GB = &Profile{
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 1500,
+		},
+		BundleTransactions: CacheOpts{
+			CacheTimeMs: 500,
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 1500,
@@ -281,6 +294,7 @@ type Profile struct {
 
 type Caches struct {
 	Bundles                   CacheOpts `json:"bundles"`
+	BundleTransactions        CacheOpts `json:"bundleTransactions"`
 	Approvers                 CacheOpts `json:"approvers"`
 	Milestones                CacheOpts `json:"milestones"`
 	Transactions              CacheOpts `json:"transactions"`
@@ -289,7 +303,7 @@ type Caches struct {
 }
 
 type CacheOpts struct {
-	CacheTimeMs  uint64 `json:"cacheTimeMs"`
+	CacheTimeMs uint64 `json:"cacheTimeMs"`
 }
 
 type BadgerOpts struct {

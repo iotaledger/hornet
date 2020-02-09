@@ -12,11 +12,11 @@ import (
 )
 
 func BundleCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx *Bundle))(params[0].(*Bundle))
+	handler.(func(cachedBndl *CachedBundle))(params[0].(*CachedBundle).Retain())
 }
 
 func BundlesCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx []*Bundle))(params[0].([]*Bundle))
+	handler.(func(cachedBndls CachedBundles))(params[0].(CachedBundles).Retain())
 }
 
 const (

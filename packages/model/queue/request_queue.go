@@ -43,7 +43,12 @@ func NewRequestQueue() *RequestQueue {
 			nil,
 			requestFactory,
 			objectstorage.CacheTime(0),
-			objectstorage.PersistenceEnabled(false)),
+			objectstorage.PersistenceEnabled(false),
+			//objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{
+			//	MaxConsumersPerObject: 20,
+			//	MaxConsumerHoldTime:   100 * time.Second,
+			//}),
+		),
 		ticker:     time.NewTicker(RequestQueueTickerInterval),
 		tickerDone: make(chan bool),
 	}

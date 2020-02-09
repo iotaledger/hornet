@@ -154,13 +154,15 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction) {
 
 // RequestMilestone requests trunk and branch of a milestone if they are missing
 // ToDo: add it to the requestsWorkerPool
-func RequestMilestone(milestone *tangle.Bundle) bool {
+func RequestMilestone(cachedMsBndl *tangle.CachedBundle) bool {
+	defer cachedMsBndl.Release() // bundle -1
+
 	var requested bool
 
-	cachedMsHeadTx := milestone.GetHead() // tx +1
-	defer cachedMsHeadTx.Release()        // tx -1
+	cachedMsHeadTx := cachedMsBndl.GetBundle().GetHead() // tx +1
+	defer cachedMsHeadTx.Release()                       // tx -1
 
-	reqMilestoneIndex := milestone.GetMilestoneIndex()
+	reqMilestoneIndex := cachedMsBndl.GetBundle().GetMilestoneIndex()
 
 	approveeHashes := []trinary.Hash{cachedMsHeadTx.GetTransaction().GetTrunk()}
 	if cachedMsHeadTx.GetTransaction().GetTrunk() != cachedMsHeadTx.GetTransaction().GetBranch() {

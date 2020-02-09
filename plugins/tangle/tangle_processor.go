@@ -44,7 +44,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
 	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processValidMilestone(task.Param(0).(*tangle.Bundle))
+		processValidMilestone(task.Param(0).(*tangle.CachedBundle)) // bundle pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -60,8 +60,8 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	}))
 
 	Events.TransactionSolid.Attach(events.NewClosure(onTransactionSolidEvent))
+	tangle.Events.ReceivedValidMilestone.Attach(events.NewClosure(onReceivedValidMilestone))
 	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
-	tangle.Events.ReceivedNewMilestone.Attach(events.NewClosure(onReceivedNewMilestone))
 }
 
 func runTangleProcessor(plugin *node.Plugin) {
@@ -119,7 +119,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 		if cachedTx.GetTransaction().IsRequested() {
 			// Add new requests to the requestQueue (needed for sync)
-			gossip.RequestApprovees(cachedTx.Retain()) //Pass +1
+			gossip.RequestApprovees(cachedTx.Retain()) // tx pass +1
 		}
 
 		server.SharedServerMetrics.IncrNewTransactionsCount()
@@ -150,12 +150,12 @@ func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
 	}
 }
 
-func onReceivedInvalidMilestone(err error) {
-	log.Info(err)
+func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
+	processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
 }
 
-func onReceivedNewMilestone(bundle *tangle.Bundle) {
-	processValidMilestoneWorkerPool.Submit(bundle)
+func onReceivedInvalidMilestone(err error) {
+	log.Info(err)
 }
 
 func printStatus() {

@@ -179,13 +179,14 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 	})
 }
 
-func onNewMilestone(bundle *tangle.Bundle) {
+func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 
-	cachedTailTx := bundle.GetTail() // tx +1
+	cachedTailTx := cachedBndl.GetBundle().GetTail() // tx +1
 	confTime := cachedTailTx.GetTransaction().GetTimestamp() * 1000
 	cachedTailTx.Release() // tx -1
 
-	cachedTxs := bundle.GetTransactions() // tx +1
+	cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
+	cachedBndl.Release()                                  // bundle -1
 
 	txRingBufferLock.Lock()
 	for _, cachedTx := range cachedTxs {

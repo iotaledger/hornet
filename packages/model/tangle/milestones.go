@@ -74,16 +74,18 @@ func updateNodeSynced(latestSolidIndex, latestIndex milestone_index.MilestoneInd
 	isNodeSynced = latestSolidIndex >= (latestIndex - NodeSyncedThreshold)
 }
 
-func SetSolidMilestone(bundle *Bundle) {
-	if bundle.IsSolid() {
+func SetSolidMilestone(cachedBndl *CachedBundle) {
+	defer cachedBndl.Release() // bundle -1
+
+	if cachedBndl.GetBundle().IsSolid() {
 		solidMilestoneLock.Lock()
-		if bundle.GetMilestoneIndex() < solidMilestoneIndex {
-			panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, bundle.GetMilestoneIndex()))
+		if cachedBndl.GetBundle().GetMilestoneIndex() < solidMilestoneIndex {
+			panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, cachedBndl.GetBundle().GetMilestoneIndex()))
 		} else {
-			solidMilestoneIndex = bundle.GetMilestoneIndex()
+			solidMilestoneIndex = cachedBndl.GetBundle().GetMilestoneIndex()
 		}
 		solidMilestoneLock.Unlock()
-		updateNodeSynced(bundle.GetMilestoneIndex(), GetLatestMilestoneIndex())
+		updateNodeSynced(cachedBndl.GetBundle().GetMilestoneIndex(), GetLatestMilestoneIndex())
 	}
 }
 
@@ -109,10 +111,12 @@ func GetSolidMilestoneIndex() milestone_index.MilestoneIndex {
 	return 0
 }
 
-func SetLatestMilestone(milestone *Bundle) error {
+func SetLatestMilestone(cachedBndl *CachedBundle) error {
+	defer cachedBndl.Release() // bundle -1
+
 	latestMilestoneLock.Lock()
 
-	index := milestone.GetMilestoneIndex()
+	index := cachedBndl.GetBundle().GetMilestoneIndex()
 
 	if latestMilestone != nil && latestMilestone.GetMilestoneIndex() >= index {
 		latestMilestoneLock.Unlock()
@@ -125,7 +129,7 @@ func SetLatestMilestone(milestone *Bundle) error {
 		err = FixFirstSeenTxHashOperations(index)
 	}
 
-	latestMilestone = milestone
+	latestMilestone = cachedBndl.GetBundle()
 	latestMilestoneLock.Unlock()
 
 	updateNodeSynced(GetSolidMilestoneIndex(), index)
@@ -172,13 +176,15 @@ func FindClosestNextMilestone(index milestone_index.MilestoneIndex) *CachedBundl
 	}
 }
 
-func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
-	cachedTxIndex0 := bundle.GetTail() // tx +1
+func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
+	defer cachedBndl.Release() // bundle -1
+
+	cachedTxIndex0 := cachedBndl.GetBundle().GetTail() // tx +1
 	if cachedTxIndex0 == nil {
 		return false, nil
 	}
 
-	if !IsMaybeMilestone(cachedTxIndex0.Retain()) { //Pass +1
+	if !IsMaybeMilestone(cachedTxIndex0.Retain()) { // tx pass +1
 		cachedTxIndex0.Release() // tx -1
 		// Transaction is not issued by compass => no milestone
 		return false, nil
@@ -187,7 +193,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	txIndex0Hash := cachedTxIndex0.GetTransaction().GetHash()
 
 	// Check the structure of the milestone
-	milestoneIndex := getMilestoneIndex(cachedTxIndex0.Retain()) //Pass +1
+	milestoneIndex := getMilestoneIndex(cachedTxIndex0.Retain()) // tx pass +1
 	if milestoneIndex <= GetSolidMilestoneIndex() {
 		// Milestone older than solid milestone
 		cachedTxIndex0.Release() // tx -1
@@ -219,7 +225,7 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 		}
 
-		if !IsMaybeMilestone(cachedTx.Retain()) { //Pass +1
+		if !IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
 			cachedTx.Release() // tx -1
 			// Transaction is not issued by compass => no milestone
 			cachedSignatureTxs.Release() // tx -1
@@ -251,12 +257,12 @@ func CheckIfMilestone(bundle *Bundle) (result bool, err error) {
 	}
 
 	// Verify milestone signature
-	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, numberOfKeysInAMilestone, coordinatorAddress) //Pass +1 +1
+	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, numberOfKeysInAMilestone, coordinatorAddress) // tx pass +2
 	if !valid {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", txIndex0Hash)
 	}
 
-	bundle.setMilestone(true)
+	cachedBndl.GetBundle().setMilestone(true)
 
 	return true, nil
 }
