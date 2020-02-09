@@ -1,9 +1,11 @@
 package mqtt
 
 import (
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	logger "github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
@@ -38,6 +40,10 @@ var (
 	newSolidMilestoneWorkerQueueSize = 100
 	newSolidMilestoneWorkerPool      *workerpool.WorkerPool
 
+	spentAddressWorkerCount     = 1
+	spentAddressWorkerQueueSize = 1000
+	spentAddressWorkerPool      *workerpool.WorkerPool
+
 	wasSyncBefore = false
 
 	mqttBroker *Broker
@@ -66,6 +72,11 @@ func configure(plugin *node.Plugin) {
 		onNewSolidMilestone(task.Param(0).(*tanglePackage.Bundle))
 		task.Return(nil)
 	}, workerpool.WorkerCount(newSolidMilestoneWorkerCount), workerpool.QueueSize(newSolidMilestoneWorkerQueueSize))
+
+	spentAddressWorkerPool = workerpool.New(func(task workerpool.Task) {
+		onSpentAddress(task.Param(0).(trinary.Hash))
+		task.Return(nil)
+	}, workerpool.WorkerCount(spentAddressWorkerCount), workerpool.QueueSize(spentAddressWorkerQueueSize))
 
 	var err error
 	mqttBroker, err = NewBroker()
@@ -121,6 +132,10 @@ func run(plugin *node.Plugin) {
 		}
 
 		newSolidMilestoneWorkerPool.TrySubmit(bundle)
+	})
+
+	notifySpentAddress := events.NewClosure(func(addr trinary.Hash) {
+		spentAddressWorkerPool.TrySubmit(addr)
 	})
 
 	daemon.BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
@@ -195,6 +210,17 @@ func run(plugin *node.Plugin) {
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[NewSolidMilestoneWorker] ... done")
+	}, shutdown.ShutdownPriorityMetricsPublishers)
+
+	daemon.BackgroundWorker("MQTT[SpentAddress]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting MQTT[SpentAddress] ... done")
+		tangle.Events.AddressSpent.Attach(notifySpentAddress)
+		spentAddressWorkerPool.Start()
+		<-shutdownSignal
+		log.Info("Stopping MQTT[SpentAddress] ...")
+		tangle.Events.AddressSpent.Detach(notifySpentAddress)
+		spentAddressWorkerPool.StopAndWait()
+		log.Info("Stopping MQTT[SpentAddress] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 }
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 type ExplorerTx struct {
@@ -130,17 +131,17 @@ func createExplorerTx(hash Hash, tx *tangle.CachedTransaction) (*ExplorerTx, err
 	return t, nil
 }
 
-type ExplorerAdress struct {
+type ExplorerAddress struct {
 	Balance uint64        `json:"balance"`
 	Txs     []*ExplorerTx `json:"txs"`
 	Spent   bool          `json:"spent"`
 }
 
 type SearchResult struct {
-	Tx        *ExplorerTx     `json:"tx"`
-	Address   *ExplorerAdress `json:"address"`
-	Bundles   [][]*ExplorerTx `json:"bundles"`
-	Milestone *ExplorerTx     `json:"milestone"`
+	Tx        *ExplorerTx      `json:"tx"`
+	Address   *ExplorerAddress `json:"address"`
+	Bundles   [][]*ExplorerTx  `json:"bundles"`
+	Milestone *ExplorerTx      `json:"milestone"`
 }
 
 func setupExplorerRoutes(routeGroup *echo.Group) {
@@ -296,7 +297,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	return expBndls, nil
 }
 
-func findAddress(hash Hash) (*ExplorerAdress, error) {
+func findAddress(hash Hash) (*ExplorerAddress, error) {
 	if len(hash) > 81 {
 		hash = hash[:81]
 	}
@@ -336,5 +337,10 @@ func findAddress(hash Hash) (*ExplorerAdress, error) {
 		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
 	}
 
-	return &ExplorerAdress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash)}, nil
+	spentState, err := permaspent.WereAddressesSpentFrom(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: spentState[0]}, nil
 }

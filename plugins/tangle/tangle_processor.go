@@ -29,7 +29,7 @@ var (
 	lastNewTPS      uint32
 	lastOutgoingTPS uint32
 
-	markedSpentAddrs atomic.Uint64
+	seenSpentAddrs   atomic.Uint64
 	bundlesValidated atomic.Uint64
 )
 
@@ -141,8 +141,8 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 					if !isZeroValueBundle {
 						for addr, change := range ledgerChanges {
 							if change < 0 {
-								tangle.MarkAddressAsSpent(addr)
-								markedSpentAddrs.Inc()
+								seenSpentAddrs.Inc()
+								Events.AddressSpent.Trigger(addr)
 							}
 						}
 					} else {
@@ -180,7 +180,7 @@ func printStatus() {
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"addrsMarked: %d, "+
+				"seenSpentAddrs: %d, "+
 				"bndlsValidated: %d, "+
 				"txReqs(Tx/Rx): %d/%d, "+
 				"newTxs: %d, "+
@@ -190,7 +190,7 @@ func printStatus() {
 			receiveTxWorkerPool.GetPendingQueueSize(),
 			tangle.GetSolidMilestoneIndex(),
 			tangle.GetLatestMilestoneIndex(),
-			markedSpentAddrs.Load(),
+			seenSpentAddrs.Load(),
 			bundlesValidated.Load(),
 			server.SharedServerMetrics.GetSentTransactionRequestCount(),
 			server.SharedServerMetrics.GetReceivedTransactionRequestCount(),

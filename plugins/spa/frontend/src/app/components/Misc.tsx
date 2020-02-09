@@ -111,21 +111,6 @@ export class Misc extends React.Component<Props, any> {
                     <Col>
                         <Card>
                             <Card.Body>
-                                <Card.Title>Spent Addresses</Card.Title>
-                                <small>
-                                    Shows the approximate amount of spent addresses persisted in the Cuckoo filter of
-                                    the node.
-                                </small>
-                                <Line height={60} data={this.props.nodeStore.spentAddrsSeries}
-                                      options={reqLineChartOptions}/>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col>
-                        <Card>
-                            <Card.Body>
                                 <Card.Title>Requests</Card.Title>
                                 <Line height={60} data={this.props.nodeStore.stingReqs}
                                       options={reqLineChartOptions}/>

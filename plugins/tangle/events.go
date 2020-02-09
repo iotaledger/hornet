@@ -16,6 +16,7 @@ var Events = pluginEvents{
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),
 	SnapshotMilestoneIndexChanged: events.NewEvent(milestone_index.MilestoneIndexCaller),
+	AddressSpent:                  events.NewEvent(events.StringCaller),
 }
 
 type pluginEvents struct {
@@ -28,4 +29,5 @@ type pluginEvents struct {
 	LatestMilestoneChanged        *events.Event
 	SolidMilestoneChanged         *events.Event
 	SnapshotMilestoneIndexChanged *events.Event
+	AddressSpent                  *events.Event
 }

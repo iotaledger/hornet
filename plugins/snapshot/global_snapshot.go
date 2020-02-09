@@ -17,41 +17,7 @@ import (
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
-func loadSpentAddresses(filePathSpent string) error {
-	log.Infof("Importing initial spent addresses from %v", filePathSpent)
-
-	spentFile, err := os.OpenFile(filePathSpent, os.O_RDONLY, 0666)
-	if err != nil {
-		return err
-	}
-	defer spentFile.Close()
-
-	var line string
-
-	ioReader := bufio.NewReader(spentFile)
-	for {
-		line, err = ioReader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-
-		address := line[:len(line)-1]
-		if err := trinary.ValidTrytes(address); err != nil {
-			return err
-		}
-
-		tangle.MarkAddressAsSpent(address)
-	}
-
-	log.Infof("Finished loading spent addresses from %v", filePathSpent)
-
-	return nil
-}
-
-func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
+func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
@@ -109,12 +75,6 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %s", err)
 	}
 
-	for _, spent := range filePathSpent {
-		if err := loadSpentAddresses(spent); err != nil {
-			return errors.Wrapf(ErrSnapshotImportFailed, "loadSpentAddresses: %v", err)
-		}
-	}
-
 	tangle.SetSnapshotMilestone(consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0)
 
 	log.Info("Finished loading snapshot")
@@ -127,11 +87,11 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 func LoadEmptySnapshot(filePathLedger string) error {
 
 	log.Info("Loading empty snapshot...")
-	return loadSnapshotFromTextfiles(filePathLedger, []string{}, 0)
+	return loadSnapshotFromTextfiles(filePathLedger, 0)
 }
 
-func LoadGlobalSnapshot(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
+func LoadGlobalSnapshot(filePathLedger string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	log.Infof("Loading global snapshot with index %v...", snapshotIndex)
-	return loadSnapshotFromTextfiles(filePathLedger, filePathSpent, snapshotIndex)
+	return loadSnapshotFromTextfiles(filePathLedger, snapshotIndex)
 }

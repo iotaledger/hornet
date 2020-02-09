@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/permaspent"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -39,6 +40,7 @@ func main() {
 			gracefulshutdown.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
+			permaspent.PLUGIN,
 			autopeering.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,

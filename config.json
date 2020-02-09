@@ -117,11 +117,6 @@
   "globalsnapshot": {
     "load": false,
     "path": "snapshotMainnet.txt",
-    "spentaddressespaths": [
-      "previousEpochsSpentAddresses1.txt",
-      "previousEpochsSpentAddresses2.txt",
-      "previousEpochsSpentAddresses3.txt"
-    ],
     "index": 1050000
   },
   "privatetangle": {
@@ -138,6 +133,15 @@
     "bindAddress": "127.0.0.1",
     "port": 4434,
     "apiPort": 4433
+  },
+  "permaspent": {
+    "thresholds": {
+      "noResponseTolerance": 0.25,
+      "quorum": 0.65
+    },
+    "nodes": [
+      "http://permaspent.manapotion.io"
+    ]
   },
   "mqtt": {
     "config": "mqtt_config.json"

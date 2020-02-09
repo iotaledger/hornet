@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	cuckoo "github.com/seiflotfy/cuckoofilter"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
@@ -25,10 +24,12 @@ import (
 )
 
 const (
-	SpentAddressesImportBatchSize            = 100000
-	SolidEntryPointCheckThresholdPast        = 50
-	SolidEntryPointCheckThresholdFuture      = 50
-	SupportedLocalSnapshotFileVersion   byte = 3
+	SolidEntryPointCheckThresholdPast   = 50
+	SolidEntryPointCheckThresholdFuture = 50
+)
+
+var (
+	SupportedLocalSnapshotFileVersions = []byte{3, 4}
 )
 
 var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
@@ -365,20 +366,15 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
-	tangle.ReadLockSpentAddresses()
-	defer tangle.ReadUnlockSpentAddresses()
-
 	targetMilestoneTail := targetMilestone.GetTail() //+1
 
 	lsh := &localSnapshotHeader{
-		msHash:              targetMilestone.GetTailHash(),
-		msIndex:             targetIndex,
-		msTimestamp:         targetMilestoneTail.GetTransaction().GetTimestamp(),
-		solidEntryPoints:    newSolidEntryPoints,
-		seenMilestones:      seenMilestones,
-		balances:            newBalances,
-		spentAddressesCount: tangle.CountSpentAddressesEntries(),
-		cuckooFilterBytes:   tangle.SerializedSpentAddressesCuckooFilter(),
+		msHash:           targetMilestone.GetTailHash(),
+		msIndex:          targetIndex,
+		msTimestamp:      targetMilestoneTail.GetTransaction().GetTimestamp(),
+		solidEntryPoints: newSolidEntryPoints,
+		seenMilestones:   seenMilestones,
+		balances:         newBalances,
 	}
 
 	filePathTmp := filePath + "_tmp"
@@ -426,20 +422,18 @@ func CreateLocalSnapshot(targetIndex milestone_index.MilestoneIndex, filePath st
 }
 
 type localSnapshotHeader struct {
-	msHash              string
-	msIndex             milestone_index.MilestoneIndex
-	msTimestamp         int64
-	solidEntryPoints    map[string]milestone_index.MilestoneIndex
-	seenMilestones      map[string]milestone_index.MilestoneIndex
-	balances            map[string]uint64
-	spentAddressesCount int32
-	cuckooFilterBytes   []byte
+	msHash           string
+	msIndex          milestone_index.MilestoneIndex
+	msTimestamp      int64
+	solidEntryPoints map[string]milestone_index.MilestoneIndex
+	seenMilestones   map[string]milestone_index.MilestoneIndex
+	balances         map[string]uint64
 }
 
 func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan struct{}) error {
 	var err error
 
-	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersion); err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersions[1]); err != nil {
 		return err
 	}
 
@@ -469,10 +463,6 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.balances))); err != nil {
-		return err
-	}
-
-	if err = binary.Write(buf, binary.LittleEndian, ls.spentAddressesCount); err != nil {
 		return err
 	}
 
@@ -540,13 +530,6 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 		}
 	}
 
-	if err := binary.Write(buf, binary.LittleEndian, int32(len(ls.cuckooFilterBytes))); err != nil {
-		return err
-	}
-	if err := binary.Write(buf, binary.LittleEndian, ls.cuckooFilterBytes); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -571,8 +554,15 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	if fileVersion != SupportedLocalSnapshotFileVersion {
-		return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %d", fileVersion, SupportedLocalSnapshotFileVersion)
+	var supported bool
+	for _, v := range SupportedLocalSnapshotFileVersions {
+		if v == fileVersion {
+			supported = true
+			break
+		}
+	}
+	if !supported {
+		return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", fileVersion, SupportedLocalSnapshotFileVersions)
 	}
 
 	hashBuf := make([]byte, 49)
@@ -618,8 +608,10 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &spentAddrsCount); err != nil {
-		return err
+	if fileVersion <= 3 {
+		if err := binary.Read(gzipReader, binary.LittleEndian, &spentAddrsCount); err != nil {
+			return err
+		}
 	}
 
 	log.Info("Importing solid entry points")
@@ -706,30 +698,6 @@ func LoadSnapshotFromFile(filePath string) error {
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 	}
-
-	log.Infof("Deserializing spent addresses cuckoo filter containing %d addresses.", spentAddrsCount)
-
-	// read serialized cuckoo filter byte size
-	var cuckooFilterSize int32
-	if err := binary.Read(gzipReader, binary.LittleEndian, &cuckooFilterSize); err != nil {
-		return errors.Wrapf(ErrSnapshotImportFailed, "couldn't deserialize cuckoo filter size: %v", err)
-	}
-
-	cuckooFilterData := make([]byte, cuckooFilterSize)
-	if err := binary.Read(gzipReader, binary.LittleEndian, &cuckooFilterData); err != nil {
-		return errors.Wrapf(ErrSnapshotImportFailed, "couldn't read serialized cuckoo filter bytes: %v", err)
-	}
-
-	cuckooFilter, err := cuckoo.Decode(cuckooFilterData)
-	if err != nil {
-		return errors.Wrapf(ErrSnapshotImportFailed, "couldn't reconstruct the cuckoo filter from the data within the snapshot file: %v", err)
-	}
-
-	if err := tangle.ImportSpentAddressesCuckooFilter(cuckooFilter); err != nil {
-		return err
-	}
-
-	tangle.InitSpentAddressesCuckooFilter()
 
 	log.Info("Finished loading snapshot")
 	return nil
