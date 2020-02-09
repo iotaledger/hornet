@@ -449,5 +449,5 @@ func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
 
 // Create a new bundle instance as soon as a tailTx gets solid
 func OnTailTransactionSolid(cachedTx *CachedTransaction) {
-	tryConstructBundle(cachedTx, true)
+	tryConstructBundle(cachedTx, true) // tx +-0 (it has +1 and will be released in tryConstructBundle)
 }

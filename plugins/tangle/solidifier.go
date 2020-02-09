@@ -67,7 +67,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction, addToApproversCache bool)
 	if isSolid {
 		// update the solidity flags of this transaction and its approvers
 		cachedTx.GetTransaction().SetSolid(true)
-		Events.TransactionSolid.Trigger(cachedTx)
+		Events.TransactionSolid.Trigger(cachedTx)	// tx pass +1
 	}
 
 	return isSolid, isSolid

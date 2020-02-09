@@ -146,8 +146,9 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
 	if cachedTx.GetTransaction().IsTail() {
-		tangle.OnTailTransactionSolid(cachedTx)
+		tangle.OnTailTransactionSolid(cachedTx.Retain())	// tx pass +1
 	}
+	cachedTx.Release() // tx -1
 }
 
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
