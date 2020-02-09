@@ -1,12 +1,13 @@
 package mqtt
 
 import (
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	logger "github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
@@ -40,7 +41,7 @@ var (
 	newSolidMilestoneWorkerPool      *workerpool.WorkerPool
 
 	spentAddressWorkerCount     = 1
-	spentAddressWorkerQueueSize = 100
+	spentAddressWorkerQueueSize = 1000
 	spentAddressWorkerPool      *workerpool.WorkerPool
 
 	wasSyncBefore = false

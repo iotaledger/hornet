@@ -10,9 +10,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/daemon"
 

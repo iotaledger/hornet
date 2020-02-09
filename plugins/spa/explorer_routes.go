@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gohornet/hornet/plugins/permaspent"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 
@@ -15,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 type ExplorerTx struct {

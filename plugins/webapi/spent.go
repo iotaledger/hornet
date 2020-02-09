@@ -5,11 +5,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/plugins/permaspent"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 func init() {
@@ -26,14 +27,6 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan st
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
-
-	/*
-	if !tangle.IsNodeSynced() {
-		e.Error = "Node not synced"
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-	*/
 
 	if len(sp.Addresses) == 0 {
 		e.Error = "No addresses provided"

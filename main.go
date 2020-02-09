@@ -5,7 +5,6 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/plugins/permaspent"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/plugins/autopeering"
@@ -16,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/permaspent"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
 	"github.com/gohornet/hornet/plugins/spammer"

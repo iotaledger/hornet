@@ -11,10 +11,13 @@ import (
 	"time"
 
 	"github.com/OneOfOne/xxhash"
-	"github.com/gohornet/hornet/packages/parameter"
+
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (

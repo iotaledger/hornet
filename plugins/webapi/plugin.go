@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/plugins/permaspent"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 // PLUGIN WebAPI
@@ -79,7 +79,7 @@ func configure(plugin *node.Plugin) {
 	if _, ok := permitedEndpoints["attachtotangle"]; ok {
 		features = append(features, "RemotePOW")
 	}
-	
+
 	if !node.IsSkipped(permaspent.PLUGIN) {
 		features = append(features, "WereAddressesSpentFrom")
 	}
