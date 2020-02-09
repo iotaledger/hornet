@@ -49,7 +49,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex))
+		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 
@@ -140,13 +140,13 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
 	if queueEmpty {
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0))
+		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 	}
 }
 
 func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
 	if cachedTx.GetTransaction().IsTail() {
-		tangle.OnTailTransactionSolid(cachedTx.Retain())	// tx pass +1
+		tangle.OnTailTransactionSolid(cachedTx.Retain()) // tx pass +1
 	}
 	cachedTx.Release() // tx -1
 }

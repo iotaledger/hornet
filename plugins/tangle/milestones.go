@@ -38,7 +38,7 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 		}
 
 		Events.LatestMilestoneChanged.Trigger(cachedBndl) // bundle pass +1
-		milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex)
+		milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex, false)
 	}
 
 	if bundleMsIndex > solidMsIndex {
