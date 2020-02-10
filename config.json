@@ -1,12 +1,12 @@
 {
-  "useProfile": "auto",
+  "useProfile": "custom",
   "profiles": {
     "custom": {
       "caches": {
         "approvers": {
           "cacheTimeMs": 1500,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -14,7 +14,7 @@
         "bundles": {
           "cacheTimeMs": 1500,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -22,7 +22,7 @@
         "bundletransactions": {
           "cacheTimeMs": 500,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -30,7 +30,7 @@
         "milestones": {
           "cacheTimeMs": 1500,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -38,7 +38,7 @@
         "transactions": {
           "cacheTimeMs": 1500,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -46,7 +46,7 @@
         "incomingTransactionFilter": {
           "cacheTimeMs": 1500,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -54,7 +54,7 @@
         "refsInvalidBundle": {
           "cacheTimeMs": 180000,
           "leakDetection": {
-            "enabled": false,
+            "enabled": true,
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
@@ -145,7 +145,7 @@
     "delay": 40000
   },
   "localsnapshots": {
-    "enabled": false,
+    "enabled": true,
     "depth": 50,
     "intervalsynced": 50,
     "intervalunsynced": 1000,

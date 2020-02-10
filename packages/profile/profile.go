@@ -422,57 +422,57 @@ var Profile1GB = &Profile{
 }
 
 type Profile struct {
-	Name   string     `json:"name"`
-	Caches Caches     `json:"caches"`
-	Badger BadgerOpts `json:"badger"`
+	Name   string     `mapstructure:"name"`
+	Caches Caches     `mapstructure:"caches"`
+	Badger BadgerOpts `mapstructure:"badger"`
 }
 
 type Caches struct {
-	Bundles                   CacheOpts `json:"bundles"`
-	BundleTransactions        CacheOpts `json:"bundleTransactions"`
-	Approvers                 CacheOpts `json:"approvers"`
-	Milestones                CacheOpts `json:"milestones"`
-	Transactions              CacheOpts `json:"transactions"`
-	IncomingTransactionFilter CacheOpts `json:"incomingTransactionFilter"`
-	RefsInvalidBundle         CacheOpts `json:"refsInvalidBundle"`
+	Bundles                   CacheOpts `mapstructure:"bundles"`
+	BundleTransactions        CacheOpts `mapstructure:"bundleTransactions"`
+	Approvers                 CacheOpts `mapstructure:"approvers"`
+	Milestones                CacheOpts `mapstructure:"milestones"`
+	Transactions              CacheOpts `mapstructure:"transactions"`
+	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`
+	RefsInvalidBundle         CacheOpts `mapstructure:"refsInvalidBundle"`
 }
 
 type CacheOpts struct {
-	CacheTimeMs          uint64            `json:"cacheTimeMs"`
-	LeakDetectionOptions LeakDetectionOpts `json:"leakDetection"`
+	CacheTimeMs          uint64            `mapstructure:"cacheTimeMs"`
+	LeakDetectionOptions LeakDetectionOpts `mapstructure:"leakDetection"`
 }
 
 type LeakDetectionOpts struct {
-	Enabled                bool   `json:"enabled"`
-	MaxConsumersPerObject  int    `json:"maxConsumersPerObject"`
-	MaxConsumerHoldTimeSec uint64 `json:"maxConsumerHoldTimeSec"`
+	Enabled                bool   `mapstructure:"enabled"`
+	MaxConsumersPerObject  int    `mapstructure:"maxConsumersPerObject"`
+	MaxConsumerHoldTimeSec uint64 `mapstructure:"maxConsumerHoldTimeSec"`
 }
 
 type BadgerOpts struct {
-	LevelOneSize            int64                   `json:"levelOneSize"`
-	LevelSizeMultiplier     int                     `json:"levelSizeMultiplier"`
-	TableLoadingMode        options.FileLoadingMode `json:"tableLoadingMode"`
-	ValueLogLoadingMode     options.FileLoadingMode `json:"valueLogLoadingMode"`
-	MaxLevels               int                     `json:"maxLevels"`
-	MaxTableSize            int64                   `json:"maxTableSize"`
-	NumCompactors           int                     `json:"numCompactors"`
-	NumLevelZeroTables      int                     `json:"numLevelZeroTables"`
-	NumLevelZeroTablesStall int                     `json:"numLevelZeroTablesStall"`
-	NumMemtables            int                     `json:"numMemtables"`
-	BloomFalsePositive      float64                 `json:"bloomFalsePositive"`
-	BlockSize               int                     `json:"blockSize"`
-	SyncWrites              bool                    `json:"syncWrites"`
-	NumVersionsToKeep       int                     `json:"numVersionsToKeep"`
-	CompactLevel0OnClose    bool                    `json:"compactLevel0OnClose"`
-	KeepL0InMemory          bool                    `json:"keepL0InMemory"`
-	VerifyValueChecksum     bool                    `json:"verifyValueChecksum"`
-	MaxCacheSize            int64                   `json:"maxCacheSize"`
-	ZSTDCompressionLevel    int                     `json:"ZSTDCompressionLevel"`
-	CompressionType         options.CompressionType `json:"CompressionType"`
-	ValueLogFileSize        int64                   `json:"valueLogFileSize"`
-	ValueLogMaxEntries      uint32                  `json:"valueLogMaxEntries"`
-	ValueThreshold          int                     `json:"valueThreshold"`
-	WithTruncate            bool                    `json:"withTruncate"`
-	LogRotatesToFlush       int32                   `json:"logRotatesToFlush"`
-	EventLogging            bool                    `json:"eventLogging"`
+	LevelOneSize            int64                   `mapstructure:"levelOneSize"`
+	LevelSizeMultiplier     int                     `mapstructure:"levelSizeMultiplier"`
+	TableLoadingMode        options.FileLoadingMode `mapstructure:"tableLoadingMode"`
+	ValueLogLoadingMode     options.FileLoadingMode `mapstructure:"valueLogLoadingMode"`
+	MaxLevels               int                     `mapstructure:"maxLevels"`
+	MaxTableSize            int64                   `mapstructure:"maxTableSize"`
+	NumCompactors           int                     `mapstructure:"numCompactors"`
+	NumLevelZeroTables      int                     `mapstructure:"numLevelZeroTables"`
+	NumLevelZeroTablesStall int                     `mapstructure:"numLevelZeroTablesStall"`
+	NumMemtables            int                     `mapstructure:"numMemtables"`
+	BloomFalsePositive      float64                 `mapstructure:"bloomFalsePositive"`
+	BlockSize               int                     `mapstructure:"blockSize"`
+	SyncWrites              bool                    `mapstructure:"syncWrites"`
+	NumVersionsToKeep       int                     `mapstructure:"numVersionsToKeep"`
+	CompactLevel0OnClose    bool                    `mapstructure:"compactLevel0OnClose"`
+	KeepL0InMemory          bool                    `mapstructure:"keepL0InMemory"`
+	VerifyValueChecksum     bool                    `mapstructure:"verifyValueChecksum"`
+	MaxCacheSize            int64                   `mapstructure:"maxCacheSize"`
+	ZSTDCompressionLevel    int                     `mapstructure:"ZSTDCompressionLevel"`
+	CompressionType         options.CompressionType `mapstructure:"CompressionType"`
+	ValueLogFileSize        int64                   `mapstructure:"valueLogFileSize"`
+	ValueLogMaxEntries      uint32                  `mapstructure:"valueLogMaxEntries"`
+	ValueThreshold          int                     `mapstructure:"valueThreshold"`
+	WithTruncate            bool                    `mapstructure:"withTruncate"`
+	LogRotatesToFlush       int32                   `mapstructure:"logRotatesToFlush"`
+	EventLogging            bool                    `mapstructure:"eventLogging"`
 }
