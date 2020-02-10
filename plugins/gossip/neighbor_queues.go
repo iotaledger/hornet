@@ -335,7 +335,7 @@ func processReplies(reply *replyItem) {
 				return
 			}
 
-			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compress
+			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compressed
 			// This reduces the outgoing traffic if we are not sync
 
 			cachedGenesisTx := tangle.GetCachedTransaction(consts.NullHashTrytes) // tx +1
