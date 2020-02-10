@@ -58,7 +58,7 @@ func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedBundle {
 		return nil
 	}
 
-	return GetBundleOfTailTransaction(cachedMilestone.GetMilestone().Hash)
+	return GetBundleOfTailTransactionOrNil(cachedMilestone.GetMilestone().Hash)
 }
 
 func IsNodeSynced() bool {

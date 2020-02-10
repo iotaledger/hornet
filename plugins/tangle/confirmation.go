@@ -69,7 +69,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 			txBundle := cachedTx.GetTransaction().Tx.Bundle
 			cachedTx.Release() // tx -1
 
-			cachedBndl := tangle.GetBundleOfTailTransaction(txHash) // bundle +1
+			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(txHash) // bundle +1
 			if cachedBndl == nil {
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
@@ -111,7 +111,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 
 		// confirm all txs of the bundle
 		// we are only iterating over tail txs
-		cachedBndl := tangle.GetBundleOfTailTransaction(txHash) // bundle +1
+		cachedBndl := tangle.GetBundleOfTailTransactionOrNil(txHash) // bundle +1
 		if cachedBndl == nil {
 			log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, cachedTx.GetTransaction().Tx.Bundle)
 		}

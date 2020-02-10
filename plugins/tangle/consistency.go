@@ -135,7 +135,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				continue
 			}
 
-			cachedBndl := tangle.GetBundleOfTailTransaction(cachedTx.GetTransaction().GetHash()) // bundle +1
+			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
 			if cachedBndl == nil {
 				cachedTx.Release() // tx -1
 				return nil, ErrRefBundleNotComplete

@@ -94,8 +94,8 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		cachedBndl := tangle.GetBundleOfTailTransaction(cachedTx.GetTransaction().GetHash()) // bundle +1
-		cachedTx.Release()                                                                   // tx -1
+		cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
+		cachedTx.Release()                                                                        // tx -1
 
 		if cachedBndl == nil {
 			info := fmt.Sprint("tails are not consistent (bundle not found): ", t)

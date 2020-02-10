@@ -148,7 +148,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		if tx.Tx.CurrentIndex == 0 {
 			// Tail Tx => Check if this is a value Tx
-			cachedBndl := tangle.GetBundleOfTailTransaction(tx.Tx.Hash) // bundle +1
+			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(tx.Tx.Hash) // bundle +1
 			if cachedBndl != nil {
 				if !cachedBndl.GetBundle().IsValueSpam() {
 					ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()

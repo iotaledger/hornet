@@ -242,9 +242,9 @@ func GetBundles(bundleHash trinary.Hash) CachedBundles {
 	return cachedBndls
 }
 
-// GetBundleOfTailTransaction gets the bundle this tail transaction is present in or nil.
+// GetBundleOfTailTransactionOrNil gets the bundle this tail transaction is present in or nil.
 // bundle +1
-func GetBundleOfTailTransaction(tailTxHash trinary.Hash) *CachedBundle {
+func GetBundleOfTailTransactionOrNil(tailTxHash trinary.Hash) *CachedBundle {
 
 	cachedBndl := GetCachedBundle(tailTxHash) // bundle +1
 	if !cachedBndl.Exists() {
@@ -255,13 +255,13 @@ func GetBundleOfTailTransaction(tailTxHash trinary.Hash) *CachedBundle {
 	return cachedBndl
 }
 
-// GetBundlesOfTransaction gets all bundle instances in which this transaction is present.
+// GetBundlesOfTransactionOrNil gets all bundle instances in which this transaction is present.
 // A transaction can be in multiple bundle instances simultaneously
 // due to the nature of reattached transactions being able to form infinite amount of bundles
 // which attach to the same underlying bundle transaction. For example it is possible to reattach
 // a bundle's tail transaction directly "on top" of the origin one.
 // bundle +1
-func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
+func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 	var cachedBndls CachedBundles
 
@@ -272,7 +272,7 @@ func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
 	}
 
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl := GetBundleOfTailTransaction(txHash) // bundle +1
+		cachedBndl := GetBundleOfTailTransactionOrNil(txHash) // bundle +1
 		if cachedBndl == nil {
 			return nil
 		}
@@ -281,7 +281,7 @@ func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
 
 	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, txHash)
 	for _, tailTxHash := range tailTxHashes {
-		cachedBndl := GetBundleOfTailTransaction(tailTxHash) // bundle +1
+		cachedBndl := GetBundleOfTailTransactionOrNil(tailTxHash) // bundle +1
 		if cachedBndl == nil {
 			continue
 		}
