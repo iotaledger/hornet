@@ -65,9 +65,11 @@ func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction
 }
 
 func transactionFactory(key []byte) objectstorage.StorableObject {
-	return &hornet.Transaction{
-		TxHash: key,
+	tx := &hornet.Transaction{
+		TxHash: make([]byte, len(key)),
 	}
+	copy(tx.TxHash, key)
+	return tx
 }
 
 func GetTransactionStorageSize() int {

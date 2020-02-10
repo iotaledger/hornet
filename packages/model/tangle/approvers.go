@@ -31,10 +31,13 @@ func (c *CachedApprover) GetApprover() *hornet.Approver {
 }
 
 func approversFactory(key []byte) objectstorage.StorableObject {
-	return &hornet.Approver{
-		TxHash: key[:49],
-		Hash:   key[49:],
+	approver := &hornet.Approver{
+		TxHash: make([]byte, 49),
+		Hash:   make([]byte, 49),
 	}
+	copy(approver.TxHash, key[:49])
+	copy(approver.Hash, key[49:])
+	return approver
 }
 
 func GetApproversStorageSize() int {

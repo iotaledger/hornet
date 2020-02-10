@@ -109,7 +109,9 @@ func (c *CachedRequest) GetRequest() *request {
 }
 
 func requestFactory(key []byte) objectstorage.StorableObject {
-	return &request{
-		hashBytes: key,
+	req := &request{
+		hashBytes: make([]byte, len(key)),
 	}
+	copy(req.hashBytes, key)
+	return req
 }

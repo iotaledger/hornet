@@ -36,11 +36,15 @@ func databaseKeyForBundleTransaction(bundleHash trinary.Hash, txHash trinary.Has
 }
 
 func bundleTransactionFactory(key []byte) objectstorage.StorableObject {
-	return &BundleTransaction{
-		BundleHash: key[:49],
+	bundleTx := &BundleTransaction{
+		BundleHash: make([]byte, 49),
 		IsTail:     key[49] == BUNDLE_TX_IS_TAIL,
-		TxHash:     key[50:],
+		TxHash:     make([]byte, 49),
 	}
+	copy(bundleTx.BundleHash, key[:49])
+	copy(bundleTx.TxHash, key[50:])
+
+	return bundleTx
 }
 
 func GetBundleTransactionsStorageSize() int {
