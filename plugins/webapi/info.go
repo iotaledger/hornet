@@ -38,10 +38,8 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
 	if cachedLatestMs != nil {
 		cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
-		if cachedMsTailTx != nil {
-			info.LatestMilestone = cachedMsTailTx.GetTransaction().GetHash()
-			cachedMsTailTx.Release() // tx -1
-		}
+		info.LatestMilestone = cachedMsTailTx.GetTransaction().GetHash()
+		cachedMsTailTx.Release() // tx -1
 		cachedLatestMs.Release() // bundle -1
 	}
 
@@ -55,10 +53,8 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1
 	if cachedSolidMs != nil {
 		cachedMsTailTx := cachedSolidMs.GetBundle().GetTail() // tx +1
-		if cachedMsTailTx != nil {
-			cachedMsTailTx.Release() // tx -1
-			info.LatestSolidSubtangleMilestone = cachedMsTailTx.GetTransaction().GetHash()
-		}
+		cachedMsTailTx.Release()                              // tx -1
+		info.LatestSolidSubtangleMilestone = cachedMsTailTx.GetTransaction().GetHash()
 		cachedSolidMs.Release() // bundle -1
 	}
 
