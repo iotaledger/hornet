@@ -240,13 +240,11 @@ func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
 	if cachedMs == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
+	defer cachedMs.Release() // bundle -1
 
-	cachedTailTx := cachedMs.GetBundle().GetTail()                                              // tx +1
-	tx, err := createExplorerTx(cachedTailTx.GetTransaction().GetHash(), cachedTailTx.Retain()) // tx pass +1
-	cachedTailTx.Release()                                                                      // tx -1
-	cachedMs.Release()                                                                          // bundle -1
-
-	return tx, err
+	cachedTailTx := cachedMs.GetBundle().GetTail()                                          // tx +1
+	defer cachedTailTx.Release()                                                            // tx -1
+	return createExplorerTx(cachedTailTx.GetTransaction().GetHash(), cachedTailTx.Retain()) // tx pass +1
 }
 
 func findTransaction(hash Hash) (*ExplorerTx, error) {
@@ -255,13 +253,12 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 	}
 
 	cachedTx := tangle.GetCachedTransaction(hash) // tx +1
+	defer cachedTx.Release()                      // tx -1
 	if !cachedTx.Exists() {
-		cachedTx.Release() // tx -1
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
 	t, err := createExplorerTx(hash, cachedTx.Retain()) // tx pass +1
-	cachedTx.Release()
 	return t, err
 }
 
@@ -274,6 +271,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	if len(cachedBndls) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "bundle %s unknown", hash)
 	}
+	defer cachedBndls.Release() // bundle -1
 
 	expBndls := [][]*ExplorerTx{}
 	for _, cachedBndl := range cachedBndls {
@@ -282,8 +280,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		for _, cachedTx := range cachedTxs {
 			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
 			if err != nil {
-				cachedTxs.Release()   // tx -1
-				cachedBndls.Release() // bundle -1
+				cachedTxs.Release() // tx -1
 				return nil, err
 			}
 			sl = append(sl, expTx)
@@ -291,7 +288,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		cachedTxs.Release() // tx -1
 		expBndls = append(expBndls, sl)
 	}
-	cachedBndls.Release() // bundle -1
+	
 	return expBndls, nil
 }
 
