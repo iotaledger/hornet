@@ -179,9 +179,9 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 					totalLedgerChanges[address] += change
 				}
 
-				bundleHead := cachedBndl.GetBundle().GetHead() // tx +1
-				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTx.GetTransaction().Tx.Bundle, TailTxHash: cachedBndl.GetBundle().GetTailHash(), Txs: txsWithValue, LastIndex: bundleHead.GetTransaction().Tx.CurrentIndex})
-				bundleHead.Release() // tx -1
+				cachedBundleHeadTx := cachedBndl.GetBundle().GetHead() // tx +1
+				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTx.GetTransaction().Tx.Bundle, TailTxHash: cachedBndl.GetBundle().GetTailHash(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
+				cachedBundleHeadTx.Release() // tx -1
 			}
 			cachedTx.Release()   // tx -1
 			cachedBndl.Release() // bundle -1
