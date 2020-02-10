@@ -61,7 +61,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		msWalkStartIndex = lastSolidIndex
 	}
 
-	cachedMs := tangle.GetMilestone(msWalkStartIndex) // bundle +1
+	cachedMs := tangle.GetMilestoneOrNil(msWalkStartIndex) // bundle +1
 	if cachedMs == nil {
 		return nil, nil, errors.Wrapf(ErrMilestoneNotFound, "index: %d", msWalkStartIndex)
 	}

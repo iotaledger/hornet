@@ -374,7 +374,7 @@ func processReplies(reply *replyItem) {
 			reply.neighborRequest.reqMilestoneIndex = tangle.GetLatestMilestoneIndex()
 		}
 
-		cachedReqMs := tangle.GetMilestone(reply.neighborRequest.reqMilestoneIndex) // bundle +1
+		cachedReqMs := tangle.GetMilestoneOrNil(reply.neighborRequest.reqMilestoneIndex) // bundle +1
 		if cachedReqMs == nil {
 			// We don't have the requested milestone => no need to reply
 			return

@@ -49,7 +49,7 @@ func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
 }
 
 // bundle +1
-func GetMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedBundle {
+func GetMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedBundle {
 
 	cachedMilestone := GetCachedMilestone(milestoneIndex) // cachedMilestone +1
 	defer cachedMilestone.Release()                       // cachedMilestone -1
@@ -169,7 +169,7 @@ func FindClosestNextMilestone(index milestone_index.MilestoneIndex) *CachedBundl
 			return nil
 		}
 
-		cachedMs := GetMilestone(index) // bundle +1
+		cachedMs := GetMilestoneOrNil(index) // bundle +1
 		if cachedMs != nil {
 			return cachedMs
 		}
@@ -206,7 +206,7 @@ func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
 	}
 
 	// Check if milestone was already processed
-	cachedMs := GetMilestone(milestoneIndex) // bundle +1
+	cachedMs := GetMilestoneOrNil(milestoneIndex) // bundle +1
 	if cachedMs != nil {
 		cachedTxIndex0.Release() // tx -1
 		cachedMs.Release()       // bundle -1

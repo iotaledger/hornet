@@ -141,7 +141,7 @@ var (
 
 // tx +1
 func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
-	cachedMs := tangle.GetMilestone(index) // bundle +1
+	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
 	if cachedMs == nil {
 		return nil
 	}

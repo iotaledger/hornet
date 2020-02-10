@@ -146,7 +146,7 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		ts := time.Now()
 		txCount := pruneUnconfirmedTransactions(milestoneIndex)
 
-		cachedMs := tangle.GetMilestone(milestoneIndex) // bundle +1
+		cachedMs := tangle.GetMilestoneOrNil(milestoneIndex) // bundle +1
 		if cachedMs == nil {
 			log.Panicf("Milestone (%d) not found!", milestoneIndex)
 		}

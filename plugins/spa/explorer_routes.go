@@ -236,7 +236,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 }
 
 func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
-	cachedMs := tangle.GetMilestone(index) // bundle +1
+	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
 	if cachedMs == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}

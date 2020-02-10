@@ -89,7 +89,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 
 func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confirmedTxWithValue []*TxHashWithValue, confirmedBundlesWithValue []*BundleWithValue, totalLedgerChanges map[string]int64, err error) {
 
-	cachedReqMs := tangle.GetMilestone(milestoneIndex) // bundle +1
+	cachedReqMs := tangle.GetMilestoneOrNil(milestoneIndex) // bundle +1
 	if cachedReqMs == nil {
 		return nil, nil, nil, errors.New("milestone not found")
 	}

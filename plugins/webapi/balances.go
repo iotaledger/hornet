@@ -52,7 +52,7 @@ func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
-	cachedLatestSolidMs := tangle.GetMilestone(tangle.GetSolidMilestoneIndex()) // bundle +1
+	cachedLatestSolidMs := tangle.GetMilestoneOrNil(tangle.GetSolidMilestoneIndex()) // bundle +1
 	if cachedLatestSolidMs == nil {
 		e.Error = "Ledger state invalid - Milestone not found"
 		c.JSON(http.StatusInternalServerError, e)
