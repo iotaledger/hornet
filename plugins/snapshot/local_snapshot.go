@@ -341,8 +341,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	tangle.ReadLockLedger()
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
-	solidMilestone := tangle.GetMilestoneOrNil(solidMilestoneIndex)
-	if solidMilestone == nil {
+	if !tangle.ContainsMilestone(solidMilestoneIndex) {
 		log.Panicf("CreateLocalSnapshot: Solid milestone (%d) not found!", solidMilestoneIndex)
 	}
 
