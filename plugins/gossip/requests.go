@@ -109,7 +109,7 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 	}
 }
 
-// RequestApproveesAndRemove add the approvees of a tx to the queue and removes the tx from the queue
+// RequestApproveesAndRemove adds the approvees of a tx to the queue and removes the tx from the queue
 func RequestApprovees(cachedTx *tangle.CachedTransaction) {
 
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
