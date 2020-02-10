@@ -4,25 +4,60 @@
     "custom": {
       "caches": {
         "approvers": {
-          "cacheTimeMs": 1500
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         },
         "bundles": {
-          "cacheTimeMs": 1500
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         },
         "bundletransactions": {
-          "cacheTimeMs": 500
+          "cacheTimeMs": 500,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         },
         "milestones": {
-          "cacheTimeMs": 1500
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         },
         "transactions": {
-          "cacheTimeMs": 1500
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         },
         "incomingTransactionFilter": {
-          "cacheTimeMs": 1500
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         },
         "refsInvalidBundle": {
-          "cacheTimeMs": 180000
+          "cacheTimeMs": 180000,
+          "leakDetection": {
+            "enabled": false,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         }
       },
       "badger": {
@@ -110,7 +145,7 @@
     "delay": 40000
   },
   "localsnapshots": {
-    "enabled": true,
+    "enabled": false,
     "depth": 50,
     "intervalsynced": 50,
     "intervalunsynced": 1000,

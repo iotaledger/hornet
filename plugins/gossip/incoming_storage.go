@@ -34,10 +34,11 @@ func configureIncomingStorage() {
 		incomingFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),
-		objectstorage.EnableLeakDetection(objectstorage.LeakDetectionOptions{
-			MaxConsumersPerObject: 20,
-			MaxConsumerHoldTime:   100 * time.Second,
-		}),
+		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
+			objectstorage.LeakDetectionOptions{
+				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
+				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+			}),
 	)
 }
 

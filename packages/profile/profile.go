@@ -74,24 +74,59 @@ var Profile8GB = &Profile{
 	Caches: Caches{
 		Approvers: CacheOpts{
 			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		BundleTransactions: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		RefsInvalidBundle: CacheOpts{
 			CacheTimeMs: 180000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 	},
 	Badger: BadgerOpts{
@@ -131,21 +166,51 @@ var Profile4GB = &Profile{
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		BundleTransactions: CacheOpts{
 			CacheTimeMs: 2500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		RefsInvalidBundle: CacheOpts{
 			CacheTimeMs: 180000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 	},
 	Badger: BadgerOpts{
@@ -182,24 +247,59 @@ var Profile2GB = &Profile{
 	Caches: Caches{
 		Approvers: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		BundleTransactions: CacheOpts{
 			CacheTimeMs: 500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 2500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		RefsInvalidBundle: CacheOpts{
 			CacheTimeMs: 180000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 	},
 	Badger: BadgerOpts{
@@ -236,24 +336,59 @@ var Profile1GB = &Profile{
 	Caches: Caches{
 		Approvers: CacheOpts{
 			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		BundleTransactions: CacheOpts{
 			CacheTimeMs: 500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Milestones: CacheOpts{
 			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Transactions: CacheOpts{
 			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		RefsInvalidBundle: CacheOpts{
 			CacheTimeMs: 180000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 	},
 	Badger: BadgerOpts{
@@ -303,7 +438,14 @@ type Caches struct {
 }
 
 type CacheOpts struct {
-	CacheTimeMs uint64 `json:"cacheTimeMs"`
+	CacheTimeMs          uint64            `json:"cacheTimeMs"`
+	LeakDetectionOptions LeakDetectionOpts `json:"leakDetection"`
+}
+
+type LeakDetectionOpts struct {
+	Enabled                bool   `json:"enabled"`
+	MaxConsumersPerObject  int    `json:"maxConsumersPerObject"`
+	MaxConsumerHoldTimeSec uint64 `json:"maxConsumerHoldTimeSec"`
 }
 
 type BadgerOpts struct {
