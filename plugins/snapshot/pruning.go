@@ -155,7 +155,7 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
 		cachedMs.Release()                               // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx, false, nil)
+		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), false, nil)
 		cachedMsTailTx.Release() // tx -1
 		if err != nil {
 			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)

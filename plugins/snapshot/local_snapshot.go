@@ -187,7 +187,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
 		cachedMs.Release()                               // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx, true, abortSignal)
+		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, abortSignal)
 		cachedMsTailTx.Release() // tx -1
 
 		if err != nil {
