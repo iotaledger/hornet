@@ -214,7 +214,6 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				if cachedBndls == nil {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
-					cachedBndls.Release()       // bundle -1
 					continue
 				}
 
