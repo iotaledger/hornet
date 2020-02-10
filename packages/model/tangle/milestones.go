@@ -180,9 +180,6 @@ func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
 	defer cachedBndl.Release() // bundle -1
 
 	cachedTxIndex0 := cachedBndl.GetBundle().GetTail() // tx +1
-	if cachedTxIndex0 == nil {
-		return false, nil
-	}
 
 	if !IsMaybeMilestone(cachedTxIndex0.Retain()) { // tx pass +1
 		cachedTxIndex0.Release() // tx -1
