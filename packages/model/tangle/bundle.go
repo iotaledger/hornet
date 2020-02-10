@@ -15,10 +15,6 @@ func BundleCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedBndl *CachedBundle))(params[0].(*CachedBundle).Retain())
 }
 
-func BundlesCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedBndls CachedBundles))(params[0].(CachedBundles).Retain())
-}
-
 const (
 	HORNET_BUNDLE_METADATA_SOLID         = 0
 	HORNET_BUNDLE_METADATA_VALID         = 1
@@ -280,11 +276,9 @@ func (bundle *Bundle) calcLedgerChanges() {
 	changes := map[trinary.Trytes]int64{}
 	for txHash := range bundle.txs {
 		cachedTx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) // tx +1
-		if cachedTx.GetTransaction().Tx.Value == 0 {
-			cachedTx.Release() // tx -1
-			continue
+		if value := cachedTx.GetTransaction().Tx.Value; value != 0 {
+			changes[cachedTx.GetTransaction().Tx.Address] += value
 		}
-		changes[cachedTx.GetTransaction().Tx.Address] += cachedTx.GetTransaction().Tx.Value
 		cachedTx.Release() // tx -1
 	}
 
@@ -301,15 +295,6 @@ func (bundle *Bundle) calcLedgerChanges() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-func loadBundleTxIfExistsOrNil(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	cachedTx := GetCachedTransaction(txHash) // tx +1
-	if !cachedTx.Exists() {
-		cachedTx.Release() // tx -1
-		return nil
-	}
-	return cachedTx
-}
 
 func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
 	cachedTx := GetCachedTransaction(txHash) // tx +1
