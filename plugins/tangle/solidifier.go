@@ -290,7 +290,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 	}
 
 	// Always traverse the oldest non-solid milestone, either it gets solid, or something is missing that should be requested.
-	cachedMsToSolidify := tangle.FindClosestNextMilestone(currentSolidIndex) // bundle +1
+	cachedMsToSolidify := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
 	if cachedMsToSolidify == nil {
 		// No newer milestone available
 		return
@@ -322,7 +322,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
-		cachedClosestNextMs := tangle.FindClosestNextMilestone(currentSolidIndex) // bundle +1
+		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
 		if cachedClosestNextMs == cachedMsToSolidify {
 			log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, milestoneIndexToSolidify)
 
