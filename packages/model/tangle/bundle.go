@@ -55,9 +55,8 @@ func (bundle *Bundle) GetTrunk() trinary.Hash {
 	defer bundle.RUnlock()
 
 	cachedHeadTx := bundle.getHead() // tx +1
-	hash := cachedHeadTx.GetTransaction().GetTrunk()
-	cachedHeadTx.Release() // tx -1
-	return hash
+	defer cachedHeadTx.Release()     // tx -1
+	return cachedHeadTx.GetTransaction().GetTrunk()
 }
 
 func (bundle *Bundle) GetBranch() trinary.Hash {
@@ -65,9 +64,8 @@ func (bundle *Bundle) GetBranch() trinary.Hash {
 	defer bundle.RUnlock()
 
 	cachedHeadTx := bundle.getHead() // tx +1
-	hash := cachedHeadTx.GetTransaction().GetBranch()
-	cachedHeadTx.Release() // tx -1
-	return hash
+	defer cachedHeadTx.Release()     // tx -1
+	return cachedHeadTx.GetTransaction().GetBranch()
 }
 
 func (bundle *Bundle) GetLedgerChanges() map[trinary.Trytes]int64 {
@@ -205,8 +203,8 @@ func (bundle *Bundle) IsConfirmed() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
+	defer cachedTailTx.Release() // tx -1
 	tailConfirmed, _ := cachedTailTx.GetTransaction().GetConfirmed()
-	cachedTailTx.Release() // tx -1
 
 	if tailConfirmed {
 		bundle.setConfirmed(true)
@@ -259,8 +257,7 @@ func (bundle *Bundle) validate() bool {
 	}
 
 	// validate bundle semantics and signatures
-	err := iotago_bundle.ValidBundle(iotaGoBundle)
-	valid := (err == nil)
+	valid := iotago_bundle.ValidBundle(iotaGoBundle) == nil
 
 	bundle.setValid(valid)
 	return valid

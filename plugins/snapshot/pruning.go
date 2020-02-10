@@ -72,7 +72,7 @@ func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
 }
 
 // pruneMilestone prunes the approvers, bundles, addresses and transaction metadata from the database
-// if the given txHashes are removed from their corresponding bundle buckets
+// if the given txHashes are removed from their corresponding bundles
 func pruneTransactions(txHashes []trinary.Hash) int {
 
 	txsToRemove := make(map[trinary.Hash]struct{})

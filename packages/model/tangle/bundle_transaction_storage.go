@@ -264,23 +264,24 @@ func getTailApproversOfSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 func existApproversFromSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) bool {
 
 	cachedTxApprovers := GetCachedApprovers(txHash) // approvers +1
-	for _, cachedApprover := range cachedTxApprovers {
-		if cachedApprover.Exists() {
-			cachedApproverTx := GetCachedTransaction(cachedApprover.GetApprover().GetHash()) // tx +1
-			if cachedApproverTx.Exists() {
-				approverTx := cachedApproverTx.GetTransaction()
+	defer cachedTxApprovers.Release()               // approvers -1
 
-				if approverTx.Tx.Bundle == bundleHash {
-					// Tx is used in another bundle instance => do not delete
-					cachedApproverTx.Release()  // tx -1
-					cachedTxApprovers.Release() // approvers -1
-					return true
-				}
-			}
-			cachedApproverTx.Release() // tx -1
+	for _, cachedApprover := range cachedTxApprovers {
+		if !cachedApprover.Exists() {
+			continue
 		}
+		cachedApproverTx := GetCachedTransaction(cachedApprover.GetApprover().GetHash()) // tx +1
+		if cachedApproverTx.Exists() {
+			approverTx := cachedApproverTx.GetTransaction()
+
+			if approverTx.Tx.Bundle == bundleHash {
+				// Tx is used in another bundle instance => do not delete
+				cachedApproverTx.Release() // tx -1
+				return true
+			}
+		}
+		cachedApproverTx.Release() // tx -1
 	}
-	cachedTxApprovers.Release() // approvers -1
 
 	return false
 }
@@ -307,41 +308,9 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 
 	txsToRemove := make(map[trinary.Hash]struct{})
 
+	// check whether this transaction is a tail or respectively stored as a bundle tail
 	isTail := ContainsBundleTransaction(tx.Bundle, tx.Hash, true)
-	if isTail {
-		// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
-
-		// Tails can't be in another bundle instance => remove it
-		DeleteBundle(tx.Hash)
-		DeleteBundleTransaction(tx.Bundle, tx.Hash, true)
-		txsToRemove[tx.Hash] = struct{}{}
-
-		cachedCurrentTx := loadBundleTxIfExistsOrPanic(tx.Hash, tx.Bundle) // tx +1
-
-		// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-		for !cachedCurrentTx.GetTransaction().IsHead() && cachedCurrentTx.GetTransaction().GetHash() != cachedCurrentTx.GetTransaction().GetTrunk() {
-
-			// check whether the trunk transaction is known to the bundle storage.
-			// this also ensures that the transaction has to be in the database
-			if !ContainsBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false) {
-				panic(fmt.Sprintf("bundle %s has a reference to a non persisted transaction: %s", tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()))
-			}
-
-			// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the bucket
-			if existApproversFromSameBundle(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()) {
-				cachedCurrentTx.Release() // tx -1
-				return txsToRemove
-			}
-
-			DeleteBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false)
-			txsToRemove[cachedCurrentTx.GetTransaction().GetTrunk()] = struct{}{}
-			cachedCurrentTx.Release() // tx -1
-
-			cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), tx.Bundle) // tx +1
-		}
-		cachedCurrentTx.Release() // tx -1
-
-	} else {
+	if !isTail {
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the storage
 		if existApproversFromSameBundle(tx.Bundle, tx.Hash) {
 			return txsToRemove
@@ -349,7 +318,40 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 
 		DeleteBundleTransaction(tx.Bundle, tx.Hash, false)
 		txsToRemove[tx.Hash] = struct{}{}
+		return txsToRemove
 	}
+
+	// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
+
+	// Tails can't be in another bundle instance => remove it
+	DeleteBundle(tx.Hash)
+	DeleteBundleTransaction(tx.Bundle, tx.Hash, true)
+	txsToRemove[tx.Hash] = struct{}{}
+
+	cachedCurrentTx := loadBundleTxIfExistsOrPanic(tx.Hash, tx.Bundle) // tx +1
+
+	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
+	for !cachedCurrentTx.GetTransaction().IsHead() && cachedCurrentTx.GetTransaction().GetHash() != cachedCurrentTx.GetTransaction().GetTrunk() {
+
+		// check whether the trunk transaction is known to the bundle storage.
+		// this also ensures that the transaction has to be in the database
+		if !ContainsBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false) {
+			panic(fmt.Sprintf("bundle %s has a reference to a non persisted transaction: %s", tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()))
+		}
+
+		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the bucket
+		if existApproversFromSameBundle(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()) {
+			cachedCurrentTx.Release() // tx -1
+			return txsToRemove
+		}
+
+		DeleteBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false)
+		txsToRemove[cachedCurrentTx.GetTransaction().GetTrunk()] = struct{}{}
+		cachedCurrentTx.Release() // tx -1
+
+		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), tx.Bundle) // tx +1
+	}
+	cachedCurrentTx.Release() // tx -1
 
 	return txsToRemove
 }

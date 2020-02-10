@@ -91,7 +91,7 @@ func (bundle *Bundle) MarshalBinary() (data []byte, err error) {
 	value := make([]byte, 172+txCount*49+57*ledgerChangesCount)
 
 	value[0] = byte(bundle.metadata)
-	binary.LittleEndian.PutUint64(value[1:], uint64(bundle.lastIndex))
+	binary.LittleEndian.PutUint64(value[1:], bundle.lastIndex)
 	binary.LittleEndian.PutUint64(value[9:], uint64(txCount))
 	binary.LittleEndian.PutUint64(value[17:], uint64(ledgerChangesCount))
 	copy(value[25:74], trinary.MustTrytesToBytes(bundle.hash))
@@ -140,7 +140,7 @@ func (bundle *Bundle) UnmarshalBinary(data []byte) error {
 	}
 
 	if ledgerChangesCount > 0 {
-		bundle.ledgerChanges = make(map[trinary.Trytes]int64)
+		bundle.ledgerChanges = make(map[trinary.Trytes]int64, ledgerChangesCount)
 	}
 
 	for i := 0; i < ledgerChangesCount; i++ {
@@ -266,13 +266,12 @@ func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
 	var cachedBndls CachedBundles
 
 	cachedTx := GetCachedTransaction(txHash) // tx +1
+	defer cachedTx.Release() // tx -1
 	if !cachedTx.Exists() {
-		cachedTx.Release() // tx -1
 		return nil
 	}
 
 	if cachedTx.GetTransaction().IsTail() {
-		cachedTx.Release()                               // tx -1
 		cachedBndl := GetBundleOfTailTransaction(txHash) // bundle +1
 		if cachedBndl == nil {
 			return nil
@@ -289,8 +288,6 @@ func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
 		cachedBndls = append(cachedBndls, cachedBndl)
 	}
 
-	cachedTx.Release() // tx -1
-
 	if len(cachedBndls) == 0 {
 		return nil
 	}
@@ -302,16 +299,16 @@ func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
 
 func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 
-	cachedTx := GetCachedTransaction(hornetTx.GetHash())
+	cachedTx := GetCachedTransaction(hornetTx.GetHash()) // tx +1
 	if cachedTx.Exists() {
-		cachedTx.Release()
+		cachedTx.Release() // tx -1
 		return true
 	}
-	cachedTx.Release()
+	cachedTx.Release() // tx -1
 
 	// Store the tx in the storage, this will update the tx reference automatically
-	cachedTx = StoreTransaction(hornetTx)
-	defer cachedTx.Release()
+	cachedTx = StoreTransaction(hornetTx) // tx +1
+	defer cachedTx.Release() // tx -1
 
 	// Store the tx in the bundleTransactionsStorage
 	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release()
@@ -320,7 +317,7 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 	StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release()
 
 	// If the transaction is part of a milestone, the bundle must be created here
-	// Otherwise, bundles are created if tailTx become solid
+	// Otherwise, bundles are created if tailTx becomes solid
 	if IsMaybeMilestoneTx(cachedTx.Retain()) { // tx pass +1
 		tryConstructBundle(cachedTx.Retain(), false)
 	}
@@ -374,28 +371,30 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	cachedBndl := StoreBundle(bndl) // bundle +1
 	defer cachedBndl.Release()      // bundle -1
 
-	if cachedBndl.GetBundle().validate() {
-		cachedBndl.GetBundle().calcLedgerChanges()
+	if !cachedBndl.GetBundle().validate() {
+		return
+	}
+	cachedBndl.GetBundle().calcLedgerChanges()
 
-		if !cachedBndl.GetBundle().IsValueSpam() {
-			for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
-				if change < 0 {
-					Events.AddressSpent.Trigger(addr)
+	if !cachedBndl.GetBundle().IsValueSpam() {
+		for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
+			if change < 0 {
+				Events.AddressSpent.Trigger(addr)
 
-					// ToDo:
-					//markedSpentAddrs.Inc()
-				}
+				// ToDo:
+				//markedSpentAddrs.Inc()
 			}
-		} else {
-			if IsMaybeMilestone(cachedBndl.GetBundle().GetTail()) { // tx pass +1
-				isMilestone, err := CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
-				if err != nil {
-					Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
-				} else if isMilestone {
-					StoreMilestone(cachedBndl.Retain()).Release()     // bundle pass +1
-					Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
-				}
-			}
+		}
+		return
+	}
+
+	if IsMaybeMilestone(cachedBndl.GetBundle().GetTail()) { // tx pass +1
+		isMilestone, err := CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
+		if err != nil {
+			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
+		} else if isMilestone {
+			StoreMilestone(cachedBndl.Retain()).Release()     // bundle pass +1
+			Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
 		}
 	}
 }
