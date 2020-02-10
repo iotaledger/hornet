@@ -241,6 +241,15 @@ func (bundle *Bundle) isComplete() bool {
 
 // Checks if a bundle is syntactically valid and has valid signatures
 func (bundle *Bundle) validate() bool {
+	bundle.Lock()
+	defer bundle.Unlock()
+
+	// Because the bundle is already complete when this function gets called, the amount of tx has to be correct,
+	// otherwise the bundle was not constructed correctly
+	if !bundle.isComplete() {
+		bundle.setValid(false)
+		return false
+	}
 
 	// check all tx
 	iotaGoBundle := make(iotago_bundle.Bundle, len(bundle.txs))
@@ -265,6 +274,8 @@ func (bundle *Bundle) validate() bool {
 
 // Calculates the ledger changes of the bundle
 func (bundle *Bundle) calcLedgerChanges() {
+	bundle.Lock()
+	defer bundle.Unlock()
 
 	changes := map[trinary.Trytes]int64{}
 	for txHash := range bundle.txs {
