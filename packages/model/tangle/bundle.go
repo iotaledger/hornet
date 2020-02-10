@@ -203,7 +203,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
-	defer cachedTailTx.Release() // tx -1
+	defer cachedTailTx.Release()     // tx -1
 	tailConfirmed, _ := cachedTailTx.GetTransaction().GetConfirmed()
 
 	if tailConfirmed {

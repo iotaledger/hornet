@@ -266,7 +266,7 @@ func GetBundlesOfTransaction(txHash trinary.Hash) CachedBundles {
 	var cachedBndls CachedBundles
 
 	cachedTx := GetCachedTransaction(txHash) // tx +1
-	defer cachedTx.Release() // tx -1
+	defer cachedTx.Release()                 // tx -1
 	if !cachedTx.Exists() {
 		return nil
 	}
@@ -308,7 +308,7 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 
 	// Store the tx in the storage, this will update the tx reference automatically
 	cachedTx = StoreTransaction(hornetTx) // tx +1
-	defer cachedTx.Release() // tx -1
+	defer cachedTx.Release()              // tx -1
 
 	// Store the tx in the bundleTransactionsStorage
 	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release()
