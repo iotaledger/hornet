@@ -288,7 +288,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		cachedTxs.Release() // tx -1
 		expBndls = append(expBndls, sl)
 	}
-	
+
 	return expBndls, nil
 }
 
