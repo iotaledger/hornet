@@ -9,21 +9,21 @@ import (
 
 // AddNeighbors legacy struct
 type AddNeighbors struct {
-	Command string   `json:"command"`
-	Uris    []string `json:"uris"`
+	Command string   `mapstructure:"command"`
+	Uris    []string `mapstructure:"uris"`
 }
 
 // AddNeighborsHornet struct
 type AddNeighborsHornet struct {
-	Command   string     `json:"command"`
-	Neighbors []Neighbor `json:"neighbors"`
+	Command   string     `mapstructure:"command"`
+	Neighbors []Neighbor `mapstructure:"neighbors"`
 }
 
 // Neighbor struct
 type Neighbor struct {
-	Identity   string `json:"identity"`
-	Alias      string `json:"alias"`
-	PreferIPv6 bool   `json:"prefer_ipv6"`
+	Identity   string `mapstructure:"identity"`
+	Alias      string `mapstructure:"alias"`
+	PreferIPv6 bool   `mapstructure:"prefer_ipv6"`
 }
 
 // AddNeighborsResponse struct
@@ -38,11 +38,11 @@ type AddNeighborsResponse struct {
 
 // AttachToTangle struct
 type AttachToTangle struct {
-	Command            string   `json:"command"`
-	TrunkTransaction   string   `json:"trunkTransaction"`
-	BranchTransaction  string   `json:"branchTransaction"`
-	MinWeightMagnitude int      `json:"minWeightMagnitude"`
-	Trytes             []string `json:"trytes"`
+	Command            string   `mapstructure:"command"`
+	TrunkTransaction   string   `mapstructure:"trunkTransaction"`
+	BranchTransaction  string   `mapstructure:"branchTransaction"`
+	MinWeightMagnitude int      `mapstructure:"minWeightMagnitude"`
+	Trytes             []string `mapstructure:"trytes"`
 }
 
 // AttachToTangleReturn struct
@@ -57,8 +57,8 @@ type AttachToTangleReturn struct {
 
 // BroadcastTransactions struct
 type BroadcastTransactions struct {
-	Command string   `json:"command"`
-	Trytes  []string `json:"trytes"`
+	Command string   `mapstructure:"command"`
+	Trytes  []string `mapstructure:"trytes"`
 }
 
 // BradcastTransactionsReturn struct
@@ -72,8 +72,8 @@ type BradcastTransactionsReturn struct {
 
 // CheckConsistency struct
 type CheckConsistency struct {
-	Command string   `json:"command"`
-	Tails   []string `json:"tails"`
+	Command string   `mapstructure:"command"`
+	Tails   []string `mapstructure:"tails"`
 }
 
 // CheckConsistencyReturn struct
@@ -98,9 +98,9 @@ type ErrorReturn struct {
 
 // FindTransactions struct
 type FindTransactions struct {
-	Command   string   `json:"command"`
-	Bundles   []string `json:"bundles,omitempty"`
-	Addresses []string `json:"addresses,omitempty"`
+	Command   string   `mapstructure:"command"`
+	Bundles   []string `mapstructure:"bundles"`
+	Addresses []string `mapstructure:"addresses"`
 }
 
 // FindTransactionsReturn struct
@@ -115,8 +115,8 @@ type FindTransactionsReturn struct {
 
 // GetBalances struct
 type GetBalances struct {
-	Command   string   `json:"command"`
-	Addresses []string `json:"addresses"`
+	Command   string   `mapstructure:"command"`
+	Addresses []string `mapstructure:"addresses"`
 }
 
 // GetBalancesReturn struct
@@ -133,8 +133,8 @@ type GetBalancesReturn struct {
 
 // GetInclusionStates struct
 type GetInclusionStates struct {
-	Command      string   `json:"command"`
-	Transactions []string `json:"transactions"`
+	Command      string   `mapstructure:"command"`
+	Transactions []string `mapstructure:"transactions"`
 }
 
 // GetInclusionStatesReturn struct
@@ -149,7 +149,7 @@ type GetInclusionStatesReturn struct {
 
 // GetNeighbors struct
 type GetNeighbors struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetNeighborsReturn struct
@@ -164,7 +164,7 @@ type GetNeighborsReturn struct {
 
 // GetNodeInfo struct
 type GetNodeInfo struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetNodeInfoReturn struct
@@ -193,7 +193,7 @@ type GetNodeInfoReturn struct {
 
 // GetNodeAPIConfiguration struct
 type GetNodeAPIConfiguration struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetNodeAPIConfigurationReturn struct
@@ -212,9 +212,9 @@ type GetNodeAPIConfigurationReturn struct {
 
 // GetTransactionsToApprove struct
 type GetTransactionsToApprove struct {
-	Command   string `json:"command"`
-	Depth     uint   `json:"depth"`
-	Reference string `json:"reference,omitempty"`
+	Command   string `mapstructure:"command"`
+	Depth     uint   `mapstructure:"depth"`
+	Reference string `mapstructure:"reference"`
 }
 
 // GetTransactionsToApproveReturn struct
@@ -230,8 +230,8 @@ type GetTransactionsToApproveReturn struct {
 
 // GetTrytes struct
 type GetTrytes struct {
-	Command string   `json:"command"`
-	Hashes  []string `json:"hashes"`
+	Command string   `mapstructure:"command"`
+	Hashes  []string `mapstructure:"hashes"`
 }
 
 // GetTrytesReturn struct
@@ -246,8 +246,8 @@ type GetTrytesReturn struct {
 
 // RemoveNeighbors struct
 type RemoveNeighbors struct {
-	Command string   `json:"removeNeighbors"`
-	Uris    []string `json:"uris"`
+	Command string   `mapstructure:"removeNeighbors"`
+	Uris    []string `mapstructure:"uris"`
 }
 
 // RemoveNeighborsReturn struct
@@ -262,8 +262,8 @@ type RemoveNeighborsReturn struct {
 
 // StoreTransactions struct
 type StoreTransactions struct {
-	Command string   `json:"command"`
-	Trytes  []string `json:"trytes"`
+	Command string   `mapstructure:"command"`
+	Trytes  []string `mapstructure:"trytes"`
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -272,8 +272,8 @@ type StoreTransactions struct {
 
 // WereAddressesSpentFrom struct
 type WereAddressesSpentFrom struct {
-	Command   string   `json:"wereAddressesSpentFrom"`
-	Addresses []string `json:"addresses"`
+	Command   string   `mapstructure:"wereAddressesSpentFrom"`
+	Addresses []string `mapstructure:"addresses"`
 }
 
 // WereAddressesSpentFromReturn struct
@@ -288,7 +288,7 @@ type WereAddressesSpentFromReturn struct {
 
 // GetSnapshot struct
 type GetSnapshot struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetSnapshotReturn struct
@@ -304,14 +304,14 @@ type GetSnapshotReturn struct {
 
 // GetLedgerDiff struct
 type GetLedgerDiff struct {
-	Command        string `json:"command"`
-	MilestoneIndex uint64 `json:"milestoneIndex"`
+	Command        string `mapstructure:"command"`
+	MilestoneIndex uint64 `mapstructure:"milestoneIndex"`
 }
 
 // GetLedgerDiffExt struct
 type GetLedgerDiffExt struct {
-	Command        string `json:"command"`
-	MilestoneIndex uint64 `json:"milestoneIndex"`
+	Command        string `mapstructure:"command"`
+	MilestoneIndex uint64 `mapstructure:"milestoneIndex"`
 }
 
 // GetLedgerDiffReturn struct
@@ -321,29 +321,32 @@ type GetLedgerDiffReturn struct {
 	Duration       int              `json:"duration"`
 }
 
+// TxHashWithValue struct
 type TxHashWithValue struct {
-	TxHash     string `json:"txHash"`
-	TailTxHash string `json:"tailTxHash"`
-	BundleHash string `json:"bundleHash"`
-	Address    string `json:"address"`
-	Value      int64  `json:"value"`
+	TxHash     string `mapstructure:"txHash"`
+	TailTxHash string `mapstructure:"tailTxHash"`
+	BundleHash string `mapstructure:"bundleHash"`
+	Address    string `mapstructure:"address"`
+	Value      int64  `mapstructure:"value"`
 }
 
+// TxWithValue struct
 type TxWithValue struct {
-	TxHash  string `json:"txHash"`
-	Address string `json:"address"`
-	Index   uint64 `json:"index"`
-	Value   int64  `json:"value"`
+	TxHash  string `mapstructure:"txHash"`
+	Address string `mapstructure:"address"`
+	Index   uint64 `mapstructure:"index"`
+	Value   int64  `mapstructure:"value"`
 }
 
+// BundleWithValue struct
 type BundleWithValue struct {
-	BundleHash string         `json:"bundleHash"`
-	TailTxHash string         `json:"tailTxHash"`
-	LastIndex  uint64         `json:"lastIndex"`
-	Txs        []*TxWithValue `json:"txs"`
+	BundleHash string         `mapstructure:"bundleHash"`
+	TailTxHash string         `mapstructure:"tailTxHash"`
+	LastIndex  uint64         `mapstructure:"lastIndex"`
+	Txs        []*TxWithValue `mapstructure:"txs"`
 }
 
-// GetLedgerDiffReturn struct
+// GetLedgerDiffExtReturn struct
 type GetLedgerDiffExtReturn struct {
 	ConfirmedTxWithValue      []*TxHashWithValue `json:"confirmedTxWithValue"`
 	ConfirmedBundlesWithValue []*BundleWithValue `json:"confirmedBundlesWithValue"`
@@ -358,12 +361,12 @@ type GetLedgerDiffExtReturn struct {
 
 // CreateSnapshot struct
 type CreateSnapshot struct {
-	Command     string `json:"command"`
-	TargetIndex uint64 `json:"targetIndex"`
-	FilePath    string `json:"filePath"`
+	Command     string `mapstructure:"command"`
+	TargetIndex uint64 `mapstructure:"targetIndex"`
+	FilePath    string `mapstructure:"filePath"`
 }
 
-// GetSnapshotReturn struct
+// CreateSnapshotReturn struct
 type CreateSnapshotReturn struct {
 	Duration int `json:"duration"`
 }
@@ -372,7 +375,7 @@ type CreateSnapshotReturn struct {
 
 // GetRequests struct
 type GetRequests struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetRequestsReturn struct
