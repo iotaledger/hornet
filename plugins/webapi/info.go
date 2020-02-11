@@ -53,9 +53,9 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1
 	if cachedSolidMs != nil {
 		cachedMsTailTx := cachedSolidMs.GetBundle().GetTail() // tx +1
-		cachedMsTailTx.Release()                              // tx -1
 		info.LatestSolidSubtangleMilestone = cachedMsTailTx.GetTransaction().GetHash()
-		cachedSolidMs.Release() // bundle -1
+		cachedMsTailTx.Release() // tx -1
+		cachedSolidMs.Release()  // bundle -1
 	}
 
 	// Milestone start index
