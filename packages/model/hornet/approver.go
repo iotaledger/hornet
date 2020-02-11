@@ -15,7 +15,7 @@ func (a *Approver) GetTransactionHash() trinary.Hash {
 	return trinary.MustBytesToTrytes(a.TxHash, 81)
 }
 
-func (a *Approver) GetHash() trinary.Hash {
+func (a *Approver) GetApproverHash() trinary.Hash {
 	return trinary.MustBytesToTrytes(a.ApproverHash, 81)
 }
 

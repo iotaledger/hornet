@@ -162,7 +162,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			var approverHashes []trinary.Hash
 			for _, cachedApprover := range cachedApprovers {
 				if cachedApprover.Exists() {
-					approverHashes = append(approverHashes, cachedApprover.GetApprover().GetHash())
+					approverHashes = append(approverHashes, cachedApprover.GetApprover().GetApproverHash())
 				}
 			}
 			cachedApprovers.Release() // approvers -1
