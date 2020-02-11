@@ -232,7 +232,7 @@ func getTailApproversOfSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 					continue
 				}
 
-				approverHash := cachedTxApprover.GetApprover().GetHash()
+				approverHash := cachedTxApprover.GetApprover().GetApproverHash()
 
 				cachedApproverTx := GetCachedTransaction(approverHash) // tx +1
 				if !cachedApproverTx.Exists() {
@@ -274,7 +274,7 @@ func existApproversFromSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 		if !cachedApprover.Exists() {
 			continue
 		}
-		cachedApproverTx := GetCachedTransaction(cachedApprover.GetApprover().GetHash()) // tx +1
+		cachedApproverTx := GetCachedTransaction(cachedApprover.GetApprover().GetApproverHash()) // tx +1
 		if cachedApproverTx.Exists() {
 			approverTx := cachedApproverTx.GetTransaction()
 

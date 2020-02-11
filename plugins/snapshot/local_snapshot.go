@@ -42,7 +42,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 
 	for _, cachedApprover := range cachedApprovers {
 		if cachedApprover.Exists() {
-			approverHash := cachedApprover.GetApprover().GetHash()
+			approverHash := cachedApprover.GetApprover().GetApproverHash()
 			cachedTx := tangle.GetCachedTransaction(approverHash) // tx +1
 			if !cachedTx.Exists() {
 				cachedTx.Release() // tx -1
