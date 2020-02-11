@@ -17,9 +17,9 @@ var (
 	prevLMI milestone_index.MilestoneIndex = 0
 )
 
-func onNewTx(transaction *tangle.CachedTransaction) {
+func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 
 		// tx topic
 		err := publishTx(tx.Tx)
@@ -35,9 +35,9 @@ func onNewTx(transaction *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		err := publishConfTx(tx.Tx, msIndex)
 		if err != nil {
 			log.Error(err.Error())
@@ -45,22 +45,24 @@ func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_inde
 	})
 }
 
-func onNewLatestMilestone(bundle *tangle.Bundle) {
-	err := publishLMI(bundle.GetMilestoneIndex())
+func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
+	err := publishLMI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
 		log.Error(err.Error())
 	}
-	err = publishLMHS(bundle.GetMilestoneHash())
+	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash())
 	if err != nil {
 		log.Error(err.Error())
 	}
+	cachedBndl.Release() // bundle -1
 }
 
-func onNewSolidMilestone(bundle *tangle.Bundle) {
-	err := publishLMSI(bundle.GetMilestoneIndex())
+func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
+	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
 		log.Error(err.Error())
 	}
+	cachedBndl.Release() // bundle -1
 }
 
 func onSpentAddress(addr trinary.Hash) {
@@ -105,10 +107,10 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(iotaTx *transaction.Transaction, ms milestone_index.MilestoneIndex) error {
+func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone_index.MilestoneIndex) error {
 
 	return mqttBroker.Send(topicSN, fmt.Sprintf(`{"msIndex":"%d","txHash":"%v","address":"%v","trunk":"%v","branch":"%v","bundle":"%v","timestamp":"%s"}`,
-		ms,                       // Index of the milestone that confirmed the transaction
+		msIndex,                  // Index of the milestone that confirmed the transaction
 		iotaTx.Hash,              // Transaction hash
 		iotaTx.Address,           // Address
 		iotaTx.TrunkTransaction,  // Trunk transaction hash

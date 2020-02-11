@@ -42,7 +42,11 @@ func configureMilestoneStorage() {
 		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		//objectstorage.EnableLeakDetection(),
+		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
+			objectstorage.LeakDetectionOptions{
+				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
+				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+			}),
 	)
 }
 
@@ -93,28 +97,24 @@ func (c *CachedMilestone) GetMilestone() *Milestone {
 	return c.Get().(*Milestone)
 }
 
-// +1
+// milestone +1
 func GetCachedMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
 	return &CachedMilestone{milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex))}
 }
 
-// +-0
+// milestone +-0
 func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-// +1
-func StoreMilestone(milestone *Bundle) *CachedMilestone {
-	// Be sure the bundle is already saved in the db
-	// TODO: Remove that with object storage for bundles
-	if err := StoreBundleInDatabase(milestone); err != nil {
-		panic(err)
-	}
+// milestone +1
+func StoreMilestone(cachedBndl *CachedBundle) *CachedMilestone {
+	defer cachedBndl.Release() // bundle -1
 
-	if milestone.IsMilestone() {
+	if cachedBndl.GetBundle().IsMilestone() {
 		return &CachedMilestone{milestoneStorage.Store(&Milestone{
-			Index: milestone.GetMilestoneIndex(),
-			Hash:  milestone.GetMilestoneHash()})}
+			Index: cachedBndl.GetBundle().GetMilestoneIndex(),
+			Hash:  cachedBndl.GetBundle().GetMilestoneHash()})}
 	}
 	panic("Bundle is not a milestone")
 }

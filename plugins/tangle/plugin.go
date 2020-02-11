@@ -32,8 +32,6 @@ func configure(plugin *node.Plugin) {
 	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
 	configureRefsAnInvalidBundleStorage()
 
-	tangle.InitBundleCache()
-
 	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
 
 	if tangle.IsDatabaseCorrupted() {
@@ -63,7 +61,8 @@ func configure(plugin *node.Plugin) {
 
 		log.Info("Flushing caches to database...")
 		tangle.ShutdownMilestoneStorage()
-		tangle.FlushBundleCache()
+		tangle.ShutdownBundleStorage()
+		tangle.ShutdownBundleTransactionsStorage()
 		tangle.ShutdownTransactionStorage()
 		tangle.ShutdownApproversStorage()
 		log.Info("Flushing caches to database... done")
@@ -75,10 +74,11 @@ func configure(plugin *node.Plugin) {
 		log.Info("Syncing database to disk... done")
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
-	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(msBundle *tangle.Bundle) {
+	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		// notify neighbors about our new solid milestone index
 		gossip.SendHeartbeat()
-		gossip.SendMilestoneRequests(msBundle.GetMilestoneIndex(), tangle.GetLatestMilestoneIndex())
+		gossip.SendMilestoneRequests(cachedBndl.GetBundle().GetMilestoneIndex(), tangle.GetLatestMilestoneIndex())
+		cachedBndl.Release() // bundle -1
 	}))
 
 	Events.SnapshotMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone_index.MilestoneIndex) {

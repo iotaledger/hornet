@@ -34,3 +34,6 @@ dist/
 
 # Snapshot directory (for docker running in main path)
 snapshot/
+
+# log files
+hornet.log

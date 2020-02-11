@@ -50,21 +50,21 @@ func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	for _, hash := range gt.Hashes {
-		cachedTx := tangle.GetCachedTransaction(hash) //+1
+		cachedTx := tangle.GetCachedTransaction(hash) // tx +1
 
 		if cachedTx.Exists() {
 			tx, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
 			if err != nil {
 				e.Error = "Internal error"
 				c.JSON(http.StatusInternalServerError, e)
-				cachedTx.Release() //-1
+				cachedTx.Release() // tx -1
 				return
 			}
 			trytes = append(trytes, tx)
 		} else {
 			trytes = append(trytes, strings.Repeat("9", 2673))
 		}
-		cachedTx.Release() //-1
+		cachedTx.Release() // tx -1
 	}
 
 	c.JSON(http.StatusOK, GetTrytesReturn{Trytes: trytes})

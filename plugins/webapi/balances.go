@@ -52,12 +52,13 @@ func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
-	lsm := tangle.GetMilestone(tangle.GetSolidMilestoneIndex())
-	if lsm == nil {
+	cachedLatestSolidMs := tangle.GetMilestoneOrNil(tangle.GetSolidMilestoneIndex()) // bundle +1
+	if cachedLatestSolidMs == nil {
 		e.Error = "Ledger state invalid - Milestone not found"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
+	defer cachedLatestSolidMs.Release() // bundle -1
 
 	for _, addr := range gb.Addresses {
 
@@ -73,7 +74,7 @@ func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	// The index of the milestone that confirmed the most recent balance
-	gbr.MilestoneIndex = uint32(lsm.GetMilestoneIndex())
-	gbr.References = []string{lsm.GetMilestoneHash()}
+	gbr.MilestoneIndex = uint32(cachedLatestSolidMs.GetBundle().GetMilestoneIndex())
+	gbr.References = []string{cachedLatestSolidMs.GetBundle().GetMilestoneHash()}
 	c.JSON(http.StatusOK, gbr)
 }

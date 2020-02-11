@@ -31,10 +31,13 @@ func (c *CachedApprover) GetApprover() *hornet.Approver {
 }
 
 func approversFactory(key []byte) objectstorage.StorableObject {
-	return &hornet.Approver{
-		TxHash: key[:49],
-		Hash:   key[49:],
+	approver := &hornet.Approver{
+		TxHash: make([]byte, 49),
+		Hash:   make([]byte, 49),
 	}
+	copy(approver.TxHash, key[:49])
+	copy(approver.Hash, key[49:])
+	return approver
 }
 
 func GetApproversStorageSize() int {
@@ -52,23 +55,29 @@ func configureApproversStorage() {
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),
-		//objectstorage.EnableLeakDetection(),
+		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
+			objectstorage.LeakDetectionOptions{
+				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
+				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+			}),
 	)
 }
 
+// approvers +1
 func GetCachedApprovers(transactionHash trinary.Hash) CachedAppprovers {
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
 
-	approvers := CachedAppprovers{}
+	cachedApprovers := CachedAppprovers{}
 
 	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		approvers = append(approvers, &CachedApprover{cachedObject})
+		cachedApprovers = append(cachedApprovers, &CachedApprover{cachedObject})
 		return true
 	}, txHash)
 
-	return approvers
+	return cachedApprovers
 }
 
+// approvers +1
 func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *CachedApprover {
 
 	approver := &hornet.Approver{
@@ -79,6 +88,7 @@ func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *Cac
 	return &CachedApprover{approversStorage.Store(approver)}
 }
 
+// approvers +-0
 func DeleteApprovers(transactionHash trinary.Hash) {
 
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]

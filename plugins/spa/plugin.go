@@ -68,8 +68,9 @@ func run(plugin *node.Plugin) {
 		wsSendWorkerPool.TrySubmit(tpsMetrics)
 	})
 
-	notifyNewMs := events.NewClosure(func(bndl *tangle.Bundle) {
-		wsSendWorkerPool.TrySubmit(bndl)
+	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
@@ -138,28 +139,31 @@ var (
 	}
 )
 
-func getMilestone(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
-	msBndl := tangle.GetMilestone(index)
-	if msBndl == nil {
+// tx +1
+func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
+	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
+	if cachedMs == nil {
 		return nil
 	}
 
-	tail := msBndl.GetTail() //+1
-	if !tail.Exists() {
-		tail.Release() //-1
+	defer cachedMs.Release() // bundle -1
+
+	cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
+	if !cachedMsTailTx.Exists() {
+		cachedMsTailTx.Release() // tx -1
 		return nil
 	}
 
-	return tail
+	return cachedMsTailTx
 }
 
 func preFeed(channel chan interface{}) {
 	channel <- &msg{MsgTypeNodeStatus, currentNodeStatus()}
 	start := tangle.GetLatestMilestoneIndex()
 	for i := start - 10; i <= start; i++ {
-		if tailTx := getMilestone(i); tailTx != nil { //+1
-			channel <- &msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), i}}
-			tailTx.Release() //-1
+		if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
+			channel <- &msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), i}}
+			cachedMsTailTx.Release() // tx -1
 		} else {
 			break
 		}
@@ -259,8 +263,7 @@ type cachesmetric struct {
 }
 
 type cache struct {
-	Size     int `json:"size"`
-	Capacity int `json:"capacity"`
+	Size int `json:"size"`
 }
 
 func neighborMetrics() []*neighbormetric {
@@ -313,32 +316,25 @@ func currentNodeStatus() *nodestatus {
 	// cache metrics
 	status.Caches = &cachesmetric{
 		Approvers: cache{
-			Size:     tangle.GetApproversStorageSize(),
-			Capacity: 0,
+			Size: tangle.GetApproversStorageSize(),
 		},
 		RequestQueue: cache{
-			Size:     gossip.RequestQueue.GetStorageSize(),
-			Capacity: 0,
+			Size: gossip.RequestQueue.GetStorageSize(),
 		},
 		Bundles: cache{
-			Size:     tangle.BundleBucketCache.GetSize(),
-			Capacity: tangle.BundleBucketCache.GetCapacity(),
+			Size: tangle.GetBundleStorageSize(),
 		},
 		Milestones: cache{
-			Size:     tangle.GetMilestoneStorageSize(),
-			Capacity: 0,
+			Size: tangle.GetMilestoneStorageSize(),
 		},
 		Transactions: cache{
-			Size:     tangle.GetTransactionStorageSize(),
-			Capacity: 0,
+			Size: tangle.GetTransactionStorageSize(),
 		},
 		IncomingTransactionFilter: cache{
-			Size:     gossip.GetIncomingStorageSize(),
-			Capacity: 0,
+			Size: gossip.GetIncomingStorageSize(),
 		},
 		RefsInvalidBundle: cache{
-			Size:     tangle_plugin.GetRefsAnInvalidBundleStorageSize(),
-			Capacity: 0,
+			Size: tangle_plugin.GetRefsAnInvalidBundleStorageSize(),
 		},
 	}
 

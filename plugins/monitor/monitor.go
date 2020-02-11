@@ -98,9 +98,9 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 	socketioServer.LeaveAllRooms(s)
 }
 
-func onNewTx(transaction *tangle.CachedTransaction) {
+func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		wsTx := &wsTransaction{
 			Hash:       tx.Tx.Hash,
 			Address:    tx.Tx.Address,
@@ -143,24 +143,21 @@ func onNewTx(transaction *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		if tx.Tx.CurrentIndex == 0 {
-			// Tail Tx => Check if there are other bundles (Reattachments)
-			bundleBucket, _ := tangle.GetBundleBucket(tx.Tx.Bundle)
-			bundles := bundleBucket.Bundles()
-			if bundleBucket != nil && (len(bundles) > 1) {
-				ledgerChanges, _ := bundles[0].GetLedgerChanges()
-				isValue := len(ledgerChanges) > 0
-				if isValue {
-					// Mark all different Txs in all bundles as reattachment
-					for _, bundle := range bundleBucket.Bundles() {
-						for _, txHash := range bundle.GetTransactionHashes() {
-							reattachmentWorkerPool.TrySubmit(txHash)
-						}
+			// Tail Tx => Check if this is a value Tx
+			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(tx.Tx.Hash) // bundle +1
+			if cachedBndl != nil {
+				if !cachedBndl.GetBundle().IsValueSpam() {
+					ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
+					if len(ledgerChanges) > 0 {
+						// Mark all different Txs in all bundles as reattachment
+						reattachmentWorkerPool.TrySubmit(tx.Tx.Bundle)
 					}
 				}
+				cachedBndl.Release() // bundle -1
 			}
 		}
 
@@ -182,17 +179,18 @@ func onConfirmedTx(transaction *tangle.CachedTransaction, msIndex milestone_inde
 	})
 }
 
-func onNewMilestone(bundle *tangle.Bundle) {
+func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 
-	tailTx := bundle.GetTail() //+1
-	confTime := tailTx.GetTransaction().GetTimestamp() * 1000
-	tailTx.Release() //-1
+	cachedTailTx := cachedBndl.GetBundle().GetTail() // tx +1
+	confTime := cachedTailTx.GetTransaction().GetTimestamp() * 1000
+	cachedTailTx.Release() // tx -1
 
-	transactions := bundle.GetTransactions() //+1
+	cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
+	cachedBndl.Release()                                  // bundle -1
 
 	txRingBufferLock.Lock()
-	for _, tx := range transactions {
-		if wsTx, exists := txPointerMap[tx.GetTransaction().GetHash()]; exists {
+	for _, cachedTx := range cachedTxs {
+		if wsTx, exists := txPointerMap[cachedTx.GetTransaction().GetHash()]; exists {
 			wsTx.Confirmed = true
 			wsTx.Milestone = "t"
 			wsTx.ConfTime = confTime
@@ -201,9 +199,9 @@ func onNewMilestone(bundle *tangle.Bundle) {
 	txRingBufferLock.Unlock()
 
 	broadcastLock.Lock()
-	for _, tx := range transactions {
+	for _, cachedTx := range cachedTxs {
 		update := wsNewMile{
-			Hash:      tx.GetTransaction().GetHash(),
+			Hash:      cachedTx.GetTransaction().GetHash(),
 			Milestone: "t",
 			ConfTime:  confTime,
 		}
@@ -212,7 +210,7 @@ func onNewMilestone(bundle *tangle.Bundle) {
 	}
 	broadcastLock.Unlock()
 
-	transactions.Release() //-1
+	cachedTxs.Release() // tx -1
 }
 
 func onReattachment(txHash trinary.Hash) {

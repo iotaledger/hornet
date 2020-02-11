@@ -25,9 +25,9 @@ func configureLiveFeed() {
 		case *transaction.Transaction:
 			sendToAllWSClient(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
 		case milestone_index.MilestoneIndex:
-			if tailTx := getMilestone(x); tailTx != nil { //+1
-				sendToAllWSClient(&msg{MsgTypeMs, &ms{tailTx.GetTransaction().GetHash(), x}})
-				tailTx.Release() //-1
+			if cachedTailTx := getMilestoneTail(x); cachedTailTx != nil { // tx +1
+				sendToAllWSClient(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), x}})
+				cachedTailTx.Release() // tx -1
 			}
 		}
 		task.Return(nil)
@@ -38,8 +38,8 @@ func runLiveFeed() {
 
 	newTxRateLimiter := time.NewTicker(time.Second / 10)
 
-	notifyNewTx := events.NewClosure(func(transaction *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 			if !tangle_model.IsNodeSynced() {
 				return
 			}
@@ -51,8 +51,9 @@ func runLiveFeed() {
 		})
 	})
 
-	notifyLMChanged := events.NewClosure(func(bndl *tangle_model.Bundle) {
-		liveFeedWorkerPool.TrySubmit(bndl.GetMilestoneIndex())
+	notifyLMChanged := events.NewClosure(func(cachedBndl *tangle_model.CachedBundle) {
+		liveFeedWorkerPool.TrySubmit(cachedBndl.GetBundle().GetMilestoneIndex())
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("SPA[TxUpdater]", func(shutdownSignal <-chan struct{}) {

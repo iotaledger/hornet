@@ -25,11 +25,11 @@ var (
 func configureGossipSolidifier() {
 	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		// Check solidity of gossip txs if the node is synced
-		tx := task.Param(0).(*tangle.CachedTransaction) //1
+		cachedTx := task.Param(0).(*tangle.CachedTransaction) //1
 		if tangle.IsNodeSynced() {
-			checkSolidityAndPropagate(tx) //Pass +1
+			checkSolidityAndPropagate(cachedTx) // tx pass +1
 		} else {
-			tx.Release() //-1
+			cachedTx.Release() // tx -1
 		}
 
 		task.Return(nil)
@@ -40,11 +40,11 @@ func configureGossipSolidifier() {
 func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
-	notifyNewTx := events.NewClosure(func(transaction *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if tangle.IsNodeSynced() {
-			gossipSolidifierWorkerPool.Submit(transaction) //Pass +1
+			gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
 		} else {
-			transaction.Release() //-1
+			cachedTx.Release() // tx -1
 		}
 	})
 
@@ -62,44 +62,44 @@ func runGossipSolidifier() {
 }
 
 // Checks and updates the solid flag of a transaction and its approvers (future cone).
-func checkSolidityAndPropagate(transaction *tangle.CachedTransaction) {
+func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 
 	txsToCheck := make(map[string]*tangle.CachedTransaction)
-	txsToCheck[transaction.GetTransaction().GetHash()] = transaction //1
+	txsToCheck[cachedTx.GetTransaction().GetHash()] = cachedTx //1
 
 	// Loop as long as new transactions are added in every loop cycle
 	for len(txsToCheck) != 0 {
-		for txHash, tx := range txsToCheck {
+		for txHash, cachedTxToCheck := range txsToCheck {
 			delete(txsToCheck, txHash)
 
-			solid, _ := checkSolidity(tx.Retain(), true)
+			solid, _ := checkSolidity(cachedTxToCheck.Retain(), true)
 			if solid {
-				if int32(time.Now().Unix())-tx.GetTransaction().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
+				if int32(time.Now().Unix())-cachedTxToCheck.GetTransaction().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions
-					tx.Release() //-1
+					cachedTxToCheck.Release() // tx -1
 					continue
 				}
 
-				transactionApprovers := tangle.GetCachedApprovers(txHash) //+1
-				for _, approver := range transactionApprovers {
-					if approver.Exists() {
-						approverHash := approver.GetApprover().GetHash()
-						approverTx := tangle.GetCachedTransaction(approverHash) //+1
-						if approverTx.Exists() {
+				cachedTxApprovers := tangle.GetCachedApprovers(txHash) // approvers +1
+				for _, cachedTxApprover := range cachedTxApprovers {
+					if cachedTxApprover.Exists() {
+						approverHash := cachedTxApprover.GetApprover().GetHash()
+						cachedApproverTx := tangle.GetCachedTransaction(approverHash) // tx +1
+						if cachedApproverTx.Exists() {
 							_, found := txsToCheck[approverHash]
 							if !found {
-								txsToCheck[approverHash] = approverTx
+								txsToCheck[approverHash] = cachedApproverTx
 							} else {
-								approverTx.Release() //-1
+								cachedApproverTx.Release() // tx -1
 							}
 						} else {
-							approverTx.Release() //-1
+							cachedApproverTx.Release() // tx -1
 						}
 					}
 				}
-				transactionApprovers.Release() //-1
+				cachedTxApprovers.Release() // approvers -1
 			}
-			tx.Release() //-1
+			cachedTxToCheck.Release() // tx -1
 		}
 	}
 }

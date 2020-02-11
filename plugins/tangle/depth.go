@@ -60,23 +60,23 @@ var BelowDepthMemoizationCache = belowDepthMemoizationCache{memoizationCache: ma
 // within the range of allowed milestones. if not, it is checked whether any referenced (directly/indirectly) tx
 // is confirmed by a milestone below the allowed threshold until a limit is reached of analyzed txs, in which case
 // the given tail transaction is also deemed being below max depth.
-func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex int) bool {
+func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex int) bool {
 
-	defer tailTx.Release() //-1
+	defer cachedTailTx.Release() // tx -1
 
 	// if the tx is already confirmed we don't need to check it for max depth
-	if confirmed, at := tailTx.GetTransaction().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
+	if confirmed, at := cachedTailTx.GetTransaction().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
 		return false
 	}
 
 	// no need to evaluate whether the tx is above/below the max depth if already checked
-	if is := BelowDepthMemoizationCache.IsBelowMaxDepth(tailTx.GetTransaction().GetHash()); is != nil {
+	if is := BelowDepthMemoizationCache.IsBelowMaxDepth(cachedTailTx.GetTransaction().GetHash()); is != nil {
 		return *is
 	}
 
 	// if the transaction is unconfirmed
 	txsToTraverse := make(map[string]struct{})
-	txsToTraverse[tailTx.GetTransaction().GetHash()] = struct{}{}
+	txsToTraverse[cachedTailTx.GetTransaction().GetHash()] = struct{}{}
 	analyzedTxs := make(map[string]struct{})
 
 	for len(txsToTraverse) != 0 {
@@ -86,7 +86,7 @@ func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex
 			// if we analyzed the limit we flag the tx automatically as below the max depth
 			// TODO: check whether a fast tangle would hit this limit naturally
 			if len(analyzedTxs) == belowMaxDepthTransactionLimit {
-				BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
+				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
 				return true
 			}
 
@@ -103,39 +103,39 @@ func IsBelowMaxDepth(tailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex
 			// we don't need to analyze further down if we already memoized this particular tx's max depth validity
 			if is := BelowDepthMemoizationCache.IsBelowMaxDepth(txHash); is != nil {
 				if *is {
-					BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
+					BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
 					return true
 				}
 				continue
 			}
 
-			tx := tangle.GetCachedTransaction(txHash) //+1
+			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
 
 			// we should have the transaction because the to be checked tail tx is solid
 			// and we passed the point where we checked whether the tx is a solid entry point
-			if !tx.Exists() {
+			if !cachedTx.Exists() {
 				log.Panicf("missing transaction %s for below max depth check", txHash)
 			}
 
-			confirmed, at := tx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
 
 			// we are below max depth on this transaction if it is confirmed by a milestone below our threshold
 			if confirmed && int(at) < lowerAllowedSnapshotIndex {
-				BelowDepthMemoizationCache.Set(tailTx.GetTransaction().GetHash(), true)
-				tx.Release() //-1
+				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
+				cachedTx.Release() // tx -1
 				return true
 			}
 
 			// we don't need to analyze further down if the transaction is confirmed within the threshold of the max depth
 			if confirmed {
-				tx.Release() //-1
+				cachedTx.Release() // tx -1
 				continue
 			}
 
 			//
-			txsToTraverse[tx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[tx.GetTransaction().GetBranch()] = struct{}{}
-			tx.Release() //-1
+			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
+			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+			cachedTx.Release() // tx -1
 		}
 	}
 

@@ -56,7 +56,6 @@ class CacheMetrics {
 
 class CacheMetric {
     size: number;
-    capacity: number;
 }
 
 class MemoryMetrics {

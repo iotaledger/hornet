@@ -287,13 +287,13 @@ func processReplies(reply *replyItem) {
 		if err != nil {
 			return
 		}
-		tx := tangle.GetCachedTransaction(reqHash) //+1
-		defer tx.Release()                         //-1
-		if !tx.Exists() {
+		cachedTx := tangle.GetCachedTransaction(reqHash) // tx +1
+		defer cachedTx.Release()                         // tx -1
+		if !cachedTx.Exists() {
 			return
 		}
 		select {
-		case neighborQueue.txQueue <- tx.GetTransaction().RawBytes:
+		case neighborQueue.txQueue <- cachedTx.GetTransaction().RawBytes:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
@@ -313,7 +313,7 @@ func processReplies(reply *replyItem) {
 		}
 
 		var err error
-		var txToSend *tangle.CachedTransaction
+		var cachedTxToSend *tangle.CachedTransaction
 
 		if !neighborSynced {
 			reqHash, err := trinary.BytesToTrytes(reply.neighborRequest.reqHashBytes, 81)
@@ -321,43 +321,43 @@ func processReplies(reply *replyItem) {
 				return
 			}
 
-			tx := tangle.GetCachedTransaction(reqHash) //+1
-			if !tx.Exists() {
-				tx.Release() //-1
+			cachedTx := tangle.GetCachedTransaction(reqHash) // tx +1
+			if !cachedTx.Exists() {
+				cachedTx.Release() // cachedTx -1
 			} else {
-				txToSend = tx
+				cachedTxToSend = cachedTx
 			}
 		}
 
-		if txToSend == nil {
+		if cachedTxToSend == nil {
 			if ourReqHash == nil {
 				// We don't have the tx, and we have nothing to request => no need to reply
 				return
 			}
 
-			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compress
+			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compressed
 			// This reduces the outgoing traffic if we are not sync
 
-			genesis := tangle.GetCachedTransaction(consts.NullHashTrytes) //+1
+			cachedGenesisTx := tangle.GetCachedTransaction(consts.NullHashTrytes) // tx +1
 
-			if !genesis.Exists() {
-				log.Panicf("Genesis tx not found. cachedObject: %p", genesis.CachedObject)
+			if !cachedGenesisTx.Exists() {
+				log.Panicf("Genesis tx not found. cachedObject: %p", cachedGenesisTx.CachedObject)
 			}
 
-			txToSend = genesis
+			cachedTxToSend = cachedGenesisTx
 		}
 
 		if ourReqHash == nil {
 			// We are synced => notify the neighbor
-			ourReqHash, err = trinary.TrytesToBytes(txToSend.GetTransaction().GetHash())
+			ourReqHash, err = trinary.TrytesToBytes(cachedTxToSend.GetTransaction().GetHash())
 			if err != nil {
-				txToSend.Release() //-1
+				cachedTxToSend.Release() // tx -1
 				return
 			}
 		}
 
-		msg := &legacyGossipTransaction{truncatedTxData: txToSend.GetTransaction().RawBytes, reqHash: ourReqHash}
-		txToSend.Release() //-1
+		msg := &legacyGossipTransaction{truncatedTxData: cachedTxToSend.GetTransaction().RawBytes, reqHash: ourReqHash}
+		cachedTxToSend.Release() // tx -1
 
 		select {
 		case neighborQueue.legacyTxQueue <- msg:
@@ -374,22 +374,23 @@ func processReplies(reply *replyItem) {
 			reply.neighborRequest.reqMilestoneIndex = tangle.GetLatestMilestoneIndex()
 		}
 
-		requestedMilestoneBundle := tangle.GetMilestone(reply.neighborRequest.reqMilestoneIndex)
-		if requestedMilestoneBundle == nil || !requestedMilestoneBundle.IsComplete() {
+		cachedReqMs := tangle.GetMilestoneOrNil(reply.neighborRequest.reqMilestoneIndex) // bundle +1
+		if cachedReqMs == nil {
 			// We don't have the requested milestone => no need to reply
 			return
 		}
 
-		transactions := requestedMilestoneBundle.GetTransactions() //+1
-		for _, txToSend := range transactions {
+		cachedTxs := cachedReqMs.GetBundle().GetTransactions() // txs +1
+		for _, cachedTxToSend := range cachedTxs {
 			select {
-			case neighborQueue.txQueue <- txToSend.GetTransaction().RawBytes:
+			case neighborQueue.txQueue <- cachedTxToSend.GetTransaction().RawBytes:
 			default:
 				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 				server.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
 		}
-		transactions.Release() //-1
+		cachedTxs.Release()   // txs -1
+		cachedReqMs.Release() // bundle -1
 		return
 	}
 }

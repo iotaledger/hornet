@@ -39,9 +39,11 @@ func (r *invalidBundleReference) UnmarshalBinary(data []byte) error {
 }
 
 func invalidBundleFactory(key []byte) objectstorage.StorableObject {
-	return &invalidBundleReference{
-		hashBytes: key,
+	invalidBndl := &invalidBundleReference{
+		hashBytes: make([]byte, len(key)),
 	}
+	copy(invalidBndl.hashBytes, key)
+	return invalidBndl
 }
 
 func configureRefsAnInvalidBundleStorage() {
@@ -52,7 +54,11 @@ func configureRefsAnInvalidBundleStorage() {
 		invalidBundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),
-		//objectstorage.EnableLeakDetection(),
+		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
+			objectstorage.LeakDetectionOptions{
+				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
+				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+			}),
 	)
 }
 

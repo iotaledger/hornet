@@ -35,13 +35,12 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	info.LatestMilestone = consts.NullHashTrytes
 
 	// Latest milestone hash
-	lsmBndl := tangle.GetMilestone(lmi)
-	if lsmBndl != nil {
-		tail := lsmBndl.GetTail() //+1
-		if tail != nil {
-			info.LatestMilestone = tail.GetTransaction().GetHash()
-		}
-		tail.Release() //-1
+	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
+	if cachedLatestMs != nil {
+		cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
+		info.LatestMilestone = cachedMsTailTx.GetTransaction().GetHash()
+		cachedMsTailTx.Release() // tx -1
+		cachedLatestMs.Release() // bundle -1
 	}
 
 	// Solid milestone index
@@ -51,13 +50,12 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	info.IsSynced = tangle.IsNodeSynced()
 
 	// Solid milestone hash
-	smBndl := tangle.GetMilestone(smi)
-	if smBndl != nil {
-		tail := smBndl.GetTail() //+1
-		if tail != nil {
-			info.LatestSolidSubtangleMilestone = tail.GetTransaction().GetHash()
-		}
-		tail.Release() //-1
+	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1
+	if cachedSolidMs != nil {
+		cachedMsTailTx := cachedSolidMs.GetBundle().GetTail() // tx +1
+		cachedMsTailTx.Release()                              // tx -1
+		info.LatestSolidSubtangleMilestone = cachedMsTailTx.GetTransaction().GetHash()
+		cachedSolidMs.Release() // bundle -1
 	}
 
 	// Milestone start index

@@ -109,10 +109,10 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 	}
 }
 
-// RequestApproveesAndRemove add the approvees of a tx to the queue and removes the tx from the queue
-func RequestApprovees(transaction *tangle.CachedTransaction) {
+// RequestApproveesAndRemove adds the approvees of a tx to the queue and removes the tx from the queue
+func RequestApprovees(cachedTx *tangle.CachedTransaction) {
 
-	transaction.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		txHash := tx.GetHash()
 
 		if tangle.SolidEntryPointsContain(txHash) {
@@ -152,19 +152,21 @@ func RequestApprovees(transaction *tangle.CachedTransaction) {
 	})
 }
 
-// RequestMilestone requests trunk and branch of a milestone if they are missing
+// RequestMilestoneApprovees requests trunk and branch of a milestone if they are missing
 // ToDo: add it to the requestsWorkerPool
-func RequestMilestone(milestone *tangle.Bundle) bool {
+func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
+	defer cachedMsBndl.Release() // bundle -1
+
 	var requested bool
 
-	milestoneHeadTx := milestone.GetHead() //+1
-	defer milestoneHeadTx.Release()        //-1
+	cachedMsHeadTx := cachedMsBndl.GetBundle().GetHead() // tx +1
+	defer cachedMsHeadTx.Release()                       // tx -1
 
-	reqMilestoneIndex := milestone.GetMilestoneIndex()
+	reqMilestoneIndex := cachedMsBndl.GetBundle().GetMilestoneIndex()
 
-	approveeHashes := []trinary.Hash{milestoneHeadTx.GetTransaction().GetTrunk()}
-	if milestoneHeadTx.GetTransaction().GetTrunk() != milestoneHeadTx.GetTransaction().GetBranch() {
-		approveeHashes = append(approveeHashes, milestoneHeadTx.GetTransaction().GetBranch())
+	approveeHashes := []trinary.Hash{cachedMsHeadTx.GetTransaction().GetTrunk()}
+	if cachedMsHeadTx.GetTransaction().GetTrunk() != cachedMsHeadTx.GetTransaction().GetBranch() {
+		approveeHashes = append(approveeHashes, cachedMsHeadTx.GetTransaction().GetBranch())
 	}
 
 	for _, approveeHash := range approveeHashes {

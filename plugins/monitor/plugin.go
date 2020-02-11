@@ -112,17 +112,17 @@ func configure(plugin *node.Plugin) {
 	api.GET("/api/v1/getRecentTransactions", handleAPI)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) //Pass +1
+		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) //Pass +1
+		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) // tx pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize))
 
 	newMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewMilestone(task.Param(0).(*tanglePackage.Bundle))
+		onNewMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize))
 
@@ -135,41 +135,43 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	notifyNewTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
-				transaction.Release() //-1
+				cachedTx.Release() // tx -1
 				return
 			}
 			wasSyncBefore = true
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(transaction) //Pass +1
+			_, added := newTxWorkerPool.TrySubmit(cachedTx) // tx pass +1
 			if added {
-				return //Avoid Release()
+				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
-		transaction.Release() //-1
+		cachedTx.Release() // tx -1
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(transaction *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime) //Pass +!
+			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
 			if added {
-				return //Avoid Release()
+				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
-		transaction.Release() //-1
+		cachedTx.Release() // tx -1
 	})
 
-	notifyNewMilestone := events.NewClosure(func(bundle *tanglePackage.Bundle) {
-		if !wasSyncBefore {
-			return
+	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
+		if wasSyncBefore {
+			_, added := newMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
+			if added {
+				return // Avoid bundle -1 (done inside workerpool task)
+			}
 		}
-
-		newMilestoneWorkerPool.TrySubmit(bundle)
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("Monitor[NewTxWorker]", func(shutdownSignal <-chan struct{}) {

@@ -70,11 +70,12 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	notifyNewSolidMilestone := events.NewClosure(func(bundle *tangle.Bundle) {
+	notifyNewSolidMilestone := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		select {
-		case newSolidMilestoneSignal <- bundle.GetMilestoneIndex():
+		case newSolidMilestoneSignal <- cachedBndl.GetBundle().GetMilestoneIndex():
 		default:
 		}
+		cachedBndl.Release() // bundle -1
 	})
 
 	daemon.BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
@@ -148,9 +149,5 @@ func installGenesisTransaction() {
 	genesisTx := hornet.NewTransactionFromAPI(genesis, txBytesTruncated)
 
 	// ensure the bundle is also existent for the genesis tx
-	genesisBundleBucket, err := tangle.GetBundleBucket(genesis.Bundle)
-	if err != nil {
-		log.Panic(err)
-	}
-	genesisBundleBucket.AddTransaction(genesisTx)
+	tangle.AddTransactionToStorage(genesisTx)
 }

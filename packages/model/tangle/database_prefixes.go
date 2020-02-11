@@ -3,13 +3,14 @@ package tangle
 const (
 	DBPrefixHealth                byte = 0
 	DBPrefixTransactions          byte = 1
-	DBPrefixBundles               byte = 2
-	DBPrefixAddresses             byte = 3
-	DBPrefixMilestones            byte = 4
-	DBPrefixLedgerState           byte = 5
-	DBPrefixApprovers             byte = 6
-	DBPrefixSnapshot              byte = 7
-	DBPrefixFirstSeenTransactions byte = 8
-	DBPrefixSpentAddresses        byte = 9
-	DBPrefixAutopeering           byte = 10
+	DBPrefixBundleTransactions    byte = 2
+	DBPrefixBundles               byte = 3
+	DBPrefixAddresses             byte = 4
+	DBPrefixMilestones            byte = 5
+	DBPrefixLedgerState           byte = 6
+	DBPrefixApprovers             byte = 7
+	DBPrefixSnapshot              byte = 8
+	DBPrefixFirstSeenTransactions byte = 9
+	DBPrefixSpentAddresses        byte = 10
+	DBPrefixAutopeering           byte = 11
 )
