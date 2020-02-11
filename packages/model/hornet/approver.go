@@ -7,16 +7,16 @@ import (
 
 type Approver struct {
 	objectstorage.StorableObjectFlags
-	TxHash []byte
-	Hash   []byte
+	TxHash       []byte
+	ApproverHash []byte
 }
 
 func (a *Approver) GetTransactionHash() trinary.Hash {
 	return trinary.MustBytesToTrytes(a.TxHash, 81)
 }
 
-func (a *Approver) GetHash() trinary.Hash {
-	return trinary.MustBytesToTrytes(a.Hash, 81)
+func (a *Approver) GetApproverHash() trinary.Hash {
+	return trinary.MustBytesToTrytes(a.ApproverHash, 81)
 }
 
 // ObjectStorage interface
@@ -26,12 +26,12 @@ func (a *Approver) Update(other objectstorage.StorableObject) {
 		panic("invalid object passed to Approver.Update()")
 	} else {
 		a.TxHash = obj.TxHash
-		a.Hash = obj.Hash
+		a.ApproverHash = obj.ApproverHash
 	}
 }
 
 func (a *Approver) GetStorageKey() []byte {
-	return append(a.TxHash, a.Hash...)
+	return append(a.TxHash, a.ApproverHash...)
 }
 
 func (a *Approver) MarshalBinary() (data []byte, err error) {
