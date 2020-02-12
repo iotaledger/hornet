@@ -28,7 +28,7 @@ builds:
     binary: hornet
     env:
       - CGO_ENABLED=1
-      - CC=/etc/musl/armv7l-linux-musleabihf-cross/bin/armv7l-linux-musleabihf-gcc-9.2.1
+      - CC=armv7l-linux-musleabihf-gcc
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
@@ -46,7 +46,7 @@ builds:
     binary: hornet
     env:
       - CGO_ENABLED=1
-      - CC=/etc/musl/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc-9.2.1
+      - CC=aarch64-linux-musl-gcc
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
@@ -71,6 +71,18 @@ builds:
     main: main.go
     goos:
       - windows
+    goarch:
+      - amd64
+  # macOS AMD64
+  - id: hornet-macOS-amd64
+    binary: hornet
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+    main: main.go
+    goos:
+      - darwin
     goarch:
       - amd64
 
