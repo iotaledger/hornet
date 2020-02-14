@@ -6,9 +6,9 @@ import (
 
 // NeighborConfig struct
 type NeighborConfig struct {
-	Identity   string `json:"identity"`
-	Alias      string `json:"alias"`
-	PreferIPv6 bool   `json:"prefer_ipv6"`
+	Identity   string `mapstructure:"identity"`
+	Alias      string `mapstructure:"alias"`
+	PreferIPv6 bool   `mapstructure:"prefer_ipv6"`
 }
 
 func init() {
