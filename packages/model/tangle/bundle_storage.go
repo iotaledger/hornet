@@ -344,6 +344,14 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		return
 	}
 
+	cachedBndl := GetCachedBundle(cachedTx.GetTransaction().GetHash()) // bundle +1
+
+	if cachedBndl.Exists() {
+		// Bundle already exists
+		cachedBndl.Release() // bundle -1
+		return
+	}
+
 	// create a new bundle instance
 	bndl := &Bundle{
 		tailTx:    cachedTx.GetTransaction().GetHash(),
@@ -368,8 +376,14 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 	}
 
-	cachedBndl := StoreBundle(bndl) // bundle +1
-	defer cachedBndl.Release()      // bundle -1
+	if cachedBndl.Exists() {
+		// Bundle already exists
+		cachedBndl.Release() // bundle -1
+		return
+	}
+
+	cachedBndl = StoreBundle(bndl) // bundle +1
+	defer cachedBndl.Release()     // bundle -1
 
 	if !cachedBndl.GetBundle().validate() {
 		return
