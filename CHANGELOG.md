@@ -147,17 +147,17 @@ Now there is a seperate file for the neighbor settings:
     {
       "identity": "example1.neighbor.com:15600",
       "alias": "Example Neighbor 1",
-      "preferIPv6": false
+      "prefer_ipv6": false
     },
     {
       "identity": "example2.neighbor.com:15600",
       "alias": "Example Neighbor 2",
-      "preferIPv6": false
+      "prefer_ipv6": false
     },
     {
       "identity": "example3.neighbor.com:15600",
       "alias": "Example Neighbor 3",
-      "preferIPv6": false
+      "prefer_ipv6": false
     }
   ]
 }
@@ -171,20 +171,20 @@ Removed options:
   "network": {
     "address": "0.0.0.0",
 -    "autotetheringenabled": false,
-    "preferIPv6": false,
+    "prefer_ipv6": false,
 -    "maxneighbors": 5,
 -    "neighbors": [
 -      {
 -        "identity": "example1.neighbor.com:15600",
--        "preferIPv6": false
+-        "prefer_ipv6": false
 -      },
 -      {
 -        "identity": "example2.neighbor.com:15600",
--        "preferIPv6": false
+-        "prefer_ipv6": false
 -      },
 -      {
 -        "identity": "example3.neighbor.com:15600",
--        "preferIPv6": false
+-        "prefer_ipv6": false
 -      }
 -    ],
     "port": 15600,
@@ -237,7 +237,7 @@ New options:
 ```json
 
   "network": {
-    "preferIPv6": false,
+    "prefer_ipv6": false,
   }
 
   "monitor": {

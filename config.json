@@ -194,7 +194,7 @@
   "network": {
     "bindAddress": "0.0.0.0",
     "externalAddress": "auto",
-    "preferIPv6": false,
+    "prefer_ipv6": false,
     "port": 15600,
     "reconnectattemptintervalseconds": 60
   },

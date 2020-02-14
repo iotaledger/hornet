@@ -32,7 +32,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
 	addedNeighbors := 0
 
-	preferIPv6 := parameter.NodeConfig.GetBool("network.preferIPv6")
+	preferIPv6 := parameter.NodeConfig.GetBool("network.prefer_ipv6")
 
 	if err := mapstructure.Decode(i, an); err != nil {
 		e.Error = "Internal error"

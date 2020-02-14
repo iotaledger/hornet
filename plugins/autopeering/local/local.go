@@ -30,7 +30,7 @@ func configureLocal() *peer.Local {
 	var externalIP net.IP
 	if str := parameter.NodeConfig.GetString(CFG_EXTERNAL); strings.ToLower(str) == "auto" {
 		log.Info("Querying external IP ...")
-		ip, err := netutil.GetPublicIP(parameter.NodeConfig.GetBool("network.preferIPv6"))
+		ip, err := netutil.GetPublicIP(parameter.NodeConfig.GetBool("network.prefer_ipv6"))
 		if err != nil {
 			log.Fatalf("Error querying external IP: %s", err)
 		}
