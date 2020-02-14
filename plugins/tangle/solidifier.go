@@ -216,7 +216,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 					entryTxs[approverTxHash] = struct{}{}
 				}
 
-				if newlySolid && tangle.IsNodeSynced() {
+				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
 					gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
 				}

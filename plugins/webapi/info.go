@@ -47,7 +47,7 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	smi := tangle.GetSolidMilestoneIndex()
 	info.LatestSolidSubtangleMilestoneIndex = uint32(smi)
 	info.LatestSolidSubtangleMilestone = consts.NullHashTrytes
-	info.IsSynced = tangle.IsNodeSynced()
+	info.IsSynced = tangle.IsNodeSyncedWithThreshold()
 
 	// Solid milestone hash
 	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1

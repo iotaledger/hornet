@@ -23,11 +23,12 @@ const (
 )
 
 var (
-	solidMilestoneIndex milestone_index.MilestoneIndex
-	solidMilestoneLock  syncutils.RWMutex
-	latestMilestone     *Bundle
-	latestMilestoneLock syncutils.RWMutex
-	isNodeSynced        bool
+	solidMilestoneIndex   milestone_index.MilestoneIndex
+	solidMilestoneLock    syncutils.RWMutex
+	latestMilestone       *Bundle
+	latestMilestoneLock   syncutils.RWMutex
+	isNodeSynced          bool
+	isNodeSyncedThreshold bool
 
 	coordinatorAddress       string
 	coordinatorSecurityLevel int
@@ -65,13 +66,19 @@ func IsNodeSynced() bool {
 	return isNodeSynced
 }
 
+func IsNodeSyncedWithThreshold() bool {
+	return isNodeSyncedThreshold
+}
+
 func updateNodeSynced(latestSolidIndex, latestIndex milestone_index.MilestoneIndex) {
 	if latestIndex == 0 {
 		isNodeSynced = false
+		isNodeSyncedThreshold = false
 		return
 	}
 
-	isNodeSynced = latestSolidIndex >= (latestIndex - NodeSyncedThreshold)
+	isNodeSynced = latestSolidIndex == latestIndex
+	isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - NodeSyncedThreshold)
 }
 
 func SetSolidMilestone(cachedBndl *CachedBundle) {

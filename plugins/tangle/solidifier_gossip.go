@@ -26,7 +26,7 @@ func configureGossipSolidifier() {
 	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		// Check solidity of gossip txs if the node is synced
 		cachedTx := task.Param(0).(*tangle.CachedTransaction) //1
-		if tangle.IsNodeSynced() {
+		if tangle.IsNodeSyncedWithThreshold() {
 			checkSolidityAndPropagate(cachedTx) // tx pass +1
 		} else {
 			cachedTx.Release() // tx -1
@@ -41,7 +41,7 @@ func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		if tangle.IsNodeSynced() {
+		if tangle.IsNodeSyncedWithThreshold() {
 			gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
 		} else {
 			cachedTx.Release() // tx -1
