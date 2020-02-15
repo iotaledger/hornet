@@ -316,6 +316,8 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 	StoreApprover(cachedTx.GetTransaction().GetTrunk(), cachedTx.GetTransaction().GetHash()).Release()
 	StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release()
 
+	StoreTag(cachedTx.GetTransaction().Tx.Tag, cachedTx.GetTransaction().GetHash()).Release()
+
 	// If the transaction is part of a milestone, the bundle must be created here
 	// Otherwise, bundles are created if tailTx becomes solid
 	if IsMaybeMilestoneTx(cachedTx.Retain()) { // tx pass +1

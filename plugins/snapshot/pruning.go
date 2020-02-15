@@ -97,6 +97,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 			cachedTx.Release() // tx -1
 			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
 		}
+		tangle.DeleteTag(cachedTx.GetTransaction().Tx.Tag, txHash)
 
 		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: cachedTx.GetTransaction().Tx.Address})
 		cachedTx.Release() // tx -1

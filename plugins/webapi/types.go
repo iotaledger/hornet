@@ -101,6 +101,8 @@ type FindTransactions struct {
 	Command   string   `mapstructure:"command"`
 	Bundles   []string `mapstructure:"bundles"`
 	Addresses []string `mapstructure:"addresses"`
+	Tags      []string `mapstructure:"tags"`
+	Approvees []string `mapstructure:"approvees"`
 }
 
 // FindTransactionsReturn struct
