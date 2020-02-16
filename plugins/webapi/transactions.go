@@ -115,9 +115,9 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	}
 
 	// Searching for all approovers of the given transactions
-	for _, approoveHash := range ft.Approvees {
-		if guards.IsTransactionHash(approoveHash) {
-			cachedTxApprovers := tangle.GetCachedApprovers(approoveHash, maxFindTransactions) // approvers +1
+	for _, approveeHash := range ft.Approvees {
+		if guards.IsTransactionHash(approveeHash) {
+			cachedTxApprovers := tangle.GetCachedApprovers(approveeHash, maxFindTransactions) // approvers +1
 			for _, cachedTxApprover := range cachedTxApprovers {
 				if !cachedTxApprover.Exists() {
 					continue
