@@ -46,7 +46,7 @@ func NewRequestQueue() *RequestQueue {
 			objectstorage.PersistenceEnabled(false),
 			objectstorage.LeakDetectionEnabled(false, objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: 20,
-				MaxConsumerHoldTime:   100 * time.Second,
+				MaxConsumerHoldTime:   120 * time.Second,
 			}),
 		),
 		ticker:     time.NewTicker(RequestQueueTickerInterval),
@@ -95,22 +95,25 @@ func (s *RequestQueue) retryPending() {
 
 	s.Lock()
 
+	stillPending := []*request{}
+
 	for _, r := range s.pending {
-		if r.isReceived() {
-			r.cachedRequest.Release() // request -1		// Request done, release consumer and delete
+		if r.isProcessed() {
+			// Request done, release consumer and delete
+			r.cachedRequest.Release() // request -1
 			s.DeleteRequest(r.hash)
+		} else if r.isReceived() {
+			// Request received but not processed yet, so re-add to pending queue
+			stillPending = append(stillPending, r)
 		} else {
+			// We haven't received any answer for this request, so re-add it to our lifo queue
 			if s.ContainsRequest(r.hash) { // Check if the request is still in the storage (there was a problem that deleted requests are still in pending)
-				// We haven't received any answer for this request, so re-add it to our lifo queue
 				s.lifo = append(s.lifo, r)
-			} else {
-				r.cachedRequest.Release() // request -1
-				s.DeleteRequest(r.hash)
 			}
 		}
 	}
 
-	s.pending = []*request{}
+	s.pending = stillPending
 	s.Unlock()
 }
 
@@ -132,8 +135,15 @@ func (s *RequestQueue) GetNext() ([]byte, trinary.Hash, milestone_index.Mileston
 			if request.isReceived() || request.isProcessed() {
 				// Remove from lifo since we received an answer for the request
 				s.lifo = append(s.lifo[:i], s.lifo[i+1:]...)
-				request.cachedRequest.Release() // request -1		// Request done, release consumer and delete
-				s.DeleteRequest(request.hash)
+
+				if request.isProcessed() {
+					// Request done, release consumer and delete
+					request.cachedRequest.Release() // request -1
+					s.DeleteRequest(request.hash)
+				} else {
+					// Request received but not processed yet, so re-add to pending queue
+					s.pending = append(s.pending, request)
+				}
 				continue
 			}
 			request.updateTimes()
@@ -158,8 +168,15 @@ func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex,
 			if request.isReceived() || request.isProcessed() {
 				// Remove from lifo since we received an answer for the request
 				s.lifo = append(s.lifo[:i], s.lifo[i+1:]...)
-				request.cachedRequest.Release() // request -1		// Request done, release consumer and delete
-				s.DeleteRequest(request.hash)
+
+				if request.isProcessed() {
+					// Request done, release consumer and delete
+					request.cachedRequest.Release() // request -1
+					s.DeleteRequest(request.hash)
+				} else {
+					// Request received but not processed yet, so re-add to pending queue
+					s.pending = append(s.pending, request)
+				}
 				continue
 			} else if request.msIndex < startIndex || request.msIndex > endIndex {
 				// Not in range, skip it
@@ -173,18 +190,6 @@ func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex,
 	}
 	return nil, "", 0
 
-}
-
-func (s *RequestQueue) Contains(txHash trinary.Hash) (bool, milestone_index.MilestoneIndex) {
-	cachedRequest := s.GetCachedRequest(txHash) // request +1
-	defer cachedRequest.Release()               // request -1
-
-	if !cachedRequest.Exists() {
-		return false, 0
-	}
-
-	request := cachedRequest.GetRequest()
-	return true, request.msIndex
 }
 
 func (s *RequestQueue) add(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, markRequested bool) bool {
@@ -231,7 +236,7 @@ func (s *RequestQueue) Add(txHash trinary.Hash, msIndex milestone_index.Mileston
 	return s.add(txHash, msIndex, markRequested)
 }
 
-func (s *RequestQueue) MarkReceived(txHash trinary.Hash) bool {
+func (s *RequestQueue) MarkReceived(txHash trinary.Hash) (bool, milestone_index.MilestoneIndex) {
 
 	s.Lock()
 	defer s.Unlock()
@@ -242,13 +247,13 @@ func (s *RequestQueue) MarkReceived(txHash trinary.Hash) bool {
 	if cachedRequest.Exists() {
 		request := cachedRequest.GetRequest()
 		request.markReceived()
-		return true
+		return true, request.msIndex
 	}
 
-	return false
+	return false, milestone_index.MilestoneIndex(0)
 }
 
-func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) bool {
+func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -259,6 +264,9 @@ func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) bool {
 		request := cachedRequest.GetRequest()
 		request.markProcessed()
 	}
+}
+
+func (s *RequestQueue) IsEmpty() bool {
 
 	// First check if we still have tx waiting to be requested
 	if len(s.lifo) > 0 {
@@ -308,7 +316,7 @@ func (s *RequestQueue) DebugRequests() []*DebugRequest {
 	var requests []*DebugRequest
 
 	for _, req := range s.lifo {
-		contains, _ := s.Contains(req.hash)
+		contains := s.ContainsRequest(req.hash)
 		exists := tangle.ContainsTransaction(req.hash)
 		requests = append(requests, &DebugRequest{
 			Hash:        req.hash,
@@ -322,7 +330,7 @@ func (s *RequestQueue) DebugRequests() []*DebugRequest {
 	}
 
 	for _, req := range s.pending {
-		contains, _ := s.Contains(req.hash)
+		contains := s.ContainsRequest(req.hash)
 		exists := tangle.ContainsTransaction(req.hash)
 		requests = append(requests, &DebugRequest{
 			Hash:        req.hash,

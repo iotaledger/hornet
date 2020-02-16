@@ -110,7 +110,7 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 }
 
 // RequestApproveesAndRemove adds the approvees of a tx to the queue and removes the tx from the queue
-func RequestApprovees(cachedTx *tangle.CachedTransaction) {
+func RequestApprovees(cachedTx *tangle.CachedTransaction, reqMilestoneIndex milestone_index.MilestoneIndex) {
 
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		txHash := tx.GetHash()
@@ -120,33 +120,29 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction) {
 			return
 		}
 
-		contains, reqMilestoneIndex := RequestQueue.Contains(txHash)
-		if contains {
-			// Tx was requested => request trunk and branch tx
+		// Request trunk and branch tx
+		approveeHashes := []trinary.Hash{tx.GetTrunk()}
+		if tx.GetTrunk() != tx.GetBranch() {
+			approveeHashes = append(approveeHashes, tx.GetBranch())
+		}
 
-			approveeHashes := []trinary.Hash{tx.GetTrunk()}
-			if tx.GetTrunk() != tx.GetBranch() {
-				approveeHashes = append(approveeHashes, tx.GetBranch())
+		approvesToAdd := trinary.Hashes{}
+		for _, approveeHash := range approveeHashes {
+			if tangle.SolidEntryPointsContain(approveeHash) {
+				// Ignore solid entry points (snapshot milestone included)
+				continue
 			}
-
-			approvesToAdd := trinary.Hashes{}
-			for _, approveeHash := range approveeHashes {
-				if tangle.SolidEntryPointsContain(approveeHash) {
-					// Ignore solid entry points (snapshot milestone included)
-					continue
-				}
-				if tangle.ContainsTransaction(approveeHash) {
-					// Do not request tx that we already know
-					continue
-				}
-				approvesToAdd = append(approvesToAdd, approveeHash)
+			if tangle.ContainsTransaction(approveeHash) {
+				// Do not request tx that we already know
+				continue
 			}
+			approvesToAdd = append(approvesToAdd, approveeHash)
+		}
 
-			reqsAdded := RequestQueue.AddMulti(approvesToAdd, reqMilestoneIndex, false)
-			for i, added := range reqsAdded {
-				if added {
-					stingRequestsWorkerPool.TrySubmit(approvesToAdd[i], reqMilestoneIndex)
-				}
+		reqsAdded := RequestQueue.AddMulti(approvesToAdd, reqMilestoneIndex, false)
+		for i, added := range reqsAdded {
+			if added {
+				stingRequestsWorkerPool.TrySubmit(approvesToAdd[i], reqMilestoneIndex)
 			}
 		}
 	})

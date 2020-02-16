@@ -23,7 +23,7 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 	// Warp sync milestone txs (via STING) are not requested by default => they would get lost
 	cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
 	for _, cachedTx := range cachedTxs {
-		cachedTx.GetTransaction().SetRequested(true)
+		cachedTx.GetTransaction().SetRequested(true, cachedBndl.GetBundle().GetMilestoneIndex())
 	}
 	cachedTxs.Release() // tx -1
 
