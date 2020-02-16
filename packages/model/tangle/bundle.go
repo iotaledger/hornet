@@ -292,6 +292,7 @@ func (bundle *Bundle) calcLedgerChanges() {
 
 	bundle.ledgerChanges = changes
 	bundle.setValueSpam(isValueSpamBundle)
+	bundle.SetModified(true)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

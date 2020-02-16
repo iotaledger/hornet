@@ -56,6 +56,10 @@ func (bundle *Bundle) Update(other objectstorage.StorableObject) {
 	if obj, ok := other.(*Bundle); !ok {
 		panic("invalid object passed to Bundle.Update()")
 	} else {
+		bundle.Lock()
+		defer bundle.Unlock()
+		other.(*Bundle).Lock()
+		defer other.(*Bundle).Unlock()
 
 		bundle.tailTx = obj.tailTx
 
@@ -202,6 +206,10 @@ func ContainsBundle(tailTxHash trinary.Hash) bool {
 
 // bundle + 1
 func StoreBundle(bundle *Bundle) *CachedBundle {
+	// Wait until all ongoing changes are done
+	bundle.RLock()
+	defer bundle.RUnlock()
+
 	return &CachedBundle{bundleStorage.Store(bundle)}
 }
 
