@@ -23,8 +23,7 @@ var (
 	solidifierMilestoneIndex     milestone_index.MilestoneIndex = 0
 	solidifierMilestoneIndexLock syncutils.RWMutex
 
-	solidifierLock         syncutils.RWMutex
-	lastSolidificationTime time.Time
+	solidifierLock syncutils.RWMutex
 
 	maxMissingMilestoneSearchDepth = 120000 // 1000 TPS at 2 min milestone interval
 )
@@ -250,7 +249,7 @@ func abortMilestoneSolidification() {
 }
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing tx
-func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, forceAbort bool, coolDown bool) {
+func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, forceAbort bool) {
 
 	/* How milestone solidification works:
 
@@ -268,10 +267,6 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 			- this should be done without blowing up the RAM
 			- don't stop that traversion if older milestone comes in, its only once and helps at startup
 	*/
-
-	if coolDown && time.Since(lastSolidificationTime) < (time.Duration(500)*time.Millisecond) {
-		return
-	}
 
 	if !forceAbort {
 		solidifierMilestoneIndexLock.RLock()
@@ -313,8 +308,6 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 	signalChanMilestoneStopSolidificationLock.Unlock()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-
-	lastSolidificationTime = time.Now()
 
 	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
 		if aborted {

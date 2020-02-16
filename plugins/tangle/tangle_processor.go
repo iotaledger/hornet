@@ -49,7 +49,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex), task.Param(1).(bool), task.Param(2).(bool))
+		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 
@@ -140,7 +140,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	if !tangle.IsNodeSynced() && gossip.RequestQueue.IsEmpty() {
 		// The node is not synced, but the request queue seems empty => trigger the solidifer
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false, true)
+		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 	}
 }
 
