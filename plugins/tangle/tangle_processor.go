@@ -152,7 +152,10 @@ func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
 }
 
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
-	processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+	_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+	if !added {
+		cachedBndl.Release() // bundle -1
+	}
 }
 
 func onReceivedInvalidMilestone(err error) {

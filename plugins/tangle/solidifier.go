@@ -219,7 +219,10 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 
 				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
+					_, added := gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
+					if !added {
+						cachedEntryTx.Release() // tx -1
+					}
 				}
 
 				// Delete the tx from the map since it is solid

@@ -25,7 +25,7 @@ var (
 func configureGossipSolidifier() {
 	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		// Check solidity of gossip txs if the node is synced
-		cachedTx := task.Param(0).(*tangle.CachedTransaction) //1
+		cachedTx := task.Param(0).(*tangle.CachedTransaction)
 		if tangle.IsNodeSyncedWithThreshold() {
 			checkSolidityAndPropagate(cachedTx) // tx pass +1
 		} else {
@@ -33,7 +33,7 @@ func configureGossipSolidifier() {
 		}
 
 		task.Return(nil)
-	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize))
+	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 }
 
@@ -42,7 +42,10 @@ func runGossipSolidifier() {
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		if tangle.IsNodeSyncedWithThreshold() {
-			gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
+			_, added := gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
+			if !added {
+				cachedTx.Release() // tx -1
+			}
 		} else {
 			cachedTx.Release() // tx -1
 		}
@@ -65,7 +68,7 @@ func runGossipSolidifier() {
 func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 
 	txsToCheck := make(map[string]*tangle.CachedTransaction)
-	txsToCheck[cachedTx.GetTransaction().GetHash()] = cachedTx //1
+	txsToCheck[cachedTx.GetTransaction().GetHash()] = cachedTx
 
 	// Loop as long as new transactions are added in every loop cycle
 	for len(txsToCheck) != 0 {
@@ -84,17 +87,19 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 				for _, cachedTxApprover := range cachedTxApprovers {
 					if cachedTxApprover.Exists() {
 						approverHash := cachedTxApprover.GetApprover().GetApproverHash()
+
 						cachedApproverTx := tangle.GetCachedTransaction(approverHash) // tx +1
-						if cachedApproverTx.Exists() {
-							_, found := txsToCheck[approverHash]
-							if !found {
-								txsToCheck[approverHash] = cachedApproverTx
-							} else {
-								cachedApproverTx.Release() // tx -1
-							}
-						} else {
+						if !cachedApproverTx.Exists() {
 							cachedApproverTx.Release() // tx -1
+							continue
 						}
+
+						if _, found := txsToCheck[approverHash]; found {
+							cachedApproverTx.Release() // tx -1
+							continue
+						}
+
+						txsToCheck[approverHash] = cachedApproverTx
 					}
 				}
 				cachedTxApprovers.Release() // approvers -1

@@ -114,17 +114,17 @@ func configure(plugin *node.Plugin) {
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize))
+	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) // tx pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize))
+	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize))
+	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	reattachmentWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onReattachment(task.Param(0).(trinary.Hash))
