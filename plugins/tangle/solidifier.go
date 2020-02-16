@@ -23,7 +23,8 @@ var (
 	solidifierMilestoneIndex     milestone_index.MilestoneIndex = 0
 	solidifierMilestoneIndexLock syncutils.RWMutex
 
-	solidifierLock syncutils.RWMutex
+	solidifierLock         syncutils.RWMutex
+	lastSolidificationTime time.Time
 
 	maxMissingMilestoneSearchDepth = 120000 // 1000 TPS at 2 min milestone interval
 )
@@ -246,7 +247,7 @@ func abortMilestoneSolidification() {
 }
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing tx
-func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, forceAbort bool) {
+func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, forceAbort bool, coolDown bool) {
 
 	/* How milestone solidification works:
 
@@ -264,6 +265,10 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 			- this should be done without blowing up the RAM
 			- don't stop that traversion if older milestone comes in, its only once and helps at startup
 	*/
+
+	if coolDown && time.Since(lastSolidificationTime) < (time.Duration(500)*time.Millisecond) {
+		return
+	}
 
 	if !forceAbort {
 		solidifierMilestoneIndexLock.RLock()
@@ -306,6 +311,8 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
 
+	lastSolidificationTime = time.Now()
+
 	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
@@ -341,7 +348,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 		// rerun to solidify the older one
 		setSolidifierMilestoneIndex(0)
 
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
+		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true, false)
 		return
 	}
 
@@ -356,7 +363,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
 
-	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
+	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true, false)
 }
 
 func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {
