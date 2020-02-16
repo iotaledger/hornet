@@ -56,6 +56,10 @@ func (bundle *Bundle) Update(other objectstorage.StorableObject) {
 	if obj, ok := other.(*Bundle); !ok {
 		panic("invalid object passed to Bundle.Update()")
 	} else {
+		bundle.Lock()
+		defer bundle.Unlock()
+		other.(*Bundle).Lock()
+		defer other.(*Bundle).Unlock()
 
 		bundle.tailTx = obj.tailTx
 
@@ -202,6 +206,10 @@ func ContainsBundle(tailTxHash trinary.Hash) bool {
 
 // bundle + 1
 func StoreBundle(bundle *Bundle) *CachedBundle {
+	// Wait until all ongoing changes are done
+	bundle.RLock()
+	defer bundle.RUnlock()
+
 	return &CachedBundle{bundleStorage.Store(bundle)}
 }
 
@@ -316,6 +324,8 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction) (alreadyAdded bool) {
 	StoreApprover(cachedTx.GetTransaction().GetTrunk(), cachedTx.GetTransaction().GetHash()).Release()
 	StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release()
 
+	StoreTag(cachedTx.GetTransaction().Tx.Tag, cachedTx.GetTransaction().GetHash()).Release()
+
 	// If the transaction is part of a milestone, the bundle must be created here
 	// Otherwise, bundles are created if tailTx becomes solid
 	if IsMaybeMilestoneTx(cachedTx.Retain()) { // tx pass +1
@@ -344,6 +354,11 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		return
 	}
 
+	if ContainsBundle(cachedTx.GetTransaction().GetHash()) {
+		// Bundle already exists
+		return
+	}
+
 	// create a new bundle instance
 	bndl := &Bundle{
 		tailTx:    cachedTx.GetTransaction().GetHash(),
@@ -366,6 +381,11 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 			}
 			return
 		}
+	}
+
+	if ContainsBundle(cachedTx.GetTransaction().GetHash()) {
+		// Bundle already exists
+		return
 	}
 
 	cachedBndl := StoreBundle(bndl) // bundle +1

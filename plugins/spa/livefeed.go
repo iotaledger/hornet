@@ -40,7 +40,7 @@ func runLiveFeed() {
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
 		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
-			if !tangle_model.IsNodeSynced() {
+			if !tangle_model.IsNodeSyncedWithThreshold() {
 				return
 			}
 			select {

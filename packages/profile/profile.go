@@ -80,6 +80,14 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		Tags: CacheOpts{
+			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 60000,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -163,6 +171,19 @@ var Profile4GB = &Profile{
 	Caches: Caches{
 		Approvers: CacheOpts{
 			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		Tags: CacheOpts{
+			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
 		},
 		Bundles: CacheOpts{
 			CacheTimeMs: 30000,
@@ -246,6 +267,14 @@ var Profile4GB = &Profile{
 var Profile2GB = &Profile{
 	Caches: Caches{
 		Approvers: CacheOpts{
+			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		Tags: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -342,8 +371,16 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Bundles: CacheOpts{
+		Tags: CacheOpts{
 			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		Bundles: CacheOpts{
+			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -431,6 +468,7 @@ type Caches struct {
 	Bundles                   CacheOpts `mapstructure:"bundles"`
 	BundleTransactions        CacheOpts `mapstructure:"bundleTransactions"`
 	Approvers                 CacheOpts `mapstructure:"approvers"`
+	Tags                      CacheOpts `mapstructure:"tags"`
 	Milestones                CacheOpts `mapstructure:"milestones"`
 	Transactions              CacheOpts `mapstructure:"transactions"`
 	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`

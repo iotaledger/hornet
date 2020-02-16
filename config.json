@@ -11,6 +11,14 @@
             "maxConsumerHoldTimeSec": 100
           }
         },
+        "tags": {
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": true,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
+        },
         "bundles": {
           "cacheTimeMs": 1500,
           "leakDetection": {
@@ -194,7 +202,7 @@
   "network": {
     "bindAddress": "0.0.0.0",
     "externalAddress": "auto",
-    "preferIPv6": false,
+    "prefer_ipv6": false,
     "port": 15600,
     "reconnectattemptintervalseconds": 60
   },

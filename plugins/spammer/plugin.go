@@ -84,7 +84,7 @@ func run(plugin *node.Plugin) {
 					log.Infof("Stopping Spammer %d... done", i)
 					return
 				default:
-					if tangle.IsNodeSynced() {
+					if tangle.IsNodeSyncedWithThreshold() {
 						doSpam(shutdownSignal)
 					}
 				}

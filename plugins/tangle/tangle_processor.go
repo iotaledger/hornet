@@ -108,18 +108,16 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 
 	txHash := incomingTx.GetHash()
 	cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
+	defer cachedTx.Release()                        // tx -1
+
+	requested, reqMilestoneIndex := incomingTx.IsRequested()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
 	alreadyAdded := tangle.AddTransactionToStorage(incomingTx)
 	if !alreadyAdded {
-
-		if !cachedTx.Exists() {
-			log.Panic("Transaction should have been added to storage!")
-		}
-
-		if cachedTx.GetTransaction().IsRequested() {
+		if requested {
 			// Add new requests to the requestQueue (needed for sync)
-			gossip.RequestApprovees(cachedTx.Retain()) // tx pass +1
+			gossip.RequestApprovees(cachedTx.Retain(), reqMilestoneIndex) // tx pass +1
 		}
 
 		server.SharedServerMetrics.IncrNewTransactionsCount()
@@ -136,10 +134,12 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
-	cachedTx.Release() // tx -1
+	if requested {
+		gossip.RequestQueue.MarkProcessed(txHash)
+	}
 
-	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
-	if queueEmpty {
+	if !tangle.IsNodeSynced() && gossip.RequestQueue.IsEmpty() {
+		// The node is not synced, but the request queue seems empty => trigger the solidifer
 		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 	}
 }
@@ -152,7 +152,10 @@ func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
 }
 
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
-	processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+	_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+	if !added {
+		cachedBndl.Release() // bundle -1
+	}
 }
 
 func onReceivedInvalidMilestone(err error) {

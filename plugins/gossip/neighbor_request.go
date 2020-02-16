@@ -149,11 +149,11 @@ func (p *PendingNeighborRequests) process() {
 		p.startProcessingLock.Unlock()
 
 		// Mark the pending request as received because we received the requested Tx Hash
-		requested := RequestQueue.MarkReceived(p.hornetTx.Tx.Hash)
+		requested, reqMilestoneIndex := RequestQueue.MarkReceived(p.hornetTx.Tx.Hash)
 
 		if requested {
 			// Tx is requested => ignore that it was marked as stale before
-			p.hornetTx.SetRequested(requested)
+			p.hornetTx.SetRequested(requested, reqMilestoneIndex)
 			Events.ReceivedTransaction.Trigger(p.hornetTx)
 		}
 
@@ -183,10 +183,10 @@ func (p *PendingNeighborRequests) process() {
 	}
 
 	// Mark the pending request as received because we received the requested Tx Hash
-	requested := RequestQueue.MarkReceived(tx.Hash)
+	requested, reqMilestoneIndex := RequestQueue.MarkReceived(tx.Hash)
 
 	// POW valid => Process the message
-	hornetTx := hornet.NewTransactionFromGossip(tx, p.recTxBytes, requested)
+	hornetTx := hornet.NewTransactionFromGossip(tx, p.recTxBytes, requested, reqMilestoneIndex)
 
 	// received tx was not requested and has an invalid timestamp (maybe before snapshot?)
 	// => do not store in our database

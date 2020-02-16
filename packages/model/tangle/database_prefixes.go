@@ -9,8 +9,9 @@ const (
 	DBPrefixMilestones            byte = 5
 	DBPrefixLedgerState           byte = 6
 	DBPrefixApprovers             byte = 7
-	DBPrefixSnapshot              byte = 8
-	DBPrefixFirstSeenTransactions byte = 9
-	DBPrefixSpentAddresses        byte = 10
-	DBPrefixAutopeering           byte = 11
+	DBPrefixTags                  byte = 8
+	DBPrefixSnapshot              byte = 9
+	DBPrefixFirstSeenTransactions byte = 10
+	DBPrefixSpentAddresses        byte = 11
+	DBPrefixAutopeering           byte = 12
 )

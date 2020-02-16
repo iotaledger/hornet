@@ -216,9 +216,12 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 					entryTxs[approverTxHash] = struct{}{}
 				}
 
-				if newlySolid && tangle.IsNodeSynced() {
+				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
+					_, added := gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
+					if !added {
+						cachedEntryTx.Release() // tx -1
+					}
 				}
 
 				// Delete the tx from the map since it is solid
@@ -341,7 +344,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 		// rerun to solidify the older one
 		setSolidifierMilestoneIndex(0)
 
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
+		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true, false)
 		return
 	}
 
@@ -356,7 +359,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
 
-	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
+	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true, false)
 }
 
 func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {

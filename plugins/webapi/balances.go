@@ -32,7 +32,7 @@ func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		c.JSON(http.StatusBadRequest, e)
 	}
 
-	if !tangle.IsNodeSynced() {
+	if !tangle.IsNodeSyncedWithThreshold() {
 		e.Error = "Node not synced"
 		c.JSON(http.StatusBadRequest, e)
 		return

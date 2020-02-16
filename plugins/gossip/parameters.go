@@ -6,14 +6,14 @@ import (
 
 // NeighborConfig struct
 type NeighborConfig struct {
-	Identity   string `json:"identity"`
-	Alias      string `json:"alias"`
-	PreferIPv6 bool   `json:"prefer_ipv6"`
+	Identity   string `mapstructure:"identity"`
+	Alias      string `mapstructure:"alias"`
+	PreferIPv6 bool   `mapstructure:"prefer_ipv6"`
 }
 
 func init() {
 	// "Defines if IPv6 is preferred for neighbors added through the API"
-	parameter.NodeConfig.SetDefault("network.preferIPv6", false)
+	parameter.NodeConfig.SetDefault("network.prefer_ipv6", false)
 
 	// "Bind the TCP server socket for the gossip protocol to an address"
 	parameter.NodeConfig.SetDefault("network.bindAddress", "0.0.0.0")

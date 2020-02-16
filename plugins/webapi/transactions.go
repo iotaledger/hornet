@@ -9,6 +9,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
+	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -110,6 +111,36 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 				return
 			}
 			txHashes = append(txHashes, tx...)
+		}
+	}
+
+	// Searching for all approovers of the given transactions
+	for _, approveeHash := range ft.Approvees {
+		if guards.IsTransactionHash(approveeHash) {
+			cachedTxApprovers := tangle.GetCachedApprovers(approveeHash, maxFindTransactions) // approvers +1
+			for _, cachedTxApprover := range cachedTxApprovers {
+				if !cachedTxApprover.Exists() {
+					continue
+				}
+
+				txHashes = append(txHashes, cachedTxApprover.GetApprover().GetApproverHash())
+			}
+			cachedTxApprovers.Release() // approvers -1
+		}
+	}
+
+	// Searching for transactions that contain the given tag
+	for _, tag := range ft.Tags {
+		err := trinary.ValidTrytes(tag)
+		if err == nil {
+			cachedTags := tangle.GetCachedTags(tag, maxFindTransactions) // tags +1
+			for _, cachedTag := range cachedTags {
+				if !cachedTag.Exists() {
+					continue
+				}
+				txHashes = append(txHashes, cachedTag.GetTag().GetTransactionHash())
+			}
+			cachedTags.Release() // tags -1
 		}
 	}
 

@@ -48,7 +48,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
-	if !tangle.IsNodeSynced() {
+	if !tangle.IsNodeSyncedWithThreshold() {
 		return nil, nil, ErrNodeNotSynced
 	}
 
