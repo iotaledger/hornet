@@ -18,10 +18,18 @@ const (
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
 func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) int {
 
-	txHashes, err := tangle.ReadFirstSeenTxHashOperations(targetIndex)
-	if err != nil {
-		log.Panicf("pruneUnconfirmedTransactions: %v", err.Error())
+	var txHashes []trinary.Hash
+
+	cachedFirstSeenTxs := tangle.GetCachedFirstSeenTxs(targetIndex) // firstSeenTx +1
+	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
+		if !cachedFirstSeenTx.Exists() {
+			continue
+		}
+
+		firstSeenTx := cachedFirstSeenTx.GetFirstSeenTx()
+		txHashes = append(txHashes, firstSeenTx.GetTransactionHash())
 	}
+	cachedFirstSeenTxs.Release() // firstSeenTx -1
 
 	txsToRemoveMap := make(map[trinary.Hash]struct{})
 	var txsToRemoveSlice []trinary.Hash
@@ -52,10 +60,8 @@ func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) in
 	}
 
 	txCount := pruneTransactions(txsToRemoveSlice)
-
-	if err := tangle.DeleteFirstSeenTxHashOperations(targetIndex); err != nil {
-		log.Error(err)
-	}
+	
+	tangle.DeleteFirstSeenTxs(targetIndex)
 
 	return txCount
 }
