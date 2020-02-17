@@ -60,7 +60,6 @@ func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) in
 	}
 
 	txCount := pruneTransactions(txsToRemoveSlice)
-	
 	tangle.DeleteFirstSeenTxs(targetIndex)
 
 	return txCount
