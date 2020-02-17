@@ -11,13 +11,12 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	configureTransactionStorage()
 	configureBundleTransactionsStorage()
 	configureBundleStorage()
-	configureTransactionHashesForAddressDatabase()
 	configureApproversStorage()
 	configureTagsStorage()
+	configureAddressesStorage()
 	configureMilestoneStorage()
 	configureLedgerDatabase()
 	configureSnapshotDatabase()
-	configureTransactionHashesForAddressDatabase()
 	configureFirstSeenTxStorage()
 }
 

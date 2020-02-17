@@ -300,10 +300,7 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	txHashes, err := tangle.ReadTransactionHashesForAddressFromDatabase(hash, 100)
-	if err != nil {
-		return nil, ErrInternalError
-	}
+	txHashes := tangle.GetTransactionHashesForAddress(hash, 100)
 
 	txs := make([]*ExplorerTx, 0, len(txHashes))
 	if len(txHashes) != 0 {

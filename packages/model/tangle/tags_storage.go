@@ -20,6 +20,7 @@ type CachedTag struct {
 
 type CachedTags []*CachedTag
 
+// tag -1
 func (cachedTags CachedTags) Release() {
 	for _, cachedTag := range cachedTags {
 		cachedTag.Release()

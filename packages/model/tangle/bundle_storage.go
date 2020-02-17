@@ -327,6 +327,8 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 
 	StoreTag(cachedTx.GetTransaction().Tx.Tag, cachedTx.GetTransaction().GetHash()).Release()
 
+	StoreAddress(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash()).Release()
+
 	// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 	// This is only used to delete unconfirmed transactions from the database at pruning
 	if requested, _ := hornetTx.IsRequested(); !requested {

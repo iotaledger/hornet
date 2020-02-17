@@ -3,6 +3,14 @@
   "profiles": {
     "custom": {
       "caches": {
+        "addresses": {
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": true,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
+        },
         "approvers": {
           "cacheTimeMs": 1500,
           "leakDetection": {

@@ -72,6 +72,14 @@ func GetProfile() *Profile {
 
 var Profile8GB = &Profile{
 	Caches: Caches{
+		Addresses: CacheOpts{
+			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		Approvers: CacheOpts{
 			CacheTimeMs: 60000,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -177,6 +185,14 @@ var Profile8GB = &Profile{
 
 var Profile4GB = &Profile{
 	Caches: Caches{
+		Addresses: CacheOpts{
+			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		Approvers: CacheOpts{
 			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -282,6 +298,14 @@ var Profile4GB = &Profile{
 
 var Profile2GB = &Profile{
 	Caches: Caches{
+		Addresses: CacheOpts{
+			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		Approvers: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -387,6 +411,14 @@ var Profile2GB = &Profile{
 
 var Profile1GB = &Profile{
 	Caches: Caches{
+		Addresses: CacheOpts{
+			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		Approvers: CacheOpts{
 			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -497,6 +529,7 @@ type Profile struct {
 }
 
 type Caches struct {
+	Addresses                 CacheOpts `mapstructure:"addresses"`
 	Bundles                   CacheOpts `mapstructure:"bundles"`
 	BundleTransactions        CacheOpts `mapstructure:"bundleTransactions"`
 	Approvers                 CacheOpts `mapstructure:"approvers"`

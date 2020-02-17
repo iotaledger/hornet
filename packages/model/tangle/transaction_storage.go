@@ -35,6 +35,7 @@ type CachedTransaction struct {
 
 type CachedTransactions []*CachedTransaction
 
+// tx +1
 func (cachedTxs CachedTransactions) Retain() CachedTransactions {
 	cachedResult := CachedTransactions{}
 	for _, cachedTx := range cachedTxs {
@@ -43,6 +44,7 @@ func (cachedTxs CachedTransactions) Retain() CachedTransactions {
 	return cachedResult
 }
 
+// tx -1
 func (cachedTxs CachedTransactions) Release() {
 	for _, cachedTx := range cachedTxs {
 		cachedTx.Release()
@@ -53,10 +55,12 @@ func (c *CachedTransaction) GetTransaction() *hornet.Transaction {
 	return c.Get().(*hornet.Transaction)
 }
 
+// tx +1
 func (c *CachedTransaction) Retain() *CachedTransaction {
 	return &CachedTransaction{c.CachedObject.Retain()}
 }
 
+// tx -1
 func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction)) {
 
 	c.Consume(func(object objectstorage.StorableObject) {
@@ -94,18 +98,22 @@ func configureTransactionStorage() {
 	)
 }
 
+// tx +1
 func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {
 	return &CachedTransaction{txStorage.Load(trinary.MustTrytesToBytes(transactionHash)[:49])}
 }
 
+// tx +-0
 func ContainsTransaction(transactionHash trinary.Hash) bool {
 	return txStorage.Contains(trinary.MustTrytesToBytes(transactionHash)[:49])
 }
 
+// tx +1
 func StoreTransaction(transaction *hornet.Transaction) *CachedTransaction {
 	return &CachedTransaction{txStorage.Store(transaction)}
 }
 
+// tx +-0
 func DeleteTransaction(txHash trinary.Hash) {
 	txStorage.Delete(trinary.MustTrytesToBytes(txHash)[:49])
 }

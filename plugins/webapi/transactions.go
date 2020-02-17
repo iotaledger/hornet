@@ -104,12 +104,9 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			if len(addr) == 90 {
 				addr = addr[:81]
 			}
-			tx, err := tangle.ReadTransactionHashesForAddressFromDatabase(addr, maxFindTransactions)
-			if err != nil {
-				e.Error = "Internal error"
-				c.JSON(http.StatusInternalServerError, e)
-				return
-			}
+
+			tx := tangle.GetTransactionHashesForAddress(addr, maxFindTransactions)
+
 			txHashes = append(txHashes, tx...)
 		}
 	}
