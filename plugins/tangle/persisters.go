@@ -5,11 +5,8 @@ import (
 
 	"github.com/iotaledger/hive.go/batchworkerpool"
 	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
@@ -20,22 +17,14 @@ var (
 	addressPersisterBatchSize              = 1000
 	addressPersisterBatchCollectionTimeout = 1000 * time.Millisecond
 	addressPersisterWorkerPool             *batchworkerpool.BatchWorkerPool
-
-	firstSeenTxWorkerCount            = 1
-	firstSeenTxQueueSize              = 10000
-	firstSeenTxBatchSize              = 1000
-	firstSeenTxBatchCollectionTimeout = 1000 * time.Millisecond
-	firstSeenTxWorkerPool             *batchworkerpool.BatchWorkerPool
 )
 
 func configurePersisters() {
 	configureAddressPersister()
-	configureFirstSeenTransactionPersister()
 }
 
 func runPersisters() {
 	runAddressPersister()
-	runFirstSeenTransactionPersister()
 }
 
 // Address persister
@@ -73,54 +62,4 @@ func runAddressPersister() {
 
 func addressPersisterSubmit(address trinary.Hash, transactionHash trinary.Hash) {
 	addressPersisterWorkerPool.Submit(&tangle.TxHashForAddress{Address: address, TxHash: transactionHash})
-}
-
-// FirstSeen Tx persister
-func configureFirstSeenTransactionPersister() {
-
-	firstSeenTxWorkerPool = batchworkerpool.New(func(tasks []batchworkerpool.Task) {
-
-		var operations []*tangle.FirstSeenTxHashOperation
-		for _, task := range tasks {
-			operations = append(operations, task.Param(0).(*tangle.FirstSeenTxHashOperation))
-		}
-
-		err := tangle.StoreFirstSeenTxHashOperations(operations)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, task := range tasks {
-			task.Return(nil)
-		}
-	}, batchworkerpool.BatchCollectionTimeout(firstSeenTxBatchCollectionTimeout), batchworkerpool.BatchSize(firstSeenTxBatchSize), batchworkerpool.WorkerCount(firstSeenTxWorkerCount), batchworkerpool.QueueSize(firstSeenTxQueueSize), batchworkerpool.FlushTasksAtShutdown(true))
-}
-
-func runFirstSeenTransactionPersister() {
-
-	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
-			// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
-			// This is only used to delete unconfirmed transactions from the database at pruning
-			requested, _ := tx.IsRequested()
-			if !requested {
-				firstSeenTxWorkerPool.Submit(&tangle.FirstSeenTxHashOperation{
-					TxHash:                        tx.GetHash(),
-					FirstSeenLatestMilestoneIndex: firstSeenLatestMilestoneIndex,
-				})
-			}
-		})
-	})
-
-	daemon.BackgroundWorker("FirstSeenTxPersister", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting FirstSeenTxPersister ... done")
-		Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		firstSeenTxWorkerPool.Start()
-		<-shutdownSignal
-		log.Info("Stopping FirstSeenTxPersister ...")
-		Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		firstSeenTxWorkerPool.StopAndWait()
-		log.Info("Stopping FirstSeenTxPersister ... done")
-	}, shutdown.ShutdownPriorityPersisters)
 }

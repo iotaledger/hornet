@@ -120,6 +120,14 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		FirstSeenTx: CacheOpts{
+			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -210,6 +218,14 @@ var Profile4GB = &Profile{
 			},
 		},
 		Transactions: CacheOpts{
+			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		FirstSeenTx: CacheOpts{
 			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -314,6 +330,14 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		FirstSeenTx: CacheOpts{
+			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 2500,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -411,6 +435,14 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		FirstSeenTx: CacheOpts{
+			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
@@ -473,6 +505,7 @@ type Caches struct {
 	Transactions              CacheOpts `mapstructure:"transactions"`
 	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`
 	RefsInvalidBundle         CacheOpts `mapstructure:"refsInvalidBundle"`
+	FirstSeenTx               CacheOpts `mapstructure:"firstSeenTx"`
 }
 
 type CacheOpts struct {

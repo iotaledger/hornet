@@ -110,10 +110,11 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 	cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
 	defer cachedTx.Release()                        // tx -1
 
+	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	requested, reqMilestoneIndex := incomingTx.IsRequested()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	alreadyAdded := tangle.AddTransactionToStorage(incomingTx)
+	alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex)
 	if !alreadyAdded {
 		if requested {
 			// Add new requests to the requestQueue (needed for sync)
@@ -123,7 +124,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 		server.SharedServerMetrics.IncrNewTransactionsCount()
 
 		addressPersisterSubmit(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash())
-		latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = solidMilestoneIndex

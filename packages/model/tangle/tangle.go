@@ -18,7 +18,7 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	configureLedgerDatabase()
 	configureSnapshotDatabase()
 	configureTransactionHashesForAddressDatabase()
-	configureFirstSeenTransactionsDatabase()
+	configureFirstSeenTxStorage()
 }
 
 func LoadInitialValuesFromDatabase() {
