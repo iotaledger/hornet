@@ -36,7 +36,6 @@ var (
 func configureTangleProcessor(plugin *node.Plugin) {
 
 	configureGossipSolidifier()
-	configurePersisters()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction))
@@ -68,7 +67,6 @@ func runTangleProcessor(plugin *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
 	runGossipSolidifier()
-	runPersisters()
 
 	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction) {
 		receiveTxWorkerPool.Submit(transaction)
@@ -116,14 +114,12 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
 	alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex)
 	if !alreadyAdded {
+		server.SharedServerMetrics.IncrNewTransactionsCount()
+
 		if requested {
 			// Add new requests to the requestQueue (needed for sync)
 			gossip.RequestApprovees(cachedTx.Retain(), reqMilestoneIndex) // tx pass +1
 		}
-
-		server.SharedServerMetrics.IncrNewTransactionsCount()
-
-		addressPersisterSubmit(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash())
 
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {

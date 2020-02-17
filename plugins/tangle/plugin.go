@@ -66,6 +66,7 @@ func configure(plugin *node.Plugin) {
 		tangle.ShutdownTransactionStorage()
 		tangle.ShutdownApproversStorage()
 		tangle.ShutdownTagsStorage()
+		tangle.ShutdownAddressStorage()
 		tangle.ShutdownFirstSeenTxsStorage()
 		log.Info("Flushing caches to database... done")
 

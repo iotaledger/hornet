@@ -81,7 +81,6 @@ func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
 func pruneTransactions(txHashes []trinary.Hash) int {
 
 	txsToRemove := make(map[trinary.Hash]struct{})
-	var addresses []*tangle.TxHashForAddress
 
 	for _, txHash := range txHashes {
 		cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
@@ -104,16 +103,11 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 		}
 		tangle.DeleteTag(cachedTx.GetTransaction().Tx.Tag, txHash)
 
-		addresses = append(addresses, &tangle.TxHashForAddress{TxHash: txHash, Address: cachedTx.GetTransaction().Tx.Address})
+		tangle.DeleteAddress(cachedTx.GetTransaction().Tx.Address, txHash)
 		cachedTx.Release() // tx -1
 
 		tangle.DeleteApprovers(txHash)
 		tangle.DeleteTransaction(txHash)
-	}
-
-	// address
-	if err := tangle.DeleteTransactionHashesForAddressesInDatabase(addresses); err != nil {
-		log.Error(err)
 	}
 
 	return len(txsToRemove)
