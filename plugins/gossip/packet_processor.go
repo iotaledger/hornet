@@ -16,7 +16,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -33,7 +32,8 @@ var (
 
 	RequestQueue *queue.RequestQueue
 
-	ErrTxExpired = errors.New("tx too old")
+	ErrTxExpired      = errors.New("tx too old")
+	ErrTxAlreadyKnown = errors.New("tx already known")
 )
 
 func configurePacketProcessor() {
@@ -112,7 +112,11 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 	}
 
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransactionFromAPI(tx, txBytesTruncated)
+	hornetTx := tangle.NewTransactionFromAPI(tx, txBytesTruncated)
+	if hornetTx == nil {
+		// Tx is already known
+		return ErrTxAlreadyKnown
+	}
 
 	if timeValid, _ := checkTimestamp(hornetTx); !timeValid {
 		return ErrTxExpired
@@ -193,7 +197,7 @@ func ProcessReceivedTransactionRequestData(protocol *protocol, reqHash []byte) {
 	})
 }
 
-func checkTimestamp(hornetTx *hornet.Transaction) (valid, broadcast bool) {
+func checkTimestamp(hornetTx *tangle.Transaction) (valid, broadcast bool) {
 	// Timestamp should be in the range of +/- 10 minutes to current time
 	// or Transaction was a solid entry point
 

@@ -13,7 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
 )
@@ -125,7 +125,10 @@ func broadcastTransaction(tx *transaction.Transaction) error {
 	}
 
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransactionFromAPI(tx, txBytesTruncated)
+	hornetTx := tangle.NewTransactionFromAPI(tx, txBytesTruncated)
+	if hornetTx == nil {
+		panic("Spam Tx is already known")
+	}
 
 	gossip.Events.ReceivedTransaction.Trigger(hornetTx)
 	gossip.BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTrytesToBytes(hornetTx.GetHash())[:49])

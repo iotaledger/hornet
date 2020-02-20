@@ -51,7 +51,15 @@
             "maxConsumerHoldTimeSec": 100
           }
         },
-        "transactions": {
+        "transactionRawData": {
+          "cacheTimeMs": 1500,
+          "leakDetection": {
+            "enabled": true,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
+        },
+        "transactionMetaData": {
           "cacheTimeMs": 1500,
           "leakDetection": {
             "enabled": true,

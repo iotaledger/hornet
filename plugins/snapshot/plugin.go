@@ -14,7 +14,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -146,7 +145,10 @@ func installGenesisTransaction() {
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
 	genesis.Hash = consts.NullHashTrytes
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(genesisTxTrits))
-	genesisTx := hornet.NewTransactionFromAPI(genesis, txBytesTruncated)
+	genesisTx := tangle.NewTransactionFromAPI(genesis, txBytesTruncated)
+	if genesisTx == nil {
+		panic("Genesis Tx is already known")
+	}
 
 	// ensure the bundle is also existent for the genesis tx
 	tangle.AddTransactionToStorage(genesisTx, 0)

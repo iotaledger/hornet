@@ -9,7 +9,6 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -122,7 +121,7 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *tangle.Transaction) {
 
 		wsTx := &wsTransaction{
 			Hash:              tx.Tx.Hash,
@@ -150,7 +149,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *tangle.Transaction) {
 		snTx := &wsTransactionSn{
 			Hash:              tx.Tx.Hash,
 			Address:           tx.Tx.Address,

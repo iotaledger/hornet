@@ -11,7 +11,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -38,7 +37,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	configureGossipSolidifier()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction))
+		processIncomingTx(plugin, task.Param(0).(*tangle.Transaction))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
@@ -68,7 +67,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 
 	runGossipSolidifier()
 
-	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction) {
+	notifyReceivedTx := events.NewClosure(func(transaction *tangle.Transaction) {
 		receiveTxWorkerPool.Submit(transaction)
 	})
 
@@ -102,7 +101,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
+func processIncomingTx(plugin *node.Plugin, incomingTx *tangle.Transaction) {
 
 	txHash := incomingTx.GetHash()
 	cachedTx := tangle.GetCachedTransaction(txHash) // tx +1

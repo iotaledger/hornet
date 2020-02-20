@@ -328,7 +328,7 @@ func currentNodeStatus() *nodestatus {
 			Size: tangle.GetMilestoneStorageSize(),
 		},
 		Transactions: cache{
-			Size: tangle.GetTransactionStorageSize(),
+			Size: tangle.GetTransactionRawStorageSize(),
 		},
 		IncomingTransactionFilter: cache{
 			Size: gossip.GetIncomingStorageSize(),

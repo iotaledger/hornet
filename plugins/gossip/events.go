@@ -7,8 +7,8 @@ import (
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 var Events = pluginEvents{
@@ -25,10 +25,10 @@ var Events = pluginEvents{
 
 	// high level protocol events
 	NeighborHandshakeCompleted: events.NewEvent(handshakeCaller),
-	SentTransaction:            events.NewEvent(hornet.TransactionCaller), // TODO
-	SentTransactionRequest:     events.NewEvent(hornet.TransactionCaller), // TODO
-	ReceivedTransaction:        events.NewEvent(hornet.TransactionCaller),
-	ProtocolError:              events.NewEvent(hornet.TransactionCaller), // TODO
+	SentTransaction:            events.NewEvent(tangle.TransactionCaller), // TODO
+	SentTransactionRequest:     events.NewEvent(tangle.TransactionCaller), // TODO
+	ReceivedTransaction:        events.NewEvent(tangle.TransactionCaller),
+	ProtocolError:              events.NewEvent(tangle.TransactionCaller), // TODO
 
 	// generic events
 	Error: events.NewEvent(events.ErrorCaller),

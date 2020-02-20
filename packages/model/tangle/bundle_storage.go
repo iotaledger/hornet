@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
 )
@@ -39,9 +38,9 @@ func configureBundleStorage() {
 	opts := profile.GetProfile().Caches.Bundles
 
 	bundleStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixBundles},
 		bundleFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -306,9 +305,9 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex) (alreadyAdded bool) {
+func AddTransactionToStorage(tx *Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex) (alreadyAdded bool) {
 
-	cachedTx := GetCachedTransaction(hornetTx.GetHash()) // tx +1
+	cachedTx := GetCachedTransaction(tx.GetHash()) // tx +1
 	if cachedTx.Exists() {
 		cachedTx.Release() // tx -1
 		return true
@@ -316,8 +315,8 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 	cachedTx.Release() // tx -1
 
 	// Store the tx in the storage, this will update the tx reference automatically
-	cachedTx = StoreTransaction(hornetTx) // tx +1
-	defer cachedTx.Release()              // tx -1
+	cachedTx = StoreTransaction(tx) // tx +1
+	defer cachedTx.Release()        // tx -1
 
 	// Store the tx in the bundleTransactionsStorage
 	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release()
@@ -331,7 +330,7 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 
 	// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 	// This is only used to delete unconfirmed transactions from the database at pruning
-	if requested, _ := hornetTx.IsRequested(); !requested {
+	if requested, _ := tx.IsRequested(); !requested {
 		StoreFirstSeenTx(firstSeenLatestMilestoneIndex, cachedTx.GetTransaction().GetHash()).Release()
 	}
 

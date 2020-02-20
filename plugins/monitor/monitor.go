@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -100,7 +99,7 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *tangle.Transaction) {
 		wsTx := &wsTransaction{
 			Hash:       tx.Tx.Hash,
 			Address:    tx.Tx.Address,
@@ -145,7 +144,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *tangle.Transaction) {
 		if tx.Tx.CurrentIndex == 0 {
 			// Tail Tx => Check if this is a value Tx
 			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(tx.Tx.Hash) // bundle +1

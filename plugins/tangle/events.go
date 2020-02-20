@@ -7,11 +7,11 @@ import (
 )
 
 var Events = pluginEvents{
-	ReceivedNewTransaction:        events.NewEvent(tangle.NewTransactionCaller),
-	ReceivedKnownTransaction:      events.NewEvent(tangle.TransactionCaller),
-	TransactionSolid:              events.NewEvent(tangle.TransactionCaller),
-	TransactionConfirmed:          events.NewEvent(tangle.TransactionConfirmedCaller),
-	TransactionStored:             events.NewEvent(tangle.TransactionCaller),
+	ReceivedNewTransaction:        events.NewEvent(tangle.CachedNewTransactionCaller),
+	ReceivedKnownTransaction:      events.NewEvent(tangle.CachedTransactionCaller),
+	TransactionSolid:              events.NewEvent(tangle.CachedTransactionCaller),
+	TransactionConfirmed:          events.NewEvent(tangle.CachedTransactionConfirmedCaller),
+	TransactionStored:             events.NewEvent(tangle.CachedTransactionCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.BundleCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),

@@ -293,7 +293,7 @@ func processReplies(reply *replyItem) {
 			return
 		}
 		select {
-		case neighborQueue.txQueue <- cachedTx.GetTransaction().RawBytes:
+		case neighborQueue.txQueue <- cachedTx.GetTransaction().GetRawBytes():
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
@@ -356,7 +356,7 @@ func processReplies(reply *replyItem) {
 			}
 		}
 
-		msg := &legacyGossipTransaction{truncatedTxData: cachedTxToSend.GetTransaction().RawBytes, reqHash: ourReqHash}
+		msg := &legacyGossipTransaction{truncatedTxData: cachedTxToSend.GetTransaction().GetRawBytes(), reqHash: ourReqHash}
 		cachedTxToSend.Release() // tx -1
 
 		select {
@@ -383,7 +383,7 @@ func processReplies(reply *replyItem) {
 		cachedTxs := cachedReqMs.GetBundle().GetTransactions() // txs +1
 		for _, cachedTxToSend := range cachedTxs {
 			select {
-			case neighborQueue.txQueue <- cachedTxToSend.GetTransaction().RawBytes:
+			case neighborQueue.txQueue <- cachedTxToSend.GetTransaction().GetRawBytes():
 			default:
 				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 				server.SharedServerMetrics.IncrDroppedSendPacketsCount()

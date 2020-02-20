@@ -32,7 +32,9 @@ func incomingFactory(key []byte) objectstorage.StorableObject {
 func configureIncomingStorage() {
 	opts := profile.GetProfile().Caches.IncomingTransactionFilter
 
-	incomingStorage = objectstorage.New(nil,
+	incomingStorage = objectstorage.New(
+		nil,
+		nil,
 		incomingFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),

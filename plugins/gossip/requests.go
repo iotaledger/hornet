@@ -7,7 +7,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -112,7 +111,7 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 // RequestApproveesAndRemove adds the approvees of a tx to the queue and removes the tx from the queue
 func RequestApprovees(cachedTx *tangle.CachedTransaction, reqMilestoneIndex milestone_index.MilestoneIndex) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *tangle.Transaction) {
 		txHash := tx.GetHash()
 
 		if tangle.SolidEntryPointsContain(txHash) {

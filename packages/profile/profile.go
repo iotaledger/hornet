@@ -120,7 +120,15 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		TransactionRawData: CacheOpts{
+			CacheTimeMs: 60000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		TransactionMetaData: CacheOpts{
 			CacheTimeMs: 60000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -233,7 +241,15 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		TransactionRawData: CacheOpts{
+			CacheTimeMs: 30000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		TransactionMetaData: CacheOpts{
 			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -346,7 +362,15 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		TransactionRawData: CacheOpts{
+			CacheTimeMs: 5000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		TransactionMetaData: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -459,7 +483,15 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		TransactionRawData: CacheOpts{
+			CacheTimeMs: 1500,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		TransactionMetaData: CacheOpts{
 			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -535,7 +567,8 @@ type Caches struct {
 	Approvers                 CacheOpts `mapstructure:"approvers"`
 	Tags                      CacheOpts `mapstructure:"tags"`
 	Milestones                CacheOpts `mapstructure:"milestones"`
-	Transactions              CacheOpts `mapstructure:"transactions"`
+	TransactionRawData        CacheOpts `mapstructure:"transactionRawData"`
+	TransactionMetaData       CacheOpts `mapstructure:"transactionMetaData"`
 	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`
 	RefsInvalidBundle         CacheOpts `mapstructure:"refsInvalidBundle"`
 	FirstSeenTx               CacheOpts `mapstructure:"firstSeenTx"`

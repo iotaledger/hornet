@@ -8,8 +8,8 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
@@ -40,7 +40,7 @@ type PendingNeighborRequests struct {
 	recTxBytes   []byte
 	recHashBytes []byte
 	recHash      trinary.Hash
-	hornetTx     *hornet.Transaction
+	hornetTx     *tangle.Transaction
 
 	// status
 	statusLock syncutils.RWMutex
@@ -186,7 +186,11 @@ func (p *PendingNeighborRequests) process() {
 	requested, reqMilestoneIndex := RequestQueue.MarkReceived(tx.Hash)
 
 	// POW valid => Process the message
-	hornetTx := hornet.NewTransactionFromGossip(tx, p.recTxBytes, requested, reqMilestoneIndex)
+	hornetTx := tangle.NewTransactionFromGossip(tx, p.recTxBytes, requested, reqMilestoneIndex)
+	if hornetTx == nil {
+		// ToDo: Why is the tx already known?
+		return
+	}
 
 	// received tx was not requested and has an invalid timestamp (maybe before snapshot?)
 	// => do not store in our database

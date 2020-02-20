@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/transaction"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tangle_model "github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -39,7 +38,7 @@ func runLiveFeed() {
 	newTxRateLimiter := time.NewTicker(time.Second / 10)
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+		cachedTx.ConsumeTransaction(func(tx *tangle_model.Transaction) {
 			if !tangle_model.IsNodeSyncedWithThreshold() {
 				return
 			}
