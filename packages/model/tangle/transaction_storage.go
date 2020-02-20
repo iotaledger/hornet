@@ -69,8 +69,8 @@ func GetCachedTransaction(txHash trinary.Hash) *CachedTransaction {
 
 	txHashBytes := trinary.MustTrytesToBytes(txHash)[:49]
 
-	cachedTransactionRawData := &hornet.CachedTransactionRawData{txRawStorage.Load(txHashBytes)}
-	cachedTransactionMetaData := &hornet.CachedTransactionMetaData{txMetaStorage.Load(txHashBytes)}
+	cachedTransactionRawData := &hornet.CachedTransactionRawData{CachedObject: txRawStorage.Load(txHashBytes)}
+	cachedTransactionMetaData := &hornet.CachedTransactionMetaData{CachedObject: txMetaStorage.Load(txHashBytes)}
 
 	transaction, _ := compressed.TransactionFromCompressedBytes(cachedTransactionRawData.GetTransactionRawData().RawBytes, txHash)
 
