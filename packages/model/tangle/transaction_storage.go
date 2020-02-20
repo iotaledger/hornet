@@ -74,18 +74,12 @@ func (c *CachedTransaction) Exists() bool {
 }
 
 // tx -1
-func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction)) {
+func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction, *hornet.TransactionMetadata)) {
 
-	c.tx.Consume(func(object objectstorage.StorableObject) {
-		consumer(object.(*hornet.Transaction))
-	})
-}
-
-// tx -1
-func (c *CachedTransaction) ConsumeMetadata(consumer func(*hornet.TransactionMetadata)) {
-
-	c.metadata.Consume(func(object objectstorage.StorableObject) {
-		consumer(object.(*hornet.TransactionMetadata))
+	c.tx.Consume(func(txObject objectstorage.StorableObject) {
+		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) {
+			consumer(txObject.(*hornet.Transaction), metadataObject.(*hornet.TransactionMetadata))
+		})
 	})
 }
 
