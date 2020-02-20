@@ -33,7 +33,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction, addToApproversCache bool)
 
 	defer cachedTx.Release() // tx -1
 
-	if cachedTx.GetTransaction().IsSolid() {
+	if cachedTx.GetMetadata().IsSolid() {
 		return true, false
 	}
 
@@ -51,7 +51,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction, addToApproversCache bool)
 		}
 
 		cachedApproveeTx := tangle.GetCachedTransaction(approveeHash) // tx +1
-		if !cachedApproveeTx.Exists() || !cachedApproveeTx.GetTransaction().IsSolid() {
+		if !cachedApproveeTx.Exists() || !cachedApproveeTx.GetMetadata().IsSolid() {
 			isSolid = false
 
 			if addToApproversCache {
@@ -66,7 +66,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction, addToApproversCache bool)
 
 	if isSolid {
 		// update the solidity flags of this transaction and its approvers
-		cachedTx.GetTransaction().SetSolid(true)
+		cachedTx.GetMetadata().SetSolid(true)
 		Events.TransactionSolid.Trigger(cachedTx) // tx pass +1
 	}
 
@@ -156,9 +156,9 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				}
 
 				// Mark the tx as checked
-				txsChecked[approveeHash] = cachedApproveeTx.GetTransaction().IsSolid()
+				txsChecked[approveeHash] = cachedApproveeTx.GetMetadata().IsSolid()
 
-				if !cachedApproveeTx.GetTransaction().IsSolid() {
+				if !cachedApproveeTx.GetMetadata().IsSolid() {
 					isEntryTx = false
 
 					// Traverse this approvee

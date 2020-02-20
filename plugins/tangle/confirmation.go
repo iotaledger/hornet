@@ -41,7 +41,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 				log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 			}
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at > milestoneIndex {
 					log.Panicf("transaction %s was already confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
@@ -119,7 +119,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 
 		cachedTxs := cachedBndl.GetBundle().GetTransactions() // txs +1
 		for _, cachedBndlTx := range cachedTxs {
-			cachedBndlTx.GetTransaction().SetConfirmed(true, milestoneIndex)
+			cachedBndlTx.GetMetadata().SetConfirmed(true, milestoneIndex)
 			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
 		}
 		cachedTxs.Release()  // txs -1

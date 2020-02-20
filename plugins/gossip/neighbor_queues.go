@@ -341,7 +341,7 @@ func processReplies(reply *replyItem) {
 			cachedGenesisTx := tangle.GetCachedTransaction(consts.NullHashTrytes) // tx +1
 
 			if !cachedGenesisTx.Exists() {
-				log.Panicf("Genesis tx not found. cachedObject: %p", cachedGenesisTx.CachedObject)
+				log.Panic("Genesis tx not found.")
 			}
 
 			cachedTxToSend = cachedGenesisTx

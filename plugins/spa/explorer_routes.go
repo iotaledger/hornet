@@ -52,7 +52,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	defer cachedTx.Release() // tx -1
 
 	originTx := cachedTx.GetTransaction().Tx
-	confirmed, by := cachedTx.GetTransaction().GetConfirmed()
+	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
 	t := &ExplorerTx{
 		Hash:                          hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
@@ -74,7 +74,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 			State     bool                           `json:"state"`
 			Milestone milestone_index.MilestoneIndex `json:"milestone_index"`
 		}{confirmed, by},
-		Solid: cachedTx.GetTransaction().IsSolid(),
+		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
 
 	// compute mwm

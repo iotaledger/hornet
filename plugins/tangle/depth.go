@@ -65,7 +65,7 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 	defer cachedTailTx.Release() // tx -1
 
 	// if the tx is already confirmed we don't need to check it for max depth
-	if confirmed, at := cachedTailTx.GetTransaction().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
+	if confirmed, at := cachedTailTx.GetMetadata().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
 		return false
 	}
 
@@ -117,7 +117,7 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 				log.Panicf("missing transaction %s for below max depth check", txHash)
 			}
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 
 			// we are below max depth on this transaction if it is confirmed by a milestone below our threshold
 			if confirmed && int(at) < lowerAllowedSnapshotIndex {

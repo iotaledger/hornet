@@ -112,7 +112,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 	}
 
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransactionFromAPI(tx, txBytesTruncated)
+	hornetTx := hornet.NewTransaction(tx, txBytesTruncated)
 
 	if timeValid, _ := checkTimestamp(hornetTx); !timeValid {
 		return ErrTxExpired

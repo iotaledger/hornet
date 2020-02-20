@@ -306,7 +306,7 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex) (alreadyAdded bool) {
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool) (alreadyAdded bool) {
 
 	cachedTx := GetCachedTransaction(hornetTx.GetHash()) // tx +1
 	if cachedTx.Exists() {
@@ -331,7 +331,7 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 
 	// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 	// This is only used to delete unconfirmed transactions from the database at pruning
-	if requested, _ := hornetTx.IsRequested(); !requested {
+	if !requested {
 		StoreFirstSeenTx(firstSeenLatestMilestoneIndex, cachedTx.GetTransaction().GetHash()).Release()
 	}
 

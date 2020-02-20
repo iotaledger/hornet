@@ -49,7 +49,7 @@ func getInclusionStates(i interface{}, c *gin.Context, abortSignal <-chan struct
 
 		if cachedTx.Exists() {
 			// check if tx is set as confirmed
-			confirmed, _ := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, _ := cachedTx.GetMetadata().GetConfirmed()
 			inclusionStates = append(inclusionStates, confirmed)
 		} else {
 			// if tx is unknown, return false

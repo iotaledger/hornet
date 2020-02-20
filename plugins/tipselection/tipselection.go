@@ -93,7 +93,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction doesn't exist")
 		}
 
-		if !cachedRefTx.GetTransaction().IsSolid() {
+		if !cachedRefTx.GetMetadata().IsSolid() {
 			cachedRefTx.Release() // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
@@ -199,7 +199,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				cachedCandidateTx := tangle.GetCachedTransaction(candidateHash) // tx +1
 
-				if !cachedCandidateTx.Exists() || !cachedCandidateTx.GetTransaction().IsSolid() {
+				if !cachedCandidateTx.Exists() || !cachedCandidateTx.GetMetadata().IsSolid() {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					continue
@@ -255,7 +255,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				// if the transaction has already been confirmed by the current solid or previous
 				// milestone, it is automatically consistent with our current walking diff
-				confirmed, at := cachedCandidateTx.GetTransaction().GetConfirmed()
+				confirmed, at := cachedCandidateTx.GetMetadata().GetConfirmed()
 				// TODO: the second condition can be removed once the solidifier ensures, that the entire
 				// ledger update process is write locked
 				if !confirmed {

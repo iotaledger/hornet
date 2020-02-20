@@ -1,28 +1,20 @@
 package hornet
 
 import (
-	"encoding/binary"
-	"time"
-
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/bitmask"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-)
-
-const (
-	HORNET_TX_METADATA_SOLID     = 0
-	HORNET_TX_METADATA_CONFIRMED = 1
-	HORNET_TX_METADATA_REQUESTED = 2
+	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 func TransactionCaller(handler interface{}, params ...interface{}) {
 	handler.(func(tx *Transaction))(params[0].(*Transaction))
+}
+
+func RequestedTransactionCaller(handler interface{}, params ...interface{}) {
+	handler.(func(tx *Transaction, requested bool, requestedIndex milestone_index.MilestoneIndex))(params[0].(*Transaction), params[1].(bool), params[2].(milestone_index.MilestoneIndex))
 }
 
 type Transaction struct {
@@ -37,49 +29,14 @@ type Transaction struct {
 
 	// TxTimestamp or, if available, AttachmentTimestamp
 	timestamp int64
-
-	// Unix time when the Tx became solid (needed for local modifiers for tipselection)
-	solidificationTimestamp int32
-
-	// The index of the milestone which confirmed this tx
-	confirmationIndex milestone_index.MilestoneIndex
-
-	// The index of the milestone which requested (referenced) this tx
-	reqMilestoneIndex milestone_index.MilestoneIndex
-
-	// Metadata
-	metadataMutex syncutils.RWMutex
-	metadata      bitmask.BitMask
 }
 
-func NewTransactionFromAPI(transaction *transaction.Transaction, transactionBytes []byte) *Transaction {
+func NewTransaction(transaction *transaction.Transaction, transactionBytes []byte) *Transaction {
 	tx := &Transaction{
-		TxHash:            trinary.MustTrytesToBytes(transaction.Hash)[:49],
-		Tx:                transaction,
-		RawBytes:          transactionBytes,
-		timestamp:         getTimestampFromTx(transaction),
-		confirmationIndex: 0,
-		reqMilestoneIndex: 0,
-		metadata:          bitmask.BitMask(byte(0)),
-	}
-	tx.SetModified(true)
-	return tx
-}
-
-func NewTransactionFromGossip(transaction *transaction.Transaction, transactionBytes []byte, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) *Transaction {
-	metadata := bitmask.BitMask(byte(0))
-	if requested {
-		metadata = metadata.SetFlag(HORNET_TX_METADATA_REQUESTED)
-	}
-
-	tx := &Transaction{
-		TxHash:            trinary.MustTrytesToBytes(transaction.Hash)[:49],
-		Tx:                transaction,
-		RawBytes:          transactionBytes,
-		timestamp:         getTimestampFromTx(transaction),
-		confirmationIndex: 0,
-		reqMilestoneIndex: reqMilestoneIndex,
-		metadata:          metadata,
+		TxHash:    trinary.MustTrytesToBytes(transaction.Hash)[:49],
+		Tx:        transaction,
+		RawBytes:  transactionBytes,
+		timestamp: getTimestampFromTx(transaction),
 	}
 	tx.SetModified(true)
 	return tx
@@ -111,10 +68,6 @@ func (tx *Transaction) GetTimestamp() int64 {
 	return tx.timestamp
 }
 
-func (tx *Transaction) GetSolidificationTimestamp() int32 {
-	return tx.solidificationTimestamp
-}
-
 func (tx *Transaction) IsTail() bool {
 	return tx.Tx.CurrentIndex == 0
 }
@@ -123,80 +76,14 @@ func (tx *Transaction) IsHead() bool {
 	return tx.Tx.CurrentIndex == tx.Tx.LastIndex
 }
 
-func (tx *Transaction) IsSolid() bool {
-	tx.metadataMutex.RLock()
-	defer tx.metadataMutex.RUnlock()
-	s := tx.metadata.HasFlag(HORNET_TX_METADATA_SOLID)
-	return s
-}
-
-func (tx *Transaction) SetSolid(solid bool) {
-	tx.metadataMutex.Lock()
-	defer tx.metadataMutex.Unlock()
-
-	if solid != tx.metadata.HasFlag(HORNET_TX_METADATA_SOLID) {
-		tx.solidificationTimestamp = int32(time.Now().Unix())
-		tx.metadata = tx.metadata.ModifyFlag(HORNET_TX_METADATA_SOLID, solid)
-		tx.SetModified(true)
-	}
-}
-
-func (tx *Transaction) GetConfirmed() (bool, milestone_index.MilestoneIndex) {
-	tx.metadataMutex.RLock()
-	defer tx.metadataMutex.RUnlock()
-
-	return tx.metadata.HasFlag(HORNET_TX_METADATA_CONFIRMED), tx.confirmationIndex
-}
-
-func (tx *Transaction) SetConfirmed(confirmed bool, confirmationIndex milestone_index.MilestoneIndex) {
-	tx.metadataMutex.Lock()
-	defer tx.metadataMutex.Unlock()
-
-	if (confirmed != tx.metadata.HasFlag(HORNET_TX_METADATA_CONFIRMED)) || (tx.confirmationIndex != confirmationIndex) {
-		tx.metadata = tx.metadata.ModifyFlag(HORNET_TX_METADATA_CONFIRMED, confirmed)
-		tx.confirmationIndex = confirmationIndex
-		tx.SetModified(true)
-	}
-}
-
-func (tx *Transaction) IsRequested() (bool, milestone_index.MilestoneIndex) {
-	tx.metadataMutex.RLock()
-	defer tx.metadataMutex.RUnlock()
-	r := tx.metadata.HasFlag(HORNET_TX_METADATA_REQUESTED)
-	return r, tx.reqMilestoneIndex
-}
-
-func (tx *Transaction) SetRequested(requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) {
-	tx.metadataMutex.Lock()
-	defer tx.metadataMutex.Unlock()
-
-	if requested != tx.metadata.HasFlag(HORNET_TX_METADATA_REQUESTED) {
-		tx.metadata = tx.metadata.ModifyFlag(HORNET_TX_METADATA_REQUESTED, requested)
-		tx.reqMilestoneIndex = reqMilestoneIndex
-		tx.SetModified(true)
-	}
-}
-
-func (tx *Transaction) GetMetadata() byte {
-	tx.metadataMutex.RLock()
-	defer tx.metadataMutex.RUnlock()
-
-	return byte(tx.metadata)
-}
-
 // ObjectStorage interface
 
 func (tx *Transaction) Update(other objectstorage.StorableObject) {
 	if obj, ok := other.(*Transaction); !ok {
 		panic("invalid object passed to Transaction.Update()")
 	} else {
-		tx.confirmationIndex = obj.confirmationIndex
-		tx.reqMilestoneIndex = obj.reqMilestoneIndex
-		tx.timestamp = obj.timestamp
-		tx.solidificationTimestamp = obj.solidificationTimestamp
 		tx.Tx = obj.Tx
 		tx.RawBytes = obj.RawBytes
-		tx.metadata = obj.metadata
 	}
 }
 
@@ -206,50 +93,12 @@ func (tx *Transaction) GetStorageKey() []byte {
 
 func (tx *Transaction) MarshalBinary() (data []byte, err error) {
 
-	/*
-		1 byte  metadata bitmask
-		4 bytes uint32 confirmationIndex
-		4 bytes uint32 reqMilestoneIndex
-		4 bytes uint32 solidificationTimestamp
-		x bytes RawBytes
-	*/
-
-	confirmed, confirmationIndex := tx.GetConfirmed()
-	if !confirmed {
-		confirmationIndex = 0
-	}
-
-	requested, reqMilestoneIndex := tx.IsRequested()
-	if !requested {
-		reqMilestoneIndex = 0
-	}
-
-	value := make([]byte, 13, 13+len(tx.RawBytes))
-	value[0] = tx.GetMetadata()
-	binary.LittleEndian.PutUint32(value[1:], uint32(confirmationIndex))
-	binary.LittleEndian.PutUint32(value[5:], uint32(reqMilestoneIndex))
-	binary.LittleEndian.PutUint32(value[9:], uint32(tx.GetSolidificationTimestamp()))
-	value = append(value, tx.RawBytes...)
-
-	return value, nil
+	return tx.RawBytes, nil
 }
 
 func (tx *Transaction) UnmarshalBinary(data []byte) error {
 
-	/*
-		1 byte  metadata bitmask
-		4 bytes uint32 confirmationIndex
-		4 bytes uint32 reqMilestoneIndex
-		4 bytes uint32 solidificationTimestamp
-		x bytes RawBytes
-	*/
-
-	tx.metadata = bitmask.BitMask(data[0])
-	tx.confirmationIndex = milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(data[1:5]))
-	tx.reqMilestoneIndex = milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(data[5:9]))
-	tx.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[9:13]))
-
-	tx.RawBytes = data[13:]
+	tx.RawBytes = data
 	transactionHash := trinary.MustBytesToTrytes(tx.TxHash, 81)
 
 	transaction, err := compressed.TransactionFromCompressedBytes(tx.RawBytes, transactionHash)

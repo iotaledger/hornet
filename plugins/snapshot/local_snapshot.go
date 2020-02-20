@@ -53,7 +53,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 			//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
 			//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			cachedTx.Release() // tx -1
 			if confirmed && (at > targetIndex) {
 				// confirmed by a later milestone than targetIndex => solidEntryPoint
@@ -113,7 +113,7 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 				continue
 			}
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if !confirmed {
 				cachedTx.Release() // tx -1
 				log.Panicf("getMilestoneApprovees: Transaction must be confirmed: %v", txHash)

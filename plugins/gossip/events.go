@@ -27,7 +27,7 @@ var Events = pluginEvents{
 	NeighborHandshakeCompleted: events.NewEvent(handshakeCaller),
 	SentTransaction:            events.NewEvent(hornet.TransactionCaller), // TODO
 	SentTransactionRequest:     events.NewEvent(hornet.TransactionCaller), // TODO
-	ReceivedTransaction:        events.NewEvent(hornet.TransactionCaller),
+	ReceivedTransaction:        events.NewEvent(hornet.RequestedTransactionCaller),
 	ProtocolError:              events.NewEvent(hornet.TransactionCaller), // TODO
 
 	// generic events

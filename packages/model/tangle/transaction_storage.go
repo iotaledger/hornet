@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	txStorage *objectstorage.ObjectStorage
+	txStorage       *objectstorage.ObjectStorage
+	metadataStorage *objectstorage.ObjectStorage
 )
 
 func TransactionCaller(handler interface{}, params ...interface{}) {
@@ -30,7 +31,8 @@ func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {
 }
 
 type CachedTransaction struct {
-	objectstorage.CachedObject
+	tx       objectstorage.CachedObject
+	metadata objectstorage.CachedObject
 }
 
 type CachedTransactions []*CachedTransaction
@@ -52,24 +54,57 @@ func (cachedTxs CachedTransactions) Release() {
 }
 
 func (c *CachedTransaction) GetTransaction() *hornet.Transaction {
-	return c.Get().(*hornet.Transaction)
+	return c.tx.Get().(*hornet.Transaction)
+}
+
+func (c *CachedTransaction) GetMetadata() *hornet.TransactionMetadata {
+	return c.metadata.Get().(*hornet.TransactionMetadata)
 }
 
 // tx +1
 func (c *CachedTransaction) Retain() *CachedTransaction {
-	return &CachedTransaction{c.CachedObject.Retain()}
+	return &CachedTransaction{
+		c.tx.Retain(),
+		c.metadata.Retain(),
+	}
+}
+
+func (c *CachedTransaction) Exists() bool {
+	return c.tx.Exists()
 }
 
 // tx -1
 func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction)) {
 
-	c.Consume(func(object objectstorage.StorableObject) {
+	c.tx.Consume(func(object objectstorage.StorableObject) {
 		consumer(object.(*hornet.Transaction))
 	})
 }
 
+// tx -1
+func (c *CachedTransaction) ConsumeMetadata(consumer func(*hornet.TransactionMetadata)) {
+
+	c.metadata.Consume(func(object objectstorage.StorableObject) {
+		consumer(object.(*hornet.TransactionMetadata))
+	})
+}
+
+// tx -1
+func (c *CachedTransaction) Release(force ...bool) {
+	c.tx.Release(force...)
+	c.metadata.Release(force...)
+}
+
 func transactionFactory(key []byte) objectstorage.StorableObject {
 	tx := &hornet.Transaction{
+		TxHash: make([]byte, len(key)),
+	}
+	copy(tx.TxHash, key)
+	return tx
+}
+
+func metadataFactory(key []byte) objectstorage.StorableObject {
+	tx := &hornet.TransactionMetadata{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
@@ -96,11 +131,28 @@ func configureTransactionStorage() {
 				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
 			}),
 	)
+
+	metadataStorage = objectstorage.New(
+		[]byte{DBPrefixTransactionMetadata},
+		metadataFactory,
+		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
+		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.PersistenceEnabled(true),
+		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
+			objectstorage.LeakDetectionOptions{
+				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
+				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+			}),
+	)
 }
 
 // tx +1
 func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {
-	return &CachedTransaction{txStorage.Load(trinary.MustTrytesToBytes(transactionHash)[:49])}
+	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+	return &CachedTransaction{
+		txStorage.Load(txHash),
+		metadataStorage.ComputeIfAbsent(txHash, metadataFactory),
+	}
 }
 
 // tx +-0
@@ -110,14 +162,20 @@ func ContainsTransaction(transactionHash trinary.Hash) bool {
 
 // tx +1
 func StoreTransaction(transaction *hornet.Transaction) *CachedTransaction {
-	return &CachedTransaction{txStorage.Store(transaction)}
+	return &CachedTransaction{
+		txStorage.Store(transaction),
+		metadataStorage.ComputeIfAbsent(transaction.TxHash, metadataFactory),
+	}
 }
 
 // tx +-0
-func DeleteTransaction(txHash trinary.Hash) {
-	txStorage.Delete(trinary.MustTrytesToBytes(txHash)[:49])
+func DeleteTransaction(transactionHash trinary.Hash) {
+	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+	txStorage.Delete(txHash)
+	metadataStorage.Delete(txHash)
 }
 
 func ShutdownTransactionStorage() {
 	txStorage.Shutdown()
+	metadataStorage.Shutdown()
 }

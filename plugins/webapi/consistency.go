@@ -87,7 +87,7 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		}
 
 		// Check if TX is solid
-		if !cachedTx.GetTransaction().IsSolid() {
+		if !cachedTx.GetMetadata().IsSolid() {
 			cachedTx.Release() // tx -1
 			info := fmt.Sprint("Tails are not solid (missing a referenced tx): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})

@@ -157,7 +157,7 @@ func (bundle *Bundle) IsSolid() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
-	tailSolid := cachedTailTx.GetTransaction().IsSolid()
+	tailSolid := cachedTailTx.GetMetadata().IsSolid()
 	cachedTailTx.Release() // tx -1
 
 	if tailSolid {
@@ -200,7 +200,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
 	defer cachedTailTx.Release()     // tx -1
-	tailConfirmed, _ := cachedTailTx.GetTransaction().GetConfirmed()
+	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
 
 	if tailConfirmed {
 		bundle.setConfirmed(true)

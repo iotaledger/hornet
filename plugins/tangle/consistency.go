@@ -114,7 +114,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			}
 
 			// ledger update process is write locked
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at > latestSolidMilestoneIndex {
 					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
