@@ -49,6 +49,7 @@ func (m *TransactionMetadata) SetSolid(solid bool) {
 	if solid != m.metadata.HasFlag(HORNET_TX_METADATA_SOLID) {
 		m.solidificationTimestamp = int32(time.Now().Unix())
 		m.metadata = m.metadata.ModifyFlag(HORNET_TX_METADATA_SOLID, solid)
+		m.Persist(true)
 		m.SetModified(true)
 	}
 }
@@ -67,6 +68,7 @@ func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex mil
 	if (confirmed != m.metadata.HasFlag(HORNET_TX_METADATA_CONFIRMED)) || (m.confirmationIndex != confirmationIndex) {
 		m.metadata = m.metadata.ModifyFlag(HORNET_TX_METADATA_CONFIRMED, confirmed)
 		m.confirmationIndex = confirmationIndex
+		m.Persist(true)
 		m.SetModified(true)
 	}
 }
