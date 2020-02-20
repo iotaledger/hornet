@@ -81,17 +81,7 @@ func (m *TransactionMetadata) GetMetadata() byte {
 // ObjectStorage interface
 
 func (m *TransactionMetadata) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*TransactionMetadata); !ok {
-		panic("invalid object passed to TransactionMetadata.Update()")
-	} else {
-		m.metadataMutex.Lock()
-		obj.metadataMutex.RLock()
-		m.confirmationIndex = obj.confirmationIndex
-		m.solidificationTimestamp = obj.solidificationTimestamp
-		m.metadata = obj.metadata
-		obj.metadataMutex.RUnlock()
-		m.metadataMutex.Unlock()
-	}
+	panic("No Update() should be called")
 }
 
 func (m *TransactionMetadata) GetStorageKey() []byte {
