@@ -49,9 +49,9 @@ func configureAddressesStorage() {
 	opts := profile.GetProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixAddresses},
 		addressFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),

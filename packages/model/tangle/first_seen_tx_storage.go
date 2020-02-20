@@ -50,9 +50,9 @@ func configureFirstSeenTxStorage() {
 	opts := profile.GetProfile().Caches.FirstSeenTx
 
 	firstSeenTxStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixFirstSeenTransactions},
 		firstSeenTxFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(4, 49),

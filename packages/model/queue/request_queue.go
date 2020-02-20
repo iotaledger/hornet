@@ -41,6 +41,7 @@ func NewRequestQueue() *RequestQueue {
 	queue := &RequestQueue{
 		requestedStorage: objectstorage.New(
 			nil,
+			nil,
 			requestFactory,
 			objectstorage.CacheTime(0),
 			objectstorage.PersistenceEnabled(false),

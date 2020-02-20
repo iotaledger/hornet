@@ -51,6 +51,7 @@ func configureRefsAnInvalidBundleStorage() {
 
 	refsAnInvalidBundleStorage = objectstorage.New(
 		nil,
+		nil,
 		invalidBundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),

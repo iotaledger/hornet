@@ -39,9 +39,9 @@ func configureBundleStorage() {
 	opts := profile.GetProfile().Caches.Bundles
 
 	bundleStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixBundles},
 		bundleFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,

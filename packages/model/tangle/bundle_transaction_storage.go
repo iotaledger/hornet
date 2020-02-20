@@ -56,9 +56,9 @@ func configureBundleTransactionsStorage() {
 	opts := profile.GetProfile().Caches.BundleTransactions
 
 	bundleTransactionsStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixBundleTransactions},
 		bundleTransactionFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 1, 49), // BundleHash, IsTail, TxHash

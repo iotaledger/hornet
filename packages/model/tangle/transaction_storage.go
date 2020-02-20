@@ -114,9 +114,9 @@ func configureTransactionStorage() {
 	opts := profile.GetProfile().Caches.Transactions
 
 	txStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -127,9 +127,9 @@ func configureTransactionStorage() {
 	)
 
 	metadataStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixTransactionMetadata},
 		metadataFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,

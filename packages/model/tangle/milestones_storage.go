@@ -37,9 +37,9 @@ func configureMilestoneStorage() {
 	opts := profile.GetProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
+		hornetDB.GetHornetBadgerInstance(),
 		[]byte{DBPrefixMilestones},
 		milestoneFactory,
-		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
