@@ -29,7 +29,7 @@ var (
 )
 
 // checkSolidity checks if a single transaction is solid
-func checkSolidity(cachedTx *tangle.CachedTransaction, addToApproversCache bool) (solid bool, newlySolid bool) {
+func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid bool) {
 
 	defer cachedTx.Release() // tx -1
 
@@ -53,11 +53,6 @@ func checkSolidity(cachedTx *tangle.CachedTransaction, addToApproversCache bool)
 		cachedApproveeTx := tangle.GetCachedTransaction(approveeHash) // tx +1
 		if !cachedApproveeTx.Exists() || !cachedApproveeTx.GetMetadata().IsSolid() {
 			isSolid = false
-
-			if addToApproversCache {
-				// Add this Transaction as approver to the approvee if it is unknown or not solid yet
-				tangle.StoreApprover(approveeHash, cachedTx.GetTransaction().GetHash()).Release()
-			}
 			cachedApproveeTx.Release() // tx -1
 			break
 		}
@@ -210,7 +205,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				log.Panicf("solidQueueCheck: EntryTx not found: %v", entryTxHash)
 			}
 
-			if solid, newlySolid := checkSolidity(cachedEntryTx.Retain(), false); solid {
+			if solid, newlySolid := checkSolidity(cachedEntryTx.Retain()); solid {
 				// Add all tx to the map that approve this solid transaction
 				for approverTxHash := range approvers[entryTxHash] {
 					entryTxs[approverTxHash] = struct{}{}
@@ -218,8 +213,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 
 				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					_, added := gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()) // tx pass +1
-					if !added {
+					if _, added := gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()); !added { // tx pass +1
 						cachedEntryTx.Release() // tx -1
 					}
 				}

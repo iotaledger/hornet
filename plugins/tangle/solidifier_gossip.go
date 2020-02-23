@@ -75,7 +75,7 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 		for txHash, cachedTxToCheck := range txsToCheck {
 			delete(txsToCheck, txHash)
 
-			solid, _ := checkSolidity(cachedTxToCheck.Retain(), true)
+			solid, _ := checkSolidity(cachedTxToCheck.Retain())
 			if solid {
 				if int32(time.Now().Unix())-cachedTxToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions
