@@ -41,24 +41,22 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 	defer cachedApprovers.Release()                      // approvers -1
 
 	for _, cachedApprover := range cachedApprovers {
-		if cachedApprover.Exists() {
-			approverHash := cachedApprover.GetApprover().GetApproverHash()
-			cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
-			if cachedTx == nil {
-				log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
-			}
+		approverHash := cachedApprover.GetApprover().GetApproverHash()
+		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+		if cachedTx == nil {
+			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
+		}
 
-			// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
-			//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
-			//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
+		// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
+		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
+		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
-			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
-			cachedTx.Release() // tx -1
-			if confirmed && (at > targetIndex) {
-				// confirmed by a later milestone than targetIndex => solidEntryPoint
+		confirmed, at := cachedTx.GetMetadata().GetConfirmed()
+		cachedTx.Release() // tx -1
+		if confirmed && (at > targetIndex) {
+			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
-				return true, at
-			}
+			return true, at
 		}
 	}
 

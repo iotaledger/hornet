@@ -52,12 +52,11 @@ func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
 // bundle +1
 func GetMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedBundle {
 
-	cachedMilestone := GetCachedMilestone(milestoneIndex) // cachedMilestone +1
-	defer cachedMilestone.Release()                       // cachedMilestone -1
-
-	if !cachedMilestone.Exists() {
+	cachedMilestone := GetCachedMilestoneOrNil(milestoneIndex) // cachedMilestone +1
+	if cachedMilestone == nil {
 		return nil
 	}
+	defer cachedMilestone.Release() // cachedMilestone -1
 
 	return GetBundleOfTailTransactionOrNil(cachedMilestone.GetMilestone().Hash)
 }

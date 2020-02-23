@@ -73,8 +73,13 @@ func (s *RequestQueue) GetStorageSize() int {
 }
 
 // request +1
-func (s *RequestQueue) GetCachedRequest(transactionHash trinary.Hash) *CachedRequest {
-	return &CachedRequest{s.requestedStorage.Get(trinary.MustTrytesToBytes(transactionHash)[:49])}
+func (s *RequestQueue) GetCachedRequestOrNil(transactionHash trinary.Hash) *CachedRequest {
+	cachedRequest := s.requestedStorage.Get(trinary.MustTrytesToBytes(transactionHash)[:49])
+	if !cachedRequest.Exists() {
+		cachedRequest.Release()
+		return nil
+	}
+	return &CachedRequest{CachedObject: cachedRequest}
 }
 
 // request +-0
@@ -242,28 +247,26 @@ func (s *RequestQueue) MarkReceived(txHash trinary.Hash) (bool, milestone_index.
 	s.Lock()
 	defer s.Unlock()
 
-	cachedRequest := s.GetCachedRequest(txHash) // request +1
-	defer cachedRequest.Release()               // request -1
-
-	if cachedRequest.Exists() {
-		request := cachedRequest.GetRequest()
-		request.markReceived()
-		return true, request.msIndex
+	cachedRequest := s.GetCachedRequestOrNil(txHash) // request +1
+	if cachedRequest == nil {
+		return false, milestone_index.MilestoneIndex(0)
 	}
+	defer cachedRequest.Release() // request -1
 
-	return false, milestone_index.MilestoneIndex(0)
+	request := cachedRequest.GetRequest()
+	request.markReceived()
+	return true, request.msIndex
 }
 
 func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) {
 	s.Lock()
 	defer s.Unlock()
 
-	cachedRequest := s.GetCachedRequest(txHash) // request +1
-	defer cachedRequest.Release()               // request -1
-
-	if cachedRequest.Exists() {
+	cachedRequest := s.GetCachedRequestOrNil(txHash) // request +1
+	if cachedRequest != nil {
 		request := cachedRequest.GetRequest()
 		request.markProcessed()
+		cachedRequest.Release() // request -1
 	}
 }
 

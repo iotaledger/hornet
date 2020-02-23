@@ -154,17 +154,34 @@ func (c *CachedBundleTransaction) GetBundleTransaction() *BundleTransaction {
 }
 
 // bundleTx +1
-func GetCachedBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Hash, isTail bool) *CachedBundleTransaction {
-	return &CachedBundleTransaction{bundleTransactionsStorage.Load(databaseKeyForBundleTransaction(bundleHash, transactionHash, isTail))}
+func GetCachedBundleTransactionOrNil(bundleHash trinary.Hash, transactionHash trinary.Hash, isTail bool) *CachedBundleTransaction {
+	cachedBundleTx := bundleTransactionsStorage.Load(databaseKeyForBundleTransaction(bundleHash, transactionHash, isTail)) // bundleTx +1
+	if !cachedBundleTx.Exists() {
+		cachedBundleTx.Release() // bundleTx -1
+		return nil
+	}
+	return &CachedBundleTransaction{CachedObject: cachedBundleTx}
 }
 
 // bundleTx +1
-func GetCachedBundleTransactions(bundleHash trinary.Hash, maxFindTransactions ...int) CachedBundleTransactions {
+func GetCachedBundleTransactions(bundleHash trinary.Hash, maxFind ...int) CachedBundleTransactions {
 	bndlHash := databaseKeyPrefixForBundleHash(bundleHash)
 
 	cachedBndlTxs := CachedBundleTransactions{}
 
+	i := 0
 	bundleTransactionsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // bundleTx -1
+			return false
+		}
+
+		if !cachedObject.Exists() {
+			cachedObject.Release() // bundleTx -1
+			return true
+		}
+
 		cachedBndlTxs = append(cachedBndlTxs, &CachedBundleTransaction{cachedObject})
 		return true
 	}, bndlHash)
@@ -173,12 +190,24 @@ func GetCachedBundleTransactions(bundleHash trinary.Hash, maxFindTransactions ..
 }
 
 // bundleTx +1
-func GetCachedBundleTailTransactions(bundleHash trinary.Hash) CachedBundleTransactions {
+func GetCachedBundleTailTransactions(bundleHash trinary.Hash, maxFind ...int) CachedBundleTransactions {
 	bndlHash := databaseKeyPrefixForBundleHash(bundleHash)
 
 	cachedBndlTxs := CachedBundleTransactions{}
 
+	i := 0
 	bundleTransactionsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // bundleTx -1
+			return false
+		}
+
+		if !cachedObject.Exists() {
+			cachedObject.Release() // bundleTx -1
+			return true
+		}
+
 		cachedBndlTxs = append(cachedBndlTxs, &CachedBundleTransaction{cachedObject})
 		return true
 	}, append(bndlHash, BUNDLE_TX_IS_TAIL))
@@ -228,10 +257,6 @@ func getTailApproversOfSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 
 			cachedTxApprovers := GetCachedApprovers(txHashToCheck) // approvers +1
 			for _, cachedTxApprover := range cachedTxApprovers {
-				if !cachedTxApprover.Exists() {
-					continue
-				}
-
 				approverHash := cachedTxApprover.GetApprover().GetApproverHash()
 
 				cachedApproverTx := GetCachedTransactionOrNil(approverHash) // tx +1
@@ -270,9 +295,6 @@ func existApproversFromSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 	defer cachedTxApprovers.Release()               // approvers -1
 
 	for _, cachedApprover := range cachedTxApprovers {
-		if !cachedApprover.Exists() {
-			continue
-		}
 		cachedApproverTx := GetCachedTransactionOrNil(cachedApprover.GetApprover().GetApproverHash()) // tx +1
 		if cachedApproverTx != nil {
 			approverTx := cachedApproverTx.GetTransaction()
@@ -290,11 +312,11 @@ func existApproversFromSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 }
 
 // GetTransactionHashes returns all transaction hashes that belong to this bundle
-func GetTransactionHashes(bundleHash trinary.Hash, maxFindTransactions ...int) []trinary.Hash {
+func GetTransactionHashes(bundleHash trinary.Hash, maxFind ...int) []trinary.Hash {
 	var txHashes []trinary.Hash
 
-	cachedBndlTxs := GetCachedBundleTransactions(bundleHash, maxFindTransactions...) // bundleTxs +1
-	defer cachedBndlTxs.Release()                                                    // bundleTxs -1
+	cachedBndlTxs := GetCachedBundleTransactions(bundleHash, maxFind...) // bundleTxs +1
+	defer cachedBndlTxs.Release()                                        // bundleTxs -1
 
 	for _, cachedBndlTx := range cachedBndlTxs {
 		bundleTx := cachedBndlTx.GetBundleTransaction()

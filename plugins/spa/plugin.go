@@ -148,13 +148,7 @@ func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransa
 
 	defer cachedMs.Release() // bundle -1
 
-	cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
-	if !cachedMsTailTx.Exists() {
-		cachedMsTailTx.Release() // tx -1
-		return nil
-	}
-
-	return cachedMsTailTx
+	return cachedMs.GetBundle().GetTail() // tx +1
 }
 
 func preFeed(channel chan interface{}) {

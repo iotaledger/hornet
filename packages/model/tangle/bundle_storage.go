@@ -196,8 +196,13 @@ func (c *CachedBundle) GetBundle() *Bundle {
 }
 
 // bundle +1
-func GetCachedBundle(tailTxHash trinary.Hash) *CachedBundle {
-	return &CachedBundle{bundleStorage.Load(databaseKeyForBundle(tailTxHash))}
+func GetCachedBundleOrNil(tailTxHash trinary.Hash) *CachedBundle {
+	cachedBundle := bundleStorage.Load(databaseKeyForBundle(tailTxHash)) // bundle +1
+	if !cachedBundle.Exists() {
+		cachedBundle.Release() // bundle -1
+		return nil
+	}
+	return &CachedBundle{CachedObject: cachedBundle}
 }
 
 // bundle +-0
@@ -240,9 +245,8 @@ func GetBundles(bundleHash trinary.Hash) CachedBundles {
 	defer cachedBndlTailTxs.Release()                                // bundleTxs -1
 
 	for _, bndlTailTx := range cachedBndlTailTxs {
-		cachedBndl := GetCachedBundle(bndlTailTx.GetBundleTransaction().GetTxHash()) // bundle +1
-		if !cachedBndl.Exists() {
-			cachedBndl.Release() // bundle -1
+		cachedBndl := GetCachedBundleOrNil(bndlTailTx.GetBundleTransaction().GetTxHash()) // bundle +1
+		if cachedBndl == nil {
 			continue
 		}
 
@@ -259,14 +263,7 @@ func GetBundles(bundleHash trinary.Hash) CachedBundles {
 // GetBundleOfTailTransactionOrNil gets the bundle this tail transaction is present in or nil.
 // bundle +1
 func GetBundleOfTailTransactionOrNil(tailTxHash trinary.Hash) *CachedBundle {
-
-	cachedBndl := GetCachedBundle(tailTxHash) // bundle +1
-	if !cachedBndl.Exists() {
-		cachedBndl.Release() // bundle -1
-		return nil
-	}
-
-	return cachedBndl
+	return GetCachedBundleOrNil(tailTxHash) // bundle +1
 }
 
 // GetBundlesOfTransactionOrNil gets all bundle instances in which this transaction is present.

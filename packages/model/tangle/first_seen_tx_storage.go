@@ -75,7 +75,13 @@ func GetCachedFirstSeenTxs(msIndex milestone_index.MilestoneIndex, maxFind ...in
 	firstSeenTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // bundleTx -1
 			return false
+		}
+
+		if !cachedObject.Exists() {
+			cachedObject.Release() // bundleTx -1
+			return true
 		}
 
 		cachedFirstSeenTxs = append(cachedFirstSeenTxs, &CachedFirstSeenTx{cachedObject})
@@ -116,10 +122,6 @@ func FixFirstSeenTxs(msIndex milestone_index.MilestoneIndex) {
 	// Search all entries with milestone 0
 	cachedFirstSeenTxs := GetCachedFirstSeenTxs(0) // firstSeenTx +1
 	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
-		if !cachedFirstSeenTx.Exists() {
-			continue
-		}
-
 		firstSeenTx := cachedFirstSeenTx.GetFirstSeenTx()
 
 		key := make([]byte, 4)

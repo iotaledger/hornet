@@ -116,10 +116,6 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		if guards.IsTransactionHash(approveeHash) {
 			cachedTxApprovers := tangle.GetCachedApprovers(approveeHash, maxFindTransactions) // approvers +1
 			for _, cachedTxApprover := range cachedTxApprovers {
-				if !cachedTxApprover.Exists() {
-					continue
-				}
-
 				txHashes = append(txHashes, cachedTxApprover.GetApprover().GetApproverHash())
 			}
 			cachedTxApprovers.Release() // approvers -1
@@ -132,9 +128,6 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		if err == nil {
 			cachedTags := tangle.GetCachedTags(tag, maxFindTransactions) // tags +1
 			for _, cachedTag := range cachedTags {
-				if !cachedTag.Exists() {
-					continue
-				}
 				txHashes = append(txHashes, cachedTag.GetTag().GetTransactionHash())
 			}
 			cachedTags.Release() // tags -1

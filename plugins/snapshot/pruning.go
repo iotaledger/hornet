@@ -22,10 +22,6 @@ func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) in
 
 	cachedFirstSeenTxs := tangle.GetCachedFirstSeenTxs(targetIndex) // firstSeenTx +1
 	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
-		if !cachedFirstSeenTx.Exists() {
-			continue
-		}
-
 		firstSeenTx := cachedFirstSeenTx.GetFirstSeenTx()
 		txHashes = append(txHashes, firstSeenTx.GetTransactionHash())
 	}

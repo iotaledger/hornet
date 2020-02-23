@@ -73,7 +73,13 @@ func GetCachedApprovers(transactionHash trinary.Hash, maxFind ...int) CachedAppp
 	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // approvers -1
 			return false
+		}
+
+		if !cachedObject.Exists() {
+			cachedObject.Release() // approvers -1
+			return true
 		}
 
 		cachedApprovers = append(cachedApprovers, &CachedApprover{cachedObject})

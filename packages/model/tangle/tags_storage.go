@@ -73,7 +73,13 @@ func GetCachedTags(txTag trinary.Trytes, maxFind ...int) CachedTags {
 	tagsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // tag -1
 			return false
+		}
+
+		if !cachedObject.Exists() {
+			cachedObject.Release() // tag -1
+			return true
 		}
 
 		cachedTags = append(cachedTags, &CachedTag{cachedObject})

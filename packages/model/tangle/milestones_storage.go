@@ -98,8 +98,13 @@ func (c *CachedMilestone) GetMilestone() *Milestone {
 }
 
 // milestone +1
-func GetCachedMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
-	return &CachedMilestone{milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex))}
+func GetCachedMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
+	cachedMilestone := milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
+	if !cachedMilestone.Exists() {
+		cachedMilestone.Release() // milestone -1
+		return nil
+	}
+	return &CachedMilestone{CachedObject: cachedMilestone}
 }
 
 // milestone +-0
