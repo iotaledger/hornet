@@ -102,7 +102,7 @@ func (tx *Transaction) UnmarshalBinary(data []byte) error {
 	/*
 		x bytes RawBytes
 	*/
-	
+
 	tx.RawBytes = data
 	transactionHash := trinary.MustBytesToTrytes(tx.TxHash, 81)
 
