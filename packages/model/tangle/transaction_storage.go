@@ -145,7 +145,7 @@ func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
 	return &CachedTransaction{
 		txStorage.Load(txHash),
-		metadataStorage.ComputeIfAbsent(txHash, metadataFactory),
+		metadataStorage.Load(txHash),
 	}
 }
 
@@ -155,11 +155,15 @@ func ContainsTransaction(transactionHash trinary.Hash) bool {
 }
 
 // tx +1
-func StoreTransaction(transaction *hornet.Transaction) *CachedTransaction {
-	return &CachedTransaction{
-		txStorage.Store(transaction),
-		metadataStorage.ComputeIfAbsent(transaction.TxHash, metadataFactory),
+func StoreTransactionIfAbsent(transaction *hornet.Transaction) (*CachedTransaction, bool) {
+	cachedTx, isNew := txStorage.StoreIfAbsent(transaction)
+	if !isNew {
+		return nil, false
 	}
+
+	cachedMeta := metadataStorage.Store(metadataFactory(trinary.MustTrytesToBytes(transaction.GetHash())[:49]))
+
+	return &CachedTransaction{tx: cachedTx, metadata: cachedMeta}, true
 }
 
 // tx +-0

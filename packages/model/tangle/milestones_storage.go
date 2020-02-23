@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/iota.go/trinary"
 
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
 )
@@ -37,7 +37,7 @@ func configureMilestoneStorage() {
 	opts := profile.GetProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
-		hornetDB.GetHornetBadgerInstance(),
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixMilestones},
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

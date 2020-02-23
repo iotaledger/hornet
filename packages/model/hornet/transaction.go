@@ -4,9 +4,10 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/objectstorage"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 func TransactionCaller(handler interface{}, params ...interface{}) {
@@ -19,12 +20,13 @@ func RequestedTransactionCaller(handler interface{}, params ...interface{}) {
 
 type Transaction struct {
 	objectstorage.StorableObjectFlags
+
 	TxHash []byte
 
 	// Decompressed iota.go Transaction containing Hash
 	Tx *transaction.Transaction
 
-	// Compressed bytes as received from IRI
+	// Compressed bytes as received via gossip
 	RawBytes []byte
 
 	// TxTimestamp or, if available, AttachmentTimestamp
@@ -79,12 +81,7 @@ func (tx *Transaction) IsHead() bool {
 // ObjectStorage interface
 
 func (tx *Transaction) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*Transaction); !ok {
-		panic("invalid object passed to Transaction.Update()")
-	} else {
-		tx.Tx = obj.Tx
-		tx.RawBytes = obj.RawBytes
-	}
+	panic("Transaction should never be updated")
 }
 
 func (tx *Transaction) GetStorageKey() []byte {
@@ -93,11 +90,19 @@ func (tx *Transaction) GetStorageKey() []byte {
 
 func (tx *Transaction) MarshalBinary() (data []byte, err error) {
 
+	/*
+		x bytes RawBytes
+	*/
+
 	return tx.RawBytes, nil
 }
 
 func (tx *Transaction) UnmarshalBinary(data []byte) error {
 
+	/*
+		x bytes RawBytes
+	*/
+	
 	tx.RawBytes = data
 	transactionHash := trinary.MustBytesToTrytes(tx.TxHash, 81)
 
