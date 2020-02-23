@@ -222,9 +222,8 @@ func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
 	cachedSignatureTxs = append(cachedSignatureTxs, cachedTxIndex0)
 
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
-		cachedTx := GetCachedTransaction(cachedSignatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) // tx +1
-		if !cachedTx.Exists() {
-			cachedTx.Release()           // tx -1
+		cachedTx := GetCachedTransactionOrNil(cachedSignatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) // tx +1
+		if cachedTx == nil {
 			cachedSignatureTxs.Release() // tx -1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 		}
@@ -242,12 +241,11 @@ func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
 
 	defer cachedSignatureTxs.Release() // tx -1
 
-	cachedSiblingsTx := GetCachedTransaction(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) // tx +1
-	defer cachedSiblingsTx.Release()                                                                                              // tx -1
-
-	if !cachedSiblingsTx.Exists() {
+	cachedSiblingsTx := GetCachedTransactionOrNil(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) // tx +1
+	if cachedSiblingsTx == nil {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 	}
+	defer cachedSiblingsTx.Release() // tx -1
 
 	if (cachedSiblingsTx.GetTransaction().Tx.Value != 0) || (cachedSiblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
 		// Transaction is not issued by compass => no milestone

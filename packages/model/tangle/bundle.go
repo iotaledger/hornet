@@ -298,8 +298,8 @@ func (bundle *Bundle) calcLedgerChanges() {
 ////////////////////////////////////////////////////////////////////////////////
 
 func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	cachedTx := GetCachedTransaction(txHash) // tx +1
-	if !cachedTx.Exists() {
+	cachedTx := GetCachedTransactionOrNil(txHash) // tx +1
+	if cachedTx == nil {
 		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash, txHash)
 	}
 	return cachedTx

@@ -36,8 +36,8 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 			}
 
@@ -104,8 +104,8 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 
 	for txHash := range txsToConfirm {
 
-		cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-		if !cachedTx.Exists() {
+		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+		if cachedTx == nil {
 			log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
 		}
 

@@ -279,11 +279,11 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 	var cachedBndls CachedBundles
 
-	cachedTx := GetCachedTransaction(txHash) // tx +1
-	defer cachedTx.Release()                 // tx -1
-	if !cachedTx.Exists() {
+	cachedTx := GetCachedTransactionOrNil(txHash) // tx +1
+	if cachedTx == nil {
 		return nil
 	}
+	defer cachedTx.Release() // tx -1
 
 	if cachedTx.GetTransaction().IsTail() {
 		cachedBndl := GetBundleOfTailTransactionOrNil(txHash) // bundle +1
@@ -311,14 +311,17 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool) (alreadyAdded bool) {
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
 
 	// Store the tx in the storage, this will update the tx reference automatically
 	cachedTx, isNew := StoreTransactionIfAbsent(hornetTx) // tx +1
 	if !isNew {
-		return true
+		cachedTx = GetCachedTransactionOrNil(hornetTx.GetHash())
+		if cachedTx == nil {
+			panic("cachedTx can't be nil")
+		}
+		return cachedTx, true // tx +1
 	}
-	defer cachedTx.Release() // tx -1
 
 	// Store the tx in the bundleTransactionsStorage
 	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release()
@@ -344,7 +347,7 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 		tryConstructBundle(cachedTx.Retain(), false)
 	}
 
-	return false
+	return cachedTx, false
 }
 
 func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
@@ -354,9 +357,8 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		// If Tx is not a tail, search all tailTx that reference this tx and try to create the bundles
 		tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash())
 		for _, tailTxHash := range tailTxHashes {
-			cachedTailTx := GetCachedTransaction(tailTxHash) // tx +1
-			if !cachedTailTx.Exists() {
-				cachedTailTx.Release() // tx -1
+			cachedTailTx := GetCachedTransactionOrNil(tailTxHash) // tx +1
+			if cachedTailTx == nil {
 				continue
 			}
 

@@ -68,11 +68,10 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 
 	for _, t := range checkCon.Tails {
 
-		cachedTx := tangle.GetCachedTransaction(t) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(t) // tx +1
 
 		// Check if TX is known
-		if !cachedTx.Exists() {
-			cachedTx.Release() // tx -1
+		if cachedTx == nil {
 			info := fmt.Sprint("Transaction not found: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return

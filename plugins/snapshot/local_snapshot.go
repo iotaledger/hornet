@@ -43,9 +43,8 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 	for _, cachedApprover := range cachedApprovers {
 		if cachedApprover.Exists() {
 			approverHash := cachedApprover.GetApprover().GetApproverHash()
-			cachedTx := tangle.GetCachedTransaction(approverHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
+			cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+			if cachedTx == nil {
 				log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
 			}
 
@@ -102,9 +101,8 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				if panicOnMissingTx {
 					log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
 				}

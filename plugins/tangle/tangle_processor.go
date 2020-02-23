@@ -105,13 +105,12 @@ func runTangleProcessor(plugin *node.Plugin) {
 func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) {
 
 	txHash := incomingTx.GetHash()
-	cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-	defer cachedTx.Release()                        // tx -1
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested)
+	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested) // tx +1
+	defer cachedTx.Release()                                                                              // tx -1
 	if !alreadyAdded {
 		server.SharedServerMetrics.IncrNewTransactionsCount()
 

@@ -87,9 +87,8 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	// check whether the given reference tx is valid for the walk
 	var cachedRefBundle *tangle.CachedBundle
 	if reference != nil {
-		cachedRefTx := tangle.GetCachedTransaction(*reference) // tx +1
-		if !cachedRefTx.Exists() {
-			cachedRefTx.Release() // tx -1
+		cachedRefTx := tangle.GetCachedTransactionOrNil(*reference) // tx +1
+		if cachedRefTx == nil {
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction doesn't exist")
 		}
 
@@ -197,9 +196,14 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				walkStats.Evaluated++
 
-				cachedCandidateTx := tangle.GetCachedTransaction(candidateHash) // tx +1
+				cachedCandidateTx := tangle.GetCachedTransactionOrNil(candidateHash) // tx +1
 
-				if !cachedCandidateTx.Exists() || !cachedCandidateTx.GetMetadata().IsSolid() {
+				if cachedCandidateTx == nil {
+					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					continue
+				}
+
+				if !cachedCandidateTx.GetMetadata().IsSolid() {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					continue

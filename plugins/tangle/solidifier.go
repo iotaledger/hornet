@@ -50,8 +50,13 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 			continue
 		}
 
-		cachedApproveeTx := tangle.GetCachedTransaction(approveeHash) // tx +1
-		if !cachedApproveeTx.Exists() || !cachedApproveeTx.GetMetadata().IsSolid() {
+		cachedApproveeTx := tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
+		if cachedApproveeTx == nil {
+			isSolid = false
+			break
+		}
+
+		if !cachedApproveeTx.GetMetadata().IsSolid() {
 			isSolid = false
 			cachedApproveeTx.Release() // tx -1
 			break
@@ -111,8 +116,8 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 			delete(txsToTraverse, txHash)
 			isEntryTx := true
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				log.Panicf("solidQueueCheck: Tx not found: %v", txHash)
 			}
 
@@ -139,14 +144,13 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 					continue
 				}
 
-				cachedApproveeTx := tangle.GetCachedTransaction(approveeHash) // tx +1
-				if !cachedApproveeTx.Exists() {
+				cachedApproveeTx := tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
+				if cachedApproveeTx == nil {
 					isEntryTx = false
 					txsToRequest[approveeHash] = struct{}{}
 
 					// Mark the tx as checked
 					txsChecked[approveeHash] = false
-					cachedApproveeTx.Release() // tx -1
 					continue
 				}
 
@@ -200,8 +204,8 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				// Go on with the check
 			}
 
-			cachedEntryTx := tangle.GetCachedTransaction(entryTxHash) // tx +1
-			if !cachedEntryTx.Exists() {
+			cachedEntryTx := tangle.GetCachedTransactionOrNil(entryTxHash) // tx +1
+			if cachedEntryTx == nil {
 				log.Panicf("solidQueueCheck: EntryTx not found: %v", entryTxHash)
 			}
 
@@ -381,8 +385,8 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 			}
 			delete(txsToTraverse, txHash)
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				log.Panicf("searchMissingMilestone: Transaction not found: %v", txHash)
 			}
 
@@ -403,8 +407,8 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 					continue
 				}
 
-				cachedApproveeTx := tangle.GetCachedTransaction(approveeHash) // tx +1
-				if !cachedApproveeTx.Exists() {
+				cachedApproveeTx := tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
+				if cachedApproveeTx == nil {
 					log.Panicf("searchMissingMilestone: Transaction not found: %v", approveeHash)
 				}
 

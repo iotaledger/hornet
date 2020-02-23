@@ -36,10 +36,9 @@ func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) in
 
 	// Check if tx is still unconfirmed
 	for _, txHash := range txHashes {
-		cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-		if !cachedTx.Exists() {
+		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+		if cachedTx == nil {
 			// Tx was already pruned
-			cachedTx.Release() // tx -1
 			continue
 		}
 
@@ -83,9 +82,8 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	txsToRemove := make(map[trinary.Hash]struct{})
 
 	for _, txHash := range txHashes {
-		cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-		if !cachedTx.Exists() {
-			cachedTx.Release() // tx -1
+		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+		if cachedTx == nil {
 			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
 		}
 
@@ -96,9 +94,8 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	}
 
 	for txHash := range txsToRemove {
-		cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-		if !cachedTx.Exists() {
-			cachedTx.Release() // tx -1
+		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+		if cachedTx == nil {
 			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
 		}
 		tangle.DeleteTag(cachedTx.GetTransaction().Tx.Tag, txHash)

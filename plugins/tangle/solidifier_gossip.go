@@ -88,9 +88,8 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 					if cachedTxApprover.Exists() {
 						approverHash := cachedTxApprover.GetApprover().GetApproverHash()
 
-						cachedApproverTx := tangle.GetCachedTransaction(approverHash) // tx +1
-						if !cachedApproverTx.Exists() {
-							cachedApproverTx.Release() // tx -1
+						cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+						if cachedApproverTx == nil {
 							continue
 						}
 

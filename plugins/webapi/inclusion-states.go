@@ -45,17 +45,17 @@ func getInclusionStates(i interface{}, c *gin.Context, abortSignal <-chan struct
 
 	for _, tx := range gis.Transactions {
 		// get tx data
-		cachedTx := tangle.GetCachedTransaction(tx) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(tx) // tx +1
 
-		if cachedTx.Exists() {
-			// check if tx is set as confirmed
-			confirmed, _ := cachedTx.GetMetadata().GetConfirmed()
-			inclusionStates = append(inclusionStates, confirmed)
-		} else {
+		if cachedTx == nil {
 			// if tx is unknown, return false
 			inclusionStates = append(inclusionStates, false)
+			continue
 		}
+		// check if tx is set as confirmed
+		confirmed, _ := cachedTx.GetMetadata().GetConfirmed()
 		cachedTx.Release() // tx -1
+		inclusionStates = append(inclusionStates, confirmed)
 	}
 
 	c.JSON(http.StatusOK, GetInclusionStatesReturn{States: inclusionStates})

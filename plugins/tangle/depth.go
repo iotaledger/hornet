@@ -109,11 +109,11 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 
 			// we should have the transaction because the to be checked tail tx is solid
 			// and we passed the point where we checked whether the tx is a solid entry point
-			if !cachedTx.Exists() {
+			if cachedTx == nil {
 				log.Panicf("missing transaction %s for below max depth check", txHash)
 			}
 

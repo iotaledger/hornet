@@ -141,11 +141,24 @@ func configureTransactionStorage() {
 }
 
 // tx +1
-func GetCachedTransaction(transactionHash trinary.Hash) *CachedTransaction {
+func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction {
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+
+	cachedTx := txStorage.Load(txHash) // tx +1
+	if !cachedTx.Exists() {
+		cachedTx.Release() // tx -1
+		return nil
+	}
+	cachedMeta := metadataStorage.Load(txHash) // tx +1
+	if !cachedMeta.Exists() {
+		cachedTx.Release()   // tx -1
+		cachedMeta.Release() // tx -1
+		return nil
+	}
+
 	return &CachedTransaction{
-		txStorage.Load(txHash),
-		metadataStorage.Load(txHash),
+		tx:       cachedTx,
+		metadata: cachedMeta,
 	}
 }
 
