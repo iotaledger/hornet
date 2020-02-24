@@ -18,20 +18,11 @@ const (
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
 func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) int {
 
-	var txHashes []trinary.Hash
-
-	cachedFirstSeenTxs := tangle.GetCachedFirstSeenTxs(targetIndex) // firstSeenTx +1
-	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
-		firstSeenTx := cachedFirstSeenTx.GetFirstSeenTx()
-		txHashes = append(txHashes, firstSeenTx.GetTransactionHash())
-	}
-	cachedFirstSeenTxs.Release() // firstSeenTx -1
-
 	txsToRemoveMap := make(map[trinary.Hash]struct{})
 	var txsToRemoveSlice []trinary.Hash
 
 	// Check if tx is still unconfirmed
-	for _, txHash := range txHashes {
+	for _, txHash := range tangle.GetFirstSeenTxHashes(targetIndex) {
 		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 		if cachedTx == nil {
 			// Tx was already pruned

@@ -80,7 +80,7 @@ func GetTransactionHashesForAddress(address trinary.Hash, maxFind ...int) []trin
 			return true
 		}
 
-		transactionHashes = append(transactionHashes, cachedObject.(*CachedAddress).GetAddress().GetTransactionHash())
+		transactionHashes = append(transactionHashes, (&CachedAddress{CachedObject: cachedObject}).GetAddress().GetTransactionHash())
 		cachedObject.Release() // address -1
 		return true
 	}, trinary.MustTrytesToBytes(address)[:49])

@@ -64,31 +64,32 @@ func configureFirstSeenTxStorage() {
 	)
 }
 
-// firstSeenTx +1
-func GetCachedFirstSeenTxs(msIndex milestone_index.MilestoneIndex, maxFind ...int) CachedFirstSeenTxs {
+// firstSeenTx +-0
+func GetFirstSeenTxHashes(msIndex milestone_index.MilestoneIndex, maxFind ...int) []trinary.Hash {
+	var firstSeenTxHashes []trinary.Hash
+
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
-
-	cachedFirstSeenTxs := CachedFirstSeenTxs{}
 
 	i := 0
 	firstSeenTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release() // bundleTx -1
+			cachedObject.Release() // firstSeenTx -1
 			return false
 		}
 
 		if !cachedObject.Exists() {
-			cachedObject.Release() // bundleTx -1
+			cachedObject.Release() // firstSeenTx -1
 			return true
 		}
 
-		cachedFirstSeenTxs = append(cachedFirstSeenTxs, &CachedFirstSeenTx{cachedObject})
+		firstSeenTxHashes = append(firstSeenTxHashes, (&CachedFirstSeenTx{CachedObject: cachedObject}).GetFirstSeenTx().GetTransactionHash())
+		cachedObject.Release() // firstSeenTx -1
 		return true
 	}, key)
 
-	return cachedFirstSeenTxs
+	return firstSeenTxHashes
 }
 
 // firstSeenTx +1
@@ -120,16 +121,13 @@ func ShutdownFirstSeenTxsStorage() {
 func FixFirstSeenTxs(msIndex milestone_index.MilestoneIndex) {
 
 	// Search all entries with milestone 0
-	cachedFirstSeenTxs := GetCachedFirstSeenTxs(0) // firstSeenTx +1
-	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
-		firstSeenTx := cachedFirstSeenTx.GetFirstSeenTx()
+	for _, firstSeenTxHash := range GetFirstSeenTxHashes(0) {
 
 		key := make([]byte, 4)
 		binary.LittleEndian.PutUint32(key, uint32(0))
-		key = append(key, firstSeenTx.TxHash...)
+		key = append(key, trinary.MustTrytesToBytes(firstSeenTxHash)[:49]...)
 		firstSeenTxStorage.Delete(key)
 
-		StoreFirstSeenTx(msIndex, firstSeenTx.GetTransactionHash()).Release()
+		StoreFirstSeenTx(msIndex, firstSeenTxHash).Release()
 	}
-	cachedFirstSeenTxs.Release() // firstSeenTx -1
 }

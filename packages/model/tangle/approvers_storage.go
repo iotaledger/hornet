@@ -63,11 +63,9 @@ func configureApproversStorage() {
 	)
 }
 
-// approvers +1
-func GetCachedApprovers(transactionHash trinary.Hash, maxFind ...int) CachedAppprovers {
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
-
-	cachedApprovers := CachedAppprovers{}
+// approvers +-0
+func GetApproverHashes(transactionHash trinary.Hash, maxFind ...int) []trinary.Hash {
+	var approverHashes []trinary.Hash
 
 	i := 0
 	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
@@ -82,11 +80,12 @@ func GetCachedApprovers(transactionHash trinary.Hash, maxFind ...int) CachedAppp
 			return true
 		}
 
-		cachedApprovers = append(cachedApprovers, &CachedApprover{cachedObject})
+		approverHashes = append(approverHashes, (&CachedApprover{CachedObject: cachedObject}).GetApprover().GetApproverHash())
+		cachedObject.Release() // approvers -1
 		return true
-	}, txHash)
+	}, trinary.MustTrytesToBytes(transactionHash)[:49])
 
-	return cachedApprovers
+	return approverHashes
 }
 
 // approvers +1

@@ -37,11 +37,7 @@ var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file ve
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
 
-	cachedApprovers := tangle.GetCachedApprovers(txHash) // approvers +1
-	defer cachedApprovers.Release()                      // approvers -1
-
-	for _, cachedApprover := range cachedApprovers {
-		approverHash := cachedApprover.GetApprover().GetApproverHash()
+	for _, approverHash := range tangle.GetApproverHashes(txHash) {
 		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
 		if cachedTx == nil {
 			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)

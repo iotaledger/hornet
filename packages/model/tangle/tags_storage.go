@@ -64,10 +64,9 @@ func configureTagsStorage() {
 	)
 }
 
-// tag +1
-func GetCachedTags(txTag trinary.Trytes, maxFind ...int) CachedTags {
-
-	cachedTags := CachedTags{}
+// tag +-0
+func GetTagHashes(txTag trinary.Trytes, maxFind ...int) []trinary.Hash {
+	var tagHashes []trinary.Hash
 
 	i := 0
 	tagsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
@@ -82,11 +81,12 @@ func GetCachedTags(txTag trinary.Trytes, maxFind ...int) CachedTags {
 			return true
 		}
 
-		cachedTags = append(cachedTags, &CachedTag{cachedObject})
+		tagHashes = append(tagHashes, (&CachedTag{CachedObject: cachedObject}).GetTag().GetTransactionHash())
+		cachedObject.Release() // tag -1
 		return true
 	}, trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17])
 
-	return cachedTags
+	return tagHashes
 }
 
 // tag +1

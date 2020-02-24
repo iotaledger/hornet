@@ -94,7 +94,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashes(bdl, maxFindTransactions)...)
+		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, maxFindTransactions)...)
 	}
 
 	// Searching for transactions that contains the given address
@@ -105,20 +105,14 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 				addr = addr[:81]
 			}
 
-			tx := tangle.GetTransactionHashesForAddress(addr, maxFindTransactions)
-
-			txHashes = append(txHashes, tx...)
+			txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, maxFindTransactions)...)
 		}
 	}
 
 	// Searching for all approovers of the given transactions
 	for _, approveeHash := range ft.Approvees {
 		if guards.IsTransactionHash(approveeHash) {
-			cachedTxApprovers := tangle.GetCachedApprovers(approveeHash, maxFindTransactions) // approvers +1
-			for _, cachedTxApprover := range cachedTxApprovers {
-				txHashes = append(txHashes, cachedTxApprover.GetApprover().GetApproverHash())
-			}
-			cachedTxApprovers.Release() // approvers -1
+			txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, maxFindTransactions)...)
 		}
 	}
 
@@ -126,11 +120,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	for _, tag := range ft.Tags {
 		err := trinary.ValidTrytes(tag)
 		if err == nil {
-			cachedTags := tangle.GetCachedTags(tag, maxFindTransactions) // tags +1
-			for _, cachedTag := range cachedTags {
-				txHashes = append(txHashes, cachedTag.GetTag().GetTransactionHash())
-			}
-			cachedTags.Release() // tags -1
+			txHashes = append(txHashes, tangle.GetTagHashes(tag, maxFindTransactions)...)
 		}
 	}
 

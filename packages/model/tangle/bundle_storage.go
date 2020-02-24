@@ -241,11 +241,8 @@ func GetBundles(bundleHash trinary.Hash) CachedBundles {
 
 	var cachedBndls CachedBundles
 
-	cachedBndlTailTxs := GetCachedBundleTailTransactions(bundleHash) // bundleTxs +1
-	defer cachedBndlTailTxs.Release()                                // bundleTxs -1
-
-	for _, bndlTailTx := range cachedBndlTailTxs {
-		cachedBndl := GetCachedBundleOrNil(bndlTailTx.GetBundleTransaction().GetTxHash()) // bundle +1
+	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash) {
+		cachedBndl := GetCachedBundleOrNil(txTailHash) // bundle +1
 		if cachedBndl == nil {
 			continue
 		}
