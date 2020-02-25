@@ -305,16 +305,12 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
+// tx +1
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool) (cachedTx *CachedTransaction, newlyAdded bool) {
 
-	// Store the tx in the storage, this will update the tx reference automatically
 	cachedTx, isNew := StoreTransactionIfAbsent(hornetTx) // tx +1
 	if !isNew {
-		cachedTx = GetCachedTransactionOrNil(hornetTx.GetHash())
-		if cachedTx == nil {
-			panic("cachedTx can't be nil")
-		}
-		return cachedTx, true // tx +1
+		return cachedTx, true
 	}
 
 	// Store the tx in the bundleTransactionsStorage

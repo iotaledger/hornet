@@ -168,15 +168,38 @@ func ContainsTransaction(transactionHash trinary.Hash) bool {
 }
 
 // tx +1
-func StoreTransactionIfAbsent(transaction *hornet.Transaction) (*CachedTransaction, bool) {
-	cachedTx, isNew := txStorage.StoreIfAbsent(transaction)
-	if !isNew {
-		return nil, false
+func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *CachedTransaction, newlyAdded bool) {
+
+	txHash := trinary.MustTrytesToBytes(transaction.GetHash())[:49]
+
+	// Store tx + metadata atomicly in the same callback
+	var cachedMeta objectstorage.CachedObject
+
+	cachedTxData := txStorage.ComputeIfAbsent(transaction.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
+		newlyAdded = true
+
+		cachedMeta = metadataStorage.Store(metadataFactory(txHash)) // meta +1
+
+		transaction.Persist()
+		transaction.SetModified()
+
+		return transaction
+	})
+
+	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
+	if !newlyAdded {
+		cachedMeta = metadataStorage.Load(txHash) // meta +1
 	}
 
-	cachedMeta := metadataStorage.Store(metadataFactory(trinary.MustTrytesToBytes(transaction.GetHash())[:49]))
+	if !cachedTxData.Exists() {
+		panic("Tx raw data does not exist")
+	}
 
-	return &CachedTransaction{tx: cachedTx, metadata: cachedMeta}, true
+	if !cachedMeta.Exists() {
+		panic("Tx metadata does not exist")
+	}
+
+	return &CachedTransaction{tx: cachedTxData, metadata: cachedMeta}, newlyAdded
 }
 
 // tx +-0
