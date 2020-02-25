@@ -54,22 +54,25 @@ type PendingNeighborRequests struct {
 
 // ObjectStorage interface
 func (p *PendingNeighborRequests) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*PendingNeighborRequests); !ok {
-		panic("invalid object passed to PendingNeighborRequests.Update()")
-	} else {
-		// data
-		p.recTxBytes = obj.recTxBytes
-		p.recHashBytes = obj.recHashBytes
-		p.recHash = obj.recHash
-		p.hornetTx = obj.hornetTx
+	panic("PendingNeighborRequests should never be updated")
+	/*
+		if obj, ok := other.(*PendingNeighborRequests); !ok {
+			panic("invalid object passed to PendingNeighborRequests.Update()")
+		} else {
+			// data
+			p.recTxBytes = obj.recTxBytes
+			p.recHashBytes = obj.recHashBytes
+			p.recHash = obj.recHash
+			p.hornetTx = obj.hornetTx
 
-		// status
-		p.invalid = obj.invalid
-		p.hashing = obj.hashing
+			// status
+			p.invalid = obj.invalid
+			p.hashing = obj.hashing
 
-		// requests
-		p.requests = obj.requests
-	}
+			// requests
+			p.requests = obj.requests
+		}
+	*/
 }
 
 func (p *PendingNeighborRequests) GetStorageKey() []byte {
