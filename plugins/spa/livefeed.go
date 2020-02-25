@@ -65,7 +65,7 @@ func runLiveFeed() {
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
 		newTxRateLimiter.Stop()
-		liveFeedWorkerPool.Stop()
+		liveFeedWorkerPool.StopAndWait()
 		log.Info("Stopping SPA[TxUpdater] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 }
