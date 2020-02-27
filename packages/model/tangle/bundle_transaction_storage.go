@@ -91,15 +91,6 @@ func (bt *BundleTransaction) GetBundleHash() trinary.Hash {
 // ObjectStorage interface
 func (bt *BundleTransaction) Update(other objectstorage.StorableObject) {
 	panic("BundleTransaction should never be updated")
-	/*
-		if obj, ok := other.(*BundleTransaction); !ok {
-			panic("invalid object passed to BundleTransaction.Update()")
-		} else {
-			bt.BundleHash = obj.BundleHash
-			bt.IsTail = obj.IsTail
-			bt.TxHash = obj.TxHash
-		}
-	*/
 }
 
 func (bt *BundleTransaction) GetStorageKey() []byte {

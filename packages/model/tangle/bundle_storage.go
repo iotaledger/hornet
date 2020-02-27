@@ -55,25 +55,6 @@ func configureBundleStorage() {
 // ObjectStorage interface
 func (bundle *Bundle) Update(other objectstorage.StorableObject) {
 	panic("Bundle should never be updated")
-	/*
-		if obj, ok := other.(*Bundle); !ok {
-			panic("invalid object passed to Bundle.Update()")
-		} else {
-			bundle.Lock()
-			defer bundle.Unlock()
-			other.(*Bundle).Lock()
-			defer other.(*Bundle).Unlock()
-
-			bundle.tailTx = obj.tailTx
-
-			bundle.metadata = obj.metadata
-			bundle.lastIndex = obj.lastIndex
-			bundle.hash = obj.hash
-			bundle.headTx = obj.headTx
-			bundle.txs = obj.txs
-			bundle.ledgerChanges = obj.ledgerChanges
-		}
-	*/
 }
 
 func (bundle *Bundle) GetStorageKey() []byte {

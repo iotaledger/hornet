@@ -28,14 +28,6 @@ func (t *FirstSeenTx) GetTransactionHash() trinary.Hash {
 
 func (t *FirstSeenTx) Update(other objectstorage.StorableObject) {
 	panic("FirstSeenTx should never be updated")
-	/*
-		if obj, ok := other.(*FirstSeenTx); !ok {
-			panic("invalid object passed to FirstSeenTx.Update()")
-		} else {
-			t.FirstSeenLatestMilestoneIndex = obj.FirstSeenLatestMilestoneIndex
-			t.TxHash = obj.TxHash
-		}
-	*/
 }
 
 func (t *FirstSeenTx) GetStorageKey() []byte {

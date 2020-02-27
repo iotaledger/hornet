@@ -62,14 +62,6 @@ type Milestone struct {
 
 func (ms *Milestone) Update(other objectstorage.StorableObject) {
 	panic("Milestone should never be updated")
-	/*
-		if obj, ok := other.(*Milestone); !ok {
-			panic("invalid object passed to Milestone.Update()")
-		} else {
-			ms.Index = obj.Index
-			ms.Hash = obj.Hash
-		}
-	*/
 }
 
 func (ms *Milestone) GetStorageKey() []byte {

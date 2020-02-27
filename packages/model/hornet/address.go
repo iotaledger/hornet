@@ -24,14 +24,6 @@ func (a *Address) GetTransactionHash() trinary.Hash {
 
 func (a *Address) Update(other objectstorage.StorableObject) {
 	panic("Address should never be updated")
-	/*
-		if obj, ok := other.(*Address); !ok {
-			panic("invalid object passed to TxHashForAddress.Update()")
-		} else {
-			a.Address = obj.Address
-			a.TxHash = obj.TxHash
-		}
-	*/
 }
 
 func (a *Address) GetStorageKey() []byte {
