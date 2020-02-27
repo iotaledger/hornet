@@ -69,7 +69,12 @@ func GetRefsAnInvalidBundleStorageSize() int {
 
 // +-0
 func PutInvalidBundleReference(txHash trinary.Hash) {
-	refsAnInvalidBundleStorage.Put(invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])).Release()
+	invalidBundleRef := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
+
+	refsAnInvalidBundleStorage.ComputeIfAbsent(invalidBundleRef.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
+		invalidBundleRef.SetModified()
+		return invalidBundleRef
+	}).Release()
 }
 
 // +-0
