@@ -58,7 +58,6 @@ func configureTangleProcessor(plugin *node.Plugin) {
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	}))
 
-	Events.TransactionSolid.Attach(events.NewClosure(onTransactionSolidEvent))
 	tangle.Events.ReceivedValidMilestone.Attach(events.NewClosure(onReceivedValidMilestone))
 	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
 }
@@ -137,13 +136,6 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 		// The node is not synced, but the request queue seems empty => trigger the solidifer
 		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 	}
-}
-
-func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
-	if cachedTx.GetTransaction().IsTail() {
-		tangle.OnTailTransactionSolid(cachedTx.Retain()) // tx pass +1
-	}
-	cachedTx.Release() // tx -1
 }
 
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
