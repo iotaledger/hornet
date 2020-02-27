@@ -398,9 +398,15 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		isMilestone, err := CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
 		if err != nil {
 			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
-		} else if isMilestone {
-			StoreMilestone(cachedBndl.Retain()).Release()     // bundle pass +1
-			Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
+			return
+		}
+
+		if isMilestone {
+			cachedMilestone := StoreMilestone(cachedBndl.Retain()) // bundle pass +1, milestone +1
+			if cachedMilestone != nil {
+				cachedMilestone.Release()                         // milestone -1
+				Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
+			}
 		}
 	}
 }

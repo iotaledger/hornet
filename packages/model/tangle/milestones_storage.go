@@ -112,10 +112,20 @@ func StoreMilestone(cachedBndl *CachedBundle) *CachedMilestone {
 	defer cachedBndl.Release() // bundle -1
 
 	if cachedBndl.GetBundle().IsMilestone() {
-		return &CachedMilestone{milestoneStorage.Store(&Milestone{
+
+		cachedMilestone, newlyAdded := milestoneStorage.StoreIfAbsent(&Milestone{
 			Index: cachedBndl.GetBundle().GetMilestoneIndex(),
-			Hash:  cachedBndl.GetBundle().GetMilestoneHash()})}
+			Hash:  cachedBndl.GetBundle().GetMilestoneHash(),
+		})
+
+		if !newlyAdded {
+			// Milestone was already stored
+			return nil
+		}
+
+		return &CachedMilestone{CachedObject: cachedMilestone}
 	}
+
 	panic("Bundle is not a milestone")
 }
 
