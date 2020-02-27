@@ -89,7 +89,21 @@ func (s *RequestQueue) ContainsRequest(transactionHash trinary.Hash) bool {
 
 // request +1
 func (s *RequestQueue) PutRequest(request *request) *CachedRequest {
-	return &CachedRequest{s.requestedStorage.Put(request)}
+
+	newlyAdded := false
+	cachedRequest := s.requestedStorage.ComputeIfAbsent(request.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // request +1
+		newlyAdded = true
+		request.SetModified()
+
+		return request
+	})
+
+	if !newlyAdded {
+		cachedRequest.Release()
+		return nil
+	}
+
+	return &CachedRequest{CachedObject: cachedRequest}
 }
 
 // request +-0
@@ -210,7 +224,13 @@ func (s *RequestQueue) add(txHash trinary.Hash, msIndex milestone_index.Mileston
 
 	request := newRequest(txHash, msIndex, markRequested)
 
-	request.cachedRequest = s.PutRequest(request) // request +1		Consumer stays registered until request is done
+	cachedRequest := s.PutRequest(request) // request +1		Consumer stays registered until request is done
+	if cachedRequest == nil {
+		// Request was added before
+		return false
+	}
+
+	request.cachedRequest = cachedRequest
 	if markRequested {
 		s.pending = append(s.pending, request)
 	} else {
