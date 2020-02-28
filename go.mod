@@ -18,7 +18,6 @@ require (
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20200227215953-967611cd154b
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200204161139-dfb0acdec240
-	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/echo/v4 v4.1.14
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.9.1
