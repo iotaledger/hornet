@@ -1,10 +1,6 @@
 package main
 
 import (
-	"net/http"
-	_ "net/http/pprof"
-	"runtime"
-
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/plugins/autopeering"
@@ -16,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/permaspent"
+	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -29,11 +26,6 @@ func main() {
 	cli.PrintVersion()
 	cli.ParseConfig()
 
-	runtime.SetMutexProfileFraction(5)
-	runtime.SetBlockProfileRate(5)
-
-	go http.ListenAndServe("localhost:6060", nil) // pprof Server for Debbuging Mutexes
-
 	node.Run(
 		node.Plugins(
 			cli.PLUGIN,
@@ -44,6 +36,7 @@ func main() {
 			autopeering.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,
+			profiling.PLUGIN,
 			snapshot.PLUGIN,
 			webapi.PLUGIN,
 			spa.PLUGIN,
