@@ -87,13 +87,12 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	// check whether the given reference tx is valid for the walk
 	var cachedRefBundle *tangle.CachedBundle
 	if reference != nil {
-		cachedRefTx := tangle.GetCachedTransaction(*reference) // tx +1
-		if !cachedRefTx.Exists() {
-			cachedRefTx.Release() // tx -1
+		cachedRefTx := tangle.GetCachedTransactionOrNil(*reference) // tx +1
+		if cachedRefTx == nil {
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction doesn't exist")
 		}
 
-		if !cachedRefTx.GetTransaction().IsSolid() {
+		if !cachedRefTx.GetMetadata().IsSolid() {
 			cachedRefTx.Release() // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
@@ -103,7 +102,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
 		}
 
-		cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedRefTx.GetTransaction().GetHash()) // bundle +1
+		cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedRefTx.GetTransaction().GetHash()) // bundle +1
 		if cachedBndl == nil {
 			// this should never happen if HORNET is programmed correctly
 			if cachedRefTx.GetTransaction().Tx.CurrentIndex == 0 {
@@ -152,20 +151,11 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		for {
 			walkStats.StepsTaken++
 			previousSelected := selected
-			cachedApprovers := tangle.GetCachedApprovers(selected) // approvers +1
 
-			if len(cachedApprovers) == 0 {
-				cachedApprovers.Release() // approvers -1
+			approverHashes := tangle.GetApproverHashes(selected)
+			if len(approverHashes) == 0 {
 				break
 			}
-
-			var approverHashes []trinary.Hash
-			for _, cachedApprover := range cachedApprovers {
-				if cachedApprover.Exists() {
-					approverHashes = append(approverHashes, cachedApprover.GetApprover().GetApproverHash())
-				}
-			}
-			cachedApprovers.Release() // approvers -1
 
 			for len(approverHashes) != 0 {
 				b := make([]byte, 1)
@@ -197,9 +187,14 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				walkStats.Evaluated++
 
-				cachedCandidateTx := tangle.GetCachedTransaction(candidateHash) // tx +1
+				cachedCandidateTx := tangle.GetCachedTransactionOrNil(candidateHash) // tx +1
 
-				if !cachedCandidateTx.Exists() || !cachedCandidateTx.GetTransaction().IsSolid() {
+				if cachedCandidateTx == nil {
+					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					continue
+				}
+
+				if !cachedCandidateTx.GetMetadata().IsSolid() {
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					continue
@@ -255,7 +250,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				// if the transaction has already been confirmed by the current solid or previous
 				// milestone, it is automatically consistent with our current walking diff
-				confirmed, at := cachedCandidateTx.GetTransaction().GetConfirmed()
+				confirmed, at := cachedCandidateTx.GetMetadata().GetConfirmed()
 				// TODO: the second condition can be removed once the solidifier ensures, that the entire
 				// ledger update process is write locked
 				if !confirmed {

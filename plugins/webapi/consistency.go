@@ -68,11 +68,10 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 
 	for _, t := range checkCon.Tails {
 
-		cachedTx := tangle.GetCachedTransaction(t) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(t) // tx +1
 
 		// Check if TX is known
-		if !cachedTx.Exists() {
-			cachedTx.Release() // tx -1
+		if cachedTx == nil {
 			info := fmt.Sprint("Transaction not found: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
@@ -87,15 +86,15 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		}
 
 		// Check if TX is solid
-		if !cachedTx.GetTransaction().IsSolid() {
+		if !cachedTx.GetMetadata().IsSolid() {
 			cachedTx.Release() // tx -1
 			info := fmt.Sprint("Tails are not solid (missing a referenced tx): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
-		cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
-		cachedTx.Release()                                                                        // tx -1
+		cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
+		cachedTx.Release()                                                                              // tx -1
 
 		if cachedBndl == nil {
 			info := fmt.Sprint("tails are not consistent (bundle not found): ", t)

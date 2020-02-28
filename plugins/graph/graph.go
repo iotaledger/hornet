@@ -122,7 +122,7 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 
 		wsTx := &wsTransaction{
 			Hash:              tx.Tx.Hash,
@@ -150,7 +150,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 		snTx := &wsTransactionSn{
 			Hash:              tx.Tx.Hash,
 			Address:           tx.Tx.Address,

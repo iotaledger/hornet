@@ -37,29 +37,22 @@ var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file ve
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
 
-	cachedApprovers := tangle.GetCachedApprovers(txHash) // approvers +1
-	defer cachedApprovers.Release()                      // approvers -1
+	for _, approverHash := range tangle.GetApproverHashes(txHash) {
+		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+		if cachedTx == nil {
+			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
+		}
 
-	for _, cachedApprover := range cachedApprovers {
-		if cachedApprover.Exists() {
-			approverHash := cachedApprover.GetApprover().GetApproverHash()
-			cachedTx := tangle.GetCachedTransaction(approverHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
-				log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
-			}
+		// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
+		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
+		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
-			// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
-			//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
-			//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
+		confirmed, at := cachedTx.GetMetadata().GetConfirmed()
+		cachedTx.Release() // tx -1
+		if confirmed && (at > targetIndex) {
+			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
-			cachedTx.Release() // tx -1
-			if confirmed && (at > targetIndex) {
-				// confirmed by a later milestone than targetIndex => solidEntryPoint
-
-				return true, at
-			}
+			return true, at
 		}
 	}
 
@@ -102,9 +95,8 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				if panicOnMissingTx {
 					log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
 				}
@@ -113,7 +105,7 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 				continue
 			}
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if !confirmed {
 				cachedTx.Release() // tx -1
 				log.Panicf("getMilestoneApprovees: Transaction must be confirmed: %v", txHash)

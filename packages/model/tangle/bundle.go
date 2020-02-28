@@ -157,7 +157,7 @@ func (bundle *Bundle) IsSolid() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
-	tailSolid := cachedTailTx.GetTransaction().IsSolid()
+	tailSolid := cachedTailTx.GetMetadata().IsSolid()
 	cachedTailTx.Release() // tx -1
 
 	if tailSolid {
@@ -200,7 +200,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
 	defer cachedTailTx.Release()     // tx -1
-	tailConfirmed, _ := cachedTailTx.GetTransaction().GetConfirmed()
+	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
 
 	if tailConfirmed {
 		bundle.setConfirmed(true)
@@ -298,8 +298,8 @@ func (bundle *Bundle) calcLedgerChanges() {
 ////////////////////////////////////////////////////////////////////////////////
 
 func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
-	cachedTx := GetCachedTransaction(txHash) // tx +1
-	if !cachedTx.Exists() {
+	cachedTx := GetCachedTransactionOrNil(txHash) // tx +1
+	if cachedTx == nil {
 		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash, txHash)
 	}
 	return cachedTx

@@ -31,21 +31,7 @@ type request struct {
 // ObjectStorage interface
 
 func (r *request) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*request); !ok {
-		panic("invalid object passed to request.Update()")
-	} else {
-		r.hash = obj.hash
-		r.hashBytes = obj.hashBytes
-		r.msIndex = obj.msIndex
-
-		r.received = obj.received
-		r.processed = obj.processed
-
-		r.timeFirstRequest = obj.timeFirstRequest
-		r.timeLastRequest = obj.timeLastRequest
-
-		r.index = obj.index
-	}
+	panic("request should never be updated")
 }
 
 func (r *request) GetStorageKey() []byte {

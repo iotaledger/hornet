@@ -287,9 +287,8 @@ func processReplies(reply *replyItem) {
 		if err != nil {
 			return
 		}
-		cachedTx := tangle.GetCachedTransaction(reqHash) // tx +1
-		defer cachedTx.Release()                         // tx -1
-		if !cachedTx.Exists() {
+		cachedTx := tangle.GetCachedTransactionOrNil(reqHash) // tx +1
+		if cachedTx == nil {
 			return
 		}
 		select {
@@ -298,6 +297,7 @@ func processReplies(reply *replyItem) {
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
+		cachedTx.Release() // tx -1
 		return
 	}
 
@@ -321,10 +321,8 @@ func processReplies(reply *replyItem) {
 				return
 			}
 
-			cachedTx := tangle.GetCachedTransaction(reqHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // cachedTx -1
-			} else {
+			cachedTx := tangle.GetCachedTransactionOrNil(reqHash) // tx +1
+			if cachedTx != nil {
 				cachedTxToSend = cachedTx
 			}
 		}
@@ -338,10 +336,10 @@ func processReplies(reply *replyItem) {
 			// If we don't have the tx the neighbor requests, send the genesis tx, since it can be compressed
 			// This reduces the outgoing traffic if we are not sync
 
-			cachedGenesisTx := tangle.GetCachedTransaction(consts.NullHashTrytes) // tx +1
+			cachedGenesisTx := tangle.GetCachedTransactionOrNil(consts.NullHashTrytes) // tx +1
 
-			if !cachedGenesisTx.Exists() {
-				log.Panicf("Genesis tx not found. cachedObject: %p", cachedGenesisTx.CachedObject)
+			if cachedGenesisTx == nil {
+				log.Panic("Genesis tx not found.")
 			}
 
 			cachedTxToSend = cachedGenesisTx

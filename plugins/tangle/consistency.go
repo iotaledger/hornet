@@ -108,13 +108,13 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				log.Panicf("Tx with hash %v not found", txHash)
 			}
 
 			// ledger update process is write locked
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at > latestSolidMilestoneIndex {
 					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
@@ -135,7 +135,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				continue
 			}
 
-			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
 			if cachedBndl == nil {
 				cachedTx.Release() // tx -1
 				return nil, ErrRefBundleNotComplete

@@ -49,9 +49,9 @@ func configureApproversStorage() {
 	opts := profile.GetProfile().Caches.Approvers
 
 	approversStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixApprovers},
 		approversFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),
@@ -63,24 +63,29 @@ func configureApproversStorage() {
 	)
 }
 
-// approvers +1
-func GetCachedApprovers(transactionHash trinary.Hash, maxFind ...int) CachedAppprovers {
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
-
-	cachedApprovers := CachedAppprovers{}
+// approvers +-0
+func GetApproverHashes(transactionHash trinary.Hash, maxFind ...int) []trinary.Hash {
+	var approverHashes []trinary.Hash
 
 	i := 0
 	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // approvers -1
 			return false
 		}
 
-		cachedApprovers = append(cachedApprovers, &CachedApprover{cachedObject})
-		return true
-	}, txHash)
+		if !cachedObject.Exists() {
+			cachedObject.Release() // approvers -1
+			return true
+		}
 
-	return cachedApprovers
+		approverHashes = append(approverHashes, (&CachedApprover{CachedObject: cachedObject}).GetApprover().GetApproverHash())
+		cachedObject.Release() // approvers -1
+		return true
+	}, trinary.MustTrytesToBytes(transactionHash)[:49])
+
+	return approverHashes
 }
 
 // approvers +1

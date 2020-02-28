@@ -22,12 +22,7 @@ func (t *Tag) GetTransactionHash() trinary.Hash {
 // ObjectStorage interface
 
 func (t *Tag) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*Tag); !ok {
-		panic("invalid object passed to Tag.Update()")
-	} else {
-		t.Tag = obj.Tag
-		t.TxHash = obj.TxHash
-	}
+	panic("Tag should never be updated")
 }
 
 func (t *Tag) GetStorageKey() []byte {

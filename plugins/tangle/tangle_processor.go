@@ -38,7 +38,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	configureGossipSolidifier()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction))
+		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(bool), task.Param(2).(milestone_index.MilestoneIndex))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
@@ -58,7 +58,6 @@ func configureTangleProcessor(plugin *node.Plugin) {
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	}))
 
-	Events.TransactionSolid.Attach(events.NewClosure(onTransactionSolidEvent))
 	tangle.Events.ReceivedValidMilestone.Attach(events.NewClosure(onReceivedValidMilestone))
 	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
 }
@@ -68,8 +67,8 @@ func runTangleProcessor(plugin *node.Plugin) {
 
 	runGossipSolidifier()
 
-	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction) {
-		receiveTxWorkerPool.Submit(transaction)
+	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) {
+		receiveTxWorkerPool.Submit(transaction, requested, reqMilestoneIndex)
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
@@ -102,17 +101,15 @@ func runTangleProcessor(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
+func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) {
 
 	txHash := incomingTx.GetHash()
-	cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-	defer cachedTx.Release()                        // tx -1
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
-	requested, reqMilestoneIndex := incomingTx.IsRequested()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex)
+	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested) // tx +1
+	defer cachedTx.Release()                                                                              // tx -1
 	if !alreadyAdded {
 		server.SharedServerMetrics.IncrNewTransactionsCount()
 
@@ -139,13 +136,6 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction) {
 		// The node is not synced, but the request queue seems empty => trigger the solidifer
 		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 	}
-}
-
-func onTransactionSolidEvent(cachedTx *tangle.CachedTransaction) {
-	if cachedTx.GetTransaction().IsTail() {
-		tangle.OnTailTransactionSolid(cachedTx.Retain()) // tx pass +1
-	}
-	cachedTx.Release() // tx -1
 }
 
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {

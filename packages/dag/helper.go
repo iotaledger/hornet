@@ -38,10 +38,8 @@ func FindAllTails(txHash trinary.Hash) (map[string]struct{}, error) {
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				return nil, errors.Wrapf(ErrFindAllTailsFailed, "Transaction not found: %v", txHash)
 			}
 

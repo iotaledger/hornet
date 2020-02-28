@@ -75,34 +75,27 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 		for txHash, cachedTxToCheck := range txsToCheck {
 			delete(txsToCheck, txHash)
 
-			solid, _ := checkSolidity(cachedTxToCheck.Retain(), true)
+			solid, _ := checkSolidity(cachedTxToCheck.Retain())
 			if solid {
-				if int32(time.Now().Unix())-cachedTxToCheck.GetTransaction().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
+				if int32(time.Now().Unix())-cachedTxToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions
 					cachedTxToCheck.Release() // tx -1
 					continue
 				}
 
-				cachedTxApprovers := tangle.GetCachedApprovers(txHash) // approvers +1
-				for _, cachedTxApprover := range cachedTxApprovers {
-					if cachedTxApprover.Exists() {
-						approverHash := cachedTxApprover.GetApprover().GetApproverHash()
-
-						cachedApproverTx := tangle.GetCachedTransaction(approverHash) // tx +1
-						if !cachedApproverTx.Exists() {
-							cachedApproverTx.Release() // tx -1
-							continue
-						}
-
-						if _, found := txsToCheck[approverHash]; found {
-							cachedApproverTx.Release() // tx -1
-							continue
-						}
-
-						txsToCheck[approverHash] = cachedApproverTx
+				for _, approverHash := range tangle.GetApproverHashes(txHash) {
+					cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+					if cachedApproverTx == nil {
+						continue
 					}
+
+					if _, found := txsToCheck[approverHash]; found {
+						cachedApproverTx.Release() // tx -1
+						continue
+					}
+
+					txsToCheck[approverHash] = cachedApproverTx
 				}
-				cachedTxApprovers.Release() // approvers -1
 			}
 			cachedTxToCheck.Release() // tx -1
 		}

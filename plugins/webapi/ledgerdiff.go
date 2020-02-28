@@ -119,13 +119,12 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", txHash)
 			}
 
-			confirmed, at := cachedTx.GetTransaction().GetConfirmed()
+			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at != milestoneIndex {
 					// ignore all tx that were confirmed by another milestone
@@ -148,7 +147,7 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 
 			txBundle := cachedTx.GetTransaction().Tx.Bundle
 
-			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(txHash) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
 			if cachedBndl == nil {
 				cachedTx.Release() // tx -1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, txBundle)

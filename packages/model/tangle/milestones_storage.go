@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/iota.go/trinary"
 
-	hornetDB "github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
 )
@@ -37,9 +37,9 @@ func configureMilestoneStorage() {
 	opts := profile.GetProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixMilestones},
 		milestoneFactory,
-		objectstorage.BadgerInstance(hornetDB.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -61,12 +61,7 @@ type Milestone struct {
 // ObjectStorage interface
 
 func (ms *Milestone) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*Milestone); !ok {
-		panic("invalid object passed to Milestone.Update()")
-	} else {
-		ms.Index = obj.Index
-		ms.Hash = obj.Hash
-	}
+	panic("Milestone should never be updated")
 }
 
 func (ms *Milestone) GetStorageKey() []byte {
@@ -98,8 +93,13 @@ func (c *CachedMilestone) GetMilestone() *Milestone {
 }
 
 // milestone +1
-func GetCachedMilestone(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
-	return &CachedMilestone{milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex))}
+func GetCachedMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
+	cachedMilestone := milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
+	if !cachedMilestone.Exists() {
+		cachedMilestone.Release() // milestone -1
+		return nil
+	}
+	return &CachedMilestone{CachedObject: cachedMilestone}
 }
 
 // milestone +-0
@@ -108,14 +108,24 @@ func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 }
 
 // milestone +1
-func StoreMilestone(cachedBndl *CachedBundle) *CachedMilestone {
+func StoreMilestoneOrNil(cachedBndl *CachedBundle) *CachedMilestone {
 	defer cachedBndl.Release() // bundle -1
 
 	if cachedBndl.GetBundle().IsMilestone() {
-		return &CachedMilestone{milestoneStorage.Store(&Milestone{
+
+		cachedMilestone, newlyAdded := milestoneStorage.StoreIfAbsent(&Milestone{
 			Index: cachedBndl.GetBundle().GetMilestoneIndex(),
-			Hash:  cachedBndl.GetBundle().GetMilestoneHash()})}
+			Hash:  cachedBndl.GetBundle().GetMilestoneHash(),
+		})
+
+		if !newlyAdded {
+			// Milestone was already stored
+			return nil
+		}
+
+		return &CachedMilestone{CachedObject: cachedMilestone}
 	}
+
 	panic("Bundle is not a milestone")
 }
 

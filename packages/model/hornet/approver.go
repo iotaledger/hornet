@@ -22,12 +22,7 @@ func (a *Approver) GetApproverHash() trinary.Hash {
 // ObjectStorage interface
 
 func (a *Approver) Update(other objectstorage.StorableObject) {
-	if obj, ok := other.(*Approver); !ok {
-		panic("invalid object passed to Approver.Update()")
-	} else {
-		a.TxHash = obj.TxHash
-		a.ApproverHash = obj.ApproverHash
-	}
+	panic("Approver should never be updated")
 }
 
 func (a *Approver) GetStorageKey() []byte {

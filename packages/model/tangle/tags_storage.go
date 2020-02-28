@@ -50,9 +50,9 @@ func configureTagsStorage() {
 	opts := profile.GetProfile().Caches.Tags
 
 	tagsStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixTags},
 		tagsFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(17, 49),
@@ -64,23 +64,29 @@ func configureTagsStorage() {
 	)
 }
 
-// tag +1
-func GetCachedTags(txTag trinary.Trytes, maxFind ...int) CachedTags {
-
-	cachedTags := CachedTags{}
+// tag +-0
+func GetTagHashes(txTag trinary.Trytes, maxFind ...int) []trinary.Hash {
+	var tagHashes []trinary.Hash
 
 	i := 0
 	tagsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release() // tag -1
 			return false
 		}
 
-		cachedTags = append(cachedTags, &CachedTag{cachedObject})
+		if !cachedObject.Exists() {
+			cachedObject.Release() // tag -1
+			return true
+		}
+
+		tagHashes = append(tagHashes, (&CachedTag{CachedObject: cachedObject}).GetTag().GetTransactionHash())
+		cachedObject.Release() // tag -1
 		return true
 	}, trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17])
 
-	return cachedTags
+	return tagHashes
 }
 
 // tag +1

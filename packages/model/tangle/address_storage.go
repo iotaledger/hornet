@@ -49,9 +49,9 @@ func configureAddressesStorage() {
 	opts := profile.GetProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
+		database.GetHornetBadgerInstance(),
 		[]byte{DBPrefixAddresses},
 		addressFactory,
-		objectstorage.BadgerInstance(database.GetHornetBadgerInstance()),
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),
@@ -80,7 +80,7 @@ func GetTransactionHashesForAddress(address trinary.Hash, maxFind ...int) []trin
 			return true
 		}
 
-		transactionHashes = append(transactionHashes, cachedObject.(*CachedAddress).GetAddress().GetTransactionHash())
+		transactionHashes = append(transactionHashes, (&CachedAddress{CachedObject: cachedObject}).GetAddress().GetTransactionHash())
 		cachedObject.Release() // address -1
 		return true
 	}, trinary.MustTrytesToBytes(address)[:49])

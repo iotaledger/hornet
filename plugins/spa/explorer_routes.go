@@ -52,7 +52,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	defer cachedTx.Release() // tx -1
 
 	originTx := cachedTx.GetTransaction().Tx
-	confirmed, by := cachedTx.GetTransaction().GetConfirmed()
+	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
 	t := &ExplorerTx{
 		Hash:                          hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
@@ -74,7 +74,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 			State     bool                           `json:"state"`
 			Milestone milestone_index.MilestoneIndex `json:"milestone_index"`
 		}{confirmed, by},
-		Solid: cachedTx.GetTransaction().IsSolid(),
+		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
 
 	// compute mwm
@@ -95,7 +95,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	// get previous/next hash
 	var cachedBndl *tangle.CachedBundle
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl = tangle.GetBundleOfTailTransactionOrNil(hash) // bundle +1
+		cachedBndl = tangle.GetCachedBundleOfTailTransactionOrNil(hash) // bundle +1
 	} else {
 		cachedBndls := tangle.GetBundlesOfTransactionOrNil(hash) // bundle +1
 		if cachedBndls != nil {
@@ -252,13 +252,13 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedTx := tangle.GetCachedTransaction(hash) // tx +1
-	defer cachedTx.Release()                      // tx -1
-	if !cachedTx.Exists() {
+	cachedTx := tangle.GetCachedTransactionOrNil(hash) // tx +1
+	if cachedTx == nil {
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
 	t, err := createExplorerTx(hash, cachedTx.Retain()) // tx pass +1
+	cachedTx.Release()                                  // tx -1
 	return t, err
 }
 
@@ -306,9 +306,8 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 	if len(txHashes) != 0 {
 		for i := 0; i < len(txHashes); i++ {
 			txHash := txHashes[i]
-			cachedTx := tangle.GetCachedTransaction(txHash) // tx +1
-			if !cachedTx.Exists() {
-				cachedTx.Release() // tx -1
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
 			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
