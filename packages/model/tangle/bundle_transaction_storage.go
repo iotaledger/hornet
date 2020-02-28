@@ -265,8 +265,8 @@ func getTailApproversOfSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) 
 	return tailTxHashes
 }
 
-// existApproversFromSameBundle returns if there are other transactions in the same bundle, that approve this transaction
-func existApproversFromSameBundle(bundleHash trinary.Hash, txHash trinary.Hash) bool {
+// approversFromSameBundleExist returns if there are other transactions in the same bundle, that approve this transaction
+func approversFromSameBundleExist(bundleHash trinary.Hash, txHash trinary.Hash) bool {
 
 	for _, approverHash := range GetApproverHashes(txHash) {
 		cachedApproverTx := GetCachedTransactionOrNil(approverHash) // tx +1
@@ -295,7 +295,7 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 	isTail := ContainsBundleTransaction(tx.Bundle, tx.Hash, true)
 	if !isTail {
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the storage
-		if existApproversFromSameBundle(tx.Bundle, tx.Hash) {
+		if approversFromSameBundleExist(tx.Bundle, tx.Hash) {
 			return txsToRemove
 		}
 
@@ -323,7 +323,7 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 		}
 
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the bucket
-		if existApproversFromSameBundle(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()) {
+		if approversFromSameBundleExist(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()) {
 			cachedCurrentTx.Release() // tx -1
 			return txsToRemove
 		}

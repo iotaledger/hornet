@@ -58,7 +58,7 @@ func GetMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedBun
 	}
 	defer cachedMilestone.Release() // cachedMilestone -1
 
-	return GetBundleOfTailTransactionOrNil(cachedMilestone.GetMilestone().Hash)
+	return GetCachedBundleOfTailTransactionOrNil(cachedMilestone.GetMilestone().Hash)
 }
 
 func IsNodeSynced() bool {

@@ -195,17 +195,17 @@ func ContainsBundle(tailTxHash trinary.Hash) bool {
 }
 
 // bundle + 1
-func StoreBundleIfAbsent(bundle *Bundle) (*CachedBundle, bool) {
+func StoreBundleIfAbsentOrNil(bundle *Bundle) *CachedBundle {
 	// Wait until all ongoing changes are done
 	bundle.RLock()
 	defer bundle.RUnlock()
 
 	cachedBndl, isNew := bundleStorage.StoreIfAbsent(bundle)
 	if !isNew {
-		return nil, false
+		return nil
 	}
 
-	return &CachedBundle{CachedObject: cachedBndl}, true
+	return &CachedBundle{CachedObject: cachedBndl}
 }
 
 // bundle +-0
@@ -241,9 +241,9 @@ func GetBundles(bundleHash trinary.Hash) CachedBundles {
 	return cachedBndls
 }
 
-// GetBundleOfTailTransactionOrNil gets the bundle this tail transaction is present in or nil.
+// GetCachedBundleOfTailTransactionOrNil gets the bundle this tail transaction is present in or nil.
 // bundle +1
-func GetBundleOfTailTransactionOrNil(tailTxHash trinary.Hash) *CachedBundle {
+func GetCachedBundleOfTailTransactionOrNil(tailTxHash trinary.Hash) *CachedBundle {
 	return GetCachedBundleOrNil(tailTxHash) // bundle +1
 }
 
@@ -264,7 +264,7 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 	defer cachedTx.Release() // tx -1
 
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl := GetBundleOfTailTransactionOrNil(txHash) // bundle +1
+		cachedBndl := GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
 		if cachedBndl == nil {
 			return nil
 		}
@@ -273,7 +273,7 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 
 	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, txHash)
 	for _, tailTxHash := range tailTxHashes {
-		cachedBndl := GetBundleOfTailTransactionOrNil(tailTxHash) // bundle +1
+		cachedBndl := GetCachedBundleOfTailTransactionOrNil(tailTxHash) // bundle +1
 		if cachedBndl == nil {
 			continue
 		}
@@ -371,8 +371,8 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 	}
 
-	cachedBndl, isNew := StoreBundleIfAbsent(bndl) // bundle +1
-	if !isNew {
+	cachedBndl := StoreBundleIfAbsentOrNil(bndl) // bundle +1
+	if cachedBndl == nil {
 		return
 	}
 	defer cachedBndl.Release() // bundle -1
@@ -402,7 +402,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 
 		if isMilestone {
-			cachedMilestone := StoreMilestone(cachedBndl.Retain()) // bundle pass +1, milestone +1
+			cachedMilestone := StoreMilestoneOrNil(cachedBndl.Retain()) // bundle pass +1, milestone +1
 			if cachedMilestone != nil {
 				cachedMilestone.Release()                         // milestone -1
 				Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1

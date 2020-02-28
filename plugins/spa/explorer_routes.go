@@ -95,7 +95,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	// get previous/next hash
 	var cachedBndl *tangle.CachedBundle
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl = tangle.GetBundleOfTailTransactionOrNil(hash) // bundle +1
+		cachedBndl = tangle.GetCachedBundleOfTailTransactionOrNil(hash) // bundle +1
 	} else {
 		cachedBndls := tangle.GetBundlesOfTransactionOrNil(hash) // bundle +1
 		if cachedBndls != nil {

@@ -147,7 +147,7 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 
 			txBundle := cachedTx.GetTransaction().Tx.Bundle
 
-			cachedBndl := tangle.GetBundleOfTailTransactionOrNil(txHash) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
 			if cachedBndl == nil {
 				cachedTx.Release() // tx -1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, txBundle)

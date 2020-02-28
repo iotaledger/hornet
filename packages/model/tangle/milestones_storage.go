@@ -108,7 +108,7 @@ func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 }
 
 // milestone +1
-func StoreMilestone(cachedBndl *CachedBundle) *CachedMilestone {
+func StoreMilestoneOrNil(cachedBndl *CachedBundle) *CachedMilestone {
 	defer cachedBndl.Release() // bundle -1
 
 	if cachedBndl.GetBundle().IsMilestone() {

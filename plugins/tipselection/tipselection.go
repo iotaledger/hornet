@@ -102,7 +102,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
 		}
 
-		cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedRefTx.GetTransaction().GetHash()) // bundle +1
+		cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedRefTx.GetTransaction().GetHash()) // bundle +1
 		if cachedBndl == nil {
 			// this should never happen if HORNET is programmed correctly
 			if cachedRefTx.GetTransaction().Tx.CurrentIndex == 0 {

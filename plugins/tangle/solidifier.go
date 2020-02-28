@@ -101,12 +101,12 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
 	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
 
-	defer func(cachedTxs map[trinary.Hash]*tangle.CachedTransaction) {
+	defer func() {
 		// Release all txs at the end
 		for _, cachedTx := range cachedTxs {
 			cachedTx.Release() // tx -1
 		}
-	}(cachedTxs)
+	}()
 
 	txsToTraverse := make(map[trinary.Hash]struct{})
 	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
@@ -444,7 +444,7 @@ func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, 
 					// This tx could belong to a milestone
 					// => load bundle, and start the milestone check
 
-					cachedBndl := tangle.GetBundleOfTailTransactionOrNil(cachedApproveeTx.GetTransaction().Tx.Hash) // bundle +1
+					cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedApproveeTx.GetTransaction().Tx.Hash) // bundle +1
 					if cachedBndl == nil {
 						log.Panicf("searchMissingMilestone: Tx: %v, Bundle not found: %v", approveeHash, cachedApproveeTx.GetTransaction().Tx.Bundle)
 					}
