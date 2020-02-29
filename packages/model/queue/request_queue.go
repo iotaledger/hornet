@@ -291,6 +291,8 @@ func (s *RequestQueue) MarkProcessed(txHash trinary.Hash) {
 }
 
 func (s *RequestQueue) IsEmpty() bool {
+	s.Lock()
+	defer s.Unlock()
 
 	// First check if we still have tx waiting to be requested
 	if len(s.lifo) > 0 {
