@@ -104,7 +104,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 	defer func() {
 		// Release all txs at the end
 		for _, cachedTx := range cachedTxs {
-			cachedTx.Release() // tx -1
+			cachedTx.Release(true) // tx -1
 		}
 	}()
 
