@@ -84,12 +84,6 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone_in
 	return nil
 }
 
-func LoadEmptySnapshot(filePathLedger string) error {
-
-	log.Info("Loading empty snapshot...")
-	return loadSnapshotFromTextfiles(filePathLedger, 0)
-}
-
 func LoadGlobalSnapshot(filePathLedger string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	log.Infof("Loading global snapshot with index %v...", snapshotIndex)

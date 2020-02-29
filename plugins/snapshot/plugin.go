@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
@@ -117,21 +118,18 @@ func run(plugin *node.Plugin) {
 		return
 	}
 
-	var err error
-	if parameter.NodeConfig.GetBool("globalSnapshot.load") {
-		err = LoadGlobalSnapshot(
-			parameter.NodeConfig.GetString("globalSnapshot.path"),
-			milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("globalSnapshot.index")),
-		)
+	var err = ErrNoSnapshotSpecified
 
-	} else if parameter.NodeConfig.GetString("localSnapshots.path") != "" {
-		err = LoadSnapshotFromFile(parameter.NodeConfig.GetString("localSnapshots.path"))
+	snapshotToLoad := parameter.NodeConfig.GetString("loadSnapshot")
 
-	} else if parameter.NodeConfig.GetString("privateTangle.ledgerStatePath") != "" {
-		err = LoadEmptySnapshot(parameter.NodeConfig.GetString("privateTangle.ledgerStatePath"))
-
-	} else {
-		err = ErrNoSnapshotSpecified
+	if strings.EqualFold(snapshotToLoad, "global") {
+		if path := parameter.NodeConfig.GetString("globalSnapshot.path"); path != "" {
+			err = LoadGlobalSnapshot(path, milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("globalSnapshot.index")))
+		}
+	} else if strings.EqualFold(snapshotToLoad, "local") {
+		if path := parameter.NodeConfig.GetString("localSnapshots.path"); path != "" {
+			err = LoadSnapshotFromFile(path)
+		}
 	}
 
 	if err != nil {

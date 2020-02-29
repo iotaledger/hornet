@@ -168,6 +168,7 @@
     "enabled": true,
     "delay": 40000
   },
+  "loadSnapshot": "local",
   "localsnapshots": {
     "enabled": true,
     "depth": 50,
@@ -176,12 +177,8 @@
     "path": "latest-export.gz.bin"
   },
   "globalsnapshot": {
-    "load": false,
     "path": "snapshotMainnet.txt",
     "index": 1050000
-  },
-  "privatetangle": {
-    "ledgerstatepath": "balances.txt"
   },
   "milestones": {
     "coordinator": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
