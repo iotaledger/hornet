@@ -30,6 +30,10 @@ func configureServer() {
 
 		go protocol.Init()
 	}))
+
+	TCPServer.Events.Error.Attach(events.NewClosure(func(err error) {
+		gossipLogger.Fatal(err)
+	}))
 }
 
 func runServer() {
