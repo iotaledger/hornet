@@ -5,6 +5,10 @@ import (
 )
 
 func init() {
+
+	// "Which snapshot to load 'local' or 'global'."
+	parameter.NodeConfig.SetDefault("loadSnapshot", "local")
+
 	// "Enable local snapshots"
 	parameter.NodeConfig.SetDefault("localSnapshots.enabled", true)
 
@@ -20,10 +24,7 @@ func init() {
 	// "Path to the local snapshot file"
 	parameter.NodeConfig.SetDefault("localSnapshots.path", "latest-export.gz.bin")
 
-	// "Whether to load a global snapshot from provided text files."
-	parameter.NodeConfig.SetDefault("globalSnapshot.load", false)
-
-	// "Path to the global snapshot file"
+	// "Path to the global snapshot file containing the ledger state"
 	parameter.NodeConfig.SetDefault("globalSnapshot.path", "snapshotMainnet.txt")
 
 	// "Milestone index of the global snapshot"
@@ -34,7 +35,4 @@ func init() {
 
 	// "Amount of milestone transactions to keep in the database"
 	parameter.NodeConfig.SetDefault("pruning.delay", 40000)
-
-	// "Path to the ledger state file for your private tangle"
-	parameter.NodeConfig.SetDefault("privateTangle.ledgerStatePath", "balances.txt")
 }
