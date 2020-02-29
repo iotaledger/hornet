@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
 )
@@ -127,7 +128,7 @@ func broadcastTransaction(tx *transaction.Transaction) error {
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	hornetTx := hornet.NewTransaction(tx, txBytesTruncated)
 
-	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, 0)
+	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0))
 	gossip.BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTrytesToBytes(hornetTx.GetHash())[:49])
 
 	return nil
