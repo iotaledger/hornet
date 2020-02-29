@@ -127,6 +127,7 @@ func start(shutdownSignal <-chan struct{}) {
 
 	<-shutdownSignal
 	log.Info("Stopping Autopeering ...")
+	local.CleanUp()
 }
 
 func parseEntryNodes() (result []*peer.Peer, err error) {
