@@ -17,6 +17,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
@@ -118,7 +119,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 		return ErrTxExpired
 	}
 
-	Events.ReceivedTransaction.Trigger(hornetTx, false, 0)
+	Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0))
 	BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTritsToBytes(hashTrits))
 
 	return nil
