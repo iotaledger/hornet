@@ -270,7 +270,7 @@ func abortMilestoneSolidification() {
 }
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing tx
-func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, forceAbort bool) {
+func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force bool) {
 
 	/* How milestone solidification works:
 
@@ -278,21 +278,27 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 	- Request milestone trunk/branch without traversion
 	- Everytime a request queue gets empty, start the solidifier for the next known non-solid milestone
 	- If tx are missing, they are requested by the solidifier
-	- If an older queue gets empty than the current solidification index, the traversion can be aborted with a signal and restarted
+	- The traversion can be aborted with a signal and restarted
 	- If we miss more than WARP_SYNC_THRESHOLD milestones in our requests, request them via warp sync
 
-	- Special situation startup:
-		- RequestMilestonesAndTraverse:
-			- loop over all other non-solid milestones from latest to oldest, traverse and request, remove other milestones hashes during the walk
-			- this will request all unknown tx in parallel => improve sync speed
-			- this should be done without blowing up the RAM
-			- don't stop that traversion if older milestone comes in, its only once and helps at startup
 	*/
 
-	if !forceAbort {
+	if !force {
+		/*
+			If solidification is not forced, we will only run the solidifier under one of the following conditions:
+				- newMilestoneIndex==0 (triggersignal) and solidifierMilestoneIndex==0 (no ongoing solidification)
+				- newMilestoneIndex!=0 (new milestone received) and solidifierMilestoneIndex!=0 (ongoing solidification) and newMilestoneIndex<solidifierMilestoneIndex (milestone older than ongoing solidification)
+		*/
+
 		solidifierMilestoneIndexLock.RLock()
-		if (solidifierMilestoneIndex != 0) && ((msIndexEmptiedQueue == 0) || (msIndexEmptiedQueue >= solidifierMilestoneIndex)) {
-			// Another older milestone solidification is already running
+		if (newMilestoneIndex == 0) && (solidifierMilestoneIndex != 0) {
+			// Do not run solidifier
+			solidifierMilestoneIndexLock.RUnlock()
+			return
+		}
+
+		if (newMilestoneIndex != 0) && ((solidifierMilestoneIndex == 0) || (newMilestoneIndex >= solidifierMilestoneIndex)) {
+			// Do not run solidifier
 			solidifierMilestoneIndexLock.RUnlock()
 			return
 		}
@@ -365,7 +371,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 		// rerun to solidify the older one
 		setSolidifierMilestoneIndex(0)
 
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true, false)
+		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
 		return
 	}
 
@@ -380,7 +386,7 @@ func solidifyMilestone(msIndexEmptiedQueue milestone_index.MilestoneIndex, force
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
 
-	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true, false)
+	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 }
 
 func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {
