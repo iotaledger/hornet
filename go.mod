@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/OneOfOne/xxhash v1.2.7
-	github.com/dgraph-io/badger/v2 v2.0.2-rc1
+	github.com/dgraph-io/badger/v2 v2.0.1
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200121105743-0d940dd29fd2
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
 	github.com/fsnotify/fsnotify v1.4.7
@@ -26,5 +26,5 @@ require (
 	github.com/spf13/viper v1.6.2
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	go.uber.org/atomic v1.5.1
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 )
