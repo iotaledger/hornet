@@ -64,7 +64,10 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	ft := &FindTransactions{}
 	e := ErrorReturn{}
 
-	maxFindTransactions := parameter.NodeConfig.GetInt("api.maxFindTransactions")
+	maxResults := parameter.NodeConfig.GetInt("api.maxFindTransactions")
+	if (ft.MaxResults != 0) && (ft.MaxResults < maxResults) {
+		maxResults = ft.MaxResults
+	}
 
 	err := mapstructure.Decode(i, ft)
 	if err != nil {
@@ -73,8 +76,8 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		return
 	}
 
-	if len(ft.Bundles) > maxFindTransactions || len(ft.Addresses) > maxFindTransactions || len(ft.Approvees) > maxFindTransactions || len(ft.Tags) > maxFindTransactions {
-		e.Error = "Too many transaction or bundle hashes. Max. allowed: " + strconv.Itoa(maxFindTransactions)
+	if (len(ft.Bundles) + len(ft.Addresses) + len(ft.Approvees) + len(ft.Tags)) > maxResults {
+		e.Error = "Too many bundle, address, approvee or tag hashes. Max. allowed: " + strconv.Itoa(maxResults)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
@@ -94,7 +97,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, maxFindTransactions)...)
+		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, maxResults-len(txHashes))...)
 	}
 
 	// Searching for transactions that contains the given address
@@ -109,7 +112,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			addr = addr[:81]
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, maxFindTransactions)...)
+		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, maxResults-len(txHashes))...)
 	}
 
 	// Searching for all approovers of the given transactions
@@ -120,7 +123,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, maxFindTransactions)...)
+		txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, maxResults-len(txHashes))...)
 	}
 
 	// Searching for transactions that contain the given tag
@@ -131,7 +134,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetTagHashes(tag, maxFindTransactions)...)
+		txHashes = append(txHashes, tangle.GetTagHashes(tag, maxResults-len(txHashes))...)
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})

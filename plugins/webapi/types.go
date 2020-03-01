@@ -98,11 +98,12 @@ type ErrorReturn struct {
 
 // FindTransactions struct
 type FindTransactions struct {
-	Command   string   `mapstructure:"command"`
-	Bundles   []string `mapstructure:"bundles"`
-	Addresses []string `mapstructure:"addresses"`
-	Tags      []string `mapstructure:"tags"`
-	Approvees []string `mapstructure:"approvees"`
+	Command    string   `mapstructure:"command"`
+	Bundles    []string `mapstructure:"bundles"`
+	Addresses  []string `mapstructure:"addresses"`
+	Tags       []string `mapstructure:"tags"`
+	Approvees  []string `mapstructure:"approvees"`
+	MaxResults int      `mapstructure:"maxResults"`
 }
 
 // FindTransactionsReturn struct
