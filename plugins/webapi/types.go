@@ -103,7 +103,7 @@ type FindTransactions struct {
 	Addresses  []string `mapstructure:"addresses"`
 	Tags       []string `mapstructure:"tags"`
 	Approvees  []string `mapstructure:"approvees"`
-	MaxResults int      `mapstructure:"maxResults"`
+	MaxResults int      `mapstructure:"maxresults"`
 }
 
 // FindTransactionsReturn struct

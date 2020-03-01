@@ -64,11 +64,6 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	ft := &FindTransactions{}
 	e := ErrorReturn{}
 
-	maxResults := parameter.NodeConfig.GetInt("api.maxFindTransactions")
-	if (ft.MaxResults != 0) && (ft.MaxResults < maxResults) {
-		maxResults = ft.MaxResults
-	}
-
 	err := mapstructure.Decode(i, ft)
 	if err != nil {
 		e.Error = "Internal error"
@@ -76,6 +71,11 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		return
 	}
 
+	maxResults := parameter.NodeConfig.GetInt("api.maxFindTransactions")
+	if (ft.MaxResults != 0) && (ft.MaxResults < maxResults) {
+		maxResults = ft.MaxResults
+	}
+	
 	if (len(ft.Bundles) + len(ft.Addresses) + len(ft.Approvees) + len(ft.Tags)) > maxResults {
 		e.Error = "Too many bundle, address, approvee or tag hashes. Max. allowed: " + strconv.Itoa(maxResults)
 		c.JSON(http.StatusBadRequest, e)
