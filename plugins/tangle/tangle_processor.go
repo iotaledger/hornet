@@ -48,6 +48,9 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
+		if daemon.IsStopped() {
+			return
+		}
 		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))

@@ -233,13 +233,13 @@ func run(plugin *node.Plugin) {
 		go socketioServer.Serve()
 
 		go func() {
-			if err := server.ListenAndServe(); err != nil {
+			if err := server.ListenAndServe(); (err != nil) && (err != http.ErrServerClosed) {
 				log.Error(err.Error())
 			}
 		}()
 
 		go func() {
-			if err := apiServer.ListenAndServe(); err != nil {
+			if err := apiServer.ListenAndServe(); (err != nil) && (err != http.ErrServerClosed) {
 				log.Errorf(err.Error())
 			}
 		}()

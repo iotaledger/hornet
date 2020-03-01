@@ -195,7 +195,7 @@ func run(plugin *node.Plugin) {
 		go socketioServer.Serve()
 
 		go func() {
-			if err := server.ListenAndServe(); err != nil {
+			if err := server.ListenAndServe(); (err != nil) && (err != http.ErrServerClosed) {
 				log.Error(err.Error())
 			}
 		}()

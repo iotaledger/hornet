@@ -64,8 +64,6 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	ft := &FindTransactions{}
 	e := ErrorReturn{}
 
-	maxFindTransactions := parameter.NodeConfig.GetInt("api.maxFindTransactions")
-
 	err := mapstructure.Decode(i, ft)
 	if err != nil {
 		e.Error = "Internal error"
@@ -73,15 +71,20 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		return
 	}
 
-	if len(ft.Bundles) > maxFindTransactions || len(ft.Addresses) > maxFindTransactions {
-		e.Error = "Too many transaction or bundle hashes. Max. allowed: " + strconv.Itoa(maxFindTransactions)
+	maxResults := parameter.NodeConfig.GetInt("api.maxFindTransactions")
+	if (ft.MaxResults != 0) && (ft.MaxResults < maxResults) {
+		maxResults = ft.MaxResults
+	}
+
+	if (len(ft.Bundles) + len(ft.Addresses) + len(ft.Approvees) + len(ft.Tags)) > maxResults {
+		e.Error = "Too many bundle, address, approvee or tag hashes. Max. allowed: " + strconv.Itoa(maxResults)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
 	txHashes := []string{}
 
-	if len(ft.Bundles) == 0 && len(ft.Addresses) == 0 {
+	if len(ft.Bundles) == 0 && len(ft.Addresses) == 0 && len(ft.Approvees) == 0 && len(ft.Tags) == 0 {
 		c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: []string{}})
 		return
 	}
@@ -94,34 +97,44 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, maxFindTransactions)...)
+		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, maxResults-len(txHashes))...)
 	}
 
 	// Searching for transactions that contains the given address
 	for _, addr := range ft.Addresses {
-		err := address.ValidAddress(addr)
-		if err == nil {
-			if len(addr) == 90 {
-				addr = addr[:81]
-			}
-
-			txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, maxFindTransactions)...)
+		if err := address.ValidAddress(addr); err != nil {
+			e.Error = fmt.Sprintf("address hash invalid: %s", addr)
+			c.JSON(http.StatusBadRequest, e)
+			return
 		}
+
+		if len(addr) == 90 {
+			addr = addr[:81]
+		}
+
+		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, maxResults-len(txHashes))...)
 	}
 
 	// Searching for all approovers of the given transactions
 	for _, approveeHash := range ft.Approvees {
-		if guards.IsTransactionHash(approveeHash) {
-			txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, maxFindTransactions)...)
+		if !guards.IsTransactionHash(approveeHash) {
+			e.Error = fmt.Sprintf("Aprovee hash invalid: %s", approveeHash)
+			c.JSON(http.StatusBadRequest, e)
+			return
 		}
+
+		txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, maxResults-len(txHashes))...)
 	}
 
 	// Searching for transactions that contain the given tag
 	for _, tag := range ft.Tags {
-		err := trinary.ValidTrytes(tag)
-		if err == nil {
-			txHashes = append(txHashes, tangle.GetTagHashes(tag, maxFindTransactions)...)
+		if err := trinary.ValidTrytes(tag); err != nil {
+			e.Error = fmt.Sprintf("Tag invalid: %s", tag)
+			c.JSON(http.StatusBadRequest, e)
+			return
 		}
+
+		txHashes = append(txHashes, tangle.GetTagHashes(tag, maxResults-len(txHashes))...)
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})
