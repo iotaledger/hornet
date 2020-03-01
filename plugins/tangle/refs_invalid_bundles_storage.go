@@ -72,7 +72,6 @@ func PutInvalidBundleReference(txHash trinary.Hash) {
 	invalidBundleRef := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
 
 	refsAnInvalidBundleStorage.ComputeIfAbsent(invalidBundleRef.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
-		invalidBundleRef.SetModified()
 		return invalidBundleRef
 	}).Release()
 }
