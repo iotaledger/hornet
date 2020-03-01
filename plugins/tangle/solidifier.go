@@ -3,6 +3,7 @@ package tangle
 import (
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
@@ -121,6 +122,10 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 	for len(txsToTraverse) != 0 {
 
 		for txHash := range txsToTraverse {
+			if daemon.IsStopped() {
+				return false, true
+			}
+
 			select {
 			case <-abortSignal:
 				return false, true
@@ -221,6 +226,10 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 		newSolidTxFound = false
 
 		for entryTxHash := range entryTxs {
+			if daemon.IsStopped() {
+				return false, true
+			}
+
 			select {
 			case <-abortSignal:
 				return false, true
