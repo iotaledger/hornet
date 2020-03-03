@@ -385,10 +385,11 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	if !cachedBndl.GetBundle().IsValueSpam() {
 		for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
 			if change < 0 {
-				Events.AddressSpent.Trigger(addr)
-
-				// ToDo:
-				//markedSpentAddrs.Inc()
+				if MarkAddressAsSpent(addr) {
+					// ToDo:
+					//markedSpentAddrs.Inc()
+					Events.AddressSpent.Trigger(addr)
+				}
 			}
 		}
 		return

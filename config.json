@@ -82,6 +82,14 @@
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
+        },
+        "spentAddresses": {
+          "cacheTimeMs": 0,
+          "leakDetection": {
+            "enabled": true,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         }
       },
       "badger": {
@@ -178,6 +186,11 @@
   },
   "globalsnapshot": {
     "path": "snapshotMainnet.txt",
+    "spentaddressespaths": [
+      "previousEpochsSpentAddresses1.txt",
+      "previousEpochsSpentAddresses2.txt",
+      "previousEpochsSpentAddresses3.txt"
+    ],
     "index": 1050000
   },
   "milestones": {
@@ -191,15 +204,6 @@
     "bindAddress": "127.0.0.1",
     "port": 4434,
     "apiPort": 4433
-  },
-  "permaspent": {
-    "thresholds": {
-      "noResponseTolerance": 0.25,
-      "quorum": 0.65
-    },
-    "nodes": [
-      "http://permaspent.manapotion.io"
-    ]
   },
   "mqtt": {
     "config": "mqtt_config.json"
@@ -250,5 +254,8 @@
   "zmq": {
     "bindAddress": "127.0.0.1",
     "port": 5556
+  },
+  "spentAddresses": {
+    "enabled": true
   }
 }

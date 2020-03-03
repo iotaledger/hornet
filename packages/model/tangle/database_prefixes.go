@@ -13,5 +13,6 @@ const (
 	DBPrefixTags                  byte = 9
 	DBPrefixSnapshot              byte = 10
 	DBPrefixFirstSeenTransactions byte = 11
-	DBPrefixAutopeering           byte = 12
+	DBPrefixSpentAddresses        byte = 12
+	DBPrefixAutopeering           byte = 13
 )

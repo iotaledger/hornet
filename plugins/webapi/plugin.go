@@ -16,7 +16,6 @@ import (
 
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 // PLUGIN WebAPI
@@ -80,7 +79,7 @@ func configure(plugin *node.Plugin) {
 		features = append(features, "RemotePOW")
 	}
 
-	if !node.IsSkipped(permaspent.PLUGIN) {
+	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
 		features = append(features, "WereAddressesSpentFrom")
 	}
 

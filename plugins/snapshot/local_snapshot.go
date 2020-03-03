@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"time"
 
@@ -20,16 +21,18 @@ import (
 	"github.com/gohornet/hornet/packages/dag"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 const (
+	SpentAddressesImportBatchSize       = 100000
 	SolidEntryPointCheckThresholdPast   = 50
 	SolidEntryPointCheckThresholdFuture = 50
 )
 
 var (
-	SupportedLocalSnapshotFileVersions = []byte{3, 4}
+	SupportedLocalSnapshotFileVersions = []byte{4}
 )
 
 var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
@@ -306,6 +309,11 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	if _, err = io.Copy(gzipWriter, &buf); err != nil {
 		return err
 	}
+
+	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+		return tangle.StreamSpentAddressesToWriter(gzipWriter, lsh.spentAddressesCount, abortSignal)
+	}
+
 	return nil
 }
 
@@ -323,6 +331,9 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	if err := checkSnapshotLimits(targetIndex, snapshotInfo); err != nil {
 		return err
 	}
+
+	tangle.ReadLockSpentAddresses()
+	defer tangle.ReadUnlockSpentAddresses()
 
 	cachedTargetMs := tangle.GetMilestoneOrNil(targetIndex) // bundle +1
 	if cachedTargetMs == nil {
@@ -365,13 +376,19 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	cachedTargetMsTail := cachedTargetMs.GetBundle().GetTail() // tx +1
 	defer cachedTargetMsTail.Release()                         // tx -1
 
+	var spentAddressesCount int32
+	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+		spentAddressesCount = tangle.CountSpentAddressesEntriesWithoutLocking()
+	}
+
 	lsh := &localSnapshotHeader{
-		msHash:           cachedTargetMs.GetBundle().GetTailHash(),
-		msIndex:          targetIndex,
-		msTimestamp:      cachedTargetMsTail.GetTransaction().GetTimestamp(),
-		solidEntryPoints: newSolidEntryPoints,
-		seenMilestones:   seenMilestones,
-		balances:         newBalances,
+		msHash:              cachedTargetMs.GetBundle().GetTailHash(),
+		msIndex:             targetIndex,
+		msTimestamp:         cachedTargetMsTail.GetTransaction().GetTimestamp(),
+		solidEntryPoints:    newSolidEntryPoints,
+		seenMilestones:      seenMilestones,
+		balances:            newBalances,
+		spentAddressesCount: spentAddressesCount,
 	}
 
 	filePathTmp := filePath + "_tmp"
@@ -415,18 +432,19 @@ func CreateLocalSnapshot(targetIndex milestone_index.MilestoneIndex, filePath st
 }
 
 type localSnapshotHeader struct {
-	msHash           string
-	msIndex          milestone_index.MilestoneIndex
-	msTimestamp      int64
-	solidEntryPoints map[string]milestone_index.MilestoneIndex
-	seenMilestones   map[string]milestone_index.MilestoneIndex
-	balances         map[string]uint64
+	msHash              string
+	msIndex             milestone_index.MilestoneIndex
+	msTimestamp         int64
+	solidEntryPoints    map[string]milestone_index.MilestoneIndex
+	seenMilestones      map[string]milestone_index.MilestoneIndex
+	balances            map[string]uint64
+	spentAddressesCount int32
 }
 
 func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan struct{}) error {
 	var err error
 
-	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersions[1]); err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersions[0]); err != nil {
 		return err
 	}
 
@@ -456,6 +474,10 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.balances))); err != nil {
+		return err
+	}
+
+	if err = binary.Write(buf, binary.LittleEndian, ls.spentAddressesCount); err != nil {
 		return err
 	}
 
@@ -601,10 +623,8 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	if fileVersion <= 3 {
-		if err := binary.Read(gzipReader, binary.LittleEndian, &spentAddrsCount); err != nil {
-			return err
-		}
+	if err := binary.Read(gzipReader, binary.LittleEndian, &spentAddrsCount); err != nil {
+		return err
 	}
 
 	log.Info("Importing solid entry points")
@@ -690,6 +710,37 @@ func LoadSnapshotFromFile(filePath string) error {
 	err = tangle.StoreBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
+	}
+
+	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+		log.Infof("Importing %d spent addresses. This can take a while...", spentAddrsCount)
+
+		batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
+		for i := 0; i < batchAmount; i++ {
+			if daemon.IsStopped() {
+				return ErrSnapshotImportWasAborted
+			}
+
+			batchStart := int32(i * SpentAddressesImportBatchSize)
+			batchEnd := batchStart + SpentAddressesImportBatchSize
+
+			if batchEnd > spentAddrsCount {
+				batchEnd = spentAddrsCount
+			}
+
+			for j := batchStart; j < batchEnd; j++ {
+
+				spentAddrBuf := make([]byte, 49)
+				err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
+				if err != nil {
+					return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
+				}
+
+				tangle.MarkAddressAsSpentBinaryWithoutLocking(spentAddrBuf)
+			}
+
+			log.Infof("Processed %d/%d spent addresses", batchEnd, spentAddrsCount)
+		}
 	}
 
 	log.Info("Finished loading snapshot")

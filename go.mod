@@ -3,7 +3,7 @@ module github.com/gohornet/hornet
 go 1.14
 
 require (
-	github.com/OneOfOne/xxhash v1.2.7
+	github.com/OneOfOne/xxhash v1.2.7 // indirect
 	github.com/dgraph-io/badger/v2 v2.0.1
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200121105743-0d940dd29fd2
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
@@ -16,7 +16,7 @@ require (
 	github.com/googollee/go-socket.io v1.4.3-0.20200226123705-6d9a4642349d
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200301000932-1ebbaefb8d4b
+	github.com/iotaledger/hive.go v0.0.0-20200303180357-a92ade9c36aa
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200204161139-dfb0acdec240
 	github.com/labstack/echo/v4 v4.1.14
 	github.com/mitchellh/mapstructure v1.1.2

@@ -124,7 +124,9 @@ func run(plugin *node.Plugin) {
 
 	if strings.EqualFold(snapshotToLoad, "global") {
 		if path := parameter.NodeConfig.GetString("globalSnapshot.path"); path != "" {
-			err = LoadGlobalSnapshot(path, milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("globalSnapshot.index")))
+			err = LoadGlobalSnapshot(path,
+				parameter.NodeConfig.GetStringSlice("globalSnapshot.spentAddressesPaths"),
+				milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("globalSnapshot.index")))
 		}
 	} else if strings.EqualFold(snapshotToLoad, "local") {
 		if path := parameter.NodeConfig.GetString("localSnapshots.path"); path != "" {
