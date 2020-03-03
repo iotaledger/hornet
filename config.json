@@ -211,7 +211,7 @@
   "autopeering": {
     "actAsEntryNode": false,
     "entryNodes": [
-      "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@159.69.9.6:18626"
+      "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626"
     ],
     "seed": "",
     "port": 14626
