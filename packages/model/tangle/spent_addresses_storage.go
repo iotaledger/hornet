@@ -142,12 +142,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abor
 		}
 
 		addressesWritten++
-		err = binary.Write(buf, binary.LittleEndian, key)
-		if err != nil {
-			return false
-		}
-
-		return true
+		return (binary.Write(buf, binary.LittleEndian, key) == nil)
 	})
 
 	if err != nil {
