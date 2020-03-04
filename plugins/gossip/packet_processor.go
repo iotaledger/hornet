@@ -16,12 +16,12 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/queue"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
 const (
@@ -126,7 +126,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 }
 
 func ProcessReceivedMilestoneRequest(protocol *protocol, data []byte) {
-	server.SharedServerMetrics.IncrReceivedMilestoneRequestsCount()
+	metrics.SharedServerMetrics.IncrReceivedMilestoneRequestsCount()
 	protocol.Neighbor.Metrics.IncrReceivedMilestoneRequestsCount()
 
 	// the raw message contains the index of a milestone they want
@@ -147,7 +147,7 @@ func ProcessReceivedMilestoneRequest(protocol *protocol, data []byte) {
 
 func ProcessReceivedLegacyTransactionGossipData(protocol *protocol, data []byte) {
 	// increment txs count
-	server.SharedServerMetrics.IncrAllTransactionsCount()
+	metrics.SharedServerMetrics.IncrAllTransactionsCount()
 	protocol.Neighbor.Metrics.IncrAllTransactionsCount()
 
 	var pending *PendingNeighborRequests
@@ -170,7 +170,7 @@ func ProcessReceivedLegacyTransactionGossipData(protocol *protocol, data []byte)
 func ProcessReceivedTransactionGossipData(protocol *protocol, txData []byte) {
 	// increment txs count
 	// TODO: maybe separate metrics
-	server.SharedServerMetrics.IncrAllTransactionsCount()
+	metrics.SharedServerMetrics.IncrAllTransactionsCount()
 	protocol.Neighbor.Metrics.IncrAllTransactionsCount()
 
 	var pending *PendingNeighborRequests
@@ -186,7 +186,7 @@ func ProcessReceivedTransactionGossipData(protocol *protocol, txData []byte) {
 }
 
 func ProcessReceivedTransactionRequestData(protocol *protocol, reqHash []byte) {
-	server.SharedServerMetrics.IncrReceivedTransactionRequestCount()
+	metrics.SharedServerMetrics.IncrReceivedTransactionRequestCount()
 	protocol.Neighbor.Reply(nil, &NeighborRequest{
 		p:                    protocol,
 		reqHashBytes:         reqHash,

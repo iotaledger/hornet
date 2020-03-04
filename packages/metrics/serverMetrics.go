@@ -1,4 +1,4 @@
-package server
+package metrics
 
 import (
 	"sync/atomic"
@@ -21,6 +21,8 @@ type ServerMetrics struct {
 	droppedSendPacketsCount   uint32
 	receivedTxReqCount        uint32
 	sentTxReqCount            uint32
+	validatedBundlesCount     uint32
+	seenSpentAddrCount        uint32
 }
 
 // Returns the number of all transactions.
@@ -86,6 +88,26 @@ func (sm *ServerMetrics) GetSentTransactionRequestCount() uint32 {
 // Increments the send transaction request count.
 func (sm *ServerMetrics) IncrSentTransactionRequestCount() uint32 {
 	return atomic.AddUint32(&sm.sentTxReqCount, 1)
+}
+
+// Gets the number of validated bundles.
+func (sm *ServerMetrics) GetValidatedBundlesCount() uint32 {
+	return atomic.LoadUint32(&sm.validatedBundlesCount)
+}
+
+// Increments the validated bundles count.
+func (sm *ServerMetrics) IncrValidatedBundlesCount() uint32 {
+	return atomic.AddUint32(&sm.validatedBundlesCount, 1)
+}
+
+// Gets the number of seen spent addresses.
+func (sm *ServerMetrics) GetSeenSpentAddrCount() uint32 {
+	return atomic.LoadUint32(&sm.seenSpentAddrCount)
+}
+
+// Increments the seen spent address count.
+func (sm *ServerMetrics) IncrSeenSpentAddrCount() uint32 {
+	return atomic.AddUint32(&sm.seenSpentAddrCount, 1)
 }
 
 // Gets the number of received milestone requests.

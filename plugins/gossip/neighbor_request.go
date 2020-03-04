@@ -8,9 +8,9 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
 type NeighborRequest struct {
@@ -219,7 +219,7 @@ func (p *PendingNeighborRequests) punish() {
 
 	for _, n := range p.requests {
 		// Tx is known as invalid => punish neighbor
-		server.SharedServerMetrics.IncrInvalidTransactionsCount()
+		metrics.SharedServerMetrics.IncrInvalidTransactionsCount()
 		n.p.Neighbor.Metrics.IncrInvalidTransactionsCount()
 		n.punish()
 	}

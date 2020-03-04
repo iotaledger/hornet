@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"github.com/gohornet/hornet/plugins/gossip/server"
+	"github.com/gohornet/hornet/packages/metrics"
 )
 
 var (
@@ -12,9 +12,9 @@ var (
 
 // measures the TPS values
 func measureTPS() {
-	incomingTxCnt := server.SharedServerMetrics.GetAllTransactionsCount()
-	incomingNewTxCnt := server.SharedServerMetrics.GetNewTransactionsCount()
-	outgoingTxCnt := server.SharedServerMetrics.GetSentTransactionsCount()
+	incomingTxCnt := metrics.SharedServerMetrics.GetAllTransactionsCount()
+	incomingNewTxCnt := metrics.SharedServerMetrics.GetNewTransactionsCount()
+	outgoingTxCnt := metrics.SharedServerMetrics.GetSentTransactionsCount()
 
 	tpsMetrics := &TPSMetrics{
 		Incoming: incomingTxCnt - lastIncomingTxCnt,
