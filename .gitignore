@@ -22,7 +22,7 @@ mainnetdb/
 /hornet
 
 # snapshot files
-*export.gz.bin
+*export.bin
 
 # template files
 *node_modules
