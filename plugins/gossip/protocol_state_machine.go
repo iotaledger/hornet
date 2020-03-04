@@ -7,9 +7,9 @@ import (
 
 	"github.com/iotaledger/hive.go/byteutils"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/parameter"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
 const (
@@ -46,7 +46,7 @@ func protocolV1(protocol *protocol) error {
 
 func sendLegacyTransaction(protocol *protocol, truncatedTxData []byte, reqHash []byte) {
 
-	server.SharedServerMetrics.IncrSentTransactionsCount()
+	metrics.SharedServerMetrics.IncrSentTransactionsCount()
 
 	packet, err := CreateLegacyTransactionGossipPacket(truncatedTxData, reqHash)
 	if err != nil {
@@ -69,7 +69,7 @@ func sendLegacyTransaction(protocol *protocol, truncatedTxData []byte, reqHash [
 
 func sendTransaction(protocol *protocol, truncatedTxData []byte) {
 
-	server.SharedServerMetrics.IncrSentTransactionsCount()
+	metrics.SharedServerMetrics.IncrSentTransactionsCount()
 
 	packet, err := CreateTransactionGossipPacket(truncatedTxData)
 	if err != nil {
@@ -136,7 +136,7 @@ func sendHeartbeat(protocol *protocol, hb *Heartbeat) {
 
 func sendMilestoneRequest(protocol *protocol, reqMilestoneIndex milestone_index.MilestoneIndex) {
 
-	server.SharedServerMetrics.IncrSentMilestoneRequestsCount()
+	metrics.SharedServerMetrics.IncrSentMilestoneRequestsCount()
 
 	packet, err := CreateMilestoneRequestPacket(reqMilestoneIndex)
 	if err != nil {

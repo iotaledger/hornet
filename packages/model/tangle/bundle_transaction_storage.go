@@ -62,6 +62,7 @@ func configureBundleTransactionsStorage() {
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 1, 49), // BundleHash, IsTail, TxHash
+		objectstorage.KeysOnly(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,

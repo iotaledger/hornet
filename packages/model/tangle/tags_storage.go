@@ -56,6 +56,7 @@ func configureTagsStorage() {
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(17, 49),
+		objectstorage.KeysOnly(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,

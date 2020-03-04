@@ -2,8 +2,8 @@ package gossip
 
 import (
 	"encoding/binary"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -36,7 +36,7 @@ func SendHeartbeat() {
 		case neighborQueue.heartbeatQueue <- msg:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 
 	}

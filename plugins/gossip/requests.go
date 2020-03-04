@@ -7,11 +7,11 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
 var (
@@ -65,12 +65,12 @@ func sendSTINGRequest(txHash trinary.Hash, msIndex milestone_index.MilestoneInde
 
 		txBytes := trinary.MustTrytesToBytes(txHash)[:49]
 		RequestQueue.Add(txHash, msIndex, true)
-		server.SharedServerMetrics.IncrSentTransactionRequestCount()
+		metrics.SharedServerMetrics.IncrSentTransactionRequestCount()
 		select {
 		case neighborQueue.txReqQueue <- txBytes:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 
 		// sent the same request to only one neighbor

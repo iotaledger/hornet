@@ -27,6 +27,9 @@ func init() {
 	// "Path to the global snapshot file containing the ledger state"
 	parameter.NodeConfig.SetDefault("globalSnapshot.path", "snapshotMainnet.txt")
 
+	// "Paths to the spent addresses files"
+	parameter.NodeConfig.SetDefault("globalSnapshot.spentAddressesPaths", []string{"previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"})
+
 	// "Milestone index of the global snapshot"
 	parameter.NodeConfig.SetDefault("globalSnapshot.index", 1050000)
 
@@ -35,4 +38,7 @@ func init() {
 
 	// "Amount of milestone transactions to keep in the database"
 	parameter.NodeConfig.SetDefault("pruning.delay", 40000)
+
+	// "Enable support for wereAddressesSpentFrom (needed for Trinity, but local snapshots are much bigger)"
+	parameter.NodeConfig.SetDefault("spentAddresses.enabled", true)
 }

@@ -14,9 +14,9 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 // PLUGIN WebAPI
@@ -75,15 +75,6 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	// Check for features
-	if _, ok := permitedEndpoints["attachtotangle"]; ok {
-		features = append(features, "RemotePOW")
-	}
-
-	if !node.IsSkipped(permaspent.PLUGIN) {
-		features = append(features, "WereAddressesSpentFrom")
-	}
-
 	// Set basic auth if enabled
 	auth = parameter.NodeConfig.GetString("api.remoteauth")
 
@@ -103,6 +94,15 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 	log.Info("Starting WebAPI server ...")
+
+	// Check for features
+	if _, ok := permitedEndpoints["attachtotangle"]; ok {
+		features = append(features, "RemotePOW")
+	}
+
+	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
+		features = append(features, "WereAddressesSpentFrom")
+	}
 
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
 		serverShutdownSignal = shutdownSignal

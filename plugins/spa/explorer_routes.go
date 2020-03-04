@@ -14,7 +14,6 @@ import (
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/permaspent"
 )
 
 type ExplorerTx struct {
@@ -328,10 +327,5 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
 	}
 
-	spentState, err := permaspent.WereAddressesSpentFrom(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: spentState[0]}, nil
+	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash)}, nil
 }

@@ -16,10 +16,10 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip/neighbor"
 )
 
 var (
@@ -129,7 +129,7 @@ type Neighbor struct {
 	// Events on this neighbor
 	Events neighborEvents
 	// Metrics about the neighbor
-	Metrics *neighbor.NeighborMetrics
+	Metrics *metrics.NeighborMetrics
 	// Whether the connection for this neighbor was handled inbound or was created outbound
 	ConnectionOrigin ConnectionOrigin
 	// Whether to place this neighbor back into the reconnect pool when the connection is closed
@@ -172,7 +172,7 @@ func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
 		Events: neighborEvents{
 			ProtocolConnectionEstablished: events.NewEvent(protocolCaller),
 		},
-		Metrics:          &neighbor.NeighborMetrics{},
+		Metrics:          &metrics.NeighborMetrics{},
 		ConnectionOrigin: Inbound,
 	}
 }
@@ -186,7 +186,7 @@ func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr *iputils
 		Events: neighborEvents{
 			ProtocolConnectionEstablished: events.NewEvent(protocolCaller),
 		},
-		Metrics:          &neighbor.NeighborMetrics{},
+		Metrics:          &metrics.NeighborMetrics{},
 		ConnectionOrigin: Outbound,
 	}
 }

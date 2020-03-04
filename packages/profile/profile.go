@@ -152,6 +152,14 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		SpentAddresses: CacheOpts{
+			CacheTimeMs: 0,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 	},
 	Badger: BadgerOpts{
 		LevelOneSize:            268435456,
@@ -259,6 +267,14 @@ var Profile4GB = &Profile{
 		},
 		RefsInvalidBundle: CacheOpts{
 			CacheTimeMs: 180000,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
+		SpentAddresses: CacheOpts{
+			CacheTimeMs: 0,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -378,6 +394,14 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		SpentAddresses: CacheOpts{
+			CacheTimeMs: 0,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 	},
 	Badger: BadgerOpts{
 		LevelOneSize:            268435456,
@@ -491,6 +515,14 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
+		SpentAddresses: CacheOpts{
+			CacheTimeMs: 0,
+			LeakDetectionOptions: LeakDetectionOpts{
+				Enabled:                false,
+				MaxConsumersPerObject:  20,
+				MaxConsumerHoldTimeSec: 100,
+			},
+		},
 	},
 	Badger: BadgerOpts{
 		LevelOneSize:            67108864,
@@ -539,6 +571,7 @@ type Caches struct {
 	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`
 	RefsInvalidBundle         CacheOpts `mapstructure:"refsInvalidBundle"`
 	FirstSeenTx               CacheOpts `mapstructure:"firstSeenTx"`
+	SpentAddresses            CacheOpts `mapstructure:"spentAddresses"`
 }
 
 type CacheOpts struct {

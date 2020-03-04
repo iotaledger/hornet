@@ -82,6 +82,14 @@
             "maxConsumersPerObject": 20,
             "maxConsumerHoldTimeSec": 100
           }
+        },
+        "spentAddresses": {
+          "cacheTimeMs": 0,
+          "leakDetection": {
+            "enabled": true,
+            "maxConsumersPerObject": 20,
+            "maxConsumerHoldTimeSec": 100
+          }
         }
       },
       "badger": {
@@ -174,10 +182,15 @@
     "depth": 50,
     "intervalsynced": 50,
     "intervalunsynced": 1000,
-    "path": "latest-export.gz.bin"
+    "path": "latest-export.bin"
   },
   "globalsnapshot": {
     "path": "snapshotMainnet.txt",
+    "spentaddressespaths": [
+      "previousEpochsSpentAddresses1.txt",
+      "previousEpochsSpentAddresses2.txt",
+      "previousEpochsSpentAddresses3.txt"
+    ],
     "index": 1050000
   },
   "milestones": {
@@ -192,22 +205,13 @@
     "port": 4434,
     "apiPort": 4433
   },
-  "permaspent": {
-    "thresholds": {
-      "noResponseTolerance": 0.25,
-      "quorum": 0.65
-    },
-    "nodes": [
-      "http://permaspent.manapotion.io"
-    ]
-  },
   "mqtt": {
     "config": "mqtt_config.json"
   },
   "autopeering": {
     "actAsEntryNode": false,
     "entryNodes": [
-      "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@159.69.9.6:18626"
+      "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626"
     ],
     "seed": "",
     "port": 14626
@@ -250,5 +254,8 @@
   "zmq": {
     "bindAddress": "127.0.0.1",
     "port": 5556
+  },
+  "spentAddresses": {
+    "enabled": true
   }
 }

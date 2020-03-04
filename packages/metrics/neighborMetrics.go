@@ -1,4 +1,4 @@
-package neighbor
+package metrics
 
 import (
 	"sync/atomic"

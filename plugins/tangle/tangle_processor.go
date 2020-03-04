@@ -4,20 +4,18 @@ import (
 	"fmt"
 	"runtime"
 
-	"go.uber.org/atomic"
-
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/gossip/server"
-	"github.com/gohornet/hornet/plugins/metrics"
+	metrics_plugin "github.com/gohornet/hornet/plugins/metrics"
 )
 
 var (
@@ -28,9 +26,6 @@ var (
 	lastIncomingTPS uint32
 	lastNewTPS      uint32
 	lastOutgoingTPS uint32
-
-	seenSpentAddrs   atomic.Uint64
-	bundlesValidated atomic.Uint64
 )
 
 func configureTangleProcessor(plugin *node.Plugin) {
@@ -55,7 +50,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 
-	metrics.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics.TPSMetrics) {
+	metrics_plugin.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
 		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
@@ -114,7 +109,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested) // tx +1
 	defer cachedTx.Release()                                                                              // tx -1
 	if !alreadyAdded {
-		server.SharedServerMetrics.IncrNewTransactionsCount()
+		metrics.SharedServerMetrics.IncrNewTransactionsCount()
 
 		if requested {
 			// Add new requests to the requestQueue (needed for sync)
@@ -171,11 +166,11 @@ func printStatus() {
 			receiveTxWorkerPool.GetPendingQueueSize(),
 			tangle.GetSolidMilestoneIndex(),
 			tangle.GetLatestMilestoneIndex(),
-			seenSpentAddrs.Load(),
-			bundlesValidated.Load(),
-			server.SharedServerMetrics.GetSentTransactionRequestCount(),
-			server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
-			server.SharedServerMetrics.GetNewTransactionsCount(),
+			metrics.SharedServerMetrics.GetSeenSpentAddrCount(),
+			metrics.SharedServerMetrics.GetValidatedBundlesCount(),
+			metrics.SharedServerMetrics.GetSentTransactionRequestCount(),
+			metrics.SharedServerMetrics.GetReceivedTransactionRequestCount(),
+			metrics.SharedServerMetrics.GetNewTransactionsCount(),
 			lastIncomingTPS,
 			lastNewTPS,
 			lastOutgoingTPS))

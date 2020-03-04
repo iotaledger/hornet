@@ -17,14 +17,14 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/gossip/server"
-	"github.com/gohornet/hornet/plugins/metrics"
+	metrics_plugin "github.com/gohornet/hornet/plugins/metrics"
 	tangle_plugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -48,7 +48,7 @@ func configure(plugin *node.Plugin) {
 
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
-		case *metrics.TPSMetrics:
+		case *metrics_plugin.TPSMetrics:
 			sendToAllWSClient(&msg{MsgTypeTPSMetric, x})
 			sendToAllWSClient(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 			sendToAllWSClient(&msg{MsgTypeNeighborMetric, neighborMetrics()})
@@ -64,7 +64,7 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	notifyStatus := events.NewClosure(func(tpsMetrics *metrics.TPSMetrics) {
+	notifyStatus := events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
 		wsSendWorkerPool.TrySubmit(tpsMetrics)
 	})
 
@@ -74,13 +74,13 @@ func run(plugin *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
-		metrics.Events.TPSMetricsUpdated.Attach(notifyStatus)
+		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
 		wsSendWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping SPA[WSSend] ...")
-		metrics.Events.TPSMetricsUpdated.Detach(notifyStatus)
+		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
 		wsSendWorkerPool.StopAndWait()
@@ -334,17 +334,17 @@ func currentNodeStatus() *nodestatus {
 
 	// server metrics
 	status.ServerMetrics = &servermetrics{
-		AllTxs:             server.SharedServerMetrics.GetAllTransactionsCount(),
-		InvalidTxs:         server.SharedServerMetrics.GetInvalidTransactionsCount(),
-		StaleTxs:           server.SharedServerMetrics.GetStaleTransactionsCount(),
-		RandomTxs:          server.SharedServerMetrics.GetRandomTransactionRequestsCount(),
-		SentTxs:            server.SharedServerMetrics.GetSentTransactionsCount(),
-		NewTxs:             server.SharedServerMetrics.GetNewTransactionsCount(),
-		DroppedSentPackets: server.SharedServerMetrics.GetDroppedSendPacketsCount(),
-		RecMsReq:           server.SharedServerMetrics.GetReceivedMilestoneRequestsCount(),
-		SentMsReq:          server.SharedServerMetrics.GetSentMilestoneRequestsCount(),
-		RecTxReq:           server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
-		SentTxReq:          server.SharedServerMetrics.GetSentTransactionRequestCount(),
+		AllTxs:             metrics.SharedServerMetrics.GetAllTransactionsCount(),
+		InvalidTxs:         metrics.SharedServerMetrics.GetInvalidTransactionsCount(),
+		StaleTxs:           metrics.SharedServerMetrics.GetStaleTransactionsCount(),
+		RandomTxs:          metrics.SharedServerMetrics.GetRandomTransactionRequestsCount(),
+		SentTxs:            metrics.SharedServerMetrics.GetSentTransactionsCount(),
+		NewTxs:             metrics.SharedServerMetrics.GetNewTransactionsCount(),
+		DroppedSentPackets: metrics.SharedServerMetrics.GetDroppedSendPacketsCount(),
+		RecMsReq:           metrics.SharedServerMetrics.GetReceivedMilestoneRequestsCount(),
+		SentMsReq:          metrics.SharedServerMetrics.GetSentMilestoneRequestsCount(),
+		RecTxReq:           metrics.SharedServerMetrics.GetReceivedTransactionRequestCount(),
+		SentTxReq:          metrics.SharedServerMetrics.GetSentTransactionRequestCount(),
 	}
 
 	// memory metrics

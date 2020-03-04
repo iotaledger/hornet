@@ -14,10 +14,49 @@ import (
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/parameter"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
-func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone_index.MilestoneIndex) error {
+func loadSpentAddresses(filePathSpent string) (int, error) {
+	log.Infof("Importing initial spent addresses from %v", filePathSpent)
+
+	spentAddressesCount := 0
+
+	spentFile, err := os.OpenFile(filePathSpent, os.O_RDONLY, 0666)
+	if err != nil {
+		return 0, err
+	}
+	defer spentFile.Close()
+
+	var line string
+
+	ioReader := bufio.NewReader(spentFile)
+	for {
+		line, err = ioReader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return 0, err
+		}
+
+		address := line[:len(line)-1]
+		if err := trinary.ValidTrytes(address); err != nil {
+			return 0, err
+		}
+
+		if tangle.MarkAddressAsSpent(address) {
+			spentAddressesCount++
+		}
+	}
+
+	log.Infof("Finished loading spent addresses from %v", filePathSpent)
+
+	return spentAddressesCount, nil
+}
+
+func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
@@ -75,7 +114,18 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone_in
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %s", err)
 	}
 
-	tangle.SetSnapshotMilestone(consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0)
+	spentAddressesSum := 0
+	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+		for _, spent := range filePathSpent {
+			spentAddressesCount, err := loadSpentAddresses(spent)
+			if err != nil {
+				return errors.Wrapf(ErrSnapshotImportFailed, "loadSpentAddresses: %v", err)
+			}
+			spentAddressesSum += spentAddressesCount
+		}
+	}
+
+	tangle.SetSnapshotMilestone(consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0, spentAddressesSum != 0)
 
 	log.Info("Finished loading snapshot")
 
@@ -84,8 +134,8 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone_in
 	return nil
 }
 
-func LoadGlobalSnapshot(filePathLedger string, snapshotIndex milestone_index.MilestoneIndex) error {
+func LoadGlobalSnapshot(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	log.Infof("Loading global snapshot with index %v...", snapshotIndex)
-	return loadSnapshotFromTextfiles(filePathLedger, snapshotIndex)
+	return loadSnapshotFromTextfiles(filePathLedger, filePathSpent, snapshotIndex)
 }

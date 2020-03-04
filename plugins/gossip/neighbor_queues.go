@@ -12,10 +12,10 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
 const (
@@ -138,7 +138,7 @@ func runBroadcastQueue() {
 							case neighborQueue.txQueue <- btx.truncatedTxData:
 							default:
 								neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-								server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+								metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 							}
 							continue
 						}
@@ -154,7 +154,7 @@ func runBroadcastQueue() {
 						case neighborQueue.legacyTxQueue <- msg:
 						default:
 							neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-							server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+							metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 						}
 					}
 				}
@@ -194,7 +194,7 @@ func (neighbor *Neighbor) RequestLatestMilestone() {
 		case neighborQueue.sendMilestoneRequestQueue <- 0:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 
 	}
@@ -216,7 +216,7 @@ func (neighbor *Neighbor) SendHeartbeat() {
 			case neighborQueue.heartbeatQueue <- msg:
 			default:
 				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-				server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
 		}
 	}
@@ -247,7 +247,7 @@ func (neighbor *Neighbor) SendTransactionRequest() {
 		case neighborQueue.txReqQueue <- ourReqHash:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 
 	}
@@ -266,7 +266,7 @@ func (neighbor *Neighbor) SendMilestoneRequest(msIndex milestone_index.Milestone
 		case neighborQueue.sendMilestoneRequestQueue <- msIndex:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 
 	}
@@ -295,7 +295,7 @@ func processReplies(reply *replyItem) {
 		case neighborQueue.txQueue <- cachedTx.GetTransaction().RawBytes:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 		cachedTx.Release() // tx -1
 		return
@@ -361,7 +361,7 @@ func processReplies(reply *replyItem) {
 		case neighborQueue.legacyTxQueue <- msg:
 		default:
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-			server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
 		return
 	}
@@ -384,7 +384,7 @@ func processReplies(reply *replyItem) {
 			case neighborQueue.txQueue <- cachedTxToSend.GetTransaction().RawBytes:
 			default:
 				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-				server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
 		}
 		cachedTxs.Release()   // txs -1

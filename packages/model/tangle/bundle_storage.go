@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/database"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/profile"
@@ -380,15 +381,17 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	if !cachedBndl.GetBundle().validate() {
 		return
 	}
+	metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 	cachedBndl.GetBundle().calcLedgerChanges()
 
 	if !cachedBndl.GetBundle().IsValueSpam() {
+		spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
 		for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
 			if change < 0 {
+				if spentAddressesEnabled && MarkAddressAsSpent(addr) {
+					metrics.SharedServerMetrics.GetSeenSpentAddrCount()
+				}
 				Events.AddressSpent.Trigger(addr)
-
-				// ToDo:
-				//markedSpentAddrs.Inc()
 			}
 		}
 		return

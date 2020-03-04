@@ -3,9 +3,9 @@ package gossip
 import (
 	"math"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip/server"
 )
 
 const milestoneRequestRange = 50
@@ -58,9 +58,8 @@ func SendMilestoneRequests(solidMilestoneIndex milestone_index.MilestoneIndex, k
 			case neighborQueue.sendMilestoneRequestQueue <- msIndexToReq:
 			default:
 				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
-				server.SharedServerMetrics.IncrDroppedSendPacketsCount()
+				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
-
 		}
 	}
 }

@@ -45,6 +45,7 @@ func NewRequestQueue() *RequestQueue {
 			requestFactory,
 			objectstorage.CacheTime(0),
 			objectstorage.PersistenceEnabled(false),
+			objectstorage.KeysOnly(true),
 			objectstorage.LeakDetectionEnabled(false, objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: 20,
 				MaxConsumerHoldTime:   120 * time.Second,
