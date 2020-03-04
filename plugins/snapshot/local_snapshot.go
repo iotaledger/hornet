@@ -598,9 +598,6 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0)
-	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
-
 	if err := binary.Read(file, binary.LittleEndian, &solidEntryPointsCount); err != nil {
 		return err
 	}
@@ -616,6 +613,9 @@ func LoadSnapshotFromFile(filePath string) error {
 	if err := binary.Read(file, binary.LittleEndian, &spentAddrsCount); err != nil {
 		return err
 	}
+
+	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0)
+	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
 
 	log.Info("Importing solid entry points")
 
