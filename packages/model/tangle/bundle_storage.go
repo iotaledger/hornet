@@ -381,6 +381,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	if !cachedBndl.GetBundle().validate() {
 		return
 	}
+	metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 	cachedBndl.GetBundle().calcLedgerChanges()
 
 	if !cachedBndl.GetBundle().IsValueSpam() {
