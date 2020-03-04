@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -554,15 +553,9 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 	defer file.Close()
 
-	gzipReader, err := gzip.NewReader(file)
-	if err != nil {
-		return err
-	}
-	defer gzipReader.Close()
-
 	// check file version
 	var fileVersion byte
-	if err := binary.Read(gzipReader, binary.LittleEndian, &fileVersion); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &fileVersion); err != nil {
 		return err
 	}
 
@@ -578,7 +571,7 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 
 	hashBuf := make([]byte, 49)
-	if _, err := gzipReader.Read(hashBuf); err != nil {
+	if _, err := file.Read(hashBuf); err != nil {
 		return err
 	}
 
@@ -597,30 +590,30 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &msIndex); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &msIndex); err != nil {
 		return err
 	}
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &msTimestamp); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &msTimestamp); err != nil {
 		return err
 	}
 
 	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0)
 	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &solidEntryPointsCount); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &solidEntryPointsCount); err != nil {
 		return err
 	}
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &seenMilestonesCount); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &seenMilestonesCount); err != nil {
 		return err
 	}
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &ledgerEntriesCount); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &ledgerEntriesCount); err != nil {
 		return err
 	}
 
-	if err := binary.Read(gzipReader, binary.LittleEndian, &spentAddrsCount); err != nil {
+	if err := binary.Read(file, binary.LittleEndian, &spentAddrsCount); err != nil {
 		return err
 	}
 
@@ -633,11 +626,11 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		var val int32
 
-		if err := binary.Read(gzipReader, binary.LittleEndian, hashBuf); err != nil {
+		if err := binary.Read(file, binary.LittleEndian, hashBuf); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 
-		if err := binary.Read(gzipReader, binary.LittleEndian, &val); err != nil {
+		if err := binary.Read(file, binary.LittleEndian, &val); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
 		}
 
@@ -662,11 +655,11 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		var val int32
 
-		if err := binary.Read(gzipReader, binary.LittleEndian, hashBuf); err != nil {
+		if err := binary.Read(file, binary.LittleEndian, hashBuf); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
-		if err := binary.Read(gzipReader, binary.LittleEndian, &val); err != nil {
+		if err := binary.Read(file, binary.LittleEndian, &val); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
@@ -689,11 +682,11 @@ func LoadSnapshotFromFile(filePath string) error {
 
 		var val uint64
 
-		if err := binary.Read(gzipReader, binary.LittleEndian, hashBuf); err != nil {
+		if err := binary.Read(file, binary.LittleEndian, hashBuf); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 
-		if err := binary.Read(gzipReader, binary.LittleEndian, &val); err != nil {
+		if err := binary.Read(file, binary.LittleEndian, &val); err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 
@@ -728,7 +721,7 @@ func LoadSnapshotFromFile(filePath string) error {
 			for j := batchStart; j < batchEnd; j++ {
 
 				spentAddrBuf := make([]byte, 49)
-				err = binary.Read(gzipReader, binary.BigEndian, spentAddrBuf)
+				err = binary.Read(file, binary.BigEndian, spentAddrBuf)
 				if err != nil {
 					return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
 				}
