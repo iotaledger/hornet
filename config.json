@@ -91,11 +91,11 @@
   },
   "tipsel": {
     "belowmaxdepthtransactionlimit": 20000,
-    "maxdepth": 15
+    "maxdepth": 3
   },
   "node": {
     "disableplugins": [],
-    "enableplugins": ["Graph","Monitor"]
+    "enableplugins": []
   },
   "logger": {
     "level": "info",
