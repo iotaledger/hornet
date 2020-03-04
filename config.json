@@ -182,7 +182,7 @@
     "depth": 50,
     "intervalsynced": 50,
     "intervalunsynced": 1000,
-    "path": "latest-export.gz.bin"
+    "path": "latest-export.bin"
   },
   "globalsnapshot": {
     "path": "snapshotMainnet.txt",
