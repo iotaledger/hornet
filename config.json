@@ -1,127 +1,5 @@
 {
-  "useProfile": "custom",
-  "profiles": {
-    "custom": {
-      "caches": {
-        "addresses": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "approvers": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "tags": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "bundles": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "bundletransactions": {
-          "cacheTimeMs": 500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "milestones": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "transactions": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "firstSeenTx": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "incomingTransactionFilter": {
-          "cacheTimeMs": 1500,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "refsInvalidBundle": {
-          "cacheTimeMs": 180000,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        },
-        "spentAddresses": {
-          "cacheTimeMs": 0,
-          "leakDetection": {
-            "enabled": true,
-            "maxConsumersPerObject": 20,
-            "maxConsumerHoldTimeSec": 100
-          }
-        }
-      },
-      "badger": {
-        "levelOneSize": 67108864,
-        "levelSizeMultiplier": 10,
-        "tableLoadingMode": 0,
-        "valueLogLoadingMode": 0,
-        "maxLevels": 5,
-        "maxTableSize": 16777216,
-        "numCompactors": 1,
-        "numLevelZeroTables": 1,
-        "numLevelZeroTablesStall": 2,
-        "numMemtables": 1,
-        "bloomFalsePositive": 0.01,
-        "blockSize": 4096,
-        "syncWrites": false,
-        "numVersionsToKeep": 1,
-        "compactLevel0OnClose": false,
-        "keepL0InMemory": false,
-        "verifyValueChecksum": false,
-        "maxCacheSize": 50000000,
-        "ZSTDCompressionLevel": 1,
-        "CompressionType": 0,
-        "valueLogFileSize": 33554431,
-        "valueLogMaxEntries": 250000,
-        "valueThreshold": 32,
-        "withTruncate": false,
-        "logRotatesToFlush": 2,
-        "eventLogging": false
-      }
-    }
-  },
+  "useProfile": "auto",
   "api": {
     "auth": {
       "password": "",
@@ -142,7 +20,7 @@
     ],
     "bindAddress": "0.0.0.0",
     "maxbodylength": 1000000,
-    "maxfindtransactions": 100000,
+    "maxfindtransactions": 1000,
     "maxgettrytes": 1000,
     "maxrequestslist": 1000,
     "port": 14265,
@@ -164,25 +42,20 @@
   "db": {
     "path": "mainnetdb"
   },
-  "graph": {
-    "webrootPath": "IOTAtangle/webroot",
-    "socketiopath": "socket.io-client/dist/socket.io.js",
-    "domain": "",
-    "bindAddress": "127.0.0.1",
-    "port": 8083,
-    "networkName": "meets HORNET"
-  },
-  "pruning": {
-    "enabled": true,
-    "delay": 40000
-  },
   "loadSnapshot": "local",
   "localsnapshots": {
     "enabled": true,
     "depth": 50,
     "intervalsynced": 50,
     "intervalunsynced": 1000,
-    "path": "latest-export.bin"
+    "path": "export.bin"
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 40000
+  },
+  "spentAddresses": {
+    "enabled": true
   },
   "globalsnapshot": {
     "path": "snapshotMainnet.txt",
@@ -193,10 +66,61 @@
     ],
     "index": 1050000
   },
+  "autopeering": {
+    "actAsEntryNode": false,
+    "entryNodes": [
+      "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626"
+    ],
+    "seed": "",
+    "port": 14626
+  },
   "milestones": {
     "coordinator": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
     "coordinatorsecuritylevel": 2,
     "numberofkeysinamilestone": 23
+  },
+  "network": {
+    "bindAddress": "0.0.0.0",
+    "externalAddress": "auto",
+    "prefer_ipv6": false,
+    "port": 15600,
+    "reconnectattemptintervalseconds": 60
+  },
+  "protocol": {
+    "mwm": 14
+  },
+  "tipsel": {
+    "belowmaxdepthtransactionlimit": 20000,
+    "maxdepth": 15
+  },
+  "node": {
+    "disableplugins": [],
+    "enableplugins": ["Graph","Monitor"]
+  },
+  "logger": {
+    "level": "info",
+    "disableCaller": true,
+    "encoding": "console",
+    "outputPaths": [
+      "stdout",
+      "hornet.log"
+    ]
+  },
+  "spammer": {
+    "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
+    "depth": 3,
+    "message": "Spamming with HORNET tipselect",
+    "tag": "HORNET99INTEGRATED99SPAMMER",
+    "tpsratelimit": 0.1,
+    "workers": 1
+  },
+  "graph": {
+    "webrootPath": "IOTAtangle/webroot",
+    "socketiopath": "socket.io-client/dist/socket.io.js",
+    "domain": "",
+    "bindAddress": "127.0.0.1",
+    "port": 8083,
+    "networkName": "meets HORNET"
   },
   "monitor": {
     "tanglemonitorpath": "tanglemonitor/frontend",
@@ -208,54 +132,8 @@
   "mqtt": {
     "config": "mqtt_config.json"
   },
-  "autopeering": {
-    "actAsEntryNode": false,
-    "entryNodes": [
-      "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626"
-    ],
-    "seed": "",
-    "port": 14626
-  },
-  "network": {
-    "bindAddress": "0.0.0.0",
-    "externalAddress": "auto",
-    "prefer_ipv6": false,
-    "port": 15600,
-    "reconnectattemptintervalseconds": 60
-  },
-  "node": {
-    "disableplugins": [],
-    "enableplugins": []
-  },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout",
-      "hornet.log"
-    ]
-  },
-  "protocol": {
-    "mwm": 14
-  },
-  "spammer": {
-    "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
-    "depth": 3,
-    "message": "Spamming with HORNET tipselect",
-    "tag": "HORNET99INTEGRATED99SPAMMER",
-    "tpsratelimit": 0.1,
-    "workers": 1
-  },
-  "tipsel": {
-    "belowmaxdepthtransactionlimit": 20000,
-    "maxdepth": 15
-  },
   "zmq": {
     "bindAddress": "127.0.0.1",
     "port": 5556
-  },
-  "spentAddresses": {
-    "enabled": true
   }
 }
