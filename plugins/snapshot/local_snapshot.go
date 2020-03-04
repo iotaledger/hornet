@@ -291,6 +291,10 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 		return err
 	}
 
+	if lsh.spentAddressesCount != 0 {
+		return tangle.StreamSpentAddressesToWriter(&buf, lsh.spentAddressesCount, abortSignal)
+	}
+
 	// write sha256 hash
 	sha256Hash := sha256.Sum256(buf.Bytes())
 	if err := binary.Write(&buf, binary.LittleEndian, sha256Hash); err != nil {
@@ -303,15 +307,8 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	}
 	defer exportFile.Close()
 
-	gzipWriter := gzip.NewWriter(exportFile)
-	defer gzipWriter.Close()
-
-	if _, err = io.Copy(gzipWriter, &buf); err != nil {
+	if _, err = io.Copy(exportFile, &buf); err != nil {
 		return err
-	}
-
-	if lsh.spentAddressesCount != 0 {
-		return tangle.StreamSpentAddressesToWriter(gzipWriter, lsh.spentAddressesCount, abortSignal)
 	}
 
 	return nil
