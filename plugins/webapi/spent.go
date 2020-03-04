@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/iota.go/address"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 )
 
 func init() {
@@ -21,7 +20,7 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan st
 	sp := &WereAddressesSpentFrom{}
 	e := ErrorReturn{}
 
-	if !parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
 		e.Error = "wereAddressesSpentFrom not available in this node"
 		c.JSON(http.StatusBadRequest, e)
 		return

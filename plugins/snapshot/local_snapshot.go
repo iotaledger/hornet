@@ -310,7 +310,7 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 		return err
 	}
 
-	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if lsh.spentAddressesCount != 0 {
 		return tangle.StreamSpentAddressesToWriter(gzipWriter, lsh.spentAddressesCount, abortSignal)
 	}
 
@@ -377,7 +377,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	defer cachedTargetMsTail.Release()                         // tx -1
 
 	var spentAddressesCount int32
-	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() && parameter.NodeConfig.GetBool("spentAddresses.enabled") {
 		spentAddressesCount = tangle.CountSpentAddressesEntriesWithoutLocking()
 	}
 
@@ -608,7 +608,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp)
+	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0)
 	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
 
 	if err := binary.Read(gzipReader, binary.LittleEndian, &solidEntryPointsCount); err != nil {

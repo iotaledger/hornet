@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
@@ -79,7 +80,7 @@ func configure(plugin *node.Plugin) {
 		features = append(features, "RemotePOW")
 	}
 
-	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
 		features = append(features, "WereAddressesSpentFrom")
 	}
 
