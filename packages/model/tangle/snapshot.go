@@ -47,8 +47,8 @@ func loadSnapshotInfo() {
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 65 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 65", len(bytes))
+	if len(bytes) != 66 {
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 66", len(bytes))
 	}
 
 	hash := trinary.MustBytesToTrytes(bytes[:49])

@@ -12,11 +12,13 @@ var (
 	// flags
 	configName          = flag.StringP("config", "c", "config", "Filename of the config file without the file extension")
 	neighborsConfigName = flag.StringP("neighborsConfig", "n", "neighbors", "Filename of the neighbors config file without the file extension")
+	profilesConfigName  = flag.String("profilesConfig", "profiles", "Filename of the profiles config file without the file extension")
 	configDirPath       = flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
 
 	// Viper
 	NodeConfig      = viper.New()
 	NeighborsConfig = viper.New()
+	ProfilesConfig  = viper.New()
 
 	neighborsConfigHotReloadAllowed = true
 	neighborsConfigHotReloadLock    syncutils.RWMutex
@@ -37,6 +39,11 @@ func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
 	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, false)
+	if err != nil {
+		return err
+	}
+
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, false)
 	if err != nil {
 		return err
 	}

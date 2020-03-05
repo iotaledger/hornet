@@ -389,7 +389,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
 			if change < 0 {
 				if spentAddressesEnabled && MarkAddressAsSpent(addr) {
-					metrics.SharedServerMetrics.GetSeenSpentAddrCount()
+					metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
 				}
 				Events.AddressSpent.Trigger(addr)
 			}

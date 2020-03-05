@@ -56,11 +56,10 @@ func GetProfile() *Profile {
 			profile.Name = "1gb"
 		default:
 			p := &Profile{}
-			key := fmt.Sprintf("profiles.%s", profileName)
-			if !parameter.NodeConfig.IsSet(key) {
+			if !parameter.ProfilesConfig.IsSet(profileName) {
 				panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
 			}
-			if err := parameter.NodeConfig.UnmarshalKey(key, p); err != nil {
+			if err := parameter.ProfilesConfig.UnmarshalKey(profileName, p); err != nil {
 				panic(err)
 			}
 			p.Name = profileName
