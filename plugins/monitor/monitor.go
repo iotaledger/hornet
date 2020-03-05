@@ -20,6 +20,7 @@ import (
 
 const (
 	TX_BUFFER_SIZE = 50000
+	NAMESPACE      = "monitor"
 )
 
 var (
@@ -77,7 +78,7 @@ func onConnectHandler(s socketio.Conn) error {
 		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
 	}
 	log.Info(infoMsg)
-	socketioServer.JoinRoom("broadcast", s)
+	socketioServer.JoinRoom(NAMESPACE, "broadcast", s)
 	return nil
 }
 
@@ -95,7 +96,7 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
 	}
 	log.Info(fmt.Sprintf("%s: %s", infoMsg, msg))
-	socketioServer.LeaveAllRooms(s)
+	socketioServer.LeaveAllRooms(NAMESPACE, s)
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -138,7 +139,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		txRingBufferLock.Unlock()
 
 		broadcastLock.Lock()
-		socketioServer.BroadcastToRoom("broadcast", "newTX", wsTx)
+		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "newTX", wsTx)
 		broadcastLock.Unlock()
 	})
 }
@@ -174,7 +175,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 		}
 
 		broadcastLock.Lock()
-		socketioServer.BroadcastToRoom("broadcast", "update", update)
+		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "update", update)
 		broadcastLock.Unlock()
 	})
 }
@@ -206,7 +207,7 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 			ConfTime:  confTime,
 		}
 
-		socketioServer.BroadcastToRoom("broadcast", "updateMilestone", update)
+		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "updateMilestone", update)
 	}
 	broadcastLock.Unlock()
 
@@ -226,7 +227,7 @@ func onReattachment(txHash trinary.Hash) {
 	}
 
 	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "updateReattach", update)
+	socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "updateReattach", update)
 	broadcastLock.Unlock()
 }
 

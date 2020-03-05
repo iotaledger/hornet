@@ -17,6 +17,7 @@ import (
 
 const (
 	TX_BUFFER_SIZE = 1800
+	NAMESPACE      = "graph"
 )
 
 var (
@@ -67,7 +68,7 @@ func onConnectHandler(s socketio.Conn) error {
 		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
 	}
 	log.Info(infoMsg)
-	socketioServer.JoinRoom("broadcast", s)
+	socketioServer.JoinRoom(NAMESPACE, "broadcast", s)
 
 	config := &wsConfig{NetworkName: parameter.NodeConfig.GetString("graph.networkName")}
 
@@ -117,7 +118,7 @@ func onDisconnectHandler(s socketio.Conn, msg string) {
 		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
 	}
 	log.Info(fmt.Sprintf("%s: %s", infoMsg, msg))
-	socketioServer.LeaveAllRooms(s)
+	socketioServer.LeaveAllRooms(NAMESPACE, s)
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -143,7 +144,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		txRingBufferLock.Unlock()
 
 		broadcastLock.Lock()
-		socketioServer.BroadcastToRoom("broadcast", "tx", wsTx)
+		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "tx", wsTx)
 		broadcastLock.Unlock()
 	})
 }
@@ -165,7 +166,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 		snRingBufferLock.Unlock()
 
 		broadcastLock.Lock()
-		socketioServer.BroadcastToRoom("broadcast", "sn", snTx)
+		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "sn", snTx)
 		broadcastLock.Unlock()
 	})
 }
