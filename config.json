@@ -55,7 +55,7 @@
     "delay": 40000
   },
   "spentAddresses": {
-    "enabled": true
+    "enabled": false
   },
   "globalsnapshot": {
     "path": "snapshotMainnet.txt",
@@ -94,7 +94,7 @@
     "maxdepth": 3
   },
   "node": {
-    "disableplugins": [],
+    "disableplugins": ["Autopeering"],
     "enableplugins": []
   },
   "logger": {

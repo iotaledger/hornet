@@ -131,9 +131,10 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 }
 
 type ExplorerAddress struct {
-	Balance uint64        `json:"balance"`
-	Txs     []*ExplorerTx `json:"txs"`
-	Spent   bool          `json:"spent"`
+	Balance      uint64        `json:"balance"`
+	Txs          []*ExplorerTx `json:"txs"`
+	Spent        bool          `json:"spent"`
+	SpentEnabled bool          `json:"spent_enabled"`
 }
 
 type SearchResult struct {
@@ -327,5 +328,5 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
 	}
 
-	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash)}, nil
+	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash), SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled()}, nil
 }

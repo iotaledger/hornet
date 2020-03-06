@@ -3,7 +3,7 @@
   "maxneighbors": 5,
   "neighbors": [
     {
-      "identity": "example1.neighbor.com:15600",
+      "identity": "mainnet01.hornet.zone:15600",
       "alias": "Example Neighbor 1",
       "prefer_ipv6": false
     }
