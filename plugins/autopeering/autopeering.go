@@ -40,16 +40,10 @@ func configureAP() {
 	}
 	log.Debugf("Entry node peers: %v", entryNodes)
 
-	Discovery = discover.New(local.GetInstance(), discover.Config{
-		Log:         log.Named("disc"),
-		MasterPeers: entryNodes,
-	})
+	Discovery = discover.New(local.GetInstance(), discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
 
 	// enable peer selection only when gossip is enabled
-	Selection = selection.New(local.GetInstance(), Discovery, selection.Config{
-		Log:               log.Named("sel"),
-		NeighborValidator: selection.ValidatorFunc(isValidNeighbor),
-	})
+	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidNeighbor)))
 }
 
 // isValidNeighbor checks whether a peer is a valid neighbor.
