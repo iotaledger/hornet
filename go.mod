@@ -16,7 +16,7 @@ require (
 	github.com/googollee/go-socket.io v1.4.4-0.20200304170631-c054f421489d
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200305153009-d3408b2be05b
+	github.com/iotaledger/hive.go v0.0.0-20200306130952-a85b713930e3
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200204161139-dfb0acdec240
 	github.com/labstack/echo/v4 v4.1.15
 	github.com/mitchellh/mapstructure v1.1.2

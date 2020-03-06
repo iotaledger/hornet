@@ -83,16 +83,18 @@ func updateNodeSynced(latestSolidIndex, latestIndex milestone_index.MilestoneInd
 func SetSolidMilestone(cachedBndl *CachedBundle) {
 	defer cachedBndl.Release() // bundle -1
 
-	if cachedBndl.GetBundle().IsSolid() {
-		solidMilestoneLock.Lock()
-		if cachedBndl.GetBundle().GetMilestoneIndex() < solidMilestoneIndex {
-			panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, cachedBndl.GetBundle().GetMilestoneIndex()))
-		} else {
-			solidMilestoneIndex = cachedBndl.GetBundle().GetMilestoneIndex()
-		}
-		solidMilestoneLock.Unlock()
-		updateNodeSynced(cachedBndl.GetBundle().GetMilestoneIndex(), GetLatestMilestoneIndex())
+	if !cachedBndl.GetBundle().IsSolid() {
+		panic(fmt.Sprintf("SetSolidMilestone: Milestone was not solid: %d", cachedBndl.GetBundle().GetMilestoneIndex()))
 	}
+
+	solidMilestoneLock.Lock()
+	if cachedBndl.GetBundle().GetMilestoneIndex() < solidMilestoneIndex {
+		panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, cachedBndl.GetBundle().GetMilestoneIndex()))
+	}
+	solidMilestoneIndex = cachedBndl.GetBundle().GetMilestoneIndex()
+	solidMilestoneLock.Unlock()
+
+	updateNodeSynced(cachedBndl.GetBundle().GetMilestoneIndex(), GetLatestMilestoneIndex())
 }
 
 func setSolidMilestoneIndex(index milestone_index.MilestoneIndex) {
