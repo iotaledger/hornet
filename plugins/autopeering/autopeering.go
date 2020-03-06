@@ -150,14 +150,9 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 		}
 
 		services := service.New()
-		ip := ipAddresses.GetPreferredAddress(parameter.NodeConfig.GetBool("network.prefer_ipv6"))
-		if ip.IsIPv6() {
-			services.Update(service.PeeringKey, "udp", fmt.Sprintf("[%s]:%d", ip.String(), entryAddr.Port))
-			result = append(result, peer.NewPeer(pubKey, services))
-		} else {
-			services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip.String(), entryAddr.Port))
-			result = append(result, peer.NewPeer(pubKey, services))
-		}
+		ip := ipAddresses.GetPreferredAddress(parameter.NodeConfig.GetBool("network.prefer_ipv6")).ToString()
+		services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip, entryAddr.Port))
+		result = append(result, peer.NewPeer(pubKey, services))
 	}
 
 	return result, nil
