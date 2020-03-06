@@ -144,41 +144,18 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 			return nil, fmt.Errorf("%w: invalid entry node address %s", err, parts[1])
 		}
 
-		// Check if it is an IP addr
-		entryAddr.Addr = strings.ReplaceAll(entryAddr.Addr, "[", "")
-		entryAddr.Addr = strings.ReplaceAll(entryAddr.Addr, "]", "")
-
-		ip := net.ParseIP(entryAddr.Addr)
-		if ip != nil {
-			services := service.New()
-			services.Update(service.PeeringKey, "udp", parts[1])
-			result = append(result, peer.NewPeer(pubKey, services))
-			continue
-		}
-
-		// If it's no IP addr, resolve them
-		ips, err := net.LookupHost(entryAddr.Addr)
+		ipAddresses, err := iputils.GetIPAddressesFromHost(entryAddr.Addr)
 		if err != nil {
-			return nil, fmt.Errorf("%w: couldn't lookup IPs for %s", err, entryAddr.String())
+			return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
 		}
 
-		if len(ips) == 0 {
-			return nil, fmt.Errorf("no IPs found for %s", entryAddr.String())
-		}
-
-		ipAddr := iputils.NewIPAddresses()
-		for _, ip := range ips {
-			ipAddr.Add(&iputils.IP{IP: net.ParseIP(ip)})
-		}
-
-		if ipAddr.Len() > 0 {
-			services := service.New()
-			ip := ipAddr.GetPreferredAddress(parameter.NodeConfig.GetBool("network.prefer_ipv6"))
-			if strings.Contains(ip.String(), ":") {
-				services.Update(service.PeeringKey, "udp", fmt.Sprintf("[%s]:%d", ip, entryAddr.Port))
-			} else {
-				services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip, entryAddr.Port))
-			}
+		services := service.New()
+		ip := ipAddresses.GetPreferredAddress(parameter.NodeConfig.GetBool("network.prefer_ipv6"))
+		if ip.IsIPv6() {
+			services.Update(service.PeeringKey, "udp", fmt.Sprintf("[%s]:%d", ip.String(), entryAddr.Port))
+			result = append(result, peer.NewPeer(pubKey, services))
+		} else {
+			services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip.String(), entryAddr.Port))
 			result = append(result, peer.NewPeer(pubKey, services))
 		}
 	}
