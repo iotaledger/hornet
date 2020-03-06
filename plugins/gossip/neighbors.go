@@ -479,7 +479,7 @@ func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string, autoPeer ..
 		return errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in the reconnect pool", neighborAddr)
 	}
 
-	possibleIdentities, err := possibleIdentitiesFromNeighborAddress(originAddr)
+	possibleIdentities, err := iputils.GetIPAddressesFromHost(originAddr.Addr)
 	if err != nil {
 		return err
 	}
@@ -503,26 +503,6 @@ func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string, autoPeer ..
 	return nil
 }
 
-func possibleIdentitiesFromNeighborAddress(originAddr *iputils.OriginAddress) (*iputils.IPAddresses, error) {
-	possibleIdentities := iputils.NewIPAddresses()
-	ip := net.ParseIP(originAddr.Addr)
-	if ip != nil {
-		possibleIdentities.Add(&iputils.IP{IP: ip})
-		return possibleIdentities, nil
-	}
-	ips, err := net.LookupHost(originAddr.Addr)
-	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't lookup IPs for %s, error: %s", originAddr.Addr, err.Error())
-	}
-	if len(ips) == 0 {
-		return nil, errors.Wrapf(ErrNoIPsFound, "no IPs found for %s", originAddr.Addr)
-	}
-	for _, ipAddr := range ips {
-		possibleIdentities.Add(&iputils.IP{IP: net.ParseIP(ipAddr)})
-	}
-	return possibleIdentities, nil
-}
-
 func RemoveNeighbor(originIdentity string) error {
 	originAddr, err := iputils.ParseOriginAddress(originIdentity)
 	if err != nil {
@@ -534,7 +514,7 @@ func RemoveNeighbor(originIdentity string) error {
 	// always remove the neighbor from the reconnect pool through its origin identity
 	delete(reconnectPool, originIdentity)
 
-	if possibleIdentities, err := possibleIdentitiesFromNeighborAddress(originAddr); err == nil {
+	if possibleIdentities, err := iputils.GetIPAddressesFromHost(originAddr.Addr); err == nil {
 
 		// make sure the neighbor is removed by all its possible identities by going
 		// through each resolved IP address from the lookup
