@@ -78,7 +78,7 @@ func reconnect() {
 next:
 	for k, recNeigh := range reconnectPool {
 		originAddr := recNeigh.OriginAddr
-		neighborAddrs, err := possibleIdentitiesFromNeighborAddress(originAddr)
+		neighborAddrs, err := iputils.GetIPAddressesFromHost(originAddr.Addr)
 		if err != nil {
 			gossipLogger.Warn(err.Error())
 			continue
@@ -145,7 +145,7 @@ func cleanReconnectPool(neighbor *Neighbor) {
 	for key, recNeigh := range reconnectPool {
 		recNeigh.mu.Lock()
 		if recNeigh.CachedIPs == nil {
-			ips, err := possibleIdentitiesFromNeighborAddress(recNeigh.OriginAddr)
+			ips, err := iputils.GetIPAddressesFromHost(recNeigh.OriginAddr.Addr)
 			if err != nil {
 				gossipLogger.Warnf("can't check reconnect pool existence on %s, as IP lookups failed: %s", recNeigh.OriginAddr.String(), err.Error())
 				recNeigh.mu.Unlock()
