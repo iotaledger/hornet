@@ -123,6 +123,7 @@ archives:
       - LICENSE
       - config.json
       - neighbors.json
+      - profiles.json
 
 # DEB and RPM packages
 nfpms:
@@ -142,6 +143,7 @@ nfpms:
     config_files:
       "config.json": "/etc/hornet/config.json"
       "neighbors.json": "/etc/hornet/neighbors.json"
+      "profiles.json": "/etc/hornet/profiles.json"
       "nfpm/shared_files/hornet.env": "/etc/default/hornet"
     dependencies:
       - systemd
