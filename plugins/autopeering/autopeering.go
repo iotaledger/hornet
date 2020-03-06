@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/autopeering/server"
 	"github.com/iotaledger/hive.go/autopeering/transport"
+	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
 
@@ -144,10 +145,48 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 			return nil, fmt.Errorf("%w: can't decode public key: %s", ErrParsingEntryNode, err)
 		}
 
-		services := service.New()
-		services.Update(service.PeeringKey, "udp", parts[1])
+		entryAddr, err := iputils.ParseOriginAddress(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("%w: invalid entry node address %s", err, parts[1])
+		}
 
-		result = append(result, peer.NewPeer(pubKey, services))
+		// Check if it is an IP addr
+		entryAddr.Addr = strings.ReplaceAll(entryAddr.Addr, "[", "")
+		entryAddr.Addr = strings.ReplaceAll(entryAddr.Addr, "]", "")
+
+		ip := net.ParseIP(entryAddr.Addr)
+		if ip != nil {
+			services := service.New()
+			services.Update(service.PeeringKey, "udp", parts[1])
+			result = append(result, peer.NewPeer(pubKey, services))
+			continue
+		}
+
+		// If it's no IP addr, resolve them
+		ips, err := net.LookupHost(entryAddr.Addr)
+		if err != nil {
+			return nil, fmt.Errorf("%w: couldn't lookup IPs for %s", err, entryAddr.String())
+		}
+
+		if len(ips) == 0 {
+			return nil, fmt.Errorf("no IPs found for %s", entryAddr.String())
+		}
+
+		ipAddr := iputils.NewIPAddresses()
+		for _, ip := range ips {
+			ipAddr.Add(&iputils.IP{IP: net.ParseIP(ip)})
+		}
+
+		if ipAddr.Len() > 0 {
+			services := service.New()
+			ip := ipAddr.GetPreferredAddress(parameter.NodeConfig.GetBool("network.prefer_ipv6"))
+			if strings.Contains(ip.String(), ":") {
+				services.Update(service.PeeringKey, "udp", fmt.Sprintf("[%s]:%d", ip, entryAddr.Port))
+			} else {
+				services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip, entryAddr.Port))
+			}
+			result = append(result, peer.NewPeer(pubKey, services))
+		}
 	}
 
 	return result, nil
