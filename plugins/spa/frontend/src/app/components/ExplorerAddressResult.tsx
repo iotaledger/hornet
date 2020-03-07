@@ -66,19 +66,24 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                         <React.Fragment>
                             <br/>
                             {
-                                addr.spent ?
-                                    addr.balance > 0 ?
-                                        <Badge variant="danger">
-                                            Spent - funds are at risk
-                                        </Badge>
+                                addr.spent_enabled ?
+                                    addr.spent ?
+                                        addr.balance > 0 ?
+                                            <Badge variant="danger">
+                                                Spent - funds are at risk
+                                            </Badge>
+                                            :
+                                            <Badge variant="warning">
+                                                Spent
+                                            </Badge>
                                         :
-                                        <Badge variant="warning">
-                                            Spent
+                                        <Badge variant="secondary">
+                                            Unspent
                                         </Badge>
-                                    :
-                                    <Badge variant="secondary">
-                                        Unspent
-                                    </Badge>
+                                :
+                                <Badge variant="warning">
+                                    Spent status unknown! - Disabled on this node
+                                </Badge>   
                             }
                         </React.Fragment>
                     }

@@ -35,6 +35,7 @@ class AddressResult {
     balance: number;
     txs: Array<Transaction>;
     spent: boolean;
+    spent_enabled: boolean;
 }
 
 class ConfirmedState {

@@ -28,6 +28,9 @@ var (
 	// Selection is the peer selection protocol.
 	Selection *selection.Protocol
 
+	// ID is the node's autopeering ID
+	ID string
+
 	ErrParsingEntryNode = errors.New("can't parse entry node")
 
 	log *logger.Logger
@@ -118,7 +121,9 @@ func start(shutdownSignal <-chan struct{}) {
 	}
 
 	log.Infof(name+" started: Address=%s/%s", peeringAddr.String(), peeringAddr.Network())
-	log.Infof(name+" started: ID=%s PublicKey=%s", lPeer.ID(), base64.StdEncoding.EncodeToString(lPeer.PublicKey()))
+
+	ID = lPeer.ID().String()
+	log.Infof(name+" started: ID=%s PublicKey=%s", ID, base64.StdEncoding.EncodeToString(lPeer.PublicKey()))
 
 	<-shutdownSignal
 	log.Info("Stopping Autopeering ...")

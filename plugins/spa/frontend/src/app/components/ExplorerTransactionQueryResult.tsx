@@ -2,6 +2,7 @@ import * as React from 'react';
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
+import {Tab, Nav} from "react-bootstrap";
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
 import ExplorerStore from "app/stores/ExplorerStore";
@@ -10,6 +11,9 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Badge from "react-bootstrap/Badge";
 import * as dateformat from 'dateformat';
 import {Link} from 'react-router-dom';
+import {Choose, When, Otherwise} from 'tsx-control-statements/components';
+
+import { trytesToAscii } from '@iota/converter';
 
 import * as style from '../../assets/main.css';
 
@@ -190,9 +194,43 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                     </ListGroup.Item>
                                     <ListGroup.Item className="text-break">
                                         Message:<br/>
-                                        <small>
-                                            {tx.signature_message_fragment}
-                                        </small>
+                                        <Tab.Container id="left-tabs-message" defaultActiveKey="trytes">
+                                            <Row>
+                                                <Col sm={3}>
+                                                    <Nav variant="pills" className="flex-column">
+                                                        <Nav.Item>
+                                                            <Nav.Link eventKey="trytes">Trytes</Nav.Link>
+                                                        </Nav.Item>
+                                                        <Nav.Item>
+                                                            <Nav.Link eventKey="text">Text</Nav.Link>
+                                                        </Nav.Item>
+                                                    </Nav>
+                                                </Col>
+                                                <Col sm={9}>
+                                                    <Tab.Content>
+                                                        <Tab.Pane eventKey="trytes">
+                                                            <small>
+                                                                {tx.signature_message_fragment}
+                                                            </small>
+                                                        </Tab.Pane>
+                                                        <Tab.Pane eventKey="text">
+                                                            <Choose>
+                                                                <When condition={tx.signature_message_fragment.length%2 === 0}>
+                                                                    {
+                                                                        trytesToAscii(tx.signature_message_fragment)
+                                                                    }
+                                                                </When>
+                                                                <Otherwise>
+                                                                    {
+                                                                        trytesToAscii(tx.signature_message_fragment + "9")
+                                                                    }
+                                                                </Otherwise>
+                                                            </Choose>
+                                                        </Tab.Pane>
+                                                    </Tab.Content>
+                                                </Col>
+                                            </Row>
+                                        </Tab.Container>
                                     </ListGroup.Item>
                                 </ListGroup>
                             </Col>
