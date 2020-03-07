@@ -108,20 +108,22 @@ func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 }
 
 // milestone +1
-func StoreMilestoneOrNil(cachedBndl *CachedBundle) *CachedMilestone {
-	defer cachedBndl.Release() // bundle -1
+func StoreMilestone(bndl *Bundle) *CachedMilestone {
 
-	if cachedBndl.GetBundle().IsMilestone() {
+	if bndl.IsMilestone() {
 
-		cachedMilestone, newlyAdded := milestoneStorage.StoreIfAbsent(&Milestone{
-			Index: cachedBndl.GetBundle().GetMilestoneIndex(),
-			Hash:  cachedBndl.GetBundle().GetMilestoneHash(),
+		msIndex := bndl.GetMilestoneIndex()
+		cachedMilestone := milestoneStorage.ComputeIfAbsent(databaseKeyForMilestoneIndex(msIndex), func(key []byte) objectstorage.StorableObject { // bundle +1
+			milestone := &Milestone{
+				Index: msIndex,
+				Hash:  bndl.GetMilestoneHash(),
+			}
+
+			milestone.Persist()
+			milestone.SetModified()
+
+			return milestone
 		})
-
-		if !newlyAdded {
-			// Milestone was already stored
-			return nil
-		}
 
 		return &CachedMilestone{CachedObject: cachedMilestone}
 	}

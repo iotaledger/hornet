@@ -41,32 +41,22 @@ type Bundle struct {
 }
 
 func (bundle *Bundle) GetHash() trinary.Hash {
-	bundle.RLock()
-	defer bundle.RUnlock()
 	return bundle.hash
 }
 
 func (bundle *Bundle) GetTrunk() trinary.Hash {
-	bundle.RLock()
-	defer bundle.RUnlock()
-
 	cachedHeadTx := bundle.getHead() // tx +1
 	defer cachedHeadTx.Release()     // tx -1
 	return cachedHeadTx.GetTransaction().GetTrunk()
 }
 
 func (bundle *Bundle) GetBranch() trinary.Hash {
-	bundle.RLock()
-	defer bundle.RUnlock()
-
 	cachedHeadTx := bundle.getHead() // tx +1
 	defer cachedHeadTx.Release()     // tx -1
 	return cachedHeadTx.GetTransaction().GetBranch()
 }
 
 func (bundle *Bundle) GetLedgerChanges() map[trinary.Trytes]int64 {
-	bundle.RLock()
-	defer bundle.RUnlock()
 	return bundle.ledgerChanges
 }
 
@@ -80,16 +70,10 @@ func (bundle *Bundle) getHead() *CachedTransaction {
 }
 
 func (bundle *Bundle) GetHead() *CachedTransaction {
-	bundle.RLock()
-	defer bundle.RUnlock()
-
 	return bundle.getHead()
 }
 
 func (bundle *Bundle) GetTailHash() trinary.Hash {
-	bundle.RLock()
-	defer bundle.RUnlock()
-
 	if len(bundle.tailTx) == 0 {
 		panic("tail hash can never be empty")
 	}
@@ -107,15 +91,10 @@ func (bundle *Bundle) getTail() *CachedTransaction {
 }
 
 func (bundle *Bundle) GetTail() *CachedTransaction {
-	bundle.RLock()
-	defer bundle.RUnlock()
-
 	return bundle.getTail()
 }
 
 func (bundle *Bundle) GetTransactionHashes() []trinary.Hash {
-	bundle.RLock()
-	defer bundle.RUnlock()
 
 	var values []trinary.Hash
 	for txHash := range bundle.txs {
@@ -126,8 +105,6 @@ func (bundle *Bundle) GetTransactionHashes() []trinary.Hash {
 }
 
 func (bundle *Bundle) GetTransactions() CachedTransactions {
-	bundle.RLock()
-	defer bundle.RUnlock()
 
 	var cachedTxs CachedTransactions
 	for txHash := range bundle.txs {
@@ -146,8 +123,6 @@ func (bundle *Bundle) setSolid(solid bool) {
 }
 
 func (bundle *Bundle) IsSolid() bool {
-	bundle.RLock()
-	defer bundle.RUnlock()
 
 	solid := bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_SOLID)
 
@@ -170,13 +145,10 @@ func (bundle *Bundle) IsSolid() bool {
 func (bundle *Bundle) setValid(valid bool) {
 	if valid != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_VALID) {
 		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_VALID, valid)
-		bundle.SetModified(true)
 	}
 }
 
 func (bundle *Bundle) IsValid() bool {
-	bundle.RLock()
-	defer bundle.RUnlock()
 	return bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_VALID)
 }
 
@@ -188,8 +160,6 @@ func (bundle *Bundle) setConfirmed(confirmed bool) {
 }
 
 func (bundle *Bundle) IsConfirmed() bool {
-	bundle.RLock()
-	defer bundle.RUnlock()
 
 	confirmed := bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_CONFIRMED)
 
@@ -212,13 +182,10 @@ func (bundle *Bundle) IsConfirmed() bool {
 func (bundle *Bundle) setValueSpam(valueSpam bool) {
 	if valueSpam != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_IS_VALUE_SPAM) {
 		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_IS_VALUE_SPAM, valueSpam)
-		bundle.SetModified(true)
 	}
 }
 
 func (bundle *Bundle) IsValueSpam() bool {
-	bundle.RLock()
-	defer bundle.RUnlock()
 	return bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_IS_VALUE_SPAM)
 }
 
@@ -237,8 +204,6 @@ func (bundle *Bundle) isComplete() bool {
 
 // Checks if a bundle is syntactically valid and has valid signatures
 func (bundle *Bundle) validate() bool {
-	bundle.Lock()
-	defer bundle.Unlock()
 
 	// Because the bundle is already complete when this function gets called, the amount of tx has to be correct,
 	// otherwise the bundle was not constructed correctly
@@ -270,8 +235,6 @@ func (bundle *Bundle) validate() bool {
 
 // Calculates the ledger changes of the bundle
 func (bundle *Bundle) calcLedgerChanges() {
-	bundle.Lock()
-	defer bundle.Unlock()
 
 	changes := map[trinary.Trytes]int64{}
 	for txHash := range bundle.txs {
@@ -292,7 +255,6 @@ func (bundle *Bundle) calcLedgerChanges() {
 
 	bundle.ledgerChanges = changes
 	bundle.setValueSpam(isValueSpamBundle)
-	bundle.SetModified(true)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
