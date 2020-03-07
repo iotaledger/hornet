@@ -358,9 +358,13 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 	}
 
+	newlyAdded := false
 	wasMilestone := false
+	var spentAddresses []trinary.Hash
+	var invalidMilestoneErr error
 	cachedBndl := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
 
+		newlyAdded = true
 		if bndl.validate() {
 			metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 
@@ -373,14 +377,14 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 						if spentAddressesEnabled && MarkAddressAsSpent(addr) {
 							metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
 						}
-						Events.AddressSpent.Trigger(addr)
+						spentAddresses = append(spentAddresses, addr)
 					}
 				}
 			}
 
 			if IsMaybeMilestone(bndl.GetTail()) { // tx pass +1
 				if isMilestone, err := CheckIfMilestone(bndl); err != nil {
-					Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
+					invalidMilestoneErr = err
 				} else {
 					if isMilestone {
 						wasMilestone = true
@@ -396,8 +400,18 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		return bndl
 	})
 
-	if wasMilestone {
-		Events.ReceivedValidMilestone.Trigger(&CachedBundle{CachedObject: cachedBndl}) // bundle pass +1
+	if newlyAdded {
+		if invalidMilestoneErr != nil {
+			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", invalidMilestoneErr.Error()))
+		}
+
+		for _, addr := range spentAddresses {
+			Events.AddressSpent.Trigger(addr)
+		}
+
+		if wasMilestone {
+			Events.ReceivedValidMilestone.Trigger(&CachedBundle{CachedObject: cachedBndl}) // bundle pass +1
+		}
 	}
 
 	cachedBndl.Release() // bundle -1
