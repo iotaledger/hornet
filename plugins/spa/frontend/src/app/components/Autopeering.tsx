@@ -19,7 +19,7 @@ export default class Autopeering extends React.Component<Props, any> {
             Autopeering-ID: {this.props.nodeStore.status.autopeering_id}
           </When>
           <Otherwise>
-            Autopeering-ID: <Badge variant="warning">Disabled</Badge>
+            Autopeering-ID: <Badge variant="secondary">Disabled</Badge>
           </Otherwise>
         </Choose>
       </React.Fragment>

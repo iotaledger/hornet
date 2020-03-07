@@ -190,20 +190,21 @@ type ms struct {
 }
 
 type nodestatus struct {
-	LSMI               milestone_index.MilestoneIndex `json:"lsmi"`
-	LMI                milestone_index.MilestoneIndex `json:"lmi"`
-	SnapshotIndex      milestone_index.MilestoneIndex `json:"snapshot_index"`
-	PruningIndex       milestone_index.MilestoneIndex `json:"pruning_index"`
-	Version            string                         `json:"version"`
-	LatestVersion      string                         `json:"latest_version"`
-	Uptime             int64                          `json:"uptime"`
-	AutopeeringID      string                         `json:"autopeering_id"`
-	CurrentRequestedMs milestone_index.MilestoneIndex `json:"current_requested_ms"`
-	MsRequestQueueSize int                            `json:"ms_request_queue_size"`
-	RequestQueueSize   int                            `json:"request_queue_size"`
-	ServerMetrics      *servermetrics                 `json:"server_metrics"`
-	Mem                *memmetrics                    `json:"mem"`
-	Caches             *cachesmetric                  `json:"caches"`
+	LSMI                    milestone_index.MilestoneIndex `json:"lsmi"`
+	LMI                     milestone_index.MilestoneIndex `json:"lmi"`
+	SnapshotIndex           milestone_index.MilestoneIndex `json:"snapshot_index"`
+	PruningIndex            milestone_index.MilestoneIndex `json:"pruning_index"`
+	Version                 string                         `json:"version"`
+	LatestVersion           string                         `json:"latest_version"`
+	Uptime                  int64                          `json:"uptime"`
+	AutopeeringID           string                         `json:"autopeering_id"`
+	ConnectedNeighborsCount int                            `json:"connected_neighbors_count"`
+	CurrentRequestedMs      milestone_index.MilestoneIndex `json:"current_requested_ms"`
+	MsRequestQueueSize      int                            `json:"ms_request_queue_size"`
+	RequestQueueSize        int                            `json:"request_queue_size"`
+	ServerMetrics           *servermetrics                 `json:"server_metrics"`
+	Mem                     *memmetrics                    `json:"mem"`
+	Caches                  *cachesmetric                  `json:"caches"`
 }
 
 type servermetrics struct {
@@ -302,6 +303,8 @@ func currentNodeStatus() *nodestatus {
 	}
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
+
+	status.ConnectedNeighborsCount = len(gossip.GetConnectedNeighbors())
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
