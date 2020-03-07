@@ -19,7 +19,7 @@ func (bundle *Bundle) setMilestone(milestone bool) {
 func (bundle *Bundle) IsMilestone() bool {
 	bundle.RLock()
 	defer bundle.RUnlock()
-	
+
 	return bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_IS_MILESTONE)
 }
 
