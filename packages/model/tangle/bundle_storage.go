@@ -195,20 +195,6 @@ func ContainsBundle(tailTxHash trinary.Hash) bool {
 	return bundleStorage.Contains(databaseKeyForBundle(tailTxHash))
 }
 
-// bundle + 1
-func StoreBundleIfAbsentOrNil(bundle *Bundle) *CachedBundle {
-	// Wait until all ongoing changes are done
-	bundle.RLock()
-	defer bundle.RUnlock()
-
-	cachedBndl, isNew := bundleStorage.StoreIfAbsent(bundle)
-	if !isNew {
-		return nil
-	}
-
-	return &CachedBundle{CachedObject: cachedBndl}
-}
-
 // bundle +-0
 func DeleteBundle(tailTxHash trinary.Hash) {
 	bundleStorage.Delete(databaseKeyForBundle(tailTxHash))
@@ -372,46 +358,49 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 	}
 
-	cachedBndl := StoreBundleIfAbsentOrNil(bndl) // bundle +1
-	if cachedBndl == nil {
-		return
-	}
-	defer cachedBndl.Release() // bundle -1
+	wasMilestone := false
+	cachedBndl := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
 
-	if !cachedBndl.GetBundle().validate() {
-		return
-	}
-	metrics.SharedServerMetrics.IncrValidatedBundlesCount()
-	cachedBndl.GetBundle().calcLedgerChanges()
+		if bndl.validate() {
+			metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 
-	if !cachedBndl.GetBundle().IsValueSpam() {
-		spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
-		for addr, change := range cachedBndl.GetBundle().GetLedgerChanges() {
-			if change < 0 {
-				if spentAddressesEnabled && MarkAddressAsSpent(addr) {
-					metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
+			bndl.calcLedgerChanges()
+
+			if !bndl.IsValueSpam() {
+				spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
+				for addr, change := range bndl.GetLedgerChanges() {
+					if change < 0 {
+						if spentAddressesEnabled && MarkAddressAsSpent(addr) {
+							metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
+						}
+						Events.AddressSpent.Trigger(addr)
+					}
 				}
-				Events.AddressSpent.Trigger(addr)
+			}
+
+			if IsMaybeMilestone(bndl.GetTail()) { // tx pass +1
+				if isMilestone, err := CheckIfMilestone(bndl); err != nil {
+					Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
+				} else {
+					if isMilestone {
+						wasMilestone = true
+						StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
+					}
+				}
 			}
 		}
-		return
+
+		bndl.Persist()
+		bndl.SetModified()
+
+		return bndl
+	})
+
+	if wasMilestone {
+		Events.ReceivedValidMilestone.Trigger(&CachedBundle{CachedObject: cachedBndl}) // bundle pass +1
 	}
 
-	if IsMaybeMilestone(cachedBndl.GetBundle().GetTail()) { // tx pass +1
-		isMilestone, err := CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
-		if err != nil {
-			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
-			return
-		}
-
-		if isMilestone {
-			cachedMilestone := StoreMilestoneOrNil(cachedBndl.Retain()) // bundle pass +1, milestone +1
-			if cachedMilestone != nil {
-				cachedMilestone.Release()                         // milestone -1
-				Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
-			}
-		}
-	}
+	cachedBndl.Release() // bundle -1
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.

@@ -66,13 +66,14 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 	}
 
 	if isSolid {
-		// update the solidity flags of this transaction and its approvers
-		cachedTx.GetMetadata().SetSolid(true)
 
-		// Construct the complete bundle if the tail got solid
+		// Construct the complete bundle if the tail got solid (before setting solid flag => otherwise not threadsafe)
 		if cachedTx.GetTransaction().IsTail() {
 			tangle.OnTailTransactionSolid(cachedTx.Retain()) // tx pass +1
 		}
+
+		// update the solidity flags of this transaction and its approvers
+		cachedTx.GetMetadata().SetSolid(true)
 
 		Events.TransactionSolid.Trigger(cachedTx) // tx pass +1
 	}
@@ -363,17 +364,7 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
 		if cachedClosestNextMs.GetBundle().GetMilestoneIndex() == cachedMsToSolidify.GetBundle().GetMilestoneIndex() {
-			log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, milestoneIndexToSolidify)
-
-			// No Milestones found in between => search an older milestone in the solid cone
-			if found, aborted := searchMissingMilestone(currentSolidIndex, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), maxMissingMilestoneSearchDepth, signalChanMilestoneStopSolidification); !found { // tx pass +1
-				if aborted {
-					log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, milestoneIndexToSolidify)
-				} else {
-					// No milestones found => this should not happen!
-					log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, milestoneIndexToSolidify)
-				}
-			}
+			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetBundle().GetMilestoneIndex())
 		}
 		cachedClosestNextMs.Release() // bundle -1
 
@@ -396,107 +387,6 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	setSolidifierMilestoneIndex(0)
 
 	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
-}
-
-func searchMissingMilestone(solidMilestoneIndex milestone_index.MilestoneIndex, startMilestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, maxSearchDepth int, abortSignal chan struct{}) (found bool, aborted bool) {
-
-	defer cachedMsTailTx.Release() // tx -1
-
-	var loopCnt int
-	var milestoneFound bool
-
-	ts := time.Now()
-
-	txsChecked := make(map[string]struct{})
-	txsToTraverse := make(map[string]struct{})
-	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
-
-	// Search milestones by traversing the tangle
-	for loopCnt = 0; (len(txsToTraverse) != 0) && (loopCnt < maxSearchDepth); loopCnt++ {
-
-		for txHash := range txsToTraverse {
-			select {
-			case <-abortSignal:
-				return false, true
-			default:
-				// Go on with the check
-			}
-			delete(txsToTraverse, txHash)
-
-			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
-			if cachedTx == nil {
-				log.Panicf("searchMissingMilestone: Transaction not found: %v", txHash)
-			}
-
-			approveeHashes := []trinary.Hash{cachedTx.GetTransaction().GetTrunk()}
-			if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
-				approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranch())
-			}
-			cachedTx.Release() // tx -1
-
-			for _, approveeHash := range approveeHashes {
-				if tangle.SolidEntryPointsContain(approveeHash) {
-					// Ignore solid entry points (snapshot milestone included)
-					continue
-				}
-
-				if _, checked := txsChecked[approveeHash]; checked {
-					// Tx was already checked
-					continue
-				}
-
-				cachedApproveeTx := tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
-				if cachedApproveeTx == nil {
-					log.Panicf("searchMissingMilestone: Transaction not found: %v", approveeHash)
-				}
-
-				if !cachedApproveeTx.GetTransaction().IsTail() {
-					cachedApproveeTx.Release() // tx -1
-					continue
-				}
-
-				if tangle.IsMaybeMilestone(cachedApproveeTx.Retain()) { // tx pass +1
-					// This tx could belong to a milestone
-					// => load bundle, and start the milestone check
-
-					cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedApproveeTx.GetTransaction().Tx.Hash) // bundle +1
-					if cachedBndl == nil {
-						log.Panicf("searchMissingMilestone: Tx: %v, Bundle not found: %v", approveeHash, cachedApproveeTx.GetTransaction().Tx.Bundle)
-					}
-
-					isMilestone, err := tangle.CheckIfMilestone(cachedBndl.Retain()) // bundle pass +1
-					if err != nil {
-						log.Infof("searchMissingMilestone: Milestone check failed: %s", err.Error())
-					}
-
-					if isMilestone {
-						msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
-						if (msIndex > solidMilestoneIndex) && (msIndex < startMilestoneIndex) {
-							// Milestone found!
-							milestoneFound = true
-							processValidMilestone(cachedBndl.Retain()) // bundle pass +1
-							cachedApproveeTx.Release()                 // tx -1
-							cachedBndl.Release()                       // bundle -1
-							break
-						}
-					}
-
-					cachedBndl.Release() // bundle -1
-				}
-
-				cachedApproveeTx.Release() // tx -1
-
-				// Traverse this approvee
-				txsToTraverse[approveeHash] = struct{}{}
-
-				// Mark the tx as checked
-				txsChecked[approveeHash] = struct{}{}
-			}
-		}
-	}
-
-	log.Infof("searchMissingMilestone finished (%d): found: %v, checked txs: %d, total: %v", loopCnt, milestoneFound, len(txsChecked), time.Since(ts))
-	return milestoneFound, false
 }
 
 func setSolidifierMilestoneIndex(index milestone_index.MilestoneIndex) {

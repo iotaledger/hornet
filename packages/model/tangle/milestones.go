@@ -184,10 +184,9 @@ func FindClosestNextMilestoneOrNil(index milestone_index.MilestoneIndex) *Cached
 	}
 }
 
-func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
-	defer cachedBndl.Release() // bundle -1
+func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 
-	cachedTxIndex0 := cachedBndl.GetBundle().GetTail() // tx +1
+	cachedTxIndex0 := bndl.GetTail() // tx +1
 
 	if !IsMaybeMilestone(cachedTxIndex0.Retain()) { // tx pass +1
 		cachedTxIndex0.Release() // tx -1
@@ -265,7 +264,7 @@ func CheckIfMilestone(cachedBndl *CachedBundle) (result bool, err error) {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", txIndex0Hash)
 	}
 
-	cachedBndl.GetBundle().setMilestone(true)
+	bndl.setMilestone(true)
 
 	return true, nil
 }
