@@ -35,6 +35,7 @@ class Status {
     version: string;
     latest_version: string;
     uptime: number;
+    autopeering_id: string;
     current_requested_ms: number;
     ms_request_queue_size: number;
     request_queue_size: number;

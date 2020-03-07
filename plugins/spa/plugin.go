@@ -22,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metrics_plugin "github.com/gohornet/hornet/plugins/metrics"
@@ -196,6 +197,7 @@ type nodestatus struct {
 	Version            string                         `json:"version"`
 	LatestVersion      string                         `json:"latest_version"`
 	Uptime             int64                          `json:"uptime"`
+	AutopeeringID      string                         `json:"autopeering_id"`
 	CurrentRequestedMs milestone_index.MilestoneIndex `json:"current_requested_ms"`
 	MsRequestQueueSize int                            `json:"ms_request_queue_size"`
 	RequestQueueSize   int                            `json:"request_queue_size"`
@@ -295,6 +297,9 @@ func currentNodeStatus() *nodestatus {
 	status.Version = cli.AppVersion
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
+	if !node.IsSkipped(autopeering.PLUGIN) {
+		status.AutopeeringID = autopeering.ID
+	}
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
 
