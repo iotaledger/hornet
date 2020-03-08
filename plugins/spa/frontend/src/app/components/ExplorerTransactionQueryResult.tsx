@@ -12,7 +12,7 @@ import Badge from "react-bootstrap/Badge";
 import * as dateformat from 'dateformat';
 import {Link} from 'react-router-dom';
 import {If} from 'tsx-control-statements/components';
-import JSONPretty from 'react-json-pretty';
+import ReactJson from 'react-json-view'
 
 import * as style from '../../assets/main.css';
 
@@ -203,7 +203,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                         <Nav.Item>
                                                             <Nav.Link eventKey="text">Text</Nav.Link>
                                                         </Nav.Item>
-                                                        <If condition={tx.ascii_message !== undefined && tx.ascii_message.includes('{')}>
+                                                        <If condition={tx.json_obj !== undefined}>
                                                             <Nav.Item>
                                                                 <Nav.Link eventKey="json">JSON</Nav.Link>
                                                             </Nav.Item>
@@ -222,11 +222,9 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                                 {tx.ascii_message}
                                                             </If>
                                                         </Tab.Pane>
-                                                        <If condition={tx.ascii_message !== undefined && tx.ascii_message.includes('{')}>
+                                                        <If condition={tx.json_obj !== undefined}>
                                                             <Tab.Pane eventKey="json">
-                                                                <If condition={tx.ascii_message !== undefined}>
-                                                                    <JSONPretty id="json-pretty" data={tx.ascii_message}></JSONPretty>
-                                                                </If>
+                                                                    <ReactJson src={tx.json_obj}/>
                                                             </Tab.Pane>
                                                         </If>
                                                     </Tab.Content>

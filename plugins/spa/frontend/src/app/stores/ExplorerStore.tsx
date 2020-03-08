@@ -8,7 +8,8 @@ import { trytesToAscii } from '@iota/converter';
 export class Transaction {
     hash: string;
     signature_message_fragment: string;
-    ascii_message: string;
+    ascii_message;
+    json_obj: object;
     address: string;
     value: number;
     obsolete_tag: string;
@@ -163,6 +164,13 @@ export class ExplorerStore {
                     tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, ""));
                 } else {
                     tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, "") + '9');
+                }
+                try {
+                    if (tx.ascii_message.includes('{') && tx.ascii_message.includes('}')) {
+                        tx.json_obj = JSON.parse(tx.ascii_message)
+                    }
+                } catch (error) {
+                    console.log(error)
                 }
             } catch (error) {
                 console.log(error);
