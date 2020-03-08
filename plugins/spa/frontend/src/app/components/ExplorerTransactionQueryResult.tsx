@@ -215,14 +215,14 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                         </Tab.Pane>
                                                         <Tab.Pane eventKey="text">
                                                             <Choose>
-                                                                <When condition={tx.signature_message_fragment.length%2 === 0}>
+                                                                <When condition={tx.signature_message_fragment.replace(/9+$/, "").length%2 === 0}>
                                                                     {
-                                                                        trytesToAscii(tx.signature_message_fragment)
+                                                                        trytesToAscii(tx.signature_message_fragment.replace(/9+$/, ""))
                                                                     }
                                                                 </When>
                                                                 <Otherwise>
                                                                     {
-                                                                        trytesToAscii(tx.signature_message_fragment + "9")
+                                                                        trytesToAscii(tx.signature_message_fragment.replace(/9+$/, "") + '9')
                                                                     }
                                                                 </Otherwise>
                                                             </Choose>
