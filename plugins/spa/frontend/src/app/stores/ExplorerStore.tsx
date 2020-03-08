@@ -3,10 +3,12 @@ import {registerHandler, WSMsgType} from "app/misc/WS";
 import * as React from "react";
 import {Link} from 'react-router-dom';
 import {RouterStore} from "mobx-react-router";
+import { trytesToAscii } from '@iota/converter';
 
 export class Transaction {
     hash: string;
     signature_message_fragment: string;
+    ascii_message: string;
     address: string;
     value: number;
     obsolete_tag: string;
@@ -156,6 +158,15 @@ export class ExplorerStore {
                 return;
             }
             let tx: Transaction = await res.json();
+            try {
+                if (tx.signature_message_fragment.replace(/9+$/, "").length%2 === 0) {
+                    tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, ""));
+                } else {
+                    tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, "") + '9');
+                }
+            } catch (error) {
+                console.log(error);
+            }
             this.updateTx(tx);
         } catch (err) {
             this.updateQueryError(err);

@@ -11,9 +11,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Badge from "react-bootstrap/Badge";
 import * as dateformat from 'dateformat';
 import {Link} from 'react-router-dom';
-import {Choose, When, Otherwise} from 'tsx-control-statements/components';
-
-import { trytesToAscii } from '@iota/converter';
+import {If} from 'tsx-control-statements/components';
+import JSONPretty from 'react-json-pretty';
 
 import * as style from '../../assets/main.css';
 
@@ -204,6 +203,11 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                         <Nav.Item>
                                                             <Nav.Link eventKey="text">Text</Nav.Link>
                                                         </Nav.Item>
+                                                        <If condition={tx.ascii_message !== undefined && tx.ascii_message.includes('{')}>
+                                                            <Nav.Item>
+                                                                <Nav.Link eventKey="json">JSON</Nav.Link>
+                                                            </Nav.Item>
+                                                        </If>
                                                     </Nav>
                                                 </Col>
                                                 <Col sm={9}>
@@ -214,19 +218,17 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                             </small>
                                                         </Tab.Pane>
                                                         <Tab.Pane eventKey="text">
-                                                            <Choose>
-                                                                <When condition={tx.signature_message_fragment.length%2 === 0}>
-                                                                    {
-                                                                        trytesToAscii(tx.signature_message_fragment)
-                                                                    }
-                                                                </When>
-                                                                <Otherwise>
-                                                                    {
-                                                                        trytesToAscii(tx.signature_message_fragment + "9")
-                                                                    }
-                                                                </Otherwise>
-                                                            </Choose>
+                                                            <If condition={tx.ascii_message !== undefined}>
+                                                                {tx.ascii_message}
+                                                            </If>
                                                         </Tab.Pane>
+                                                        <If condition={tx.ascii_message !== undefined && tx.ascii_message.includes('{')}>
+                                                            <Tab.Pane eventKey="json">
+                                                                <If condition={tx.ascii_message !== undefined}>
+                                                                    <JSONPretty id="json-pretty" data={tx.ascii_message}></JSONPretty>
+                                                                </If>
+                                                            </Tab.Pane>
+                                                        </If>
                                                     </Tab.Content>
                                                 </Col>
                                             </Row>
