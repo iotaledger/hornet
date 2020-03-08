@@ -3,12 +3,14 @@ package webapi
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -26,6 +28,7 @@ var (
 
 	server               *http.Server
 	permitedEndpoints    = make(map[string]string)
+	whitelistedNetworks  []net.IPNet
 	implementedAPIcalls  = make(map[string]apiEndpoint)
 	features             []string
 	api                  *gin.Engine
@@ -73,6 +76,17 @@ func configure(plugin *node.Plugin) {
 			ep := strings.ToLower(endpoint)
 			permitedEndpoints[ep] = ep
 		}
+	}
+
+	// Load whitelisted addresses
+	whitelist := append([]string{"127.0.0.1", "::1"}, parameter.NodeConfig.GetStringSlice("api.whitelistedAddresses")...)
+	for _, entry := range whitelist {
+		_, ipnet, err := cnet.ParseCIDROrIP(entry)
+		if err != nil {
+			log.Warnf("Invalid whitelist address: %s", entry)
+			continue
+		}
+		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
 
 	// Set basic auth if enabled

@@ -2,6 +2,7 @@ package webapi
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -24,14 +25,26 @@ func webAPIRoute() {
 
 		implementation, apiCallExists := implementedAPIcalls[cmd]
 
-		// Check if command is permited. If it's not permited and the request does not come from localhost, deny it.
-		_, permited := permitedEndpoints[cmd]
-		if apiCallExists && !permited && c.Request.RemoteAddr[:9] != "127.0.0.1" {
-			e := ErrorReturn{
-				Error: fmt.Sprintf("Command [%v] is protected", originCommand),
+		whitelisted := false
+		remoteHost, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
+		remoteAddress := net.ParseIP(remoteHost)
+		for _, whitelistedNet := range whitelistedNetworks {
+			if whitelistedNet.Contains(remoteAddress) {
+				whitelisted = true
+				break
 			}
-			c.JSON(http.StatusForbidden, e)
-			return
+		}
+
+		if !whitelisted {
+			// Check if command is permited. If it's not permited and the request does not come from localhost, deny it.
+			_, permited := permitedEndpoints[cmd]
+			if apiCallExists && !permited {
+				e := ErrorReturn{
+					Error: fmt.Sprintf("Command [%v] is protected", originCommand),
+				}
+				c.JSON(http.StatusForbidden, e)
+				return
+			}
 		}
 
 		if !apiCallExists {
