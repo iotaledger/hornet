@@ -41,6 +41,10 @@ class AddressResult {
     spent_enabled: boolean;
 }
 
+class TagResult {
+    txs: Array<Transaction>;
+}
+
 class ConfirmedState {
     state: boolean;
     milestone_index: number;
@@ -49,6 +53,7 @@ class ConfirmedState {
 class SearchResult {
     tx: Transaction;
     address: AddressResult;
+    tag: TagResult;
     milestone: Transaction;
     bundles: Array<Array<Transaction>>;
 }
@@ -78,6 +83,7 @@ export class ExplorerStore {
     @observable tx: Transaction = null;
     @observable bundles: Array<Array<Transaction>> = null;
     @observable addr: AddressResult = null;
+    @observable tag: TagResult = null;
 
     // loading
     @observable query_loading: boolean = false;
@@ -133,6 +139,10 @@ export class ExplorerStore {
         }
         if (this.search_result.address) {
             this.routerStore.push(`/explorer/addr/${search}`);
+            return;
+        }
+        if (this.search_result.tag) {
+            this.routerStore.push(`/explorer/tag/${search}`);
             return;
         }
         if (this.search_result.bundles) {
@@ -211,6 +221,21 @@ export class ExplorerStore {
         }
     };
 
+    searchTag = async (hash: string) => {
+        this.updateQueryLoading(true);
+        try {
+            let res = await fetch(`/api/tag/${hash}`);
+            if (res.status === 404) {
+                this.updateQueryError(QueryError.NotFound);
+                return;
+            }
+            let tag: TagResult = await res.json();
+            this.updateTag(tag);
+        } catch (error) {
+            this.updateQueryError(error);
+        }
+    }
+
     @action
     reset = () => {
         this.tx = null;
@@ -224,6 +249,16 @@ export class ExplorerStore {
             return a.timestamp < b.timestamp ? 1 : -1;
         });
         this.addr = addr;
+        this.query_err = null;
+        this.query_loading = false;
+    };
+
+    @action
+    updateTag = (tag: TagResult) => {
+        tag.txs = tag.txs.sort((a, b) => {
+            return a.timestamp < b.timestamp ? 1 : -1;
+        });
+        this.tag = tag;
         this.query_err = null;
         this.query_loading = false;
     };

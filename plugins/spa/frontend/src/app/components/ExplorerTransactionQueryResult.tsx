@@ -103,7 +103,12 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                             <Col>
                                 <ListGroup>
                                     <ListGroup.Item>Value: {tx.value}i</ListGroup.Item>
-                                    <ListGroup.Item>Tag: {tx.tag}</ListGroup.Item>
+                                    <ListGroup.Item>
+                                        Tag: {' '}
+                                        <Link to={`/explorer/tag/${tx.tag}`}>
+                                            {tx.tag} 
+                                        </Link>
+                                    </ListGroup.Item>
                                     <ListGroup.Item>Obsolete Tag: {tx.obsolete_tag}</ListGroup.Item>
                                 </ListGroup>
                             </Col>

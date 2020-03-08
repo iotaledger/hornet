@@ -3,6 +3,7 @@ package spa
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/labstack/echo/v4"
@@ -130,6 +131,10 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	return t, nil
 }
 
+type ExplorerTag struct {
+	Txs []*ExplorerTx `json:"txs"`
+}
+
 type ExplorerAddress struct {
 	Balance      uint64        `json:"balance"`
 	Txs          []*ExplorerTx `json:"txs"`
@@ -139,6 +144,7 @@ type ExplorerAddress struct {
 
 type SearchResult struct {
 	Tx        *ExplorerTx      `json:"tx"`
+	Tag       *ExplorerTag     `json:"tag"`
 	Address   *ExplorerAddress `json:"address"`
 	Bundles   [][]*ExplorerTx  `json:"bundles"`
 	Milestone *ExplorerTx      `json:"milestone"`
@@ -147,7 +153,8 @@ type SearchResult struct {
 func setupExplorerRoutes(routeGroup *echo.Group) {
 
 	routeGroup.GET("/tx/:hash", func(c echo.Context) error {
-		t, err := findTransaction(c.Param("hash"))
+		hash := strings.ToUpper(c.Param("hash"))
+		t, err := findTransaction(hash)
 		if err != nil {
 			return err
 		}
@@ -155,15 +162,26 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET("/bundle/:hash", func(c echo.Context) error {
-		bndls, err := findBundles(c.Param("hash"))
+		hash := strings.ToUpper(c.Param("hash"))
+		bndls, err := findBundles(hash)
 		if err != nil {
 			return err
 		}
 		return c.JSON(http.StatusOK, bndls)
 	})
 
+	routeGroup.GET("/tag/:tag", func(c echo.Context) error {
+		tag := strings.ToUpper(c.Param("tag"))
+		txs, err := findTag(strings.ToUpper(tag))
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, txs)
+	})
+
 	routeGroup.GET("/addr/:hash", func(c echo.Context) error {
-		addr, err := findAddress(c.Param("hash"))
+		hash := strings.ToUpper(c.Param("hash"))
+		addr, err := findAddress(hash)
 		if err != nil {
 			return err
 		}
@@ -184,7 +202,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET("/search/:search", func(c echo.Context) error {
-		search := c.Param("search")
+		search := strings.ToUpper(c.Param("search"))
 		result := &SearchResult{}
 
 		// milestone query
@@ -197,8 +215,16 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 			return c.JSON(http.StatusOK, result)
 		}
 
+		if len(search) <= 27 {
+			txs, err := findTag(search)
+			if err == nil && len(txs.Txs) > 0 {
+				result.Tag = txs
+				return c.JSON(http.StatusOK, result)
+			}
+		}
+
 		if len(search) < 81 {
-			return errors.Wrapf(ErrInvalidParameter, "search hash invalid: %s", search)
+			return c.JSON(http.StatusOK, result)
 		}
 
 		// auto. remove checksum
@@ -260,6 +286,36 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 	t, err := createExplorerTx(hash, cachedTx.Retain()) // tx pass +1
 	cachedTx.Release()                                  // tx -1
 	return t, err
+}
+
+func findTag(tag Trytes) (*ExplorerTag, error) {
+	if err := ValidTrytes(tag); err != nil && len(tag) > 27 {
+		return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid: %s", tag)
+	}
+
+	txHashes := tangle.GetTagHashes(tag, 100)
+	if len(txHashes) == 0 {
+		return nil, errors.Wrapf(ErrNotFound, "tag %s unknown", tag)
+	}
+
+	txs := make([]*ExplorerTx, 0, len(txHashes))
+	if len(txHashes) != 0 {
+		for i := 0; i < len(txHashes); i++ {
+			txHash := txHashes[i]
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
+				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to tag %s", txHash, tag)
+			}
+			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
+			cachedTx.Release()                                                                     // tx -1
+			if err != nil {
+				return nil, err
+			}
+			txs = append(txs, expTx)
+		}
+	}
+
+	return &ExplorerTag{Txs: txs}, nil
 }
 
 func findBundles(hash Hash) ([][]*ExplorerTx, error) {
