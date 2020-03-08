@@ -21,6 +21,7 @@ require (
 	github.com/labstack/echo/v4 v4.1.15
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.9.1
+	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2

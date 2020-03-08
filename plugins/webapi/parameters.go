@@ -28,6 +28,9 @@ func init() {
 			"getTrytes",
 		})
 
+	// "Allow specified addresses and networks to access all API commands"
+	parameter.NodeConfig.SetDefault("api.whitelistedAddresses", []string{})
+
 	// "Basic authentication user name"
 	parameter.NodeConfig.SetDefault("api.auth.username", "")
 

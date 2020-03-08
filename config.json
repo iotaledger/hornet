@@ -18,6 +18,7 @@
       "storeTransactions",
       "getTrytes"
     ],
+    "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0",
     "maxbodylength": 1000000,
     "maxfindtransactions": 1000,
