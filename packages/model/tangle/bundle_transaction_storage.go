@@ -331,7 +331,7 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 
 		DeleteBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false)
 		txsToRemove[cachedCurrentTx.GetTransaction().GetTrunk()] = struct{}{}
-		
+
 		// Do not force release, since it is loaded again for pruning
 		cachedCurrentTx.Release() // tx -1
 

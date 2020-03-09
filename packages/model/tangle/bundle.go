@@ -45,14 +45,14 @@ func (bundle *Bundle) GetHash() trinary.Hash {
 }
 
 func (bundle *Bundle) GetTrunk(forceRelease bool) trinary.Hash {
-	cachedHeadTx := bundle.getHead() // tx +1
-	defer cachedHeadTx.Release(forceRelease)     // tx -1
+	cachedHeadTx := bundle.getHead()         // tx +1
+	defer cachedHeadTx.Release(forceRelease) // tx -1
 	return cachedHeadTx.GetTransaction().GetTrunk()
 }
 
 func (bundle *Bundle) GetBranch(forceRelease bool) trinary.Hash {
-	cachedHeadTx := bundle.getHead() // tx +1
-	defer cachedHeadTx.Release(forceRelease)     // tx -1
+	cachedHeadTx := bundle.getHead()         // tx +1
+	defer cachedHeadTx.Release(forceRelease) // tx -1
 	return cachedHeadTx.GetTransaction().GetBranch()
 }
 
@@ -169,7 +169,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
-	defer cachedTailTx.Release(true)     // tx -1
+	defer cachedTailTx.Release(true) // tx -1
 	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
 
 	if tailConfirmed {

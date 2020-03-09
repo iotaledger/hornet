@@ -22,7 +22,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
-		
+
 		// Release all bundles at the end
 		for _, cachedBndl := range cachedBndls {
 			cachedBndl.Release(true) // bundle -1
