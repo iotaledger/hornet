@@ -139,7 +139,7 @@ func run(plugin *node.Plugin) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				return
 			}
 			wasSyncBefore = true
@@ -151,7 +151,7 @@ func run(plugin *node.Plugin) {
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
@@ -161,7 +161,7 @@ func run(plugin *node.Plugin) {
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 	})
 
 	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
@@ -171,7 +171,7 @@ func run(plugin *node.Plugin) {
 				return // Avoid bundle -1 (done inside workerpool task)
 			}
 		}
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("Monitor[NewTxWorker]", func(shutdownSignal <-chan struct{}) {

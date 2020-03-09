@@ -71,7 +71,7 @@ func run(plugin *node.Plugin) {
 
 	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
@@ -147,7 +147,7 @@ func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransa
 		return nil
 	}
 
-	defer cachedMs.Release() // bundle -1
+	defer cachedMs.Release(true) // bundle -1
 
 	return cachedMs.GetBundle().GetTail() // tx +1
 }
@@ -158,7 +158,7 @@ func preFeed(channel chan interface{}) {
 	for i := start - 10; i <= start; i++ {
 		if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
 			channel <- &msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), i}}
-			cachedMsTailTx.Release() // tx -1
+			cachedMsTailTx.Release(true) // tx -1
 		} else {
 			break
 		}

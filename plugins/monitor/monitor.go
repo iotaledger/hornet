@@ -149,7 +149,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 		if tx.Tx.CurrentIndex == 0 {
 			// Tail Tx => Check if this is a value Tx
-			cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(tx.Tx.Hash) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOrNil(tx.Tx.Hash) // bundle +1
 			if cachedBndl != nil {
 				if !cachedBndl.GetBundle().IsValueSpam() {
 					ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
@@ -158,7 +158,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 						reattachmentWorkerPool.TrySubmit(tx.Tx.Bundle)
 					}
 				}
-				cachedBndl.Release() // bundle -1
+				cachedBndl.Release(true) // bundle -1
 			}
 		}
 
@@ -184,10 +184,10 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 
 	cachedTailTx := cachedBndl.GetBundle().GetTail() // tx +1
 	confTime := cachedTailTx.GetTransaction().GetTimestamp() * 1000
-	cachedTailTx.Release() // tx -1
+	cachedTailTx.Release(true) // tx -1
 
 	cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
-	cachedBndl.Release()                                  // bundle -1
+	cachedBndl.Release(true)                              // bundle -1
 
 	txRingBufferLock.Lock()
 	for _, cachedTx := range cachedTxs {
@@ -211,7 +211,7 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 	}
 	broadcastLock.Unlock()
 
-	cachedTxs.Release() // tx -1
+	cachedTxs.Release(true) // tx -1
 }
 
 func onReattachment(txHash trinary.Hash) {

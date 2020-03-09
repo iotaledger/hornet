@@ -32,7 +32,10 @@ var (
 // checkSolidity checks if a single transaction is solid
 func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid bool) {
 
-	defer cachedTx.Release() // tx -1
+	// Normal solidification could be part of a cone of old milestones while synching
+	// => no need to keep this in cache
+	// If future cone solidifier calls this, it has it's own Release with cacheTime anyway
+	defer cachedTx.Release(true) // tx -1
 
 	if cachedTx.GetMetadata().IsSolid() {
 		return true, false
@@ -59,10 +62,10 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 
 		if !cachedApproveeTx.GetMetadata().IsSolid() {
 			isSolid = false
-			cachedApproveeTx.Release() // tx -1
+			cachedApproveeTx.Release(true) // tx -1
 			break
 		}
-		cachedApproveeTx.Release() // tx -1
+		cachedApproveeTx.Release(true) // tx -1
 	}
 
 	if isSolid {
@@ -106,6 +109,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 	defer func() {
 		// Release all txs at the end
 		for _, cachedTx := range cachedTxs {
+			// Normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
 			cachedTx.Release(true) // tx -1
 		}
 	}()
@@ -252,7 +256,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
 					if _, added := gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()); !added { // tx pass +1
-						cachedEntryTx.Release() // tx -1
+						cachedEntryTx.Release(true) // tx -1
 					}
 				}
 
@@ -335,6 +339,8 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 		// No newer milestone available
 		return
 	}
+
+	// Release shouldn't be forced, to cache the latest milestones
 	defer cachedMsToSolidify.Release() // bundle -1
 
 	milestoneIndexToSolidify := cachedMsToSolidify.GetBundle().GetMilestoneIndex()

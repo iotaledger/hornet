@@ -149,7 +149,6 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction, reqMilestoneIndex mile
 }
 
 // RequestMilestoneApprovees requests trunk and branch of a milestone if they are missing
-// ToDo: add it to the requestsWorkerPool
 func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 	defer cachedMsBndl.Release() // bundle -1
 

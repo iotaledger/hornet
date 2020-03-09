@@ -76,7 +76,7 @@ func run(plugin *node.Plugin) {
 		case newSolidMilestoneSignal <- cachedBndl.GetBundle().GetMilestoneIndex():
 		default:
 		}
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {

@@ -47,9 +47,9 @@ func (cachedTxs CachedTransactions) Retain() CachedTransactions {
 }
 
 // tx -1
-func (cachedTxs CachedTransactions) Release() {
+func (cachedTxs CachedTransactions) Release(force ...bool) {
 	for _, cachedTx := range cachedTxs {
-		cachedTx.Release()
+		cachedTx.Release(force...)
 	}
 }
 
@@ -146,13 +146,13 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 
 	cachedTx := txStorage.Load(txHash) // tx +1
 	if !cachedTx.Exists() {
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 		return nil
 	}
 	cachedMeta := metadataStorage.Load(txHash) // tx +1
 	if !cachedMeta.Exists() {
-		cachedTx.Release()   // tx -1
-		cachedMeta.Release() // tx -1
+		cachedTx.Release(true)   // tx -1
+		cachedMeta.Release(true) // tx -1
 		return nil
 	}
 

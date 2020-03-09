@@ -72,6 +72,7 @@ func GetRefsAnInvalidBundleStorageSize() int {
 func PutInvalidBundleReference(txHash trinary.Hash) {
 	invalidBundleRef := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
 
+	// Do not force the release, otherwise the object is gone (no persistence enabled)
 	refsAnInvalidBundleStorage.ComputeIfAbsent(invalidBundleRef.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
 		return invalidBundleRef
 	}).Release()

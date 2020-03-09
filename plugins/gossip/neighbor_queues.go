@@ -297,7 +297,7 @@ func processReplies(reply *replyItem) {
 			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 		}
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 		return
 	}
 
@@ -349,13 +349,13 @@ func processReplies(reply *replyItem) {
 			// We are synced => notify the neighbor
 			ourReqHash, err = trinary.TrytesToBytes(cachedTxToSend.GetTransaction().GetHash())
 			if err != nil {
-				cachedTxToSend.Release() // tx -1
+				cachedTxToSend.Release(true) // tx -1
 				return
 			}
 		}
 
 		msg := &legacyGossipTransaction{truncatedTxData: cachedTxToSend.GetTransaction().RawBytes, reqHash: ourReqHash}
-		cachedTxToSend.Release() // tx -1
+		cachedTxToSend.Release(true) // tx -1
 
 		select {
 		case neighborQueue.legacyTxQueue <- msg:
@@ -387,8 +387,8 @@ func processReplies(reply *replyItem) {
 				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
 			}
 		}
-		cachedTxs.Release()   // txs -1
-		cachedReqMs.Release() // bundle -1
+		cachedTxs.Release(true)   // txs -1
+		cachedReqMs.Release(true) // bundle -1
 		return
 	}
 }

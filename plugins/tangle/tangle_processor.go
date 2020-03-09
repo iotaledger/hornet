@@ -107,7 +107,10 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
 	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested) // tx +1
-	defer cachedTx.Release()                                                                              // tx -1
+
+	// Release shouldn't be forced, to cache the latest transactions
+	defer cachedTx.Release() // tx -1
+
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.IncrNewTransactionsCount()
 
@@ -139,6 +142,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
 	_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
 	if !added {
+		// Release shouldn't be forced, to cache the latest milestones
 		cachedBndl.Release() // bundle -1
 	}
 }

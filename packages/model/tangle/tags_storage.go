@@ -21,9 +21,9 @@ type CachedTag struct {
 type CachedTags []*CachedTag
 
 // tag -1
-func (cachedTags CachedTags) Release() {
+func (cachedTags CachedTags) Release(force ...bool) {
 	for _, cachedTag := range cachedTags {
-		cachedTag.Release()
+		cachedTag.Release(force...)
 	}
 }
 
@@ -66,24 +66,24 @@ func configureTagsStorage() {
 }
 
 // tag +-0
-func GetTagHashes(txTag trinary.Trytes, maxFind ...int) []trinary.Hash {
+func GetTagHashes(txTag trinary.Trytes, forceRelease bool, maxFind ...int) []trinary.Hash {
 	var tagHashes []trinary.Hash
 
 	i := 0
 	tagsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release() // tag -1
+			cachedObject.Release(true) // tag -1
 			return false
 		}
 
 		if !cachedObject.Exists() {
-			cachedObject.Release() // tag -1
+			cachedObject.Release(true) // tag -1
 			return true
 		}
 
 		tagHashes = append(tagHashes, (&CachedTag{CachedObject: cachedObject}).GetTag().GetTransactionHash())
-		cachedObject.Release() // tag -1
+		cachedObject.Release(forceRelease) // tag -1
 		return true
 	}, trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17])
 

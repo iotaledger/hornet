@@ -58,7 +58,7 @@ func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
-	defer cachedLatestSolidMs.Release() // bundle -1
+	defer cachedLatestSolidMs.Release(true) // bundle -1
 
 	for _, addr := range gb.Addresses {
 

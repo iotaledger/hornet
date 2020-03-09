@@ -97,7 +97,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, true, maxResults-len(txHashes))...)
 	}
 
 	// Searching for transactions that contains the given address
@@ -112,7 +112,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			addr = addr[:81]
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, true, maxResults-len(txHashes))...)
 	}
 
 	// Searching for all approovers of the given transactions
@@ -123,7 +123,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, true, maxResults-len(txHashes))...)
 	}
 
 	// Searching for transactions that contain the given tag
@@ -134,7 +134,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetTagHashes(tag, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetTagHashes(tag, true, maxResults-len(txHashes))...)
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})

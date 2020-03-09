@@ -39,7 +39,7 @@ var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file ve
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
 
-	for _, approverHash := range tangle.GetApproverHashes(txHash) {
+	for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
 		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
 		if cachedTx == nil {
 			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
@@ -50,7 +50,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
 		confirmed, at := cachedTx.GetMetadata().GetConfirmed()
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 		if confirmed && (at > targetIndex) {
 			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
@@ -64,7 +64,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
 func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, panicOnMissingTx bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
 
-	defer cachedMsTailTx.Release() // tx -1
+	defer cachedMsTailTx.Release(true) // tx -1
 
 	ts := time.Now()
 
@@ -109,13 +109,13 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 
 			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if !confirmed {
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				log.Panicf("getMilestoneApprovees: Transaction must be confirmed: %v", txHash)
 			}
 
 			if at < milestoneIndex {
 				// Ignore Tx that were confirmed by older milestones
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				continue
 			}
 
@@ -125,6 +125,7 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
 
+			// Do not force release, since it is loaded again
 			cachedTx.Release() // tx -1
 		}
 	}
@@ -179,9 +180,11 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 
 		// Get all approvees of that milestone
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
-		cachedMs.Release()                               // bundle -1
+		cachedMs.Release(true)                           // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, abortSignal)
+
+		// Do not force release, since it is loaded again
 		cachedMsTailTx.Release() // tx -1
 
 		if err != nil {
@@ -197,7 +200,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 
 			if isEntryPoint, at := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
 				// A solid entry point should only be a tail transaction, otherwise the whole bundle can't be reproduced with a snapshot file
-				tails, err := dag.FindAllTails(approvee)
+				tails, err := dag.FindAllTails(approvee, true)
 				if err != nil {
 					log.Panicf("CreateLocalSnapshot: %v", err)
 				}
@@ -229,7 +232,7 @@ func getSeenMilestones(targetIndex milestone_index.MilestoneIndex, abortSignal <
 			continue
 		}
 		seenMilestones[cachedMs.GetBundle().GetTailHash()] = milestoneIndex
-		cachedMs.Release() // bundle -1
+		cachedMs.Release(true) // bundle -1
 	}
 	return seenMilestones, nil
 }
@@ -335,7 +338,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	if cachedTargetMs == nil {
 		log.Panicf("CreateLocalSnapshot: Target milestone (%d) not found!", targetIndex)
 	}
-	defer cachedTargetMs.Release() // bundle -1
+	defer cachedTargetMs.Release(true) // bundle -1
 
 	tangle.ReadLockLedger()
 
@@ -370,7 +373,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	}
 
 	cachedTargetMsTail := cachedTargetMs.GetBundle().GetTail() // tx +1
-	defer cachedTargetMsTail.Release()                         // tx -1
+	defer cachedTargetMsTail.Release(true)                     // tx -1
 
 	var spentAddressesCount int32
 	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() && parameter.NodeConfig.GetBool("spentAddresses.enabled") {

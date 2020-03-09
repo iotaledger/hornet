@@ -79,7 +79,7 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 
 		// Check if provided tx is tail
 		if !cachedTx.GetTransaction().IsTail() {
-			cachedTx.Release() // tx -1
+			cachedTx.Release(true) // tx -1
 			info := fmt.Sprint("Invalid transaction, not a tail: ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
@@ -87,14 +87,14 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 
 		// Check if TX is solid
 		if !cachedTx.GetMetadata().IsSolid() {
-			cachedTx.Release() // tx -1
+			cachedTx.Release(true) // tx -1
 			info := fmt.Sprint("Tails are not solid (missing a referenced tx): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			return
 		}
 
-		cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
-		cachedTx.Release()                                                                              // tx -1
+		cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
+		cachedTx.Release(true)                                                         // tx -1
 
 		if cachedBndl == nil {
 			info := fmt.Sprint("tails are not consistent (bundle not found): ", t)
@@ -105,32 +105,32 @@ func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		if !cachedBndl.GetBundle().IsValid() {
 			info := fmt.Sprint("tails are not consistent (bundle is invalid): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
-			cachedBndl.Release() // bundle -1
+			cachedBndl.Release(true) // bundle -1
 			return
 		}
 
 		// skip validating the tx if we already approved it
 		if _, alreadyApproved := approved[cachedBndl.GetBundle().GetTailHash()]; alreadyApproved {
-			cachedBndl.Release() // bundle -1
+			cachedBndl.Release(true) // bundle -1
 			continue
 		}
 
 		// Check below max depth
-		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { // tx pass +1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, true) { // tx pass +1
 			info := fmt.Sprint("tails are not consistent (below max depth): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
-			cachedBndl.Release() // bundle -1
+			cachedBndl.Release(true) // bundle -1
 			return
 		}
 
 		// Check consistency
-		if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedBndl.GetBundle().GetTailHash(), approved, diff) {
+		if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedBndl.GetBundle().GetTailHash(), approved, diff, true) {
 			info := fmt.Sprint("tails are not consistent (would lead to inconsistent ledger state): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
-			cachedBndl.Release() // bundle -1
+			cachedBndl.Release(true) // bundle -1
 			return
 		}
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	}
 
 	c.JSON(http.StatusOK, CheckConsistencyReturn{State: true})

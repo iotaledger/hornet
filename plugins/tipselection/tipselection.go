@@ -40,6 +40,9 @@ type TipSelStats struct {
 	GlobalBelowMaxDepthCacheHitRatio float64 `json:"global_below_max_depth_cache_hit_ratio"`
 }
 
+// SelectTips selects two tips
+// Most Release calls inside this function shouldn't be forced, to cache the latest cone,
+// except reference transaction
 func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelStats, error) {
 	if int(depth) > maxDepth {
 		return nil, nil, errors.Wrapf(ErrDepthTooHigh, "max supported is: %d", maxDepth)
@@ -69,7 +72,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 	// record stats
 	start := time.Now()
-	walkStats := &TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash()}
+	walkStats := &TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash(), Depth: uint64(depth)}
 
 	// compute the range in which we allow approvers to reference transactions in
 	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
@@ -93,35 +96,35 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		}
 
 		if !cachedRefTx.GetMetadata().IsSolid() {
-			cachedRefTx.Release() // tx -1
+			cachedRefTx.Release(true) // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not solid")
 		}
 
 		if !cachedRefTx.GetTransaction().IsTail() {
-			cachedRefTx.Release() // tx -1
+			cachedRefTx.Release(true) // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is not a tail transaction")
 		}
 
-		cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedRefTx.GetTransaction().GetHash()) // bundle +1
+		cachedBndl := tangle.GetCachedBundleOrNil(cachedRefTx.GetTransaction().GetHash()) // bundle +1
 		if cachedBndl == nil {
 			// this should never happen if HORNET is programmed correctly
 			if cachedRefTx.GetTransaction().Tx.CurrentIndex == 0 {
 				log.Panicf("reference transaction is a tail but there's no bundle instance")
 			}
-			cachedRefTx.Release() // tx -1
+			cachedRefTx.Release(true) // tx -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle tail not yet known (bundle is complete)")
 		}
 
-		cachedRefTx.Release() // tx -1
+		cachedRefTx.Release(true) // tx -1
 
 		if !cachedBndl.GetBundle().IsValid() {
-			cachedBndl.Release() // bundle -1
+			cachedBndl.Release(true) // bundle -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "bundle is invalid")
 		}
 		cachedRefBundle = cachedBndl
 
-		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { // tx pass +1
-			cachedBndl.Release() // bundle -1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, false) { // tx pass +1
+			cachedBndl.Release(true) // bundle -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is below max depth")
 		}
 		walkStats.Reference = reference
@@ -133,11 +136,11 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 		// on the second walk, use the given reference as a starting point
 		if i == 1 && reference != nil {
 			// check whether the reference transaction itself is consistent with the first walk's diff
-			if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedRefBundle.GetBundle().GetTailHash(), approved, diff) {
-				cachedRefBundle.Release() // bundle -1
+			if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedRefBundle.GetBundle().GetTailHash(), approved, diff, false) {
+				cachedRefBundle.Release(true) // bundle -1
 				return nil, nil, errors.Wrapf(ErrReferenceNotConsistent, "with milestone %d", tangle.GetSolidMilestoneIndex())
 			}
-			cachedRefBundle.Release() // bundle -1
+			cachedRefBundle.Release(true) // bundle -1
 			selected = *reference
 		} else {
 			if cachedMs.GetBundle().GetHash() == consts.NullHashTrytes {
@@ -152,7 +155,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			walkStats.StepsTaken++
 			previousSelected := selected
 
-			approverHashes := tangle.GetApproverHashes(selected)
+			approverHashes := tangle.GetApproverHashes(selected, false)
 			if len(approverHashes) == 0 {
 				break
 			}
@@ -203,7 +206,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				// a transaction can be within multiple bundle instances, because it is possible
 				// that transactions are reattached "above" the origin bundle but pointing (via trunk)
 				// to some transactions of the origin bundle.
-				cachedBndls := tangle.GetBundlesOfTransactionOrNil(cachedCandidateTx.GetTransaction().GetHash()) // bundle +1
+				cachedBndls := tangle.GetBundlesOfTransactionOrNil(cachedCandidateTx.GetTransaction().GetHash(), false) // bundle +1
 
 				// isn't in any bundle instance
 				if cachedBndls == nil {
@@ -241,7 +244,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					cachedBndl.Release()        // bundle -1
 					continue
 				}
-				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex) { // tx pass +1
+				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, false) { // tx pass +1
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndl.Release()        // bundle -1
@@ -258,7 +261,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 						log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedCandidateTx.GetTransaction().GetHash(), at)
 					}
 					// check whether the bundle's approved cone is consistent with our current diff
-					if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedBndl.GetBundle().GetTailHash(), approved, diff) {
+					if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedBndl.GetBundle().GetTailHash(), approved, diff, false) {
 						approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 						cachedCandidateTx.Release() // tx -1
 						cachedBndl.Release()        // bundle -1

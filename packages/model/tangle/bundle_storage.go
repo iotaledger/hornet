@@ -159,9 +159,9 @@ func (cachedBundles CachedBundles) Retain() CachedBundles {
 	return cachedResult
 }
 
-func (cachedBundles CachedBundles) Release() {
+func (cachedBundles CachedBundles) Release(force ...bool) {
 	for _, cachedBundle := range cachedBundles {
-		cachedBundle.Release()
+		cachedBundle.Release(force...)
 	}
 }
 
@@ -184,7 +184,7 @@ func (c *CachedBundle) GetBundle() *Bundle {
 func GetCachedBundleOrNil(tailTxHash trinary.Hash) *CachedBundle {
 	cachedBundle := bundleStorage.Load(databaseKeyForBundle(tailTxHash)) // bundle +1
 	if !cachedBundle.Exists() {
-		cachedBundle.Release() // bundle -1
+		cachedBundle.Release(true) // bundle -1
 		return nil
 	}
 	return &CachedBundle{CachedObject: cachedBundle}
@@ -208,11 +208,11 @@ func ShutdownBundleStorage() {
 
 // GetBundles returns all existing bundle instances for that bundle hash
 // bundle +1
-func GetBundles(bundleHash trinary.Hash) CachedBundles {
+func GetBundles(bundleHash trinary.Hash, forceRelease bool) CachedBundles {
 
 	var cachedBndls CachedBundles
 
-	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash) {
+	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash, forceRelease) {
 		cachedBndl := GetCachedBundleOrNil(txTailHash) // bundle +1
 		if cachedBndl == nil {
 			continue
@@ -228,19 +228,13 @@ func GetBundles(bundleHash trinary.Hash) CachedBundles {
 	return cachedBndls
 }
 
-// GetCachedBundleOfTailTransactionOrNil gets the bundle this tail transaction is present in or nil.
-// bundle +1
-func GetCachedBundleOfTailTransactionOrNil(tailTxHash trinary.Hash) *CachedBundle {
-	return GetCachedBundleOrNil(tailTxHash) // bundle +1
-}
-
 // GetBundlesOfTransactionOrNil gets all bundle instances in which this transaction is present.
 // A transaction can be in multiple bundle instances simultaneously
 // due to the nature of reattached transactions being able to form infinite amount of bundles
 // which attach to the same underlying bundle transaction. For example it is possible to reattach
 // a bundle's tail transaction directly "on top" of the origin one.
 // bundle +1
-func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
+func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) CachedBundles {
 
 	var cachedBndls CachedBundles
 
@@ -248,19 +242,19 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash) CachedBundles {
 	if cachedTx == nil {
 		return nil
 	}
-	defer cachedTx.Release() // tx -1
+	defer cachedTx.Release(forceRelease) // tx -1
 
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl := GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
+		cachedBndl := GetCachedBundleOrNil(txHash) // bundle +1
 		if cachedBndl == nil {
 			return nil
 		}
 		return append(cachedBndls, cachedBndl)
 	}
 
-	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, txHash)
+	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, txHash, forceRelease)
 	for _, tailTxHash := range tailTxHashes {
-		cachedBndl := GetCachedBundleOfTailTransactionOrNil(tailTxHash) // bundle +1
+		cachedBndl := GetCachedBundleOrNil(tailTxHash) // bundle +1
 		if cachedBndl == nil {
 			continue
 		}
@@ -292,14 +286,15 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 		StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release()
 	}
 
-	StoreTag(cachedTx.GetTransaction().Tx.Tag, cachedTx.GetTransaction().GetHash()).Release()
+	// Force release Tag, Address, FirstSeenTx since its not needed for solidification/confirmation
+	StoreTag(cachedTx.GetTransaction().Tx.Tag, cachedTx.GetTransaction().GetHash()).Release(true)
 
-	StoreAddress(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash()).Release()
+	StoreAddress(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash()).Release(true)
 
 	// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 	// This is only used to delete unconfirmed transactions from the database at pruning
 	if !requested {
-		StoreFirstSeenTx(firstSeenLatestMilestoneIndex, cachedTx.GetTransaction().GetHash()).Release()
+		StoreFirstSeenTx(firstSeenLatestMilestoneIndex, cachedTx.GetTransaction().GetHash()).Release(true)
 	}
 
 	// If the transaction is part of a milestone, the bundle must be created here
@@ -316,7 +311,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 
 	if !isSolidTail && !cachedTx.GetTransaction().IsTail() {
 		// If Tx is not a tail, search all tailTx that reference this tx and try to create the bundles
-		tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash())
+		tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), false)
 		for _, tailTxHash := range tailTxHashes {
 			cachedTailTx := GetCachedTransactionOrNil(tailTxHash) // tx +1
 			if cachedTailTx == nil {
