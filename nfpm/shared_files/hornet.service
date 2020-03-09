@@ -14,8 +14,7 @@ PrivateTmp=yes
 ProtectSystem=full
 ProtectHome=yes
 
-User=hornet
-Group=hornet
+User=beekeeper
 WorkingDirectory=/var/lib/hornet
 TimeoutSec=1200
 Restart=always
