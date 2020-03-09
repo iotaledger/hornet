@@ -229,7 +229,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                         </Tab.Pane>
                                                         <If condition={tx.json_obj !== undefined}>
                                                             <Tab.Pane eventKey="json">
-                                                                    <ReactJson src={tx.json_obj}/>
+                                                                    <ReactJson src={tx.json_obj} name={false}/>
                                                             </Tab.Pane>
                                                         </If>
                                                     </Tab.Content>
