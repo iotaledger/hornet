@@ -179,7 +179,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 
 		// Get all approvees of that milestone
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
-		cachedMs.Release(true)                               // bundle -1
+		cachedMs.Release(true)                           // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, abortSignal)
 		cachedMsTailTx.Release(true) // tx -1
@@ -370,7 +370,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	}
 
 	cachedTargetMsTail := cachedTargetMs.GetBundle().GetTail() // tx +1
-	defer cachedTargetMsTail.Release(true)                         // tx -1
+	defer cachedTargetMsTail.Release(true)                     // tx -1
 
 	var spentAddressesCount int32
 	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() && parameter.NodeConfig.GetBool("spentAddresses.enabled") {

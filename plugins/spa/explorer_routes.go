@@ -307,7 +307,7 @@ func findTag(tag Trytes) (*ExplorerTag, error) {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to tag %s", txHash, tag)
 			}
 			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
-			cachedTx.Release(true)                                                                     // tx -1
+			cachedTx.Release(true)                                                                 // tx -1
 			if err != nil {
 				return nil, err
 			}

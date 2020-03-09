@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrInvalidSendParam       = errors.New("invalid parameter passed to send")
+	ErrInvalidSendParam = errors.New("invalid parameter passed to send")
 )
 
 func NewConnectionFailureError(cause error) *ConnectionFailureError {
