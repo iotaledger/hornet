@@ -17,7 +17,7 @@ var (
 // CheckConsistencyOfConeAndMutateDiff checks whether cone referenced by the given tail transaction is consistent with the current diff.
 // this function mutates the approved, respectively walked transaction hashes and the diff with the cone diff,
 // in case the tail transaction is consistent with the latest ledger state.
-func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[trinary.Hash]struct{}, diff map[trinary.Hash]int64) bool {
+func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[trinary.Hash]struct{}, diff map[trinary.Hash]int64, forceRelease bool) bool {
 
 	// make a copy of approved, respectively visited transactions
 	visited := make(map[trinary.Hash]struct{}, len(approved))
@@ -26,7 +26,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 	}
 
 	// compute the diff of the cone which the transaction references
-	coneDiff, err := computeConeDiff(visited, tailTxHash, tangle.GetSolidMilestoneIndex())
+	coneDiff, err := computeConeDiff(visited, tailTxHash, tangle.GetSolidMilestoneIndex(), forceRelease)
 	if err != nil {
 		if err == ErrRefBundleNotValid {
 			// memorize for a certain time that this transaction references an invalid bundle
@@ -87,7 +87,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 
 // computes the diff of the cone by collecting all mutations of transactions directly/indirectly referenced by the given tail.
 // only the non yet visited transactions are collected
-func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone_index.MilestoneIndex) (map[trinary.Trytes]int64, error) {
+func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone_index.MilestoneIndex, forceRelease bool) (map[trinary.Trytes]int64, error) {
 
 	coneDiff := map[trinary.Trytes]int64{}
 	txsToTraverse := make(map[string]struct{})
@@ -120,7 +120,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
 				}
 				// only take transactions into account that have not been confirmed by the referenced or older milestones
-				cachedTx.Release() // tx -1
+				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
@@ -131,19 +131,19 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			if !cachedTx.GetTransaction().IsTail() {
 				txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 				txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-				cachedTx.Release() // tx -1
+				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
-			cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
 			if cachedBndl == nil {
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				return nil, ErrRefBundleNotComplete
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
-				cachedTx.Release()   // tx -1
-				cachedBndl.Release() // bundle -1
+				cachedTx.Release(forceRelease)   // tx -1
+				cachedBndl.Release(forceRelease) // bundle -1
 				return nil, ErrRefBundleNotValid
 			}
 
@@ -158,8 +158,8 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
 
-			cachedTx.Release()   // tx -1
-			cachedBndl.Release() // bundle -1
+			cachedTx.Release(forceRelease)   // tx -1
+			cachedBndl.Release(forceRelease) // bundle -1
 		}
 	}
 

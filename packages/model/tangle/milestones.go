@@ -56,9 +56,9 @@ func GetMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedBun
 	if cachedMilestone == nil {
 		return nil
 	}
-	defer cachedMilestone.Release() // cachedMilestone -1
+	defer cachedMilestone.Release(true) // cachedMilestone -1
 
-	return GetCachedBundleOfTailTransactionOrNil(cachedMilestone.GetMilestone().Hash)
+	return GetCachedBundleOrNil(cachedMilestone.GetMilestone().Hash)
 }
 
 func IsNodeSynced() bool {
@@ -189,7 +189,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	cachedTxIndex0 := bndl.GetTail() // tx +1
 
 	if !IsMaybeMilestone(cachedTxIndex0.Retain()) { // tx pass +1
-		cachedTxIndex0.Release() // tx -1
+		cachedTxIndex0.Release(true) // tx -1
 		// Transaction is not issued by compass => no milestone
 		return false, nil
 	}
@@ -200,20 +200,20 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	milestoneIndex := getMilestoneIndex(cachedTxIndex0.Retain()) // tx pass +1
 	if milestoneIndex <= GetSolidMilestoneIndex() {
 		// Milestone older than solid milestone
-		cachedTxIndex0.Release() // tx -1
+		cachedTxIndex0.Release(true) // tx -1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) older than solid milestone (%d), Hash: %v", milestoneIndex, GetSolidMilestoneIndex(), txIndex0Hash)
 	}
 
 	if milestoneIndex >= maxMilestoneIndex {
-		cachedTxIndex0.Release() // tx -1
+		cachedTxIndex0.Release(true) // tx -1
 		return false, errors.Wrapf(ErrInvalidMilestone, "Index (%d) out of range (0...%d), Hash: %v)", milestoneIndex, maxMilestoneIndex, txIndex0Hash)
 	}
 
 	// Check if milestone was already processed
 	cachedMs := GetMilestoneOrNil(milestoneIndex) // bundle +1
 	if cachedMs != nil {
-		cachedTxIndex0.Release() // tx -1
-		cachedMs.Release()       // bundle -1
+		cachedTxIndex0.Release(true) // tx -1
+		cachedMs.Release(true)       // bundle -1
 		// It could be issued again since several transactions of the same bundle were processed in parallel
 		return false, nil
 	}
@@ -224,14 +224,14 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
 		cachedTx := GetCachedTransactionOrNil(cachedSignatureTxs[secLvl-1].GetTransaction().Tx.TrunkTransaction) // tx +1
 		if cachedTx == nil {
-			cachedSignatureTxs.Release() // tx -1
+			cachedSignatureTxs.Release(true) // tx -1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 		}
 
 		if !IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
-			cachedTx.Release() // tx -1
+			cachedTx.Release(true) // tx -1
 			// Transaction is not issued by compass => no milestone
-			cachedSignatureTxs.Release() // tx -1
+			cachedSignatureTxs.Release(true) // tx -1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", txIndex0Hash)
 		}
 
@@ -239,13 +239,13 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		// tx will be released with cachedSignatureTxs
 	}
 
-	defer cachedSignatureTxs.Release() // tx -1
+	defer cachedSignatureTxs.Release(true) // tx -1
 
 	cachedSiblingsTx := GetCachedTransactionOrNil(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().Tx.TrunkTransaction) // tx +1
 	if cachedSiblingsTx == nil {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", txIndex0Hash)
 	}
-	defer cachedSiblingsTx.Release() // tx -1
+	defer cachedSiblingsTx.Release(true) // tx -1
 
 	if (cachedSiblingsTx.GetTransaction().Tx.Value != 0) || (cachedSiblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
 		// Transaction is not issued by compass => no milestone
@@ -272,8 +272,8 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 // Validates if the milestone has the correct signature
 func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone_index.MilestoneIndex, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
-	defer cachedSignatureTxs.Release() // tx -1
-	defer cachedSiblingsTx.Release()   // tx -1
+	defer cachedSignatureTxs.Release(true) // tx -1
+	defer cachedSiblingsTx.Release(true)   // tx -1
 
 	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
 
@@ -332,7 +332,7 @@ func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *
 // Checks if the the tx could be part of a milestone
 func IsMaybeMilestone(cachedTx *CachedTransaction) bool {
 	value := (cachedTx.GetTransaction().Tx.Value == 0) && (cachedTx.GetTransaction().Tx.Address == coordinatorAddress)
-	cachedTx.Release() // tx -1
+	cachedTx.Release(true) // tx -1
 	return value
 }
 
@@ -340,13 +340,13 @@ func IsMaybeMilestone(cachedTx *CachedTransaction) bool {
 func IsMaybeMilestoneTx(cachedTx *CachedTransaction) bool {
 	tx := cachedTx.GetTransaction().Tx
 	value := (tx.Value == 0) && ((tx.Address == coordinatorAddress) || (tx.Address == consts.NullHashTrytes))
-	cachedTx.Release() // tx -1
+	cachedTx.Release(true) // tx -1
 	return value
 }
 
 // Returns Milestone index of the milestone
 func getMilestoneIndex(cachedTx *CachedTransaction) (milestoneIndex milestone_index.MilestoneIndex) {
 	value := milestone_index.MilestoneIndex(trinary.TrytesToInt(cachedTx.GetTransaction().Tx.ObsoleteTag))
-	cachedTx.Release() // tx -1
+	cachedTx.Release(true) // tx -1
 	return value
 }

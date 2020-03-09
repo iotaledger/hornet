@@ -20,9 +20,9 @@ type CachedAddress struct {
 
 type CachedAddresses []*CachedAddress
 
-func (cachedAddresses CachedAddresses) Release() {
+func (cachedAddresses CachedAddresses) Release(force ...bool) {
 	for _, cachedAddress := range cachedAddresses {
-		cachedAddress.Release()
+		cachedAddress.Release(force...)
 	}
 }
 
@@ -65,24 +65,24 @@ func configureAddressesStorage() {
 }
 
 // address +-0
-func GetTransactionHashesForAddress(address trinary.Hash, maxFind ...int) []trinary.Hash {
+func GetTransactionHashesForAddress(address trinary.Hash, forceRelease bool, maxFind ...int) []trinary.Hash {
 	var transactionHashes []trinary.Hash
 
 	i := 0
 	addressesStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release() // address -1
+			cachedObject.Release(true) // address -1
 			return false
 		}
 
 		if !cachedObject.Exists() {
-			cachedObject.Release() // address -1
+			cachedObject.Release(true) // address -1
 			return true
 		}
 
 		transactionHashes = append(transactionHashes, (&CachedAddress{CachedObject: cachedObject}).GetAddress().GetTransactionHash())
-		cachedObject.Release() // address -1
+		cachedObject.Release(forceRelease) // address -1
 		return true
 	}, trinary.MustTrytesToBytes(address)[:49])
 

@@ -44,15 +44,15 @@ func (bundle *Bundle) GetHash() trinary.Hash {
 	return bundle.hash
 }
 
-func (bundle *Bundle) GetTrunk() trinary.Hash {
+func (bundle *Bundle) GetTrunk(forceRelease bool) trinary.Hash {
 	cachedHeadTx := bundle.getHead() // tx +1
-	defer cachedHeadTx.Release()     // tx -1
+	defer cachedHeadTx.Release(forceRelease)     // tx -1
 	return cachedHeadTx.GetTransaction().GetTrunk()
 }
 
-func (bundle *Bundle) GetBranch() trinary.Hash {
+func (bundle *Bundle) GetBranch(forceRelease bool) trinary.Hash {
 	cachedHeadTx := bundle.getHead() // tx +1
-	defer cachedHeadTx.Release()     // tx -1
+	defer cachedHeadTx.Release(forceRelease)     // tx -1
 	return cachedHeadTx.GetTransaction().GetBranch()
 }
 
@@ -133,7 +133,7 @@ func (bundle *Bundle) IsSolid() bool {
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
 	tailSolid := cachedTailTx.GetMetadata().IsSolid()
-	cachedTailTx.Release() // tx -1
+	cachedTailTx.Release(true) // tx -1
 
 	if tailSolid {
 		bundle.setSolid(true)
@@ -169,7 +169,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
-	defer cachedTailTx.Release()     // tx -1
+	defer cachedTailTx.Release(true)     // tx -1
 	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
 
 	if tailConfirmed {
@@ -218,12 +218,12 @@ func (bundle *Bundle) validate() bool {
 	cachedCurrentTx := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
 	lastIndex := int(cachedCurrentTx.GetTransaction().Tx.LastIndex)
 	iotaGoBundle[0] = *cachedCurrentTx.GetTransaction().Tx
-	cachedCurrentTx.Release() // tx -1
+	cachedCurrentTx.Release(true) // tx -1
 
 	for i := 1; i < lastIndex+1; i++ {
 		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bundle.hash) // tx +1
 		iotaGoBundle[i] = *cachedCurrentTx.GetTransaction().Tx
-		cachedCurrentTx.Release() // tx -1
+		cachedCurrentTx.Release(true) // tx -1
 	}
 
 	// validate bundle semantics and signatures
@@ -242,7 +242,7 @@ func (bundle *Bundle) calcLedgerChanges() {
 		if value := cachedTx.GetTransaction().Tx.Value; value != 0 {
 			changes[cachedTx.GetTransaction().Tx.Address] += value
 		}
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 	}
 
 	isValueSpamBundle := true

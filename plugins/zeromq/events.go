@@ -64,7 +64,7 @@ func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	cachedBndl.Release() // bundle -1
+	cachedBndl.Release(true) // bundle -1
 }
 
 func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
@@ -72,7 +72,7 @@ func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	cachedBndl.Release() // bundle -1
+	cachedBndl.Release(true) // bundle -1
 }
 
 func onSpentAddress(addr trinary.Hash) {

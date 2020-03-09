@@ -21,6 +21,8 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 	cachedBndls := make(map[trinary.Hash]*tangle.CachedBundle)
 
 	defer func() {
+		// All releases are forced since the cone is confirmed and not needed anymore
+		
 		// Release all bundles at the end
 		for _, cachedBndl := range cachedBndls {
 			cachedBndl.Release(true) // bundle -1
@@ -90,7 +92,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 
 			cachedBndl, exists := cachedBndls[txHash]
 			if !exists {
-				cachedBndl = tangle.GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
+				cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
 				if cachedBndl == nil {
 					log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, txBundle)
 				}
@@ -138,7 +140,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 		// we are only iterating over tail txs
 		cachedBndl, exists := cachedBndls[txHash]
 		if !exists {
-			cachedBndl = tangle.GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
+			cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
 			if cachedBndl == nil {
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, cachedTx.GetTransaction().Tx.Bundle)
 			}

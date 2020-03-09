@@ -60,9 +60,9 @@ var BelowDepthMemoizationCache = belowDepthMemoizationCache{memoizationCache: ma
 // within the range of allowed milestones. if not, it is checked whether any referenced (directly/indirectly) tx
 // is confirmed by a milestone below the allowed threshold until a limit is reached of analyzed txs, in which case
 // the given tail transaction is also deemed being below max depth.
-func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex int) bool {
+func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapshotIndex int, forceRelease bool) bool {
 
-	defer cachedTailTx.Release() // tx -1
+	defer cachedTailTx.Release(forceRelease) // tx -1
 
 	// if the tx is already confirmed we don't need to check it for max depth
 	if confirmed, at := cachedTailTx.GetMetadata().GetConfirmed(); confirmed && int(at) >= lowerAllowedSnapshotIndex {
@@ -122,20 +122,20 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 			// we are below max depth on this transaction if it is confirmed by a milestone below our threshold
 			if confirmed && int(at) < lowerAllowedSnapshotIndex {
 				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
-				cachedTx.Release() // tx -1
+				cachedTx.Release(forceRelease) // tx -1
 				return true
 			}
 
 			// we don't need to analyze further down if the transaction is confirmed within the threshold of the max depth
 			if confirmed {
-				cachedTx.Release() // tx -1
+				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
 			//
 			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-			cachedTx.Release() // tx -1
+			cachedTx.Release(forceRelease) // tx -1
 		}
 	}
 

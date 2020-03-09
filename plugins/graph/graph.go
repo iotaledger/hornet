@@ -173,7 +173,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 
 func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 	msHash := cachedBndl.GetBundle().GetMilestoneHash()
-	cachedBndl.Release() // bundle -1
+	cachedBndl.Release(true) // bundle -1
 
 	msRingBufferLock.Lock()
 	msRingBuffer.Value = msHash

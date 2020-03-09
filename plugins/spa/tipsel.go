@@ -22,7 +22,7 @@ func configureTipSelMetric() {
 		case milestone_index.MilestoneIndex:
 			if cachedMsTailTx := getMilestoneTail(x); cachedMsTailTx != nil { // tx +1
 				sendToAllWSClient(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), x}})
-				cachedMsTailTx.Release() // tx -1
+				cachedMsTailTx.Release(true) // tx -1
 			}
 		}
 		task.Return(nil)

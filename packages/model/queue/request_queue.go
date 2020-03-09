@@ -77,7 +77,7 @@ func (s *RequestQueue) GetStorageSize() int {
 func (s *RequestQueue) GetCachedRequestOrNil(transactionHash trinary.Hash) *CachedRequest {
 	cachedRequest := s.requestedStorage.Get(trinary.MustTrytesToBytes(transactionHash)[:49])
 	if !cachedRequest.Exists() {
-		cachedRequest.Release()
+		cachedRequest.Release(true)
 		return nil
 	}
 	return &CachedRequest{CachedObject: cachedRequest}

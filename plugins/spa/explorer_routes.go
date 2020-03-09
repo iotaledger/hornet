@@ -49,7 +49,7 @@ type ExplorerTx struct {
 
 func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 
-	defer cachedTx.Release() // tx -1
+	defer cachedTx.Release(true) // tx -1
 
 	originTx := cachedTx.GetTransaction().Tx
 	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
@@ -95,15 +95,15 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	// get previous/next hash
 	var cachedBndl *tangle.CachedBundle
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl = tangle.GetCachedBundleOfTailTransactionOrNil(hash) // bundle +1
+		cachedBndl = tangle.GetCachedBundleOrNil(hash) // bundle +1
 	} else {
-		cachedBndls := tangle.GetBundlesOfTransactionOrNil(hash) // bundle +1
+		cachedBndls := tangle.GetBundlesOfTransactionOrNil(hash, true) // bundle +1
 		if cachedBndls != nil {
 			cachedBndl = cachedBndls[0]
 
 			// Release unused bundles
 			for i := 1; i < len(cachedBndls); i++ {
-				cachedBndls[i].Release() // bundle -1
+				cachedBndls[i].Release(true) // bundle -1
 			}
 		}
 	}
@@ -118,14 +118,14 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 				t.Next = cachedBndlTx.GetTransaction().Tx.Hash
 			}
 		}
-		cachedTxs.Release() // tx -1
+		cachedTxs.Release(true) // tx -1
 
 		// check whether milestone
 		if cachedBndl.GetBundle().IsMilestone() {
 			t.IsMilestone = true
 			t.MilestoneIndex = cachedBndl.GetBundle().GetMilestoneIndex()
 		}
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	}
 
 	return t, nil
@@ -266,10 +266,10 @@ func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
 	if cachedMs == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
-	defer cachedMs.Release() // bundle -1
+	defer cachedMs.Release(true) // bundle -1
 
 	cachedTailTx := cachedMs.GetBundle().GetTail()                                          // tx +1
-	defer cachedTailTx.Release()                                                            // tx -1
+	defer cachedTailTx.Release(true)                                                        // tx -1
 	return createExplorerTx(cachedTailTx.GetTransaction().GetHash(), cachedTailTx.Retain()) // tx pass +1
 }
 
@@ -284,7 +284,7 @@ func findTransaction(hash Hash) (*ExplorerTx, error) {
 	}
 
 	t, err := createExplorerTx(hash, cachedTx.Retain()) // tx pass +1
-	cachedTx.Release()                                  // tx -1
+	cachedTx.Release(true)                              // tx -1
 	return t, err
 }
 
@@ -293,7 +293,7 @@ func findTag(tag Trytes) (*ExplorerTag, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid: %s", tag)
 	}
 
-	txHashes := tangle.GetTagHashes(tag, 100)
+	txHashes := tangle.GetTagHashes(tag, true, 100)
 	if len(txHashes) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "tag %s unknown", tag)
 	}
@@ -307,7 +307,7 @@ func findTag(tag Trytes) (*ExplorerTag, error) {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to tag %s", txHash, tag)
 			}
 			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
-			cachedTx.Release()                                                                     // tx -1
+			cachedTx.Release(true)                                                                     // tx -1
 			if err != nil {
 				return nil, err
 			}
@@ -323,11 +323,11 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedBndls := tangle.GetBundles(hash) // bundle +1
+	cachedBndls := tangle.GetBundles(hash, true) // bundle +1
 	if len(cachedBndls) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "bundle %s unknown", hash)
 	}
-	defer cachedBndls.Release() // bundle -1
+	defer cachedBndls.Release(true) // bundle -1
 
 	expBndls := [][]*ExplorerTx{}
 	for _, cachedBndl := range cachedBndls {
@@ -336,12 +336,12 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		for _, cachedTx := range cachedTxs {
 			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
 			if err != nil {
-				cachedTxs.Release() // tx -1
+				cachedTxs.Release(true) // tx -1
 				return nil, err
 			}
 			sl = append(sl, expTx)
 		}
-		cachedTxs.Release() // tx -1
+		cachedTxs.Release(true) // tx -1
 		expBndls = append(expBndls, sl)
 	}
 
@@ -356,7 +356,7 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	txHashes := tangle.GetTransactionHashesForAddress(hash, 100)
+	txHashes := tangle.GetTransactionHashesForAddress(hash, true, 100)
 
 	txs := make([]*ExplorerTx, 0, len(txHashes))
 	if len(txHashes) != 0 {
@@ -367,7 +367,7 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
 			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
-			cachedTx.Release()                                                                     // tx -1
+			cachedTx.Release(true)                                                                 // tx -1
 			if err != nil {
 				return nil, err
 			}
