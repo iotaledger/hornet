@@ -72,7 +72,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 	// record stats
 	start := time.Now()
-	walkStats := &TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash()}
+	walkStats := &TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash(), Depth: uint64(depth)}
 
 	// compute the range in which we allow approvers to reference transactions in
 	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
