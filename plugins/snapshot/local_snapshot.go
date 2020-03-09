@@ -125,7 +125,8 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
 
-			cachedTx.Release(true) // tx -1
+			// Do not force release, since it is loaded again
+			cachedTx.Release() // tx -1
 		}
 	}
 
@@ -182,7 +183,9 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		cachedMs.Release(true)                           // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, abortSignal)
-		cachedMsTailTx.Release(true) // tx -1
+
+		// Do not force release, since it is loaded again
+		cachedMsTailTx.Release() // tx -1
 
 		if err != nil {
 			return nil, err

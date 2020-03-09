@@ -29,12 +29,12 @@ func configureGossipSolidifier() {
 		if tangle.IsNodeSyncedWithThreshold() {
 			checkSolidityAndPropagate(cachedTx) // tx pass +1
 		} else {
+			// Force release allowed if the node is not synced
 			cachedTx.Release(true) // tx -1
 		}
 
 		task.Return(nil)
 	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
-
 }
 
 func runGossipSolidifier() {
@@ -44,9 +44,11 @@ func runGossipSolidifier() {
 		if tangle.IsNodeSyncedWithThreshold() {
 			_, added := gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
 			if !added {
+				// Force release possible here, since processIncomingTx still holds a reference
 				cachedTx.Release(true) // tx -1
 			}
 		} else {
+			// Force release possible here, since processIncomingTx still holds a reference
 			cachedTx.Release(true) // tx -1
 		}
 	})
@@ -78,7 +80,7 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 			_, newlySolid := checkSolidity(cachedTxToCheck.Retain())
 			if newlySolid {
 				if int32(time.Now().Unix())-cachedTxToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
-					// Skip older transactions
+					// Skip older transactions and force release them
 					cachedTxToCheck.Release(true) // tx -1
 					continue
 				}
@@ -90,14 +92,16 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 					}
 
 					if _, found := txsToCheck[approverHash]; found {
-						cachedApproverTx.Release(true) // tx -1
+						// Do no force release here, otherwise cacheTime for new Tx could be ignored
+						cachedApproverTx.Release() // tx -1
 						continue
 					}
 
 					txsToCheck[approverHash] = cachedApproverTx
 				}
 			}
-			cachedTxToCheck.Release(true) // tx -1
+			// Do no force release here, otherwise cacheTime for new Tx could be ignored
+			cachedTxToCheck.Release() // tx -1
 		}
 	}
 }
