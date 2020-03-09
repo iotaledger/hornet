@@ -2,7 +2,7 @@
   "custom": {
     "caches": {
       "addresses": {
-        "cacheTimeMs": 1500,
+        "cacheTimeMs": 100,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 20,
@@ -18,7 +18,7 @@
         }
       },
       "tags": {
-        "cacheTimeMs": 1500,
+        "cacheTimeMs": 100,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 20,
@@ -42,7 +42,7 @@
         }
       },
       "milestones": {
-        "cacheTimeMs": 1500,
+        "cacheTimeMs": 500,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 20,
@@ -58,7 +58,7 @@
         }
       },
       "firstSeenTx": {
-        "cacheTimeMs": 1500,
+        "cacheTimeMs": 100,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 20,
@@ -66,7 +66,7 @@
         }
       },
       "incomingTransactionFilter": {
-        "cacheTimeMs": 1500,
+        "cacheTimeMs": 2000,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 20,
@@ -104,7 +104,119 @@
       "ZSTDCompressionLevel": 1,
       "CompressionType": 0,
       "valueLogFileSize": 1073741823,
-      "valueLogMaxEntries": 1000000,
+      "valueLogMaxEntries": 33554431,
+      "valueThreshold": 32,
+      "withTruncate": false,
+      "logRotatesToFlush": 2,
+      "eventLogging": false
+    }
+  },
+  "debug": {
+    "caches": {
+      "addresses": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "approvers": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "tags": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "bundles": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "bundletransactions": {
+        "cacheTimeMs": 500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "milestones": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "transactions": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "firstSeenTx": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "incomingTransactionFilter": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      },
+      "refsInvalidBundle": {
+        "cacheTimeMs": 180000,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 20,
+          "maxConsumerHoldTimeSec": 100
+        }
+      }
+    },
+    "badger": {
+      "levelOneSize": 268435456,
+      "levelSizeMultiplier": 10,
+      "tableLoadingMode": 0,
+      "valueLogLoadingMode": 0,
+      "maxLevels": 7,
+      "maxTableSize": 67108864,
+      "numCompactors": 2,
+      "numLevelZeroTables": 5,
+      "numLevelZeroTablesStall": 10,
+      "numMemtables": 5,
+      "bloomFalsePositive": 0.01,
+      "blockSize": 4096,
+      "syncWrites": false,
+      "numVersionsToKeep": 1,
+      "compactLevel0OnClose": false,
+      "keepL0InMemory": false,
+      "verifyValueChecksum": false,
+      "maxCacheSize": 50000000,
+      "ZSTDCompressionLevel": 1,
+      "CompressionType": 0,
+      "valueLogFileSize": 1073741823,
+      "valueLogMaxEntries": 33554431,
       "valueThreshold": 32,
       "withTruncate": false,
       "logRotatesToFlush": 2,
