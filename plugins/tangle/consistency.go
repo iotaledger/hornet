@@ -89,6 +89,21 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 // only the non yet visited transactions are collected
 func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone_index.MilestoneIndex, forceRelease bool) (map[trinary.Trytes]int64, error) {
 
+	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
+	cachedBndls := make(map[trinary.Hash]*tangle.CachedBundle)
+
+	defer func() {
+		// Release all bundles at the end
+		for _, cachedBndl := range cachedBndls {
+			cachedBndl.Release(forceRelease) // bundle -1
+		}
+
+		// Release all txs at the end
+		for _, cachedTx := range cachedTxs {
+			cachedTx.Release(forceRelease) // tx -1
+		}
+	}()
+
 	coneDiff := map[trinary.Trytes]int64{}
 	txsToTraverse := make(map[string]struct{})
 	txsToTraverse[tailTxHash] = struct{}{}
@@ -108,9 +123,13 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
-			if cachedTx == nil {
-				log.Panicf("Tx with hash %v not found", txHash)
+			cachedTx, exists := cachedTxs[txHash]
+			if !exists {
+				cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
+				if cachedTx == nil {
+					log.Panicf("Tx with hash %v not found", txHash)
+				}
+				cachedTxs[txHash] = cachedTx
 			}
 
 			// ledger update process is write locked
@@ -120,8 +139,31 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
 				}
 				// only take transactions into account that have not been confirmed by the referenced or older milestones
-				cachedTx.Release(forceRelease) // tx -1
 				continue
+			}
+
+			// Check the tangle structure
+			approveeHashes := []trinary.Hash{cachedTx.GetTransaction().GetTrunk()}
+			if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
+				approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranch())
+			}
+
+			for _, approveeHash := range approveeHashes {
+				cachedApproveeTx, exists := cachedTxs[approveeHash]
+				if !exists {
+					cachedApproveeTx = tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
+					if cachedApproveeTx == nil {
+						log.Panicf("Tx with hash %v not found", approveeHash)
+					}
+					cachedTxs[approveeHash] = cachedApproveeTx
+				}
+
+				if cachedApproveeTx.GetTransaction().Tx.Bundle != cachedTx.GetTransaction().Tx.Bundle {
+					// Tx references another Bundle => Check if the referenced tx is a tail
+					if !cachedApproveeTx.GetTransaction().IsTail() {
+						return nil, ErrRefBundleNotValid
+					}
+				}
 			}
 
 			// we only load up bundles when we're traversing tails, so we don't
@@ -131,19 +173,19 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			if !cachedTx.GetTransaction().IsTail() {
 				txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 				txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
-			cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
-			if cachedBndl == nil {
-				cachedTx.Release(true) // tx -1
-				return nil, ErrRefBundleNotComplete
+			cachedBndl, exists := cachedBndls[txHash]
+			if !exists {
+				cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
+				if cachedBndl == nil {
+					return nil, ErrRefBundleNotComplete
+				}
+				cachedBndls[txHash] = cachedBndl
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
-				cachedTx.Release(forceRelease)   // tx -1
-				cachedBndl.Release(forceRelease) // bundle -1
 				return nil, ErrRefBundleNotValid
 			}
 
@@ -157,9 +199,6 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 
 			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-
-			cachedTx.Release(forceRelease)   // tx -1
-			cachedBndl.Release(forceRelease) // bundle -1
 		}
 	}
 
