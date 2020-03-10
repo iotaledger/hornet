@@ -91,6 +91,8 @@ func MarkAddressAsSpent(address trinary.Trytes) bool {
 	newlyAdded := false
 	spentAddressesStorage.ComputeIfAbsent(spentAddress.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
+		spentAddress.Persist()
+		spentAddress.SetModified()
 		return spentAddress
 	}).Release(true)
 
@@ -105,6 +107,8 @@ func MarkAddressAsSpentBinaryWithoutLocking(address []byte) bool {
 	newlyAdded := false
 	spentAddressesStorage.ComputeIfAbsent(spentAddress.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
+		spentAddress.Persist()
+		spentAddress.SetModified()
 		return spentAddress
 	}).Release(true)
 
