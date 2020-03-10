@@ -294,7 +294,9 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	}
 
 	if lsh.spentAddressesCount != 0 {
-		return tangle.StreamSpentAddressesToWriter(&buf, lsh.spentAddressesCount, abortSignal)
+		if err := tangle.StreamSpentAddressesToWriter(&buf, lsh.spentAddressesCount, abortSignal); err != nil {
+			return err
+		}
 	}
 
 	// write sha256 hash
@@ -417,6 +419,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		SnapshotIndex: targetIndex,
 		PruningIndex:  snapshotInfo.PruningIndex,
 		Timestamp:     cachedTargetMsTail.GetTransaction().GetTimestamp(),
+		Metadata:      snapshotInfo.Metadata,
 	})
 
 	log.Infof("Creating local snapshot for targetIndex %d done, took %v", targetIndex, time.Since(ts))
