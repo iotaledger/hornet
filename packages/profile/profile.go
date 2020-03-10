@@ -72,7 +72,7 @@ func GetProfile() *Profile {
 var Profile8GB = &Profile{
 	Caches: Caches{
 		Addresses: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 10000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -80,7 +80,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		Approvers: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -88,7 +88,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		Tags: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 10000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -96,7 +96,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		Bundles: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -104,7 +104,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		BundleTransactions: CacheOpts{
-			CacheTimeMs: 5000,
+			CacheTimeMs: 10000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -112,7 +112,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		Milestones: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 10000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -120,7 +120,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		Transactions: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -128,7 +128,7 @@ var Profile8GB = &Profile{
 			},
 		},
 		FirstSeenTx: CacheOpts{
-			CacheTimeMs: 60000,
+			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -182,7 +182,7 @@ var Profile8GB = &Profile{
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
-		ValueLogMaxEntries:      1000000,
+		ValueLogMaxEntries:      33554431,
 		ValueThreshold:          32,
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
@@ -193,7 +193,7 @@ var Profile8GB = &Profile{
 var Profile4GB = &Profile{
 	Caches: Caches{
 		Addresses: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -201,7 +201,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		Approvers: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 15000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -209,7 +209,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		Tags: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -217,7 +217,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		Bundles: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 15000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -225,7 +225,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		BundleTransactions: CacheOpts{
-			CacheTimeMs: 2500,
+			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -233,7 +233,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		Milestones: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -241,7 +241,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		Transactions: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 15000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -249,7 +249,7 @@ var Profile4GB = &Profile{
 			},
 		},
 		FirstSeenTx: CacheOpts{
-			CacheTimeMs: 30000,
+			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -303,7 +303,7 @@ var Profile4GB = &Profile{
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
-		ValueLogMaxEntries:      1000000,
+		ValueLogMaxEntries:      33554431,
 		ValueThreshold:          32,
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
@@ -314,7 +314,7 @@ var Profile4GB = &Profile{
 var Profile2GB = &Profile{
 	Caches: Caches{
 		Addresses: CacheOpts{
-			CacheTimeMs: 5000,
+			CacheTimeMs: 200,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -330,7 +330,7 @@ var Profile2GB = &Profile{
 			},
 		},
 		Tags: CacheOpts{
-			CacheTimeMs: 5000,
+			CacheTimeMs: 200,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -346,7 +346,7 @@ var Profile2GB = &Profile{
 			},
 		},
 		BundleTransactions: CacheOpts{
-			CacheTimeMs: 500,
+			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -354,7 +354,7 @@ var Profile2GB = &Profile{
 			},
 		},
 		Milestones: CacheOpts{
-			CacheTimeMs: 5000,
+			CacheTimeMs: 2500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -370,7 +370,7 @@ var Profile2GB = &Profile{
 			},
 		},
 		FirstSeenTx: CacheOpts{
-			CacheTimeMs: 5000,
+			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -424,7 +424,7 @@ var Profile2GB = &Profile{
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
-		ValueLogMaxEntries:      1000000,
+		ValueLogMaxEntries:      33554431,
 		ValueThreshold:          32,
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
@@ -435,7 +435,7 @@ var Profile2GB = &Profile{
 var Profile1GB = &Profile{
 	Caches: Caches{
 		Addresses: CacheOpts{
-			CacheTimeMs: 1500,
+			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -451,7 +451,7 @@ var Profile1GB = &Profile{
 			},
 		},
 		Tags: CacheOpts{
-			CacheTimeMs: 1500,
+			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -459,7 +459,7 @@ var Profile1GB = &Profile{
 			},
 		},
 		Bundles: CacheOpts{
-			CacheTimeMs: 500,
+			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -475,7 +475,7 @@ var Profile1GB = &Profile{
 			},
 		},
 		Milestones: CacheOpts{
-			CacheTimeMs: 1500,
+			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -491,7 +491,7 @@ var Profile1GB = &Profile{
 			},
 		},
 		FirstSeenTx: CacheOpts{
-			CacheTimeMs: 1500,
+			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -499,7 +499,7 @@ var Profile1GB = &Profile{
 			},
 		},
 		IncomingTransactionFilter: CacheOpts{
-			CacheTimeMs: 1500,
+			CacheTimeMs: 2000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -544,8 +544,8 @@ var Profile1GB = &Profile{
 		MaxCacheSize:            50000000,
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
-		ValueLogFileSize:        33554431,
-		ValueLogMaxEntries:      250000,
+		ValueLogFileSize:        67108863,
+		ValueLogMaxEntries:      2097151,
 		ValueThreshold:          32,
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
