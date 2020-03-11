@@ -360,7 +360,21 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	cachedBndl := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
 
 		newlyAdded = true
-		if bndl.validate() {
+		if bndl.validate(func() bool {
+			isMilestone, err := CheckIfMilestone(bndl)
+			if err != nil {
+				invalidMilestoneErr = err
+				return false
+			}
+
+			if !isMilestone {
+				return false
+			}
+
+			wasMilestone = true
+			StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
+			return true
+		}) {
 			metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 
 			bndl.calcLedgerChanges()
@@ -373,17 +387,6 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 							metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
 						}
 						spentAddresses = append(spentAddresses, addr)
-					}
-				}
-			}
-
-			if IsMaybeMilestone(bndl.GetTail()) { // tx pass +1
-				if isMilestone, err := CheckIfMilestone(bndl); err != nil {
-					invalidMilestoneErr = err
-				} else {
-					if isMilestone {
-						wasMilestone = true
-						StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
 					}
 				}
 			}
