@@ -306,6 +306,8 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 	return cachedTx, false
 }
 
+// tryConstructBundle tries to construct a bundle (maybe txs are still missing in the DB)
+// isSolidTail should only be false for possible milestone txs
 func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	defer cachedTx.Release() // tx -1
 
@@ -353,27 +355,33 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 	}
 
+	if !isSolidTail {
+		// This can only happen if the tx is a possible milestone tx
+		isMilestone, err := CheckIfMilestone(bndl)
+		if err != nil {
+			// The bundle is not a milestone => it should not be added to the database in this step
+			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
+			return
+		}
+
+		if !isMilestone {
+			// The bundle is not a milestone => it should not be added to the database in this step
+			return
+		}
+	}
+
 	newlyAdded := false
 	wasMilestone := false
 	var spentAddresses []trinary.Hash
-	var invalidMilestoneErr error
 	cachedBndl := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
 
 		newlyAdded = true
 		if bndl.validate(func() bool {
-			isMilestone, err := CheckIfMilestone(bndl)
-			if err != nil {
-				invalidMilestoneErr = err
-				return false
+			if bndl.IsMilestone() {
+				wasMilestone = true
+				StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
 			}
-
-			if !isMilestone {
-				return false
-			}
-
-			wasMilestone = true
-			StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
-			return true
+			return bndl.IsMilestone()
 		}) {
 			metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 
@@ -399,9 +407,6 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	})
 
 	if newlyAdded {
-		if invalidMilestoneErr != nil {
-			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", invalidMilestoneErr.Error()))
-		}
 
 		for _, addr := range spentAddresses {
 			Events.AddressSpent.Trigger(addr)
