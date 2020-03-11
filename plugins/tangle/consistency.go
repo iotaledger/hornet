@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -89,6 +90,21 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 // only the non yet visited transactions are collected
 func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone_index.MilestoneIndex, forceRelease bool) (map[trinary.Trytes]int64, error) {
 
+	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
+	cachedBndls := make(map[trinary.Hash]*tangle.CachedBundle)
+
+	defer func() {
+		// Release all bundles at the end
+		for _, cachedBndl := range cachedBndls {
+			cachedBndl.Release(forceRelease) // bundle -1
+		}
+
+		// Release all txs at the end
+		for _, cachedTx := range cachedTxs {
+			cachedTx.Release(forceRelease) // tx -1
+		}
+	}()
+
 	coneDiff := map[trinary.Trytes]int64{}
 	txsToTraverse := make(map[string]struct{})
 	txsToTraverse[tailTxHash] = struct{}{}
@@ -108,9 +124,13 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
-			if cachedTx == nil {
-				log.Panicf("Tx with hash %v not found", txHash)
+			cachedTx, exists := cachedTxs[txHash]
+			if !exists {
+				cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
+				if cachedTx == nil {
+					log.Panicf("Tx with hash %v not found", txHash)
+				}
+				cachedTxs[txHash] = cachedTx
 			}
 
 			// ledger update process is write locked
@@ -120,46 +140,41 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
 				}
 				// only take transactions into account that have not been confirmed by the referenced or older milestones
-				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
-			// we only load up bundles when we're traversing tails, so we don't
-			// check the same bundle twice, however, we still add the trunk and branch of the
-			// bundle transaction to ensure, that if a transaction within the bundle would reference
-			// another trunk (as seen from the view of the bundle), we'd get that cone too.
-			if !cachedTx.GetTransaction().IsTail() {
-				txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-				txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-				cachedTx.Release(forceRelease) // tx -1
-				continue
-			}
-
-			cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
-			if cachedBndl == nil {
-				cachedTx.Release(true) // tx -1
-				return nil, ErrRefBundleNotComplete
+			cachedBndl, exists := cachedBndls[txHash]
+			if !exists {
+				cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
+				if cachedBndl == nil {
+					return nil, ErrRefBundleNotComplete
+				}
+				cachedBndls[txHash] = cachedBndl
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
-				cachedTx.Release(forceRelease)   // tx -1
-				cachedBndl.Release(forceRelease) // bundle -1
+				return nil, ErrRefBundleNotValid
+			}
+
+			// note that through the stricter bundle validation rules, this
+			// check also ensures that the bundle is actually approving only tail transactions
+			if !cachedBndl.GetBundle().ValidStrictSemantics() {
 				return nil, ErrRefBundleNotValid
 			}
 
 			if !cachedBndl.GetBundle().IsValueSpam() {
-
 				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
 				for addr, change := range ledgerChanges {
 					coneDiff[addr] += change
 				}
 			}
 
-			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-
-			cachedTx.Release(forceRelease)   // tx -1
-			cachedBndl.Release(forceRelease) // bundle -1
+			// at this point the bundle is valid and therefore the trunk/branch of
+			// the head tx are tail transactions
+			cachedBndl.GetBundle().GetHead().ConsumeTransaction(func(headTx *hornet.Transaction, _ *hornet.TransactionMetadata) {
+				txsToTraverse[headTx.GetTrunk()] = struct{}{}
+				txsToTraverse[headTx.GetBranch()] = struct{}{}
+			})
 		}
 	}
 

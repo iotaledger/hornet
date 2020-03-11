@@ -62,7 +62,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, panicOnMissingTx bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
+func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, panicOnMissingTx bool, ignoreConfirmationState bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
 
 	defer cachedMsTailTx.Release(true) // tx -1
 
@@ -107,16 +107,30 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 				continue
 			}
 
-			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
-			if !confirmed {
-				cachedTx.Release(true) // tx -1
-				log.Panicf("getMilestoneApprovees: Transaction must be confirmed: %v", txHash)
-			}
+			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+				if at < milestoneIndex {
+					// Ignore Tx that were confirmed by older milestones
+					cachedTx.Release(true) // tx -1
+					continue
+				}
+			} else {
+				// Tx is not confirmed
+				// ToDo: This shouldn't happen, but it does since tipselection allows it at the moment
+				if !ignoreConfirmationState {
+					cachedTx.Release(true) // tx -1
+					return nil, errors.Wrapf(ErrUnconfirmedTxInSubtangle, ": %v", txHash)
+				}
 
-			if at < milestoneIndex {
-				// Ignore Tx that were confirmed by older milestones
-				cachedTx.Release(true) // tx -1
-				continue
+				// Check if the we can walk further
+				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetTrunk()) {
+					cachedTx.Release(true) // tx -1
+					continue
+				}
+
+				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetBranch()) {
+					cachedTx.Release(true) // tx -1
+					continue
+				}
 			}
 
 			approvees = append(approvees, txHash)
@@ -182,7 +196,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
 		cachedMs.Release(true)                           // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, abortSignal)
+		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, false, abortSignal)
 
 		// Do not force release, since it is loaded again
 		cachedMsTailTx.Release() // tx -1
