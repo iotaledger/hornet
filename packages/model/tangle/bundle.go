@@ -251,7 +251,7 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 	// this is fine within the validation code, since the bundle is only complete when it is solid.
 	// however, as a special rule, milestone bundles might not be solid
 	checkTails := true
-	if IsMaybeMilestone(cachedCurrentTailTx) {
+	if IsMaybeMilestone(cachedCurrentTailTx.Retain()) {
 		checkTails = !onMaybeMilestone()
 	}
 
