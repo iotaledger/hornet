@@ -34,6 +34,11 @@ func configureReconnectPool() {
 			continue
 		}
 
+		if neighConf.Identity == ExampleNeighborIdentity {
+			// Ignore the example neighbor
+			continue
+		}
+
 		originAddr, err := iputils.ParseOriginAddress(neighConf.Identity)
 		if err != nil {
 			panic(errors.Wrapf(err, "invalid neighbor address %s", neighConf.Identity))
