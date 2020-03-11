@@ -3,9 +3,9 @@ package tangle
 import (
 	"errors"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )

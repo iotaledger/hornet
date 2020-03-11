@@ -238,7 +238,23 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 		cachedCurrentTx.Release(true) // tx -1
 	}
 
+
+	// validate bundle semantics and signatures
+	if iotago_bundle.ValidBundle(iotaGoBundle) != nil {
+		bundle.setValid(false)
+		bundle.setValidStrictSemantics(false)
+		return false
+	}
+
 	validStrictSemantics := true
+
+	// verify that the head transaction only approves tail transactions.
+	// this is fine within the validation code, since the bundle is only complete when it is solid.
+	// however, as a special rule, milestone bundles might not be solid
+	checkTails := true
+	if IsMaybeMilestone(cachedCurrentTailTx) {
+		checkTails = !onMaybeMilestone()
+	}
 
 	// enforce that non head transactions within the bundle approve as their branch transaction
 	// the trunk transaction of the head transaction.
@@ -249,21 +265,6 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 				validStrictSemantics = false
 			}
 		}
-	}
-
-	// validate bundle semantics and signatures
-	if iotago_bundle.ValidBundle(iotaGoBundle) != nil {
-		bundle.setValid(false)
-		bundle.setValidStrictSemantics(false)
-		return false
-	}
-
-	// verify that the head transaction only approves tail transactions.
-	// this is fine within the validation code, since the bundle is only complete when it is solid.
-	// however, as a special rule, milestone bundles might not be solid
-	checkTails := true
-	if IsMaybeMilestone(cachedCurrentTailTx) {
-		checkTails = !onMaybeMilestone()
 	}
 
 	// check whether the bundle approves tails
