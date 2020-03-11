@@ -233,7 +233,7 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 
 	cachedCurrentTx := cachedCurrentTailTx
 	for i := 1; i < lastIndex+1; i++ {
-		cachedCurrentTx := loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bundle.hash) // tx +1
+		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bundle.hash) // tx +1
 		iotaGoBundle[i] = *cachedCurrentTx.GetTransaction().Tx
 		cachedCurrentTx.Release(true) // tx -1
 	}
@@ -274,6 +274,9 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 		}
 
 		for _, approveeHash := range approveeHashes {
+			if SolidEntryPointsContain(approveeHash) {
+				continue
+			}
 			cachedApproveeTx := GetCachedTransactionOrNil(approveeHash) // tx +1
 			if cachedApproveeTx == nil {
 				log.Panicf("Tx with hash %v not found", approveeHash)
