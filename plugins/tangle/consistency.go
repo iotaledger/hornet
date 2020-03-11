@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -142,40 +143,6 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				continue
 			}
 
-			// Check the tangle structure
-			approveeHashes := []trinary.Hash{cachedTx.GetTransaction().GetTrunk()}
-			if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
-				approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranch())
-			}
-
-			for _, approveeHash := range approveeHashes {
-				cachedApproveeTx, exists := cachedTxs[approveeHash]
-				if !exists {
-					cachedApproveeTx = tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
-					if cachedApproveeTx == nil {
-						log.Panicf("Tx with hash %v not found", approveeHash)
-					}
-					cachedTxs[approveeHash] = cachedApproveeTx
-				}
-
-				if cachedApproveeTx.GetTransaction().Tx.Bundle != cachedTx.GetTransaction().Tx.Bundle {
-					// Tx references another Bundle => Check if the referenced tx is a tail
-					if !cachedApproveeTx.GetTransaction().IsTail() {
-						return nil, ErrRefBundleNotValid
-					}
-				}
-			}
-
-			// we only load up bundles when we're traversing tails, so we don't
-			// check the same bundle twice, however, we still add the trunk and branch of the
-			// bundle transaction to ensure, that if a transaction within the bundle would reference
-			// another trunk (as seen from the view of the bundle), we'd get that cone too.
-			if !cachedTx.GetTransaction().IsTail() {
-				txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-				txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-				continue
-			}
-
 			cachedBndl, exists := cachedBndls[txHash]
 			if !exists {
 				cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
@@ -189,16 +156,25 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				return nil, ErrRefBundleNotValid
 			}
 
-			if !cachedBndl.GetBundle().IsValueSpam() {
+			// note that through the stricter bundle validation rules, this
+			// check also ensures that the bundle is actually approving only tail transactions
+			if !cachedBndl.GetBundle().ValidStrictSemantics() {
+				return nil, ErrRefBundleNotValid
+			}
 
+			if !cachedBndl.GetBundle().IsValueSpam() {
 				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
 				for addr, change := range ledgerChanges {
 					coneDiff[addr] += change
 				}
 			}
 
-			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+			// at this point the bundle is valid and therefore the trunk/branch of
+			// the head tx are tail transactions
+			cachedBndl.GetBundle().GetHead().ConsumeTransaction(func(headTx *hornet.Transaction, _ *hornet.TransactionMetadata) {
+				txsToTraverse[headTx.GetTrunk()] = struct{}{}
+				txsToTraverse[headTx.GetBranch()] = struct{}{}
+			})
 		}
 	}
 
