@@ -61,12 +61,12 @@ func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		if err != nil {
 			e.Error = "Internal error"
 			c.JSON(http.StatusInternalServerError, e)
-			cachedTx.Release() // tx -1
+			cachedTx.Release(true) // tx -1
 			return
 		}
 
 		trytes = append(trytes, tx)
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 	}
 
 	c.JSON(http.StatusOK, GetTrytesReturn{Trytes: trytes})

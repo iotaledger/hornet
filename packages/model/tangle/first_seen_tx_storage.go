@@ -22,9 +22,9 @@ type CachedFirstSeenTx struct {
 
 type CachedFirstSeenTxs []*CachedFirstSeenTx
 
-func (cachedFirstSeenTxs CachedFirstSeenTxs) Release() {
+func (cachedFirstSeenTxs CachedFirstSeenTxs) Release(force ...bool) {
 	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
-		cachedFirstSeenTx.Release()
+		cachedFirstSeenTx.Release(force...)
 	}
 }
 
@@ -66,7 +66,7 @@ func configureFirstSeenTxStorage() {
 }
 
 // firstSeenTx +-0
-func GetFirstSeenTxHashes(msIndex milestone_index.MilestoneIndex, maxFind ...int) []trinary.Hash {
+func GetFirstSeenTxHashes(msIndex milestone_index.MilestoneIndex, forceRelease bool, maxFind ...int) []trinary.Hash {
 	var firstSeenTxHashes []trinary.Hash
 
 	key := make([]byte, 4)
@@ -76,17 +76,17 @@ func GetFirstSeenTxHashes(msIndex milestone_index.MilestoneIndex, maxFind ...int
 	firstSeenTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release() // firstSeenTx -1
+			cachedObject.Release(true) // firstSeenTx -1
 			return false
 		}
 
 		if !cachedObject.Exists() {
-			cachedObject.Release() // firstSeenTx -1
+			cachedObject.Release(true) // firstSeenTx -1
 			return true
 		}
 
 		firstSeenTxHashes = append(firstSeenTxHashes, (&CachedFirstSeenTx{CachedObject: cachedObject}).GetFirstSeenTx().GetTransactionHash())
-		cachedObject.Release() // firstSeenTx -1
+		cachedObject.Release(forceRelease) // firstSeenTx -1
 		return true
 	}, key)
 
@@ -122,13 +122,13 @@ func ShutdownFirstSeenTxsStorage() {
 func FixFirstSeenTxs(msIndex milestone_index.MilestoneIndex) {
 
 	// Search all entries with milestone 0
-	for _, firstSeenTxHash := range GetFirstSeenTxHashes(0) {
+	for _, firstSeenTxHash := range GetFirstSeenTxHashes(0, true) {
 
 		key := make([]byte, 4)
 		binary.LittleEndian.PutUint32(key, uint32(0))
 		key = append(key, trinary.MustTrytesToBytes(firstSeenTxHash)[:49]...)
 		firstSeenTxStorage.Delete(key)
 
-		StoreFirstSeenTx(msIndex, firstSeenTxHash).Release()
+		StoreFirstSeenTx(msIndex, firstSeenTxHash).Release(true)
 	}
 }

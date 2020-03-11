@@ -27,7 +27,7 @@ func configureLiveFeed() {
 		case milestone_index.MilestoneIndex:
 			if cachedTailTx := getMilestoneTail(x); cachedTailTx != nil { // tx +1
 				sendToAllWSClient(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), x}})
-				cachedTailTx.Release() // tx -1
+				cachedTailTx.Release(true) // tx -1
 			}
 		}
 		task.Return(nil)
@@ -53,7 +53,7 @@ func runLiveFeed() {
 
 	notifyLMChanged := events.NewClosure(func(cachedBndl *tangle_model.CachedBundle) {
 		liveFeedWorkerPool.TrySubmit(cachedBndl.GetBundle().GetMilestoneIndex())
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("SPA[TxUpdater]", func(shutdownSignal <-chan struct{}) {

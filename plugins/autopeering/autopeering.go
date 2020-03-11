@@ -15,7 +15,6 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/transport"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/netutil"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/parameter"
@@ -85,11 +84,6 @@ func start(shutdownSignal <-chan struct{}) {
 	if err != nil {
 		log.Fatalf("Error resolving %s: %v", local.CFG_BIND, err)
 	}
-
-	// check that discovery is working and the port is open
-	log.Info("Testing service ...")
-	checkConnection(localAddr, &lPeer.Peer)
-	log.Info("Testing service ... done")
 
 	conn, err := net.ListenUDP(peeringAddr.Network(), localAddr)
 	if err != nil {
@@ -161,20 +155,4 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 	}
 
 	return result, nil
-}
-
-func checkConnection(localAddr *net.UDPAddr, self *peer.Peer) {
-	peering := self.Services().Get(service.PeeringKey)
-	remoteAddr, err := net.ResolveUDPAddr(peering.Network(), peering.String())
-	if err != nil {
-		panic(err)
-	}
-
-	// do not check the address as a NAT may change them for local connections
-	err = netutil.CheckUDP(localAddr, remoteAddr, false, true)
-	if err != nil {
-		log.Errorf("Error testing service: %s", err)
-		log.Panicf("Please check that HORNET is publicly reachable at %s/%s",
-			peering.String(), peering.Network())
-	}
 }

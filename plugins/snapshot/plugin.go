@@ -34,6 +34,7 @@ var (
 	ErrSnapshotCreationFailed     = errors.New("creating snapshot failed: %v")
 	ErrTargetIndexTooNew          = errors.New("snapshot target is too new.")
 	ErrTargetIndexTooOld          = errors.New("snapshot target is too old.")
+	ErrUnconfirmedTxInSubtangle   = errors.New("Unconfirmed tx in subtangle")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)
@@ -76,7 +77,7 @@ func run(plugin *node.Plugin) {
 		case newSolidMilestoneSignal <- cachedBndl.GetBundle().GetMilestoneIndex():
 		default:
 		}
-		cachedBndl.Release() // bundle -1
+		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {

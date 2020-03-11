@@ -91,8 +91,10 @@ func MarkAddressAsSpent(address trinary.Trytes) bool {
 	newlyAdded := false
 	spentAddressesStorage.ComputeIfAbsent(spentAddress.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
+		spentAddress.Persist()
+		spentAddress.SetModified()
 		return spentAddress
-	}).Release()
+	}).Release(true)
 
 	return newlyAdded
 }
@@ -105,8 +107,10 @@ func MarkAddressAsSpentBinaryWithoutLocking(address []byte) bool {
 	newlyAdded := false
 	spentAddressesStorage.ComputeIfAbsent(spentAddress.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
+		spentAddress.Persist()
+		spentAddress.SetModified()
 		return spentAddress
-	}).Release()
+	}).Release(true)
 
 	return newlyAdded
 }
@@ -116,7 +120,7 @@ func CountSpentAddressesEntriesWithoutLocking() (spentAddressesCount int32) {
 	spentAddressesCount = 0
 	spentAddressesStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		spentAddressesCount++
-		cachedObject.Release() // spentAddress -1
+		cachedObject.Release(true) // spentAddress -1
 		return true
 	})
 
@@ -132,7 +136,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abor
 	var err error
 	wasAborted := false
 	spentAddressesStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		cachedObject.Release() // spentAddress -1
+		cachedObject.Release(true) // spentAddress -1
 
 		select {
 		case <-abortSignal:

@@ -12,7 +12,7 @@ var (
 	ErrFindAllTailsFailed = errors.New("Unable to find all tails")
 )
 
-func FindAllTails(txHash trinary.Hash) (map[string]struct{}, error) {
+func FindAllTails(txHash trinary.Hash, forceRelease bool) (map[string]struct{}, error) {
 
 	txsToTraverse := make(map[string]struct{})
 	txsChecked := make(map[string]struct{})
@@ -45,14 +45,14 @@ func FindAllTails(txHash trinary.Hash) (map[string]struct{}, error) {
 
 			if cachedTx.GetTransaction().IsTail() {
 				tails[txHash] = struct{}{}
-				cachedTx.Release() // tx -1
+				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
 			// Mark the approvees to be traversed
 			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
-			cachedTx.Release() // tx -1
+			cachedTx.Release(forceRelease) // tx -1
 		}
 	}
 	return tails, nil

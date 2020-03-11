@@ -20,9 +20,9 @@ type CachedApprover struct {
 
 type CachedAppprovers []*CachedApprover
 
-func (cachedApprovers CachedAppprovers) Release() {
+func (cachedApprovers CachedAppprovers) Release(force ...bool) {
 	for _, cachedApprover := range cachedApprovers {
-		cachedApprover.Release()
+		cachedApprover.Release(force...)
 	}
 }
 
@@ -65,24 +65,24 @@ func configureApproversStorage() {
 }
 
 // approvers +-0
-func GetApproverHashes(transactionHash trinary.Hash, maxFind ...int) []trinary.Hash {
+func GetApproverHashes(transactionHash trinary.Hash, forceRelease bool, maxFind ...int) []trinary.Hash {
 	var approverHashes []trinary.Hash
 
 	i := 0
 	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release() // approvers -1
+			cachedObject.Release(true) // approvers -1
 			return false
 		}
 
 		if !cachedObject.Exists() {
-			cachedObject.Release() // approvers -1
+			cachedObject.Release(true) // approvers -1
 			return true
 		}
 
 		approverHashes = append(approverHashes, (&CachedApprover{CachedObject: cachedObject}).GetApprover().GetApproverHash())
-		cachedObject.Release() // approvers -1
+		cachedObject.Release(forceRelease) // approvers -1
 		return true
 	}, trinary.MustTrytesToBytes(transactionHash)[:49])
 

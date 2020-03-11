@@ -100,7 +100,7 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 
 	txsToTraverse[cachedReqMs.GetBundle().GetTailHash()] = struct{}{}
 
-	cachedReqMs.Release() // bundle -1
+	cachedReqMs.Release(true) // bundle -1
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -128,11 +128,11 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 			if confirmed {
 				if at != milestoneIndex {
 					// ignore all tx that were confirmed by another milestone
-					cachedTx.Release() // tx -1
+					cachedTx.Release(true) // tx -1
 					continue
 				}
 			} else {
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", txHash)
 			}
 
@@ -141,21 +141,21 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
 
 			if !cachedTx.GetTransaction().IsTail() {
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				continue
 			}
 
 			txBundle := cachedTx.GetTransaction().Tx.Bundle
 
-			cachedBndl := tangle.GetCachedBundleOfTailTransactionOrNil(txHash) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOrNil(txHash) // bundle +1
 			if cachedBndl == nil {
-				cachedTx.Release() // tx -1
+				cachedTx.Release(true) // tx -1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, txBundle)
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
-				cachedTx.Release()   // tx -1
-				cachedBndl.Release() // bundle -1
+				cachedTx.Release(true)   // tx -1
+				cachedBndl.Release(true) // bundle -1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", txHash, txBundle)
 			}
 
@@ -173,17 +173,17 @@ func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confi
 					}
 					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: hornetTx.GetHash(), Address: hornetTx.Tx.Address, Index: hornetTx.Tx.CurrentIndex, Value: hornetTx.Tx.Value})
 				}
-				cachedTxs.Release() // tx -1
+				cachedTxs.Release(true) // tx -1
 				for address, change := range ledgerChanges {
 					totalLedgerChanges[address] += change
 				}
 
 				cachedBundleHeadTx := cachedBndl.GetBundle().GetHead() // tx +1
 				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTx.GetTransaction().Tx.Bundle, TailTxHash: cachedBndl.GetBundle().GetTailHash(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
-				cachedBundleHeadTx.Release() // tx -1
+				cachedBundleHeadTx.Release(true) // tx -1
 			}
-			cachedTx.Release()   // tx -1
-			cachedBndl.Release() // bundle -1
+			cachedTx.Release(true)   // tx -1
+			cachedBndl.Release(true) // bundle -1
 
 			// we only add the tail transaction to the txsToConfirm set, in order to not
 			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not

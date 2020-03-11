@@ -16,11 +16,12 @@ func BundleCaller(handler interface{}, params ...interface{}) {
 }
 
 const (
-	HORNET_BUNDLE_METADATA_SOLID         = 0
-	HORNET_BUNDLE_METADATA_VALID         = 1
-	HORNET_BUNDLE_METADATA_CONFIRMED     = 2
-	HORNET_BUNDLE_METADATA_IS_MILESTONE  = 3
-	HORNET_BUNDLE_METADATA_IS_VALUE_SPAM = 4
+	HORNET_BUNDLE_METADATA_SOLID                  = 0
+	HORNET_BUNDLE_METADATA_VALID                  = 1
+	HORNET_BUNDLE_METADATA_CONFIRMED              = 2
+	HORNET_BUNDLE_METADATA_IS_MILESTONE           = 3
+	HORNET_BUNDLE_METADATA_IS_VALUE_SPAM          = 4
+	HORNET_BUNDLE_METADATA_VALID_STRICT_SEMANTICS = 5
 )
 
 // Storable Object
@@ -44,15 +45,15 @@ func (bundle *Bundle) GetHash() trinary.Hash {
 	return bundle.hash
 }
 
-func (bundle *Bundle) GetTrunk() trinary.Hash {
-	cachedHeadTx := bundle.getHead() // tx +1
-	defer cachedHeadTx.Release()     // tx -1
+func (bundle *Bundle) GetTrunk(forceRelease bool) trinary.Hash {
+	cachedHeadTx := bundle.getHead()         // tx +1
+	defer cachedHeadTx.Release(forceRelease) // tx -1
 	return cachedHeadTx.GetTransaction().GetTrunk()
 }
 
-func (bundle *Bundle) GetBranch() trinary.Hash {
-	cachedHeadTx := bundle.getHead() // tx +1
-	defer cachedHeadTx.Release()     // tx -1
+func (bundle *Bundle) GetBranch(forceRelease bool) trinary.Hash {
+	cachedHeadTx := bundle.getHead()         // tx +1
+	defer cachedHeadTx.Release(forceRelease) // tx -1
 	return cachedHeadTx.GetTransaction().GetBranch()
 }
 
@@ -133,7 +134,7 @@ func (bundle *Bundle) IsSolid() bool {
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
 	tailSolid := cachedTailTx.GetMetadata().IsSolid()
-	cachedTailTx.Release() // tx -1
+	cachedTailTx.Release(true) // tx -1
 
 	if tailSolid {
 		bundle.setSolid(true)
@@ -150,6 +151,16 @@ func (bundle *Bundle) setValid(valid bool) {
 
 func (bundle *Bundle) IsValid() bool {
 	return bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_VALID)
+}
+
+func (bundle *Bundle) setValidStrictSemantics(valid bool) {
+	if valid != bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_VALID_STRICT_SEMANTICS) {
+		bundle.metadata = bundle.metadata.ModifyFlag(HORNET_BUNDLE_METADATA_VALID_STRICT_SEMANTICS, valid)
+	}
+}
+
+func (bundle *Bundle) ValidStrictSemantics() bool {
+	return bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_VALID_STRICT_SEMANTICS)
 }
 
 func (bundle *Bundle) setConfirmed(confirmed bool) {
@@ -169,7 +180,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 
 	// Check tail tx
 	cachedTailTx := bundle.getTail() // tx +1
-	defer cachedTailTx.Release()     // tx -1
+	defer cachedTailTx.Release(true) // tx -1
 	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
 
 	if tailConfirmed {
@@ -203,7 +214,7 @@ func (bundle *Bundle) isComplete() bool {
 }
 
 // Checks if a bundle is syntactically valid and has valid signatures
-func (bundle *Bundle) validate() bool {
+func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 
 	// Because the bundle is already complete when this function gets called, the amount of tx has to be correct,
 	// otherwise the bundle was not constructed correctly
@@ -215,22 +226,74 @@ func (bundle *Bundle) validate() bool {
 	// check all tx
 	iotaGoBundle := make(iotago_bundle.Bundle, len(bundle.txs))
 
-	cachedCurrentTx := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
-	lastIndex := int(cachedCurrentTx.GetTransaction().Tx.LastIndex)
-	iotaGoBundle[0] = *cachedCurrentTx.GetTransaction().Tx
-	cachedCurrentTx.Release() // tx -1
+	cachedCurrentTailTx := loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
+	lastIndex := int(cachedCurrentTailTx.GetTransaction().Tx.LastIndex)
+	iotaGoBundle[0] = *cachedCurrentTailTx.GetTransaction().Tx
+	defer cachedCurrentTailTx.Release(true) // tx -1
 
+	cachedCurrentTx := cachedCurrentTailTx
 	for i := 1; i < lastIndex+1; i++ {
 		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bundle.hash) // tx +1
 		iotaGoBundle[i] = *cachedCurrentTx.GetTransaction().Tx
-		cachedCurrentTx.Release() // tx -1
+		cachedCurrentTx.Release(true) // tx -1
 	}
 
 	// validate bundle semantics and signatures
-	valid := iotago_bundle.ValidBundle(iotaGoBundle) == nil
+	if iotago_bundle.ValidBundle(iotaGoBundle) != nil {
+		bundle.setValid(false)
+		bundle.setValidStrictSemantics(false)
+		return false
+	}
 
-	bundle.setValid(valid)
-	return valid
+	validStrictSemantics := true
+
+	// verify that the head transaction only approves tail transactions.
+	// this is fine within the validation code, since the bundle is only complete when it is solid.
+	// however, as a special rule, milestone bundles might not be solid
+	checkTails := true
+	if IsMaybeMilestone(cachedCurrentTailTx) {
+		checkTails = !onMaybeMilestone()
+	}
+
+	// enforce that non head transactions within the bundle approve as their branch transaction
+	// the trunk transaction of the head transaction.
+	headTx := iotaGoBundle[len(iotaGoBundle)-1]
+	if len(iotaGoBundle) > 1 {
+		for i := 0; i < len(iotaGoBundle)-1; i++ {
+			if iotaGoBundle[i].BranchTransaction != headTx.TrunkTransaction {
+				validStrictSemantics = false
+			}
+		}
+	}
+
+	// check whether the bundle approves tails
+	if checkTails {
+		approveeHashes := []trinary.Hash{headTx.TrunkTransaction}
+		if headTx.TrunkTransaction != headTx.BranchTransaction {
+			approveeHashes = append(approveeHashes, headTx.BranchTransaction)
+		}
+
+		for _, approveeHash := range approveeHashes {
+			if SolidEntryPointsContain(approveeHash) {
+				continue
+			}
+			cachedApproveeTx := GetCachedTransactionOrNil(approveeHash) // tx +1
+			if cachedApproveeTx == nil {
+				log.Panicf("Tx with hash %v not found", approveeHash)
+			}
+
+			if !cachedApproveeTx.GetTransaction().IsTail() {
+				validStrictSemantics = false
+				cachedApproveeTx.Release(true) // tx -1
+				break
+			}
+			cachedApproveeTx.Release(true) // tx -1
+		}
+	}
+
+	bundle.setValidStrictSemantics(validStrictSemantics)
+	bundle.setValid(true)
+	return true
 }
 
 // Calculates the ledger changes of the bundle
@@ -242,7 +305,7 @@ func (bundle *Bundle) calcLedgerChanges() {
 		if value := cachedTx.GetTransaction().Tx.Value; value != 0 {
 			changes[cachedTx.GetTransaction().Tx.Address] += value
 		}
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 	}
 
 	isValueSpamBundle := true

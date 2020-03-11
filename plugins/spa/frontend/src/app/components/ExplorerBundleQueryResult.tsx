@@ -7,6 +7,7 @@ import {inject, observer} from "mobx-react";
 import ExplorerStore from "app/stores/ExplorerStore";
 import Spinner from "react-bootstrap/Spinner";
 import {ExplorerBundle} from "app/components/ExplorerBundle";
+import {If} from 'tsx-control-statements/components';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -57,9 +58,12 @@ export class ExplorerBundleQueryResult extends React.Component<Props, any> {
                         }
                     </Col>
                 </Row>
-                {
-                    bundles !== null && bndlEle
-                }
+                <If condition={bundles !== null}>
+                    {bndlEle}
+                </If>
+                <If condition={bundles === null}>
+                    Bundle not yet available or unknown
+                </If>
             </Container>
         );
     }
