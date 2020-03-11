@@ -238,7 +238,6 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 		cachedCurrentTx.Release(true) // tx -1
 	}
 
-
 	// validate bundle semantics and signatures
 	if iotago_bundle.ValidBundle(iotaGoBundle) != nil {
 		bundle.setValid(false)
