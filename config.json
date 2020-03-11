@@ -39,7 +39,7 @@
       "username": "hornet",
       "password": "hornet"
     },
-	"theme": "default"
+    "theme": "default"
   },
   "db": {
     "path": "mainnetdb"
