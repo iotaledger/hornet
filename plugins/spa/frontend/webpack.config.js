@@ -128,11 +128,11 @@ module.exports = {
             disable: !isProduction
         }),
         new HtmlWebpackPlugin({
-			filename: 'index.html',
+	        filename: 'index.html',
             template: 'assets/index.html'
         }),
 		new HtmlWebpackPlugin({
-			filename: 'index_dark.html',
+	        filename: 'index_dark.html',
             template: 'assets/index_dark.html'
         }),
         new FaviconsWebpackPlugin('./assets/favicon.svg')
