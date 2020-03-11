@@ -2,6 +2,7 @@ package graph
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"time"
 
@@ -58,6 +59,17 @@ func downloadSocketIOHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, parameter.NodeConfig.GetString("graph.socketioPath"))
 }
 
+func wrapHandler(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
+			tmpl, _ := template.New("graph").Parse(index)
+			tmpl.Execute(w, nil)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}
+}
+
 func configureSocketIOServer() error {
 	var err error
 
@@ -99,7 +111,7 @@ func configure(plugin *node.Plugin) {
 		log.Panicf("Graph: %v", err.Error())
 	}
 
-	router.Handle("/", fs)
+	router.HandleFunc("/", wrapHandler(fs))
 	router.HandleFunc("/socket.io/socket.io.js", downloadSocketIOHandler)
 	router.Handle("/socket.io/", socketioServer)
 
