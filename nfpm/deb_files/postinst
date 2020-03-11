@@ -1,34 +1,35 @@
 #!/bin/sh
-
 set -e
+OPTS=""
 
-SERVICE_NAME="hornet"
-SYSTEMD_SERVICE="${SERVICE_NAME}.service"
+if [ -n "$D" ]; then
+    OPTS="--root=$D"
+fi
 
-case "$1" in
-configure | abort-upgrade | abort-remove | abort-deconfigure)
-    deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null || true
-    systemctl --system daemon-reload >/dev/null
-    if [ -n "$2" ]; then
-        deb-systemd-invoke restart "${SYSTEMD_SERVICE}" >/dev/null
-    else
-        echo "######################################\n"
-        echo "HORNET installation finished\n"
-        echo "######################################\n"
-        echo "Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.\n"
-        echo "To start HORNET the first time, please run:\nsudo systemctl enable hornet && sudo service hornet start\n"
-    fi
+if type systemctl >/dev/null 2>/dev/null; then
+	if [ -z "$D" ]; then
+		systemctl daemon-reload
+	fi
 
-    adduser --no-create-home --system --group hornet >/dev/null
+        # if iota group doesn't exist, create it
+        if [ ! $(getent group iota) ]; then
+                groupadd iota > /dev/null
+        fi   
 
-    mkdir -p /var/lib/hornet
-    chmod 700 /var/lib/hornet
-    chmod 700 /etc/hornet
-    chown -R hornet:hornet /etc/hornet
-    chown -R hornet:hornet /var/lib/hornet
-    ;;
-*)
-    echo "postinst called with unknown argument \`$1'" >&2
-    exit 1
-    ;;
-esac
+	# if beekeeper user doesn't exist, create it
+	if [ ! $(getent passwd beekeeper) ]; then
+		useradd --no-create-home --system -g iota beekeeper > /dev/null
+	fi
+
+	mkdir -p /var/lib/hornet
+	chmod 775 /var/lib/hornet
+	chmod 775 /etc/hornet
+	chown -R beekeeper:iota /var/lib/hornet
+	chown -R beekeeper:iota /etc/hornet
+
+	systemctl $OPTS disable hornet.service
+
+	if [ -z "$D" -a "disable" = "enable" ]; then
+		systemctl --no-block restart hornet.service
+	fi
+fi

@@ -1,18 +1,16 @@
 #!/bin/sh
-
+[ "$1" != "upgrade" ] || exit 0
 set -e
+OPTS=""
 
-SERVICE_NAME="hornet"
-SYSTEMD_SERVICE="${SERVICE_NAME}.service"
+if [ -n "$D" ]; then
+    OPTS="--root=$D"
+fi
 
-case "$1" in
-remove)
-    deb-systemd-invoke stop "${SYSTEMD_SERVICE}" >/dev/null
-    ;;
-upgrade | deconfigure | failed-upgrade) ;;
+if type systemctl >/dev/null 2>/dev/null; then
+	if [ -z "$D" ]; then
+		systemctl stop hornet.service
+	fi
 
-*)
-    echo "prerm called with unknown argument \`$1'" >&2
-    exit 1
-    ;;
-esac
+	systemctl $OPTS disable hornet.service
+fi
