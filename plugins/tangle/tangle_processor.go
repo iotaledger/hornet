@@ -33,7 +33,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	configureGossipSolidifier()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(bool), task.Param(2).(milestone_index.MilestoneIndex), task.Param(3).(*gossip.Neighbor))
+		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(bool), task.Param(2).(milestone_index.MilestoneIndex), task.Param(3).(*metrics.NeighborMetrics))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
@@ -65,8 +65,8 @@ func runTangleProcessor(plugin *node.Plugin) {
 
 	runGossipSolidifier()
 
-	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighbor *gossip.Neighbor) {
-		receiveTxWorkerPool.Submit(transaction, requested, reqMilestoneIndex, neighbor)
+	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighborMetrics *metrics.NeighborMetrics) {
+		receiveTxWorkerPool.Submit(transaction, requested, reqMilestoneIndex, neighborMetrics)
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
@@ -99,7 +99,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighbor *gossip.Neighbor) {
+func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighborMetrics *metrics.NeighborMetrics) {
 
 	txHash := incomingTx.GetHash()
 
@@ -113,8 +113,8 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.IncrNewTransactionsCount()
-		if neighbor != nil {
-			neighbor.Metrics.IncrNewTransactionsCount()
+		if neighborMetrics != nil {
+			neighborMetrics.IncrNewTransactionsCount()
 		}
 
 		if requested {
@@ -130,8 +130,8 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	} else {
 		metrics.SharedServerMetrics.IncrKnownTransactionsCount()
-		if neighbor != nil {
-			neighbor.Metrics.IncrKnownTransactionsCount()
+		if neighborMetrics != nil {
+			neighborMetrics.IncrKnownTransactionsCount()
 		}
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}

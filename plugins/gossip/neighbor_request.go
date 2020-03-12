@@ -142,7 +142,7 @@ func (p *PendingNeighborRequests) process(neighbor *Neighbor) {
 
 		if requested {
 			// Tx is requested => ignore that it was marked as stale before
-			Events.ReceivedTransaction.Trigger(p.hornetTx, requested, reqMilestoneIndex, neighbor)
+			Events.ReceivedTransaction.Trigger(p.hornetTx, requested, reqMilestoneIndex, neighbor.Metrics)
 		}
 
 		p.notify()
@@ -195,7 +195,7 @@ func (p *PendingNeighborRequests) process(neighbor *Neighbor) {
 
 	if !stale {
 		// Ignore stale transactions until they are requested
-		Events.ReceivedTransaction.Trigger(hornetTx, requested, reqMilestoneIndex, neighbor)
+		Events.ReceivedTransaction.Trigger(hornetTx, requested, reqMilestoneIndex, neighbor.Metrics)
 
 		if !requested && broadcast {
 			p.broadcast()
