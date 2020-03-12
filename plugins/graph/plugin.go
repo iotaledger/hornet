@@ -42,7 +42,7 @@ var (
 	newMilestoneWorkerQueueSize = 100
 	newMilestoneWorkerPool      *workerpool.WorkerPool
 
-	broadcast = make(chan *wsMessage)
+	broadcast = make(chan *wsMessage, 100)
 
 	wasSyncBefore = false
 
@@ -84,12 +84,10 @@ func socketServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func socketBroadcast() {
-	for {
-		val := <-broadcast
+	for message := range broadcast {
 		clientsLock.Lock()
-		// broadcast to all connected clients
 		for client := range clients {
-			err := client.WriteJSON(val)
+			err := client.WriteJSON(message)
 			if err != nil {
 				log.Warnf("Websocket error: %s", err)
 				client.Close()
@@ -219,6 +217,8 @@ func run(plugin *node.Plugin) {
 
 		<-shutdownSignal
 		log.Info("Stopping Graph ...")
+
+		close(broadcast)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
 		defer cancel()

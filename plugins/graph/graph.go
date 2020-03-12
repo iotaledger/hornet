@@ -27,7 +27,6 @@ var (
 	upgrader = websocket.Upgrader{}
 	clients  = make(map[*websocket.Conn]bool)
 
-	broadcastLock    = syncutils.Mutex{}
 	clientsLock      = syncutils.Mutex{}
 	txRingBufferLock = syncutils.Mutex{}
 	snRingBufferLock = syncutils.Mutex{}
@@ -125,9 +124,12 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		txRingBuffer = txRingBuffer.Next()
 		txRingBufferLock.Unlock()
 
-		broadcastLock.Lock()
-		broadcast <- &wsMessage{Type: "tx", Data: wsTx}
-		broadcastLock.Unlock()
+		msg := &wsMessage{Type: "tx", Data: wsTx}
+		select {
+		case broadcast <- msg:
+		default:
+		}
+
 	})
 }
 
@@ -147,9 +149,11 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 		snRingBuffer = snRingBuffer.Next()
 		snRingBufferLock.Unlock()
 
-		broadcastLock.Lock()
-		broadcast <- &wsMessage{Type: "sn", Data: snTx}
-		broadcastLock.Unlock()
+		msg := &wsMessage{Type: "sn", Data: snTx}
+		select {
+		case broadcast <- msg:
+		default:
+		}
 	})
 }
 
@@ -162,7 +166,9 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 	msRingBuffer = msRingBuffer.Next()
 	msRingBufferLock.Unlock()
 
-	broadcastLock.Lock()
-	broadcast <- &wsMessage{Type: "ms", Data: msHash}
-	broadcastLock.Unlock()
+	msg := &wsMessage{Type: "ms", Data: msHash}
+	select {
+	case broadcast <- msg:
+	default:
+	}
 }

@@ -5,7 +5,7 @@ const index string = `
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>the IOTA tangle</title>
+    <title>The IOTA tangle</title>
     <link rel="stylesheet" href="main.css" />
     <script src="lib/vivagraph.js"></script>
     <script src="main.js"></script>
@@ -15,7 +15,7 @@ const index string = `
       crossorigin="anonymous"
     ></script>
 
-    <meta name="application-name" content="The IOTA TAngle" />
+    <meta name="application-name" content="HORNET - The IOTA Tangle" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="See the IOTA Tangle in action." />
   </head>
