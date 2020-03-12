@@ -306,8 +306,15 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 	return cachedTx, false
 }
 
+// tryConstructBundle tries to construct a bundle (maybe txs are still missing in the DB)
+// isSolidTail should only be false for possible milestone txs
 func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	defer cachedTx.Release() // tx -1
+
+	if ContainsBundle(cachedTx.GetTransaction().GetHash()) {
+		// Bundle already exists
+		return
+	}
 
 	if !isSolidTail && !cachedTx.GetTransaction().IsTail() {
 		// If Tx is not a tail, search all tailTx that reference this tx and try to create the bundles
@@ -321,11 +328,6 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 			tryConstructBundle(cachedTailTx.Retain(), false) // tx pass +1
 			cachedTailTx.Release()                           // tx -1
 		}
-		return
-	}
-
-	if ContainsBundle(cachedTx.GetTransaction().GetHash()) {
-		// Bundle already exists
 		return
 	}
 
@@ -353,44 +355,35 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		}
 	}
 
+	isMilestone, err := CheckIfMilestone(bndl)
+	if err != nil {
+		// Invalid milestone
+		Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", err.Error()))
+
+		if !isSolidTail {
+			// Only valid milestones should be added to the database if not triggered via solidification
+			return
+		}
+	}
+
+	if !isSolidTail && !isMilestone {
+		// Only valid milestones should be added to the database if not triggered via solidification
+		return
+	}
+
 	newlyAdded := false
-	wasMilestone := false
-	var spentAddresses []trinary.Hash
-	var invalidMilestoneErr error
-	cachedBndl := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
-
+	cachedObj := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
 		newlyAdded = true
-		if bndl.validate(func() bool {
-			isMilestone, err := CheckIfMilestone(bndl)
-			if err != nil {
-				invalidMilestoneErr = err
-				return false
-			}
 
-			if !isMilestone {
-				return false
-			}
-
-			wasMilestone = true
-			StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
-			return true
-		}) {
-			metrics.SharedServerMetrics.IncrValidatedBundlesCount()
-
+		if bndl.validate() {
 			bndl.calcLedgerChanges()
 
-			if !bndl.IsValueSpam() {
-				spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
-				for addr, change := range bndl.GetLedgerChanges() {
-					if change < 0 {
-						if spentAddressesEnabled && MarkAddressAsSpent(addr) {
-							metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
-						}
-						spentAddresses = append(spentAddresses, addr)
-					}
-				}
+			if bndl.IsMilestone() {
+				StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
 			}
 		}
+
+		metrics.SharedServerMetrics.IncrValidatedBundlesCount()
 
 		bndl.Persist()
 		bndl.SetModified()
@@ -399,20 +392,28 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	})
 
 	if newlyAdded {
-		if invalidMilestoneErr != nil {
-			Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("Invalid milestone detected! Err: %s", invalidMilestoneErr.Error()))
+
+		cachedBndl := &CachedBundle{CachedObject: cachedObj}
+		bndl := cachedBndl.GetBundle()
+
+		if !bndl.IsValueSpam() {
+			spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
+			for addr, change := range bndl.GetLedgerChanges() {
+				if change < 0 {
+					if spentAddressesEnabled && MarkAddressAsSpent(addr) {
+						metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
+					}
+					Events.AddressSpent.Trigger(addr)
+				}
+			}
 		}
 
-		for _, addr := range spentAddresses {
-			Events.AddressSpent.Trigger(addr)
-		}
-
-		if wasMilestone {
-			Events.ReceivedValidMilestone.Trigger(&CachedBundle{CachedObject: cachedBndl}) // bundle pass +1
+		if bndl.IsMilestone() {
+			Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
 		}
 	}
 
-	cachedBndl.Release() // bundle -1
+	cachedObj.Release() // bundle -1
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.

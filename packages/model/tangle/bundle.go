@@ -214,7 +214,7 @@ func (bundle *Bundle) isComplete() bool {
 }
 
 // Checks if a bundle is syntactically valid and has valid signatures
-func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
+func (bundle *Bundle) validate() bool {
 
 	// Because the bundle is already complete when this function gets called, the amount of tx has to be correct,
 	// otherwise the bundle was not constructed correctly
@@ -250,10 +250,7 @@ func (bundle *Bundle) validate(onMaybeMilestone func() bool) bool {
 	// verify that the head transaction only approves tail transactions.
 	// this is fine within the validation code, since the bundle is only complete when it is solid.
 	// however, as a special rule, milestone bundles might not be solid
-	checkTails := true
-	if IsMaybeMilestone(cachedCurrentTailTx.Retain()) {
-		checkTails = !onMaybeMilestone()
-	}
+	checkTails := !bundle.IsMilestone()
 
 	// enforce that non head transactions within the bundle approve as their branch transaction
 	// the trunk transaction of the head transaction.
