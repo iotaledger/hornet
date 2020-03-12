@@ -618,7 +618,7 @@ export class NodeStore {
 
         return {
             labels: labels,
-            datasets: [sentTxReq, sentMsReq, recTxReq, recMsReq],
+            datasets: [sentTxReq, sentMsReq, recTxReq, recMsReq, sentHeatbeats, recHeartbeats],
         };
     }
 
