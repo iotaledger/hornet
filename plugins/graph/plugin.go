@@ -52,20 +52,14 @@ var (
 
 // PageData struct for html template
 type PageData struct {
-	Host string
-	Port int
-}
-
-func downloadSocketIOHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, parameter.NodeConfig.GetString("graph.socketioPath"))
+	URI string
 }
 
 func wrapHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
 			data := PageData{
-				Host: parameter.NodeConfig.GetString("graph.bindAddress"),
-				Port: parameter.NodeConfig.GetInt("graph.port"),
+				URI: parameter.NodeConfig.GetString("graph.websocket.uri"),
 			}
 			tmpl, _ := template.New("graph").Parse(index)
 			tmpl.Execute(w, data)
@@ -110,7 +104,7 @@ func configure(plugin *node.Plugin) {
 
 	router = http.NewServeMux()
 
-	// socket.io and web server
+	// websocket and web server
 	server = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port")),
 		Handler: router,

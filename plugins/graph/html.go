@@ -32,7 +32,7 @@ const index string = `
         COLOR_BY_NUMBER: true
       })
 
-      var Socket = new WebSocket("ws://{{.Host}}:{{.Port}}/ws");
+      var Socket = new WebSocket("{{.URI}}");
 
       Socket.onmessage = function(event) {
         var msg = JSON.parse(event.data);

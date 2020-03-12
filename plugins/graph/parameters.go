@@ -9,8 +9,8 @@ func init() {
 	// "Path to IOTA Tangle Visualiser webroot files"
 	parameter.NodeConfig.SetDefault("graph.webrootPath", "IOTAtangle/webroot")
 
-	// "Path to socket.io.js"
-	parameter.NodeConfig.SetDefault("graph.socketioPath", "socket.io-client/dist/socket.io.js")
+	// "Set the websocket URI"
+	parameter.NodeConfig.SetDefault("graph.websocket.uri", "ws://127.0.0.1:8083/ws")
 
 	// "Set the domain on which IOTA Tangle Visualiser is served"
 	parameter.NodeConfig.SetDefault("graph.domain", "")
