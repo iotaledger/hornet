@@ -33,7 +33,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	configureGossipSolidifier()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(bool), task.Param(2).(milestone_index.MilestoneIndex))
+		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(bool), task.Param(2).(milestone_index.MilestoneIndex), task.Param(3).(*gossip.Neighbor))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
@@ -65,8 +65,8 @@ func runTangleProcessor(plugin *node.Plugin) {
 
 	runGossipSolidifier()
 
-	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) {
-		receiveTxWorkerPool.Submit(transaction, requested, reqMilestoneIndex)
+	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighbor *gossip.Neighbor) {
+		receiveTxWorkerPool.Submit(transaction, requested, reqMilestoneIndex, neighbor)
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
@@ -99,7 +99,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex) {
+func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighbor *gossip.Neighbor) {
 
 	txHash := incomingTx.GetHash()
 
@@ -113,6 +113,7 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.IncrNewTransactionsCount()
+		neighbor.Metrics.IncrNewTransactionsCount()
 
 		if requested {
 			// Add new requests to the requestQueue (needed for sync)
@@ -126,6 +127,8 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 		Events.ReceivedNewTransaction.Trigger(cachedTx, latestMilestoneIndex, solidMilestoneIndex)
 
 	} else {
+		metrics.SharedServerMetrics.IncrKnownTransactionsCount()
+		neighbor.Metrics.IncrKnownTransactionsCount()
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
@@ -172,8 +175,8 @@ func printStatus() {
 			tangle.GetLatestMilestoneIndex(),
 			metrics.SharedServerMetrics.GetSeenSpentAddrCount(),
 			metrics.SharedServerMetrics.GetValidatedBundlesCount(),
-			metrics.SharedServerMetrics.GetSentTransactionRequestCount(),
-			metrics.SharedServerMetrics.GetReceivedTransactionRequestCount(),
+			metrics.SharedServerMetrics.GetSentTransactionRequestsCount(),
+			metrics.SharedServerMetrics.GetReceivedTransactionRequestsCount(),
 			metrics.SharedServerMetrics.GetNewTransactionsCount(),
 			lastIncomingTPS,
 			lastNewTPS,

@@ -435,6 +435,10 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 		neighbor.Protocol.Events.ReceivedMilestoneRequestData.Attach(receiveMilestoneRequestClosure)
 
 		heartbeatClosure := events.NewClosure(func(protocol *protocol, data []byte) {
+
+			metrics.SharedServerMetrics.IncrReceivedHeartbeatsCount()
+			protocol.Neighbor.Metrics.IncrReceivedHeartbeatsCount()
+
 			// if we are receiving the first heartbeat message, we fire a "SendMilestoneRequest" call
 			firstHeartbeat := neighbor.LatestHeartbeat == nil
 			neighbor.LatestHeartbeat = HeartbeatFromBytes(data)
@@ -589,23 +593,30 @@ func IsAddrBlacklisted(remoteAddr net.Addr) bool {
 }
 
 type NeighborInfo struct {
-	Neighbor                          *Neighbor `json:"-"`
-	Address                           string    `json:"address"`
-	Port                              uint16    `json:"port,omitempty"`
-	Domain                            string    `json:"domain,omitempty"`
-	DomainWithPort                    string    `json:"-"`
-	Alias                             string    `json:"alias,omitempty"`
-	PreferIPv6                        bool      `json:"-"`
-	NumberOfAllTransactions           uint32    `json:"numberOfAllTransactions"`
-	NumberOfRandomTransactionRequests uint32    `json:"numberOfRandomTransactionRequests"`
-	NumberOfNewTransactions           uint32    `json:"numberOfNewTransactions"`
-	NumberOfInvalidTransactions       uint32    `json:"numberOfInvalidTransactions"`
-	NumberOfStaleTransactions         uint32    `json:"numberOfStaleTransactions"`
-	NumberOfSentTransactions          uint32    `json:"numberOfSentTransactions"`
-	NumberOfDroppedSentPackets        uint32    `json:"numberOfDroppedSentPackets"`
-	ConnectionType                    string    `json:"connectionType"`
-	Connected                         bool      `json:"connected"`
-	AutopeeringID                     string    `json:"autopeering_id,omitempty"`
+	Neighbor                       *Neighbor `json:"-"`
+	Address                        string    `json:"address"`
+	Port                           uint16    `json:"port,omitempty"`
+	Domain                         string    `json:"domain,omitempty"`
+	DomainWithPort                 string    `json:"-"`
+	Alias                          string    `json:"alias,omitempty"`
+	PreferIPv6                     bool      `json:"-"`
+	NumberOfAllTransactions        uint32    `json:"numberOfAllTransactions"`
+	NumberOfNewTransactions        uint32    `json:"numberOfNewTransactions"`
+	NumberOfKnownTransactions      uint32    `json:"numberOfKnownTransactions"`
+	NumberOfInvalidTransactions    uint32    `json:"numberOfInvalidTransactions"`
+	NumberOfInvalidRequests        uint32    `json:"numberOfInvalidRequests"`
+	NumberOfStaleTransactions      uint32    `json:"numberOfStaleTransactions"`
+	NumberOfReceivedTransactionReq uint32    `json:"numberOfReceivedTransactionReq"`
+	NumberOfReceivedMilestoneReq   uint32    `json:"numberOfReceivedMilestoneReq"`
+	NumberOfReceivedHeartbeats     uint32    `json:"numberOfReceivedHeartbeats"`
+	NumberOfSentTransactions       uint32    `json:"numberOfSentTransactions"`
+	NumberOfSentTransactionsReq    uint32    `json:"numberOfSentTransactionsReq"`
+	NumberOfSentMilestoneReq       uint32    `json:"numberOfSentMilestoneReq"`
+	NumberOfSentHeartbeats         uint32    `json:"numberOfSentHeartbeats"`
+	NumberOfDroppedSentPackets     uint32    `json:"numberOfDroppedSentPackets"`
+	ConnectionType                 string    `json:"connectionType"`
+	Connected                      bool      `json:"connected"`
+	AutopeeringID                  string    `json:"autopeering_id,omitempty"`
 }
 
 type AutopeeringInfo struct {
@@ -636,21 +647,28 @@ func GetNeighbors() []NeighborInfo {
 	result := []NeighborInfo{}
 	for _, neighbor := range connectedNeighbors {
 		info := NeighborInfo{
-			Neighbor:                          neighbor,
-			Address:                           neighbor.Identity,
-			Domain:                            neighbor.InitAddress.Addr,
-			DomainWithPort:                    neighbor.InitAddress.String(),
-			Alias:                             neighbor.InitAddress.Alias,
-			NumberOfAllTransactions:           neighbor.Metrics.GetAllTransactionsCount(),
-			NumberOfInvalidTransactions:       neighbor.Metrics.GetInvalidTransactionsCount(),
-			NumberOfStaleTransactions:         neighbor.Metrics.GetStaleTransactionsCount(),
-			NumberOfNewTransactions:           neighbor.Metrics.GetNewTransactionsCount(),
-			NumberOfSentTransactions:          neighbor.Metrics.GetSentTransactionsCount(),
-			NumberOfDroppedSentPackets:        neighbor.Metrics.GetDroppedSendPacketsCount(),
-			NumberOfRandomTransactionRequests: neighbor.Metrics.GetRandomTransactionRequestsCount(),
-			ConnectionType:                    "tcp",
-			Connected:                         true,
-			PreferIPv6:                        neighbor.InitAddress.PreferIPv6,
+			Neighbor:                       neighbor,
+			Address:                        neighbor.Identity,
+			Domain:                         neighbor.InitAddress.Addr,
+			DomainWithPort:                 neighbor.InitAddress.String(),
+			Alias:                          neighbor.InitAddress.Alias,
+			NumberOfAllTransactions:        neighbor.Metrics.GetAllTransactionsCount(),
+			NumberOfNewTransactions:        neighbor.Metrics.GetNewTransactionsCount(),
+			NumberOfKnownTransactions:      neighbor.Metrics.GetKnownTransactionsCount(),
+			NumberOfInvalidTransactions:    neighbor.Metrics.GetInvalidTransactionsCount(),
+			NumberOfInvalidRequests:        neighbor.Metrics.GetInvalidRequestsCount(),
+			NumberOfStaleTransactions:      neighbor.Metrics.GetStaleTransactionsCount(),
+			NumberOfReceivedTransactionReq: neighbor.Metrics.GetReceivedTransactionRequestsCount(),
+			NumberOfReceivedMilestoneReq:   neighbor.Metrics.GetReceivedMilestoneRequestsCount(),
+			NumberOfReceivedHeartbeats:     neighbor.Metrics.GetReceivedHeartbeatsCount(),
+			NumberOfSentTransactions:       neighbor.Metrics.GetSentTransactionsCount(),
+			NumberOfSentTransactionsReq:    neighbor.Metrics.GetSentTransactionRequestsCount(),
+			NumberOfSentMilestoneReq:       neighbor.Metrics.GetSentMilestoneRequestsCount(),
+			NumberOfSentHeartbeats:         neighbor.Metrics.GetSentHeartbeatsCount(),
+			NumberOfDroppedSentPackets:     neighbor.Metrics.GetDroppedSendPacketsCount(),
+			ConnectionType:                 "tcp",
+			Connected:                      true,
+			PreferIPv6:                     neighbor.InitAddress.PreferIPv6,
 		}
 		if neighbor.Autopeering != nil {
 			info.AutopeeringID = neighbor.Autopeering.ID().String()

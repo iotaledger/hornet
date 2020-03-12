@@ -35,8 +35,8 @@ func SendHeartbeat() {
 		select {
 		case neighborQueue.heartbeatQueue <- msg:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 
 	}

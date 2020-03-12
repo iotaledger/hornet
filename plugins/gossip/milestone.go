@@ -57,8 +57,8 @@ func SendMilestoneRequests(solidMilestoneIndex milestone_index.MilestoneIndex, k
 			select {
 			case neighborQueue.sendMilestoneRequestQueue <- msIndexToReq:
 			default:
-				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			}
 		}
 	}

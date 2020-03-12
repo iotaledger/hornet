@@ -27,6 +27,10 @@ func (n *NeighborRequest) punish() {
 	n.p.Neighbor.Metrics.IncrInvalidTransactionsCount()
 }
 
+func (n *NeighborRequest) stale() {
+	n.p.Neighbor.Metrics.IncrStaleTransactionsCount()
+}
+
 func (n *NeighborRequest) notify(recHashBytes []byte) {
 	n.p.Neighbor.Reply(recHashBytes, n)
 }
@@ -120,7 +124,7 @@ func (p *PendingNeighborRequests) GetTxHashBytes() []byte {
 	return p.recHashBytes
 }
 
-func (p *PendingNeighborRequests) process() {
+func (p *PendingNeighborRequests) process(neighbor *Neighbor) {
 	p.startProcessingLock.Lock()
 
 	if p.IsHashing() {
@@ -138,7 +142,7 @@ func (p *PendingNeighborRequests) process() {
 
 		if requested {
 			// Tx is requested => ignore that it was marked as stale before
-			Events.ReceivedTransaction.Trigger(p.hornetTx, requested, reqMilestoneIndex)
+			Events.ReceivedTransaction.Trigger(p.hornetTx, requested, reqMilestoneIndex, neighbor)
 		}
 
 		p.notify()
@@ -191,13 +195,13 @@ func (p *PendingNeighborRequests) process() {
 
 	if !stale {
 		// Ignore stale transactions until they are requested
-		Events.ReceivedTransaction.Trigger(hornetTx, requested, reqMilestoneIndex)
+		Events.ReceivedTransaction.Trigger(hornetTx, requested, reqMilestoneIndex, neighbor)
 
 		if !requested && broadcast {
 			p.broadcast()
 		}
-	} else if len(p.requests) == 1 {
-		p.requests[0].p.Neighbor.Metrics.IncrInvalidTransactionsCount()
+	} else {
+		p.stale()
 	}
 
 	p.notify()
@@ -220,11 +224,22 @@ func (p *PendingNeighborRequests) punish() {
 	for _, n := range p.requests {
 		// Tx is known as invalid => punish neighbor
 		metrics.SharedServerMetrics.IncrInvalidTransactionsCount()
-		n.p.Neighbor.Metrics.IncrInvalidTransactionsCount()
 		n.punish()
 	}
 
 	p.requests = make([]*NeighborRequest, 0)
+	p.requestsLock.Unlock()
+}
+
+func (p *PendingNeighborRequests) stale() {
+	p.requestsLock.Lock()
+
+	for _, n := range p.requests {
+		// Tx is known as stale
+		metrics.SharedServerMetrics.IncrStaleTransactionsCount()
+		n.stale()
+	}
+
 	p.requestsLock.Unlock()
 }
 

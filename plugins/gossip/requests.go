@@ -65,12 +65,12 @@ func sendSTINGRequest(txHash trinary.Hash, msIndex milestone_index.MilestoneInde
 
 		txBytes := trinary.MustTrytesToBytes(txHash)[:49]
 		RequestQueue.Add(txHash, msIndex, true)
-		metrics.SharedServerMetrics.IncrSentTransactionRequestCount()
+
 		select {
 		case neighborQueue.txReqQueue <- txBytes:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 
 		// sent the same request to only one neighbor
