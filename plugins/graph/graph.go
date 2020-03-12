@@ -28,6 +28,7 @@ var (
 	clients  = make(map[*websocket.Conn]bool)
 
 	broadcastLock    = syncutils.Mutex{}
+	clientsLock      = syncutils.Mutex{}
 	txRingBufferLock = syncutils.Mutex{}
 	snRingBufferLock = syncutils.Mutex{}
 	msRingBufferLock = syncutils.Mutex{}

@@ -77,14 +77,16 @@ func socketServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// register client
+	clientsLock.Lock()
 	clients[c] = true
+	clientsLock.Unlock()
 	onConnect(c)
 }
 
 func socketBroadcast() {
 	for {
 		val := <-broadcast
-
+		clientsLock.Lock()
 		// broadcast to all connected clients
 		for client := range clients {
 			err := client.WriteJSON(val)
@@ -95,6 +97,7 @@ func socketBroadcast() {
 				log.Infof("Removed dead websocket client")
 			}
 		}
+		clientsLock.Unlock()
 	}
 }
 
