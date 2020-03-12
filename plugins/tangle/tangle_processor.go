@@ -113,7 +113,9 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.IncrNewTransactionsCount()
-		neighbor.Metrics.IncrNewTransactionsCount()
+		if neighbor != nil {
+			neighbor.Metrics.IncrNewTransactionsCount()
+		}
 
 		if requested {
 			// Add new requests to the requestQueue (needed for sync)
@@ -128,7 +130,9 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	} else {
 		metrics.SharedServerMetrics.IncrKnownTransactionsCount()
-		neighbor.Metrics.IncrKnownTransactionsCount()
+		if neighbor != nil {
+			neighbor.Metrics.IncrKnownTransactionsCount()
+		}
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
