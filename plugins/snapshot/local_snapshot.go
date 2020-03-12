@@ -62,14 +62,14 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, panicOnMissingTx bool, ignoreConfirmationState bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
+func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, collectForPruning bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
 
 	defer cachedMsTailTx.Release(true) // tx -1
 
 	ts := time.Now()
 
-	txsToTraverse := make(map[string]struct{})
-	txsChecked := make(map[string]struct{})
+	txsToTraverse := make(map[trinary.Hash]struct{})
+	txsChecked := make(map[trinary.Hash]struct{})
 	var approvees []trinary.Hash
 	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
 
@@ -99,7 +99,7 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 
 			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 			if cachedTx == nil {
-				if panicOnMissingTx {
+				if !collectForPruning {
 					log.Panicf("getMilestoneApprovees: Transaction not found: %v", txHash)
 				}
 
@@ -116,19 +116,42 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 			} else {
 				// Tx is not confirmed
 				// ToDo: This shouldn't happen, but it does since tipselection allows it at the moment
-				if !ignoreConfirmationState {
-					cachedTx.Release(true) // tx -1
-					return nil, errors.Wrapf(ErrUnconfirmedTxInSubtangle, ": %v", txHash)
-				}
+				if !collectForPruning {
+					if cachedTx.GetTransaction().IsTail() {
+						cachedTx.Release(true) // tx -1
+						log.Panicf("getMilestoneApprovees: Transaction not confirmed: %v", txHash)
+					}
 
-				// Check if the we can walk further
-				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetTrunk()) {
+					// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
+					// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
+					// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
+					tailTxs, err := dag.FindAllTails(txHash, true)
+					if err != nil {
+						cachedTx.Release(true) // tx -1
+						return nil, err
+					}
+
+					for tailTx := range tailTxs {
+						txsToTraverse[tailTx] = struct{}{}
+					}
+
+					// Ignore this transaction in the cone because it is not confirmed
 					cachedTx.Release(true) // tx -1
 					continue
 				}
 
+				// Check if the we can walk further => if not, it should be fine (only used for pruning anyway)
+				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetTrunk()) {
+					// Do not force release, since it is loaded again
+					cachedTx.Release() // tx -1
+					approvees = append(approvees, txHash)
+					continue
+				}
+
 				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetBranch()) {
-					cachedTx.Release(true) // tx -1
+					// Do not force release, since it is loaded again
+					cachedTx.Release() // tx -1
+					approvees = append(approvees, txHash)
 					continue
 				}
 			}
@@ -196,7 +219,7 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
 		cachedMs.Release(true)                           // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, false, abortSignal)
+		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), false, abortSignal)
 
 		// Do not force release, since it is loaded again
 		cachedMsTailTx.Release() // tx -1

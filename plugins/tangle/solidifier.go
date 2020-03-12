@@ -75,7 +75,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 			tangle.OnTailTransactionSolid(cachedTx.Retain()) // tx pass +1
 		}
 
-		// update the solidity flags of this transaction and its approvers
+		// update the solidity flags of this transaction
 		cachedTx.GetMetadata().SetSolid(true)
 
 		Events.TransactionSolid.Trigger(cachedTx) // tx pass +1
