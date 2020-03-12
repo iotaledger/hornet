@@ -122,7 +122,7 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 						log.Panicf("getMilestoneApprovees: Transaction not confirmed: %v", txHash)
 					}
 
-					// Search all references tails of this Tx (needed for correct SolidEntryPoint calculation)
+					// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation)
 					tailTxs, err := dag.FindAllTails(txHash, true)
 					if err != nil {
 						cachedTx.Release(true) // tx -1
