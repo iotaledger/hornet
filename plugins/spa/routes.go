@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gobuffalo/packr/v2"
@@ -45,7 +46,18 @@ func indexRoute(e echo.Context) error {
 	return e.HTMLBlob(http.StatusOK, indexHTML)
 }
 
+func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if strings.Count(c.Request().URL.Path, "..") != 0 {
+			return c.String(http.StatusForbidden, "path not allowed")
+		}
+		return next(c)
+	}
+}
+
 func setupRoutes(e *echo.Echo) {
+
+	e.Pre(enforceMaxOneDotPerURL)
 
 	if parameter.NodeConfig.GetBool("dashboard.dev") {
 		e.Static("/assets", "./plugins/spa/frontend/src/assets")
