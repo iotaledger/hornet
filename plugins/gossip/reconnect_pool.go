@@ -99,13 +99,13 @@ next:
 		// don't do any new connection attempts, if the neighbor is already connected or in-flight
 		for ip := range neighborAddrs.IPs {
 			id := NewNeighborIdentity(ip.String(), originAddr.Port)
-			if _, alreadyConnected := connectedNeighbors[id]; alreadyConnected {
-				gossipLogger.Infof("neighbor %s already connected, removing it from reconnect pool...", connectedNeighbors[id].InitAddress.String())
+			if neigh, alreadyConnected := connectedNeighbors[id]; alreadyConnected {
+				gossipLogger.Infof("neighbor %s already connected, removing it from reconnect pool...", neigh.InitAddress.String())
 				delete(reconnectPool, k)
 				continue next
 			}
-			if _, alreadyInFlight := inFlightNeighbors[id]; alreadyInFlight {
-				gossipLogger.Infof("neighbor %s already in-fight, removing it from reconnect pool...", connectedNeighbors[id].InitAddress.String())
+			if neigh, alreadyInFlight := inFlightNeighbors[id]; alreadyInFlight {
+				gossipLogger.Infof("neighbor %s already in-fight, removing it from reconnect pool...", neigh.InitAddress.String())
 				delete(reconnectPool, k)
 				continue next
 			}
