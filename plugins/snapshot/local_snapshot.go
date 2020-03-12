@@ -122,7 +122,9 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 						log.Panicf("getMilestoneApprovees: Transaction not confirmed: %v", txHash)
 					}
 
-					// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation)
+					// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
+					// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
+					// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
 					tailTxs, err := dag.FindAllTails(txHash, true)
 					if err != nil {
 						cachedTx.Release(true) // tx -1
