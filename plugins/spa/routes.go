@@ -48,7 +48,7 @@ func indexRoute(e echo.Context) error {
 
 func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if strings.Count(c.Request().URL.RawPath, ".") > 1 {
+		if strings.Count(c.Request().URL.Path, "..") != 0 {
 			return c.String(http.StatusForbidden, "path not allowed")
 		}
 		return next(c)
@@ -57,7 +57,7 @@ func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
 
 func setupRoutes(e *echo.Echo) {
 
-	e.Use(enforceMaxOneDotPerURL)
+	e.Pre(enforceMaxOneDotPerURL)
 
 	if parameter.NodeConfig.GetBool("dashboard.dev") {
 		e.Static("/assets", "./plugins/spa/frontend/src/assets")
