@@ -138,21 +138,21 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 					// Ignore this transaction in the cone because it is not confirmed
 					cachedTx.Release(true) // tx -1
 					continue
-				} else {
-					// Check if the we can walk further => if not, it should be fine (only used for pruning anyway)
-					if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetTrunk()) {
-						// Do not force release, since it is loaded again
-						cachedTx.Release() // tx -1
-						approvees = append(approvees, txHash)
-						continue
-					}
+				}
 
-					if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetBranch()) {
-						// Do not force release, since it is loaded again
-						cachedTx.Release() // tx -1
-						approvees = append(approvees, txHash)
-						continue
-					}
+				// Check if the we can walk further => if not, it should be fine (only used for pruning anyway)
+				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetTrunk()) {
+					// Do not force release, since it is loaded again
+					cachedTx.Release() // tx -1
+					approvees = append(approvees, txHash)
+					continue
+				}
+
+				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetBranch()) {
+					// Do not force release, since it is loaded again
+					cachedTx.Release() // tx -1
+					approvees = append(approvees, txHash)
+					continue
 				}
 			}
 
