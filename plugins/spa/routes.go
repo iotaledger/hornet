@@ -34,7 +34,11 @@ func indexRoute(e echo.Context) error {
 		}
 		return e.HTMLBlob(http.StatusOK, devIndexHTML)
 	}
+	theme := parameter.NodeConfig.GetString("dashboard.theme")
 	indexHTML, err := appBox.Find("index.html")
+	if theme == "dark" {
+		indexHTML, err = appBox.Find("index_dark.html")
+	}
 	if err != nil {
 		return err
 	}
@@ -46,7 +50,6 @@ func setupRoutes(e *echo.Echo) {
 	if parameter.NodeConfig.GetBool("dashboard.dev") {
 		e.Static("/assets", "./plugins/spa/frontend/src/assets")
 	} else {
-
 		// load assets from packr: either from within the binary or actual disk
 		e.GET("/app/*", echo.WrapHandler(http.StripPrefix("/app", http.FileServer(appBox))))
 		e.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets", http.FileServer(assetsBox))))

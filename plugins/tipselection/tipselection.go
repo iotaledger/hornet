@@ -237,13 +237,14 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					continue
 				}
 
-				if !cachedBndl.GetBundle().IsValid() {
+				if !cachedBndl.GetBundle().IsValid() || !cachedBndl.GetBundle().ValidStrictSemantics() {
 					tanglePlugin.PutInvalidBundleReference(candidateHash)
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndl.Release()        // bundle -1
 					continue
 				}
+
 				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, false) { // tx pass +1
 					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1

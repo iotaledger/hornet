@@ -22,6 +22,10 @@ import (
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
+const (
+	ExampleNeighborIdentity = "example.neighbor.com:15600"
+)
+
 var (
 	// master lock protecting connected-, in-flight neighbors and the reconnect pool
 	neighborsLock = sync.Mutex{}
@@ -461,6 +465,12 @@ func wakeupReconnectPool() {
 }
 
 func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string, autoPeer ...*peer.Peer) error {
+
+	if neighborAddr == ExampleNeighborIdentity {
+		// Ignore the example neighbor
+		return fmt.Errorf("can't add the example neighbor %s", neighborAddr)
+	}
+
 	originAddr, err := iputils.ParseOriginAddress(neighborAddr)
 	if err != nil {
 		return errors.Wrapf(err, "invalid neighbor address %s", neighborAddr)

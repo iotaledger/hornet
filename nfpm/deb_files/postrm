@@ -1,20 +1,20 @@
 #!/bin/sh
 
+[ "$1" != "upgrade" ] || exit 0
 set -e
+OPTS=""
 
-SERVICE_NAME="hornet"
-SYSTEMD_SERVICE="${SERVICE_NAME}.service"
+if [ -n "$D" ]; then
+    OPTS="--root=$D"
+fi
 
 systemctl --system daemon-reload >/dev/null || true
 
 case "$1" in
 remove)
-    deb-systemd-helper mask "${SYSTEMD_SERVICE}" >/dev/null
     rm -rf /var/lib/hornet/*
     ;;
 purge)
-    deb-systemd-helper purge "${SYSTEMD_SERVICE}" >/dev/null
-    deb-systemd-helper unmask "${SYSTEMD_SERVICE}" >/dev/null
     rm -rf /var/lib/hornet
     rm /etc/default/hornet
     deluser hornet >/dev/null

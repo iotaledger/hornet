@@ -84,6 +84,12 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	}
 
 	for _, configNeighbor := range configNeighbors {
+
+		if configNeighbor.Identity == ExampleNeighborIdentity {
+			// Ignore the example neighbor
+			continue
+		}
+
 		found := false
 		for _, boundNeighbor := range boundNeighbors {
 			if strings.EqualFold(boundNeighbor.Address, configNeighbor.Identity) || strings.EqualFold(boundNeighbor.DomainWithPort, configNeighbor.Identity) {
@@ -102,6 +108,11 @@ func addNewNeighbors(neighbors []NeighborConfig) {
 	defer neighborsLock.Unlock()
 	for _, nb := range neighbors {
 		if nb.Identity == "" {
+			continue
+		}
+
+		if nb.Identity == ExampleNeighborIdentity {
+			// Ignore the example neighbor
 			continue
 		}
 
