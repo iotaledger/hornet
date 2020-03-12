@@ -77,16 +77,22 @@ class MemoryMetrics {
 
 class ServerMetrics {
     all_txs: number;
-    invalid_txs: number;
-    stale_txs: number;
-    random_txs: number;
-    sent_txs: number;
-    rec_ms_req: number;
-    sent_ms_req: number;
     new_txs: number;
-    dropped_sent_packets: number;
+    known_txs: number;
+    invalid_txs: number;
+    invalid_req: number;
+    stale_txs: number;
     rec_tx_req: number;
+    rec_ms_req: number;
+    rec_heartbeat: number;
+    sent_txs: number;
     sent_tx_req: number;
+    sent_ms_req: number;
+    sent_heartbeat: number;
+    dropped_sent_packets: number;
+    sent_spam_txs: number;
+    validated_bundles: number;
+    spent_addr: number;
     ts: number;
 }
 
@@ -163,20 +169,20 @@ class NeighborMetrics {
 
     @computed
     get protocolSeries() {
+        let newTx = Object.assign({}, chartSeriesOpts,
+            series("New Txs", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
+        );
+        let knownTx = Object.assign({}, chartSeriesOpts,
+            series("Known Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
+        );
         let invalid = Object.assign({}, chartSeriesOpts,
             series("Invalid Txs", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
         );
         let stale = Object.assign({}, chartSeriesOpts,
             series("Stale Txs", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
         );
-        let random = Object.assign({}, chartSeriesOpts,
-            series("Random Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
-        );
         let sent = Object.assign({}, chartSeriesOpts,
             series("Sent Txs", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
-        );
-        let newTx = Object.assign({}, chartSeriesOpts,
-            series("New Txs", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
         );
         let droppedSent = Object.assign({}, chartSeriesOpts,
             series("Dropped Packets", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
@@ -187,18 +193,18 @@ class NeighborMetrics {
             let metric: NeighborMetric = this.collected[i];
             let prevMetric: NeighborMetric = this.collected[i - 1];
             labels.push(metric.ts);
+            newTx.data.push(metric.info.numberOfNewTransactions - prevMetric.info.numberOfNewTransactions);
+            knownTx.data.push(metric.info.numberOfKnownTransactions - prevMetric.info.numberOfKnownTransactions);
             invalid.data.push(metric.info.numberOfInvalidTransactions - prevMetric.info.numberOfInvalidTransactions);
             stale.data.push(metric.info.numberOfStaleTransactions - prevMetric.info.numberOfStaleTransactions);
-            random.data.push(metric.info.numberOfRandomTransactionRequests - prevMetric.info.numberOfRandomTransactionRequests);
             sent.data.push(metric.info.numberOfSentTransactions - prevMetric.info.numberOfSentTransactions);
-            newTx.data.push(metric.info.numberOfNewTransactions - prevMetric.info.numberOfNewTransactions);
             droppedSent.data.push(metric.info.numberOfDroppedSentPackets - prevMetric.info.numberOfDroppedSentPackets);
         }
 
         return {
             labels: labels,
             datasets: [
-                invalid, stale, random, sent, newTx, droppedSent
+                newTx, knownTx, invalid, stale, sent, droppedSent
             ],
         };
     }
@@ -228,11 +234,18 @@ class NeighborInfo {
     port: number;
     domain: string;
     numberOfAllTransactions: number;
-    numberOfRandomTransactionRequests: number;
     numberOfNewTransactions: number;
+    numberOfKnownTransactions: number;
     numberOfInvalidTransactions: number;
+    numberOfInvalidRequests: number;
     numberOfStaleTransactions: number;
+    numberOfReceivedTransactionReq: number;
+    numberOfReceivedMilestoneReq: number;
+    numberOfReceivedHeartbeats: number;
     numberOfSentTransactions: number;
+    numberOfSentTransactionsReq: number;
+    numberOfSentMilestoneReq: number;
+    numberOfSentHeartbeats: number;
     numberOfDroppedSentPackets: number;
     connectionType: string;
     autopeering_id: string;
@@ -530,20 +543,20 @@ export class NodeStore {
         let all = Object.assign({}, chartSeriesOpts,
             series("All Txs", 'rgba(14, 230, 183,1)', 'rgba(14, 230, 183,0.4)')
         );
+        let newTx = Object.assign({}, chartSeriesOpts,
+            series("New Txs", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
+        );
+        let knownTx = Object.assign({}, chartSeriesOpts,
+            series("Known Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
+        );
         let invalid = Object.assign({}, chartSeriesOpts,
             series("Invalid Txs", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
         );
         let stale = Object.assign({}, chartSeriesOpts,
             series("Stale Txs", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
         );
-        let random = Object.assign({}, chartSeriesOpts,
-            series("Random Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
-        );
         let sent = Object.assign({}, chartSeriesOpts,
             series("Sent Txs", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
-        );
-        let newTx = Object.assign({}, chartSeriesOpts,
-            series("New Txs", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
         );
         let droppedSent = Object.assign({}, chartSeriesOpts,
             series("Dropped Packets", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
@@ -554,18 +567,18 @@ export class NodeStore {
             let metric: ServerMetrics = this.collected_server_metrics[i];
             labels.push(metric.ts);
             all.data.push(metric.all_txs);
+            newTx.data.push(metric.new_txs);
+            knownTx.data.push(metric.known_txs);
             invalid.data.push(metric.invalid_txs);
             stale.data.push(metric.stale_txs);
-            random.data.push(metric.random_txs);
             sent.data.push(metric.sent_txs);
-            newTx.data.push(metric.new_txs);
             droppedSent.data.push(metric.dropped_sent_packets);
         }
 
         return {
             labels: labels,
             datasets: [
-                all, invalid, stale, random, sent, newTx, droppedSent
+                all, newTx, knownTx, invalid, stale, sent, droppedSent
             ],
         };
     }
@@ -584,6 +597,12 @@ export class NodeStore {
         let recMsReq = Object.assign({}, chartSeriesOpts,
             series("Received Ms Requests", 'rgba(219, 178, 53,1)', 'rgba(219, 178, 53,0.4)')
         );
+        let sentHeatbeats = Object.assign({}, chartSeriesOpts,
+            series("Sent Heartbeats", 'rgba(87, 12, 119,1)', 'rgba(87, 12, 119,0.4)')
+        );
+        let recHeartbeats = Object.assign({}, chartSeriesOpts,
+            series("Received Heartbeats", 'rgba(111, 138, 83,1)', 'rgba(111, 138, 83,0.4)')
+        );
 
         let labels = [];
         for (let i = 0; i < this.collected_server_metrics.length; i++) {
@@ -593,6 +612,8 @@ export class NodeStore {
             recTxReq.data.push(-metric.rec_tx_req);
             sentMsReq.data.push(metric.sent_ms_req);
             recMsReq.data.push(-metric.rec_ms_req);
+            sentHeatbeats.data.push(metric.sent_heartbeat);
+            recHeartbeats.data.push(-metric.rec_heartbeat);
         }
 
         return {
