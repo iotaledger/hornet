@@ -22,7 +22,7 @@ func init() {
 
 	// "The HTTP Basic Auth password"
 	parameter.NodeConfig.SetDefault("dashboard.basic_auth.password", "hornet")
-	
+
 	// "The dashboard theme"
 	parameter.NodeConfig.SetDefault("dashboard.theme", "default")
 }
