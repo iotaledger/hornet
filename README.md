@@ -76,8 +76,10 @@ git clone https://github.com/socketio/socket.io-client.git
 ```json
   "graph": {
     "webrootPath": "IOTAtangle/webroot",
-    "socketiopath": "socket.io-client/dist/socket.io.js",
     "domain": "",
+    "websocket": {
+      "uri": "ws://127.0.0.1:8083/ws"
+    },
     "host": "127.0.0.1",
     "port": 8083,
     "networkName": "meets HORNET"
