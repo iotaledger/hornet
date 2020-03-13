@@ -139,5 +139,8 @@
   "zmq": {
     "bindAddress": "127.0.0.1",
     "port": 5556
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
   }
 }
