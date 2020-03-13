@@ -88,9 +88,12 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                 {' '}
                                 {
                                     tx.is_milestone ?
-                                        <Badge variant="primary">
-                                            Confirmed
-                                        </Badge>
+                                        tx.confirmed.state ?
+                                            <Badge variant="success">
+                                                Confirmed
+                                            </Badge>
+                                            :
+                                            <Badge variant="primary">Valid</Badge>
                                         :
                                         tx.confirmed.state ?
                                             <Badge variant="success">
@@ -113,7 +116,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                     <ListGroup.Item>
                                         Tag: {' '}
                                         <Link to={`/explorer/tag/${tx.tag}`}>
-                                            {tx.tag} 
+                                            {tx.tag}
                                         </Link>
                                     </ListGroup.Item>
                                     <ListGroup.Item>Obsolete Tag: {tx.obsolete_tag}</ListGroup.Item>
