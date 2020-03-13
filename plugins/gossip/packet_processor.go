@@ -119,7 +119,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 		return ErrTxExpired
 	}
 
-	Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), nil)
+	Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), (*metrics.NeighborMetrics)(nil))
 	BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTritsToBytes(hashTrits))
 
 	return nil
