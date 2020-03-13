@@ -11,15 +11,18 @@ const (
 	CfgDashboardBasicAuthEnabled = "dashboard.basicAuth.enabled"
 	// the HTTP basic auth username
 	CfgDashboardBasicAuthUsername = "dashboard.basicAuth.username"
-	// the HTTP basic auth password
-	CfgDashboardBasicAuthPassword = "dashboard.basicauth.password" // must be lower cased
+	// the HTTP basic auth password+salt as a sha256 hash
+	CfgDashboardBasicAuthPasswordHash = "dashboard.basicauth.passwordhash" // must be lower cased
+	// the HTTP basic auth salt used for hashing the password
+	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordsalt" // must be lower cased
 )
 
 func init() {
 	NodeConfig.SetDefault(CfgDashboardBindAddress, "localhost:8081")
 	NodeConfig.SetDefault(CfgDashboardDevMode, false)
 	NodeConfig.SetDefault(CfgDashboardBasicAuthEnabled, true)
-	NodeConfig.SetDefault(CfgDashboardBasicAuthUsername, "hornet")
-	NodeConfig.SetDefault(CfgDashboardBasicAuthPassword, "hornet")
+	NodeConfig.SetDefault(CfgDashboardBasicAuthUsername, "")
+	NodeConfig.SetDefault(CfgDashboardBasicAuthPasswordHash, "")
+	NodeConfig.SetDefault(CfgDashboardBasicAuthPasswordSalt, "")
 	NodeConfig.SetDefault(CfgDashboardTheme, "default")
 }

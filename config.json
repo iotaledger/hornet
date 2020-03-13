@@ -3,8 +3,9 @@
   "httpAPI": {
     "basicAuth": {
       "enabled": false,
-      "password": "",
-      "username": ""
+      "username": "",
+      "passwordHash": "",
+      "passwordSalt": ""
     },
     "permitRemoteAccess": [
       "getNodeInfo",
@@ -37,8 +38,9 @@
     "dev": false,
     "basicAuth": {
       "enabled": false,
-      "username": "hornet",
-      "password": "hornet"
+      "username": "",
+      "passwordHash": "",
+      "passwordSalt": ""
     }
   },
   "db": {

@@ -11,8 +11,10 @@ const (
 	CfgWebAPIBasicAuthEnabled = "httpAPI.basicAuth.enabled"
 	// the username of the HTTP basic auth
 	CfgWebAPIBasicAuthUsername = "httpAPI.basicAuth.username"
-	// the password of the HTTP basic auth
-	CfgWebAPIBasicAuthPassword = "httpapi.basicauth.password" // must be lower cased
+	// the HTTP basic auth password+salt as a sha256 hash
+	CfgWebAPIBasicAuthPasswordHash = "httpapi.basicauth.passwordhash" // must be lower cased
+	// the HTTP basic auth salt used for hashing the password
+	CfgWebAPIBasicAuthPasswordSalt = "httpapi.basicauth.passwordsalt" // must be lower cased
 	// the maximum number of trytes that may be returned by the getTrytes endpoint
 	CfgWebAPILimitsMaxBodyLengthBytes = "httpAPI.limits.bodyLengthBytes"
 	// the maximum number of parameters in an API call
@@ -42,7 +44,8 @@ func init() {
 	NodeConfig.SetDefault(CfgWebAPIWhitelistedAddresses, []string{})
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthEnabled, "")
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthUsername, "")
-	NodeConfig.SetDefault(CfgWebAPIBasicAuthPassword, "")
+	NodeConfig.SetDefault(CfgWebAPIBasicAuthPasswordHash, "")
+	NodeConfig.SetDefault(CfgWebAPIBasicAuthPasswordSalt, "")
 	NodeConfig.SetDefault(CfgWebAPILimitsMaxGetTrytes, 10000)
 	NodeConfig.SetDefault(CfgWebAPILimitsMaxRequestsList, 1000)
 	NodeConfig.SetDefault(CfgWebAPILimitsMaxFindTransactions, 100000)

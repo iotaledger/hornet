@@ -2,6 +2,7 @@ package webapi
 
 import (
 	"context"
+	"encoding/base64"
 	"net"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/basicauth"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -88,10 +90,47 @@ func configure(plugin *node.Plugin) {
 	}
 
 	// set basic auth if enabled
+	// TODO: replace gin with echo so we don't have to write this middleware ourselves
 	if config.NodeConfig.GetBool(config.CfgWebAPIBasicAuthEnabled) {
+		const basicAuthPrefix = "Basic "
 		username := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthUsername)
-		password := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPassword)
-		api.Use(gin.BasicAuth(gin.Accounts{username: password}))
+		passwordHash := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordHash)
+		passwordSalt := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordSalt)
+
+		unauthorizedReq := func(c *gin.Context) {
+			c.Header("WWW-Authenticate", "Authorization Required")
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
+		api.Use(func(c *gin.Context) {
+			authVal := c.Request.Header.Get("Authorization")
+			if len(authVal) <= len(basicAuthPrefix) {
+				unauthorizedReq(c)
+				return
+			}
+
+			base64EncodedUserPW := strings.TrimPrefix(authVal, basicAuthPrefix)
+			userAndPWBytes, err := base64.StdEncoding.DecodeString(base64EncodedUserPW)
+			if err != nil {
+				unauthorizedReq(c)
+				return
+			}
+
+			reqUsernameAndPW := string(userAndPWBytes)
+			colonIndex := strings.Index(reqUsernameAndPW, ":")
+			if colonIndex == -1 || colonIndex+1 >= len(reqUsernameAndPW) {
+				unauthorizedReq(c)
+				return
+			}
+
+			// username and password are split by a colon
+			reqUsername := reqUsernameAndPW[:colonIndex]
+			reqPasword := reqUsernameAndPW[colonIndex+1:]
+
+			if reqUsername != username || basicauth.VerifyPassword(reqPasword, passwordSalt, passwordHash) {
+				unauthorizedReq(c)
+			}
+		})
 	}
 
 	// WebAPI route

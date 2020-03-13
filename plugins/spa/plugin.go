@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/packages/basicauth"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -101,8 +102,14 @@ func run(plugin *node.Plugin) {
 
 	if config.NodeConfig.GetBool(config.CfgDashboardBasicAuthEnabled) {
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username == config.NodeConfig.GetString(config.CfgDashboardBasicAuthUsername) &&
-				password == config.NodeConfig.GetString(config.CfgDashboardBasicAuthPassword) {
+
+			// grab auth info
+			expectedUsername := config.NodeConfig.GetString(config.CfgDashboardBasicAuthUsername)
+			expectedPassword := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordHash)
+			passwordSalt := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordSalt)
+
+			if username == expectedUsername &&
+				basicauth.VerifyPassword(password, passwordSalt, expectedPassword) {
 				return true, nil
 			}
 			return false, nil

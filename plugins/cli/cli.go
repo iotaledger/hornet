@@ -34,8 +34,10 @@ func getList(a []string) string {
 
 func ParseConfig() {
 	ignoreSettingsAtPrint := []string{}
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPassword)
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPassword)
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPasswordHash)
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPasswordSalt)
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPasswordHash)
+	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPasswordSalt)
 	if err := config.FetchConfig(true, ignoreSettingsAtPrint); err != nil {
 		panic(err)
 	}
