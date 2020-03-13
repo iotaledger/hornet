@@ -119,7 +119,7 @@ func BroadcastTransactionFromAPI(txTrytes trinary.Trytes) error {
 		return ErrTxExpired
 	}
 
-	Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0))
+	Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), nil)
 	BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTritsToBytes(hashTrits))
 
 	return nil
@@ -132,12 +132,11 @@ func ProcessReceivedMilestoneRequest(protocol *protocol, data []byte) {
 	// the raw message contains the index of a milestone they want
 	reqMilestoneIndex, err := ExtractRequestedMilestoneIndex(data)
 	if err != nil {
-		// TODO: increase invalid milestone request counter
-		protocol.Neighbor.Metrics.IncrInvalidTransactionsCount()
+		metrics.SharedServerMetrics.IncrInvalidRequestsCount()
+		protocol.Neighbor.Metrics.IncrInvalidRequestsCount()
 		return
 	}
 
-	// TODO: add metrics
 	protocol.Neighbor.Reply(nil, &NeighborRequest{
 		p:                  protocol,
 		reqMilestoneIndex:  reqMilestoneIndex,
@@ -162,23 +161,21 @@ func ProcessReceivedLegacyTransactionGossipData(protocol *protocol, data []byte)
 	pending = cachedRequest.GetRequest()
 
 	pending.AddLegacyTxRequest(protocol, reqHashBytes)
-	pending.process()
+	pending.process(protocol.Neighbor)
 
 	cachedRequest.Release() // neighborReq -1
 }
 
 func ProcessReceivedTransactionGossipData(protocol *protocol, txData []byte) {
 	// increment txs count
-	// TODO: maybe separate metrics
 	metrics.SharedServerMetrics.IncrAllTransactionsCount()
 	protocol.Neighbor.Metrics.IncrAllTransactionsCount()
 
-	var pending *PendingNeighborRequests
 	cachedRequest := GetCachedPendingNeighborRequest(txData) // neighborReq +1
-	pending = cachedRequest.GetRequest()
+	pending := cachedRequest.GetRequest()
 
 	pending.BlockFeedback(protocol)
-	pending.process()
+	pending.process(protocol.Neighbor)
 
 	cachedRequest.Release() // neighborReq -1
 
@@ -186,7 +183,9 @@ func ProcessReceivedTransactionGossipData(protocol *protocol, txData []byte) {
 }
 
 func ProcessReceivedTransactionRequestData(protocol *protocol, reqHash []byte) {
-	metrics.SharedServerMetrics.IncrReceivedTransactionRequestCount()
+	metrics.SharedServerMetrics.IncrReceivedTransactionRequestsCount()
+	protocol.Neighbor.Metrics.IncrReceivedTransactionRequestsCount()
+
 	protocol.Neighbor.Reply(nil, &NeighborRequest{
 		p:                    protocol,
 		reqHashBytes:         reqHash,

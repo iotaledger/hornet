@@ -7,6 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 )
 
@@ -15,7 +16,7 @@ func TransactionCaller(handler interface{}, params ...interface{}) {
 }
 
 func RequestedTransactionCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx *Transaction, requested bool, requestedIndex milestone_index.MilestoneIndex))(params[0].(*Transaction), params[1].(bool), params[2].(milestone_index.MilestoneIndex))
+	handler.(func(tx *Transaction, requested bool, requestedIndex milestone_index.MilestoneIndex, neighborMetrics *metrics.NeighborMetrics))(params[0].(*Transaction), params[1].(bool), params[2].(milestone_index.MilestoneIndex), params[3].(*metrics.NeighborMetrics))
 }
 
 type Transaction struct {

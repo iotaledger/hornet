@@ -46,8 +46,6 @@ func protocolV1(protocol *protocol) error {
 
 func sendLegacyTransaction(protocol *protocol, truncatedTxData []byte, reqHash []byte) {
 
-	metrics.SharedServerMetrics.IncrSentTransactionsCount()
-
 	packet, err := CreateLegacyTransactionGossipPacket(truncatedTxData, reqHash)
 	if err != nil {
 		gossipLogger.Error(err.Error())
@@ -61,6 +59,7 @@ func sendLegacyTransaction(protocol *protocol, truncatedTxData []byte, reqHash [
 		if err := protocol.send(packet); err != nil {
 			return
 		}
+		metrics.SharedServerMetrics.IncrSentTransactionsCount()
 		protocol.Neighbor.Metrics.IncrSentTransactionsCount()
 	} else {
 		gossipLogger.Warn("SendState was not in headerState. Message dropped")
@@ -68,8 +67,6 @@ func sendLegacyTransaction(protocol *protocol, truncatedTxData []byte, reqHash [
 }
 
 func sendTransaction(protocol *protocol, truncatedTxData []byte) {
-
-	metrics.SharedServerMetrics.IncrSentTransactionsCount()
 
 	packet, err := CreateTransactionGossipPacket(truncatedTxData)
 	if err != nil {
@@ -84,6 +81,7 @@ func sendTransaction(protocol *protocol, truncatedTxData []byte) {
 		if err := protocol.send(packet); err != nil {
 			return
 		}
+		metrics.SharedServerMetrics.IncrSentTransactionsCount()
 		protocol.Neighbor.Metrics.IncrSentTransactionsCount()
 	} else {
 		gossipLogger.Warn("SendState was not in headerState. Message dropped")
@@ -91,8 +89,6 @@ func sendTransaction(protocol *protocol, truncatedTxData []byte) {
 }
 
 func sendTransactionRequest(protocol *protocol, reqHash []byte) {
-
-	// TODO: add metric
 
 	packet, err := CreateTransactionRequestGossipPacket(reqHash)
 	if err != nil {
@@ -107,14 +103,14 @@ func sendTransactionRequest(protocol *protocol, reqHash []byte) {
 		if err := protocol.send(packet); err != nil {
 			return
 		}
+		metrics.SharedServerMetrics.IncrSentTransactionRequestsCount()
+		protocol.Neighbor.Metrics.IncrSentTransactionRequestsCount()
 	} else {
 		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 
 func sendHeartbeat(protocol *protocol, hb *Heartbeat) {
-
-	// TODO: add metric
 
 	packet, err := CreateHeartbeatPacket(hb.SolidMilestoneIndex, hb.PrunedMilestoneIndex)
 	if err != nil {
@@ -129,14 +125,14 @@ func sendHeartbeat(protocol *protocol, hb *Heartbeat) {
 		if err := protocol.send(packet); err != nil {
 			return
 		}
+		metrics.SharedServerMetrics.IncrSentHeartbeatsCount()
+		protocol.Neighbor.Metrics.IncrSentHeartbeatsCount()
 	} else {
 		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
 }
 
 func sendMilestoneRequest(protocol *protocol, reqMilestoneIndex milestone_index.MilestoneIndex) {
-
-	metrics.SharedServerMetrics.IncrSentMilestoneRequestsCount()
 
 	packet, err := CreateMilestoneRequestPacket(reqMilestoneIndex)
 	if err != nil {
@@ -151,7 +147,8 @@ func sendMilestoneRequest(protocol *protocol, reqMilestoneIndex milestone_index.
 		if err := protocol.send(packet); err != nil {
 			return
 		}
-		//gossipLogger.Infof("REQUESTED MS: %d", reqMilestoneIndex)
+		metrics.SharedServerMetrics.IncrSentMilestoneRequestsCount()
+		protocol.Neighbor.Metrics.IncrSentMilestoneRequestsCount()
 	} else {
 		gossipLogger.Warn("SendState was not in headerState. Message dropped")
 	}
@@ -561,7 +558,7 @@ func (state *requestMilestoneState) Send(param interface{}) error {
 		if _, err := protocol.Conn.Write(tx); err != nil {
 			return errors.Wrap(NewSendError(err), "failed to send milestone request")
 		}
-		state.protocol.Neighbor.Metrics.IncrSentMilestoneRequestsCount()
+
 		protocol.SendState = newHeaderState(protocol)
 		return nil
 	}

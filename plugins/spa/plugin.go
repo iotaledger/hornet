@@ -208,17 +208,23 @@ type nodestatus struct {
 }
 
 type servermetrics struct {
-	AllTxs             uint32 `json:"all_txs"`
-	InvalidTxs         uint32 `json:"invalid_txs"`
-	StaleTxs           uint32 `json:"stale_txs"`
-	RandomTxs          uint32 `json:"random_txs"`
-	SentTxs            uint32 `json:"sent_txs"`
-	RecMsReq           uint32 `json:"rec_ms_req"`
-	SentMsReq          uint32 `json:"sent_ms_req"`
-	NewTxs             uint32 `json:"new_txs"`
-	DroppedSentPackets uint32 `json:"dropped_sent_packets"`
-	RecTxReq           uint32 `json:"rec_tx_req"`
-	SentTxReq          uint32 `json:"sent_tx_req"`
+	NumberOfAllTransactions        uint32 `json:"all_txs"`
+	NumberOfNewTransactions        uint32 `json:"new_txs"`
+	NumberOfKnownTransactions      uint32 `json:"known_txs"`
+	NumberOfInvalidTransactions    uint32 `json:"invalid_txs"`
+	NumberOfInvalidRequests        uint32 `json:"invalid_req"`
+	NumberOfStaleTransactions      uint32 `json:"stale_txs"`
+	NumberOfReceivedTransactionReq uint32 `json:"rec_tx_req"`
+	NumberOfReceivedMilestoneReq   uint32 `json:"rec_ms_req"`
+	NumberOfReceivedHeartbeats     uint32 `json:"rec_heartbeat"`
+	NumberOfSentTransactions       uint32 `json:"sent_txs"`
+	NumberOfSentTransactionsReq    uint32 `json:"sent_tx_req"`
+	NumberOfSentMilestoneReq       uint32 `json:"sent_ms_req"`
+	NumberOfSentHeartbeats         uint32 `json:"sent_heartbeat"`
+	NumberOfDroppedSentPackets     uint32 `json:"dropped_sent_packets"`
+	NumberOfSentSpamTxsCount       uint32 `json:"sent_spam_txs"`
+	NumberOfValidatedBundles       uint32 `json:"validated_bundles"`
+	NumberOfSeenSpentAddr          uint32 `json:"spent_addr"`
 }
 
 type memmetrics struct {
@@ -342,17 +348,23 @@ func currentNodeStatus() *nodestatus {
 
 	// server metrics
 	status.ServerMetrics = &servermetrics{
-		AllTxs:             metrics.SharedServerMetrics.GetAllTransactionsCount(),
-		InvalidTxs:         metrics.SharedServerMetrics.GetInvalidTransactionsCount(),
-		StaleTxs:           metrics.SharedServerMetrics.GetStaleTransactionsCount(),
-		RandomTxs:          metrics.SharedServerMetrics.GetRandomTransactionRequestsCount(),
-		SentTxs:            metrics.SharedServerMetrics.GetSentTransactionsCount(),
-		NewTxs:             metrics.SharedServerMetrics.GetNewTransactionsCount(),
-		DroppedSentPackets: metrics.SharedServerMetrics.GetDroppedSendPacketsCount(),
-		RecMsReq:           metrics.SharedServerMetrics.GetReceivedMilestoneRequestsCount(),
-		SentMsReq:          metrics.SharedServerMetrics.GetSentMilestoneRequestsCount(),
-		RecTxReq:           metrics.SharedServerMetrics.GetReceivedTransactionRequestCount(),
-		SentTxReq:          metrics.SharedServerMetrics.GetSentTransactionRequestCount(),
+		NumberOfAllTransactions:        metrics.SharedServerMetrics.GetAllTransactionsCount(),
+		NumberOfNewTransactions:        metrics.SharedServerMetrics.GetNewTransactionsCount(),
+		NumberOfKnownTransactions:      metrics.SharedServerMetrics.GetKnownTransactionsCount(),
+		NumberOfInvalidTransactions:    metrics.SharedServerMetrics.GetInvalidTransactionsCount(),
+		NumberOfInvalidRequests:        metrics.SharedServerMetrics.GetInvalidRequestsCount(),
+		NumberOfStaleTransactions:      metrics.SharedServerMetrics.GetStaleTransactionsCount(),
+		NumberOfReceivedTransactionReq: metrics.SharedServerMetrics.GetReceivedTransactionRequestsCount(),
+		NumberOfReceivedMilestoneReq:   metrics.SharedServerMetrics.GetReceivedMilestoneRequestsCount(),
+		NumberOfReceivedHeartbeats:     metrics.SharedServerMetrics.GetReceivedHeartbeatsCount(),
+		NumberOfSentTransactions:       metrics.SharedServerMetrics.GetSentTransactionsCount(),
+		NumberOfSentTransactionsReq:    metrics.SharedServerMetrics.GetSentTransactionRequestsCount(),
+		NumberOfSentMilestoneReq:       metrics.SharedServerMetrics.GetSentMilestoneRequestsCount(),
+		NumberOfSentHeartbeats:         metrics.SharedServerMetrics.GetSentHeartbeatsCount(),
+		NumberOfDroppedSentPackets:     metrics.SharedServerMetrics.GetDroppedSendPacketsCount(),
+		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.GetSentSpamTxsCount(),
+		NumberOfValidatedBundles:       metrics.SharedServerMetrics.GetValidatedBundlesCount(),
+		NumberOfSeenSpentAddr:          metrics.SharedServerMetrics.GetSeenSpentAddrCount(),
 	}
 
 	// memory metrics

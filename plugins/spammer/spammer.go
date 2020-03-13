@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -64,6 +65,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		if err != nil {
 			return
 		}
+		metrics.SharedServerMetrics.IncrSentSpamTxsCount()
 	}
 
 	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
@@ -128,7 +130,7 @@ func broadcastTransaction(tx *transaction.Transaction) error {
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	hornetTx := hornet.NewTransaction(tx, txBytesTruncated)
 
-	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0))
+	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), nil)
 	gossip.BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTrytesToBytes(hornetTx.GetHash())[:49])
 
 	return nil

@@ -137,8 +137,8 @@ func runBroadcastQueue() {
 							select {
 							case neighborQueue.txQueue <- btx.truncatedTxData:
 							default:
-								neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 								metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+								neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 							}
 							continue
 						}
@@ -153,8 +153,8 @@ func runBroadcastQueue() {
 						select {
 						case neighborQueue.legacyTxQueue <- msg:
 						default:
-							neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 							metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+							neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 						}
 					}
 				}
@@ -193,8 +193,8 @@ func (neighbor *Neighbor) RequestLatestMilestone() {
 		select {
 		case neighborQueue.sendMilestoneRequestQueue <- 0:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 
 	}
@@ -215,8 +215,8 @@ func (neighbor *Neighbor) SendHeartbeat() {
 			select {
 			case neighborQueue.heartbeatQueue <- msg:
 			default:
-				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			}
 		}
 	}
@@ -246,8 +246,8 @@ func (neighbor *Neighbor) SendTransactionRequest() {
 		select {
 		case neighborQueue.txReqQueue <- ourReqHash:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 
 	}
@@ -265,8 +265,8 @@ func (neighbor *Neighbor) SendMilestoneRequest(msIndex milestone_index.Milestone
 		select {
 		case neighborQueue.sendMilestoneRequestQueue <- msIndex:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 
 	}
@@ -294,8 +294,8 @@ func processReplies(reply *replyItem) {
 		select {
 		case neighborQueue.txQueue <- cachedTx.GetTransaction().RawBytes:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 		cachedTx.Release(true) // tx -1
 		return
@@ -360,8 +360,8 @@ func processReplies(reply *replyItem) {
 		select {
 		case neighborQueue.legacyTxQueue <- msg:
 		default:
-			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+			neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 		}
 		return
 	}
@@ -383,8 +383,8 @@ func processReplies(reply *replyItem) {
 			select {
 			case neighborQueue.txQueue <- cachedTxToSend.GetTransaction().RawBytes:
 			default:
-				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 				metrics.SharedServerMetrics.IncrDroppedSendPacketsCount()
+				neighborQueue.protocol.Neighbor.Metrics.IncrDroppedSendPacketsCount()
 			}
 		}
 		cachedTxs.Release(true)   // txs -1
