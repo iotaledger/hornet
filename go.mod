@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/OneOfOne/xxhash v1.2.7 // indirect
-	github.com/dgraph-io/badger/v2 v2.0.2
+	github.com/dgraph-io/badger/v2 v2.0.1
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200121105743-0d940dd29fd2
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
 	github.com/fsnotify/fsnotify v1.4.8
