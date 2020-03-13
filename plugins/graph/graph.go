@@ -16,7 +16,6 @@ import (
 
 const (
 	TX_BUFFER_SIZE = 1800
-	NAMESPACE      = "graph"
 )
 
 var (
@@ -28,6 +27,7 @@ var (
 	clients  = make(map[*websocket.Conn]bool)
 
 	clientsLock      = syncutils.Mutex{}
+	broadcastLock    = syncutils.Mutex{}
 	txRingBufferLock = syncutils.Mutex{}
 	snRingBufferLock = syncutils.Mutex{}
 	msRingBufferLock = syncutils.Mutex{}
