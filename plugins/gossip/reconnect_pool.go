@@ -25,7 +25,7 @@ var (
 func configureReconnectPool() {
 	reconnectLogger = logger.NewLogger("Reconnect Pool")
 
-	neighborConfig := []NeighborConfig{}
+	neighborConfig := []config.NeighborConfig{}
 	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &neighborConfig); err != nil {
 		panic(err)
 	}

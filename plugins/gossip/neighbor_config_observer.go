@@ -61,9 +61,9 @@ func runConfigObserver() {
 }
 
 // calculates the differences between the loaded neighbors and the modified config
-func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
+func getNeighborConfigDiff() (modified, added, removed []config.NeighborConfig) {
 	boundNeighbors := GetNeighbors()
-	configNeighbors := []NeighborConfig{}
+	configNeighbors := []config.NeighborConfig{}
 	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		gossipLogger.Error(err)
 	}
@@ -79,7 +79,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 			}
 		}
 		if !found {
-			removed = append(removed, NeighborConfig{Identity: boundNeighbor.Address, PreferIPv6: boundNeighbor.PreferIPv6})
+			removed = append(removed, config.NeighborConfig{Identity: boundNeighbor.Address, PreferIPv6: boundNeighbor.PreferIPv6})
 		}
 	}
 
@@ -103,7 +103,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	return
 }
 
-func addNewNeighbors(neighbors []NeighborConfig) {
+func addNewNeighbors(neighbors []config.NeighborConfig) {
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
 	for _, nb := range neighbors {

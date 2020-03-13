@@ -42,7 +42,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	added := false
 
-	configNeighbors := []gossip.NeighborConfig{}
+	configNeighbors := []config.NeighborConfig{}
 	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		log.Error(err)
 	}
@@ -64,7 +64,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		}
 
 		if !contains {
-			configNeighbors = append(configNeighbors, gossip.NeighborConfig{
+			configNeighbors = append(configNeighbors, config.NeighborConfig{
 				Identity:   uri,
 				Alias:      uri,
 				PreferIPv6: preferIPv6,
@@ -95,7 +95,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 
 	added := false
 
-	configNeighbors := []gossip.NeighborConfig{}
+	configNeighbors := []config.NeighborConfig{}
 	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		log.Error(err)
 	}
@@ -117,7 +117,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 		}
 
 		if !contains {
-			configNeighbors = append(configNeighbors, gossip.NeighborConfig{
+			configNeighbors = append(configNeighbors, config.NeighborConfig{
 				Identity:   neighbor.Identity,
 				Alias:      neighbor.Alias,
 				PreferIPv6: neighbor.PreferIPv6,
@@ -157,7 +157,7 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 
 	removed := false
 
-	configNeighbors := []gossip.NeighborConfig{}
+	configNeighbors := []config.NeighborConfig{}
 	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		log.Error(err)
 	}
