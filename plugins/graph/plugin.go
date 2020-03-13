@@ -87,6 +87,7 @@ func socketBroadcast() {
 	for message := range broadcast {
 		clientsLock.Lock()
 		for client := range clients {
+			broadcastLock.Lock()
 			err := client.WriteJSON(message)
 			if err != nil {
 				log.Warnf("Websocket error: %s", err)
@@ -94,6 +95,7 @@ func socketBroadcast() {
 				delete(clients, client)
 				log.Infof("Removed dead websocket client")
 			}
+			broadcastLock.Unlock()
 		}
 		clientsLock.Unlock()
 	}
