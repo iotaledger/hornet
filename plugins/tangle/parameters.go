@@ -1,13 +1,13 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "Path to the database folder"
-	parameter.NodeConfig.SetDefault("db.path", "mainnetdb")
+	// the path to the database folder
+	config.NodeConfig.SetDefault(config.CfgDatabasePath, "mainnetdb")
 
-	// "Auto. set LSM as LSMI if enabled"
-	parameter.NodeConfig.SetDefault("compass.loadLSMIAsLMI", false)
+	// whether to auto. set LSM as LSMI
+	config.NodeConfig.SetDefault(config.CfgCompassLoadLSMIAsLMI, false)
 }

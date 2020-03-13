@@ -1,28 +1,25 @@
 package spa
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "Set the host to which the Dashboard listens"
-	parameter.NodeConfig.SetDefault("dashboard.bindAddress", "127.0.0.1")
+	// the bind address on which the dashboard can be access from
+	config.NodeConfig.SetDefault(config.CfgDashboardBindAddress, "localhost:8081")
 
-	// "Set the port to which the Dashboard listens"
-	parameter.NodeConfig.SetDefault("dashboard.port", 8081)
+	// whether to run the dashboard in dev mode
+	config.NodeConfig.SetDefault(config.CfgDashboardDevMode, false)
 
-	// "Activate the dashboard dev mode"
-	parameter.NodeConfig.SetDefault("dashboard.dev", false)
+	// whether to use HTTP basic auth
+	config.NodeConfig.SetDefault(config.CfgDashboardBasicAuthEnabled, true)
 
-	// "Whether to use HTTP Basic Auth"
-	parameter.NodeConfig.SetDefault("dashboard.basic_auth.enabled", true)
+	// the HTTP basic auth username
+	config.NodeConfig.SetDefault(config.CfgDashboardBasicAuthUsername, "hornet")
 
-	// "The HTTP Basic Auth username"
-	parameter.NodeConfig.SetDefault("dashboard.basic_auth.username", "hornet")
+	// the HTTP basic auth password
+	config.NodeConfig.SetDefault(config.CfgDashboardBasicAuthPassword, "hornet")
 
-	// "The HTTP Basic Auth password"
-	parameter.NodeConfig.SetDefault("dashboard.basic_auth.password", "hornet")
-
-	// "The dashboard theme"
-	parameter.NodeConfig.SetDefault("dashboard.theme", "default")
+	// the theme for the dashboard to use (default or dark)
+	config.NodeConfig.SetDefault(config.CfgDashboardTheme, "default")
 }

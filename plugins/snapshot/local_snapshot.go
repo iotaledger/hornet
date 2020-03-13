@@ -17,10 +17,10 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/dag"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -415,7 +415,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	defer cachedTargetMsTail.Release(true)                     // tx -1
 
 	var spentAddressesCount int32
-	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() && parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
 		spentAddressesCount = tangle.CountSpentAddressesEntriesWithoutLocking()
 	}
 
@@ -657,7 +657,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0 && parameter.NodeConfig.GetBool("spentAddresses.enabled"))
+	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
 	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
 
 	log.Info("Importing solid entry points")
@@ -745,7 +745,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 	}
 
-	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
 		log.Infof("Importing %d spent addresses. This can take a while...", spentAddrsCount)
 
 		batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))

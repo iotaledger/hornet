@@ -7,7 +7,7 @@ import (
 
 	zmq "github.com/go-zeromq/zmq4"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 // Publisher is a simple zmq publisher abstraction
@@ -27,7 +27,9 @@ func NewPublisher() (*Publisher, error) {
 
 // Start the publisher on the given port.
 func (pub *Publisher) Start() error {
-	return pub.socket.Listen(fmt.Sprintf("%s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.bindAddress"), parameter.NodeConfig.GetInt("zmq.port")))
+	protocol := config.NodeConfig.GetString(config.CfgZMQProtocol)
+	bindAddr := config.NodeConfig.GetString(config.CfgZMQBindAddress)
+	return pub.socket.Listen(fmt.Sprintf("%s://%s", protocol, bindAddr))
 }
 
 // Shutdown stops the publisher.

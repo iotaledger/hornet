@@ -1,25 +1,25 @@
 package spammer
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "Tx Address"
-	parameter.NodeConfig.SetDefault("spammer.address", "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999")
+	// the target address of the spam
+	config.NodeConfig.SetDefault(config.CfgSpammerAddress, "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999")
 
-	// "Message of the Tx"
-	parameter.NodeConfig.SetDefault("spammer.message", "Spamming with HORNET tipselect")
+	// the message to embed within the spam transactions
+	config.NodeConfig.SetDefault(config.CfgSpammerMessage, "Spamming with HORNET tipselect")
 
-	// "Tag of the Tx"
-	parameter.NodeConfig.SetDefault("spammer.tag", "HORNET99SPAMMER999999999999")
+	// the tag of the transaction
+	config.NodeConfig.SetDefault(config.CfgSpammerTag, "HORNET99SPAMMER999999999999")
 
-	// "Depth of the random walker"
-	parameter.NodeConfig.SetDefault("spammer.depth", 3)
+	// the depth to use for tip-selection
+	config.NodeConfig.SetDefault(config.CfgSpammerDepth, 3)
 
-	// "Rate limit for the spam (0 = no limit)"
-	parameter.NodeConfig.SetDefault("spammer.tpsRateLimit", 0.10)
+	// the rate limit for the spammer (0 = no limit)
+	config.NodeConfig.SetDefault(config.CfgSpammerTPSRateLimit, 0.10)
 
-	// "How many spammers should run in parallel"
-	parameter.NodeConfig.SetDefault("spammer.workers", 1)
+	// the amount of parallel running spammers
+	config.NodeConfig.SetDefault(config.CfgSpammerWorkers, 1)
 }

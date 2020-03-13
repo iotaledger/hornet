@@ -1,11 +1,11 @@
 {
   "acceptAnyNeighborConnection": false,
-  "maxneighbors": 5,
+  "maxNeighbors": 5,
   "neighbors": [
     {
       "identity": "example.neighbor.com:15600",
       "alias": "Example Neighbor",
-      "prefer_ipv6": false
+      "preferIPv6": false
     }
   ]
 }

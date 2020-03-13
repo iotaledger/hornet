@@ -1,14 +1,12 @@
 package autopeering
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
-)
-
-const (
-	CFG_ENTRY_NODES = "autopeering.entryNodes"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "list of trusted entry nodes for auto peering"
-	parameter.NodeConfig.SetDefault(CFG_ENTRY_NODES, []string{"zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@159.69.9.6:18626"})
+	// list of autopeering entry nodes to use
+	config.NodeConfig.SetDefault(config.CfgNetAutopeeringEntryNodes, []string{
+		"LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
+	})
 }

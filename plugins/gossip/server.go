@@ -1,12 +1,15 @@
 package gossip
 
 import (
+	"net"
+	"strconv"
+
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/network"
 	"github.com/iotaledger/hive.go/network/tcp"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
@@ -37,12 +40,23 @@ func configureServer() {
 }
 
 func runServer() {
-	gossipLogger.Infof("Starting TCP Server (port %d) ...", parameter.NodeConfig.GetInt("network.port"))
+	gossipBindAddr := config.NodeConfig.GetString(config.CfgNetGossipBindAddress)
+	gossipLogger.Infof("Starting TCP Server (%s) ...", gossipBindAddr)
 
 	daemon.BackgroundWorker("Gossip TCP Server", func(shutdownSignal <-chan struct{}) {
-		gossipLogger.Infof("Starting TCP Server (port %d) ... done", parameter.NodeConfig.GetInt("network.port"))
+		gossipLogger.Infof("Starting TCP Server (%s) ... done", gossipBindAddr)
 
-		go TCPServer.Listen(parameter.NodeConfig.GetString("network.bindAddress"), parameter.NodeConfig.GetInt("network.port"))
+		addr, portStr, err := net.SplitHostPort(gossipBindAddr)
+		if err != nil {
+			gossipLogger.Fatalf("'%s' is an invalid bind address: %s", gossipBindAddr, err)
+		}
+
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			gossipLogger.Fatalf("'%s' contains an invalid port: %s", gossipBindAddr, err)
+		}
+
+		go TCPServer.Listen(addr, port)
 		<-shutdownSignal
 		gossipLogger.Info("Stopping TCP Server ...")
 		TCPServer.Shutdown()

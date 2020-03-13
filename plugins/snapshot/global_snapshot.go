@@ -12,9 +12,9 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -115,7 +115,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 	}
 
 	spentAddressesSum := 0
-	if parameter.NodeConfig.GetBool("spentAddresses.enabled") {
+	if config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
 		for _, spent := range filePathSpent {
 			spentAddressesCount, err := loadSpentAddresses(spent)
 			if err != nil {

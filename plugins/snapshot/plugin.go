@@ -15,10 +15,10 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -52,20 +52,20 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 	installGenesisTransaction()
 
-	localSnapshotsEnabled = parameter.NodeConfig.GetBool("localSnapshots.enabled")
-	snapshotDepth = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.depth"))
+	localSnapshotsEnabled = config.NodeConfig.GetBool(config.CfgLocalSnapshotsEnabled)
+	snapshotDepth = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
-		log.Warnf("Parameter \"localSnapshots.depth\" is too small (%d). Value was changed to %d", snapshotDepth, SolidEntryPointCheckThresholdFuture)
+		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgLocalSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
-	snapshotIntervalSynced = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.intervalSynced"))
-	snapshotIntervalUnsynced = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("localSnapshots.intervalUnsynced"))
+	snapshotIntervalSynced = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalSynced))
+	snapshotIntervalUnsynced = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalUnsynced))
 
-	pruningEnabled = parameter.NodeConfig.GetBool("pruning.enabled")
-	pruningDelay = milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("pruning.delay"))
+	pruningEnabled = config.NodeConfig.GetBool(config.CfgPruningEnabled)
+	pruningDelay = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgPruningDelay))
 	pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
 	if pruningDelay < pruningDelayMin {
-		log.Warnf("Parameter \"pruning.delay\" is too small (%d). Value was changed to %d", pruningDelay, pruningDelayMin)
+		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
 		pruningDelay = pruningDelayMin
 	}
 }
@@ -98,7 +98,8 @@ func run(plugin *node.Plugin) {
 					localSnapshotLock.Lock()
 
 					if shouldTakeSnapshot(solidMilestoneIndex) {
-						if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, parameter.NodeConfig.GetString("localSnapshots.path"), shutdownSignal); err != nil {
+						localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
+						if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, shutdownSignal); err != nil {
 							log.Warnf(ErrSnapshotCreationFailed.Error(), err)
 						}
 					}
@@ -121,18 +122,20 @@ func run(plugin *node.Plugin) {
 
 	var err = ErrNoSnapshotSpecified
 
-	snapshotToLoad := parameter.NodeConfig.GetString("loadSnapshot")
-
-	if strings.EqualFold(snapshotToLoad, "global") {
-		if path := parameter.NodeConfig.GetString("globalSnapshot.path"); path != "" {
+	snapshotTypeToLoad := config.NodeConfig.GetString(config.CfgSnapshotLoadType)
+	switch strings.ToLower(snapshotTypeToLoad) {
+	case "global":
+		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
 			err = LoadGlobalSnapshot(path,
-				parameter.NodeConfig.GetStringSlice("globalSnapshot.spentAddressesPaths"),
-				milestone_index.MilestoneIndex(parameter.NodeConfig.GetInt("globalSnapshot.index")))
+				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPath),
+				milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
 		}
-	} else if strings.EqualFold(snapshotToLoad, "local") {
-		if path := parameter.NodeConfig.GetString("localSnapshots.path"); path != "" {
+	case "local":
+		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
 			err = LoadSnapshotFromFile(path)
 		}
+	default:
+		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, snapshotTypeToLoad)
 	}
 
 	if err != nil {

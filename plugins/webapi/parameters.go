@@ -1,19 +1,16 @@
 package webapi
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "Set the port on which the API listens"
-	parameter.NodeConfig.SetDefault("api.port", 14265)
 
-	// "Set the host to which the API listens"
-	parameter.NodeConfig.SetDefault("api.bindAddress", "0.0.0.0")
+	// the bind address on which the HTTP API listens on
+	config.NodeConfig.SetDefault(config.CfgWebAPIBindAddress, "0.0.0.0:14265")
 
-	// "Allow remote access to certain API commands"
-	parameter.NodeConfig.SetDefault(
-		"api.permitRemoteAccess",
+	// the allowed HTTP API calls which can be called from non whitelisted addresses
+	config.NodeConfig.SetDefault(config.CfgWebAPIPermitRemoteAccess,
 		[]string{
 			"getNodeInfo",
 			"getBalances",
@@ -28,25 +25,27 @@ func init() {
 			"getTrytes",
 		})
 
-	// "Allow specified addresses and networks to access all API commands"
-	parameter.NodeConfig.SetDefault("api.whitelistedAddresses", []string{})
+	// the whitelist of addresses which are allowed to access the HTTP API
+	config.NodeConfig.SetDefault(config.CfgWebAPIWhitelistedAddresses, []string{})
 
-	// "Basic authentication user name"
-	parameter.NodeConfig.SetDefault("api.auth.username", "")
+	// whether to use HTTP basic auth for the HTTP API
+	config.NodeConfig.SetDefault(config.CfgWebAPIBasicAuthEnabled, "")
 
-	// "Basic authentication password"
-	parameter.NodeConfig.SetDefault("api.auth.password", "")
+	// the username of the HTTP basic auth
+	config.NodeConfig.SetDefault(config.CfgWebAPIBasicAuthUsername, "")
 
-	// "Set a maximum number of trytes that may be returned by the getTrytes endpoint"
-	parameter.NodeConfig.SetDefault("api.maxGetTrytes", 10000)
+	// the password of the HTTP basic auth
+	config.NodeConfig.SetDefault(config.CfgWebAPIBasicAuthPassword, "")
 
-	// "Set a maximum number of parameters in an API call"
-	parameter.NodeConfig.SetDefault("api.maxRequestsList", 1000)
+	// the maximum number of trytes that may be returned by the getTrytes endpoint
+	config.NodeConfig.SetDefault(config.CfgWebAPILimitsMaxGetTrytes, 10000)
 
-	// "Set a maximum number of transactions that may be returned by the findTransactions endpoint"
-	parameter.NodeConfig.SetDefault("api.maxFindTransactions", 100000)
+	// the maximum number of parameters in an API call
+	config.NodeConfig.SetDefault(config.CfgWebAPILimitsMaxRequestsList, 1000)
 
-	// "Set a maximum number of characters that the body of an API call may contain"
-	parameter.NodeConfig.SetDefault("api.maxBodyLength", 1000000)
+	// the maximum number of transactions that may be returned by the findTransactions endpoint
+	config.NodeConfig.SetDefault(config.CfgWebAPILimitsMaxFindTransactions, 100000)
 
+	// the maximum number of characters that the body of an API call may contain
+	config.NodeConfig.SetDefault(config.CfgWebAPILimitsMaxBodyLengthBytes, 1000000)
 }

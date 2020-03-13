@@ -1,22 +1,19 @@
 package monitor
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "Path to tanglemonitor frontend files"
-	parameter.NodeConfig.SetDefault("monitor.TangleMonitorPath", "tanglemonitor/frontend")
+	// path to the tanglemonitor web assets
+	config.NodeConfig.SetDefault(config.CfgMonitorTangleMonitorPath, "tanglemonitor/frontend")
 
-	// "Set the domain on which TangleMonitor is served"
-	parameter.NodeConfig.SetDefault("monitor.domain", "")
+	// the domain from which the tanglemonitor is served from
+	config.NodeConfig.SetDefault(config.CfgMonitorDomain, "")
 
-	// "Set the host to which the TangleMonitor listens"
-	parameter.NodeConfig.SetDefault("monitor.bindAddress", "127.0.0.1")
+	// the bind address on which the monitor can be access from
+	config.NodeConfig.SetDefault(config.CfgMonitorWebBindAddress, "localhost:4434")
 
-	// "TangleMonitor webserver port (do not change unless you redirect back to 4434)"
-	parameter.NodeConfig.SetDefault("monitor.port", 4434)
-
-	// "TangleMonitor API port (do not change unless you redirect back to 4433)"
-	parameter.NodeConfig.SetDefault("monitor.apiPort", 4433)
+	// the bind address on which the API listens on
+	config.NodeConfig.SetDefault(config.CfgMonitorAPIBindAddress, "localhost:4433")
 }

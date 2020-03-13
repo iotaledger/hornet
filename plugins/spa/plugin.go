@@ -1,7 +1,6 @@
 package spa
 
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"sync"
@@ -17,10 +16,10 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
@@ -100,10 +99,10 @@ func run(plugin *node.Plugin) {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if parameter.NodeConfig.GetBool("dashboard.basic_auth.enabled") {
+	if config.NodeConfig.GetBool(config.CfgDashboardBasicAuthEnabled) {
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username == parameter.NodeConfig.GetString("dashboard.basic_auth.username") &&
-				password == parameter.NodeConfig.GetString("dashboard.basic_auth.password") {
+			if username == config.NodeConfig.GetString(config.CfgDashboardBasicAuthUsername) &&
+				password == config.NodeConfig.GetString(config.CfgDashboardBasicAuthPassword) {
 				return true, nil
 			}
 			return false, nil
@@ -111,11 +110,9 @@ func run(plugin *node.Plugin) {
 	}
 
 	setupRoutes(e)
-	addr := parameter.NodeConfig.GetString("dashboard.bindAddress")
-	port := parameter.NodeConfig.GetInt("dashboard.port")
-
-	log.Infof("You can now access the dashboard using: http://%s:%d", addr, port)
-	go e.Start(fmt.Sprintf("%s:%d", addr, port))
+	bindAddr := config.NodeConfig.GetString(config.CfgDashboardBindAddress)
+	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
+	go e.Start(bindAddr)
 }
 
 // sends the given message to all connected websocket clients

@@ -1,11 +1,10 @@
 package mqtt
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-
-	// "Path to the MQTT broker config file"
-	parameter.NodeConfig.SetDefault("mqtt.config", "mqtt_config.json")
+	// path to the MQTT broker config file
+	config.NodeConfig.SetDefault(config.CfgMQTTConfig, "mqtt_config.json")
 }

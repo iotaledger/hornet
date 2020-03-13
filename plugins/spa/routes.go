@@ -11,10 +11,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
-var ErrInvalidParameter = errors.New("invalid parameter")
+var ErrInvalidParameter = errors.New("invalid config")
 var ErrInternalError = errors.New("internal error")
 var ErrNotFound = errors.New("not found")
 var ErrForbidden = errors.New("forbidden")
@@ -24,7 +24,7 @@ var appBox = packr.New("SPA_App", "./frontend/build")
 var assetsBox = packr.New("SPA_Assets", "./frontend/src/assets")
 
 func indexRoute(e echo.Context) error {
-	if parameter.NodeConfig.GetBool("dashboard.dev") {
+	if config.NodeConfig.GetBool(config.CfgDashboardDevMode) {
 		res, err := http.Get("http://127.0.0.1:9090/")
 		if err != nil {
 			return err
@@ -35,7 +35,7 @@ func indexRoute(e echo.Context) error {
 		}
 		return e.HTMLBlob(http.StatusOK, devIndexHTML)
 	}
-	theme := parameter.NodeConfig.GetString("dashboard.theme")
+	theme := config.NodeConfig.GetString(config.CfgDashboardTheme)
 	indexHTML, err := appBox.Find("index.html")
 	if theme == "dark" {
 		indexHTML, err = appBox.Find("index_dark.html")
@@ -59,7 +59,7 @@ func setupRoutes(e *echo.Echo) {
 
 	e.Pre(enforceMaxOneDotPerURL)
 
-	if parameter.NodeConfig.GetBool("dashboard.dev") {
+	if config.NodeConfig.GetBool(config.CfgDashboardDevMode) {
 		e.Static("/assets", "./plugins/spa/frontend/src/assets")
 	} else {
 		// load assets from packr: either from within the binary or actual disk

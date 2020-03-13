@@ -16,9 +16,9 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
@@ -76,11 +76,11 @@ type reconnectneighbor struct {
 func availableNeighborSlotsFilled() bool {
 	// while this check is not thread-safe, initiated connections will be dropped
 	// when their handshaking was done but already all neighbor slots are filled
-	return len(connectedNeighbors) >= parameter.NeighborsConfig.GetInt("maxNeighbors")
+	return len(connectedNeighbors) >= config.NeighborsConfig.GetInt(config.CfgNeighborsMaxNeighbors)
 }
 
 func configureNeighbors() {
-	acceptAnyNeighborConnection = parameter.NeighborsConfig.GetBool("acceptAnyNeighborConnection")
+	acceptAnyNeighborConnection = config.NeighborsConfig.GetBool(config.CfgNeighborsAcceptAnyNeighborConnection)
 
 	Events.NeighborPutBackIntoReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
 		gossipLogger.Infof("added neighbor %s back into reconnect pool...", neighbor.InitAddress.String())

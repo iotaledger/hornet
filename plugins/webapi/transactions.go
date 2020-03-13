@@ -12,8 +12,8 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -71,7 +71,7 @@ func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 		return
 	}
 
-	maxResults := parameter.NodeConfig.GetInt("api.maxFindTransactions")
+	maxResults := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions)
 	if (ft.MaxResults != 0) && (ft.MaxResults < maxResults) {
 		maxResults = ft.MaxResults
 	}

@@ -11,8 +11,8 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
@@ -32,13 +32,13 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	address = trinary.MustPad(parameter.NodeConfig.GetString("spammer.address"), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
-	message = parameter.NodeConfig.GetString("spammer.message")
-	tagSubstring = trinary.MustPad(parameter.NodeConfig.GetString("spammer.tag"), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
-	depth = parameter.NodeConfig.GetUint("spammer.depth")
-	rateLimit = parameter.NodeConfig.GetFloat64("spammer.tpsRateLimit")
-	mwm = parameter.NodeConfig.GetInt("protocol.mwm")
-	spammerWorkerCount = int(parameter.NodeConfig.GetUint("spammer.workers"))
+	address = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
+	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
+	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
+	depth = config.NodeConfig.GetUint(config.CfgSpammerDepth)
+	rateLimit = config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
+	mwm = config.NodeConfig.GetInt(config.CfgProtocolMWM)
+	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
 
 	if spammerWorkerCount >= runtime.NumCPU() {
 		spammerWorkerCount = runtime.NumCPU() - 1

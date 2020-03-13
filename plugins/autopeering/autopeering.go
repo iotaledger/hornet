@@ -17,7 +17,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/plugins/autopeering/local"
 )
 
@@ -72,17 +72,15 @@ func start(shutdownSignal <-chan struct{}) {
 	defer log.Info("Stopping Autopeering ... done")
 
 	lPeer := local.GetInstance()
+
 	// use the port of the peering service
 	peeringAddr := lPeer.Services().Get(service.PeeringKey)
-	_, peeringPort, err := net.SplitHostPort(peeringAddr.String())
-	if err != nil {
-		panic(err)
-	}
+
 	// resolve the bind address
-	address := net.JoinHostPort(parameter.NodeConfig.GetString(local.CFG_BIND), peeringPort)
-	localAddr, err := net.ResolveUDPAddr(peeringAddr.Network(), address)
+	bindAddr := config.NodeConfig.GetString(config.CfgNetAutopeeringBindAddr)
+	localAddr, err := net.ResolveUDPAddr(peeringAddr.Network(), bindAddr)
 	if err != nil {
-		log.Fatalf("Error resolving %s: %v", local.CFG_BIND, err)
+		log.Fatalf("Error resolving %s: %v", config.CfgNetAutopeeringBindAddr, err)
 	}
 
 	conn, err := net.ListenUDP(peeringAddr.Network(), localAddr)
@@ -124,7 +122,7 @@ func start(shutdownSignal <-chan struct{}) {
 }
 
 func parseEntryNodes() (result []*peer.Peer, err error) {
-	for _, entryNodeDefinition := range parameter.NodeConfig.GetStringSlice(CFG_ENTRY_NODES) {
+	for _, entryNodeDefinition := range config.NodeConfig.GetStringSlice(config.CfgNetAutopeeringEntryNodes) {
 		if entryNodeDefinition == "" {
 			continue
 		}
@@ -149,7 +147,7 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 		}
 
 		services := service.New()
-		ip := ipAddresses.GetPreferredAddress(parameter.NodeConfig.GetBool("network.prefer_ipv6")).ToString()
+		ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6)).ToString()
 		services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip, entryAddr.Port))
 		result = append(result, peer.NewPeer(pubKey, services))
 	}

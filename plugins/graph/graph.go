@@ -8,10 +8,10 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 )
 
 const (
@@ -70,10 +70,9 @@ func initRingBuffers() {
 }
 
 func onConnect(c *websocket.Conn) {
-	infoMsg := "Websocket client connection established"
-	log.Info(infoMsg)
+	log.Info("WebSocket client connection established")
 
-	config := &wsConfig{NetworkName: parameter.NodeConfig.GetString("graph.networkName")}
+	config := &wsConfig{NetworkName: config.NodeConfig.GetString(config.CfgGraphNetworkName)}
 
 	var initTxs []*wsTransaction
 	txRingBuffer.Do(func(tx interface{}) {

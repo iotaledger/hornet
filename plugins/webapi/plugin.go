@@ -2,7 +2,6 @@ package webapi
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -16,8 +15,8 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
@@ -33,7 +32,6 @@ var (
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
-	auth                 string
 	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
@@ -41,7 +39,7 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
+	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
 
 	// Release mode
 	gin.SetMode(gin.ReleaseMode)
@@ -69,8 +67,8 @@ func configure(plugin *node.Plugin) {
 	// GZIP
 	api.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	// Load allowed remote access to specific api commands
-	pae := parameter.NodeConfig.GetStringSlice("api.permitRemoteAccess")
+	// Load allowed remote access to specific HTTP API commands
+	pae := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermitRemoteAccess)
 	if len(pae) > 0 {
 		for _, endpoint := range pae {
 			ep := strings.ToLower(endpoint)
@@ -78,8 +76,8 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	// Load whitelisted addresses
-	whitelist := append([]string{"127.0.0.1", "::1"}, parameter.NodeConfig.GetStringSlice("api.whitelistedAddresses")...)
+	// load whitelisted addresses
+	whitelist := append([]string{"127.0.0.1", "::1"}, config.NodeConfig.GetStringSlice(config.CfgWebAPIWhitelistedAddresses)...)
 	for _, entry := range whitelist {
 		_, ipnet, err := cnet.ParseCIDROrIP(entry)
 		if err != nil {
@@ -89,12 +87,11 @@ func configure(plugin *node.Plugin) {
 		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
 
-	// Set basic auth if enabled
-	auth = parameter.NodeConfig.GetString("api.remoteauth")
-
-	if len(auth) > 0 {
-		authSlice := strings.Split(auth, ":")
-		api.Use(gin.BasicAuth(gin.Accounts{authSlice[0]: authSlice[1]}))
+	// set basic auth if enabled
+	if config.NodeConfig.GetBool(config.CfgWebAPIBasicAuthEnabled) {
+		username := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthUsername)
+		password := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPassword)
+		api.Use(gin.BasicAuth(gin.Accounts{username: password}))
 	}
 
 	// WebAPI route
@@ -123,15 +120,11 @@ func run(plugin *node.Plugin) {
 
 		log.Info("Starting WebAPI server ... done")
 
-		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.bindAddress"), parameter.NodeConfig.GetInt("api.port"))
-
-		server = &http.Server{
-			Addr:    serveAddress,
-			Handler: api,
-		}
+		bindAddr := config.NodeConfig.GetString(config.CfgWebAPIBindAddress)
+		server = &http.Server{Addr: bindAddr, Handler: api}
 
 		go func() {
-			log.Infof("You can now access the API using: http://%s", serveAddress)
+			log.Infof("You can now access the API using: http://%s", bindAddr)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Error("Stopping WebAPI server due to an error ... done")
 			}

@@ -36,7 +36,7 @@ func webAPIRoute() {
 		}
 
 		if !whitelisted {
-			// Check if command is permited. If it's not permited and the request does not come from localhost, deny it.
+			// Check if command is permitted. If it's not permited and the request does not come from localhost, deny it.
 			_, permited := permitedEndpoints[cmd]
 			if apiCallExists && !permited {
 				e := ErrorReturn{

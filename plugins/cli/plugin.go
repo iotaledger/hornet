@@ -14,7 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
@@ -50,10 +50,10 @@ func init() {
 }
 
 func parseParameters() {
-	for _, pluginName := range parameter.NodeConfig.GetStringSlice("node.disableplugins") {
+	for _, pluginName := range config.NodeConfig.GetStringSlice(node.CFG_DISABLE_PLUGINS) {
 		node.DisabledPlugins[strings.ToLower(pluginName)] = true
 	}
-	for _, pluginName := range parameter.NodeConfig.GetStringSlice("node.enableplugins") {
+	for _, pluginName := range config.NodeConfig.GetStringSlice(node.CFG_ENABLE_PLUGINS) {
 		node.EnabledPlugins[strings.ToLower(pluginName)] = true
 	}
 }
@@ -80,7 +80,7 @@ func configure(plugin *node.Plugin) {
 
 	checkLatestVersion()
 
-	if parameter.NodeConfig.GetString("useProfile") == "auto" {
+	if config.NodeConfig.GetString(profile.CfgUseProfile) == profile.AutoProfileName {
 		log.Infof("Profile mode 'auto', Using profile '%s'", profile.GetProfile().Name)
 	} else {
 		log.Infof("Using profile '%s'", profile.GetProfile().Name)

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -32,7 +32,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
 	addedNeighbors := 0
 
-	preferIPv6 := parameter.NodeConfig.GetBool("network.prefer_ipv6")
+	preferIPv6 := config.NodeConfig.GetBool(config.CfgNetPreferIPv6)
 
 	if err := mapstructure.Decode(i, an); err != nil {
 		e.Error = "Internal error"
@@ -43,7 +43,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	added := false
 
 	configNeighbors := []gossip.NeighborConfig{}
-	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		log.Error(err)
 	}
 
@@ -81,10 +81,10 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	if added {
-		parameter.DenyNeighborsConfigHotReload()
-		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
-		parameter.NeighborsConfig.WriteConfig()
-		parameter.AllowNeighborsConfigHotReload()
+		config.DenyNeighborsConfigHotReload()
+		config.NeighborsConfig.Set(config.CfgNeighbors, configNeighbors)
+		config.NeighborsConfig.WriteConfig()
+		config.AllowNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
@@ -96,7 +96,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	added := false
 
 	configNeighbors := []gossip.NeighborConfig{}
-	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		log.Error(err)
 	}
 
@@ -134,10 +134,10 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	}
 
 	if added {
-		parameter.DenyNeighborsConfigHotReload()
-		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
-		parameter.NeighborsConfig.WriteConfig()
-		parameter.AllowNeighborsConfigHotReload()
+		config.DenyNeighborsConfigHotReload()
+		config.NeighborsConfig.Set(config.CfgNeighbors, configNeighbors)
+		config.NeighborsConfig.WriteConfig()
+		config.AllowNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
@@ -158,7 +158,7 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 	removed := false
 
 	configNeighbors := []gossip.NeighborConfig{}
-	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		log.Error(err)
 	}
 
@@ -210,10 +210,10 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 	}
 
 	if removed {
-		parameter.DenyNeighborsConfigHotReload()
-		parameter.NeighborsConfig.Set("neighbors", configNeighbors)
-		parameter.NeighborsConfig.WriteConfig()
-		parameter.AllowNeighborsConfigHotReload()
+		config.DenyNeighborsConfigHotReload()
+		config.NeighborsConfig.Set(config.CfgNeighbors, configNeighbors)
+		config.NeighborsConfig.WriteConfig()
+		config.AllowNeighborsConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})

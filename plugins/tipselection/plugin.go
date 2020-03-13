@@ -5,7 +5,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 var (
@@ -31,5 +31,5 @@ type tipselevents struct {
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
+	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
 }

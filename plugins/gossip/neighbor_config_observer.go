@@ -8,21 +8,21 @@ import (
 
 	"github.com/iotaledger/hive.go/iputils"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func configureConfigObserver() {
-	parameter.NeighborsConfig.WatchConfig()
+	config.NeighborsConfig.WatchConfig()
 }
 
 func runConfigObserver() {
-	parameter.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
-		if !parameter.IsNeighborsConfigHotReloadAllowed() {
+	config.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
+		if !config.IsNeighborsConfigHotReloadAllowed() {
 			return
 		}
 
 		// whether to accept any incoming neighbor connection
-		acceptAnyNeighborConnectionRead := parameter.NeighborsConfig.GetBool("acceptAnyNeighborConnection")
+		acceptAnyNeighborConnectionRead := config.NeighborsConfig.GetBool(config.CfgNeighborsAcceptAnyNeighborConnection)
 		if acceptAnyNeighborConnection != acceptAnyNeighborConnectionRead {
 			gossipLogger.Infof("Set acceptAnyNeighborConnection to <%v> due to config change", acceptAnyNeighborConnectionRead)
 			acceptAnyNeighborConnection = acceptAnyNeighborConnectionRead
@@ -64,7 +64,7 @@ func runConfigObserver() {
 func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	boundNeighbors := GetNeighbors()
 	configNeighbors := []NeighborConfig{}
-	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		gossipLogger.Error(err)
 	}
 

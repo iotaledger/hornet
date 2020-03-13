@@ -1,13 +1,14 @@
 package tipselection
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "Max. depth for tip selection"
-	parameter.NodeConfig.SetDefault("tipsel.maxDepth", 15)
+	// the max allowed depth to be used as the starting point for tip-selection
+	config.NodeConfig.SetDefault(config.CfgTipSelMaxDepth, 15)
 
-	// "Number of tx to automatically flag them as below the max depth"
-	parameter.NodeConfig.SetDefault("tipsel.belowMaxDepthTransactionLimit", 20000)
+	// the limit defining the max amount of transactions to traverse in order to check
+	// whether a transaction references a transaction below max depth
+	config.NodeConfig.SetDefault(config.CfgTipSelBelowMaxDepthTransactionLimit, 20000)
 }

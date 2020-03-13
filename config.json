@@ -1,7 +1,8 @@
 {
   "useProfile": "auto",
-  "api": {
-    "auth": {
+  "httpAPI": {
+    "basicAuth": {
+      "enabled": false,
       "password": "",
       "username": ""
     },
@@ -19,85 +20,87 @@
       "getTrytes"
     ],
     "whitelistedAddresses": [],
-    "bindAddress": "0.0.0.0",
-    "maxbodylength": 1000000,
-    "maxfindtransactions": 1000,
-    "maxgettrytes": 1000,
-    "maxrequestslist": 1000,
-    "port": 14265,
-    "remoteauth": ""
+    "bindAddress": "0.0.0.0:14265",
+    "limits": {
+      "bodyLengthBytes": 1000000,
+      "findTransactions": 1000,
+      "getTrytes": 1000,
+      "requestsList": 1000
+    }
   },
   "compass": {
     "loadLSMIAsLMI": false
   },
   "dashboard": {
-    "bindAddress": "127.0.0.1",
-    "port": 8081,
+    "bindAddress": "localhost:8081",
+    "theme": "default",
     "dev": false,
-    "basic_auth": {
+    "basicAuth": {
       "enabled": false,
       "username": "hornet",
       "password": "hornet"
-    },
-    "theme": "default"
+    }
   },
   "db": {
     "path": "mainnetdb"
   },
-  "loadSnapshot": "local",
-  "localsnapshots": {
-    "enabled": true,
-    "depth": 50,
-    "intervalsynced": 50,
-    "intervalunsynced": 1000,
-    "path": "export.bin"
-  },
-  "pruning": {
-    "enabled": true,
-    "delay": 40000
+  "snapshots": {
+    "loadType": "local",
+    "local": {
+      "enabled": true,
+      "depth": 50,
+      "intervalSynced": 50,
+      "intervalUnsynced": 1000,
+      "path": "export.bin"
+    },
+    "global": {
+      "path": "snapshotMainnet.txt",
+      "spentAddressesPaths": [
+        "previousEpochsSpentAddresses1.txt",
+        "previousEpochsSpentAddresses2.txt",
+        "previousEpochsSpentAddresses3.txt"
+      ],
+      "index": 1050000
+    },
+    "pruning": {
+      "enabled": true,
+      "delay": 40000
+    }
   },
   "spentAddresses": {
     "enabled": true
   },
-  "globalsnapshot": {
-    "path": "snapshotMainnet.txt",
-    "spentaddressespaths": [
-      "previousEpochsSpentAddresses1.txt",
-      "previousEpochsSpentAddresses2.txt",
-      "previousEpochsSpentAddresses3.txt"
-    ],
-    "index": 1050000
-  },
-  "autopeering": {
-    "actAsEntryNode": false,
-    "entryNodes": [
-      "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626"
-    ],
-    "seed": "",
-    "port": 14626
-  },
   "milestones": {
     "coordinator": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
-    "coordinatorsecuritylevel": 2,
-    "numberofkeysinamilestone": 23
+    "coordinatorSecurityLevel": 2,
+    "numberOfKeysInAMilestone": 23
   },
   "network": {
-    "bindAddress": "0.0.0.0",
-    "externalAddress": "auto",
-    "prefer_ipv6": false,
-    "port": 15600,
-    "reconnectattemptintervalseconds": 60
+    "preferIPv6": false,
+    "gossip": {
+      "bindAddress": "0.0.0.0:15600",
+      "reconnectAttemptIntervalSeconds": 60
+    },
+    "autopeering": {
+      "bindAddress": "0.0.0.0:14626",
+      "externalAddress": "auto",
+      "runAsEntryNode": false,
+      "entryNodes": [
+        "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626"
+      ],
+      "seed": ""
+    }
   },
   "protocol": {
     "mwm": 14
   },
   "tipsel": {
-    "belowmaxdepthtransactionlimit": 20000,
-    "maxdepth": 3
+    "belowMaxDepthTransactionLimit": 20000,
+    "maxDepth": 3
   },
   "node": {
-    "disableplugins": [],
-    "enableplugins": []
+    "disablePlugins": [],
+    "enablePlugins": []
   },
   "logger": {
     "level": "info",
@@ -113,32 +116,29 @@
     "depth": 3,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
-    "tpsratelimit": 0.1,
+    "tpsRateLimit": 0.1,
     "workers": 1
   },
   "graph": {
-    "webrootPath": "IOTAtangle/webroot",
+    "webRootPath": "IOTAtangle/webroot",
     "domain": "",
-    "websocket": {
+    "webSocket": {
       "uri": "ws://127.0.0.1:8083/ws"
     },
-    "bindAddress": "127.0.0.1",
-    "port": 8083,
+    "bindAddress": "localhost:8083",
     "networkName": "meets HORNET"
   },
   "monitor": {
-    "tanglemonitorpath": "tanglemonitor/frontend",
+    "tangleMonitorPath": "tanglemonitor/frontend",
     "domain": "",
-    "bindAddress": "127.0.0.1",
-    "port": 4434,
-    "apiPort": 4433
+    "webBindAddress": "localhost:4434",
+    "apiBindAddress": "localhost:4433"
   },
   "mqtt": {
     "config": "mqtt_config.json"
   },
   "zmq": {
-    "bindAddress": "127.0.0.1",
-    "port": 5556
+    "bindAddress": "localhost:5556"
   },
   "profiling": {
     "bindAddress": "localhost:6060"
