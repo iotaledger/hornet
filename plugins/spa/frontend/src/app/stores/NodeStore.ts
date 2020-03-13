@@ -544,19 +544,19 @@ export class NodeStore {
             series("All Txs", 'rgba(14, 230, 183,1)', 'rgba(14, 230, 183,0.4)')
         );
         let newTx = Object.assign({}, chartSeriesOpts,
-            series("New Txs", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
+            series("New Txs", 'rgba(230, 201, 14,1)', 'rgba(219, 53, 219,0.4)')
         );
         let knownTx = Object.assign({}, chartSeriesOpts,
-            series("Known Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
+            series("Known Txs", 'rgba(219, 53, 219,1)', 'rgba(53, 219, 175,0.4)')
         );
         let invalid = Object.assign({}, chartSeriesOpts,
             series("Invalid Txs", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
         );
         let stale = Object.assign({}, chartSeriesOpts,
-            series("Stale Txs", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
+            series("Stale Txs", 'rgba(114, 53, 219,1)', 'rgba(219, 150, 53,0.4)')
         );
         let sent = Object.assign({}, chartSeriesOpts,
-            series("Sent Txs", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
+            series("Sent Txs", 'rgba(14, 230, 100,1)', 'rgba(114, 53, 219,0.4)')
         );
         let droppedSent = Object.assign({}, chartSeriesOpts,
             series("Dropped Packets", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
@@ -592,16 +592,16 @@ export class NodeStore {
             series("Received Tx Requests", 'rgba(219, 111, 53,1)', 'rgba(219, 111, 53,0.4)')
         );
         let sentMsReq = Object.assign({}, chartSeriesOpts,
-            series("Sent Ms Requests", 'rgba(53, 83, 219,1)', 'rgba(53, 83, 219,0.4)')
+            series("Sent Ms Requests", 'rgba(53, 109, 230,1)', 'rgba(53, 83, 219,0.4)')
         );
         let recMsReq = Object.assign({}, chartSeriesOpts,
-            series("Received Ms Requests", 'rgba(219, 178, 53,1)', 'rgba(219, 178, 53,0.4)')
+            series("Received Ms Requests", 'rgba(159, 53, 230,1)', 'rgba(219, 178, 53,0.4)')
         );
         let sentHeatbeats = Object.assign({}, chartSeriesOpts,
-            series("Sent Heartbeats", 'rgba(87, 12, 119,1)', 'rgba(87, 12, 119,0.4)')
+            series("Sent Heartbeats", 'rgba(14, 230, 183,1)', 'rgba(87, 12, 119,0.4)')
         );
         let recHeartbeats = Object.assign({}, chartSeriesOpts,
-            series("Received Heartbeats", 'rgba(111, 138, 83,1)', 'rgba(111, 138, 83,0.4)')
+            series("Received Heartbeats", 'rgba(14, 230, 100,1)', 'rgba(111, 138, 83,0.4)')
         );
 
         let labels = [];
@@ -618,7 +618,7 @@ export class NodeStore {
 
         return {
             labels: labels,
-            datasets: [sentTxReq, sentMsReq, recTxReq, recMsReq, sentHeatbeats, recHeartbeats],
+            datasets: [sentTxReq, recTxReq, sentMsReq, recMsReq, sentHeatbeats, recHeartbeats],
         };
     }
 
