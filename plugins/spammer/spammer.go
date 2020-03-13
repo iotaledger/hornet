@@ -130,7 +130,7 @@ func broadcastTransaction(tx *transaction.Transaction) error {
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	hornetTx := hornet.NewTransaction(tx, txBytesTruncated)
 
-	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), nil)
+	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), (*metrics.NeighborMetrics)(nil))
 	gossip.BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTrytesToBytes(hornetTx.GetHash())[:49])
 
 	return nil
