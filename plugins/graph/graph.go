@@ -2,10 +2,9 @@ package graph
 
 import (
 	"container/ring"
-	"fmt"
 	"strconv"
 
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/gorilla/websocket"
 
 	"github.com/iotaledger/hive.go/syncutils"
 
@@ -25,7 +24,10 @@ var (
 	snRingBuffer *ring.Ring // confirmed transactions
 	msRingBuffer *ring.Ring // Milestones
 
-	broadcastLock    = syncutils.Mutex{}
+	upgrader = websocket.Upgrader{}
+	clients  = make(map[*websocket.Conn]bool)
+
+	clientsLock      = syncutils.Mutex{}
 	txRingBufferLock = syncutils.Mutex{}
 	snRingBufferLock = syncutils.Mutex{}
 	msRingBufferLock = syncutils.Mutex{}
@@ -56,19 +58,20 @@ type wsTransactionSn struct {
 	Bundle            string `json:"bundle"`
 }
 
+type wsMessage struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
+
 func initRingBuffers() {
 	txRingBuffer = ring.New(TX_BUFFER_SIZE)
 	snRingBuffer = ring.New(TX_BUFFER_SIZE)
 	msRingBuffer = ring.New(20)
 }
 
-func onConnectHandler(s socketio.Conn) error {
-	infoMsg := "Graph client connection established"
-	if s != nil {
-		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
-	}
+func onConnect(c *websocket.Conn) {
+	infoMsg := "Websocket client connection established"
 	log.Info(infoMsg)
-	socketioServer.JoinRoom(NAMESPACE, "broadcast", s)
 
 	config := &wsConfig{NetworkName: parameter.NodeConfig.GetString("graph.networkName")}
 
@@ -93,32 +96,10 @@ func onConnectHandler(s socketio.Conn) error {
 		}
 	})
 
-	s.Emit("config", config)
-	s.Emit("inittx", initTxs)
-	s.Emit("initsn", initSns)
-	s.Emit("initms", initMs)
-	s.Emit("donation", "0")
-	s.Emit("donations", []int{})
-	s.Emit("donation-address", "-")
-
-	return nil
-}
-
-func onErrorHandler(s socketio.Conn, e error) {
-	errorMsg := "Graph meet error"
-	if e != nil {
-		errorMsg = fmt.Sprintf("%s: %s", errorMsg, e.Error())
-	}
-	log.Error(errorMsg)
-}
-
-func onDisconnectHandler(s socketio.Conn, msg string) {
-	infoMsg := "Graph client connection closed"
-	if s != nil {
-		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
-	}
-	log.Info(fmt.Sprintf("%s: %s", infoMsg, msg))
-	socketioServer.LeaveAllRooms(NAMESPACE, s)
+	c.WriteJSON(&wsMessage{Type: "config", Data: config})
+	c.WriteJSON(&wsMessage{Type: "inittx", Data: initTxs})
+	c.WriteJSON(&wsMessage{Type: "initsn", Data: initSns})
+	c.WriteJSON(&wsMessage{Type: "initms", Data: initMs})
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -143,9 +124,12 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		txRingBuffer = txRingBuffer.Next()
 		txRingBufferLock.Unlock()
 
-		broadcastLock.Lock()
-		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "tx", wsTx)
-		broadcastLock.Unlock()
+		msg := &wsMessage{Type: "tx", Data: wsTx}
+		select {
+		case broadcast <- msg:
+		default:
+		}
+
 	})
 }
 
@@ -165,9 +149,11 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 		snRingBuffer = snRingBuffer.Next()
 		snRingBufferLock.Unlock()
 
-		broadcastLock.Lock()
-		socketioServer.BroadcastToRoom(NAMESPACE, "broadcast", "sn", snTx)
-		broadcastLock.Unlock()
+		msg := &wsMessage{Type: "sn", Data: snTx}
+		select {
+		case broadcast <- msg:
+		default:
+		}
 	})
 }
 
@@ -180,7 +166,9 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 	msRingBuffer = msRingBuffer.Next()
 	msRingBufferLock.Unlock()
 
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "ms", msHash)
-	broadcastLock.Unlock()
+	msg := &wsMessage{Type: "ms", Data: msHash}
+	select {
+	case broadcast <- msg:
+	default:
+	}
 }

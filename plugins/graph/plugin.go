@@ -2,16 +2,11 @@ package graph
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"time"
 
 	"golang.org/x/net/context"
-
-	engineio "github.com/googollee/go-engine.io"
-	"github.com/googollee/go-engine.io/transport"
-	"github.com/googollee/go-engine.io/transport/polling"
-	"github.com/googollee/go-engine.io/transport/websocket"
-	socketio "github.com/googollee/go-socket.io"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -47,37 +42,61 @@ var (
 	newMilestoneWorkerQueueSize = 100
 	newMilestoneWorkerPool      *workerpool.WorkerPool
 
+	broadcast = make(chan *wsMessage, 100)
+
 	wasSyncBefore = false
 
-	server         *http.Server
-	router         *http.ServeMux
-	socketioServer *socketio.Server
+	server *http.Server
+	router *http.ServeMux
 )
 
-func downloadSocketIOHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, parameter.NodeConfig.GetString("graph.socketioPath"))
+// PageData struct for html template
+type PageData struct {
+	URI string
 }
 
-func configureSocketIOServer() error {
-	var err error
-
-	socketioServer, err = socketio.NewServer(&engineio.Options{
-		PingTimeout:  time.Second * 20,
-		PingInterval: time.Second * 5,
-		Transports: []transport.Transport{
-			polling.Default,
-			websocket.Default,
-		},
-	})
-	if err != nil {
-		return err
+func wrapHandler(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
+			data := PageData{
+				URI: parameter.NodeConfig.GetString("graph.websocket.uri"),
+			}
+			tmpl, _ := template.New("graph").Parse(index)
+			tmpl.Execute(w, data)
+			return
+		}
+		h.ServeHTTP(w, r)
 	}
+}
 
-	socketioServer.OnConnect("/", onConnectHandler)
-	socketioServer.OnError("/", onErrorHandler)
-	socketioServer.OnDisconnect("/", onDisconnectHandler)
+func socketServer(w http.ResponseWriter, r *http.Request) {
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Errorf("Upgrade websocket:", err)
+		return
+	}
+	// register client
+	clientsLock.Lock()
+	clients[c] = true
+	clientsLock.Unlock()
+	onConnect(c)
+}
 
-	return nil
+func socketBroadcast() {
+	for message := range broadcast {
+		clientsLock.Lock()
+		for client := range clients {
+			err := client.WriteJSON(message)
+			if err != nil {
+				log.Warnf("Websocket error: %s", err)
+				client.Close()
+				delete(clients, client)
+				log.Infof("Removed dead websocket client")
+			}
+		}
+		clientsLock.Unlock()
+	}
 }
 
 func configure(plugin *node.Plugin) {
@@ -86,7 +105,7 @@ func configure(plugin *node.Plugin) {
 
 	router = http.NewServeMux()
 
-	// socket.io and web server
+	// websocket and web server
 	server = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port")),
 		Handler: router,
@@ -94,14 +113,8 @@ func configure(plugin *node.Plugin) {
 
 	fs := http.FileServer(http.Dir(parameter.NodeConfig.GetString("graph.webrootPath")))
 
-	err := configureSocketIOServer()
-	if err != nil {
-		log.Panicf("Graph: %v", err.Error())
-	}
-
-	router.Handle("/", fs)
-	router.HandleFunc("/socket.io/socket.io.js", downloadSocketIOHandler)
-	router.Handle("/socket.io/", socketioServer)
+	router.HandleFunc("/", wrapHandler(fs))
+	router.HandleFunc("/ws", socketServer)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
@@ -117,7 +130,6 @@ func configure(plugin *node.Plugin) {
 		onNewMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
 }
 
 func run(plugin *node.Plugin) {
@@ -192,7 +204,6 @@ func run(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Graph Webserver", func(shutdownSignal <-chan struct{}) {
-		go socketioServer.Serve()
 
 		go func() {
 			if err := server.ListenAndServe(); (err != nil) && (err != http.ErrServerClosed) {
@@ -200,12 +211,14 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
+		go socketBroadcast()
+
 		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port"))
 
 		<-shutdownSignal
 		log.Info("Stopping Graph ...")
 
-		socketioServer.Close()
+		close(broadcast)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
 		defer cancel()
