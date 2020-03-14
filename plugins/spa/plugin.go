@@ -110,8 +110,8 @@ func run(plugin *node.Plugin) {
 			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", config.CfgDashboardBasicAuthUsername)
 		}
 
-		if len(expectedPasswordHash) != 32 {
-			log.Fatalf("'%s' must be 32 (sha256 hash) in length if dashboard basic auth is enabled", config.CfgDashboardBasicAuthPasswordHash)
+		if len(expectedPasswordHash) != 64 {
+			log.Fatalf("'%s' must be 64 (sha256 hash) in length if dashboard basic auth is enabled", config.CfgDashboardBasicAuthPasswordHash)
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
