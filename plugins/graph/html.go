@@ -29,7 +29,8 @@ const index string = `
         PIN_OLD_NODES: false,
         STATIC_FRONT: false,
         DARK_MODE: true,
-        COLOR_BY_NUMBER: true
+        COLOR_BY_NUMBER: true,
+        REMOVE_OLD_NODES: true
       });
 
       var WebSocketURIConfig = "{{.URI}}";
