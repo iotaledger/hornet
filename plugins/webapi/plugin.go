@@ -101,8 +101,8 @@ func configure(plugin *node.Plugin) {
 			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", config.CfgWebAPIBasicAuthUsername)
 		}
 
-		if len(expectedPasswordHash) != 32 {
-			log.Fatalf("'%s' must be 32 (sha256 hash) in length if web API basic auth is enabled", config.CfgWebAPIBasicAuthPasswordHash)
+		if len(expectedPasswordHash) != 64 {
+			log.Fatalf("'%s' must be 64 (sha256 hash) in length if web API basic auth is enabled", config.CfgWebAPIBasicAuthPasswordHash)
 		}
 
 		unauthorizedReq := func(c *gin.Context) {
