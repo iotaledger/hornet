@@ -101,15 +101,22 @@ func run(plugin *node.Plugin) {
 	e.Use(middleware.Recover())
 
 	if config.NodeConfig.GetBool(config.CfgDashboardBasicAuthEnabled) {
+		// grab auth info
+		expectedUsername := config.NodeConfig.GetString(config.CfgDashboardBasicAuthUsername)
+		expectedPasswordHash := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordHash)
+		passwordSalt := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordSalt)
+
+		if len(expectedUsername) == 0 {
+			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", config.CfgDashboardBasicAuthUsername)
+		}
+
+		if len(expectedPasswordHash) != 32 {
+			log.Fatalf("'%s' must be 32 (sha256 hash) in length if dashboard basic auth is enabled", config.CfgDashboardBasicAuthPasswordHash)
+		}
+
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-
-			// grab auth info
-			expectedUsername := config.NodeConfig.GetString(config.CfgDashboardBasicAuthUsername)
-			expectedPassword := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordHash)
-			passwordSalt := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordSalt)
-
 			if username == expectedUsername &&
-				basicauth.VerifyPassword(password, passwordSalt, expectedPassword) {
+				basicauth.VerifyPassword(password, passwordSalt, expectedPasswordHash) {
 				return true, nil
 			}
 			return false, nil

@@ -93,9 +93,17 @@ func configure(plugin *node.Plugin) {
 	// TODO: replace gin with echo so we don't have to write this middleware ourselves
 	if config.NodeConfig.GetBool(config.CfgWebAPIBasicAuthEnabled) {
 		const basicAuthPrefix = "Basic "
-		username := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthUsername)
-		passwordHash := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordHash)
+		expectedUsername := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthUsername)
+		expectedPasswordHash := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordHash)
 		passwordSalt := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordSalt)
+
+		if len(expectedUsername) == 0 {
+			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", config.CfgWebAPIBasicAuthUsername)
+		}
+
+		if len(expectedPasswordHash) != 32 {
+			log.Fatalf("'%s' must be 32 (sha256 hash) in length if web API basic auth is enabled", config.CfgWebAPIBasicAuthPasswordHash)
+		}
 
 		unauthorizedReq := func(c *gin.Context) {
 			c.Header("WWW-Authenticate", "Authorization Required")
@@ -127,7 +135,7 @@ func configure(plugin *node.Plugin) {
 			reqUsername := reqUsernameAndPW[:colonIndex]
 			reqPasword := reqUsernameAndPW[colonIndex+1:]
 
-			if reqUsername != username || basicauth.VerifyPassword(reqPasword, passwordSalt, passwordHash) {
+			if reqUsername != expectedUsername || basicauth.VerifyPassword(reqPasword, passwordSalt, expectedPasswordHash) {
 				unauthorizedReq(c)
 			}
 		})
