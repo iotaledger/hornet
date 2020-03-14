@@ -340,28 +340,36 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 		return nil, err
 	}
 
-	// stream spent addresses into the file
-	spentAddressesCount, err := tangle.StreamSpentAddressesToWriter(fileBufWriter, abortSignal)
-	if err != nil {
-		return nil, err
-	}
-
-	// flush content of the buffered writer into the file
+	// flush remains of header and content without spent addresses to file
 	if err := fileBufWriter.Flush(); err != nil {
 		return nil, err
 	}
 
-	if spentAddressesCount > 0 {
-		// seek to spent addresses count in the header:
-		// 1 (version) + 49 (ms hash) + 4 (ms index) + 8 (ms timestamp) +
-		// 4 (SEPs count) + 4 (seen ms count) + 4 (ledger entries) = 74
-		if _, err := exportFile.Seek(74, 0); err != nil {
+	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() &&
+		config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
+
+		// stream spent addresses into the file
+		spentAddressesCount, err := tangle.StreamSpentAddressesToWriter(fileBufWriter, abortSignal)
+		if err != nil {
 			return nil, err
 		}
 
-		// override 0 spent addresses count with actual count
-		if err := binary.Write(exportFile, binary.LittleEndian, spentAddressesCount); err != nil {
+		if err := fileBufWriter.Flush(); err != nil {
 			return nil, err
+		}
+
+		if spentAddressesCount > 0 {
+			// seek to spent addresses count in the header:
+			// 1 (version) + 49 (ms hash) + 4 (ms index) + 8 (ms timestamp) +
+			// 4 (SEPs count) + 4 (seen ms count) + 4 (ledger entries) = 74
+			if _, err := exportFile.Seek(74, 0); err != nil {
+				return nil, err
+			}
+
+			// override 0 spent addresses count with actual count
+			if err := binary.Write(exportFile, binary.LittleEndian, spentAddressesCount); err != nil {
+				return nil, err
+			}
 		}
 	}
 
