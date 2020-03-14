@@ -2,7 +2,6 @@ package tangle
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -129,7 +128,7 @@ func CountSpentAddressesEntriesWithoutLocking() (spentAddressesCount int32) {
 
 // StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer.
 // ReadLockSpentAddresses must be held while entering this function.
-func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abortSignal <-chan struct{}) error {
+func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (int32, error) {
 
 	var addressesWritten int32
 
@@ -150,18 +149,14 @@ func StreamSpentAddressesToWriter(buf io.Writer, spentAddressesCount int32, abor
 	})
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if wasAborted {
-		return ErrOperationAborted
+		return 0, ErrOperationAborted
 	}
 
-	if addressesWritten != spentAddressesCount {
-		return fmt.Errorf("Amount of spent addresses changed during write %d/%d", addressesWritten, spentAddressesCount)
-	}
-
-	return nil
+	return addressesWritten, nil
 }
 
 func ShutdownSpentAddressesStorage() {
