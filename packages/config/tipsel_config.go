@@ -9,6 +9,6 @@ const (
 )
 
 func init() {
-	NodeConfig.SetDefault(CfgTipSelMaxDepth, 15)
+	NodeConfig.SetDefault(CfgTipSelMaxDepth, 3)
 	NodeConfig.SetDefault(CfgTipSelBelowMaxDepthTransactionLimit, 20000)
 }

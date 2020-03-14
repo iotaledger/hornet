@@ -42,12 +42,12 @@ func init() {
 			"getTrytes",
 		})
 	NodeConfig.SetDefault(CfgWebAPIWhitelistedAddresses, []string{})
-	NodeConfig.SetDefault(CfgWebAPIBasicAuthEnabled, "")
+	NodeConfig.SetDefault(CfgWebAPIBasicAuthEnabled, false)
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthUsername, "")
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthPasswordHash, "")
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthPasswordSalt, "")
-	NodeConfig.SetDefault(CfgWebAPILimitsMaxGetTrytes, 10000)
+	NodeConfig.SetDefault(CfgWebAPILimitsMaxGetTrytes, 1000)
 	NodeConfig.SetDefault(CfgWebAPILimitsMaxRequestsList, 1000)
-	NodeConfig.SetDefault(CfgWebAPILimitsMaxFindTransactions, 100000)
+	NodeConfig.SetDefault(CfgWebAPILimitsMaxFindTransactions, 1000)
 	NodeConfig.SetDefault(CfgWebAPILimitsMaxBodyLengthBytes, 1000000)
 }

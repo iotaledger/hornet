@@ -45,8 +45,8 @@ func init() {
 	NeighborsConfig.SetDefault(CfgNeighborsMaxNeighbors, 5)
 	NeighborsConfig.SetDefault(CfgNeighbors, []NeighborConfig{
 		{
-			Identity:   "example1.neighbor.com:15600",
-			Alias:      "Example Neighbor 1",
+			Identity:   "example.neighbor.com:15600",
+			Alias:      "Example Neighbor",
 			PreferIPv6: false,
 		},
 	})

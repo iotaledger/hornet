@@ -20,7 +20,7 @@ const (
 func init() {
 	NodeConfig.SetDefault(CfgDashboardBindAddress, "localhost:8081")
 	NodeConfig.SetDefault(CfgDashboardDevMode, false)
-	NodeConfig.SetDefault(CfgDashboardBasicAuthEnabled, true)
+	NodeConfig.SetDefault(CfgDashboardBasicAuthEnabled, false)
 	NodeConfig.SetDefault(CfgDashboardBasicAuthUsername, "")
 	NodeConfig.SetDefault(CfgDashboardBasicAuthPasswordHash, "")
 	NodeConfig.SetDefault(CfgDashboardBasicAuthPasswordSalt, "")
