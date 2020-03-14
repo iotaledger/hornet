@@ -49,12 +49,12 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
         let {tx, query_loading, query_err} = this.props.explorerStore;
         return (
             <Container>
-            <If condition={query_err === 0}>
+            <If condition={query_err !== null}>
                 <Alert variant={"warning"}>
                     Requested transaction unknown on this node!
                 </Alert>
             </If>
-            <If condition={query_err !== 0}>
+            <If condition={query_err === null}>
                 <h3>
                     {
                         tx ?
