@@ -1,7 +1,7 @@
 package snapshot
 
 import (
-	"bytes"
+	"bufio"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -323,36 +323,74 @@ func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInf
 	return nil
 }
 
-func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) error {
+func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) ([]byte, error) {
 
-	var buf bytes.Buffer
-	if err := lsh.WriteToBuffer(&buf, abortSignal); err != nil {
-		return err
-	}
-
-	if lsh.spentAddressesCount != 0 {
-		if err := tangle.StreamSpentAddressesToWriter(&buf, lsh.spentAddressesCount, abortSignal); err != nil {
-			return err
-		}
-	}
-
-	// write sha256 hash
-	sha256Hash := sha256.Sum256(buf.Bytes())
-	if err := binary.Write(&buf, binary.LittleEndian, sha256Hash); err != nil {
-		return err
-	}
-
-	exportFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0660)
+	exportFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0660)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer exportFile.Close()
 
-	if _, err = io.Copy(exportFile, &buf); err != nil {
-		return err
+	// write into the file with an 8MB buffer
+	fileBufWriter := bufio.NewWriterSize(exportFile, 4096*2)
+
+	// write header, SEPs, seen milestones and ledger
+	// with a WRONG spent addresses count
+	if err := lsh.WriteToBuffer(fileBufWriter, abortSignal); err != nil {
+		return nil, err
 	}
 
-	return nil
+	// flush remains of header and content without spent addresses to file
+	if err := fileBufWriter.Flush(); err != nil {
+		return nil, err
+	}
+
+	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() &&
+		config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
+
+		// stream spent addresses into the file
+		spentAddressesCount, err := tangle.StreamSpentAddressesToWriter(fileBufWriter, abortSignal)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := fileBufWriter.Flush(); err != nil {
+			return nil, err
+		}
+
+		if spentAddressesCount > 0 {
+			// seek to spent addresses count in the header:
+			// 1 (version) + 49 (ms hash) + 4 (ms index) + 8 (ms timestamp) +
+			// 4 (SEPs count) + 4 (seen ms count) + 4 (ledger entries) = 74
+			if _, err := exportFile.Seek(74, 0); err != nil {
+				return nil, err
+			}
+
+			// override 0 spent addresses count with actual count
+			if err := binary.Write(exportFile, binary.LittleEndian, spentAddressesCount); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// seek back to the beginning of the file
+	if _, err := exportFile.Seek(0, 0); err != nil {
+		return nil, err
+	}
+
+	// compute sha256 of file
+	lsHash := sha256.New()
+	if _, err := io.Copy(lsHash, exportFile); err != nil {
+		return nil, err
+	}
+
+	// write sha256 hash into the file
+	sha256Hash := lsHash.Sum(nil)
+	if err := binary.Write(exportFile, binary.LittleEndian, sha256Hash); err != nil {
+		return nil, err
+	}
+
+	return sha256Hash, nil
 }
 
 func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneIndex, filePath string, abortSignal <-chan struct{}) error {
@@ -414,19 +452,13 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	cachedTargetMsTail := cachedTargetMs.GetBundle().GetTail() // tx +1
 	defer cachedTargetMsTail.Release(true)                     // tx -1
 
-	var spentAddressesCount int32
-	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
-		spentAddressesCount = tangle.CountSpentAddressesEntriesWithoutLocking()
-	}
-
 	lsh := &localSnapshotHeader{
-		msHash:              cachedTargetMs.GetBundle().GetTailHash(),
-		msIndex:             targetIndex,
-		msTimestamp:         cachedTargetMsTail.GetTransaction().GetTimestamp(),
-		solidEntryPoints:    newSolidEntryPoints,
-		seenMilestones:      seenMilestones,
-		balances:            newBalances,
-		spentAddressesCount: spentAddressesCount,
+		msHash:           cachedTargetMs.GetBundle().GetTailHash(),
+		msIndex:          targetIndex,
+		msTimestamp:      cachedTargetMsTail.GetTransaction().GetTimestamp(),
+		solidEntryPoints: newSolidEntryPoints,
+		seenMilestones:   seenMilestones,
+		balances:         newBalances,
 	}
 
 	filePathTmp := filePath + "_tmp"
@@ -434,7 +466,8 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	// Remove old temp file
 	os.Remove(filePathTmp)
 
-	if err := createSnapshotFile(filePathTmp, lsh, abortSignal); err != nil {
+	hash, err := createSnapshotFile(filePathTmp, lsh, abortSignal)
+	if err != nil {
 		return err
 	}
 
@@ -459,7 +492,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		Metadata:      snapshotInfo.Metadata,
 	})
 
-	log.Infof("Creating local snapshot for targetIndex %d done, took %v", targetIndex, time.Since(ts))
+	log.Infof("Created local snapshot for targetIndex %d (%x), took %v", targetIndex, hash, time.Since(ts))
 
 	return nil
 }
