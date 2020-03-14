@@ -106,6 +106,13 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                         </React.Fragment>
                     }
                 </p>
+                <Row className={"mb-3"}>
+                    <Col>
+                        {
+                            query_loading && <Spinner animation="border"/>
+                        }
+                    </Col>
+                </Row>
                 {
                     tx &&
                     <React.Fragment>
@@ -252,13 +259,6 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                         </Row>
                     </React.Fragment>
                 }
-                <Row className={"mb-3"}>
-                    <Col>
-                        {
-                            query_loading && <Spinner animation="border"/>
-                        }
-                    </Col>
-                </Row>
             </If>
             </Container>
         );
