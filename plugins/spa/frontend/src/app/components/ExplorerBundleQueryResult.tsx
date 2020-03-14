@@ -8,6 +8,7 @@ import ExplorerStore from "app/stores/ExplorerStore";
 import Spinner from "react-bootstrap/Spinner";
 import {ExplorerBundle} from "app/components/ExplorerBundle";
 import {If} from 'tsx-control-statements/components';
+import Alert from "react-bootstrap/Alert";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -62,7 +63,9 @@ export class ExplorerBundleQueryResult extends React.Component<Props, any> {
                     {bndlEle}
                 </If>
                 <If condition={bundles === null}>
-                    Bundle not yet available or unknown
+                    <Alert variant={"warning"}>
+                        Bundle not yet available or unknown on this node!
+                    </Alert>
                 </If>
             </Container>
         );
