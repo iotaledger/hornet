@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -20,9 +19,9 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
@@ -94,7 +93,7 @@ func configure(plugin *node.Plugin) {
 	api.Use(gin.Recovery())
 
 	router = http.NewServeMux()
-	tanglemonitorPath = parameter.NodeConfig.GetString("monitor.TangleMonitorPath")
+	tanglemonitorPath = config.NodeConfig.GetString(config.CfgMonitorTangleMonitorPath)
 	if tanglemonitorPath == "" {
 		log.Panic("Tanglemonitor Path is empty")
 	}
@@ -219,16 +218,12 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Monitor Webserver", func(shutdownSignal <-chan struct{}) {
 
 		// socket.io and web server
-		server = &http.Server{
-			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.bindAddress"), parameter.NodeConfig.GetInt("monitor.port")),
-			Handler: router,
-		}
+		webBindAddr := config.NodeConfig.GetString(config.CfgMonitorWebBindAddress)
+		server = &http.Server{Addr: webBindAddr, Handler: router}
 
 		// REST api server
-		apiServer = &http.Server{
-			Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("monitor.bindAddress"), parameter.NodeConfig.GetInt("monitor.apiPort")),
-			Handler: api,
-		}
+		apiBindAddr := config.NodeConfig.GetString(config.CfgMonitorAPIBindAddress)
+		apiServer = &http.Server{Addr: apiBindAddr, Handler: api}
 
 		go socketioServer.Serve()
 
@@ -244,7 +239,7 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
-		log.Infof("You can now access TangleMonitor using: http://%s:%d", parameter.NodeConfig.GetString("monitor.bindAddress"), parameter.NodeConfig.GetInt("monitor.port"))
+		log.Infof("You can now access TangleMonitor using: http://%s", webBindAddr)
 
 		<-shutdownSignal
 		log.Info("Stopping Monitor ...")

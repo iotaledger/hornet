@@ -12,9 +12,9 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
@@ -142,7 +142,7 @@ func run(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("ZeroMQ Publisher", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ Publisher ... done")
-		log.Infof("You can now listen to ZMQ via: %s://%s:%d", parameter.NodeConfig.GetString("zmq.protocol"), parameter.NodeConfig.GetString("zmq.bindAddress"), parameter.NodeConfig.GetInt("zmq.port"))
+		log.Infof("You can now listen to ZMQ via: %s://%s", config.NodeConfig.GetString(config.CfgZMQProtocol), config.NodeConfig.GetString(config.CfgZMQBindAddress))
 
 		go func() {
 			if err := startPublisher(); err != nil {

@@ -14,7 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/network"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
@@ -25,8 +25,8 @@ var (
 func configureReconnectPool() {
 	reconnectLogger = logger.NewLogger("Reconnect Pool")
 
-	neighborConfig := []NeighborConfig{}
-	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &neighborConfig); err != nil {
+	neighborConfig := []config.NeighborConfig{}
+	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &neighborConfig); err != nil {
 		panic(err)
 	}
 	for _, neighConf := range neighborConfig {
@@ -179,7 +179,7 @@ func cleanReconnectPool(neighbor *Neighbor) {
 }
 
 func spawnReconnecter() {
-	intervalSec := parameter.NodeConfig.GetInt("network.reconnectAttemptIntervalSeconds")
+	intervalSec := config.NodeConfig.GetInt(config.CfgNetGossipReconnectAttemptIntervalSeconds)
 	reconnectAttemptInterval := time.Duration(intervalSec) * time.Second
 
 	reconnectLogger.Infof("reconnecter configured with %d seconds interval", intervalSec)

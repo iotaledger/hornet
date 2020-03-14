@@ -2,7 +2,7 @@ package webapi
 
 import (
 	"context"
-	"fmt"
+	"encoding/base64"
 	"net"
 	"net/http"
 	"strings"
@@ -10,14 +10,15 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/packages/basicauth"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
@@ -33,7 +34,6 @@ var (
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
-	auth                 string
 	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
@@ -41,7 +41,7 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
+	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
 
 	// Release mode
 	gin.SetMode(gin.ReleaseMode)
@@ -69,8 +69,8 @@ func configure(plugin *node.Plugin) {
 	// GZIP
 	api.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	// Load allowed remote access to specific api commands
-	pae := parameter.NodeConfig.GetStringSlice("api.permitRemoteAccess")
+	// Load allowed remote access to specific HTTP API commands
+	pae := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermitRemoteAccess)
 	if len(pae) > 0 {
 		for _, endpoint := range pae {
 			ep := strings.ToLower(endpoint)
@@ -78,8 +78,8 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	// Load whitelisted addresses
-	whitelist := append([]string{"127.0.0.1", "::1"}, parameter.NodeConfig.GetStringSlice("api.whitelistedAddresses")...)
+	// load whitelisted addresses
+	whitelist := append([]string{"127.0.0.1", "::1"}, config.NodeConfig.GetStringSlice(config.CfgWebAPIWhitelistedAddresses)...)
 	for _, entry := range whitelist {
 		_, ipnet, err := cnet.ParseCIDROrIP(entry)
 		if err != nil {
@@ -89,12 +89,48 @@ func configure(plugin *node.Plugin) {
 		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
 
-	// Set basic auth if enabled
-	auth = parameter.NodeConfig.GetString("api.remoteauth")
+	// set basic auth if enabled
+	// TODO: replace gin with echo so we don't have to write this middleware ourselves
+	if config.NodeConfig.GetBool(config.CfgWebAPIBasicAuthEnabled) {
+		const basicAuthPrefix = "Basic "
+		username := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthUsername)
+		passwordHash := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordHash)
+		passwordSalt := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordSalt)
 
-	if len(auth) > 0 {
-		authSlice := strings.Split(auth, ":")
-		api.Use(gin.BasicAuth(gin.Accounts{authSlice[0]: authSlice[1]}))
+		unauthorizedReq := func(c *gin.Context) {
+			c.Header("WWW-Authenticate", "Authorization Required")
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
+		api.Use(func(c *gin.Context) {
+			authVal := c.Request.Header.Get("Authorization")
+			if len(authVal) <= len(basicAuthPrefix) {
+				unauthorizedReq(c)
+				return
+			}
+
+			base64EncodedUserPW := strings.TrimPrefix(authVal, basicAuthPrefix)
+			userAndPWBytes, err := base64.StdEncoding.DecodeString(base64EncodedUserPW)
+			if err != nil {
+				unauthorizedReq(c)
+				return
+			}
+
+			reqUsernameAndPW := string(userAndPWBytes)
+			colonIndex := strings.Index(reqUsernameAndPW, ":")
+			if colonIndex == -1 || colonIndex+1 >= len(reqUsernameAndPW) {
+				unauthorizedReq(c)
+				return
+			}
+
+			// username and password are split by a colon
+			reqUsername := reqUsernameAndPW[:colonIndex]
+			reqPasword := reqUsernameAndPW[colonIndex+1:]
+
+			if reqUsername != username || basicauth.VerifyPassword(reqPasword, passwordSalt, passwordHash) {
+				unauthorizedReq(c)
+			}
+		})
 	}
 
 	// WebAPI route
@@ -123,15 +159,11 @@ func run(plugin *node.Plugin) {
 
 		log.Info("Starting WebAPI server ... done")
 
-		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.bindAddress"), parameter.NodeConfig.GetInt("api.port"))
-
-		server = &http.Server{
-			Addr:    serveAddress,
-			Handler: api,
-		}
+		bindAddr := config.NodeConfig.GetString(config.CfgWebAPIBindAddress)
+		server = &http.Server{Addr: bindAddr, Handler: api}
 
 		go func() {
-			log.Infof("You can now access the API using: http://%s", serveAddress)
+			log.Infof("You can now access the API using: http://%s", bindAddr)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Error("Stopping WebAPI server due to an error ... done")
 			}

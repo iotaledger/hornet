@@ -11,9 +11,9 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/compressed"
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/parameter"
 )
 
 var (
@@ -47,7 +47,7 @@ func configureLedgerDatabase() {
 		ledgerDatabase = db
 	}
 
-	loadLSMIAsLSM := parameter.NodeConfig.GetBool("compass.loadLSMIAsLMI")
+	loadLSMIAsLSM := config.NodeConfig.GetBool(config.CfgCompassLoadLSMIAsLMI)
 	err := readLedgerMilestoneIndexFromDatabase(loadLSMIAsLSM)
 	if err != nil {
 		panic(err)

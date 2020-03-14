@@ -9,8 +9,17 @@ import (
 	"github.com/dgraph-io/badger/v2/options"
 	"github.com/shirou/gopsutil/mem"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
+
+const (
+	AutoProfileName = "auto"
+	CfgUseProfile   = "useProfile"
+)
+
+func init() {
+	config.NodeConfig.SetDefault(CfgUseProfile, AutoProfileName)
+}
 
 var (
 	once    = sync.Once{}
@@ -21,7 +30,7 @@ var (
 
 func GetProfile() *Profile {
 	once.Do(func() {
-		profileName := strings.ToLower(parameter.NodeConfig.GetString("useProfile"))
+		profileName := strings.ToLower(config.NodeConfig.GetString(CfgUseProfile))
 		if profileName == "auto" {
 			v, err := mem.VirtualMemory()
 			if err != nil {
@@ -56,10 +65,10 @@ func GetProfile() *Profile {
 			profile.Name = "1gb"
 		default:
 			p := &Profile{}
-			if !parameter.ProfilesConfig.IsSet(profileName) {
+			if !config.ProfilesConfig.IsSet(profileName) {
 				panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
 			}
-			if err := parameter.ProfilesConfig.UnmarshalKey(profileName, p); err != nil {
+			if err := config.ProfilesConfig.UnmarshalKey(profileName, p); err != nil {
 				panic(err)
 			}
 			p.Name = profileName

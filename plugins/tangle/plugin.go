@@ -3,18 +3,16 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/profile"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -29,10 +27,10 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	belowMaxDepthTransactionLimit = parameter.NodeConfig.GetInt("tipsel.belowMaxDepthTransactionLimit")
+	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
 	configureRefsAnInvalidBundleStorage()
 
-	tangle.ConfigureDatabases(parameter.NodeConfig.GetString("db.path"), &profile.GetProfile().Badger)
+	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &profile.GetProfile().Badger)
 
 	if tangle.IsDatabaseCorrupted() {
 		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
@@ -51,9 +49,9 @@ func configure(plugin *node.Plugin) {
 	})
 
 	tangle.ConfigureMilestones(
-		trinary.Hash(parameter.NodeConfig.GetString("milestones.coordinator")),
-		parameter.NodeConfig.GetInt("milestones.coordinatorSecurityLevel"),
-		uint64(parameter.NodeConfig.GetInt("milestones.numberOfKeysInAMilestone")),
+		config.NodeConfig.GetString(config.CfgMilestoneCoordinator),
+		config.NodeConfig.GetInt(config.CfgMilestoneCoordinatorSecurityLevel),
+		uint64(config.NodeConfig.GetInt(config.CfgMilestoneNumberOfKeysInAMilestone)),
 	)
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {

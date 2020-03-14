@@ -8,21 +8,21 @@ import (
 
 	"github.com/iotaledger/hive.go/iputils"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func configureConfigObserver() {
-	parameter.NeighborsConfig.WatchConfig()
+	config.NeighborsConfig.WatchConfig()
 }
 
 func runConfigObserver() {
-	parameter.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
-		if !parameter.IsNeighborsConfigHotReloadAllowed() {
+	config.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
+		if !config.IsNeighborsConfigHotReloadAllowed() {
 			return
 		}
 
 		// whether to accept any incoming neighbor connection
-		acceptAnyNeighborConnectionRead := parameter.NeighborsConfig.GetBool("acceptAnyNeighborConnection")
+		acceptAnyNeighborConnectionRead := config.NeighborsConfig.GetBool(config.CfgNeighborsAcceptAnyNeighborConnection)
 		if acceptAnyNeighborConnection != acceptAnyNeighborConnectionRead {
 			gossipLogger.Infof("Set acceptAnyNeighborConnection to <%v> due to config change", acceptAnyNeighborConnectionRead)
 			acceptAnyNeighborConnection = acceptAnyNeighborConnectionRead
@@ -61,10 +61,10 @@ func runConfigObserver() {
 }
 
 // calculates the differences between the loaded neighbors and the modified config
-func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
+func getNeighborConfigDiff() (modified, added, removed []config.NeighborConfig) {
 	boundNeighbors := GetNeighbors()
-	configNeighbors := []NeighborConfig{}
-	if err := parameter.NeighborsConfig.UnmarshalKey("neighbors", &configNeighbors); err != nil {
+	configNeighbors := []config.NeighborConfig{}
+	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
 		gossipLogger.Error(err)
 	}
 
@@ -79,7 +79,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 			}
 		}
 		if !found {
-			removed = append(removed, NeighborConfig{Identity: boundNeighbor.Address, PreferIPv6: boundNeighbor.PreferIPv6})
+			removed = append(removed, config.NeighborConfig{Identity: boundNeighbor.Address, PreferIPv6: boundNeighbor.PreferIPv6})
 		}
 	}
 
@@ -103,7 +103,7 @@ func getNeighborConfigDiff() (modified, added, removed []NeighborConfig) {
 	return
 }
 
-func addNewNeighbors(neighbors []NeighborConfig) {
+func addNewNeighbors(neighbors []config.NeighborConfig) {
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
 	for _, nb := range neighbors {

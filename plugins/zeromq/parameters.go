@@ -1,16 +1,13 @@
 package zeromq
 
 import (
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
-	// "protocol used to connect to the zmq feed [unix, tcp, udp, inproc]"
-	parameter.NodeConfig.SetDefault("zmq.protocol", "tcp")
+	// protocol used to connect to the zmq feed [unix, tcp, udp, inproc]
+	config.NodeConfig.SetDefault(config.CfgZMQProtocol, "tcp")
 
-	// "host used to connect to the zmq feed"
-	parameter.NodeConfig.SetDefault("zmq.bindAddress", "127.0.0.1")
-
-	// "port used to connect to the zmq feed"
-	parameter.NodeConfig.SetDefault("zmq.port", 5556)
+	// the bind address of the ZMQ feed
+	config.NodeConfig.SetDefault(config.CfgZMQBindAddress, "localhost:5556")
 }

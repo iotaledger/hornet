@@ -17,7 +17,7 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/packages/config"
 )
 
 func init() {
@@ -34,7 +34,7 @@ var (
 
 func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
-	mwm := parameter.NodeConfig.GetInt("protocol.mwm")
+	mwm := config.NodeConfig.GetInt(config.CfgProtocolMWM)
 
 	aTT := &AttachToTangle{}
 	e := ErrorReturn{}

@@ -1,15 +1,19 @@
 package gossip
 
 import (
+	"log"
+	"net"
+	"strconv"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/byteutils"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/parameter"
 )
 
 const (
@@ -24,9 +28,17 @@ var (
 )
 
 func configureProtocol() {
-	ownByteEncodedCooAddress = trinary.MustTrytesToBytes(parameter.NodeConfig.GetString("milestones.coordinator"))[:BYTE_ENCODED_COO_ADDRESS_BYTES_LENGTH]
-	ownMWM = uint64(parameter.NodeConfig.GetInt("protocol.mwm"))
-	ownSrvSocketPort = uint16(parameter.NodeConfig.GetInt("network.port"))
+	ownByteEncodedCooAddress = trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgMilestoneCoordinator))[:BYTE_ENCODED_COO_ADDRESS_BYTES_LENGTH]
+	ownMWM = uint64(config.NodeConfig.GetInt(config.CfgProtocolMWM))
+	_, portStr, err := net.SplitHostPort(config.NodeConfig.GetString(config.CfgNetGossipBindAddress))
+	if err != nil {
+		log.Fatalf("gossip bind address is invalid: %s", err)
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		log.Fatalf("gossip bind address is invalid: %s", err)
+	}
+	ownSrvSocketPort = uint16(port)
 }
 
 // region protocolV1 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,7 +253,7 @@ func (state *headerState) Send(param interface{}) error {
 		return protocol.SendState.Send(data[3:])
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid packet header")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid packet header")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -302,7 +314,7 @@ func (state *handshakeState) Send(param interface{}) error {
 		return nil
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid handshake packet")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid handshake packet")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -354,7 +366,7 @@ func (state *legacyTransactionGossipState) Send(param interface{}) error {
 		return nil
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid legacy transaction gossip packet")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid legacy transaction gossip packet")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -406,7 +418,7 @@ func (state *transactionGossipState) Send(param interface{}) error {
 		return nil
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid transaction gossip packet")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid transaction gossip packet")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -458,7 +470,7 @@ func (state *transactionRequestGossipState) Send(param interface{}) error {
 		return nil
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid transaction request packet")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid transaction request packet")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -510,7 +522,7 @@ func (state *heartbeatState) Send(param interface{}) error {
 		return nil
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid Heartbeat packet")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid Heartbeat packet")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -563,7 +575,7 @@ func (state *requestMilestoneState) Send(param interface{}) error {
 		return nil
 	}
 
-	return errors.Wrap(ErrInvalidSendParam, "passed in parameter is not a valid milestone request packet")
+	return errors.Wrap(ErrInvalidSendParam, "passed in config is not a valid milestone request packet")
 }
 
 // endregion ///////////////////////////////////////////////////////////////////////////////////////////////////////////

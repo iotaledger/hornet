@@ -8,8 +8,8 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
@@ -80,19 +80,19 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	_, info.TransactionsToRequest = gossip.RequestQueue.CurrentMilestoneIndexAndSize()
 
 	// Coo addr
-	info.CoordinatorAddress = parameter.NodeConfig.GetString("milestones.coordinator")
+	info.CoordinatorAddress = config.NodeConfig.GetString(config.CfgMilestoneCoordinator)
 
 	// Return node info
 	c.JSON(http.StatusOK, info)
 }
 
-func getNodeAPIConfiguration(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getNodeAPIConfiguration(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	config := GetNodeAPIConfigurationReturn{
-		MaxFindTransactions: parameter.NodeConfig.GetInt("api.maxFindTransactions"),
-		MaxRequestsList:     parameter.NodeConfig.GetInt("api.maxRequestsList"),
-		MaxGetTrytes:        parameter.NodeConfig.GetInt("api.maxGetTrytes"),
-		MaxBodyLength:       parameter.NodeConfig.GetInt("api.maxBodyLength"),
+		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions),
+		MaxRequestsList:     config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxRequestsList),
+		MaxGetTrytes:        config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes),
+		MaxBodyLength:       config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxBodyLengthBytes),
 	}
 
 	// Milestone start index

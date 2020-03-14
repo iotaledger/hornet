@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -14,9 +13,9 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
@@ -59,7 +58,7 @@ func wrapHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
 			data := PageData{
-				URI: parameter.NodeConfig.GetString("graph.websocket.uri"),
+				URI: config.NodeConfig.GetString(config.CfgGraphWebSocketURI),
 			}
 			tmpl, _ := template.New("graph").Parse(index)
 			tmpl.Execute(w, data)
@@ -108,12 +107,10 @@ func configure(plugin *node.Plugin) {
 	router = http.NewServeMux()
 
 	// websocket and web server
-	server = &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port")),
-		Handler: router,
-	}
+	bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
+	server = &http.Server{Addr: bindAddr, Handler: router}
 
-	fs := http.FileServer(http.Dir(parameter.NodeConfig.GetString("graph.webrootPath")))
+	fs := http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgGraphWebRootPath)))
 
 	router.HandleFunc("/", wrapHandler(fs))
 	router.HandleFunc("/ws", socketServer)
@@ -215,7 +212,8 @@ func run(plugin *node.Plugin) {
 
 		go socketBroadcast()
 
-		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s:%d", parameter.NodeConfig.GetString("graph.bindAddress"), parameter.NodeConfig.GetInt("graph.port"))
+		bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
+		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s", bindAddr)
 
 		<-shutdownSignal
 		log.Info("Stopping Graph ...")
