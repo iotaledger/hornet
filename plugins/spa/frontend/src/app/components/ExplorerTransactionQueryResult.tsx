@@ -12,7 +12,8 @@ import Badge from "react-bootstrap/Badge";
 import * as dateformat from 'dateformat';
 import {Link} from 'react-router-dom';
 import {If} from 'tsx-control-statements/components';
-import ReactJson from 'react-json-view'
+import ReactJson from 'react-json-view';
+import Alert from "react-bootstrap/Alert";
 
 import * as style from '../../assets/main.css';
 
@@ -45,9 +46,15 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
 
     render() {
         let {hash} = this.props.match.params;
-        let {tx, query_loading} = this.props.explorerStore;
+        let {tx, query_loading, query_err} = this.props.explorerStore;
         return (
             <Container>
+            <If condition={query_err !== null}>
+                <Alert variant={"warning"}>
+                    Requested transaction unknown on this node!
+                </Alert>
+            </If>
+            <If condition={query_err === null}>
                 <h3>
                     {
                         tx ?
@@ -249,6 +256,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                         }
                     </Col>
                 </Row>
+            </If>
             </Container>
         );
     }
