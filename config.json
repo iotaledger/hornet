@@ -125,7 +125,7 @@
     "webRootPath": "IOTAtangle/webroot",
     "domain": "",
     "webSocket": {
-      "uri": "ws://127.0.0.1:8083/ws"
+      "uri": ""
     },
     "bindAddress": "localhost:8083",
     "networkName": "meets HORNET"

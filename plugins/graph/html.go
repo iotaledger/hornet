@@ -30,23 +30,34 @@ const index string = `
         STATIC_FRONT: false,
         DARK_MODE: true,
         COLOR_BY_NUMBER: true
-      })
+      });
 
-      var Socket = new WebSocket("{{.URI}}");
+      var WebSocketURIConfig = "{{.URI}}";
+      var WebSocketURI =
+        "ws://" +
+        location.hostname +
+        (location.port ? ":" + location.port : "") +
+        "/ws";
+
+      var Socket = new WebSocket(
+        WebSocketURIConfig !== "" ? WebSocketURIConfig : WebSocketURI
+      );
 
       Socket.onmessage = function(event) {
         var msg = JSON.parse(event.data);
         var msgData = msg.data;
 
-        switch(msg.type) {
+        switch (msg.type) {
           case "inittx":
             tg.updateTx(msgData);
             break;
           case "initms":
-            tg.updateTx(msgData.map(hash => ({
-              hash,
-              milestone: true
-            })));
+            tg.updateTx(
+              msgData.map(hash => ({
+                hash,
+                milestone: true
+              }))
+            );
             break;
           case "tx":
             tg.updateTx([msgData]);
@@ -55,10 +66,12 @@ const index string = `
             tg.setNetworkName(msgData.networkName);
             break;
           case "ms":
-            tg.updateTx([{
-              msgData,
-              milestone: true
-            }]);
+            tg.updateTx([
+              {
+                msgData,
+                milestone: true
+              }
+            ]);
             break;
         }
       };
