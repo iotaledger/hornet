@@ -32,6 +32,7 @@ func main() {
 		gracefulshutdown.PLUGIN,
 		database.PLUGIN,
 		autopeering.PLUGIN,
+		profiling.PLUGIN,
 	}
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
@@ -40,7 +41,6 @@ func main() {
 			tangle.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,
-			profiling.PLUGIN,
 			snapshot.PLUGIN,
 			webapi.PLUGIN,
 			spa.PLUGIN,
