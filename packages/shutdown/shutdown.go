@@ -1,7 +1,8 @@
 package shutdown
 
 const (
-	ShutdownPriorityFlushToDatabase = iota
+	ShutdownPriorityCloseDatabase = iota
+	ShutdownPriorityFlushToDatabase
 	ShutdownPriorityPersisters
 	ShutdownPriorityRequestsProcessor
 	ShutdownPriorityMilestoneSolidifier

@@ -3,8 +3,10 @@ package main
 import (
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/graph"
@@ -25,13 +27,17 @@ func main() {
 	cli.PrintVersion()
 	cli.ParseConfig()
 
-	node.Run(
-		node.Plugins(
-			cli.PLUGIN,
-			gracefulshutdown.PLUGIN,
+	plugins := []*node.Plugin{
+		cli.PLUGIN,
+		gracefulshutdown.PLUGIN,
+		database.PLUGIN,
+		autopeering.PLUGIN,
+	}
+
+	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		plugins = append(plugins, []*node.Plugin{
 			gossip.PLUGIN,
 			tangle.PLUGIN,
-			autopeering.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,
 			profiling.PLUGIN,
@@ -43,6 +49,8 @@ func main() {
 			graph.PLUGIN,
 			monitor.PLUGIN,
 			spammer.PLUGIN,
-		),
-	)
+		}...)
+	}
+
+	node.Run(node.Plugins(plugins...))
 }
