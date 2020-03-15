@@ -15,13 +15,13 @@ const (
 	CfgWebAPIBasicAuthPasswordHash = "httpapi.basicauth.passwordhash" // must be lower cased
 	// the HTTP basic auth salt used for hashing the password
 	CfgWebAPIBasicAuthPasswordSalt = "httpapi.basicauth.passwordsalt" // must be lower cased
-	// the maximum number of trytes that may be returned by the getTrytes endpoint
-	CfgWebAPILimitsMaxBodyLengthBytes = "httpAPI.limits.bodyLengthBytes"
-	// the maximum number of parameters in an API call
-	CfgWebAPILimitsMaxFindTransactions = "httpAPI.limits.findTransactions"
-	// the maximum number of transactions that may be returned by the findTransactions endpoint
-	CfgWebAPILimitsMaxGetTrytes = "httpAPI.limits.getTrytes"
 	// the maximum number of characters that the body of an API call may contain
+	CfgWebAPILimitsMaxBodyLengthBytes = "httpAPI.limits.bodyLengthBytes"
+	// the maximum number of transactions that may be returned by the findTransactions endpoint
+	CfgWebAPILimitsMaxFindTransactions = "httpAPI.limits.findTransactions"
+	// the maximum number of trytes that may be returned by the getTrytes endpoint
+	CfgWebAPILimitsMaxGetTrytes = "httpAPI.limits.getTrytes"
+	// the maximum number of parameters in an API call
 	CfgWebAPILimitsMaxRequestsList = "httpAPI.limits.requestsList"
 )
 

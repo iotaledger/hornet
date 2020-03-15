@@ -37,7 +37,7 @@ const (
 func init() {
 	// gossip
 	NodeConfig.SetDefault(CfgNetPreferIPv6, false)
-	NodeConfig.SetDefault(CfgNetGossipBindAddress, "0.0.0.0")
+	NodeConfig.SetDefault(CfgNetGossipBindAddress, "0.0.0.0:15600")
 	NodeConfig.SetDefault(CfgNetGossipReconnectAttemptIntervalSeconds, 60)
 
 	// neighbors
