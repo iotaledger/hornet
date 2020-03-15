@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Tip-Sel", node.Enabled, configure)
+	PLUGIN = node.NewPlugin("Tip-Sel", node.Enabled, configure, run)
 	log    *logger.Logger
 
 	// config options
@@ -32,4 +32,8 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
+}
+
+func run(plugin *node.Plugin) {
+	// nothing
 }

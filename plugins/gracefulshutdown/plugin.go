@@ -16,7 +16,7 @@ import (
 const WAIT_TO_KILL_TIME_IN_SECONDS = 120
 
 var (
-	PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, configure)
+	PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, configure, run)
 	log    *logger.Logger
 )
 
@@ -54,4 +54,8 @@ func configure(plugin *node.Plugin) {
 
 		daemon.ShutdownAndWait()
 	}()
+}
+
+func run(plugin *node.Plugin) {
+	// nothing
 }

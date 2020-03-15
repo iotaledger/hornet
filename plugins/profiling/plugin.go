@@ -10,8 +10,12 @@ import (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Profiling", node.Enabled, run)
+	PLUGIN = node.NewPlugin("Profiling", node.Enabled, configure, run)
 )
+
+func configure(plugin *node.Plugin) {
+	// nothing
+}
 
 func run(plugin *node.Plugin) {
 	runtime.SetMutexProfileFraction(5)
