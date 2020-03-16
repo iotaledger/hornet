@@ -43,8 +43,6 @@ const index string = `
       <div class="center net_title">
         <select id="netselector" class="" name="netselector">
           <option value="mainnet" selected>Mainnet</option>
-          <option value="testnet">Devnet</option>
-          <option value="spamnet">Spamnet</option>
         </select>
       </div>
       <div id="minNumberOfTxWrapper">
