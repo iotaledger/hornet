@@ -107,6 +107,7 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 
 	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		approversStorage.Delete(key)
+		cachedObject.Release(true)
 		return true
 	}, txHash)
 }

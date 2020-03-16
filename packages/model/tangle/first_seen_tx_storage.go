@@ -111,6 +111,7 @@ func DeleteFirstSeenTxs(msIndex milestone_index.MilestoneIndex) {
 
 	firstSeenTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		firstSeenTxStorage.Delete(key)
+		cachedObject.Release(true)
 		return true
 	}, key)
 }
