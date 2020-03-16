@@ -104,12 +104,13 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 	txHash := incomingTx.GetHash()
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested) // tx +1
+	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, requested, !isNodeSyncedWithThreshold) // tx +1
 
 	// Release shouldn't be forced, to cache the latest transactions
-	defer cachedTx.Release() // tx -1
+	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
 
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.IncrNewTransactionsCount()

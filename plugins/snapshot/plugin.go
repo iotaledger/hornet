@@ -153,6 +153,6 @@ func installGenesisTransaction() {
 	genesisTx := hornet.NewTransaction(genesis, txBytesTruncated)
 
 	// ensure the bundle is also existent for the genesis tx
-	cachedTx, _ := tangle.AddTransactionToStorage(genesisTx, 0, false)
+	cachedTx, _ := tangle.AddTransactionToStorage(genesisTx, 0, false, false)
 	cachedTx.Release() // tx -1
 }

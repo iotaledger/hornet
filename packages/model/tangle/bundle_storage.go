@@ -271,7 +271,7 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) Cached
 ////////////////////////////////////////////////////////////////////////////////
 
 // tx +1
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool, forceRelease bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
 
 	cachedTx, isNew := StoreTransactionIfAbsent(hornetTx) // tx +1
 	if !isNew {
@@ -279,11 +279,11 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 	}
 
 	// Store the tx in the bundleTransactionsStorage
-	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release()
+	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release(forceRelease)
 
-	StoreApprover(cachedTx.GetTransaction().GetTrunk(), cachedTx.GetTransaction().GetHash()).Release()
+	StoreApprover(cachedTx.GetTransaction().GetTrunk(), cachedTx.GetTransaction().GetHash()).Release(forceRelease)
 	if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
-		StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release()
+		StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release(forceRelease)
 	}
 
 	// Force release Tag, Address, FirstSeenTx since its not needed for solidification/confirmation
