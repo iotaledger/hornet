@@ -9,7 +9,7 @@ const (
 	CfgMonitorWebSocketURI = "monitor.webSocket.uri"
 	// the remote API port
 	CfgMonitorRemoteAPIPort = "monitor.remoteAPIPort"
-	// the inital amount of tx to load
+	// the initial amount of tx to load
 	CfgMonitorInitialTx = "monitor.initialTx"
 	// the bind address on which the monitor can be access from
 	CfgMonitorWebBindAddress = "monitor.webBindAddress"

@@ -6,7 +6,7 @@ const index string = `
   <head>
     <meta charset="utf-8" />
     <title>
-      TangleMonitor - Live visualisation and metrics of the IOTA Tangle
+      TangleMonitor - Live visualization and metrics of the IOTA Tangle
     </title>
     <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
     <link
@@ -120,7 +120,7 @@ let txHistoryGlobal = {};
 let txAmountToPollGlobal = 15000;
 // Amount if retries to poll history API
 let InitialHistoryPollRetriesGlobal = 10;
-// Flag to prevent multiple simultanious WebSocket connections
+// Flag to prevent multiple simultaneous WebSocket connections
 let websocketActiveGlobal = {};
 // Flag to determine if history was already fetched from backend successfully.
 let historyFetchedFromBackendGlobal = false;
@@ -158,7 +158,7 @@ const takeRight = (array, n, guard) => {
 };
 // Lodash functions (end)
 
-// Add collections and indeces to lokiDB
+// Add collections and indices to lokiDB
 const addCollectionsToTxHistory = options => {
   return new Promise((resolve, reject) => {
     let error = false;
@@ -213,7 +213,7 @@ const InitialHistoryPoll = (that, options) => {
       // Store fetched TX history in local DB
       const txList = fetchedListJSON.txHistory ? fetchedListJSON.txHistory : [];
       txHistoryGlobal[options.host].insert(txList);
-      // Set flag to signal successfull history fetch
+      // Set flag to signal successful history fetch
       historyFetchedFromBackendGlobal = true;
     })
     .catch(e => {
@@ -331,7 +331,7 @@ const InitWebSocket = (that, options) => {
   }
 };
 
-// Class to instanciate the tangleview object which can be implemented to projects
+// Class to instantiate the tangleview object which can be implemented to projects
 class tangleview {
   constructor(options) {
     this.events = {};
@@ -464,6 +464,6 @@ class tangleview {
   }
 }
 
-// Store instances of tangleview (so they can be called simultaniously)
+// Store instances of tangleview (so they can be called simultaneously)
 tangleview.allInstances = [];
 `
