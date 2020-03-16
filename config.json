@@ -134,8 +134,13 @@
   "monitor": {
     "tangleMonitorPath": "tanglemonitor/frontend",
     "domain": "",
+    "initialTransactionCount": 15000,
+    "remoteapiport": 4433,
     "webBindAddress": "localhost:4434",
-    "apiBindAddress": "localhost:4433"
+    "apiBindAddress": "localhost:4433",
+    "websocket": {
+      "uri": ""
+    }
   },
   "mqtt": {
     "config": "mqtt_config.json"
