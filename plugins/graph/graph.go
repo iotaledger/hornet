@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	TX_BUFFER_SIZE       = 20000
+	TX_BUFFER_SIZE       = 1800
 	MS_BUFFER_SIZE       = 20
 	BROADCAST_QUEUE_SIZE = 20000
 )

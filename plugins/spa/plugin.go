@@ -44,21 +44,24 @@ var (
 	wsSendWorkerQueueSize = 250
 	wsSendWorkerPool      *workerpool.WorkerPool
 
-	BROADCAST_QUEUE_SIZE = 100
-	hub                  *websockethub.Hub
-)
-
-var webSocketWriteTimeout = time.Duration(3) * time.Second
-
-var (
-	upgrader = &websocket.Upgrader{
-		HandshakeTimeout:  webSocketWriteTimeout,
-		EnableCompression: true,
-	}
+	BROADCAST_QUEUE_SIZE  = 1000
+	hub                   *websockethub.Hub
+	upgrader              *websocket.Upgrader
+	webSocketWriteTimeout = time.Duration(3) * time.Second
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
+
+	upgrader = &websocket.Upgrader{
+		HandshakeTimeout:  webSocketWriteTimeout,
+		EnableCompression: true,
+	}
+
+	// allow any origin for websocket connections
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
 
 	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
 
@@ -106,11 +109,6 @@ func run(plugin *node.Plugin) {
 
 	runLiveFeed()
 	runTipSelMetricWorker()
-
-	// allow any origin for websocket connections
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
 
 	e := echo.New()
 	e.HideBanner = true
