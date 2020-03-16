@@ -42,6 +42,7 @@ func (h *GraphHub) run(shutdownSignal <-chan struct{}) {
 				delete(h.clients, client)
 				close(client.sendChan)
 			}
+			return
 
 		case client := <-h.register:
 			// register client
