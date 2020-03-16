@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/config"
@@ -42,19 +43,33 @@ var (
 	wsSendWorkerCount     = 1
 	wsSendWorkerQueueSize = 250
 	wsSendWorkerPool      *workerpool.WorkerPool
+
+	BROADCAST_QUEUE_SIZE = 100
+	hub                  *websockethub.Hub
+)
+
+var webSocketWriteTimeout = time.Duration(3) * time.Second
+
+var (
+	upgrader = &websocket.Upgrader{
+		HandshakeTimeout:  webSocketWriteTimeout,
+		EnableCompression: true,
+	}
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
+	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
+
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *metrics_plugin.TPSMetrics:
-			sendToAllWSClient(&msg{MsgTypeTPSMetric, x})
-			sendToAllWSClient(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			sendToAllWSClient(&msg{MsgTypeNeighborMetric, neighborMetrics()})
+			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
+			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&msg{MsgTypeNeighborMetric, neighborMetrics()})
 		case *tangle.Bundle:
-			sendToAllWSClient(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
@@ -79,6 +94,7 @@ func run(plugin *node.Plugin) {
 		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
 		wsSendWorkerPool.Start()
+		hub.Run(shutdownSignal)
 		<-shutdownSignal
 		log.Info("Stopping SPA[WSSend] ...")
 		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
@@ -128,28 +144,6 @@ func run(plugin *node.Plugin) {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 }
-
-// sends the given message to all connected websocket clients
-func sendToAllWSClient(msg interface{}) {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-	for _, channel := range clients {
-		select {
-		case channel <- msg:
-		default:
-			// drop if buffer not drained
-		}
-	}
-}
-
-var webSocketWriteTimeout = time.Duration(3) * time.Second
-
-var (
-	upgrader = websocket.Upgrader{
-		HandshakeTimeout:  webSocketWriteTimeout,
-		EnableCompression: true,
-	}
-)
 
 // tx +1
 func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {

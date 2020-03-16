@@ -23,10 +23,10 @@ func configureLiveFeed() {
 	liveFeedWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *transaction.Transaction:
-			sendToAllWSClient(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
+			hub.BroadcastMsg(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
 		case milestone_index.MilestoneIndex:
 			if cachedTailTx := getMilestoneTail(x); cachedTailTx != nil { // tx +1
-				sendToAllWSClient(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), x}})
+				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), x}})
 				cachedTailTx.Release(true) // tx -1
 			}
 		}
