@@ -128,7 +128,7 @@ func run(plugin *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
-		hub.Run(shutdownSignal)
+		go hub.Run(shutdownSignal)
 		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
