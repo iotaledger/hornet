@@ -2,15 +2,13 @@ package monitor
 
 import (
 	"context"
+	"html/template"
 	"net/http"
+	texttemp "text/template"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	engineio "github.com/googollee/go-engine.io"
-	"github.com/googollee/go-engine.io/transport"
-	"github.com/googollee/go-engine.io/transport/polling"
-	"github.com/googollee/go-engine.io/transport/websocket"
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/gorilla/websocket"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -55,31 +53,36 @@ var (
 	server            *http.Server
 	apiServer         *http.Server
 	router            *http.ServeMux
-	socketioServer    *socketio.Server
 	api               *gin.Engine
 	tanglemonitorPath string
+	upgrader          *websocket.Upgrader
+	hub               *MonitorHub
 )
 
-func configureSocketIOServer() error {
-	var err error
+type PageData struct {
+	WebsocketURI string
+	APIPort      string
+	InitTxAmount int
+}
 
-	socketioServer, err = socketio.NewServer(&engineio.Options{
-		PingTimeout:  time.Second * 20,
-		PingInterval: time.Second * 5,
-		Transports: []transport.Transport{
-			polling.Default,
-			websocket.Default,
-		},
-	})
-	if err != nil {
-		return err
+func wrapHandler(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
+			data := PageData{
+				WebsocketURI: config.NodeConfig.GetString(config.CfgMonitorWebSocketURI),
+				APIPort:      config.NodeConfig.GetString(config.CfgMonitorRemoteAPIPort),
+				InitTxAmount: config.NodeConfig.GetInt(config.CfgMonitorInitialTx),
+			}
+			tmpl, _ := template.New("monitorIndex").Parse(index)
+			tmpl.Execute(w, data)
+			return
+		} else if r.URL.Path == "/js/tangleview.mod.js" {
+			tmpl, _ := texttemp.New("monitorJS").Parse(tangleviewJS)
+			tmpl.Execute(w, nil)
+			return
+		}
+		h.ServeHTTP(w, r)
 	}
-
-	socketioServer.OnConnect("/", onConnectHandler)
-	socketioServer.OnError("/", onErrorHandler)
-	socketioServer.OnDisconnect("/", onDisconnectHandler)
-
-	return nil
 }
 
 func configure(plugin *node.Plugin) {
@@ -98,15 +101,13 @@ func configure(plugin *node.Plugin) {
 		log.Panic("Tanglemonitor Path is empty")
 	}
 
-	fs := http.FileServer(http.Dir(tanglemonitorPath))
-
-	err := configureSocketIOServer()
-	if err != nil {
-		log.Panic(err.Error())
+	upgrader = &websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
 	}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	router.Handle("/", fs)
-	router.Handle("/socket.io/", socketioServer)
+	hub = newHub()
 
 	api.GET("/api/v1/getRecentTransactions", handleAPI)
 
@@ -217,15 +218,13 @@ func run(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("Monitor Webserver", func(shutdownSignal <-chan struct{}) {
 
-		// socket.io and web server
+		// Websocket and web server
 		webBindAddr := config.NodeConfig.GetString(config.CfgMonitorWebBindAddress)
 		server = &http.Server{Addr: webBindAddr, Handler: router}
 
 		// REST api server
 		apiBindAddr := config.NodeConfig.GetString(config.CfgMonitorAPIBindAddress)
 		apiServer = &http.Server{Addr: apiBindAddr, Handler: api}
-
-		go socketioServer.Serve()
 
 		go func() {
 			if err := server.ListenAndServe(); (err != nil) && (err != http.ErrServerClosed) {
@@ -239,12 +238,17 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
+		go hub.run(shutdownSignal)
+
+		router.HandleFunc("/", wrapHandler(http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgMonitorTangleMonitorPath)))))
+		router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			serveWebsocket(hub, w, r)
+		})
+
 		log.Infof("You can now access TangleMonitor using: http://%s", webBindAddr)
 
 		<-shutdownSignal
 		log.Info("Stopping Monitor ...")
-
-		socketioServer.Close()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
 		defer cancel()

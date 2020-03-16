@@ -12,8 +12,8 @@ require (
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-zeromq/zmq4 v0.9.0
 	github.com/gobuffalo/packr/v2 v2.8.0
-	github.com/googollee/go-engine.io v1.4.3-0.20200302130011-d38973698d33
-	github.com/googollee/go-socket.io v1.4.4-0.20200304170631-c054f421489d
+	github.com/google/go-github v17.0.0+incompatible // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20200310233521-ad325e43e552
