@@ -111,6 +111,7 @@ func DeleteTags(txTag trinary.Trytes) {
 
 	tagsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		tagsStorage.Delete(key)
+		cachedObject.Release(true)
 		return true
 	}, trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17])
 }
