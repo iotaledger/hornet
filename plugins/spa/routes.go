@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/labstack/echo/v4"
@@ -137,36 +136,7 @@ func websocketRoute(c echo.Context) error {
 			log.Errorf("recovered from panic within WS handle func: %s", r)
 		}
 	}()
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-	if err != nil {
-		return err
-	}
-	defer ws.Close()
-	ws.EnableWriteCompression(true)
+	hub.ServeWebsocket(c.Response(), c.Request())
 
-	// cleanup client websocket
-	clientID, channel := registerWSClient()
-	defer func() {
-		clientsMu.Lock()
-		delete(clients, clientID)
-		close(channel)
-		clientsMu.Unlock()
-	}()
-
-	msgRateLimiter := time.NewTicker(time.Second / 20)
-	defer msgRateLimiter.Stop()
-
-	for {
-		<-msgRateLimiter.C
-		msg := <-channel
-		if err := ws.WriteJSON(msg); err != nil {
-			log.Warnf("error while writing to web socket client %s: %s", c.RealIP(), err.Error())
-			break
-		}
-		if err := ws.SetWriteDeadline(time.Now().Add(webSocketWriteTimeout)); err != nil {
-			log.Warnf("error while setting write deadline on web socket client %s: %s", c.RealIP(), err.Error())
-			break
-		}
-	}
 	return nil
 }

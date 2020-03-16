@@ -18,10 +18,10 @@ func configureTipSelMetric() {
 	tipSelMetricWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *tipselection.TipSelStats:
-			sendToAllWSClient(&msg{MsgTypeTipSelMetric, x})
+			hub.BroadcastMsg(&msg{MsgTypeTipSelMetric, x})
 		case milestone_index.MilestoneIndex:
 			if cachedMsTailTx := getMilestoneTail(x); cachedMsTailTx != nil { // tx +1
-				sendToAllWSClient(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), x}})
+				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), x}})
 				cachedMsTailTx.Release(true) // tx -1
 			}
 		}

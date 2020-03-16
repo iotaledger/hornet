@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/config"
@@ -39,22 +40,42 @@ var (
 	clients             = make(map[uint64]chan interface{}, 0)
 	nextClientID uint64 = 0
 
+	wsSendWorkerPool      *workerpool.WorkerPool
+	webSocketWriteTimeout = time.Duration(3) * time.Second
+
+	hub      *websockethub.Hub
+	upgrader *websocket.Upgrader
+)
+
+const (
+	BROADCAST_QUEUE_SIZE  = 1000
 	wsSendWorkerCount     = 1
 	wsSendWorkerQueueSize = 250
-	wsSendWorkerPool      *workerpool.WorkerPool
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
+	upgrader = &websocket.Upgrader{
+		HandshakeTimeout:  webSocketWriteTimeout,
+		EnableCompression: true,
+	}
+
+	// allow any origin for websocket connections
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
+
+	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
+
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *metrics_plugin.TPSMetrics:
-			sendToAllWSClient(&msg{MsgTypeTPSMetric, x})
-			sendToAllWSClient(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			sendToAllWSClient(&msg{MsgTypeNeighborMetric, neighborMetrics()})
+			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
+			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&msg{MsgTypeNeighborMetric, neighborMetrics()})
 		case *tangle.Bundle:
-			sendToAllWSClient(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
@@ -64,37 +85,6 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(plugin *node.Plugin) {
-
-	notifyStatus := events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
-		wsSendWorkerPool.TrySubmit(tpsMetrics)
-	})
-
-	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
-		cachedBndl.Release(true) // bundle -1
-	})
-
-	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
-		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
-		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
-		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
-		wsSendWorkerPool.Start()
-		<-shutdownSignal
-		log.Info("Stopping SPA[WSSend] ...")
-		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
-		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
-		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		wsSendWorkerPool.StopAndWait()
-		log.Info("Stopping SPA[WSSend] ... done")
-	}, shutdown.ShutdownPrioritySPA)
-
-	runLiveFeed()
-	runTipSelMetricWorker()
-
-	// allow any origin for websocket connections
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
 
 	e := echo.New()
 	e.HideBanner = true
@@ -127,29 +117,34 @@ func run(plugin *node.Plugin) {
 	bindAddr := config.NodeConfig.GetString(config.CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
+
+	notifyStatus := events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
+		wsSendWorkerPool.TrySubmit(tpsMetrics)
+	})
+
+	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
+		cachedBndl.Release(true) // bundle -1
+	})
+
+	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
+		hub.Run(shutdownSignal)
+		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
+		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
+		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
+		wsSendWorkerPool.Start()
+		<-shutdownSignal
+		log.Info("Stopping SPA[WSSend] ...")
+		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
+		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
+		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
+		wsSendWorkerPool.StopAndWait()
+		log.Info("Stopping SPA[WSSend] ... done")
+	}, shutdown.ShutdownPrioritySPA)
+
+	runLiveFeed()
+	runTipSelMetricWorker()
 }
-
-// sends the given message to all connected websocket clients
-func sendToAllWSClient(msg interface{}) {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-	for _, channel := range clients {
-		select {
-		case channel <- msg:
-		default:
-			// drop if buffer not drained
-		}
-	}
-}
-
-var webSocketWriteTimeout = time.Duration(3) * time.Second
-
-var (
-	upgrader = websocket.Upgrader{
-		HandshakeTimeout:  webSocketWriteTimeout,
-		EnableCompression: true,
-	}
-)
 
 // tx +1
 func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
