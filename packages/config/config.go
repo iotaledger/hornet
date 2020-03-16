@@ -31,24 +31,23 @@ var (
 func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	// flags
 
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, false)
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, true)
 	if err != nil {
 		return err
 	}
-
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
-	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, false)
+	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, true)
 	if err != nil {
 		return err
 	}
-
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, false)
-	if err != nil {
-		return err
-	}
-
 	parameter.PrintConfig(NeighborsConfig)
+
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, true)
+	if err != nil {
+		return err
+	}
+	parameter.PrintConfig(ProfilesConfig)
 
 	return nil
 }
