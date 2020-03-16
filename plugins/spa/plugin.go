@@ -83,33 +83,6 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	notifyStatus := events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
-		wsSendWorkerPool.TrySubmit(tpsMetrics)
-	})
-
-	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
-		cachedBndl.Release(true) // bundle -1
-	})
-
-	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
-		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
-		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
-		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
-		wsSendWorkerPool.Start()
-		hub.Run(shutdownSignal)
-		<-shutdownSignal
-		log.Info("Stopping SPA[WSSend] ...")
-		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
-		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
-		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		wsSendWorkerPool.StopAndWait()
-		log.Info("Stopping SPA[WSSend] ... done")
-	}, shutdown.ShutdownPrioritySPA)
-
-	runLiveFeed()
-	runTipSelMetricWorker()
-
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.Recover())
@@ -141,6 +114,33 @@ func run(plugin *node.Plugin) {
 	bindAddr := config.NodeConfig.GetString(config.CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
+
+	notifyStatus := events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
+		wsSendWorkerPool.TrySubmit(tpsMetrics)
+	})
+
+	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
+		cachedBndl.Release(true) // bundle -1
+	})
+
+	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
+		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
+		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
+		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
+		wsSendWorkerPool.Start()
+		hub.Run(shutdownSignal)
+		<-shutdownSignal
+		log.Info("Stopping SPA[WSSend] ...")
+		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
+		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
+		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
+		wsSendWorkerPool.StopAndWait()
+		log.Info("Stopping SPA[WSSend] ... done")
+	}, shutdown.ShutdownPrioritySPA)
+
+	runLiveFeed()
+	runTipSelMetricWorker()
 }
 
 // tx +1
