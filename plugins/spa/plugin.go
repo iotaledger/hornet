@@ -40,14 +40,17 @@ var (
 	clients             = make(map[uint64]chan interface{}, 0)
 	nextClientID uint64 = 0
 
+	wsSendWorkerPool      *workerpool.WorkerPool
+	webSocketWriteTimeout = time.Duration(3) * time.Second
+
+	hub      *websockethub.Hub
+	upgrader *websocket.Upgrader
+)
+
+const (
+	BROADCAST_QUEUE_SIZE  = 1000
 	wsSendWorkerCount     = 1
 	wsSendWorkerQueueSize = 250
-	wsSendWorkerPool      *workerpool.WorkerPool
-
-	BROADCAST_QUEUE_SIZE  = 1000
-	hub                   *websockethub.Hub
-	upgrader              *websocket.Upgrader
-	webSocketWriteTimeout = time.Duration(3) * time.Second
 )
 
 func configure(plugin *node.Plugin) {
@@ -125,11 +128,11 @@ func run(plugin *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
+		hub.Run(shutdownSignal)
 		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
 		wsSendWorkerPool.Start()
-		hub.Run(shutdownSignal)
 		<-shutdownSignal
 		log.Info("Stopping SPA[WSSend] ...")
 		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
