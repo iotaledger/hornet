@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	TX_BUFFER_SIZE       = 1800
+	TX_BUFFER_SIZE       = 20000
 	MS_BUFFER_SIZE       = 20
-	BROADCAST_QUEUE_SIZE = 100
+	BROADCAST_QUEUE_SIZE = 20000
 )
 
 var (
