@@ -85,7 +85,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		txRingBuffer = txRingBuffer.Next()
 		txRingBufferLock.Unlock()
 
-		hub.broadcastMsg(&wsMessage{Type: "tx", Data: wsTx})
+		hub.BroadcastMsg(&wsMessage{Type: "tx", Data: wsTx})
 	})
 }
 
@@ -105,7 +105,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 		snRingBuffer = snRingBuffer.Next()
 		snRingBufferLock.Unlock()
 
-		hub.broadcastMsg(&wsMessage{Type: "sn", Data: snTx})
+		hub.BroadcastMsg(&wsMessage{Type: "sn", Data: snTx})
 	})
 }
 
@@ -119,6 +119,6 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 		msRingBuffer = msRingBuffer.Next()
 		msRingBufferLock.Unlock()
 
-		hub.broadcastMsg(&wsMessage{Type: "ms", Data: msHash})
+		hub.BroadcastMsg(&wsMessage{Type: "ms", Data: msHash})
 	})
 }

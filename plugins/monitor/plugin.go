@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -25,7 +26,9 @@ import (
 )
 
 const (
-	isSyncThreshold = 1
+	TX_BUFFER_SIZE       = 50000
+	BROADCAST_QUEUE_SIZE = 100
+	isSyncThreshold      = 1
 )
 
 var (
@@ -56,7 +59,7 @@ var (
 	api               *gin.Engine
 	tanglemonitorPath string
 	upgrader          *websocket.Upgrader
-	hub               *MonitorHub
+	hub               *websockethub.Hub
 )
 
 type PageData struct {
@@ -71,7 +74,7 @@ func wrapHandler(h http.Handler) http.HandlerFunc {
 			data := PageData{
 				WebsocketURI: config.NodeConfig.GetString(config.CfgMonitorWebSocketURI),
 				APIPort:      config.NodeConfig.GetString(config.CfgMonitorRemoteAPIPort),
-				InitTxAmount: config.NodeConfig.GetInt(config.CfgMonitorInitialTransactionCount),
+				InitTxAmount: config.NodeConfig.GetInt(config.CfgMonitorInitialTransactionsCount),
 			}
 			tmpl, _ := template.New("monitorIndex").Parse(index)
 			tmpl.Execute(w, data)
@@ -107,7 +110,7 @@ func configure(plugin *node.Plugin) {
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	hub = newHub()
+	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
 
 	api.GET("/api/v1/getRecentTransactions", handleAPI)
 
@@ -238,11 +241,11 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
-		go hub.run(shutdownSignal)
+		go hub.Run(shutdownSignal)
 
 		router.HandleFunc("/", wrapHandler(http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgMonitorTangleMonitorPath)))))
 		router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-			serveWebsocket(hub, w, r)
+			hub.ServeWebsocket(w, r)
 		})
 
 		log.Infof("You can now access TangleMonitor using: http://%s", webBindAddr)

@@ -16,11 +16,6 @@ import (
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
-const (
-	TX_BUFFER_SIZE       = 50000
-	BROADCAST_QUEUE_SIZE = 100
-)
-
 var (
 	txRingBuffer *ring.Ring
 	txPointerMap map[string]*wsTransaction
@@ -113,7 +108,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 		txRingBufferLock.Unlock()
 
-		hub.broadcastMsg(&wsMessage{Type: "newTX", Data: wsTx})
+		hub.BroadcastMsg(&wsMessage{Type: "newTX", Data: wsTx})
 	})
 }
 
@@ -147,7 +142,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 			ConfTime: confTime * 1000,
 		}
 
-		hub.broadcastMsg(&wsMessage{Type: "update", Data: update})
+		hub.BroadcastMsg(&wsMessage{Type: "update", Data: update})
 	})
 }
 
@@ -176,7 +171,7 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 			Milestone: "t",
 			ConfTime:  confTime,
 		}
-		hub.broadcastMsg(&wsMessage{Type: "updateMilestone", Data: update})
+		hub.BroadcastMsg(&wsMessage{Type: "updateMilestone", Data: update})
 	}
 
 	cachedTxs.Release(true) // tx -1
@@ -194,7 +189,7 @@ func onReattachment(txHash trinary.Hash) {
 		Hash: txHash,
 	}
 
-	hub.broadcastMsg(&wsMessage{Type: "updateReattach", Data: update})
+	hub.BroadcastMsg(&wsMessage{Type: "updateReattach", Data: update})
 }
 
 func setupResponse(c *gin.Context) {
