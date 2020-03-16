@@ -255,8 +255,19 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 
 				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
-					if _, added := gossipSolidifierWorkerPool.Submit(cachedEntryTx.Retain()); !added { // tx pass +1
-						cachedEntryTx.Release(true) // tx -1
+					for _, approverHash := range tangle.GetApproverHashes(entryTxHash, true) {
+						cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+						if cachedApproverTx == nil {
+							continue
+						}
+
+						if _, added := gossipSolidifierWorkerPool.Submit(cachedApproverTx.Retain()); !added { // tx pass +1
+							// Do no force release here, otherwise cacheTime for new Tx could be ignored
+							cachedApproverTx.Release() // tx -1
+						}
+
+						// Do no force release here, otherwise cacheTime for new Tx could be ignored
+						cachedApproverTx.Release() // tx -1
 					}
 				}
 
