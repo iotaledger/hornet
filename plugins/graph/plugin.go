@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/gorilla/websocket"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -41,12 +42,12 @@ var (
 	newMilestoneWorkerQueueSize = 100
 	newMilestoneWorkerPool      *workerpool.WorkerPool
 
-	broadcast = make(chan *wsMessage, 100)
-
 	wasSyncBefore = false
 
-	server *http.Server
-	router *http.ServeMux
+	router   *http.ServeMux
+	server   *http.Server
+	upgrader *websocket.Upgrader
+	hub      *GraphHub
 )
 
 // PageData struct for html template
@@ -68,40 +69,9 @@ func wrapHandler(h http.Handler) http.HandlerFunc {
 	}
 }
 
-func socketServer(w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Errorf("Upgrade websocket:", err)
-		return
-	}
-	// register client
-	clientsLock.Lock()
-	clients[c] = true
-	clientsLock.Unlock()
-	onConnect(c)
-}
-
-func socketBroadcast() {
-	for message := range broadcast {
-		clientsLock.Lock()
-		for client := range clients {
-			broadcastLock.Lock()
-			err := client.WriteJSON(message)
-			if err != nil {
-				log.Warnf("Websocket error: %s", err)
-				client.Close()
-				delete(clients, client)
-				log.Infof("Removed dead websocket client")
-			}
-			broadcastLock.Unlock()
-		}
-		clientsLock.Unlock()
-	}
-}
-
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
+
 	initRingBuffers()
 
 	router = http.NewServeMux()
@@ -110,10 +80,13 @@ func configure(plugin *node.Plugin) {
 	bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
 	server = &http.Server{Addr: bindAddr, Handler: router}
 
-	fs := http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgGraphWebRootPath)))
+	upgrader = &websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	router.HandleFunc("/", wrapHandler(fs))
-	router.HandleFunc("/ws", socketServer)
+	hub = newHub()
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
@@ -210,15 +183,18 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
-		go socketBroadcast()
+		go hub.run(shutdownSignal)
+
+		router.HandleFunc("/", wrapHandler(http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgGraphWebRootPath)))))
+		router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			serveWebsocket(hub, w, r)
+		})
 
 		bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
 		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s", bindAddr)
 
 		<-shutdownSignal
 		log.Info("Stopping Graph ...")
-
-		close(broadcast)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
 		defer cancel()

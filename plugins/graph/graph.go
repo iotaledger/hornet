@@ -4,18 +4,17 @@ import (
 	"container/ring"
 	"strconv"
 
-	"github.com/gorilla/websocket"
-
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 const (
-	TX_BUFFER_SIZE = 1800
+	TX_BUFFER_SIZE       = 1800
+	MS_BUFFER_SIZE       = 20
+	BROADCAST_QUEUE_SIZE = 100
 )
 
 var (
@@ -23,11 +22,6 @@ var (
 	snRingBuffer *ring.Ring // confirmed transactions
 	msRingBuffer *ring.Ring // Milestones
 
-	upgrader = websocket.Upgrader{}
-	clients  = make(map[*websocket.Conn]bool)
-
-	clientsLock      = syncutils.Mutex{}
-	broadcastLock    = syncutils.Mutex{}
 	txRingBufferLock = syncutils.Mutex{}
 	snRingBufferLock = syncutils.Mutex{}
 	msRingBufferLock = syncutils.Mutex{}
@@ -66,39 +60,7 @@ type wsMessage struct {
 func initRingBuffers() {
 	txRingBuffer = ring.New(TX_BUFFER_SIZE)
 	snRingBuffer = ring.New(TX_BUFFER_SIZE)
-	msRingBuffer = ring.New(20)
-}
-
-func onConnect(c *websocket.Conn) {
-	log.Info("WebSocket client connection established")
-
-	config := &wsConfig{NetworkName: config.NodeConfig.GetString(config.CfgGraphNetworkName)}
-
-	var initTxs []*wsTransaction
-	txRingBuffer.Do(func(tx interface{}) {
-		if tx != nil {
-			initTxs = append(initTxs, tx.(*wsTransaction))
-		}
-	})
-
-	var initSns []*wsTransactionSn
-	snRingBuffer.Do(func(sn interface{}) {
-		if sn != nil {
-			initSns = append(initSns, sn.(*wsTransactionSn))
-		}
-	})
-
-	var initMs []string
-	msRingBuffer.Do(func(ms interface{}) {
-		if ms != nil {
-			initMs = append(initMs, ms.(string))
-		}
-	})
-
-	c.WriteJSON(&wsMessage{Type: "config", Data: config})
-	c.WriteJSON(&wsMessage{Type: "inittx", Data: initTxs})
-	c.WriteJSON(&wsMessage{Type: "initsn", Data: initSns})
-	c.WriteJSON(&wsMessage{Type: "initms", Data: initMs})
+	msRingBuffer = ring.New(MS_BUFFER_SIZE)
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -123,12 +85,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		txRingBuffer = txRingBuffer.Next()
 		txRingBufferLock.Unlock()
 
-		msg := &wsMessage{Type: "tx", Data: wsTx}
-		select {
-		case broadcast <- msg:
-		default:
-		}
-
+		hub.broadcastMsg(&wsMessage{Type: "tx", Data: wsTx})
 	})
 }
 
@@ -148,26 +105,20 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 		snRingBuffer = snRingBuffer.Next()
 		snRingBufferLock.Unlock()
 
-		msg := &wsMessage{Type: "sn", Data: snTx}
-		select {
-		case broadcast <- msg:
-		default:
-		}
+		hub.broadcastMsg(&wsMessage{Type: "sn", Data: snTx})
 	})
 }
 
 func onNewMilestone(cachedBndl *tangle.CachedBundle) {
-	msHash := cachedBndl.GetBundle().GetMilestoneHash()
-	cachedBndl.Release(true) // bundle -1
 
-	msRingBufferLock.Lock()
-	msRingBuffer.Value = msHash
-	msRingBuffer = msRingBuffer.Next()
-	msRingBufferLock.Unlock()
+	cachedBndl.ConsumeBundle(func(bndl *tangle.Bundle) {
+		msHash := bndl.GetMilestoneHash()
 
-	msg := &wsMessage{Type: "ms", Data: msHash}
-	select {
-	case broadcast <- msg:
-	default:
-	}
+		msRingBufferLock.Lock()
+		msRingBuffer.Value = msHash
+		msRingBuffer = msRingBuffer.Next()
+		msRingBufferLock.Unlock()
+
+		hub.broadcastMsg(&wsMessage{Type: "ms", Data: msHash})
+	})
 }
