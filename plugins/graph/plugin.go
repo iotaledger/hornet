@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/config"
@@ -47,7 +48,7 @@ var (
 	router   *http.ServeMux
 	server   *http.Server
 	upgrader *websocket.Upgrader
-	hub      *GraphHub
+	hub      *websockethub.Hub
 )
 
 // PageData struct for html template
@@ -86,7 +87,7 @@ func configure(plugin *node.Plugin) {
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	hub = newHub()
+	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
@@ -183,11 +184,47 @@ func run(plugin *node.Plugin) {
 			}
 		}()
 
-		go hub.run(shutdownSignal)
+		go hub.Run(shutdownSignal)
 
 		router.HandleFunc("/", wrapHandler(http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgGraphWebRootPath)))))
 		router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-			serveWebsocket(hub, w, r)
+			hub.ServeWebsocket(w, r, func(client *websockethub.Client) {
+				log.Info("WebSocket client connection established")
+
+				config := &wsConfig{NetworkName: config.NodeConfig.GetString(config.CfgGraphNetworkName)}
+
+				var initTxs []*wsTransaction
+				txRingBufferLock.Lock()
+				txRingBuffer.Do(func(tx interface{}) {
+					if tx != nil {
+						initTxs = append(initTxs, tx.(*wsTransaction))
+					}
+				})
+				txRingBufferLock.Unlock()
+
+				var initSns []*wsTransactionSn
+				snRingBufferLock.Lock()
+				snRingBuffer.Do(func(sn interface{}) {
+					if sn != nil {
+						initSns = append(initSns, sn.(*wsTransactionSn))
+					}
+				})
+				snRingBufferLock.Unlock()
+
+				var initMs []string
+				msRingBufferLock.Lock()
+				msRingBuffer.Do(func(ms interface{}) {
+					if ms != nil {
+						initMs = append(initMs, ms.(string))
+					}
+				})
+				msRingBufferLock.Unlock()
+
+				client.Send(&wsMessage{Type: "config", Data: config})
+				client.Send(&wsMessage{Type: "inittx", Data: initTxs})
+				client.Send(&wsMessage{Type: "initsn", Data: initSns})
+				client.Send(&wsMessage{Type: "initms", Data: initMs})
+			})
 		})
 
 		bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
