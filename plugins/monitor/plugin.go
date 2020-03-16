@@ -27,7 +27,7 @@ import (
 
 const (
 	TX_BUFFER_SIZE       = 50000
-	BROADCAST_QUEUE_SIZE = 100
+	BROADCAST_QUEUE_SIZE = 20000
 	isSyncThreshold      = 1
 )
 
@@ -105,8 +105,9 @@ func configure(plugin *node.Plugin) {
 	}
 
 	upgrader = &websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
+		ReadBufferSize:    1024,
+		WriteBufferSize:   1024,
+		EnableCompression: true,
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
