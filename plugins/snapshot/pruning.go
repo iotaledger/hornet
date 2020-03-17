@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/dag"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -141,7 +142,9 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
 		cachedMs.Release(true)                           // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, nil)
+		tsmw := time.Now()
+		approvees, err := dag.GetMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, nil)
+		log.Debugf("Milestone walked (%d): approvees: %v, collect: %v", milestoneIndex, len(approvees), time.Since(tsmw))
 
 		// Do not force release, since it is loaded again for pruning
 		cachedMsTailTx.Release() // tx -1
