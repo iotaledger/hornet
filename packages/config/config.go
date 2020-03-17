@@ -9,10 +9,15 @@ import (
 )
 
 var (
+	// default
+	defaultConfigName          = "config"
+	defaultNeighborsConfigName = "neighbors"
+	defaultProfilesConfigName  = "profiles"
+
 	// flags
-	configName          = flag.StringP("config", "c", "config", "Filename of the config file without the file extension")
-	neighborsConfigName = flag.StringP("neighborsConfig", "n", "neighbors", "Filename of the neighbors config file without the file extension")
-	profilesConfigName  = flag.String("profilesConfig", "profiles", "Filename of the profiles config file without the file extension")
+	configName          = flag.StringP("config", "c", defaultConfigName, "Filename of the config file without the file extension")
+	neighborsConfigName = flag.StringP("neighborsConfig", "n", defaultNeighborsConfigName, "Filename of the neighbors config file without the file extension")
+	profilesConfigName  = flag.String("profilesConfig", defaultProfilesConfigName, "Filename of the profiles config file without the file extension")
 	configDirPath       = flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
 
 	// Viper
@@ -29,21 +34,19 @@ var (
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
 // and ending with: .json, .toml, .yaml or .yml (in this sequence).
 func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
-	// flags
-
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, true)
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
 	if err != nil {
 		return err
 	}
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
-	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, true)
+	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, !hasFlag(defaultNeighborsConfigName))
 	if err != nil {
 		return err
 	}
 	parameter.PrintConfig(NeighborsConfig)
 
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, true)
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
 	if err != nil {
 		return err
 	}
@@ -68,4 +71,14 @@ func IsNeighborsConfigHotReloadAllowed() bool {
 	neighborsConfigHotReloadLock.RLock()
 	defer neighborsConfigHotReloadLock.RUnlock()
 	return neighborsConfigHotReloadAllowed
+}
+
+func hasFlag(name string) bool {
+	has := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			has = true
+		}
+	})
+	return has
 }
