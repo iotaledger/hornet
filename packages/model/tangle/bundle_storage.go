@@ -379,7 +379,8 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 			bndl.calcLedgerChanges()
 
 			if bndl.IsMilestone() {
-				StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
+				// Force release to store milestones without caching
+				StoreMilestone(bndl).Release(true) // bundle pass +1, milestone +-0
 			}
 		}
 
