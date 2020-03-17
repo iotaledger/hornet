@@ -484,6 +484,11 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	}
 	tangle.StoreSolidEntryPoints()
 
+	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
+	if err != nil {
+		return err
+	}
+
 	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
 		Hash:          cachedTargetMs.GetBundle().GetMilestoneHash(),
 		SnapshotIndex: targetIndex,
