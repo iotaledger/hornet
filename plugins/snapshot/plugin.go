@@ -127,7 +127,7 @@ func run(plugin *node.Plugin) {
 	case "global":
 		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
 			err = LoadGlobalSnapshot(path,
-				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPath),
+				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPaths),
 				milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
 		}
 	case "local":

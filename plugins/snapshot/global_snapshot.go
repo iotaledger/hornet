@@ -56,7 +56,7 @@ func loadSpentAddresses(filePathSpent string) (int, error) {
 	return spentAddressesCount, nil
 }
 
-func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
+func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
@@ -116,7 +116,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 
 	spentAddressesSum := 0
 	if config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
-		for _, spent := range filePathSpent {
+		for _, spent := range filePathsSpent {
 			spentAddressesCount, err := loadSpentAddresses(spent)
 			if err != nil {
 				return errors.Wrapf(ErrSnapshotImportFailed, "loadSpentAddresses: %v", err)
@@ -134,8 +134,8 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathSpent []string, sn
 	return nil
 }
 
-func LoadGlobalSnapshot(filePathLedger string, filePathSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
+func LoadGlobalSnapshot(filePathLedger string, filePathsSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
 
 	log.Infof("Loading global snapshot with index %v...", snapshotIndex)
-	return loadSnapshotFromTextfiles(filePathLedger, filePathSpent, snapshotIndex)
+	return loadSnapshotFromTextfiles(filePathLedger, filePathsSpent, snapshotIndex)
 }

@@ -16,7 +16,7 @@ const (
 	// path to the global snapshot file containing the ledger state
 	CfgGlobalSnapshotPath = "snapshots.global.path"
 	// paths to the spent addresses files
-	CfgGlobalSnapshotSpentAddressesPath = "snapshots.global.spentAddressesPath"
+	CfgGlobalSnapshotSpentAddressesPaths = "snapshots.global.spentAddressesPaths"
 	// milestone index of the global snapshot
 	CfgGlobalSnapshotIndex = "snapshots.global.index"
 	// whether to delete old transaction data from the database
@@ -35,7 +35,7 @@ func init() {
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalUnsynced, 1000)
 	NodeConfig.SetDefault(CfgLocalSnapshotsPath, "latest-export.gz.bin")
 	NodeConfig.SetDefault(CfgGlobalSnapshotPath, "snapshotMainnet.txt")
-	NodeConfig.SetDefault(CfgGlobalSnapshotSpentAddressesPath, []string{
+	NodeConfig.SetDefault(CfgGlobalSnapshotSpentAddressesPaths, []string{
 		"previousEpochsSpentAddresses1.txt",
 		"previousEpochsSpentAddresses2.txt",
 		"previousEpochsSpentAddresses3.txt",
