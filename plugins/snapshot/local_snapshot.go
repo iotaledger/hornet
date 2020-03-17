@@ -424,9 +424,9 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		log.Panicf("CreateLocalSnapshot: Solid milestone (%d) not found!", solidMilestoneIndex)
 	}
 
-	balances, ledgerMilestone, err := tangle.GetAllBalancesWithoutLocking(abortSignal)
+	balances, ledgerMilestone, err := tangle.GetAllLedgerBalancesWithoutLocking(abortSignal)
 	if err != nil {
-		log.Panicf("CreateLocalSnapshot: GetAllBalances failed! %v", err)
+		log.Panicf("CreateLocalSnapshot: GetAllLedgerBalances failed! %v", err)
 	}
 
 	if ledgerMilestone != solidMilestoneIndex {
@@ -483,6 +483,11 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		tangle.SolidEntryPointsAdd(solidEntryPoint, index)
 	}
 	tangle.StoreSolidEntryPoints()
+
+	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
+	if err != nil {
+		return err
+	}
 
 	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
 		Hash:          cachedTargetMs.GetBundle().GetMilestoneHash(),
@@ -773,7 +778,12 @@ func LoadSnapshotFromFile(filePath string) error {
 		ledgerState[hash[:81]] = val
 	}
 
-	err = tangle.StoreBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
+	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
+	if err != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "snapshot ledgerEntries: %s", err)
+	}
+
+	err = tangle.StoreLedgerBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 	}
