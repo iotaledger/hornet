@@ -158,19 +158,6 @@ func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransa
 	return cachedMs.GetBundle().GetTail() // tx +1
 }
 
-func preFeed(channel chan interface{}) {
-	channel <- &msg{MsgTypeNodeStatus, currentNodeStatus()}
-	start := tangle.GetLatestMilestoneIndex()
-	for i := start - 10; i <= start; i++ {
-		if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
-			channel <- &msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), i}}
-			cachedMsTailTx.Release(true) // tx -1
-		} else {
-			break
-		}
-	}
-}
-
 const (
 	MsgTypeNodeStatus byte = iota
 	MsgTypeTPSMetric
