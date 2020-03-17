@@ -43,17 +43,12 @@ func init() {
 	// neighbors
 	NeighborsConfig.SetDefault(CfgNeighborsAcceptAnyNeighborConnection, false)
 	NeighborsConfig.SetDefault(CfgNeighborsMaxNeighbors, 5)
-	NeighborsConfig.SetDefault(CfgNeighbors, []NeighborConfig{
-		{
-			Identity:   "example.neighbor.com:15600",
-			Alias:      "Example Neighbor",
-			PreferIPv6: false,
-		},
-	})
+	NeighborsConfig.SetDefault(CfgNeighbors, []NeighborConfig{})
 
 	// autopeering
 	NodeConfig.SetDefault(CfgNetAutopeeringEntryNodes, []string{
 		"LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
+		"zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
 	})
 	NodeConfig.SetDefault(CfgNetAutopeeringBindAddr, "0.0.0.0:14626")
 	NodeConfig.SetDefault(CfgNetAutopeeringExternalAddr, "auto")
