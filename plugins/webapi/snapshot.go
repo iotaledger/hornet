@@ -29,7 +29,7 @@ func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	snr := &GetSnapshotReturn{}
 
-	balances, index, err := tangle.GetAllBalances(abortSignal)
+	balances, index, err := tangle.GetAllLedgerBalances(abortSignal)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)

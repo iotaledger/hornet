@@ -116,7 +116,7 @@ func run(plugin *node.Plugin) {
 
 	if tangle.GetSnapshotInfo() != nil {
 		// Check the ledger state
-		tangle.GetAllBalances(nil)
+		tangle.GetAllLedgerBalances(nil)
 		return
 	}
 

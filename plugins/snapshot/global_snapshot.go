@@ -109,7 +109,12 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 		//log.Infof("Address: %v (%d)", address, balance)
 	}
 
-	err = tangle.StoreBalancesInDatabase(ledgerState, snapshotIndex)
+	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, snapshotIndex)
+	if err != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "snapshot ledgerEntries: %s", err)
+	}
+
+	err = tangle.StoreLedgerBalancesInDatabase(ledgerState, snapshotIndex)
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %s", err)
 	}
