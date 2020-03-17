@@ -7,10 +7,12 @@ import (
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
+	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 var ErrInvalidParameter = errors.New("invalid config")
@@ -118,25 +120,26 @@ func setupRoutes(e *echo.Echo) {
 	}
 }
 
-func registerWSClient() (uint64, chan interface{}) {
-	// allocate new client id
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-	clientID := nextClientID
-	channel := make(chan interface{}, 100)
-	preFeed(channel)
-	clients[clientID] = channel
-	nextClientID++
-	return clientID, channel
-}
-
 func websocketRoute(c echo.Context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorf("recovered from panic within WS handle func: %s", r)
 		}
 	}()
-	hub.ServeWebsocket(c.Response(), c.Request())
+	hub.ServeWebsocket(c.Response(), c.Request(), func(client *websockethub.Client) {
+		log.Info("WebSocket client connection established")
+
+		client.Send(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+		start := tangle.GetLatestMilestoneIndex()
+		for i := start - 10; i <= start; i++ {
+			if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
+				client.Send(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), i}})
+				cachedMsTailTx.Release(true) // tx -1
+			} else {
+				break
+			}
+		}
+	})
 
 	return nil
 }
