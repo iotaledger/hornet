@@ -31,7 +31,7 @@ Please have a look into our [HORNET wiki](https://github.com/gohornet/hornet/wik
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
 - Extract the files in a folder of your choice
 - Add neighbors to the `neighbors.json` file (optional)
-- Download the latest HORNET snapshot from [dbfiles.iota.org](https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin)
+- Download the latest HORNET snapshot from [https://ls.manapotion.io](https://ls.manapotion.io/export.bin)
 - Run HORNET: `./hornet -c config`
 
 ---
