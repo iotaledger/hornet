@@ -24,23 +24,23 @@ builds:
     goarch:
       - amd64
   # Linux ARM(v7) statically linked
-  - id: hornet-linux-arm
-    binary: hornet
-    env:
-      - CGO_ENABLED=1
-      - CC=armv7l-linux-musleabihf-gcc
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
-      - -w -extldflags "-static"
-    flags:
-      - -tags=pow_c
-    main: main.go
-    goos:
-      - linux
-    goarch:
-      - arm
-    goarm:
-      - 7
+  #- id: hornet-linux-arm
+  #  binary: hornet
+  #  env:
+  #    - CGO_ENABLED=1
+  #    - CC=armv7l-linux-musleabihf-gcc
+  #  ldflags:
+  #    - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+  #    - -w -extldflags "-static"
+  #  flags:
+  #   - -tags=pow_c
+  #  main: main.go
+  #  goos:
+  #    - linux
+  #  goarch:
+  #    - arm
+  #  goarm:
+  #    - 7
   # Linux ARM64 statically linked
   - id: hornet-linux-arm64
     binary: hornet
