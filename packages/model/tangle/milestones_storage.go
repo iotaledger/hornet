@@ -112,16 +112,14 @@ func StoreMilestone(bndl *Bundle) *CachedMilestone {
 
 	if bndl.IsMilestone() {
 
-		msIndex := bndl.GetMilestoneIndex()
-		cachedMilestone := milestoneStorage.ComputeIfAbsent(databaseKeyForMilestoneIndex(msIndex), func(key []byte) objectstorage.StorableObject { // bundle +1
-			milestone := &Milestone{
-				Index: msIndex,
-				Hash:  bndl.GetMilestoneHash(),
-			}
+		milestone := &Milestone{
+			Index: bndl.GetMilestoneIndex(),
+			Hash:  bndl.GetMilestoneHash(),
+		}
 
+		cachedMilestone := milestoneStorage.ComputeIfAbsent(milestone.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // milestone +1
 			milestone.Persist()
 			milestone.SetModified()
-
 			return milestone
 		})
 
