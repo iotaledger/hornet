@@ -178,7 +178,12 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 	cachedTxData := txStorage.ComputeIfAbsent(transaction.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
 
-		cachedMeta = metadataStorage.Store(metadataFactory(txHash)) // meta +1
+		metadata := metadataFactory(txHash)
+		cachedMeta = metadataStorage.ComputeIfAbsent(metadata.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
+			metadata.Persist()
+			metadata.SetModified()
+			return metadata
+		})
 
 		transaction.Persist()
 		transaction.SetModified()

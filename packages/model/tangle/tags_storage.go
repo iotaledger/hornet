@@ -98,7 +98,13 @@ func StoreTag(txTag trinary.Trytes, txHash trinary.Hash) *CachedTag {
 		TxHash: trinary.MustTrytesToBytes(txHash)[:49],
 	}
 
-	return &CachedTag{tagsStorage.Store(tag)}
+	cachedObj := tagsStorage.ComputeIfAbsent(tag.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // tag +1
+		tag.Persist()
+		tag.SetModified()
+		return tag
+	})
+
+	return &CachedTag{CachedObject: cachedObj}
 }
 
 // tag +-0
