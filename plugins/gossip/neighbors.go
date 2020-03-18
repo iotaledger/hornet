@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	// master lock protecting connected-, in-flight neighbors and the reconnect pool
+	// master lock protecting connected neighbors and the reconnect pool
 	neighborsLock = sync.Mutex{}
 
 	// holds neighbors which are fully connected and handshaked
@@ -465,7 +465,7 @@ func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string, autoPeer ..
 	originAddr.PreferIPv6 = preferIPv6
 	originAddr.Alias = alias
 
-	// check whether the neighbor is already connected, in-flight or in the reconnect pool
+	// check whether the neighbor is already connected or in the reconnect pool
 	// given any of the IP addresses to which the neighbor address resolved to
 	neighborsLock.Lock()
 	defer neighborsLock.Unlock()
