@@ -30,7 +30,6 @@ All notable changes to this project will be documented in this file.
 
     - Database layout
     - Ignore example neighbor
-    - Ignore spent addresses while creating local snapshots
     - Improved RPM and DEB packages
     - Make config files optional
     - Refactored configuration options
