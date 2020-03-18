@@ -270,7 +270,7 @@ func neighborMetrics() []*neighbormetric {
 			OriginAdrr: info.DomainWithPort,
 			Info:       info,
 		}
-		if info.Neighbor != nil {
+		if info.Neighbor != nil && info.Neighbor.Protocol != nil {
 			m.Identity = info.Neighbor.Identity
 			m.Alias = info.Alias
 			m.ConnectionOrigin = info.Neighbor.ConnectionOrigin

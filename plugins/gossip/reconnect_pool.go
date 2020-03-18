@@ -49,11 +49,8 @@ func configureReconnectPool() {
 		addNeighborToReconnectPool(&reconnectneighbor{OriginAddr: originAddr})
 	}
 
-	// if a neighbor was handshaked, we move it from being in-flight to connected
 	Events.NeighborHandshakeCompleted.Attach(events.NewClosure(func(neighbor *Neighbor, protocolVersion byte) {
-		neighborsLock.Lock()
-		moveNeighborToConnected(neighbor)
-		neighborsLock.Unlock()
+		// print out handshake success
 		gossipLogger.Infof("neighbor handshaked %s, using protocol version %d", neighbor.InitAddress.String(), protocolVersion)
 	}))
 }
@@ -70,7 +67,7 @@ func runReconnectPool() {
 
 func reconnect() {
 	neighborsLock.Lock()
-	newlyInFlight := make([]*Neighbor, 0)
+	neighborsToConnectTo := make([]*Neighbor, 0)
 
 	if len(reconnectPool) == 0 {
 		neighborsLock.Unlock()
@@ -96,16 +93,11 @@ next:
 
 		prefIP := neighborAddrs.GetPreferredAddress(originAddr.PreferIPv6)
 
-		// don't do any new connection attempts, if the neighbor is already connected or in-flight
+		// don't do any new connection attempts if the neighbor is already connected
 		for ip := range neighborAddrs.IPs {
 			id := NewNeighborIdentity(ip.String(), originAddr.Port)
 			if neigh, alreadyConnected := connectedNeighbors[id]; alreadyConnected {
 				gossipLogger.Infof("neighbor %s already connected, removing it from reconnect pool...", neigh.InitAddress.String())
-				delete(reconnectPool, k)
-				continue next
-			}
-			if neigh, alreadyInFlight := inFlightNeighbors[id]; alreadyInFlight {
-				gossipLogger.Infof("neighbor %s already in-fight, removing it from reconnect pool...", neigh.InitAddress.String())
 				delete(reconnectPool, k)
 				continue next
 			}
@@ -115,15 +107,15 @@ next:
 		if recNeigh.Autopeering != nil {
 			neighbor.Autopeering = recNeigh.Autopeering
 		}
-		newlyInFlight = append(newlyInFlight, neighbor)
+		neighborsToConnectTo = append(neighborsToConnectTo, neighbor)
 	}
 	neighborsLock.Unlock()
 
-	for _, neighbor := range newlyInFlight {
+	for _, neighbor := range neighborsToConnectTo {
 
 		neighborsLock.Lock()
 		allowNeighborIdentity(neighbor)
-		moveNeighborFromReconnectToInFlightPool(neighbor)
+		moveFromReconnectPoolToConnected(neighbor)
 		neighborsLock.Unlock()
 
 		if neighbor.Autopeering != nil {
@@ -134,7 +126,7 @@ next:
 		if err := Connect(neighbor); err != nil {
 			gossipLogger.Warnf("connection attempt to %s failed: %s", neighbor.InitAddress.String(), err.Error())
 			neighborsLock.Lock()
-			moveFromInFlightToReconnectPool(neighbor)
+			moveFromConnectedToReconnectPool(neighbor)
 			neighborsLock.Unlock()
 			continue
 		}
