@@ -33,10 +33,6 @@ var (
 	// holds neighbors which are fully connected and handshaked
 	connectedNeighbors = make(map[string]*Neighbor)
 
-	// in-flight: neighbors where we currently are trying to build up a connection to
-	// and will commence a handshake
-	inFlightNeighbors = make(map[string]*Neighbor)
-
 	// holds IP/port or host/port combinations of neighbors which we want to be connected to
 	reconnectPool       = make(map[string]*reconnectneighbor)
 	reconnectPoolWakeup = make(chan struct{})
@@ -82,19 +78,15 @@ func availableNeighborSlotsFilled() bool {
 func configureNeighbors() {
 	acceptAnyNeighborConnection = config.NeighborsConfig.GetBool(config.CfgNeighborsAcceptAnyNeighborConnection)
 
-	Events.NeighborPutBackIntoReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
+	Events.NeighborMovedBackToReconnectPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
 		gossipLogger.Infof("added neighbor %s back into reconnect pool...", neighbor.InitAddress.String())
 	}))
 
-	Events.NeighborPutIntoConnectedPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
-		gossipLogger.Infof("neighbor %s is now connected", neighbor.InitAddress.String())
+	Events.NeighborMovedToConnectedPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
+		gossipLogger.Infof("initiating handshake for neighbor %s", neighbor.InitAddress.String())
 	}))
 
-	Events.NeighborPutIntoInFlightPool.Attach(events.NewClosure(func(neighbor *Neighbor) {
-		gossipLogger.Infof("connecting and initiating handshake for neighbor %s", neighbor.InitAddress.String())
-	}))
-
-	Events.NeighborPutIntoReconnectPool.Attach(events.NewClosure(func(originAddr *iputils.OriginAddress) {
+	Events.NeighborMovedToReconnectPool.Attach(events.NewClosure(func(originAddr *iputils.OriginAddress) {
 		gossipLogger.Infof("added neighbor %s into reconnect pool for the first time", originAddr.String())
 	}))
 
@@ -103,9 +95,6 @@ func configureNeighbors() {
 		gossipLogger.Info("Closing neighbor connections ...")
 
 		for _, neighbor := range connectedNeighbors {
-			RemoveNeighbor(neighbor.Identity)
-		}
-		for _, neighbor := range inFlightNeighbors {
 			RemoveNeighbor(neighbor.Identity)
 		}
 
@@ -183,10 +172,11 @@ func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
 
 func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr *iputils.IP, port uint16, addresses *iputils.IPAddresses) *Neighbor {
 	return &Neighbor{
-		InitAddress:    originAddr,
-		Identity:       NewNeighborIdentity(primaryAddr.String(), port),
-		PrimaryAddress: primaryAddr,
-		Addresses:      addresses,
+		InitAddress:             originAddr,
+		Identity:                NewNeighborIdentity(primaryAddr.String(), port),
+		PrimaryAddress:          primaryAddr,
+		Addresses:               addresses,
+		MoveBackToReconnectPool: true,
 		Events: neighborEvents{
 			ProtocolConnectionEstablished: events.NewEvent(protocolCaller),
 		},
@@ -200,41 +190,23 @@ func addNeighborToReconnectPool(recNeigh *reconnectneighbor) {
 		return
 	}
 	reconnectPool[recNeigh.OriginAddr.String()] = recNeigh
-	Events.NeighborPutIntoReconnectPool.Trigger(recNeigh.OriginAddr)
+	Events.NeighborMovedToReconnectPool.Trigger(recNeigh.OriginAddr)
 }
 
-func moveNeighborFromReconnectToInFlightPool(neighbor *Neighbor) {
+func moveToConnected(neighbor *Neighbor) {
 	// neighbors lock must be held by caller
-	delete(reconnectPool, neighbor.InitAddress.String())
-	inFlightNeighbors[neighbor.Identity] = neighbor
-	Events.NeighborPutIntoInFlightPool.Trigger(neighbor)
-}
-
-func moveFromInFlightToReconnectPool(neighbor *Neighbor) {
-	// neighbors lock must be held by caller
-	delete(inFlightNeighbors, neighbor.Identity)
-	if neighbor.Autopeering != nil {
-		return
-	}
-	reconnectPool[neighbor.InitAddress.String()] = &reconnectneighbor{
-		OriginAddr: neighbor.InitAddress,
-		CachedIPs:  neighbor.Addresses,
-	}
-	Events.NeighborPutBackIntoReconnectPool.Trigger(neighbor)
-}
-
-func moveNeighborToConnected(neighbor *Neighbor) {
-	// neighbors lock must be held by caller
-	delete(inFlightNeighbors, neighbor.Identity)
 	connectedNeighbors[neighbor.Identity] = neighbor
 
 	// delete any existing neighbor from the reconnect pool
 	cleanReconnectPool(neighbor)
-
-	Events.NeighborPutIntoConnectedPool.Trigger(neighbor)
 }
 
-func moveNeighborFromConnectedToReconnectPool(neighbor *Neighbor) {
+func moveFromReconnectPoolToConnected(neighbor *Neighbor) {
+	moveToConnected(neighbor)
+	Events.NeighborMovedToConnectedPool.Trigger(neighbor)
+}
+
+func moveFromConnectedToReconnectPool(neighbor *Neighbor) {
 	// neighbors lock must be held by caller
 
 	// check whether manually removed or autopeered neighbor
@@ -255,7 +227,7 @@ func moveNeighborFromConnectedToReconnectPool(neighbor *Neighbor) {
 		OriginAddr: neighbor.InitAddress,
 		CachedIPs:  neighbor.Addresses,
 	}
-	Events.NeighborPutBackIntoReconnectPool.Trigger(neighbor)
+	Events.NeighborMovedBackToReconnectPool.Trigger(neighbor)
 }
 
 func allowNeighborIdentity(neighbor *Neighbor) {
@@ -322,6 +294,10 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 	// check whether the neighbor is already connected by checking each neighbors' IP addresses
 	neighborsLock.Lock()
 	for _, connectedNeighbor := range connectedNeighbors {
+		// skip self: we must check this now as we have no concept of in-flight connections anymore
+		if connectedNeighbor == neighbor {
+			continue
+		}
 		// we need to loop through because the map holds pointer values
 		for handshakingNeighborIP := range neighbor.Addresses.IPs {
 			for ip := range connectedNeighbor.Addresses.IPs {
@@ -343,6 +319,12 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 			return errors.Wrapf(ErrIdentityUnknown, neighbor.Identity)
 		}
 	}
+
+	// mark inbound neighbor as connected
+	if neighbor.ConnectionOrigin == Inbound {
+		moveToConnected(neighbor)
+	}
+
 	neighborsLock.Unlock()
 
 	protocol.Version = byte(version)
@@ -393,7 +375,7 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 		}
 		neighborsLock.Lock()
 		defer neighborsLock.Unlock()
-		moveNeighborFromConnectedToReconnectPool(neighbor)
+		moveFromConnectedToReconnectPool(neighbor)
 	}))
 
 	neighbor.Protocol.Events.HandshakeCompleted.Attach(events.NewClosure(func(protocolVersion byte) {
@@ -502,9 +484,6 @@ func AddNeighbor(neighborAddr string, preferIPv6 bool, alias string, autoPeer ..
 		if _, exists := connectedNeighbors[identity]; exists {
 			return errors.Wrapf(ErrNeighborAlreadyConnected, "%s is already connected via identity %s", neighborAddr, identity)
 		}
-		if _, exists := inFlightNeighbors[identity]; exists {
-			return errors.Wrapf(ErrNeighborAlreadyKnown, "%s is already known and in-flight via %s", neighborAddr, identity)
-		}
 	}
 	recNeigh := &reconnectneighbor{OriginAddr: originAddr, CachedIPs: possibleIdentities}
 	if len(autoPeer) > 0 {
@@ -539,12 +518,6 @@ func RemoveNeighbor(originIdentity string) error {
 			if neigh, exists := connectedNeighbors[identity]; exists {
 				neigh.MoveBackToReconnectPool = false
 				delete(connectedNeighbors, identity)
-				neigh.Protocol.Conn.Close()
-				Events.RemovedNeighbor.Trigger(neigh)
-				// if the neighbor is in-flight, also close the connection and remove it from the pool
-			} else if neigh, exists := inFlightNeighbors[identity]; exists {
-				delete(inFlightNeighbors, identity)
-				neigh.MoveBackToReconnectPool = false
 				if neigh.Protocol != nil && neigh.Protocol.Conn != nil {
 					neigh.Protocol.Conn.Close()
 				}

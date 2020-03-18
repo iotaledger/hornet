@@ -14,10 +14,9 @@ import (
 var Events = pluginEvents{
 	// neighbor events
 	RemovedNeighbor:                  events.NewEvent(neighborCaller),
-	NeighborPutIntoConnectedPool:     events.NewEvent(neighborCaller),
-	NeighborPutIntoInFlightPool:      events.NewEvent(neighborCaller),
-	NeighborPutBackIntoReconnectPool: events.NewEvent(neighborCaller),
-	NeighborPutIntoReconnectPool:     events.NewEvent(originAddrCaller),
+	NeighborMovedToConnectedPool:     events.NewEvent(neighborCaller),
+	NeighborMovedBackToReconnectPool: events.NewEvent(neighborCaller),
+	NeighborMovedToReconnectPool:     events.NewEvent(originAddrCaller),
 	NeighborConnectionClosed:         events.NewEvent(neighborCaller),
 
 	// low level network events
@@ -37,10 +36,9 @@ var Events = pluginEvents{
 type pluginEvents struct {
 	// neighbor events
 	RemovedNeighbor                  *events.Event
-	NeighborPutIntoConnectedPool     *events.Event
-	NeighborPutIntoInFlightPool      *events.Event
-	NeighborPutBackIntoReconnectPool *events.Event
-	NeighborPutIntoReconnectPool     *events.Event
+	NeighborMovedToConnectedPool     *events.Event
+	NeighborMovedBackToReconnectPool *events.Event
+	NeighborMovedToReconnectPool     *events.Event
 	NeighborConnectionClosed         *events.Event
 
 	// low level network events
