@@ -28,12 +28,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+    - Database layout
     - Ignore example neighbor
     - Ignore spent addresses while creating local snapshots
     - Improved RPM and DEB packages
     - Make config files optional
     - Refactored configuration options
     - Reintroduce spent addresses DB
+    - Snapshot format
     - `tx_trytes` ZMQ and MQTT topic changed to `trytes`
     - Updated to Go 1.14
     - Updated to packr 2.8.0
