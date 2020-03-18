@@ -82,8 +82,6 @@ func (protocol *protocol) ReceivedHandshake() {
 
 	protocol.receiveHandshakeCompleted = true
 	if protocol.sendHandshakeCompleted {
-		// this will automatically move the neighbor from the in-flight pool
-		// or if it is an inbound neighbor, to the connected pool
 		protocol.Events.HandshakeCompleted.Trigger(protocol.Version)
 	}
 }
