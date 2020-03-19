@@ -26,7 +26,7 @@ var (
 
 	solidifierLock syncutils.RWMutex
 
-	maxMissingMilestoneSearchDepth = 120000 // 1000 TPS at 2 min milestone interval
+	revalidationMilestoneIndex = milestone_index.MilestoneIndex(0)
 )
 
 // checkSolidity checks if a single transaction is solid
@@ -99,7 +99,7 @@ func registerApproverOfApprovee(approver trinary.Hash, approveeHash trinary.Hash
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
-func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, abortSignal chan struct{}) (solid bool, aborted bool) {
+func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, revalidate bool, abortSignal chan struct{}) (solid bool, aborted bool) {
 
 	ts := time.Now()
 
@@ -189,7 +189,32 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				}
 
 				// Mark the tx as checked
-				approveeSolid := cachedApproveeTx.GetMetadata().IsSolid()
+				var approveeSolid bool
+				if !revalidate {
+					approveeSolid = cachedApproveeTx.GetMetadata().IsSolid()
+				} else {
+					// The metadata of this cone may be corrupted => do not trust the solid flags
+					if confirmed, at := cachedApproveeTx.GetMetadata().GetConfirmed(); confirmed {
+						if at < milestoneIndex {
+							// Mark the tx as solid if it was confirmed by an older milestone
+							approveeSolid = true
+						} else {
+							// Corrupted Tx was confirmed before by this or newer milestone => reset metadata
+							cachedApproveeTx.GetMetadata().Reset()
+						}
+					} else {
+						// Corrupted Tx was not confirmed, but could be solid => reset metadata
+						cachedApproveeTx.GetMetadata().Reset()
+					}
+
+					// We should also delete corrupted bundle information (it will be reconstructed if tailTx gets solid again).
+					// This also handles the special case if a milestone bundle was stored, but the milestone is missing in the database,
+					// because the bundle gets deleted and would be reconstructed on solidification, which would lead to reapplying the
+					// valid milestone to the database.
+					if cachedApproveeTx.GetTransaction().IsTail() {
+						tangle.DeleteBundle(approveeHash)
+					}
+				}
 				txsChecked[approveeHash] = approveeSolid
 
 				if !approveeSolid {
@@ -253,7 +278,13 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 					entryTxs[approverTxHash] = struct{}{}
 				}
 
-				if newlySolid && tangle.IsNodeSyncedWithThreshold() {
+				if revalidate {
+					// If this cone is maybe corrupted, the transaction is added again to the database to store all additional information
+					cachedTx, _ := tangle.AddTransactionToStorage(cachedEntryTx.GetTransaction(), tangle.GetLatestMilestoneIndex(), true, true, true)
+					cachedTx.Release(true)
+				}
+
+				if !revalidate && newlySolid && tangle.IsNodeSyncedWithThreshold() {
 					// Propagate solidity to the future cone (txs attached to the txs of this milestone)
 					for _, approverHash := range tangle.GetApproverHashes(entryTxHash, true) {
 						cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
@@ -362,8 +393,9 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	signalChanMilestoneStopSolidificationLock.Unlock()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
+	revalidateMilestone := (revalidationMilestoneIndex != 0) && (milestoneIndexToSolidify <= revalidationMilestoneIndex)
 
-	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
+	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), revalidateMilestone, signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)

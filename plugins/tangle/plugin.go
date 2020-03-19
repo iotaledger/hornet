@@ -31,6 +31,12 @@ func configure(plugin *node.Plugin) {
 
 	if tangle.IsDatabaseCorrupted() {
 		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
+
+		var err error
+		revalidationMilestoneIndex, err = revalidateDatabase()
+		if err != nil {
+			log.Panic("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
+		}
 	}
 
 	// Create a background worker that marks the database as corrupted at clean startup.
