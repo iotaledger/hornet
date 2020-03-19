@@ -172,7 +172,7 @@ func DeleteLedgerDiffForMilestone(index milestone_index.MilestoneIndex) error {
 	var deletions []database.Key
 
 	err := ledgerDatabase.StreamForEachPrefixKeyOnly(databaseKeyPrefixForLedgerDiff(index), func(entry database.KeyOnlyEntry) error {
-		deletions = append(deletions, entry.Key)
+		deletions = append(deletions, append(databaseKeyPrefixForLedgerDiff(index), entry.Key...))
 		return nil
 	})
 
@@ -293,19 +293,24 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	var entries []database.Entry
-	var deletions []database.Key
-
 	// Delete all old entries
+	var deletions []database.Key
 	err := ledgerDatabase.StreamForEachPrefixKeyOnly(snapshotBalancePrefix, func(entry database.KeyOnlyEntry) error {
-		deletions = append(deletions, entry.Key)
+		deletions = append(deletions, append(snapshotBalancePrefix, entry.Key...))
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to delete snapshot balances")
+		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot balances")
 	}
 	deletions = append(deletions, typeutils.StringToBytes(snapshotMilestoneIndexKey))
 
+	// Now delete all entries
+	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot balances")
+	}
+
+	// Add all new entries
+	var entries []database.Entry
 	for address, balance := range balances {
 		key := databaseKeyForSnapshotAddressBalance(address)
 		if balance != 0 {
@@ -315,11 +320,10 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 			})
 		}
 	}
-
 	entries = append(entries, entryForSnapshotMilestoneIndex(index))
 
-	// Now batch insert/delete all entries
-	if err := ledgerDatabase.Apply(entries, deletions); err != nil {
+	// Now batch insert all entries
+	if err := ledgerDatabase.Apply(entries, []database.Key{}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot ledger state")
 	}
 
@@ -383,7 +387,7 @@ func DeleteLedgerBalancesInDatabase() error {
 	var deletions []database.Key
 
 	err := ledgerDatabase.StreamForEachPrefixKeyOnly(ledgerBalancePrefix, func(entry database.KeyOnlyEntry) error {
-		deletions = append(deletions, entry.Key)
+		deletions = append(deletions, append(ledgerBalancePrefix, entry.Key...))
 		return nil
 	})
 
