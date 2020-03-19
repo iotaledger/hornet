@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"net"
 	"strings"
 
@@ -42,7 +43,11 @@ func configureAP() {
 	}
 	log.Debugf("Entry node peers: %v", entryNodes)
 
-	Discovery = discover.New(local.GetInstance(), discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
+	gossipServiceKeyHash := fnv.New32a()
+	gossipServiceKeyHash.Write([]byte(services.GossipServiceKey()))
+	version := gossipServiceKeyHash.Sum32()
+
+	Discovery = discover.New(local.GetInstance(), discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes), discover.Version(version))
 
 	// enable peer selection only when gossip is enabled
 	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidNeighbor)))
