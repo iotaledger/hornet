@@ -271,10 +271,10 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) Cached
 ////////////////////////////////////////////////////////////////////////////////
 
 // tx +1
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool, forceRelease bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool, forceRelease bool, reapply bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
 
 	cachedTx, isNew := StoreTransactionIfAbsent(hornetTx) // tx +1
-	if !isNew {
+	if !isNew && !reapply {
 		return cachedTx, true
 	}
 
