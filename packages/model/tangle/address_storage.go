@@ -97,7 +97,13 @@ func StoreAddress(address trinary.Hash, txHash trinary.Hash) *CachedAddress {
 		TxHash:  trinary.MustTrytesToBytes(txHash)[:49],
 	}
 
-	return &CachedAddress{addressesStorage.Store(addressObj)}
+	cachedObj := addressesStorage.ComputeIfAbsent(addressObj.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // address +1
+		addressObj.Persist()
+		addressObj.SetModified()
+		return addressObj
+	})
+
+	return &CachedAddress{CachedObject: cachedObj}
 }
 
 // address +-0

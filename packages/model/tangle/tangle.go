@@ -15,9 +15,9 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
 	configureTagsStorage()
 	configureAddressesStorage()
 	configureMilestoneStorage()
+	configureFirstSeenTxStorage()
 	configureLedgerDatabase()
 	configureSnapshotDatabase()
-	configureFirstSeenTxStorage()
 	configureSpentAddressesStorage()
 }
 

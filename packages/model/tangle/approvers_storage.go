@@ -97,7 +97,13 @@ func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *Cac
 		ApproverHash: trinary.MustTrytesToBytes(approverHash)[:49],
 	}
 
-	return &CachedApprover{approversStorage.Store(approver)}
+	cachedObj := approversStorage.ComputeIfAbsent(approver.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // approvers +1
+		approver.Persist()
+		approver.SetModified()
+		return approver
+	})
+
+	return &CachedApprover{CachedObject: cachedObj}
 }
 
 // approvers +-0
