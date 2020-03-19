@@ -34,7 +34,7 @@ func configure(plugin *node.Plugin) {
 	configureRefsAnInvalidBundleStorage()
 
 	tangle.LoadInitialValuesFromDatabase()
-	
+
 	if tangle.IsDatabaseCorrupted() {
 		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
 
