@@ -208,8 +208,6 @@ func (bundle *Bundle) ResetSolidAndConfirmed() {
 	// Metadata
 	bundle.setSolid(false)
 	bundle.setConfirmed(false)
-	
-	bundle.SetModified(true)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
