@@ -60,13 +60,22 @@ func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
 	snapshotInfo := tangle.GetSnapshotInfo()
 	latestMilestoneIndex := tangle.SearchLatestMilestoneIndex()
 
+	// Resume old revalidation attemps
+	if snapshotInfo.RevalidationIndex != 0 && latestMilestoneIndex < (snapshotInfo.RevalidationIndex-RevalidationMilestoneThreshold) {
+		latestMilestoneIndex = snapshotInfo.RevalidationIndex - RevalidationMilestoneThreshold
+	}
+
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return 0, ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
+	// It has to be stored in the snapshot info, otherwise a failed revalidation attempt would lead to missing info about latestMilestoneIndex
+	snapshotInfo.RevalidationIndex = latestMilestoneIndex + RevalidationMilestoneThreshold
+	tangle.SetSnapshotInfo(snapshotInfo)
+
 	// Walk all milestones since SnapshotIndex and delete all corrupted balances diffs and milestone bundles
 	// Add a treshold in case the milestones don't exist, but the ledger data was stored already
-	for milestoneIndex := snapshotInfo.SnapshotIndex + 1; milestoneIndex <= latestMilestoneIndex+RevalidationMilestoneThreshold; milestoneIndex++ {
+	for milestoneIndex := snapshotInfo.SnapshotIndex + 1; milestoneIndex <= snapshotInfo.RevalidationIndex; milestoneIndex++ {
 		if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
 			return 0, err
 		}
@@ -122,5 +131,5 @@ func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
 	}
 
 	// Add a treshold in case the milestones don't exist, but parts of confirmed cones were already stored
-	return latestMilestoneIndex + RevalidationMilestoneThreshold, nil
+	return snapshotInfo.RevalidationIndex, nil
 }

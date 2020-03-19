@@ -43,6 +43,7 @@ func configure(plugin *node.Plugin) {
 		if err != nil {
 			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
 		}
+		log.Info("First stage of database revalidation successful. Solidifcation will be slower due to stage two.")
 	}
 
 	// Create a background worker that marks the database as corrupted at clean startup.

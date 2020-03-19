@@ -6,6 +6,7 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -103,6 +104,8 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 
 	ts := time.Now()
 
+	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+
 	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
 	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
 
@@ -195,11 +198,11 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				} else {
 					// The metadata of this cone may be corrupted => do not trust the solid flags
 					if confirmed, at := cachedApproveeTx.GetMetadata().GetConfirmed(); confirmed {
-						if at < milestoneIndex {
-							// Mark the tx as solid if it was confirmed by an older milestone
+						if at <= solidMilestoneIndex {
+							// Mark the tx as solid if it was confirmed by an valid milestone
 							approveeSolid = true
 						} else {
-							// Corrupted Tx was confirmed before by this or newer milestone => reset metadata
+							// Corrupted Tx was confirmed by an invalid milestone => reset metadata
 							cachedApproveeTx.GetMetadata().Reset()
 						}
 					} else {
@@ -211,7 +214,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 					// This also handles the special case if a milestone bundle was stored, but the milestone is missing in the database,
 					// because the bundle gets deleted and would be reconstructed on solidification, which would lead to reapplying the
 					// valid milestone to the database.
-					if cachedApproveeTx.GetTransaction().IsTail() {
+					if !approveeSolid && cachedApproveeTx.GetTransaction().IsTail() && (approveeHash != consts.NullHashTrytes) {
 						tangle.DeleteBundle(approveeHash)
 					}
 				}
@@ -272,16 +275,16 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 				log.Panicf("solidQueueCheck: EntryTx not found: %v", entryTxHash)
 			}
 
+			if revalidate {
+				// If this cone is maybe corrupted, the transaction is added again to the database to store all additional information
+				cachedTx, _ := tangle.AddTransactionToStorage(cachedEntryTx.GetTransaction(), tangle.GetLatestMilestoneIndex(), true, true, true)
+				cachedTx.Release(true)
+			}
+
 			if solid, newlySolid := checkSolidity(cachedEntryTx.Retain()); solid {
 				// Add all tx to the map that approve this solid transaction
 				for approverTxHash := range approvers[entryTxHash] {
 					entryTxs[approverTxHash] = struct{}{}
-				}
-
-				if revalidate {
-					// If this cone is maybe corrupted, the transaction is added again to the database to store all additional information
-					cachedTx, _ := tangle.AddTransactionToStorage(cachedEntryTx.GetTransaction(), tangle.GetLatestMilestoneIndex(), true, true, true)
-					cachedTx.Release(true)
 				}
 
 				if !revalidate && newlySolid && tangle.IsNodeSyncedWithThreshold() {
@@ -431,6 +434,11 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	tangle.SetSolidMilestone(cachedMsToSolidify.Retain())    // bundle pass +1
 	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 	log.Infof("New solid milestone: %d", milestoneIndexToSolidify)
+
+	if (revalidationMilestoneIndex != 0) && milestoneIndexToSolidify > revalidationMilestoneIndex {
+		revalidationMilestoneIndex = 0
+		log.Info("Final stage of database revalidation successful. Your database is consistent again.")
+	}
 
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)

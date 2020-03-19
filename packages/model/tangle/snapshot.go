@@ -27,11 +27,12 @@ var (
 )
 
 type SnapshotInfo struct {
-	Hash          trinary.Hash
-	SnapshotIndex milestone_index.MilestoneIndex
-	PruningIndex  milestone_index.MilestoneIndex
-	Timestamp     int64
-	Metadata      bitmask.BitMask
+	Hash              trinary.Hash
+	SnapshotIndex     milestone_index.MilestoneIndex
+	PruningIndex      milestone_index.MilestoneIndex
+	RevalidationIndex milestone_index.MilestoneIndex
+	Timestamp         int64
+	Metadata          bitmask.BitMask
 }
 
 func loadSnapshotInfo() {
@@ -47,22 +48,24 @@ func loadSnapshotInfo() {
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 66 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 66", len(bytes))
+	if len(bytes) != 70 {
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 70", len(bytes))
 	}
 
 	hash := trinary.MustBytesToTrytes(bytes[:49])
 	snapshotIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[49:53]))
 	pruningIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[53:57]))
-	timestamp := int64(binary.LittleEndian.Uint64(bytes[57:65]))
-	metadata := bitmask.BitMask(bytes[65])
+	revalidationIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[57:61]))
+	timestamp := int64(binary.LittleEndian.Uint64(bytes[61:69]))
+	metadata := bitmask.BitMask(bytes[69])
 
 	return &SnapshotInfo{
-		Hash:          hash,
-		SnapshotIndex: snapshotIndex,
-		PruningIndex:  pruningIndex,
-		Timestamp:     timestamp,
-		Metadata:      metadata,
+		Hash:              hash,
+		SnapshotIndex:     snapshotIndex,
+		PruningIndex:      pruningIndex,
+		RevalidationIndex: revalidationIndex,
+		Timestamp:         timestamp,
+		Metadata:          metadata,
 	}, nil
 }
 
@@ -87,6 +90,10 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	binary.LittleEndian.PutUint32(pruningIndexBytes, uint32(i.PruningIndex))
 	bytes = append(bytes, pruningIndexBytes...)
 
+	revalidationIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(revalidationIndexBytes, uint32(i.RevalidationIndex))
+	bytes = append(bytes, revalidationIndexBytes...)
+
 	timestampBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(timestampBytes, uint64(i.Timestamp))
 	bytes = append(bytes, timestampBytes...)
@@ -100,11 +107,12 @@ func SetSnapshotMilestone(milestoneHash trinary.Hash, snapshotIndex milestone_in
 	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), pruning index: %d, Timestamp: %v, SpentAddressesEnabled: %v", snapshotIndex, milestoneHash, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
 
 	sn := &SnapshotInfo{
-		Hash:          milestoneHash,
-		SnapshotIndex: snapshotIndex,
-		PruningIndex:  pruningIndex,
-		Timestamp:     timestamp,
-		Metadata:      bitmask.BitMask(0),
+		Hash:              milestoneHash,
+		SnapshotIndex:     snapshotIndex,
+		PruningIndex:      pruningIndex,
+		RevalidationIndex: 0,
+		Timestamp:         timestamp,
+		Metadata:          bitmask.BitMask(0),
 	}
 	sn.SetSpentAddressesEnabled(spentAddressesEnabled)
 

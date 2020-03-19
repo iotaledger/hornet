@@ -29,7 +29,11 @@ func configure(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 
-		tangle.MarkDatabaseHealthy()
+		// Only mark database as healthy, if there was no revalidation or it was finished already
+		revalidationIndex := tangle.GetSnapshotInfo().RevalidationIndex
+		if revalidationIndex == 0 || tangle.GetSolidMilestoneIndex() > revalidationIndex {
+			tangle.MarkDatabaseHealthy()
+		}
 
 		log.Info("Syncing database to disk...")
 		database.GetHornetBadgerInstance().Close()
