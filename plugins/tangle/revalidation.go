@@ -60,7 +60,7 @@ func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
 	snapshotInfo := tangle.GetSnapshotInfo()
 	latestMilestoneIndex := tangle.SearchLatestMilestoneIndex()
 
-	// Resume old revalidation attemps
+	// Resume old revalidation attempts
 	if snapshotInfo.RevalidationIndex != 0 && latestMilestoneIndex < (snapshotInfo.RevalidationIndex-RevalidationMilestoneThreshold) {
 		latestMilestoneIndex = snapshotInfo.RevalidationIndex - RevalidationMilestoneThreshold
 	}
