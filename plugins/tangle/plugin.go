@@ -33,6 +33,8 @@ func configure(plugin *node.Plugin) {
 	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
 	configureRefsAnInvalidBundleStorage()
 
+	tangle.LoadInitialValuesFromDatabase()
+	
 	if tangle.IsDatabaseCorrupted() {
 		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
 
@@ -87,7 +89,6 @@ func configure(plugin *node.Plugin) {
 		gossip.SendMilestoneRequests(msIndex, tangle.GetLatestMilestoneIndex())
 	}))
 
-	tangle.LoadInitialValuesFromDatabase()
 	configureTangleProcessor(plugin)
 }
 
