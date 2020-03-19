@@ -201,6 +201,17 @@ func (bundle *Bundle) GetMetadata() byte {
 	return byte(bundle.metadata)
 }
 
+func (bundle *Bundle) ResetSolidAndConfirmed() {
+	bundle.Lock()
+	defer bundle.Unlock()
+
+	// Metadata
+	bundle.setSolid(false)
+	bundle.setConfirmed(false)
+	
+	bundle.SetModified(true)
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Checks if a bundle is complete

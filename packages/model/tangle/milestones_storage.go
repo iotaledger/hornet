@@ -130,7 +130,9 @@ func SearchLatestMilestoneIndex() milestone_index.MilestoneIndex {
 }
 
 // milestone +1
-func StoreMilestone(bndl *Bundle) *CachedMilestone {
+func StoreMilestone(bndl *Bundle) (bool, *CachedMilestone) {
+
+	newlyAdded := false
 
 	if bndl.IsMilestone() {
 
@@ -140,12 +142,13 @@ func StoreMilestone(bndl *Bundle) *CachedMilestone {
 		}
 
 		cachedMilestone := milestoneStorage.ComputeIfAbsent(milestone.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // milestone +1
+			newlyAdded = true
 			milestone.Persist()
 			milestone.SetModified()
 			return milestone
 		})
 
-		return &CachedMilestone{CachedObject: cachedMilestone}
+		return newlyAdded, &CachedMilestone{CachedObject: cachedMilestone}
 	}
 
 	panic("Bundle is not a milestone")

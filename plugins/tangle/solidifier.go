@@ -215,7 +215,23 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 					// because the bundle gets deleted and would be reconstructed on solidification, which would lead to reapplying the
 					// valid milestone to the database.
 					if !approveeSolid && cachedApproveeTx.GetTransaction().IsTail() && (approveeHash != consts.NullHashTrytes) {
-						tangle.DeleteBundle(approveeHash)
+						if cachedBndl := tangle.GetCachedBundleOrNil(approveeHash); cachedBndl != nil {
+
+							// Reset corrupted meta tags of the bundle
+							cachedBndl.GetBundle().ResetSolidAndConfirmed()
+
+							if cachedBndl.GetBundle().IsMilestone() {
+								// Reapply milestone information to database
+								newlyAdded, cachedMilestone := tangle.StoreMilestone(cachedBndl.GetBundle())
+
+								// Fire the event if the milestone was unknown
+								if newlyAdded {
+									tangle.Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
+								}
+								cachedMilestone.Release(true) // milestone +-0
+							}
+							cachedBndl.Release(true)
+						}
 					}
 				}
 				txsChecked[approveeHash] = approveeSolid
