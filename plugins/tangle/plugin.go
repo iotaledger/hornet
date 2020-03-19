@@ -3,6 +3,8 @@ package tangle
 import (
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -21,6 +23,8 @@ var (
 	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
 	belowMaxDepthTransactionLimit int
 	log                           *logger.Logger
+
+	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 )
 
 func configure(plugin *node.Plugin) {
@@ -35,7 +39,7 @@ func configure(plugin *node.Plugin) {
 		var err error
 		revalidationMilestoneIndex, err = revalidateDatabase()
 		if err != nil {
-			log.Panic("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
+			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
 		}
 	}
 
