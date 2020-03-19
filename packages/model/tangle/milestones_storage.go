@@ -22,9 +22,13 @@ func databaseKeyForMilestoneIndex(milestoneIndex milestone_index.MilestoneIndex)
 	return bytes
 }
 
+func milestoneIndexFromDatabaseKey(key []byte) milestone_index.MilestoneIndex {
+	return milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key))
+}
+
 func milestoneFactory(key []byte) objectstorage.StorableObject {
 	return &Milestone{
-		Index: milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key)),
+		Index: milestoneIndexFromDatabaseKey(key),
 	}
 }
 
@@ -105,6 +109,24 @@ func GetCachedMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *Cac
 // milestone +-0
 func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
+}
+
+// milestone +-0
+func SearchLatestMilestoneIndex() milestone_index.MilestoneIndex {
+	var latestMilestoneIndex milestone_index.MilestoneIndex
+
+	milestoneStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		cachedObject.Release(true) // milestone -1
+
+		msIndex := milestoneIndexFromDatabaseKey(key)
+		if latestMilestoneIndex < msIndex {
+			latestMilestoneIndex = msIndex
+		}
+
+		return true
+	})
+
+	return latestMilestoneIndex
 }
 
 // milestone +1
