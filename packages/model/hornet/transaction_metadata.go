@@ -83,6 +83,17 @@ func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex mil
 	}
 }
 
+func (m *TransactionMetadata) Reset() {
+	m.Lock()
+	defer m.Unlock()
+
+	// Metadata
+	m.metadata = bitmask.BitMask(0)
+	m.solidificationTimestamp = 0
+	m.confirmationIndex = 0
+	m.SetModified(true)
+}
+
 func (m *TransactionMetadata) GetMetadata() byte {
 	m.RLock()
 	defer m.RUnlock()
