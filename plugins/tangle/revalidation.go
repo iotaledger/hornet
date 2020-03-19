@@ -130,6 +130,9 @@ func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
 		return 0, err
 	}
 
+	// Set the valid solid milestone index
+	tangle.SetSolidMilestoneIndex(snapshotInfo.SnapshotIndex)
+
 	// Add a treshold in case the milestones don't exist, but parts of confirmed cones were already stored
 	return snapshotInfo.RevalidationIndex, nil
 }
