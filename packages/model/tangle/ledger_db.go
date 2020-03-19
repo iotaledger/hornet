@@ -127,7 +127,7 @@ func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
 	ledgerMilestoneIndex = milestoneIndexFromBytes(entry.Value)
 
 	// Set the solid milestone index based on the ledger milestone
-	setSolidMilestoneIndex(ledgerMilestoneIndex)
+	SetSolidMilestoneIndex(ledgerMilestoneIndex)
 	if setLSMIAsLMI && ledgerMilestoneIndex != 0 {
 		cachedSolidMs := GetMilestoneOrNil(ledgerMilestoneIndex) // bundle +1
 		if cachedSolidMs != nil {
