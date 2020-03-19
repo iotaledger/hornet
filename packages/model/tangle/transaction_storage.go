@@ -149,6 +149,7 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 		cachedTx.Release(true) // tx -1
 		return nil
 	}
+
 	cachedMeta := metadataStorage.Load(txHash) // tx +1
 	if !cachedMeta.Exists() {
 		cachedTx.Release(true)   // tx -1
@@ -172,37 +173,25 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 
 	txHash := trinary.MustTrytesToBytes(transaction.GetHash())[:49]
 
-	// Store tx + metadata atomicly in the same callback
-	var cachedMeta objectstorage.CachedObject
-
-	cachedTxData := txStorage.ComputeIfAbsent(transaction.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
-		newlyAdded = true
-
-		metadata := metadataFactory(txHash)
-		cachedMeta = metadataStorage.ComputeIfAbsent(metadata.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
-			metadata.Persist()
-			metadata.SetModified()
-			return metadata
-		})
-
-		transaction.Persist()
-		transaction.SetModified()
-
-		return transaction
+	// Store metadata first, because existence is checked via tx
+	newlyAddedMetadata := false
+	metadata := metadataFactory(txHash)
+	cachedMeta := metadataStorage.ComputeIfAbsent(metadata.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
+		newlyAddedMetadata = true
+		metadata.Persist()
+		metadata.SetModified()
+		return metadata
 	})
 
-	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
-	if !newlyAdded {
-		cachedMeta = metadataStorage.Load(txHash) // meta +1
-	}
-
-	if !cachedTxData.Exists() {
-		panic("Tx raw data does not exist")
-	}
-
-	if !cachedMeta.Exists() {
-		panic("Tx metadata does not exist")
-	}
+	cachedTxData := txStorage.ComputeIfAbsent(transaction.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // tx +1
+		if !newlyAddedMetadata {
+			// Metadata was known, but transaction was missing => Reset corrupted metadata
+			cachedMeta.Get().(*hornet.TransactionMetadata).Reset()
+		}
+		transaction.Persist()
+		transaction.SetModified()
+		return transaction
+	})
 
 	return &CachedTransaction{tx: cachedTxData, metadata: cachedMeta}, newlyAdded
 }
