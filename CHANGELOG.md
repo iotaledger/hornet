@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.4.0] - xx.xx.xxxx
+## [0.4.0-rc1] - 19.03.2020
 
 ### Added
 
@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
     - Dashboard explorer JSON view
     - Dashboard explorer text view
     - Dashboard `Tag` search
+    - Database re-validation after a crash
     - Dockerfiles for armhf and arm64
     - Neighbor alias
     - Object storage (speed and memory improvement)
