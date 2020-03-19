@@ -29,6 +29,18 @@ func configure(plugin *node.Plugin) {
 	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
 	configureRefsAnInvalidBundleStorage()
 
+	if tangle.IsDatabaseCorrupted() {
+		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
+	}
+
+	// Create a background worker that marks the database as corrupted at clean startup.
+	// This has to be done in a background worker, because the Daemon could receive
+	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
+	// and the database will never be marked as corrupted.
+	daemon.BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
+		tangle.MarkDatabaseCorrupted()
+	})
+
 	tangle.ConfigureMilestones(
 		config.NodeConfig.GetString(config.CfgMilestoneCoordinator),
 		config.NodeConfig.GetInt(config.CfgMilestoneCoordinatorSecurityLevel),
