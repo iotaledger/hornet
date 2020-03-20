@@ -26,7 +26,7 @@ var (
 	ProfilesConfig  = viper.New()
 
 	neighborsConfigHotReloadAllowed = true
-	neighborsConfigHotReloadLock    syncutils.RWMutex
+	neighborsConfigHotReloadLock    syncutils.Mutex
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
@@ -67,10 +67,18 @@ func DenyNeighborsConfigHotReload() {
 	neighborsConfigHotReloadAllowed = false
 }
 
-func IsNeighborsConfigHotReloadAllowed() bool {
-	neighborsConfigHotReloadLock.RLock()
-	defer neighborsConfigHotReloadLock.RUnlock()
-	return neighborsConfigHotReloadAllowed
+func AcquireNeighborsConfigHotReload() bool {
+	neighborsConfigHotReloadLock.Lock()
+	defer neighborsConfigHotReloadLock.Unlock()
+
+	if !neighborsConfigHotReloadAllowed {
+		// It is already denied
+		return false
+	}
+
+	// Deny it for other calls
+	neighborsConfigHotReloadAllowed = false
+	return true
 }
 
 func hasFlag(name string) bool {

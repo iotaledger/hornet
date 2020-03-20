@@ -17,9 +17,10 @@ func configureConfigObserver() {
 
 func runConfigObserver() {
 	config.NeighborsConfig.OnConfigChange(func(e fsnotify.Event) {
-		if !config.IsNeighborsConfigHotReloadAllowed() {
+		if !config.AcquireNeighborsConfigHotReload() {
 			return
 		}
+		defer config.AllowNeighborsConfigHotReload()
 
 		// whether to accept any incoming neighbor connection
 		acceptAnyNeighborConnectionRead := config.NeighborsConfig.GetBool(config.CfgNeighborsAcceptAnyNeighborConnection)

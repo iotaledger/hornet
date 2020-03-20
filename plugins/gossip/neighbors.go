@@ -114,7 +114,7 @@ type Neighbor struct {
 	// The ip/port combination of the neighbor
 	Identity string
 	// The address IP address under which the neighbor is connected
-	PrimaryAddress *iputils.IP
+	PrimaryAddress net.IP
 	// The IP addresses which were looked up during neighbor initialisation
 	Addresses *iputils.IPAddresses
 	// The protocol instance under which this neighbor operates
@@ -153,9 +153,8 @@ func NewNeighborIdentity(ip string, port uint16) string {
 }
 
 func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
-	ip := net.ParseIP(remoteAddr.(*net.TCPAddr).IP.String())
+	primaryAddr := net.ParseIP(remoteAddr.(*net.TCPAddr).IP.String())
 	addresses := iputils.NewIPAddresses()
-	primaryAddr := &iputils.IP{IP: ip}
 	addresses.Add(primaryAddr)
 
 	// InitAddress and Identity are set in finalizeHandshake
@@ -170,7 +169,7 @@ func NewInboundNeighbor(remoteAddr net.Addr) *Neighbor {
 	}
 }
 
-func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr *iputils.IP, port uint16, addresses *iputils.IPAddresses) *Neighbor {
+func NewOutboundNeighbor(originAddr *iputils.OriginAddress, primaryAddr net.IP, port uint16, addresses *iputils.IPAddresses) *Neighbor {
 	return &Neighbor{
 		InitAddress:             originAddr,
 		Identity:                NewNeighborIdentity(primaryAddr.String(), port),
@@ -281,7 +280,8 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 		// grab autopeering information from whitelist
 		neighbor.Autopeering = allowedIdentities[neighbor.Identity]
 		if neighbor.Autopeering != nil {
-			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
+			gossipService := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
+			gossipAddr := net.JoinHostPort(neighbor.Autopeering.IP().String(), strconv.Itoa(gossipService.Port()))
 			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		}
 	case Outbound:
@@ -589,7 +589,7 @@ type NeighborInfo struct {
 	NumberOfDroppedSentPackets     uint32    `json:"numberOfDroppedSentPackets"`
 	ConnectionType                 string    `json:"connectionType"`
 	Connected                      bool      `json:"connected"`
-	AutopeeringID                  string    `json:"autopeering_id,omitempty"`
+	AutopeeringID                  string    `json:"autopeeringId,omitempty"`
 }
 
 type AutopeeringInfo struct {
