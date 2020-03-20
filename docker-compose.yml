@@ -17,10 +17,10 @@ services:
       - ALL
     # Note: for local snapshots to work please
     # read the DOCKER.md on how to mount a new
-    # path where latest-export.gz.bin should be
+    # path where export.bin should be
     # placed in.
     volumes:
       - ./config.json:/app/config.json:ro
       - ./neighbors.json:/app/neighbors.json
-      - ./latest-export.gz.bin:/app/latest-export.gz.bin
+      - ./export.bin:/app/export.bin
       - ./mainnetdb:/app/mainnetdb

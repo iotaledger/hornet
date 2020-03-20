@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc1] - 20.03.2020
+
+### Added
+
+    - Autopeering
+    - Object storage (speed and memory improvement)
+    - Database re-validation after a crash
+    - Add API IP whitelist
+    - Additional neighbors stats
+    - Dashboard add `bundle not found` alert
+    - Dashboard add `unknown Tx` alert
+    - Dashboard add GitHub mark linking to github
+    - Dashboard dark theme
+    - Dashboard explorer JSON view
+    - Dashboard explorer text view
+    - Dashboard `Tag` search
+    - Dockerfiles for armhf and arm64
+    - Neighbor alias
+    - Profiles configuration file
+
+### Removed
+
+    - `in-flight` neighbor pool
+    - Socket.io in favor of hive.go websockethub
+
+### Changed
+
+    - Database layout
+    - Ignore example neighbor
+    - Improved RPM and DEB packages
+    - Make config files optional
+    - Refactored configuration options
+    - Reintroduce spent addresses DB
+    - Snapshot format
+    - `tx_trytes` ZMQ and MQTT topic changed to `trytes`
+    - Updated to Go 1.14.1
+    - Updated to packr 2.8.0
+
+### Fixed
+
+    - Allow all orders of txs in attachToTangle
+    - API getNodeInfo features is `null`
+    - Graph plugin
+    - Monitor plugin
+    - Missing comma in MQTT TX event
+    - Missing folder in `.deb` package
+    - Updated profiles for better RAM usage
+    - ZMQ panics on greeting
+
+### Config file changes
+
+Please use the new config.json and transfer values from your current config.json over to the new one, as a lot of keys have changed (instead of mutating your current one).
+
 ## [0.3.0] - 13.01.2020
 
 ### Added

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Set default if none set.
-REMOTE_FILE="${1:-https://dbfiles.iota.org/mainnet/hornet/latest-export.gz.bin}"
+REMOTE_FILE="${1:-https://ls.manapotion.io/export.bin}"
 
 # Download with timestamping (only download if remote file is newer)
 echo "Checking for the latest snapshot file..."

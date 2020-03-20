@@ -33,7 +33,7 @@ func init() {
 	NodeConfig.SetDefault(CfgLocalSnapshotsDepth, 50)
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalSynced, 50)
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalUnsynced, 1000)
-	NodeConfig.SetDefault(CfgLocalSnapshotsPath, "latest-export.gz.bin")
+	NodeConfig.SetDefault(CfgLocalSnapshotsPath, "export.bin")
 	NodeConfig.SetDefault(CfgGlobalSnapshotPath, "snapshotMainnet.txt")
 	NodeConfig.SetDefault(CfgGlobalSnapshotSpentAddressesPaths, []string{
 		"previousEpochsSpentAddresses1.txt",
