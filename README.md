@@ -22,6 +22,18 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 Please have a look into our [HORNET wiki](https://github.com/gohornet/hornet/wiki)
 
+### Autopeering
+
+The autopeering plugin is still in an early state. We recommend to add 1-2 static neighbors as well if you want to run a reliable node.
+If you want to disable autopeering, you can do so by adding it to the `disablePlugins` in your `config.json`:
+
+```json
+"node": {
+    "disablePlugins": ["Autopeering"],
+    "enablePlugins": []
+  },
+```
+
 ### Contributing
 
 - See [CONTRIBUTING](/CONTRIBUTING.md)
