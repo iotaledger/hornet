@@ -209,16 +209,16 @@ func moveFromReconnectPoolToConnected(neighbor *Neighbor) {
 func moveFromConnectedToReconnectPool(neighbor *Neighbor) {
 	// neighbors lock must be held by caller
 
-	// check whether manually removed or autopeered neighbor
-	if !neighbor.MoveBackToReconnectPool || neighbor.Autopeering != nil {
-		return
-	}
-
 	// prevents non handshaked connections to be put back into the reconnect pool
 	if _, ok := connectedNeighbors[neighbor.Identity]; !ok {
 		return
 	}
 	delete(connectedNeighbors, neighbor.Identity)
+
+	// check whether manually removed or autopeered neighbor
+	if !neighbor.MoveBackToReconnectPool || neighbor.Autopeering != nil {
+		return
+	}
 
 	// remove any other reconnect pool entry where the identity would match
 	cleanReconnectPool(neighbor)
