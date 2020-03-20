@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/netutil"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/config"
@@ -45,10 +44,6 @@ func configureLocal() *peer.Local {
 		log.Fatalf("Invalid autopeering port number: %s, Error: %s", peeringPortStr, err)
 	}
 
-	if !netutil.IsValidPort(peeringPort) {
-		log.Fatalf("Invalid autopeering port number (%s): %d", config.CfgNetAutopeeringBindAddr, peeringPort)
-	}
-
 	// announce the peering service
 	ownServices := service.New()
 	ownServices.Update(service.PeeringKey, "udp", peeringPort)
@@ -60,8 +55,8 @@ func configureLocal() *peer.Local {
 		}
 
 		gossipBindAddrPort, err := strconv.Atoi(gossipBindAddrPortStr)
-		if err != nil || !netutil.IsValidPort(gossipBindAddrPort) {
-			log.Fatalf("Invalid gossip port number: %s", gossipBindAddrPortStr)
+		if err != nil {
+			log.Fatalf("Invalid gossip port number: %s, Error: %s", gossipBindAddrPort, err)
 		}
 
 		ownServices.Update(services.GossipServiceKey(), "tcp", gossipBindAddrPort)
