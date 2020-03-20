@@ -6,9 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+    - Autopeering
+    - Object storage (speed and memory improvement)
+    - Database re-validation after a crash
     - Add API IP whitelist
     - Additional neighbors stats
-    - Autopeering
     - Dashboard add `bundle not found` alert
     - Dashboard add `unknown Tx` alert
     - Dashboard add GitHub mark linking to github
@@ -16,10 +18,8 @@ All notable changes to this project will be documented in this file.
     - Dashboard explorer JSON view
     - Dashboard explorer text view
     - Dashboard `Tag` search
-    - Database re-validation after a crash
     - Dockerfiles for armhf and arm64
     - Neighbor alias
-    - Object storage (speed and memory improvement)
     - Profiles configuration file
 
 ### Removed
@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
     - Reintroduce spent addresses DB
     - Snapshot format
     - `tx_trytes` ZMQ and MQTT topic changed to `trytes`
-    - Updated to Go 1.14
+    - Updated to Go 1.14.1
     - Updated to packr 2.8.0
 
 ### Fixed
