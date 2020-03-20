@@ -490,11 +490,12 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	}
 
 	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
-		Hash:          cachedTargetMs.GetBundle().GetMilestoneHash(),
-		SnapshotIndex: targetIndex,
-		PruningIndex:  snapshotInfo.PruningIndex,
-		Timestamp:     cachedTargetMsTail.GetTransaction().GetTimestamp(),
-		Metadata:      snapshotInfo.Metadata,
+		Hash:              cachedTargetMs.GetBundle().GetMilestoneHash(),
+		SnapshotIndex:     targetIndex,
+		PruningIndex:      snapshotInfo.PruningIndex,
+		RevalidationIndex: snapshotInfo.RevalidationIndex,
+		Timestamp:         cachedTargetMsTail.GetTransaction().GetTimestamp(),
+		Metadata:          snapshotInfo.Metadata,
 	})
 
 	log.Infof("Created local snapshot for targetIndex %d (%x), took %v", targetIndex, hash, time.Since(ts))

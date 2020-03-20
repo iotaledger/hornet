@@ -22,26 +22,18 @@ func configure(plugin *node.Plugin) {
 
 	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &profile.GetProfile().Badger)
 
-	if tangle.IsDatabaseCorrupted() {
-		log.Panic("HORNET was not shut down correctly. Database is corrupted. Please delete the database folder and start with a new local snapshot.")
-	}
-
 	if !tangle.IsCorrectDatabaseVersion() {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 	}
 
-	// Create a background worker that marks the database as corrupted at clean startup.
-	// This has to be done in a background worker, because the Daemon could receive
-	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
-	// and the database will never be marked as corrupted.
-	daemon.BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
-		tangle.MarkDatabaseCorrupted()
-	})
-
 	daemon.BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 
-		tangle.MarkDatabaseHealthy()
+		// Only mark database as healthy, if there was no revalidation or it was finished already
+		revalidationIndex := tangle.GetSnapshotInfo().RevalidationIndex
+		if revalidationIndex == 0 || tangle.GetSolidMilestoneIndex() > revalidationIndex {
+			tangle.MarkDatabaseHealthy()
+		}
 
 		log.Info("Syncing database to disk...")
 		database.GetHornetBadgerInstance().Close()

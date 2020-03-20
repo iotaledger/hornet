@@ -82,17 +82,12 @@ func (bundle *Bundle) GetTailHash() trinary.Hash {
 	return bundle.tailTx
 }
 
-func (bundle *Bundle) getTail() *CachedTransaction {
-
+func (bundle *Bundle) GetTail() *CachedTransaction {
 	if len(bundle.tailTx) == 0 {
 		panic("tail hash can never be empty")
 	}
 
 	return loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
-}
-
-func (bundle *Bundle) GetTail() *CachedTransaction {
-	return bundle.getTail()
 }
 
 func (bundle *Bundle) GetTransactionHashes() []trinary.Hash {
@@ -132,7 +127,7 @@ func (bundle *Bundle) IsSolid() bool {
 	}
 
 	// Check tail tx
-	cachedTailTx := bundle.getTail() // tx +1
+	cachedTailTx := bundle.GetTail() // tx +1
 	tailSolid := cachedTailTx.GetMetadata().IsSolid()
 	cachedTailTx.Release(true) // tx -1
 
@@ -179,7 +174,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 	}
 
 	// Check tail tx
-	cachedTailTx := bundle.getTail() // tx +1
+	cachedTailTx := bundle.GetTail() // tx +1
 	defer cachedTailTx.Release(true) // tx -1
 	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
 
@@ -204,6 +199,15 @@ func (bundle *Bundle) GetMetadata() byte {
 	bundle.RLock()
 	defer bundle.RUnlock()
 	return byte(bundle.metadata)
+}
+
+func (bundle *Bundle) ResetSolidAndConfirmed() {
+	bundle.Lock()
+	defer bundle.Unlock()
+
+	// Metadata
+	bundle.setSolid(false)
+	bundle.setConfirmed(false)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
