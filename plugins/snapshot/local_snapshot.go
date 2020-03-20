@@ -20,7 +20,7 @@ import (
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/dag"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
@@ -39,7 +39,7 @@ var (
 )
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
-func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
+func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone.Index) (bool, milestone.Index) {
 
 	for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
 		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
@@ -66,7 +66,7 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, collectForPruning bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
+func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, collectForPruning bool, abortSignal <-chan struct{}) ([]trinary.Hash, error) {
 
 	defer cachedMsTailTx.Release(true) // tx -1
 
@@ -175,14 +175,14 @@ func getMilestoneApprovees(milestoneIndex milestone_index.MilestoneIndex, cached
 	return approvees, nil
 }
 
-func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool {
+func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		log.Panic("No snapshotInfo found!")
 	}
 
-	var snapshotInterval milestone_index.MilestoneIndex
+	var snapshotInterval milestone.Index
 	if tangle.IsNodeSynced() {
 		snapshotInterval = snapshotIntervalSynced
 	} else {
@@ -197,9 +197,9 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool
 	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[string]milestone_index.MilestoneIndex, error) {
+func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
 
-	solidEntryPoints := make(map[string]milestone_index.MilestoneIndex)
+	solidEntryPoints := make(map[string]milestone.Index)
 	solidEntryPoints[consts.NullHashTrytes] = targetIndex
 
 	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
@@ -256,10 +256,10 @@ func getSolidEntryPoints(targetIndex milestone_index.MilestoneIndex, abortSignal
 	return solidEntryPoints, nil
 }
 
-func getSeenMilestones(targetIndex milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[string]milestone_index.MilestoneIndex, error) {
+func getSeenMilestones(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
 
 	// Fill the list with seen milestones
-	seenMilestones := make(map[string]milestone_index.MilestoneIndex)
+	seenMilestones := make(map[string]milestone.Index)
 	lastestMilestone := tangle.GetLatestMilestoneIndex()
 	for milestoneIndex := targetIndex + 1; milestoneIndex <= lastestMilestone; milestoneIndex++ {
 		select {
@@ -278,7 +278,7 @@ func getSeenMilestones(targetIndex milestone_index.MilestoneIndex, abortSignal <
 	return seenMilestones, nil
 }
 
-func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex milestone_index.MilestoneIndex, solidMilestoneIndex milestone_index.MilestoneIndex, abortSignal <-chan struct{}) (map[trinary.Hash]uint64, error) {
+func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex milestone.Index, solidMilestoneIndex milestone.Index, abortSignal <-chan struct{}) (map[trinary.Hash]uint64, error) {
 
 	// Calculate balances for targetIndex
 	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
@@ -308,7 +308,7 @@ func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex mil
 	return balances, nil
 }
 
-func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInfo *tangle.SnapshotInfo) error {
+func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.SnapshotInfo) error {
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 
@@ -405,7 +405,7 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	return sha256Hash, nil
 }
 
-func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneIndex, filePath string, abortSignal <-chan struct{}) error {
+func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, abortSignal <-chan struct{}) error {
 
 	log.Infof("Creating local snapshot for targetIndex %d", targetIndex)
 
@@ -515,7 +515,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	return nil
 }
 
-func CreateLocalSnapshot(targetIndex milestone_index.MilestoneIndex, filePath string, abortSignal <-chan struct{}) error {
+func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, abortSignal <-chan struct{}) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 	return createLocalSnapshotWithoutLocking(targetIndex, filePath, abortSignal)
@@ -523,10 +523,10 @@ func CreateLocalSnapshot(targetIndex milestone_index.MilestoneIndex, filePath st
 
 type localSnapshotHeader struct {
 	msHash              string
-	msIndex             milestone_index.MilestoneIndex
+	msIndex             milestone.Index
 	msTimestamp         int64
-	solidEntryPoints    map[string]milestone_index.MilestoneIndex
-	seenMilestones      map[string]milestone_index.MilestoneIndex
+	solidEntryPoints    map[string]milestone.Index
+	seenMilestones      map[string]milestone.Index
 	balances            map[string]uint64
 	spentAddressesCount int32
 }
@@ -708,8 +708,8 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81], msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
-	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
+	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81], msHash[:81], milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
+	tangle.SolidEntryPointsAdd(msHash[:81], milestone.Index(msIndex))
 
 	log.Info("Importing solid entry points")
 
@@ -734,7 +734,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		}
 		//ls.solidEntryPoints[hash[:81]] = val
 
-		tangle.SolidEntryPointsAdd(hash[:81], milestone_index.MilestoneIndex(val))
+		tangle.SolidEntryPointsAdd(hash[:81], milestone.Index(val))
 	}
 
 	tangle.StoreSolidEntryPoints()
@@ -762,8 +762,9 @@ func LoadSnapshotFromFile(filePath string) error {
 			return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
 		}
 
-		tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone_index.MilestoneIndex(val))
-		gossip.Request([]trinary.Hash{hash[:81]}, milestone_index.MilestoneIndex(val))
+		tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone.Index(val))
+		// request the milestone and prevent the request from being discarded from the request queue
+		gossip.Request(hash[:81], milestone.Index(val), true)
 	}
 
 	log.Info("Importing ledger state")
@@ -800,12 +801,12 @@ func LoadSnapshotFromFile(filePath string) error {
 		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, compressed.TOTAL_SUPPLY)
 	}
 
-	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
+	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, milestone.Index(msIndex))
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "snapshot ledgerEntries: %s", err)
 	}
 
-	err = tangle.StoreLedgerBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
+	err = tangle.StoreLedgerBalancesInDatabase(ledgerState, milestone.Index(msIndex))
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 	}

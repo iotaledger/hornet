@@ -12,7 +12,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
@@ -25,15 +25,15 @@ var (
 	signalChanMilestoneStopSolidification     chan struct{}
 	signalChanMilestoneStopSolidificationLock syncutils.Mutex
 
-	solidifierMilestoneIndex     milestone_index.MilestoneIndex = 0
+	solidifierMilestoneIndex     milestone.Index = 0
 	solidifierMilestoneIndexLock syncutils.RWMutex
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewTxCount       uint32
-	oldConfirmedTxCount uint32
+	oldNewTxCount       uint64
+	oldConfirmedTxCount uint64
 
-	revalidationMilestoneIndex = milestone_index.MilestoneIndex(0)
+	revalidationMilestoneIndex = milestone.Index(0)
 
 	ErrMilestoneNotFound = errors.New("Milestone not found")
 	ErrIntOverflow       = errors.New("Integer overflow")
@@ -41,10 +41,10 @@ var (
 )
 
 type ConfirmedMilestoneMetric struct {
-	MilestoneIndex         milestone_index.MilestoneIndex `json:"ms_index"`
-	TPS                    float64                        `json:"tps"`
-	CTPS                   float64                        `json:"ctps"`
-	TimeSinceLastMilestone float64                        `json:"time_since_last_ms"`
+	MilestoneIndex         milestone.Index `json:"ms_index"`
+	TPS                    float64         `json:"tps"`
+	CTPS                   float64         `json:"ctps"`
+	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
 
 // checkSolidity checks if a single transaction is solid
@@ -117,7 +117,7 @@ func registerApproverOfApprovee(approver trinary.Hash, approveeHash trinary.Hash
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
-func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction, revalidate bool, abortSignal chan struct{}) (solid bool, aborted bool) {
+func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, revalidate bool, abortSignal chan struct{}) (solid bool, aborted bool) {
 
 	ts := time.Now()
 
@@ -281,7 +281,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 		for txHash := range txsToRequest {
 			txHashes = append(txHashes, txHash)
 		}
-		gossip.RequestMulti(txHashes, milestoneIndex)
+		gossip.RequestMultiple(txHashes, milestoneIndex)
 		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d)", len(txHashes))
 		return false, false
 	}
@@ -368,7 +368,7 @@ func abortMilestoneSolidification() {
 }
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing tx
-func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force bool) {
+func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	/* How milestone solidification works:
 
@@ -460,7 +460,7 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 		// rerun to solidify the older one
 		setSolidifierMilestoneIndex(0)
 
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
+		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 		return
 	}
 
@@ -487,19 +487,20 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
 
-	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
+	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
 }
 
-func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone_index.MilestoneIndex) (*ConfirmedMilestoneMetric, error) {
+func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
 
-	newNewTxCount := metrics.SharedServerMetrics.GetNewTransactionsCount()
+	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Inc()
 	if newNewTxCount < oldNewTxCount {
 		return nil, ErrIntOverflow
 	}
 	newTxDiff := newNewTxCount - oldNewTxCount
 	oldNewTxCount = newNewTxCount
 
-	newConfirmedTxCount := metrics.SharedServerMetrics.GetConfirmedTransactionsCount()
+	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+
 	if newConfirmedTxCount < oldConfirmedTxCount {
 		return nil, ErrIntOverflow
 	}
@@ -537,13 +538,13 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 	return metric, nil
 }
 
-func setSolidifierMilestoneIndex(index milestone_index.MilestoneIndex) {
+func setSolidifierMilestoneIndex(index milestone.Index) {
 	solidifierMilestoneIndexLock.Lock()
 	solidifierMilestoneIndex = index
 	solidifierMilestoneIndexLock.Unlock()
 }
 
-func GetSolidifierMilestoneIndex() milestone_index.MilestoneIndex {
+func GetSolidifierMilestoneIndex() milestone.Index {
 	solidifierMilestoneIndexLock.RLock()
 	defer solidifierMilestoneIndexLock.RUnlock()
 	return solidifierMilestoneIndex

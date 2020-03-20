@@ -9,7 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 var snapshotDatabase database.Database
@@ -84,12 +84,12 @@ func readSolidEntryPointsFromDatabase() (*hornet.SolidEntryPoints, error) {
 	return points, nil
 }
 
-func bytesFromMilestoneIndex(milestoneIndex milestone_index.MilestoneIndex) []byte {
+func bytesFromMilestoneIndex(milestoneIndex milestone.Index) []byte {
 	bytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bytes, uint32(milestoneIndex))
 	return bytes
 }
 
-func milestoneIndexFromBytes(bytes []byte) milestone_index.MilestoneIndex {
-	return milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes))
+func milestoneIndexFromBytes(bytes []byte) milestone.Index {
+	return milestone.Index(binary.LittleEndian.Uint32(bytes))
 }

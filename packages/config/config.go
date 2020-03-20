@@ -10,23 +10,23 @@ import (
 
 var (
 	// default
-	defaultConfigName          = "config"
-	defaultNeighborsConfigName = "neighbors"
-	defaultProfilesConfigName  = "profiles"
+	defaultConfigName         = "config"
+	defaultPeeringConfigName  = "peering"
+	defaultProfilesConfigName = "profiles"
 
 	// flags
-	configName          = flag.StringP("config", "c", defaultConfigName, "Filename of the config file without the file extension")
-	neighborsConfigName = flag.StringP("neighborsConfig", "n", defaultNeighborsConfigName, "Filename of the neighbors config file without the file extension")
-	profilesConfigName  = flag.String("profilesConfig", defaultProfilesConfigName, "Filename of the profiles config file without the file extension")
-	configDirPath       = flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
+	configName         = flag.StringP("config", "c", defaultConfigName, "Filename of the config file without the file extension")
+	peeringConfigName  = flag.StringP("peeringConfig", "n", defaultPeeringConfigName, "Filename of the peering config file without the file extension")
+	profilesConfigName = flag.String("profilesConfig", defaultProfilesConfigName, "Filename of the profiles config file without the file extension")
+	configDirPath      = flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
 
 	// Viper
-	NodeConfig      = viper.New()
-	NeighborsConfig = viper.New()
-	ProfilesConfig  = viper.New()
+	NodeConfig     = viper.New()
+	PeeringConfig  = viper.New()
+	ProfilesConfig = viper.New()
 
-	neighborsConfigHotReloadAllowed = true
-	neighborsConfigHotReloadLock    syncutils.Mutex
+	peeringConfigHotReloadAllowed = true
+	peeringConfigHotReloadLock    syncutils.RWMutex
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
@@ -40,11 +40,11 @@ func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	}
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
-	err = parameter.LoadConfigFile(NeighborsConfig, *configDirPath, *neighborsConfigName, false, !hasFlag(defaultNeighborsConfigName))
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, false, !hasFlag(defaultPeeringConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(NeighborsConfig)
+	parameter.PrintConfig(PeeringConfig)
 
 	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
 	if err != nil {
@@ -55,30 +55,28 @@ func FetchConfig(printConfig bool, ignoreSettingsAtPrint ...[]string) error {
 	return nil
 }
 
-func AllowNeighborsConfigHotReload() {
-	neighborsConfigHotReloadLock.Lock()
-	defer neighborsConfigHotReloadLock.Unlock()
-	neighborsConfigHotReloadAllowed = true
+func AllowPeeringConfigHotReload() {
+	peeringConfigHotReloadLock.Lock()
+	defer peeringConfigHotReloadLock.Unlock()
+	peeringConfigHotReloadAllowed = true
 }
 
-func DenyNeighborsConfigHotReload() {
-	neighborsConfigHotReloadLock.Lock()
-	defer neighborsConfigHotReloadLock.Unlock()
-	neighborsConfigHotReloadAllowed = false
+func DenyPeeringConfigHotReload() {
+	peeringConfigHotReloadLock.Lock()
+	defer peeringConfigHotReloadLock.Unlock()
+	peeringConfigHotReloadAllowed = false
 }
 
-func AcquireNeighborsConfigHotReload() bool {
-	neighborsConfigHotReloadLock.Lock()
-	defer neighborsConfigHotReloadLock.Unlock()
+func AcquirePeeringConfigHotReload() bool {
+	peeringConfigHotReloadLock.RLock()
+	defer peeringConfigHotReloadLock.RUnlock()
 
-	if !neighborsConfigHotReloadAllowed {
-		// It is already denied
+	if !peeringConfigHotReloadAllowed {
 		return false
 	}
 
-	// Deny it for other calls
-	neighborsConfigHotReloadAllowed = false
-	return true
+	peeringConfigHotReloadAllowed = false
+	return peeringConfigHotReloadAllowed
 }
 
 func hasFlag(name string) bool {

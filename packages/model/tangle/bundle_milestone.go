@@ -3,7 +3,7 @@ package tangle
 import (
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 func (bundle *Bundle) setMilestone(milestone bool) {
@@ -23,9 +23,9 @@ func (bundle *Bundle) IsMilestone() bool {
 	return bundle.metadata.HasFlag(HORNET_BUNDLE_METADATA_IS_MILESTONE)
 }
 
-func (bundle *Bundle) GetMilestoneIndex() milestone_index.MilestoneIndex {
+func (bundle *Bundle) GetMilestoneIndex() milestone.Index {
 	cachedTailTx := bundle.GetTail() // tx +1
-	index := milestone_index.MilestoneIndex(trinary.TrytesToInt(cachedTailTx.GetTransaction().Tx.ObsoleteTag))
+	index := milestone.Index(trinary.TrytesToInt(cachedTailTx.GetTransaction().Tx.ObsoleteTag))
 	cachedTailTx.Release() // tx -1
 	return index
 }

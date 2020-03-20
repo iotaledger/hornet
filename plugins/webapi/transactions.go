@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 func init() {
@@ -50,7 +50,7 @@ func broadcastTransactions(i interface{}, c *gin.Context, abortSignal <-chan str
 	}
 
 	for _, trytes := range bt.Trytes {
-		err = gossip.BroadcastTransactionFromAPI(trytes)
+		err := gossip.Processor().ValidateTransactionTrytesAndEmit(trytes)
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusBadRequest, e)

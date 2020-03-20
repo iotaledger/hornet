@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	tangle_model "github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
@@ -24,7 +24,7 @@ func configureLiveFeed() {
 		switch x := task.Param(0).(type) {
 		case *transaction.Transaction:
 			hub.BroadcastMsg(&msg{MsgTypeTx, &tx{x.Hash, x.Value}})
-		case milestone_index.MilestoneIndex:
+		case milestone.Index:
 			if cachedTailTx := getMilestoneTail(x); cachedTailTx != nil { // tx +1
 				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), x}})
 				cachedTailTx.Release(true) // tx -1
@@ -38,7 +38,7 @@ func runLiveFeed() {
 
 	newTxRateLimiter := time.NewTicker(time.Second / 10)
 
-	notifyNewTx := events.NewClosure(func(cachedTx *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle_model.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 			if !tangle_model.IsNodeSyncedWithThreshold() {
 				return

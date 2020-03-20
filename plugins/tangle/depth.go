@@ -4,7 +4,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/iotaledger/iota.go/trinary"
 )
@@ -12,7 +12,7 @@ import (
 // keeps track of whether a tx is below the max depth for the given milestone
 type belowDepthMemoizationCache struct {
 	mu               sync.RWMutex
-	milestone        milestone_index.MilestoneIndex
+	milestone        milestone.Index
 	memoizationCache map[trinary.Hash]bool
 	hits             uint64
 	misses           uint64
@@ -31,7 +31,7 @@ func (bdmc *belowDepthMemoizationCache) IsBelowMaxDepth(hash trinary.Hash) *bool
 	return &is
 }
 
-func (bdmc *belowDepthMemoizationCache) ResetIfNewerMilestone(currentIndex milestone_index.MilestoneIndex) {
+func (bdmc *belowDepthMemoizationCache) ResetIfNewerMilestone(currentIndex milestone.Index) {
 	bdmc.mu.Lock()
 	if currentIndex > bdmc.milestone {
 		bdmc.memoizationCache = make(map[trinary.Hash]bool)

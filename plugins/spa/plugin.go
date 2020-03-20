@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/packages/basicauth"
+	"github.com/gohornet/hornet/packages/peering/peer"
+	"github.com/gohornet/hornet/packages/protocol/sting"
+	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -20,12 +24,11 @@ import (
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
-	"github.com/gohornet/hornet/plugins/gossip"
 	metrics_plugin "github.com/gohornet/hornet/plugins/metrics"
 	tangle_plugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -75,7 +78,7 @@ func configure(plugin *node.Plugin) {
 		case *metrics_plugin.TPSMetrics:
 			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			hub.BroadcastMsg(&msg{MsgTypeNeighborMetric, neighborMetrics()})
+			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
 		case *tangle.Bundle:
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangle_plugin.ConfirmedMilestoneMetric:
@@ -161,7 +164,7 @@ func run(plugin *node.Plugin) {
 }
 
 // tx +1
-func getMilestoneTail(index milestone_index.MilestoneIndex) *tangle.CachedTransaction {
+func getMilestoneTail(index milestone.Index) *tangle.CachedTransaction {
 	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
 	if cachedMs == nil {
 		return nil
@@ -178,7 +181,7 @@ const (
 	MsgTypeTipSelMetric
 	MsgTypeTx
 	MsgTypeMs
-	MsgTypeNeighborMetric
+	MsgTypePeerMetric
 	MsgTypeConfirmedMsMetrics
 )
 
@@ -193,47 +196,48 @@ type tx struct {
 }
 
 type ms struct {
-	Hash  string                         `json:"hash"`
-	Index milestone_index.MilestoneIndex `json:"index"`
+	Hash  string          `json:"hash"`
+	Index milestone.Index `json:"index"`
 }
 
 type nodestatus struct {
-	LSMI                    milestone_index.MilestoneIndex `json:"lsmi"`
-	LMI                     milestone_index.MilestoneIndex `json:"lmi"`
-	SnapshotIndex           milestone_index.MilestoneIndex `json:"snapshot_index"`
-	PruningIndex            milestone_index.MilestoneIndex `json:"pruning_index"`
-	Version                 string                         `json:"version"`
-	LatestVersion           string                         `json:"latest_version"`
-	Uptime                  int64                          `json:"uptime"`
-	AutopeeringID           string                         `json:"autopeering_id"`
-	NodeAlias               string                         `json:"node_alias"`
-	ConnectedNeighborsCount int                            `json:"connected_neighbors_count"`
-	CurrentRequestedMs      milestone_index.MilestoneIndex `json:"current_requested_ms"`
-	MsRequestQueueSize      int                            `json:"ms_request_queue_size"`
-	RequestQueueSize        int                            `json:"request_queue_size"`
-	ServerMetrics           *servermetrics                 `json:"server_metrics"`
-	Mem                     *memmetrics                    `json:"mem"`
-	Caches                  *cachesmetric                  `json:"caches"`
+	LSMI                   milestone.Index `json:"lsmi"`
+	LMI                    milestone.Index `json:"lmi"`
+	SnapshotIndex          milestone.Index `json:"snapshot_index"`
+	PruningIndex           milestone.Index `json:"pruning_index"`
+	Version                string          `json:"version"`
+	LatestVersion          string          `json:"latest_version"`
+	Uptime                 int64           `json:"uptime"`
+	AutopeeringID          string          `json:"autopeering_id"`
+	NodeAlias              string          `json:"node_alias"`
+	ConnectedPeersCount    int             `json:"connected_peers_count"`
+	CurrentRequestedMs     milestone.Index `json:"current_requested_ms"`
+	RequestQueueQueued     int             `json:"request_queue_queued"`
+	RequestQueuePending    int             `json:"request_queue_pending"`
+	RequestQueueAvgLatency int64           `json:"request_queue_avg_latency"`
+	ServerMetrics          *servermetrics  `json:"server_metrics"`
+	Mem                    *memmetrics     `json:"mem"`
+	Caches                 *cachesmetric   `json:"caches"`
 }
 
 type servermetrics struct {
-	NumberOfAllTransactions        uint32 `json:"all_txs"`
-	NumberOfNewTransactions        uint32 `json:"new_txs"`
-	NumberOfKnownTransactions      uint32 `json:"known_txs"`
-	NumberOfInvalidTransactions    uint32 `json:"invalid_txs"`
-	NumberOfInvalidRequests        uint32 `json:"invalid_req"`
-	NumberOfStaleTransactions      uint32 `json:"stale_txs"`
-	NumberOfReceivedTransactionReq uint32 `json:"rec_tx_req"`
-	NumberOfReceivedMilestoneReq   uint32 `json:"rec_ms_req"`
-	NumberOfReceivedHeartbeats     uint32 `json:"rec_heartbeat"`
-	NumberOfSentTransactions       uint32 `json:"sent_txs"`
-	NumberOfSentTransactionsReq    uint32 `json:"sent_tx_req"`
-	NumberOfSentMilestoneReq       uint32 `json:"sent_ms_req"`
-	NumberOfSentHeartbeats         uint32 `json:"sent_heartbeat"`
-	NumberOfDroppedSentPackets     uint32 `json:"dropped_sent_packets"`
-	NumberOfSentSpamTxsCount       uint32 `json:"sent_spam_txs"`
-	NumberOfValidatedBundles       uint32 `json:"validated_bundles"`
-	NumberOfSeenSpentAddr          uint32 `json:"spent_addr"`
+	NumberOfAllTransactions        uint64 `json:"all_txs"`
+	NumberOfNewTransactions        uint64 `json:"new_txs"`
+	NumberOfKnownTransactions      uint64 `json:"known_txs"`
+	NumberOfInvalidTransactions    uint64 `json:"invalid_txs"`
+	NumberOfInvalidRequests        uint64 `json:"invalid_req"`
+	NumberOfStaleTransactions      uint64 `json:"stale_txs"`
+	NumberOfReceivedTransactionReq uint64 `json:"rec_tx_req"`
+	NumberOfReceivedMilestoneReq   uint64 `json:"rec_ms_req"`
+	NumberOfReceivedHeartbeats     uint64 `json:"rec_heartbeat"`
+	NumberOfSentTransactions       uint64 `json:"sent_txs"`
+	NumberOfSentTransactionsReq    uint64 `json:"sent_tx_req"`
+	NumberOfSentMilestoneReq       uint64 `json:"sent_ms_req"`
+	NumberOfSentHeartbeats         uint64 `json:"sent_heartbeat"`
+	NumberOfDroppedSentPackets     uint64 `json:"dropped_sent_packets"`
+	NumberOfSentSpamTxsCount       uint64 `json:"sent_spam_txs"`
+	NumberOfValidatedBundles       uint64 `json:"validated_bundles"`
+	NumberOfSeenSpentAddr          uint64 `json:"spent_addr"`
 }
 
 type memmetrics struct {
@@ -250,50 +254,50 @@ type memmetrics struct {
 	LastPauseGC  uint64 `json:"last_pause_gc"`
 }
 
-type neighbormetric struct {
-	Identity         string                  `json:"identity"`
-	Alias            string                  `json:"alias" omitempty`
-	OriginAdrr       string                  `json:"origin_addr"`
-	ConnectionOrigin gossip.ConnectionOrigin `json:"connection_origin"`
-	ProtocolVersion  byte                    `json:"protocol_version"`
-	BytesRead        int                     `json:"bytes_read"`
-	BytesWritten     int                     `json:"bytes_written"`
-	Heartbeat        *gossip.Heartbeat       `json:"heartbeat"`
-	Info             gossip.NeighborInfo     `json:"info"`
-	Connected        bool                    `json:"connected"`
+type peermetric struct {
+	Identity         string                `json:"identity"`
+	Alias            string                `json:"alias,omitempty"`
+	OriginAdrr       string                `json:"origin_addr"`
+	ConnectionOrigin peer.ConnectionOrigin `json:"connection_origin"`
+	ProtocolVersion  byte                  `json:"protocol_version"`
+	BytesRead        int                   `json:"bytes_read"`
+	BytesWritten     int                   `json:"bytes_written"`
+	Heartbeat        *sting.Heartbeat      `json:"heartbeat"`
+	Info             *peer.Info            `json:"info"`
+	Connected        bool                  `json:"connected"`
 }
 
 type cachesmetric struct {
-	RequestQueue              cache `json:"request_queue"`
-	Approvers                 cache `json:"approvers"`
-	Bundles                   cache `json:"bundles"`
-	Milestones                cache `json:"milestones"`
-	SpentAddresses            cache `json:"spent_addresses"`
-	Transactions              cache `json:"transactions"`
-	IncomingTransactionFilter cache `json:"incoming_transaction_filter"`
-	RefsInvalidBundle         cache `json:"refs_invalid_bundle"`
+	RequestQueue                 cache `json:"request_queue"`
+	Approvers                    cache `json:"approvers"`
+	Bundles                      cache `json:"bundles"`
+	Milestones                   cache `json:"milestones"`
+	SpentAddresses               cache `json:"spent_addresses"`
+	Transactions                 cache `json:"transactions"`
+	IncomingTransactionWorkUnits cache `json:"incoming_transaction_work_units"`
+	RefsInvalidBundle            cache `json:"refs_invalid_bundle"`
 }
 
 type cache struct {
 	Size int `json:"size"`
 }
 
-func neighborMetrics() []*neighbormetric {
-	infos := gossip.GetNeighbors()
-	stats := []*neighbormetric{}
+func peerMetrics() []*peermetric {
+	infos := peering.Manager().PeerInfos()
+	var stats []*peermetric
 	for _, info := range infos {
-		m := &neighbormetric{
+		m := &peermetric{
 			OriginAdrr: info.DomainWithPort,
 			Info:       info,
 		}
-		if info.Neighbor != nil && info.Neighbor.Protocol != nil {
-			m.Identity = info.Neighbor.Identity
+		if info.Peer != nil && info.Peer.Protocol != nil {
+			m.Identity = info.Peer.ID
 			m.Alias = info.Alias
-			m.ConnectionOrigin = info.Neighbor.ConnectionOrigin
-			m.ProtocolVersion = info.Neighbor.Protocol.Version
-			m.BytesRead = info.Neighbor.Protocol.Conn.BytesRead
-			m.BytesWritten = info.Neighbor.Protocol.Conn.BytesWritten
-			m.Heartbeat = info.Neighbor.LatestHeartbeat
+			m.ConnectionOrigin = info.Peer.ConnectionOrigin
+			m.ProtocolVersion = info.Peer.Protocol.FeatureSet
+			m.BytesRead = info.Peer.Conn.BytesRead
+			m.BytesWritten = info.Peer.Conn.BytesWritten
+			m.Heartbeat = info.Peer.LatestHeartbeat
 			m.Connected = info.Connected
 		} else {
 			m.Identity = info.Address
@@ -309,7 +313,12 @@ func currentNodeStatus() *nodestatus {
 	status := &nodestatus{}
 
 	// node status
-	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
+	var requestedMilestone milestone.Index
+	peekedRequest := gossip.RequestQueue().Peek()
+	queued, pending := gossip.RequestQueue().Size()
+	if peekedRequest != nil {
+		requestedMilestone = peekedRequest.MilestoneIndex
+	}
 	status.Version = cli.AppVersion
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
@@ -320,16 +329,17 @@ func currentNodeStatus() *nodestatus {
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
 
-	status.ConnectedNeighborsCount = len(gossip.GetConnectedNeighbors())
+	status.ConnectedPeersCount = peering.Manager().ConnectedPeerCount()
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
 	}
-	status.MsRequestQueueSize = requestCount
 	status.CurrentRequestedMs = requestedMilestone
-	status.RequestQueueSize = requestCount
+	status.RequestQueuePending = pending
+	status.RequestQueueQueued = queued
+	status.RequestQueueAvgLatency = gossip.RequestQueue().AvgLatency()
 
 	// cache metrics
 	status.Caches = &cachesmetric{
@@ -337,7 +347,7 @@ func currentNodeStatus() *nodestatus {
 			Size: tangle.GetApproversStorageSize(),
 		},
 		RequestQueue: cache{
-			Size: gossip.RequestQueue.GetStorageSize(),
+			Size: queued + pending,
 		},
 		Bundles: cache{
 			Size: tangle.GetBundleStorageSize(),
@@ -348,8 +358,8 @@ func currentNodeStatus() *nodestatus {
 		Transactions: cache{
 			Size: tangle.GetTransactionStorageSize(),
 		},
-		IncomingTransactionFilter: cache{
-			Size: gossip.GetIncomingStorageSize(),
+		IncomingTransactionWorkUnits: cache{
+			Size: gossip.Processor().WorkUnitsSize(),
 		},
 		RefsInvalidBundle: cache{
 			Size: tangle_plugin.GetRefsAnInvalidBundleStorageSize(),
@@ -358,23 +368,23 @@ func currentNodeStatus() *nodestatus {
 
 	// server metrics
 	status.ServerMetrics = &servermetrics{
-		NumberOfAllTransactions:        metrics.SharedServerMetrics.GetAllTransactionsCount(),
-		NumberOfNewTransactions:        metrics.SharedServerMetrics.GetNewTransactionsCount(),
-		NumberOfKnownTransactions:      metrics.SharedServerMetrics.GetKnownTransactionsCount(),
-		NumberOfInvalidTransactions:    metrics.SharedServerMetrics.GetInvalidTransactionsCount(),
-		NumberOfInvalidRequests:        metrics.SharedServerMetrics.GetInvalidRequestsCount(),
-		NumberOfStaleTransactions:      metrics.SharedServerMetrics.GetStaleTransactionsCount(),
-		NumberOfReceivedTransactionReq: metrics.SharedServerMetrics.GetReceivedTransactionRequestsCount(),
-		NumberOfReceivedMilestoneReq:   metrics.SharedServerMetrics.GetReceivedMilestoneRequestsCount(),
-		NumberOfReceivedHeartbeats:     metrics.SharedServerMetrics.GetReceivedHeartbeatsCount(),
-		NumberOfSentTransactions:       metrics.SharedServerMetrics.GetSentTransactionsCount(),
-		NumberOfSentTransactionsReq:    metrics.SharedServerMetrics.GetSentTransactionRequestsCount(),
-		NumberOfSentMilestoneReq:       metrics.SharedServerMetrics.GetSentMilestoneRequestsCount(),
-		NumberOfSentHeartbeats:         metrics.SharedServerMetrics.GetSentHeartbeatsCount(),
-		NumberOfDroppedSentPackets:     metrics.SharedServerMetrics.GetDroppedSendPacketsCount(),
-		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.GetSentSpamTxsCount(),
-		NumberOfValidatedBundles:       metrics.SharedServerMetrics.GetValidatedBundlesCount(),
-		NumberOfSeenSpentAddr:          metrics.SharedServerMetrics.GetSeenSpentAddrCount(),
+		NumberOfAllTransactions:        metrics.SharedServerMetrics.Transactions.Load(),
+		NumberOfNewTransactions:        metrics.SharedServerMetrics.NewTransactions.Load(),
+		NumberOfKnownTransactions:      metrics.SharedServerMetrics.KnownTransactions.Load(),
+		NumberOfInvalidTransactions:    metrics.SharedServerMetrics.InvalidTransactions.Load(),
+		NumberOfInvalidRequests:        metrics.SharedServerMetrics.InvalidTransactionRequests.Load(),
+		NumberOfStaleTransactions:      metrics.SharedServerMetrics.StaleTransactions.Load(),
+		NumberOfReceivedTransactionReq: metrics.SharedServerMetrics.ReceivedTransactionRequests.Load(),
+		NumberOfReceivedMilestoneReq:   metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),
+		NumberOfReceivedHeartbeats:     metrics.SharedServerMetrics.ReceivedHeartbeats.Load(),
+		NumberOfSentTransactions:       metrics.SharedServerMetrics.SentTransactions.Load(),
+		NumberOfSentTransactionsReq:    metrics.SharedServerMetrics.SentTransactionRequests.Load(),
+		NumberOfSentMilestoneReq:       metrics.SharedServerMetrics.SentMilestoneRequests.Load(),
+		NumberOfSentHeartbeats:         metrics.SharedServerMetrics.SentHeartbeats.Load(),
+		NumberOfDroppedSentPackets:     metrics.SharedServerMetrics.DroppedMessages.Load(),
+		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.SentSpamTransactions.Load(),
+		NumberOfValidatedBundles:       metrics.SharedServerMetrics.ValidatedBundles.Load(),
+		NumberOfSeenSpentAddr:          metrics.SharedServerMetrics.SeenSpentAddresses.Load(),
 	}
 
 	// memory metrics

@@ -1,26 +1,26 @@
 package config
 
-// NeighborConfig struct
-type NeighborConfig struct {
-	Identity   string `json:"identity" mapstructure:"identity"`
+// PeerConfig holds the initial information about peers.
+type PeerConfig struct {
+	ID         string `json:"identity" mapstructure:"identity"`
 	Alias      string `json:"alias" mapstructure:"alias"`
 	PreferIPv6 bool   `json:"preferIPv6" mapstructure:"preferIPv6"`
 }
 
 const (
-	// Defines if IPv6 is preferred for neighbors added through the API
+	// Defines if IPv6 is preferred for peers added through the API
 	CfgNetPreferIPv6 = "network.preferIPv6"
 	// the bind address of the gossip TCP server
 	CfgNetGossipBindAddress = "network.gossip.bindAddress"
-	// the number of seconds to wait before trying to reconnect to a disconnected neighbor
+	// the number of seconds to wait before trying to reconnect to a disconnected peer
 	CfgNetGossipReconnectAttemptIntervalSeconds = "network.gossip.reconnectAttemptIntervalSeconds"
 
-	// enable inbound connections from unknown neighbors
-	CfgNeighborsAcceptAnyNeighborConnection = "acceptAnyNeighborConnection"
-	// set the maximum number of neighbors
-	CfgNeighborsMaxNeighbors = "maxNeighbors"
-	// set the URLs and IP addresses of neighbors
-	CfgNeighbors = "neighbors"
+	// enable inbound connections from unknown peers
+	CfgPeeringAcceptAnyConnection = "acceptAnyConnection"
+	// set the maximum number of peers
+	CfgPeeringMaxPeers = "maxPeers"
+	// set the URLs and IP addresses of peers
+	CfgPeers = "peers"
 
 	// list of autopeering entry nodes to use
 	CfgNetAutopeeringEntryNodes = "network.autopeering.entryNodes"
@@ -38,10 +38,10 @@ func init() {
 	NodeConfig.SetDefault(CfgNetGossipBindAddress, "0.0.0.0:15600")
 	NodeConfig.SetDefault(CfgNetGossipReconnectAttemptIntervalSeconds, 60)
 
-	// neighbors
-	NeighborsConfig.SetDefault(CfgNeighborsAcceptAnyNeighborConnection, false)
-	NeighborsConfig.SetDefault(CfgNeighborsMaxNeighbors, 5)
-	NeighborsConfig.SetDefault(CfgNeighbors, []NeighborConfig{})
+	// peering
+	PeeringConfig.SetDefault(CfgPeeringAcceptAnyConnection, false)
+	PeeringConfig.SetDefault(CfgPeeringMaxPeers, 5)
+	PeeringConfig.SetDefault(CfgPeers, []PeerConfig{})
 
 	// autopeering
 	NodeConfig.SetDefault(CfgNetAutopeeringEntryNodes, []string{

@@ -8,7 +8,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {
@@ -30,7 +30,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	an := &AddNeighbors{}
 	e := ErrorReturn{}
-	addedNeighbors := 0
+	addedPeers := 0
 
 	preferIPv6 := config.NodeConfig.GetBool(config.CfgNetPreferIPv6)
 
@@ -42,8 +42,8 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	added := false
 
-	configNeighbors := []config.NeighborConfig{}
-	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
+	configPeers := []config.PeerConfig{}
+	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
 		log.Error(err)
 	}
 
@@ -56,38 +56,38 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		}
 
 		contains := false
-		for _, cn := range configNeighbors {
-			if cn.Identity == uri {
+		for _, cn := range configPeers {
+			if cn.ID == uri {
 				contains = true
 				break
 			}
 		}
 
 		if !contains {
-			configNeighbors = append(configNeighbors, config.NeighborConfig{
-				Identity:   uri,
+			configPeers = append(configPeers, config.PeerConfig{
+				ID:         uri,
 				Alias:      uri,
 				PreferIPv6: preferIPv6,
 			})
 			added = true
 		}
 
-		if err := gossip.AddNeighbor(uri, preferIPv6, uri); err != nil {
-			log.Warnf("Can't add neighbor %s, Error: %s", uri, err)
+		if err := peering.Manager().Add(uri, preferIPv6, uri); err != nil {
+			log.Warnf("can't add peer %s, Error: %s", uri, err)
 		} else {
-			addedNeighbors++
-			log.Infof("Added neighbor: %s", uri)
+			addedPeers++
+			log.Infof("added peer: %s", uri)
 		}
 	}
 
 	if added {
-		config.DenyNeighborsConfigHotReload()
-		config.NeighborsConfig.Set(config.CfgNeighbors, configNeighbors)
-		config.NeighborsConfig.WriteConfig()
-		config.AllowNeighborsConfigHotReload()
+		config.DenyPeeringConfigHotReload()
+		config.PeeringConfig.Set(config.CfgPeers, configPeers)
+		config.PeeringConfig.WriteConfig()
+		config.AllowPeeringConfigHotReload()
 	}
 
-	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
+	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedPeers})
 }
 
 func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
@@ -95,49 +95,49 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 
 	added := false
 
-	configNeighbors := []config.NeighborConfig{}
-	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
+	configPeers := []config.PeerConfig{}
+	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
 		log.Error(err)
 	}
 
-	for _, neighbor := range s.Neighbors {
+	for _, peer := range s.Neighbors {
 
-		if strings.Contains(neighbor.Identity, "tcp://") {
-			neighbor.Identity = neighbor.Identity[6:]
-		} else if strings.Contains(neighbor.Identity, "://") {
+		if strings.Contains(peer.Identity, "tcp://") {
+			peer.Identity = peer.Identity[6:]
+		} else if strings.Contains(peer.Identity, "://") {
 			continue
 		}
 
 		contains := false
-		for _, cn := range configNeighbors {
-			if cn.Identity == neighbor.Identity {
+		for _, cn := range configPeers {
+			if cn.ID == peer.Identity {
 				contains = true
 				break
 			}
 		}
 
 		if !contains {
-			configNeighbors = append(configNeighbors, config.NeighborConfig{
-				Identity:   neighbor.Identity,
-				Alias:      neighbor.Alias,
-				PreferIPv6: neighbor.PreferIPv6,
+			configPeers = append(configPeers, config.PeerConfig{
+				ID:         peer.Identity,
+				Alias:      peer.Alias,
+				PreferIPv6: peer.PreferIPv6,
 			})
 			added = true
 		}
 
-		if err := gossip.AddNeighbor(neighbor.Identity, neighbor.PreferIPv6, neighbor.Alias); err != nil {
-			log.Warnf("Can't add neighbor %s, Error: %s", neighbor.Identity, err)
+		if err := peering.Manager().Add(peer.Identity, peer.PreferIPv6, peer.Alias); err != nil {
+			log.Warnf("Can't add peer %s, Error: %s", peer.Identity, err)
 		} else {
 			addedNeighbors++
-			log.Infof("Added neighbor: %s", neighbor.Identity)
+			log.Infof("Added peer: %s", peer.Identity)
 		}
 	}
 
 	if added {
-		config.DenyNeighborsConfigHotReload()
-		config.NeighborsConfig.Set(config.CfgNeighbors, configNeighbors)
-		config.NeighborsConfig.WriteConfig()
-		config.AllowNeighborsConfigHotReload()
+		config.DenyPeeringConfigHotReload()
+		config.PeeringConfig.Set(config.CfgPeers, configPeers)
+		config.PeeringConfig.WriteConfig()
+		config.AllowPeeringConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
@@ -157,20 +157,20 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 
 	removed := false
 
-	configNeighbors := []config.NeighborConfig{}
-	if err := config.NeighborsConfig.UnmarshalKey(config.CfgNeighbors, &configNeighbors); err != nil {
+	configNeighbors := []config.PeerConfig{}
+	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configNeighbors); err != nil {
 		log.Error(err)
 	}
 
-	nb := gossip.GetNeighbors()
+	peers := peering.Manager().PeerInfos()
 	for _, uri := range rn.Uris {
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
 		}
-		for _, n := range nb {
+		for _, p := range peers {
 
 			for i, cn := range configNeighbors {
-				if strings.EqualFold(cn.Identity, uri) {
+				if strings.EqualFold(cn.ID, uri) {
 					removed = true
 
 					// Delete item
@@ -181,9 +181,9 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 			}
 
 			// Remove connected neighbor
-			if n.Neighbor != nil {
-				if strings.EqualFold(n.Neighbor.Identity, uri) || strings.EqualFold(n.DomainWithPort, uri) {
-					err := gossip.RemoveNeighbor(uri)
+			if p.Peer != nil {
+				if strings.EqualFold(p.Peer.ID, uri) || strings.EqualFold(p.DomainWithPort, uri) {
+					err := peering.Manager().Remove(uri)
 					if err != nil {
 						log.Errorf("Can't remove neighbor, Error: %s", err.Error())
 						e.Error = "Internal error"
@@ -194,8 +194,8 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 				}
 			} else {
 				// Remove unconnected neighbor
-				if strings.EqualFold(n.Address, uri) {
-					err := gossip.RemoveNeighbor(uri)
+				if strings.EqualFold(p.Address, uri) {
+					err := peering.Manager().Remove(uri)
 					if err != nil {
 						log.Errorf("Can't remove neighbor, Error: %s", err.Error())
 						e.Error = "Internal error"
@@ -210,18 +210,17 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 	}
 
 	if removed {
-		config.DenyNeighborsConfigHotReload()
-		config.NeighborsConfig.Set(config.CfgNeighbors, configNeighbors)
-		config.NeighborsConfig.WriteConfig()
-		config.AllowNeighborsConfigHotReload()
+		config.DenyPeeringConfigHotReload()
+		config.PeeringConfig.Set(config.CfgPeers, configNeighbors)
+		config.PeeringConfig.WriteConfig()
+		config.AllowPeeringConfigHotReload()
 	}
 
 	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})
 }
 
 func getNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-
 	nb := &GetNeighborsReturn{}
-	nb.Neighbors = gossip.GetNeighbors()
+	nb.Neighbors = peering.Manager().PeerInfos()
 	c.JSON(http.StatusOK, nb)
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -51,7 +51,7 @@ func loadSpentAddresses(filePathSpent string) (int, error) {
 	return spentAddressesCount, nil
 }
 
-func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
+func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, snapshotIndex milestone.Index) error {
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
@@ -135,7 +135,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 	return nil
 }
 
-func LoadGlobalSnapshot(filePathLedger string, filePathsSpent []string, snapshotIndex milestone_index.MilestoneIndex) error {
+func LoadGlobalSnapshot(filePathLedger string, filePathsSpent []string, snapshotIndex milestone.Index) error {
 
 	log.Infof("Loading global snapshot with index %v...", snapshotIndex)
 	return loadSnapshotFromTextfiles(filePathLedger, filePathsSpent, snapshotIndex)

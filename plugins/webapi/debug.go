@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -20,9 +21,32 @@ func init() {
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
 }
 
-func getRequests(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getRequests(interf interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	grr := &GetRequestsReturn{}
-	grr.Requests = gossip.RequestQueue.DebugRequests()
+	queued, pending := gossip.RequestQueue().Requests()
+	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
+	var offset int
+	for i := 0; i < len(queued); offset, i = offset+1, i+1 {
+		req := queued[i]
+		debugReqs[i] = &DebugRequest{
+			Hash:             req.Hash,
+			InPending:        false,
+			TxExists:         tangle.ContainsTransaction(req.Hash),
+			MilestoneIndex:   req.MilestoneIndex,
+			EnqueueTimestamp: req.EnqueueTime.Unix(),
+		}
+	}
+	for i := 0; i < len(pending); i++ {
+		req := queued[i]
+		debugReqs[offset+i] = &DebugRequest{
+			Hash:             req.Hash,
+			InPending:        true,
+			TxExists:         tangle.ContainsTransaction(req.Hash),
+			MilestoneIndex:   req.MilestoneIndex,
+			EnqueueTimestamp: req.EnqueueTime.Unix(),
+		}
+	}
+	grr.Requests = debugReqs
 	c.JSON(http.StatusOK, grr)
 }
 

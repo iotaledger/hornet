@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/plugins/gossip"
 
 	"github.com/iotaledger/iota.go/consts"
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {
@@ -30,9 +31,9 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	if config.NodeConfig.GetBool(config.CfgNodeShowAliasInGetNodeInfo) {
 		info.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 	}
-
-	// Number of neighbors
-	info.Neighbors = uint(gossip.GetNeighborsCount())
+	
+	// Number of peers
+	info.Neighbors = uint(peering.Manager().PeerCount())
 
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
@@ -82,7 +83,8 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	// TX to request
-	_, info.TransactionsToRequest = gossip.RequestQueue.CurrentMilestoneIndexAndSize()
+	queued, pending := gossip.RequestQueue().Size()
+	info.TransactionsToRequest = queued + pending
 
 	// Coo addr
 	info.CoordinatorAddress = config.NodeConfig.GetString(config.CfgMilestoneCoordinator)
