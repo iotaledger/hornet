@@ -51,7 +51,8 @@ func configureEvents() {
 			return
 		}
 		gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
-		log.Infof("removing: %s / %s", net.JoinHostPort(gossipAddr.Network(), strconv.Itoa(gossipAddr.Port())), neighbor.Autopeering.ID())
+		gossipAddrStr := net.JoinHostPort(neighbor.Autopeering.IP().String(), strconv.Itoa(gossipAddr.Port()))
+		log.Infof("removing: %s / %s", gossipAddrStr, neighbor.Autopeering.ID())
 		Selection.RemoveNeighbor(neighbor.Autopeering.ID())
 	}))
 
