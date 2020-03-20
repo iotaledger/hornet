@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.4.0-rc1] - 19.03.2020
+## [0.4.0-rc1] - 20.03.2020
 
 ### Added
 
