@@ -2,9 +2,9 @@ package config
 
 // NeighborConfig struct
 type NeighborConfig struct {
-	Identity   string `mapstructure:"identity"`
-	Alias      string `mapstructure:"alias"`
-	PreferIPv6 bool   `mapstructure:"preferIPv6"`
+	Identity   string `json:"identity" mapstructure:"identity"`
+	Alias      string `json:"alias" mapstructure:"alias"`
+	PreferIPv6 bool   `json:"preferIPv6" mapstructure:"preferIPv6"`
 }
 
 const (
@@ -26,8 +26,6 @@ const (
 	CfgNetAutopeeringEntryNodes = "network.autopeering.entryNodes"
 	// bind address for global services such as autopeering and gossip
 	CfgNetAutopeeringBindAddr = "network.autopeering.bindAddress"
-	// external IP address under which the node is reachable; or 'auto' to determine it automatically
-	CfgNetAutopeeringExternalAddr = "network.autopeering.externalAddress"
 	// private key seed used to derive the node identity; optional Base64 encoded 256-bit string
 	CfgNetAutopeeringSeed = "network.autopeering.seed"
 	// whether the node should act as an autopeering entry node
@@ -51,7 +49,6 @@ func init() {
 		"zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
 	})
 	NodeConfig.SetDefault(CfgNetAutopeeringBindAddr, "0.0.0.0:14626")
-	NodeConfig.SetDefault(CfgNetAutopeeringExternalAddr, "auto")
 	NodeConfig.SetDefault(CfgNetAutopeeringSeed, nil)
 	NodeConfig.SetDefault(CfgNetAutopeeringRunAsEntryNode, false)
 }

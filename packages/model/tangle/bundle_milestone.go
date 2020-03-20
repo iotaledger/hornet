@@ -24,7 +24,7 @@ func (bundle *Bundle) IsMilestone() bool {
 }
 
 func (bundle *Bundle) GetMilestoneIndex() milestone_index.MilestoneIndex {
-	cachedTailTx := bundle.getTail() // tx +1
+	cachedTailTx := bundle.GetTail() // tx +1
 	index := milestone_index.MilestoneIndex(trinary.TrytesToInt(cachedTailTx.GetTransaction().Tx.ObsoleteTag))
 	cachedTailTx.Release() // tx -1
 	return index

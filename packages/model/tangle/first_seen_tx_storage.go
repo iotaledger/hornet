@@ -101,7 +101,13 @@ func StoreFirstSeenTx(msIndex milestone_index.MilestoneIndex, txHash trinary.Has
 		TxHash:                        trinary.MustTrytesToBytes(txHash)[:49],
 	}
 
-	return &CachedFirstSeenTx{firstSeenTxStorage.Store(firstSeenTx)}
+	cachedObj := firstSeenTxStorage.ComputeIfAbsent(firstSeenTx.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // firstSeenTx +1
+		firstSeenTx.Persist()
+		firstSeenTx.SetModified()
+		return firstSeenTx
+	})
+
+	return &CachedFirstSeenTx{CachedObject: cachedObj}
 }
 
 // firstSeenTx +-0

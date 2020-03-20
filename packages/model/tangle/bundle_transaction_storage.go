@@ -211,7 +211,13 @@ func StoreBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Has
 		TxHash:     trinary.MustTrytesToBytes(transactionHash)[:49],
 	}
 
-	return &CachedBundleTransaction{bundleTransactionsStorage.Store(bundleTx)}
+	cachedObj := bundleTransactionsStorage.ComputeIfAbsent(bundleTx.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundleTx +1
+		bundleTx.Persist()
+		bundleTx.SetModified()
+		return bundleTx
+	})
+
+	return &CachedBundleTransaction{CachedObject: cachedObj}
 }
 
 // bundleTx +-0

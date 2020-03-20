@@ -77,6 +77,8 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 		for txHash, cachedTxToCheck := range txsToCheck {
 			delete(txsToCheck, txHash)
 
+			// We don't have to revalidate in the future cone solidifier, since the node wouldn't be solid anyway
+			// if revalidateDatabase was triggered at startup
 			_, newlySolid := checkSolidity(cachedTxToCheck.Retain())
 			if newlySolid {
 				if int32(time.Now().Unix())-cachedTxToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {

@@ -22,9 +22,13 @@ func databaseKeyForMilestoneIndex(milestoneIndex milestone_index.MilestoneIndex)
 	return bytes
 }
 
+func milestoneIndexFromDatabaseKey(key []byte) milestone_index.MilestoneIndex {
+	return milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key))
+}
+
 func milestoneFactory(key []byte) objectstorage.StorableObject {
 	return &Milestone{
-		Index: milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key)),
+		Index: milestoneIndexFromDatabaseKey(key),
 	}
 }
 
@@ -107,25 +111,44 @@ func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
+// milestone +-0
+func SearchLatestMilestoneIndex() milestone_index.MilestoneIndex {
+	var latestMilestoneIndex milestone_index.MilestoneIndex
+
+	milestoneStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		cachedObject.Release(true) // milestone -1
+
+		msIndex := milestoneIndexFromDatabaseKey(key)
+		if latestMilestoneIndex < msIndex {
+			latestMilestoneIndex = msIndex
+		}
+
+		return true
+	})
+
+	return latestMilestoneIndex
+}
+
 // milestone +1
-func StoreMilestone(bndl *Bundle) *CachedMilestone {
+func StoreMilestone(bndl *Bundle) (bool, *CachedMilestone) {
+
+	newlyAdded := false
 
 	if bndl.IsMilestone() {
 
-		msIndex := bndl.GetMilestoneIndex()
-		cachedMilestone := milestoneStorage.ComputeIfAbsent(databaseKeyForMilestoneIndex(msIndex), func(key []byte) objectstorage.StorableObject { // bundle +1
-			milestone := &Milestone{
-				Index: msIndex,
-				Hash:  bndl.GetMilestoneHash(),
-			}
+		milestone := &Milestone{
+			Index: bndl.GetMilestoneIndex(),
+			Hash:  bndl.GetMilestoneHash(),
+		}
 
+		cachedMilestone := milestoneStorage.ComputeIfAbsent(milestone.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // milestone +1
+			newlyAdded = true
 			milestone.Persist()
 			milestone.SetModified()
-
 			return milestone
 		})
 
-		return &CachedMilestone{CachedObject: cachedMilestone}
+		return newlyAdded, &CachedMilestone{CachedObject: cachedMilestone}
 	}
 
 	panic("Bundle is not a milestone")

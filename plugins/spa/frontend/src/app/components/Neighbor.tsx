@@ -97,8 +97,8 @@ export class Neighbor extends React.Component<Props, any> {
                                 <h5>
                                     {last.origin_addr}
                                     {' '}
-                                    <If condition={!!last.info.autopeering_id}>
-                                        {' / '}{last.info.autopeering_id}
+                                    <If condition={!!last.info.autopeeringId}>
+                                        {' / '}{last.info.autopeeringId}
                                         {' '}
                                     </If>
                                     <small>
@@ -132,7 +132,7 @@ export class Neighbor extends React.Component<Props, any> {
                                             (Origin:
                                             {' '}
                                             {last.connection_origin === 0 ? "Inbound" : "Outbound"}
-                                            {!!last.info.autopeering_id ? " / autopeered)" : ")"}
+                                            {!!last.info.autopeeringId ? " / autopeered)" : ")"}
                                         </ListGroup.Item>
                                         <If condition={!!last.heartbeat}>
                                             <ListGroup.Item>

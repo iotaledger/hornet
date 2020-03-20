@@ -97,7 +97,9 @@ func SetSolidMilestone(cachedBndl *CachedBundle) {
 	updateNodeSynced(cachedBndl.GetBundle().GetMilestoneIndex(), GetLatestMilestoneIndex())
 }
 
-func setSolidMilestoneIndex(index milestone_index.MilestoneIndex) {
+// SetSolidMilestoneIndex sets the solid milestone index at node startup
+// Do not use this function during normal node operation
+func SetSolidMilestoneIndex(index milestone_index.MilestoneIndex) {
 	solidMilestoneLock.Lock()
 	solidMilestoneIndex = index
 	solidMilestoneLock.Unlock()

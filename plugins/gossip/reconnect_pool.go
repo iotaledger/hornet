@@ -119,7 +119,8 @@ next:
 		neighborsLock.Unlock()
 
 		if neighbor.Autopeering != nil {
-			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
+			gossipService := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
+			gossipAddr := net.JoinHostPort(neighbor.Autopeering.IP().String(), strconv.Itoa(gossipService.Port()))
 			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
 		}
 
@@ -192,7 +193,7 @@ func spawnReconnecter() {
 }
 
 func Connect(neighbor *Neighbor) error {
-	addr := neighbor.PrimaryAddress.ToString() + ":" + strconv.Itoa(int(neighbor.InitAddress.Port))
+	addr := iputils.IPToString(neighbor.PrimaryAddress) + ":" + strconv.Itoa(int(neighbor.InitAddress.Port))
 	conn, err := net.DialTimeout("tcp", addr, time.Duration(3)*time.Second)
 	if err != nil {
 		return errors.Wrapf(NewConnectionFailureError(err), "error when connecting to neighbor %s", neighbor.Identity)

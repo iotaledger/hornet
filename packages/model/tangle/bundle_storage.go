@@ -271,10 +271,10 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) Cached
 ////////////////////////////////////////////////////////////////////////////////
 
 // tx +1
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool, forceRelease bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool, forceRelease bool, reapply bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
 
 	cachedTx, isNew := StoreTransactionIfAbsent(hornetTx) // tx +1
-	if !isNew {
+	if !isNew && !reapply {
 		return cachedTx, true
 	}
 
@@ -300,15 +300,15 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilest
 	// If the transaction is part of a milestone, the bundle must be created here
 	// Otherwise, bundles are created if tailTx becomes solid
 	if IsMaybeMilestoneTx(cachedTx.Retain()) { // tx pass +1
-		tryConstructBundle(cachedTx.Retain(), false)
+		TryConstructBundle(cachedTx.Retain(), false)
 	}
 
 	return cachedTx, false
 }
 
-// tryConstructBundle tries to construct a bundle (maybe txs are still missing in the DB)
+// TryConstructBundle tries to construct a bundle (maybe txs are still missing in the DB)
 // isSolidTail should only be false for possible milestone txs
-func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
+func TryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	defer cachedTx.Release() // tx -1
 
 	if ContainsBundle(cachedTx.GetTransaction().GetHash()) {
@@ -325,7 +325,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 				continue
 			}
 
-			tryConstructBundle(cachedTailTx.Retain(), false) // tx pass +1
+			TryConstructBundle(cachedTailTx.Retain(), false) // tx pass +1
 			cachedTailTx.Release()                           // tx -1
 		}
 		return
@@ -379,7 +379,9 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 			bndl.calcLedgerChanges()
 
 			if bndl.IsMilestone() {
-				StoreMilestone(bndl).Release() // bundle pass +1, milestone +-0
+				// Force release to store milestones without caching
+				_, cachedMilestone := StoreMilestone(bndl)
+				cachedMilestone.Release(true) // milestone +-0
 			}
 		}
 
@@ -466,5 +468,5 @@ func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
 
 // Create a new bundle instance as soon as a tailTx gets solid
 func OnTailTransactionSolid(cachedTx *CachedTransaction) {
-	tryConstructBundle(cachedTx, true) // tx +-0 (it has +1 and will be released in tryConstructBundle)
+	TryConstructBundle(cachedTx, true) // tx +-0 (it has +1 and will be released in TryConstructBundle)
 }
