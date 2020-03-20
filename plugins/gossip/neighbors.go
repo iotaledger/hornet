@@ -590,7 +590,7 @@ type NeighborInfo struct {
 	NumberOfDroppedSentPackets     uint32    `json:"numberOfDroppedSentPackets"`
 	ConnectionType                 string    `json:"connectionType"`
 	Connected                      bool      `json:"connected"`
-	AutopeeringID                  string    `json:"autopeering_id,omitempty"`
+	AutopeeringID                  string    `json:"autopeeringId,omitempty"`
 }
 
 type AutopeeringInfo struct {

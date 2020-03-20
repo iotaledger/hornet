@@ -2,9 +2,9 @@ package config
 
 // NeighborConfig struct
 type NeighborConfig struct {
-	Identity   string `mapstructure:"identity"`
-	Alias      string `mapstructure:"alias"`
-	PreferIPv6 bool   `mapstructure:"preferIPv6"`
+	Identity   string `json:"identity",mapstructure:"identity"`
+	Alias      string `json:"alias",mapstructure:"alias"`
+	PreferIPv6 bool   `json:"preferIPv6",mapstructure:"preferIPv6"`
 }
 
 const (
