@@ -97,6 +97,7 @@ dockers:
     binaries:
       - hornet
     dockerfile: docker/Dockerfile.goreleaser
+    skip_push: auto
 
 # Archives
 archives:
