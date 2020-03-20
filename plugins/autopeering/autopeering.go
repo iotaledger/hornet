@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
@@ -40,17 +39,6 @@ var (
 
 	log *logger.Logger
 )
-
-// GetBindAddress returns the string form of the autopeering bind address.
-func GetBindAddress() string {
-	peering := local.GetInstance().Services().Get(service.PeeringKey)
-	host, _, err := net.SplitHostPort(config.NodeConfig.GetString(config.CfgNetAutopeeringBindAddr))
-	if err != nil {
-		log.Fatalf("autopeering bind address is invalid: %s", err)
-	}
-	port := strconv.Itoa(peering.Port())
-	return net.JoinHostPort(host, port)
-}
 
 func configureAP() {
 	entryNodes, err := parseEntryNodes()
@@ -92,7 +80,7 @@ func start(shutdownSignal <-chan struct{}) {
 	peering := lPeer.Services().Get(service.PeeringKey)
 
 	// resolve the bind address
-	localAddr, err := net.ResolveUDPAddr(peering.Network(), GetBindAddress())
+	localAddr, err := net.ResolveUDPAddr(peering.Network(), config.NodeConfig.GetString(config.CfgNetAutopeeringBindAddr))
 	if err != nil {
 		log.Fatalf("Error resolving %s: %v", config.CfgNetAutopeeringBindAddr, err)
 	}
