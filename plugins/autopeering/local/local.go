@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 	"net"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/netutil"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/config"
@@ -27,18 +27,12 @@ func configureLocal() *peer.Local {
 	log := logger.NewLogger("Local")
 
 	var peeringIP net.IP
-	if str := config.NodeConfig.GetString(config.CfgNetAutopeeringExternalAddr); strings.ToLower(str) == "auto" {
-		// let the autopeering discover the IP
-		peeringIP = net.IPv4zero
-	} else {
-		peeringIP = net.ParseIP(str)
-		if peeringIP == nil {
-			log.Fatalf("Invalid IP address (%s): %s", config.CfgNetAutopeeringExternalAddr, str)
-		}
 
-		if !peeringIP.IsGlobalUnicast() {
-			log.Warnf("IP is not a global unicast address: %s", peeringIP.String())
-		}
+	// let the autopeering discover the IP
+	if config.NodeConfig.GetBool(config.CfgNetPreferIPv6) {
+		peeringIP = net.IPv6unspecified
+	} else {
+		peeringIP = net.IPv4zero
 	}
 
 	_, peeringPortStr, err := net.SplitHostPort(config.NodeConfig.GetString(config.CfgNetAutopeeringBindAddr))
@@ -66,12 +60,8 @@ func configureLocal() *peer.Local {
 		}
 
 		gossipBindAddrPort, err := strconv.Atoi(gossipBindAddrPortStr)
-		if err != nil {
-			log.Fatalf("Invalid gossip port number: %s, Error: %s", gossipBindAddrPortStr, err)
-		}
-
-		if 0 > gossipBindAddrPort || gossipBindAddrPort > 65535 {
-			log.Fatalf("Invalid gossip port number (%s): %d", config.CfgNetGossipBindAddress, gossipBindAddrPort)
+		if err != nil || !netutil.IsValidPort(gossipBindAddrPort) {
+			log.Fatalf("Invalid gossip port number: %s", gossipBindAddrPortStr)
 		}
 
 		ownServices.Update(services.GossipServiceKey(), "tcp", gossipBindAddrPort)

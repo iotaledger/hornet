@@ -48,20 +48,20 @@ func configureAutopeering() {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
-		gossipAddr := ev.Peer.Services().Get(services.GossipServiceKey())
-		gossipAddrStr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipAddr.Port()))
-		apLog.Infof("[incoming peering] whitelisting %s / %s / %s", ev.Peer.Address(), gossipAddrStr, ev.Peer.ID())
+		gossipService := ev.Peer.Services().Get(services.GossipServiceKey())
+		gossipAddr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipService.Port()))
+		apLog.Infof("[incoming peering] whitelisting %s / %s / %s", ev.Peer.Address(), gossipAddr, ev.Peer.ID())
 
 		// whitelist the given peer
 		neighborsLock.Lock()
 		defer neighborsLock.Unlock()
 
 		// will be grabbed later by the incoming connection
-		allowedIdentities[gossipAddrStr] = ev.Peer
+		allowedIdentities[gossipAddr] = ev.Peer
 
 		// remove from host blacklist
 		hostsBlacklistLock.Lock()
-		delete(hostsBlacklist, ev.Peer.Address().IP.String())
+		delete(hostsBlacklist, ev.Peer.IP().String())
 		hostsBlacklistLock.Unlock()
 	}))
 
@@ -69,10 +69,10 @@ func configureAutopeering() {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
-		gossipAddr := ev.Peer.Services().Get(services.GossipServiceKey())
-		gossipAddrStr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipAddr.Port()))
-		apLog.Infof("[outgoing peering] adding autopeering neighbor %s / %s / %s", ev.Peer.Address(), gossipAddrStr, ev.Peer.ID())
-		if err := AddNeighbor(gossipAddrStr, false, "", ev.Peer); err != nil {
+		gossipService := ev.Peer.Services().Get(services.GossipServiceKey())
+		gossipAddr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipService.Port()))
+		apLog.Infof("[outgoing peering] adding autopeering neighbor %s / %s / %s", ev.Peer.Address(), gossipAddr, ev.Peer.ID())
+		if err := AddNeighbor(gossipAddr, false, "", ev.Peer); err != nil {
 			apLog.Warnf("couldn't add autopeering neighbor %s", err)
 		}
 	}))

@@ -85,7 +85,6 @@
     },
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "externalAddress": "auto",
       "runAsEntryNode": false,
       "entryNodes": [
         "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",

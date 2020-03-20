@@ -14,7 +14,9 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/autopeering/server"
+	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/netutil"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
 	"github.com/gohornet/hornet/packages/config"
@@ -76,7 +78,8 @@ func isValidNeighbor(p *peer.Peer) bool {
 	}
 
 	// gossip service must be valid
-	if gossipService.Network() != "tcp" || gossipService.Port() < 0 || gossipService.Port() > 65535 {
+
+	if gossipService.Network() != "tcp" || !netutil.IsValidPort(gossipService.Port()) {
 		return false
 	}
 	return true
@@ -142,15 +145,21 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 			return nil, fmt.Errorf("%w: invalid public key: %s", ErrParsingEntryNode, err)
 		}
 
-		addr, err := net.ResolveUDPAddr("udp", parts[1])
+		entryAddr, err := iputils.ParseOriginAddress(parts[1])
 		if err != nil {
-			return nil, fmt.Errorf("%w: host cannot be resolved: %s", ErrParsingEntryNode, err)
+			return nil, fmt.Errorf("%w: invalid entry node address %s", err, parts[1])
+		}
+
+		ipAddresses, err := iputils.GetIPAddressesFromHost(entryAddr.Addr)
+		if err != nil {
+			return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
 		}
 
 		services := service.New()
-		services.Update(service.PeeringKey, addr.Network(), addr.Port)
+		services.Update(service.PeeringKey, "udp", int(entryAddr.Port))
 
-		result = append(result, peer.NewPeer(pubKey, addr.IP, services))
+		ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6))
+		result = append(result, peer.NewPeer(pubKey, ip, services))
 	}
 
 	return result, nil
