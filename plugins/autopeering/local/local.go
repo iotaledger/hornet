@@ -45,7 +45,7 @@ func configureLocal() *peer.Local {
 		log.Fatalf("Invalid autopeering port number: %s, Error: %s", peeringPortStr, err)
 	}
 
-	if 0 > peeringPort || peeringPort > 65535 {
+	if !netutil.IsValidPort(peeringPort) {
 		log.Fatalf("Invalid autopeering port number (%s): %d", config.CfgNetAutopeeringBindAddr, peeringPort)
 	}
 
