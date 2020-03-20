@@ -16,7 +16,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200316213914-76b7a4169e64
+	github.com/iotaledger/hive.go v0.0.0-20200319204115-e052cf07c81d
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200204161139-dfb0acdec240
 	github.com/labstack/echo/v4 v4.1.15
 	github.com/mitchellh/mapstructure v1.1.2

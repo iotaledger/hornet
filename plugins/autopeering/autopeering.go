@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
@@ -13,8 +14,6 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/autopeering/server"
-	"github.com/iotaledger/hive.go/autopeering/transport"
-	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
@@ -36,6 +35,17 @@ var (
 	log *logger.Logger
 )
 
+// GetBindAddress returns the string form of the autopeering bind address.
+func GetBindAddress() string {
+	peering := local.GetInstance().Services().Get(service.PeeringKey)
+	host, _, err := net.SplitHostPort(config.NodeConfig.GetString(config.CfgNetAutopeeringBindAddr))
+	if err != nil {
+		log.Fatalf("autopeering bind address is invalid: %s", err)
+	}
+	port := strconv.Itoa(peering.Port())
+	return net.JoinHostPort(host, port)
+}
+
 func configureAP() {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
@@ -47,7 +57,7 @@ func configureAP() {
 	gossipServiceKeyHash.Write([]byte(services.GossipServiceKey()))
 	version := gossipServiceKeyHash.Sum32()
 
-	Discovery = discover.New(local.GetInstance(), discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes), discover.Version(version))
+	Discovery = discover.New(local.GetInstance(), version, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
 
 	// enable peer selection only when gossip is enabled
 	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidNeighbor)))
@@ -56,47 +66,35 @@ func configureAP() {
 // isValidNeighbor checks whether a peer is a valid neighbor.
 func isValidNeighbor(p *peer.Peer) bool {
 	// gossip must be supported
-	gossipAddr := p.Services().Get(services.GossipServiceKey())
-	if gossipAddr == nil {
+	gossipService := p.Services().Get(services.GossipServiceKey())
+	if gossipService == nil {
 		return false
 	}
-	// the host for the gossip and peering service must be identical
-	gossipHost, _, err := net.SplitHostPort(gossipAddr.String())
-	if err != nil {
+
+	// gossip service must be valid
+	if gossipService.Network() != "tcp" || gossipService.Port() < 0 || gossipService.Port() > 65535 {
 		return false
 	}
-	peeringAddr := p.Services().Get(service.PeeringKey)
-	peeringHost, _, err := net.SplitHostPort(peeringAddr.String())
-	if err != nil {
-		return false
-	}
-	return gossipHost == peeringHost
+	return true
 }
 
 func start(shutdownSignal <-chan struct{}) {
 	defer log.Info("Stopping Autopeering ... done")
 
 	lPeer := local.GetInstance()
-
-	// use the port of the peering service
-	peeringAddr := lPeer.Services().Get(service.PeeringKey)
+	peering := lPeer.Services().Get(service.PeeringKey)
 
 	// resolve the bind address
-	bindAddr := config.NodeConfig.GetString(config.CfgNetAutopeeringBindAddr)
-	localAddr, err := net.ResolveUDPAddr(peeringAddr.Network(), bindAddr)
+	localAddr, err := net.ResolveUDPAddr(peering.Network(), GetBindAddress())
 	if err != nil {
 		log.Fatalf("Error resolving %s: %v", config.CfgNetAutopeeringBindAddr, err)
 	}
 
-	conn, err := net.ListenUDP(peeringAddr.Network(), localAddr)
+	conn, err := net.ListenUDP(peering.Network(), localAddr)
 	if err != nil {
 		log.Fatalf("Error listening: %v", err)
 	}
 	defer conn.Close()
-
-	// use the UDP connection for transport
-	trans := transport.Conn(conn, func(network, address string) (net.Addr, error) { return net.ResolveUDPAddr(network, address) })
-	defer trans.Close()
 
 	handlers := []server.Handler{Discovery}
 	if Selection != nil {
@@ -104,7 +102,7 @@ func start(shutdownSignal <-chan struct{}) {
 	}
 
 	// start a server doing discovery and peering
-	srv := server.Serve(lPeer, trans, log.Named("srv"), handlers...)
+	srv := server.Serve(lPeer, conn, log.Named("srv"), handlers...)
 	defer srv.Close()
 
 	// start the discovery on that connection
@@ -117,10 +115,8 @@ func start(shutdownSignal <-chan struct{}) {
 		defer Selection.Close()
 	}
 
-	log.Infof(name+" started: Address=%s/%s", peeringAddr.String(), peeringAddr.Network())
-
 	ID = lPeer.ID().String()
-	log.Infof(name+" started: ID=%s PublicKey=%s", ID, base64.StdEncoding.EncodeToString(lPeer.PublicKey()))
+	log.Infof("%s started: ID=%s Address=%s/%s PublicKey=%s", name, lPeer.ID(), localAddr.String(), localAddr.Network(), base64.StdEncoding.EncodeToString(lPeer.PublicKey()))
 
 	<-shutdownSignal
 	log.Info("Stopping Autopeering ...")
@@ -136,25 +132,21 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("%w: entry node parts must be 2, is %d", ErrParsingEntryNode, len(parts))
 		}
+
 		pubKey, err := base64.StdEncoding.DecodeString(parts[0])
 		if err != nil {
-			return nil, fmt.Errorf("%w: can't decode public key: %s", ErrParsingEntryNode, err)
+			return nil, fmt.Errorf("%w: invalid public key: %s", ErrParsingEntryNode, err)
 		}
 
-		entryAddr, err := iputils.ParseOriginAddress(parts[1])
+		addr, err := net.ResolveUDPAddr("udp", parts[1])
 		if err != nil {
-			return nil, fmt.Errorf("%w: invalid entry node address %s", err, parts[1])
-		}
-
-		ipAddresses, err := iputils.GetIPAddressesFromHost(entryAddr.Addr)
-		if err != nil {
-			return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
+			return nil, fmt.Errorf("%w: host cannot be resolved: %s", ErrParsingEntryNode, err)
 		}
 
 		services := service.New()
-		ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6)).ToString()
-		services.Update(service.PeeringKey, "udp", fmt.Sprintf("%s:%d", ip, entryAddr.Port))
-		result = append(result, peer.NewPeer(pubKey, services))
+		services.Update(service.PeeringKey, addr.Network(), addr.Port)
+
+		result = append(result, peer.NewPeer(pubKey, addr.IP, services))
 	}
 
 	return result, nil

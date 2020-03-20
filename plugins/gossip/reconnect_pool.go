@@ -119,8 +119,9 @@ next:
 		neighborsLock.Unlock()
 
 		if neighbor.Autopeering != nil {
-			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
-			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
+			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
+			gossipAddrStr := net.JoinHostPort(neighbor.Autopeering.IP().String(), strconv.Itoa(gossipAddr.Port()))
+			gossipLogger.Infof("initiating connection to autopeered neighbor %s / %s", gossipAddrStr, neighbor.Autopeering.ID())
 		}
 
 		if err := Connect(neighbor); err != nil {

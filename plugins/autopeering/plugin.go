@@ -1,6 +1,8 @@
 package autopeering
 
 import (
+	"net"
+	"strconv"
 	"time"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
@@ -48,8 +50,8 @@ func configureEvents() {
 		if neighbor.Autopeering == nil {
 			return
 		}
-		gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
-		log.Infof("removing: %s / %s", gossipAddr, neighbor.Autopeering.ID())
+		gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
+		log.Infof("removing: %s / %s", net.JoinHostPort(gossipAddr.Network(), strconv.Itoa(gossipAddr.Port())), neighbor.Autopeering.ID())
 		Selection.RemoveNeighbor(neighbor.Autopeering.ID())
 	}))
 

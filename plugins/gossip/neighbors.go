@@ -281,8 +281,9 @@ func finalizeHandshake(protocol *protocol, handshake *Handshake) error {
 		// grab autopeering information from whitelist
 		neighbor.Autopeering = allowedIdentities[neighbor.Identity]
 		if neighbor.Autopeering != nil {
-			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey()).String()
-			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", gossipAddr, neighbor.Autopeering.ID())
+			gossipAddr := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
+			gossipAddrStr := net.JoinHostPort(neighbor.Autopeering.IP().String(), strconv.Itoa(gossipAddr.Port()))
+			gossipLogger.Infof("handshaking with autopeered neighbor %s / %s", gossipAddrStr, neighbor.Autopeering.ID())
 		}
 	case Outbound:
 		expectedPort := neighbor.InitAddress.Port
