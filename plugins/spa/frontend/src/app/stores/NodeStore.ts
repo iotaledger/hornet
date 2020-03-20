@@ -248,7 +248,7 @@ class NeighborInfo {
     numberOfSentHeartbeats: number;
     numberOfDroppedSentPackets: number;
     connectionType: string;
-    autopeering_id: string;
+    autopeeringId: string;
     connected: boolean;
 }
 
