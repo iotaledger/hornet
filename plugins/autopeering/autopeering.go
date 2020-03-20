@@ -21,6 +21,10 @@ import (
 	"github.com/gohornet/hornet/plugins/autopeering/local"
 )
 
+const (
+	protocolVersion = 1
+)
+
 var (
 	// Discovery is the peer discovery protocol.
 	Discovery *discover.Protocol
@@ -55,9 +59,9 @@ func configureAP() {
 
 	gossipServiceKeyHash := fnv.New32a()
 	gossipServiceKeyHash.Write([]byte(services.GossipServiceKey()))
-	version := gossipServiceKeyHash.Sum32()
+	networkID := gossipServiceKeyHash.Sum32()
 
-	Discovery = discover.New(local.GetInstance(), version, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
+	Discovery = discover.New(local.GetInstance(), protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
 
 	// enable peer selection only when gossip is enabled
 	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidNeighbor)))
