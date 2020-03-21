@@ -362,17 +362,12 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 		/*
 			If solidification is not forced, we will only run the solidifier under one of the following conditions:
 				- newMilestoneIndex==0 (triggersignal) and solidifierMilestoneIndex==0 (no ongoing solidification)
+				- newMilestoneIndex==solidMilestoneIndex+1 (next milestone)
 				- newMilestoneIndex!=0 (new milestone received) and solidifierMilestoneIndex!=0 (ongoing solidification) and newMilestoneIndex<solidifierMilestoneIndex (milestone older than ongoing solidification)
 		*/
 
 		solidifierMilestoneIndexLock.RLock()
-		if (newMilestoneIndex == 0) && (solidifierMilestoneIndex != 0) {
-			// Do not run solidifier
-			solidifierMilestoneIndexLock.RUnlock()
-			return
-		}
-
-		if (newMilestoneIndex != 0) && ((solidifierMilestoneIndex == 0) || (newMilestoneIndex >= solidifierMilestoneIndex)) {
+		if !((newMilestoneIndex == 0) && (solidifierMilestoneIndex == 0) || (newMilestoneIndex == tangle.GetSolidMilestoneIndex()+1) || ((newMilestoneIndex != 0) && ((solidifierMilestoneIndex != 0) && (newMilestoneIndex < solidifierMilestoneIndex)))) {
 			// Do not run solidifier
 			solidifierMilestoneIndexLock.RUnlock()
 			return
