@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc2] - 21.03.2020
+
+### Added
+
+    - Node alias (Dashboard and `getNodeInfo`)
+    - Check for missing snapshot info
+
+### Fixed
+
+    - Deadlock between confirmation and snapshots
+    - Snapshot limits
+    - Scheme for jquery url in monitor plugin
+    - Solidification trigger signal
+
+### Config file changes
+
+New options:
+
+`config.json`
+
+```diff
+"node": {
++   "alias": "",
++   "showAliasInGetNodeInfo": false,
+    "disablePlugins": [],
+    "enablePlugins": []
+  },
+```
+
 ## [0.4.0-rc1] - 20.03.2020
 
 ### Added
