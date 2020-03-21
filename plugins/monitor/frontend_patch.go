@@ -17,7 +17,7 @@ const index string = `
     <script>
       let apiPort = "{{.APIPort}}";
       let apiUrl =
-        "http://" +
+        "//" +
         location.hostname +
         ":" +
         apiPort +
@@ -268,7 +268,7 @@ const InitWebSocket = (that, options) => {
     websocketActiveGlobal[options.host] = true;
 
     var WebSocketURI =
-      "ws://" +
+      (location.protocol === "https:" ? "wss://" : "ws://") +
       location.hostname +
       (location.port ? ":" + location.port : "") +
       "/ws";

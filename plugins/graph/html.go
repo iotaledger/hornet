@@ -35,7 +35,7 @@ const index string = `
 
       var WebSocketURIConfig = "{{.URI}}";
       var WebSocketURI =
-        "ws://" +
+        (location.protocol === "https:" ? "wss://" : "ws://") +
         location.hostname +
         (location.port ? ":" + location.port : "") +
         "/ws";
