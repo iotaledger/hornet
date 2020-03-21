@@ -34,6 +34,7 @@ var (
 	ErrSnapshotCreationFailed     = errors.New("creating snapshot failed: %v")
 	ErrTargetIndexTooNew          = errors.New("snapshot target is too new.")
 	ErrTargetIndexTooOld          = errors.New("snapshot target is too old.")
+	ErrNotEnoughHistory           = errors.New("not enough history.")
 	ErrUnconfirmedTxInSubtangle   = errors.New("Unconfirmed tx in subtangle")
 
 	localSnapshotLock       = syncutils.Mutex{}
