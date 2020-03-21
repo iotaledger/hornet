@@ -90,7 +90,7 @@ func configureLocal() *peer.Local {
 		log.Fatalf("Error creating local: %s", err)
 	}
 
-	log.Infof("Initialized local: %v", local)
+	log.Infof("Initialized local: peer://%s@%s", base64.StdEncoding.EncodeToString(local.PublicKey()), local.Address())
 
 	return local
 }
