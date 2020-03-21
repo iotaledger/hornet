@@ -135,7 +135,7 @@ func configure(plugin *node.Plugin) {
 			reqUsername := reqUsernameAndPW[:colonIndex]
 			reqPasword := reqUsernameAndPW[colonIndex+1:]
 
-			if reqUsername != expectedUsername || basicauth.VerifyPassword(reqPasword, passwordSalt, expectedPasswordHash) {
+			if reqUsername != expectedUsername || !basicauth.VerifyPassword(reqPasword, passwordSalt, expectedPasswordHash) {
 				unauthorizedReq(c)
 			}
 		})

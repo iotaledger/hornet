@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
     - Snapshot limits
     - Scheme for jquery url in monitor plugin
     - Solidification trigger signal
+    - HTTP API basic auth
 
 ### Config file changes
 
