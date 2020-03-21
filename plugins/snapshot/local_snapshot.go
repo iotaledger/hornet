@@ -408,9 +408,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
-	tangle.ReadLockSpentAddresses()
-	defer tangle.ReadUnlockSpentAddresses()
-
 	cachedTargetMs := tangle.GetMilestoneOrNil(targetIndex) // bundle +1
 	if cachedTargetMs == nil {
 		log.Panicf("CreateLocalSnapshot: Target milestone (%d) not found!", targetIndex)
@@ -475,6 +472,13 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
+	// This has to be done before aquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
+	// In "solidifyMilestone" the LedgerLock is aquired, but by traversing the tangle, the SolidEntryPoint Lock is also aquired.
+	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
+	if err != nil {
+		return err
+	}
+
 	tangle.WriteLockSolidEntryPoints()
 	defer tangle.WriteUnlockSolidEntryPoints()
 
@@ -483,11 +487,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		tangle.SolidEntryPointsAdd(solidEntryPoint, index)
 	}
 	tangle.StoreSolidEntryPoints()
-
-	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
-	if err != nil {
-		return err
-	}
 
 	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
 		Hash:              cachedTargetMs.GetBundle().GetMilestoneHash(),
