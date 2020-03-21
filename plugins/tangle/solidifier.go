@@ -368,10 +368,10 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 		*/
 
 		solidifierMilestoneIndexLock.RLock()
-		tiggerSignal := (newMilestoneIndex == 0) && (solidifierMilestoneIndex == 0)
+		triggerSignal := (newMilestoneIndex == 0) && (solidifierMilestoneIndex == 0)
 		nextMilestoneSignal := (newMilestoneIndex == tangle.GetSolidMilestoneIndex()+1)
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((solidifierMilestoneIndex != 0) && (newMilestoneIndex < solidifierMilestoneIndex))
-		if !(tiggerSignal || nextMilestoneSignal || olderMilestoneDetected) {
+		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected) {
 			// Do not run solidifier
 			solidifierMilestoneIndexLock.RUnlock()
 			return
