@@ -12,6 +12,7 @@ const (
 )
 
 var (
+	ErrSnapshotInfoMissing                   = errors.New("Snapshot information not found in database")
 	ErrLatestMilestoneOlderThanSnapshotIndex = errors.New("Latest milestone in the database is older than the snapshot index")
 	ErrSnapshotIndexWrong                    = errors.New("Snapshot index does not fit the snapshot ledger index")
 )
@@ -58,6 +59,10 @@ var (
 func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
+	if snapshotInfo == nil {
+		return 0, ErrSnapshotInfoMissing
+	}
+
 	latestMilestoneIndex := tangle.SearchLatestMilestoneIndex()
 
 	// Resume old revalidation attempts
