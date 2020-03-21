@@ -185,7 +185,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone_index.MilestoneIndex) bool
 		snapshotInterval = snapshotIntervalUnsynced
 	}
 
-	if (solidMilestoneIndex - snapshotDepth) < snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast {
+	if (solidMilestoneIndex < snapshotDepth+snapshotInterval) || (solidMilestoneIndex-snapshotDepth) < snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast {
 		// Not enough history to calculate solid entry points
 		return false
 	}
@@ -307,6 +307,14 @@ func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex mil
 func checkSnapshotLimits(targetIndex milestone_index.MilestoneIndex, snapshotInfo *tangle.SnapshotInfo) error {
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+
+	if solidMilestoneIndex < SolidEntryPointCheckThresholdFuture {
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum solid index: %d, actual solid index: %d", SolidEntryPointCheckThresholdFuture+1, solidMilestoneIndex)
+	}
+
+	if targetIndex < SolidEntryPointCheckThresholdPast {
+		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", SolidEntryPointCheckThresholdPast+1, targetIndex)
+	}
 
 	if targetIndex > (solidMilestoneIndex - SolidEntryPointCheckThresholdFuture) {
 		return errors.Wrapf(ErrTargetIndexTooNew, "maximum: %d, actual: %d", solidMilestoneIndex-SolidEntryPointCheckThresholdFuture, targetIndex)

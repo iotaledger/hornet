@@ -107,6 +107,11 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		log.Panic("No snapshotInfo found!")
 	}
 
+	if solidMilestoneIndex <= pruningDelay || (snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1) {
+		// Not enough history
+		return
+	}
+
 	targetIndex := solidMilestoneIndex - pruningDelay
 	targetIndexMax := (snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1)
 	if targetIndex > targetIndexMax {
