@@ -136,10 +136,10 @@
     "tangleMonitorPath": "tanglemonitor/frontend",
     "domain": "",
     "initialTransactionsCount": 15000,
-    "remoteapiport": 4433,
+    "remoteApiPort": 4433,
     "webBindAddress": "localhost:4434",
     "apiBindAddress": "localhost:4433",
-    "websocket": {
+    "webSocket": {
       "uri": ""
     }
   },
