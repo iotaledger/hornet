@@ -174,6 +174,7 @@ type GetNodeInfo struct {
 type GetNodeInfoReturn struct {
 	AppName                            string   `json:"appName"`
 	AppVersion                         string   `json:"appVersion"`
+	NodeAlias                          string   `json:"nodeAlias,omitempty"`
 	LatestMilestone                    string   `json:"latestMilestone"`
 	LatestMilestoneIndex               uint32   `json:"latestMilestoneIndex"`
 	LatestSolidSubtangleMilestone      string   `json:"latestSolidSubtangleMilestone"`
