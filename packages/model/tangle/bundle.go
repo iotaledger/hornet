@@ -9,6 +9,8 @@ import (
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
+
+	"github.com/gohornet/hornet/packages/metrics"
 )
 
 func BundleCaller(handler interface{}, params ...interface{}) {
@@ -208,6 +210,20 @@ func (bundle *Bundle) ResetSolidAndConfirmed() {
 	// Metadata
 	bundle.setSolid(false)
 	bundle.setConfirmed(false)
+}
+
+func (bundle *Bundle) ApplySpentAddresses() {
+	if !bundle.IsValueSpam() {
+		spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
+		for addr, change := range bundle.GetLedgerChanges() {
+			if change < 0 {
+				if spentAddressesEnabled && MarkAddressAsSpent(addr) {
+					metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
+				}
+				Events.AddressSpent.Trigger(addr)
+			}
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////

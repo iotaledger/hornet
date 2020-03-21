@@ -398,17 +398,7 @@ func TryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		cachedBndl := &CachedBundle{CachedObject: cachedObj}
 		bndl := cachedBndl.GetBundle()
 
-		if !bndl.IsValueSpam() {
-			spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
-			for addr, change := range bndl.GetLedgerChanges() {
-				if change < 0 {
-					if spentAddressesEnabled && MarkAddressAsSpent(addr) {
-						metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
-					}
-					Events.AddressSpent.Trigger(addr)
-				}
-			}
-		}
+		bndl.ApplySpentAddresses()
 
 		if bndl.IsMilestone() {
 			Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
