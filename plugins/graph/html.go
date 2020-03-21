@@ -10,7 +10,7 @@ const index string = `
     <script src="lib/vivagraph.js"></script>
     <script src="main.js"></script>
     <script
-      src="http://code.jquery.com/jquery-3.2.1.slim.min.js"
+      src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
       integrity="sha256-k2WSCIexGzOj3Euiig+TlR8gA0EmPjuc79OEeY5L45g="
       crossorigin="anonymous"
     ></script>
