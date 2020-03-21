@@ -36,6 +36,7 @@ var (
 	ErrTargetIndexTooOld          = errors.New("snapshot target is too old.")
 	ErrNotEnoughHistory           = errors.New("not enough history.")
 	ErrUnconfirmedTxInSubtangle   = errors.New("Unconfirmed tx in subtangle")
+	ErrInvalidBalance             = errors.New("Invalid balance! Total does not match supply:")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)

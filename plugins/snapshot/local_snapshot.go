@@ -17,6 +17,7 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 
+	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/dag"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -784,6 +785,15 @@ func LoadSnapshotFromFile(filePath string) error {
 			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
 		}
 		ledgerState[hash[:81]] = val
+	}
+
+	var total uint64
+	for _, value := range ledgerState {
+		total += value
+	}
+
+	if total != compressed.TOTAL_SUPPLY {
+		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, compressed.TOTAL_SUPPLY)
 	}
 
 	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, milestone_index.MilestoneIndex(msIndex))
