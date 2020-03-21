@@ -101,6 +101,7 @@
     "maxDepth": 3
   },
   "node": {
+    "alias": "",
     "disablePlugins": [],
     "enablePlugins": []
   },

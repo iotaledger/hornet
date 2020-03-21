@@ -18,6 +18,7 @@ import TipSelChart from "app/components/TipSelChart";
 import ListGroup from "react-bootstrap/ListGroup";
 import Card from "react-bootstrap/Card";
 import MemChart from "app/components/MemChart";
+import {If} from 'tsx-control-statements/components';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -29,7 +30,7 @@ export class Dashboard extends React.Component<Props, any> {
     render() {
         return (
             <Container>
-                <h3>Dashboard</h3>
+                <h3>Dashboard <If condition={this.props.nodeStore.status.node_alias !== ""}>({this.props.nodeStore.status.node_alias})</If></h3>
                 <Row className={"mb-3"}>
                     <Col>
                         <Card>
