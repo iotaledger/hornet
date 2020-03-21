@@ -114,21 +114,11 @@ func MarkAddressAsSpentBinaryWithoutLocking(address []byte) bool {
 	return newlyAdded
 }
 
-func CountSpentAddressesEntriesWithoutLocking() (spentAddressesCount int32) {
-
-	spentAddressesCount = 0
-	spentAddressesStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		spentAddressesCount++
-		cachedObject.Release(true) // spentAddress -1
-		return true
-	})
-
-	return spentAddressesCount
-}
-
 // StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer.
-// ReadLockSpentAddresses must be held while entering this function.
 func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (int32, error) {
+
+	ReadLockSpentAddresses()
+	defer ReadUnlockSpentAddresses()
 
 	var addressesWritten int32
 

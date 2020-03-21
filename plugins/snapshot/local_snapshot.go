@@ -408,9 +408,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
-	tangle.ReadLockSpentAddresses()
-	defer tangle.ReadUnlockSpentAddresses()
-
 	cachedTargetMs := tangle.GetMilestoneOrNil(targetIndex) // bundle +1
 	if cachedTargetMs == nil {
 		log.Panicf("CreateLocalSnapshot: Target milestone (%d) not found!", targetIndex)
@@ -475,6 +472,11 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
+	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
+	if err != nil {
+		return err
+	}
+
 	tangle.WriteLockSolidEntryPoints()
 	defer tangle.WriteUnlockSolidEntryPoints()
 
@@ -483,11 +485,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		tangle.SolidEntryPointsAdd(solidEntryPoint, index)
 	}
 	tangle.StoreSolidEntryPoints()
-
-	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
-	if err != nil {
-		return err
-	}
 
 	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
 		Hash:              cachedTargetMs.GetBundle().GetMilestoneHash(),
