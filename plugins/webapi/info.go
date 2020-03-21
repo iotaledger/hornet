@@ -26,6 +26,11 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		AppVersion: cli.AppVersion,
 	}
 
+	// Node Alias
+	if config.NodeConfig.GetBool(config.CfgNodeShowAliasInGetNodeInfo) {
+		info.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
+	}
+
 	// Number of neighbors
 	info.Neighbors = uint(gossip.GetNeighborsCount())
 

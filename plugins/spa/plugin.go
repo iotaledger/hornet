@@ -191,6 +191,7 @@ type nodestatus struct {
 	LatestVersion           string                         `json:"latest_version"`
 	Uptime                  int64                          `json:"uptime"`
 	AutopeeringID           string                         `json:"autopeering_id"`
+	NodeAlias               string                         `json:"node_alias"`
 	ConnectedNeighborsCount int                            `json:"connected_neighbors_count"`
 	CurrentRequestedMs      milestone_index.MilestoneIndex `json:"current_requested_ms"`
 	MsRequestQueueSize      int                            `json:"ms_request_queue_size"`
@@ -300,6 +301,7 @@ func currentNodeStatus() *nodestatus {
 	if !node.IsSkipped(autopeering.PLUGIN) {
 		status.AutopeeringID = autopeering.ID
 	}
+	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()
 

@@ -36,6 +36,7 @@ class Status {
     latest_version: string;
     uptime: number;
     autopeering_id: string;
+    node_alias: string;
     connected_neighbors_count: number;
     current_requested_ms: number;
     ms_request_queue_size: number;
