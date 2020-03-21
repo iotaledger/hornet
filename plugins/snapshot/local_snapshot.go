@@ -472,6 +472,8 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 		return err
 	}
 
+	// This has to be done before aquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
+	// In "solidifyMilestone" the LedgerLock is aquired, but by traversing the tangle, the SolidEntryPoint Lock is also aquired.
 	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
 	if err != nil {
 		return err
