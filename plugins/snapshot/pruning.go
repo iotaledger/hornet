@@ -73,7 +73,8 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	for _, txHash := range txHashes {
 		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 		if cachedTx == nil {
-			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
+			log.Warnf("pruneTransactions: Transaction not found: %v", txHash)
+			continue
 		}
 
 		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTx.GetTransaction().Tx) {
@@ -87,7 +88,8 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	for txHash := range txsToRemove {
 		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 		if cachedTx == nil {
-			log.Panicf("pruneTransactions: Transaction not found: %v", txHash)
+			log.Warnf("pruneTransactions: Transaction not found: %v", txHash)
+			continue
 		}
 		tangle.DeleteTag(cachedTx.GetTransaction().Tx.Tag, txHash)
 		tangle.DeleteAddress(cachedTx.GetTransaction().Tx.Address, txHash)
@@ -137,22 +139,29 @@ func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSign
 		ts := time.Now()
 		txCount := pruneUnconfirmedTransactions(milestoneIndex)
 
-		cachedMs := tangle.GetMilestoneOrNil(milestoneIndex) // bundle +1
+		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
-			log.Panicf("Milestone (%d) not found!", milestoneIndex)
+			// Milestone not found, pruning impossible
+			log.Warnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
+			continue
 		}
 
 		// Get all approvees of that milestone
-		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
-		cachedMs.Release(true)                           // bundle -1
+		cachedMsTailTx := tangle.GetCachedTransactionOrNil(cachedMs.GetMilestone().Hash) // tx +1
+		cachedMs.Release(true)                                                           // milestone -1
 
+		if cachedMsTailTx == nil {
+			// Milestone tail not found, pruning impossible
+			log.Warnf("Pruning milestone (%d) failed! Milestone tail tx not found!", milestoneIndex)
+			continue
+		}
 		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, nil)
 
 		// Do not force release, since it is loaded again for pruning
 		cachedMsTailTx.Release() // tx -1
 
 		if err != nil {
-			log.Errorf("Pruning milestone (%d) failed! %v", milestoneIndex, err)
+			log.Warnf("Pruning milestone (%d) failed! Error: %v", milestoneIndex, err)
 			continue
 		}
 
