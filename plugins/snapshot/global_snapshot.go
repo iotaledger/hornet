@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -107,6 +108,15 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 		ledgerState[address] = balance
 
 		//log.Infof("Address: %v (%d)", address, balance)
+	}
+
+	var total uint64
+	for _, value := range ledgerState {
+		total += value
+	}
+
+	if total != compressed.TOTAL_SUPPLY {
+		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, compressed.TOTAL_SUPPLY)
 	}
 
 	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, snapshotIndex)
