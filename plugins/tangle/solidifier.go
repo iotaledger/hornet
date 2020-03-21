@@ -210,15 +210,16 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 						cachedApproveeTx.GetMetadata().Reset()
 					}
 
-					// We should also delete corrupted bundle information (it will be reconstructed if tailTx gets solid again).
-					// This also handles the special case if a milestone bundle was stored, but the milestone is missing in the database,
-					// because the bundle gets deleted and would be reconstructed on solidification, which would lead to reapplying the
-					// valid milestone to the database.
+					// We should also delete corrupted bundle information (it will be reapplied at solidification and confirmation).
+					// This also handles the special case if a milestone bundle was stored, but the milestone is missing in the database.
 					if !approveeSolid && cachedApproveeTx.GetTransaction().IsTail() && (approveeHash != consts.NullHashTrytes) {
 						if cachedBndl := tangle.GetCachedBundleOrNil(approveeHash); cachedBndl != nil {
 
 							// Reset corrupted meta tags of the bundle
 							cachedBndl.GetBundle().ResetSolidAndConfirmed()
+
+							// Reapplies missing spent addresses to the database
+							cachedBndl.GetBundle().ApplySpentAddresses()
 
 							if cachedBndl.GetBundle().IsMilestone() {
 								// Reapply milestone information to database
