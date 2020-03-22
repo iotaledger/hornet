@@ -498,12 +498,13 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone_index.MilestoneInde
 	tangle.StoreSolidEntryPoints()
 
 	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
-		Hash:              cachedTargetMs.GetBundle().GetMilestoneHash(),
-		SnapshotIndex:     targetIndex,
-		PruningIndex:      snapshotInfo.PruningIndex,
-		RevalidationIndex: snapshotInfo.RevalidationIndex,
-		Timestamp:         cachedTargetMsTail.GetTransaction().GetTimestamp(),
-		Metadata:          snapshotInfo.Metadata,
+		CoordinatorAddress: snapshotInfo.CoordinatorAddress,
+		Hash:               cachedTargetMs.GetBundle().GetMilestoneHash(),
+		SnapshotIndex:      targetIndex,
+		PruningIndex:       snapshotInfo.PruningIndex,
+		RevalidationIndex:  snapshotInfo.RevalidationIndex,
+		Timestamp:          cachedTargetMsTail.GetTransaction().GetTimestamp(),
+		Metadata:           snapshotInfo.Metadata,
 	})
 
 	log.Infof("Created local snapshot for targetIndex %d (%x), took %v", targetIndex, hash, time.Since(ts))
@@ -704,7 +705,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
+	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81], msHash[:81], milestone_index.MilestoneIndex(msIndex), milestone_index.MilestoneIndex(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
 	tangle.SolidEntryPointsAdd(msHash[:81], milestone_index.MilestoneIndex(msIndex))
 
 	log.Info("Importing solid entry points")

@@ -1,8 +1,9 @@
 package snapshot
 
 import (
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
@@ -27,16 +28,17 @@ var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	ErrNoSnapshotSpecified        = errors.New("no snapshot file was specified in the config")
-	ErrSnapshotImportWasAborted   = errors.New("snapshot import was aborted")
-	ErrSnapshotImportFailed       = errors.New("snapshot import failed")
-	ErrSnapshotCreationWasAborted = errors.New("operation was aborted")
-	ErrSnapshotCreationFailed     = errors.New("creating snapshot failed: %v")
-	ErrTargetIndexTooNew          = errors.New("snapshot target is too new.")
-	ErrTargetIndexTooOld          = errors.New("snapshot target is too old.")
-	ErrNotEnoughHistory           = errors.New("not enough history.")
-	ErrUnconfirmedTxInSubtangle   = errors.New("Unconfirmed tx in subtangle")
-	ErrInvalidBalance             = errors.New("Invalid balance! Total does not match supply:")
+	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
+	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
+	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
+	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
+	ErrSnapshotCreationFailed          = errors.New("creating snapshot failed: %v")
+	ErrTargetIndexTooNew               = errors.New("snapshot target is too new.")
+	ErrTargetIndexTooOld               = errors.New("snapshot target is too old.")
+	ErrNotEnoughHistory                = errors.New("not enough history.")
+	ErrUnconfirmedTxInSubtangle        = errors.New("Unconfirmed tx in subtangle")
+	ErrInvalidBalance                  = errors.New("Invalid balance! Total does not match supply:")
+	ErrWrongCoordinatorAddressDatabase = errors.New("Configured coordinator address does not match database information")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)
@@ -116,7 +118,13 @@ func run(plugin *node.Plugin) {
 		}
 	}, shutdown.ShutdownPriorityLocalSnapshots)
 
-	if tangle.GetSnapshotInfo() != nil {
+	snapshotInfo := tangle.GetSnapshotInfo()
+	if snapshotInfo != nil {
+		// Check coordinator address in database
+		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81] {
+			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81]))
+		}
+
 		// Check the ledger state
 		tangle.GetAllLedgerBalances(nil)
 		return
