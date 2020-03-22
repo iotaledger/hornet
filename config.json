@@ -117,7 +117,7 @@
   },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
-    "depth": 3,
+    "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
     "tpsRateLimit": 0.1,
