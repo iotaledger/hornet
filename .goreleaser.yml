@@ -143,6 +143,7 @@ nfpms:
       "nfpm/shared_files/download_snapshot.sh": "/usr/bin/hornet_download_snapshot.sh"
     config_files:
       "config.json": "/etc/hornet/config.json"
+      "mqtt_config.json": "/etc/hornet/mqtt_config.json"
       "neighbors.json": "/etc/hornet/neighbors.json"
       "profiles.json": "/etc/hornet/profiles.json"
       "nfpm/shared_files/hornet.env": "/etc/default/hornet"
