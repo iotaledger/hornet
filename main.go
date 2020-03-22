@@ -4,6 +4,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/packages/toolset"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/database"
@@ -25,6 +26,7 @@ import (
 
 func main() {
 	cli.PrintVersion()
+	toolset.HandleTools()
 	cli.ParseConfig()
 
 	plugins := []*node.Plugin{
