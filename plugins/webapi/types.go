@@ -180,8 +180,8 @@ type GetNodeInfoReturn struct {
 	LatestSolidSubtangleMilestone      string   `json:"latestSolidSubtangleMilestone"`
 	LatestSolidSubtangleMilestoneIndex uint32   `json:"latestSolidSubtangleMilestoneIndex"`
 	IsSynced                           bool     `json:"isSynced"`
-	MilestoneStartIndex                uint32   `json:"milestoneStartIndex,omitempty"`
-	LastSnapshottedMilestoneIndex      uint32   `json:"lastSnapshottedMilestoneIndex,omitempty"`
+	MilestoneStartIndex                uint32   `json:"milestoneStartIndex"`
+	LastSnapshottedMilestoneIndex      uint32   `json:"lastSnapshottedMilestoneIndex"`
 	Neighbors                          uint     `json:"neighbors"`
 	Time                               int64    `json:"time"`
 	Tips                               uint16   `json:"tips"`
@@ -206,7 +206,7 @@ type GetNodeAPIConfigurationReturn struct {
 	MaxRequestsList     int    `json:"maxRequestsList"`
 	MaxGetTrytes        int    `json:"maxGetTrytes"`
 	MaxBodyLength       int    `json:"maxBodyLength"`
-	MilestoneStartIndex uint32 `json:"milestoneStartIndex,omitempty"`
+	MilestoneStartIndex uint32 `json:"milestoneStartIndex"`
 	Duration            int    `json:"duration"`
 }
 
