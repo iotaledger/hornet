@@ -1,9 +1,11 @@
 latest-export.bin
 export.bin
+export_comnet.bin
 .github
 .git
 docker/
 mainnetdb/
+comnetdb/
 snapshot/
 README.md
 .dockerignore

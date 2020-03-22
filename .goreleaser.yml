@@ -123,6 +123,7 @@ archives:
       - README.md
       - LICENSE
       - config.json
+      - config_comnet.json
       - neighbors.json
       - profiles.json
 
@@ -143,6 +144,7 @@ nfpms:
       "nfpm/shared_files/download_snapshot.sh": "/usr/bin/hornet_download_snapshot.sh"
     config_files:
       "config.json": "/etc/hornet/config.json"
+      "config_comnet.json": "/etc/hornet/config_comnet.json"
       "mqtt_config.json": "/etc/hornet/mqtt_config.json"
       "neighbors.json": "/etc/hornet/neighbors.json"
       "profiles.json": "/etc/hornet/profiles.json"
