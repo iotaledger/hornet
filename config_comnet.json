@@ -44,7 +44,7 @@
     }
   },
   "db": {
-    "path": "mainnetdb"
+    "path": "comnetdb"
   },
   "snapshots": {
     "loadType": "local",
@@ -53,16 +53,12 @@
       "depth": 50,
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
-      "path": "export.bin"
+      "path": "export_comnet.bin"
     },
     "global": {
-      "path": "snapshotMainnet.txt",
-      "spentAddressesPaths": [
-        "previousEpochsSpentAddresses1.txt",
-        "previousEpochsSpentAddresses2.txt",
-        "previousEpochsSpentAddresses3.txt"
-      ],
-      "index": 1050000
+      "path": "snapshot.csv",
+      "spentAddressesPaths": [],
+      "index": 0
     },
     "pruning": {
       "enabled": true,
@@ -73,7 +69,7 @@
     "enabled": true
   },
   "milestones": {
-    "coordinator": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
+    "coordinator": "ZNCCPOTBCDZXCBQYBWUYYFO9PLRHNAROWOS9KGMYWNVIXWGYGUSJBZUTUQBNQRADHPUEONZZTYGVMSRZD",
     "coordinatorSecurityLevel": 2,
     "numberOfKeysInAMilestone": 23
   },
@@ -87,14 +83,13 @@
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "entryNodes": [
-        "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
-        "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626"
+        "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641"
       ],
       "seed": ""
     }
   },
   "protocol": {
-    "mwm": 14
+    "mwm": 10
   },
   "tipsel": {
     "belowMaxDepthTransactionLimit": 20000,

@@ -16,6 +16,7 @@
 
 # Database directory
 mainnetdb/
+comnetdb/
 
 # OSX related files
 .DS_Store
@@ -23,6 +24,7 @@ mainnetdb/
 
 # snapshot files
 *export.bin
+*export_comnet.bin
 
 # template files
 *node_modules
