@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"bufio"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -31,26 +30,20 @@ func loadSpentAddresses(filePathSpent string) (int, error) {
 	}
 	defer spentFile.Close()
 
-	var line string
+	scanner := bufio.NewScanner(spentFile)
+	for scanner.Scan() {
+		addr := scanner.Text()
 
-	ioReader := bufio.NewReader(spentFile)
-	for {
-		line, err = ioReader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
+		if err := address.ValidAddress(addr); err != nil {
 			return 0, err
 		}
 
-		address := line[:len(line)-1]
-		if err := trinary.ValidTrytes(address); err != nil {
-			return 0, err
-		}
-
-		if tangle.MarkAddressAsSpent(address) {
+		if tangle.MarkAddressAsSpent(addr) {
 			spentAddressesCount++
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
 	}
 
 	log.Infof("Finished loading spent addresses from %v", filePathSpent)
@@ -97,10 +90,9 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 		}
 
 		ledgerState[addr] = balance
-		//log.Infof("Address: %v (%d)", addr, balance)
 	}
-	if scanner.Err() != nil {
-		return errors.Wrapf(ErrSnapshotImportFailed, "Scanner: %v", scanner.Err())
+	if err := scanner.Err(); err != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "Scanner: %v", err)
 	}
 
 	var total uint64
