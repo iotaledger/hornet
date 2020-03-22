@@ -1,8 +1,9 @@
 package snapshot
 
 import (
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
@@ -121,7 +122,7 @@ func run(plugin *node.Plugin) {
 	if snapshotInfo != nil {
 		// Check coordinator address in database
 		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81] {
-			log.Panic(ErrWrongCoordinatorAddressDatabase)
+			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81]))
 		}
 
 		// Check the ledger state
