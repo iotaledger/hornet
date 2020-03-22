@@ -102,7 +102,7 @@ func hashPasswordAndSalt() {
 
 	salt = strings.TrimSuffix(salt, "\n")
 
-	for _, rune := range []rune(salt) {
+	for _, rune := range salt {
 		if unicode.IsUpper(rune) {
 			fmt.Printf("\nSalt (%s) contains upper cased characters\n", salt)
 			os.Exit(1)
