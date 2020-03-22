@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -76,38 +77,30 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 	defer ledgerFile.Close()
 
 	ledgerState := make(map[trinary.Hash]uint64)
+	scanner := bufio.NewScanner(ledgerFile)
 
-	var line string
-	var balance uint64
-
-	ioReader := bufio.NewReader(ledgerFile)
-	for {
-		line, err = ioReader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return errors.Wrapf(ErrSnapshotImportFailed, "ReadString: %v", err)
-		}
-
-		lineSplitted := strings.Split(line[:len(line)-1], ";")
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineSplitted := strings.Split(line, ";")
 		if len(lineSplitted) != 2 {
 			return errors.Wrapf(ErrSnapshotImportFailed, "Wrong format in %v", filePathLedger)
 		}
 
-		address := lineSplitted[0][:81]
-		if err := trinary.ValidTrytes(address); err != nil {
-			return errors.Wrapf(ErrSnapshotImportFailed, "ValidTrytes: %v", err)
+		addr := lineSplitted[0]
+		if err := address.ValidAddress(addr); err != nil {
+			return errors.Wrapf(ErrSnapshotImportFailed, "ValidAddress: %v", err)
 		}
 
-		balance, err = strconv.ParseUint(lineSplitted[1], 10, 64)
+		balance, err := strconv.ParseUint(lineSplitted[1], 10, 64)
 		if err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "ParseUint: %v", err)
 		}
 
-		ledgerState[address] = balance
-
-		//log.Infof("Address: %v (%d)", address, balance)
+		ledgerState[addr] = balance
+		//log.Infof("Address: %v (%d)", addr, balance)
+	}
+	if scanner.Err() != nil {
+		return errors.Wrapf(ErrSnapshotImportFailed, "Scanner: %v", scanner.Err())
 	}
 
 	var total uint64
