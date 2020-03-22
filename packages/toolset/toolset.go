@@ -27,7 +27,7 @@ func HandleTools() {
 		return
 	}
 
-	if args[0] != "tool" {
+	if strings.ToLower(args[0]) != "tool" {
 		return
 	}
 
