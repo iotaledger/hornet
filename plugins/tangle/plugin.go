@@ -94,6 +94,7 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(plugin *node.Plugin) {
+
 	runTangleProcessor(plugin)
 
 	// create a background worker that prints a status message every second

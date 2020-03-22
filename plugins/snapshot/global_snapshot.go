@@ -126,7 +126,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 	}
 
 	spentAddrEnabled := (spentAddressesSum != 0) || ((snapshotIndex == 0) && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled))
-	tangle.SetSnapshotMilestone(consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0, spentAddrEnabled)
+	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81], consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0, spentAddrEnabled)
 
 	log.Info("Finished loading snapshot")
 

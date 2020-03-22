@@ -27,12 +27,13 @@ var (
 )
 
 type SnapshotInfo struct {
-	Hash              trinary.Hash
-	SnapshotIndex     milestone_index.MilestoneIndex
-	PruningIndex      milestone_index.MilestoneIndex
-	RevalidationIndex milestone_index.MilestoneIndex
-	Timestamp         int64
-	Metadata          bitmask.BitMask
+	CoordinatorAddress trinary.Hash
+	Hash               trinary.Hash
+	SnapshotIndex      milestone_index.MilestoneIndex
+	PruningIndex       milestone_index.MilestoneIndex
+	RevalidationIndex  milestone_index.MilestoneIndex
+	Timestamp          int64
+	Metadata           bitmask.BitMask
 }
 
 func loadSnapshotInfo() {
@@ -42,30 +43,32 @@ func loadSnapshotInfo() {
 	}
 	snapshot = info
 	if info != nil {
-		println(fmt.Sprintf("SnapshotInfo: PruningIndex: %d, SnapshotIndex: %d (%v) Timestamp: %v, SpentAddressesEnabled: %v", info.PruningIndex, info.SnapshotIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
+		println(fmt.Sprintf("SnapshotInfo: CooAddr: %v, PruningIndex: %d, SnapshotIndex: %d (%v) Timestamp: %v, SpentAddressesEnabled: %v", info.CoordinatorAddress, info.PruningIndex, info.SnapshotIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
 	}
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 70 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 70", len(bytes))
+	if len(bytes) != 119 {
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 119", len(bytes))
 	}
 
-	hash := trinary.MustBytesToTrytes(bytes[:49])
-	snapshotIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[49:53]))
-	pruningIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[53:57]))
-	revalidationIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[57:61]))
-	timestamp := int64(binary.LittleEndian.Uint64(bytes[61:69]))
-	metadata := bitmask.BitMask(bytes[69])
+	cooAddr := trinary.MustBytesToTrytes(bytes[:49], 81)
+	hash := trinary.MustBytesToTrytes(bytes[49:98], 81)
+	snapshotIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[98:102]))
+	pruningIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[102:106]))
+	revalidationIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[106:110]))
+	timestamp := int64(binary.LittleEndian.Uint64(bytes[110:118]))
+	metadata := bitmask.BitMask(bytes[118])
 
 	return &SnapshotInfo{
-		Hash:              hash,
-		SnapshotIndex:     snapshotIndex,
-		PruningIndex:      pruningIndex,
-		RevalidationIndex: revalidationIndex,
-		Timestamp:         timestamp,
-		Metadata:          metadata,
+		CoordinatorAddress: cooAddr,
+		Hash:               hash,
+		SnapshotIndex:      snapshotIndex,
+		PruningIndex:       pruningIndex,
+		RevalidationIndex:  revalidationIndex,
+		Timestamp:          timestamp,
+		Metadata:           metadata,
 	}, nil
 }
 
@@ -80,7 +83,9 @@ func (i *SnapshotInfo) SetSpentAddressesEnabled(enabled bool) {
 }
 
 func (i *SnapshotInfo) GetBytes() []byte {
-	bytes := trinary.MustTrytesToBytes(i.Hash)[:49]
+	bytes := trinary.MustTrytesToBytes(i.CoordinatorAddress)[:49]
+
+	bytes = append(bytes, trinary.MustTrytesToBytes(i.Hash)[:49]...)
 
 	snapshotIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(snapshotIndexBytes, uint32(i.SnapshotIndex))
@@ -103,16 +108,17 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(milestoneHash trinary.Hash, snapshotIndex milestone_index.MilestoneIndex, pruningIndex milestone_index.MilestoneIndex, timestamp int64, spentAddressesEnabled bool) {
-	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), pruning index: %d, Timestamp: %v, SpentAddressesEnabled: %v", snapshotIndex, milestoneHash, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
+func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary.Hash, snapshotIndex milestone_index.MilestoneIndex, pruningIndex milestone_index.MilestoneIndex, timestamp int64, spentAddressesEnabled bool) {
+	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), coo address: %v,  pruning index: %d, Timestamp: %v, SpentAddressesEnabled: %v", snapshotIndex, milestoneHash, coordinatorAddress, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
 
 	sn := &SnapshotInfo{
-		Hash:              milestoneHash,
-		SnapshotIndex:     snapshotIndex,
-		PruningIndex:      pruningIndex,
-		RevalidationIndex: 0,
-		Timestamp:         timestamp,
-		Metadata:          bitmask.BitMask(0),
+		CoordinatorAddress: coordinatorAddress,
+		Hash:               milestoneHash,
+		SnapshotIndex:      snapshotIndex,
+		PruningIndex:       pruningIndex,
+		RevalidationIndex:  0,
+		Timestamp:          timestamp,
+		Metadata:           bitmask.BitMask(0),
 	}
 	sn.SetSpentAddressesEnabled(spentAddressesEnabled)
 
