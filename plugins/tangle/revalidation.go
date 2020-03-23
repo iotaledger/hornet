@@ -78,41 +78,17 @@ func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
 	snapshotInfo.RevalidationIndex = latestMilestoneIndex + RevalidationMilestoneThreshold
 	tangle.SetSnapshotInfo(snapshotInfo)
 
-	// Walk all milestones since SnapshotIndex and delete all corrupted balances diffs and milestone bundles
-	// Add a treshold in case the milestones don't exist, but the ledger data was stored already
+	// Walk all milestones since SnapshotIndex and delete all corrupted balances diffs and milestones.
+	// Add a treshold in case the milestones don't exist, but the ledger data was stored already.
+	// Existing milestone bundles or transactions don't have to be deleted. Their metadata will be resetted or ignored
+	// during the solidification walk, and milestones will be reapplied to the database.
 	for milestoneIndex := snapshotInfo.SnapshotIndex + 1; milestoneIndex <= snapshotInfo.RevalidationIndex; milestoneIndex++ {
+		// Delete the information about this milestone (it will be reapplied during solidification walk)
+		tangle.DeleteMilestone(milestoneIndex)
+
 		if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
 			return 0, err
 		}
-	}
-
-	// Walk all milestones since SnapshotIndex and try to reconstruct all known milestones
-	for milestoneIndex := snapshotInfo.SnapshotIndex + 1; milestoneIndex <= latestMilestoneIndex; milestoneIndex++ {
-
-		cachedMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
-		if cachedMilestone == nil {
-			// Maybe node was not solid and never received the milestone
-			continue
-		}
-		milestoneTailTxHash := cachedMilestone.GetMilestone().Hash
-		cachedMilestone.Release(true)
-
-		// Delete the information about this milestone (it will be reconstructed if all data is available)
-		tangle.DeleteMilestone(milestoneIndex)
-
-		// Delete the milestone bundle (it will be reconstructed if all data is available)
-		tangle.DeleteBundle(milestoneTailTxHash)
-
-		cachedMsTailTx := tangle.GetCachedTransactionOrNil(milestoneTailTxHash) // tx +1
-		if cachedMsTailTx == nil {
-			// Transaction not available => skip milestone bundle reconstruction
-			continue
-		}
-
-		// Try to reconstruct the milestone bundle
-		// If all tx are available, it will succeed, otherwise the bundle will be constructed if the missing tx are received
-		tangle.TryConstructBundle(cachedMsTailTx.Retain(), false)
-		cachedMsTailTx.Release(true) // tx -1
 	}
 
 	// Get the ledger state of the last snapshot
