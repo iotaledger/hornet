@@ -88,7 +88,7 @@ func createBundle(address string, msg string, tagSubstring string, txCount int, 
 		return nil, fmt.Errorf("ASCIIToTrytes: %v", err.Error())
 	}
 
-	timestamp := uint64(now.UnixNano() / int64(time.Millisecond))
+	timestamp := uint64(now.UnixNano() / int64(time.Second))
 
 	var b bundle.Bundle
 

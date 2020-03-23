@@ -265,26 +265,26 @@ func (bundle *Bundle) validate() bool {
 		return false
 	}
 
+	headTx := iotaGoBundle[len(iotaGoBundle)-1]
 	validStrictSemantics := true
-
-	// verify that the head transaction only approves tail transactions.
-	// this is fine within the validation code, since the bundle is only complete when it is solid.
-	// however, as a special rule, milestone bundles might not be solid
-	checkTails := !bundle.IsMilestone()
 
 	// enforce that non head transactions within the bundle approve as their branch transaction
 	// the trunk transaction of the head transaction.
-	headTx := iotaGoBundle[len(iotaGoBundle)-1]
-	if len(iotaGoBundle) > 1 {
-		for i := 0; i < len(iotaGoBundle)-1; i++ {
-			if iotaGoBundle[i].BranchTransaction != headTx.TrunkTransaction {
-				validStrictSemantics = false
+	// Milestones already follow these rules.
+	if !bundle.IsMilestone() {
+		if len(iotaGoBundle) > 1 {
+			for i := 0; i < len(iotaGoBundle)-1; i++ {
+				if iotaGoBundle[i].BranchTransaction != headTx.TrunkTransaction {
+					validStrictSemantics = false
+				}
 			}
 		}
 	}
 
-	// check whether the bundle approves tails
-	if checkTails {
+	// verify that the head transaction only approves tail transactions.
+	// this is fine within the validation code, since the bundle is only complete when it is solid.
+	// however, as a special rule, milestone bundles might not be solid
+	if !bundle.IsMilestone() && validStrictSemantics {
 		approveeHashes := []trinary.Hash{headTx.TrunkTransaction}
 		if headTx.TrunkTransaction != headTx.BranchTransaction {
 			approveeHashes = append(approveeHashes, headTx.BranchTransaction)
