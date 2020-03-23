@@ -10,7 +10,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 ---
 
-### Notes
+## Notes
 
 - **Currently HORNET is only released for testing purposes. Don't use it for wallet transfers (except testing with small amounts).**
 - **Please open a [new issue](https://github.com/gohornet/hornet/issues/new) if you detect an error or crash (or submit a PR if you have already fixed it).**
@@ -18,11 +18,27 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 ---
 
-### Documentation
+## Table of Contents
+
+<!--ts-->
+  * [Documentation](#documentation)
+  * [Autopeerinp](#autopeering)
+  * [Contributing](#contributing)
+  * [Run Hornet](#run-hornet)
+  * [Available Plugins](#available-plugins)
+    * [TangleMonitor](#tanglemonitor)
+    * [IOTA Tangle Visualiser](#iota-tangle-visualiser)
+    * [MQTT Broker](#mqtt-broker)
+    * [Spammer](#spammer)
+    * [Autopeering](#autopeering)
+  * [Docker](#docker)
+<!--te-->
+
+## Documentation
 
 Please have a look into our [HORNET wiki](https://github.com/gohornet/hornet/wiki)
 
-### Autopeering
+## Autopeering
 
 The autopeering plugin is still in an early state. We recommend to add 1-2 static neighbors as well if you want to run a reliable node.
 If you want to disable autopeering, you can do so by adding it to the `disablePlugins` in your `config.json`:
@@ -34,11 +50,11 @@ If you want to disable autopeering, you can do so by adding it to the `disablePl
   },
 ```
 
-### Contributing
+## Contributing
 
 - See [CONTRIBUTING](/CONTRIBUTING.md)
 
-### Run HORNET
+## Run HORNET
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
 - Extract the files in a folder of your choice
@@ -48,9 +64,9 @@ If you want to disable autopeering, you can do so by adding it to the `disablePl
 
 ---
 
-### Available plugins
+## Available Plugins
 
-#### TangleMonitor
+### TangleMonitor
 
 - Download the latest TangleMonitor source code
 
@@ -82,7 +98,7 @@ git clone https://github.com/unioproject/tanglemonitor.git
   },
 ```
 
-#### IOTA Tangle Visualiser
+### IOTA Tangle Visualiser
 
 - Download the latest IOTA Tangle Visualiser and socket.io source code
 
@@ -112,7 +128,7 @@ git clone https://github.com/glumb/IOTAtangle.git
   },
 ```
 
-#### MQTT Broker
+### MQTT Broker
 
 - Modify the `mqtt_config.json` to fit your needs
   - Change `"host"` to `"0.0.0.0"` if you want to access MQTT from anywhere
@@ -147,7 +163,7 @@ git clone https://github.com/glumb/IOTAtangle.git
   },
 ```
 
-#### Spammer
+### Spammer
 
 - Modify the `config.json` to fit your needs
   - Change `"address"`, `"message"` and `"tag"`
@@ -172,7 +188,7 @@ git clone https://github.com/glumb/IOTAtangle.git
 
 ---
 
-### Docker
+## Docker
 
 ![Docker Pulls](https://img.shields.io/docker/pulls/gohornet/hornet?style=for-the-badge)
 
@@ -180,4 +196,4 @@ Pull HORNET from [Docker Hub](https://hub.docker.com/r/gohornet/hornet)
 
 **Build a Docker image**
 
-- See [Docker](docker/DOCKER.md)
+- See [Docker](docker/README.md)
