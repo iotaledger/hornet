@@ -223,13 +223,18 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 
 							if cachedBndl.GetBundle().IsMilestone() {
 								// Reapply milestone information to database
-								newlyAdded, cachedMilestone := tangle.StoreMilestone(cachedBndl.GetBundle())
+								_, cachedMilestone := tangle.StoreMilestone(cachedBndl.GetBundle())
 
-								// Fire the event if the milestone was unknown
-								if newlyAdded {
-									tangle.Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
-								}
-								cachedMilestone.Release(true) // milestone +-0
+								// Do not force release, since it is loaded again
+								cachedMilestone.Release() // milestone +-0
+
+								// Always fire the event to abort the walk and release the cached transactions
+								// => otherwise the walked cone could become to big and lead to OOM
+								tangle.Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
+
+								// Do not force release, since it is loaded again
+								cachedBndl.Release()
+								return false, true
 							}
 							cachedBndl.Release(true)
 						}

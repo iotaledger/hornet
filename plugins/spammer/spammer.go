@@ -69,7 +69,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-	log.Infof("Sent Spam Transaction # %v GTTA: %v POW: %v Total: %v", txCount, durGTTA, durPOW, durTotal)
+	log.Infof("Sent Spam Transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCount, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
 }
 
 // transactionHash makes a transaction hash from the given transaction.
