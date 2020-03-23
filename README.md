@@ -22,7 +22,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 <!--ts-->
   * [Documentation](#documentation)
-  * [Autopeerinp](#autopeering)
+  * [Autopeering](#autopeering)
   * [Contributing](#contributing)
   * [Run Hornet](#run-hornet)
   * [Available Plugins](#available-plugins)
