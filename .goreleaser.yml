@@ -126,6 +126,7 @@ archives:
       - config_comnet.json
       - neighbors.json
       - profiles.json
+      - mqtt_config.json
 
 # DEB and RPM packages
 nfpms:
