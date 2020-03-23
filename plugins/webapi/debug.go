@@ -153,5 +153,4 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, abortSignal <-chan s
 
 	e.Error = fmt.Sprintf("No confirmed approver found: %s", query.TxHash)
 	c.JSON(http.StatusInternalServerError, e)
-	return
 }
