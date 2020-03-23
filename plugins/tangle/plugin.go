@@ -35,17 +35,6 @@ func configure(plugin *node.Plugin) {
 
 	tangle.LoadInitialValuesFromDatabase()
 
-	if tangle.IsDatabaseCorrupted() {
-		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
-
-		var err error
-		revalidationMilestoneIndex, err = revalidateDatabase()
-		if err != nil {
-			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
-		}
-		log.Infof("First stage of database revalidation successful (RevalidationIndex: %d). Solidifcation will be slower due to stage two.", revalidationMilestoneIndex)
-	}
-
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
@@ -94,6 +83,17 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(plugin *node.Plugin) {
+
+	if tangle.IsDatabaseCorrupted() {
+		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
+
+		var err error
+		revalidationMilestoneIndex, err = revalidateDatabase()
+		if err != nil {
+			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
+		}
+		log.Infof("First stage of database revalidation successful (RevalidationIndex: %d). Solidifcation will be slower due to stage two.", revalidationMilestoneIndex)
+	}
 
 	runTangleProcessor(plugin)
 

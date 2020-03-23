@@ -72,6 +72,41 @@ func configure(plugin *node.Plugin) {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
 		pruningDelay = pruningDelayMin
 	}
+
+	snapshotInfo := tangle.GetSnapshotInfo()
+	if snapshotInfo != nil {
+		// Check coordinator address in database
+		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81] {
+			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81]))
+		}
+
+		// Check the ledger state
+		tangle.GetAllLedgerBalances(nil)
+		return
+	}
+
+	var err = ErrNoSnapshotSpecified
+
+	snapshotTypeToLoad := config.NodeConfig.GetString(config.CfgSnapshotLoadType)
+	switch strings.ToLower(snapshotTypeToLoad) {
+	case "global":
+		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
+			err = LoadGlobalSnapshot(path,
+				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPaths),
+				milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
+		}
+	case "local":
+		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
+			err = LoadSnapshotFromFile(path)
+		}
+	default:
+		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, snapshotTypeToLoad)
+	}
+
+	if err != nil {
+		tangle.MarkDatabaseCorrupted()
+		log.Panic(err.Error())
+	}
 }
 
 func run(plugin *node.Plugin) {
@@ -117,41 +152,6 @@ func run(plugin *node.Plugin) {
 			}
 		}
 	}, shutdown.ShutdownPriorityLocalSnapshots)
-
-	snapshotInfo := tangle.GetSnapshotInfo()
-	if snapshotInfo != nil {
-		// Check coordinator address in database
-		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81] {
-			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81]))
-		}
-
-		// Check the ledger state
-		tangle.GetAllLedgerBalances(nil)
-		return
-	}
-
-	var err = ErrNoSnapshotSpecified
-
-	snapshotTypeToLoad := config.NodeConfig.GetString(config.CfgSnapshotLoadType)
-	switch strings.ToLower(snapshotTypeToLoad) {
-	case "global":
-		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
-			err = LoadGlobalSnapshot(path,
-				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPaths),
-				milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
-		}
-	case "local":
-		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
-			err = LoadSnapshotFromFile(path)
-		}
-	default:
-		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, snapshotTypeToLoad)
-	}
-
-	if err != nil {
-		tangle.MarkDatabaseCorrupted()
-		log.Panic(err.Error())
-	}
 }
 
 func installGenesisTransaction() {
