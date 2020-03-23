@@ -18,7 +18,7 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 ---
 
-## Table of Contents
+*Table of contents*
 
 <!--ts-->
   * [Documentation](#documentation)
