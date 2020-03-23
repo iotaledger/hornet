@@ -388,3 +388,27 @@ type GetRequestsReturn struct {
 }
 
 ///////////////////////////////////////////////////////////////////
+
+///////////////// searchConfirmedApprover /////////////////////////
+
+// SearchConfirmedApprover struct
+type SearchConfirmedApprover struct {
+	Command         string `mapstructure:"command"`
+	TxHash          string `mapstructure:"txHash"`
+	SearchMilestone bool   `mapstructure:"searchMilestone"`
+}
+
+// ApproverStruct struct
+type ApproverStruct struct {
+	TxHash            string `mapstructure:"txHash"`
+	ReferencedByTrunk bool   `mapstructure:"referencedByTrunk"`
+}
+
+// SearchConfirmedApproverReturn struct
+type SearchConfirmedApproverReturn struct {
+	ConfirmedTxHash           string            `json:"confirmedTxHash"`
+	ConfirmedByMilestoneIndex uint32            `json:"confirmedByMilestoneIndex"`
+	TanglePath                []*ApproverStruct `json:"tanglePath"`
+}
+
+///////////////////////////////////////////////////////////////////
