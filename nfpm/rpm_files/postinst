@@ -5,7 +5,7 @@ if [ $1 -eq 1 ]; then
 ######################################
 HORNET installation finished
 ######################################
-Please edit the config files (/etc/hornet/config.json and /etc/hornet/neighbors.json) to fit your needs.
+Please edit the config files (/var/lib/hornet/config.json and /var/lib/hornet/neighbors.json) to fit your needs.
 To start HORNET the first time, please run:
 
 sudo systemctl enable hornet && sudo service hornet start
