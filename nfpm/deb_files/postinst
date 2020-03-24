@@ -11,22 +11,13 @@ if type systemctl >/dev/null 2>/dev/null; then
 		systemctl daemon-reload
 	fi
 
-        # if iota group doesn't exist, create it
-        if [ ! $(getent group iota) ]; then
-                groupadd iota > /dev/null
-        fi   
-
-	# if beekeeper user doesn't exist, create it
-	if [ ! $(getent passwd beekeeper) ]; then
-		useradd --no-create-home --system -g iota beekeeper > /dev/null
+	# if hornet user doesn't exist, create it
+	if [ ! $(getent passwd hornet) ]; then
+		useradd --no-create-home --system hornet > /dev/null
 	fi
 
-	mkdir -p /var/lib/hornet/db
-	mkdir -p /var/lib/hornet/snapshot
-	chmod -R 775 /var/lib/hornet
-	chmod -R 775 /etc/hornet
-	chown -R beekeeper:iota /var/lib/hornet
-	chown -R beekeeper:iota /etc/hornet
+	mkdir -p /var/lib/hornet
+	chown -R hornet:hornet /var/lib/hornet
 
 	systemctl $OPTS disable hornet.service
 
