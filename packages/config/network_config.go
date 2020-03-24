@@ -47,6 +47,7 @@ func init() {
 	NodeConfig.SetDefault(CfgNetAutopeeringEntryNodes, []string{
 		"LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
 		"zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
+		"npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@autopeering.tanglebay.org:14626",
 	})
 	NodeConfig.SetDefault(CfgNetAutopeeringBindAddr, "0.0.0.0:14626")
 	NodeConfig.SetDefault(CfgNetAutopeeringSeed, nil)

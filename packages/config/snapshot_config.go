@@ -36,7 +36,7 @@ func init() {
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalSynced, 50)
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalUnsynced, 1000)
 	NodeConfig.SetDefault(CfgLocalSnapshotsPath, "export.bin")
-	NodeConfig.SetDefault(CfgLocalSnapshotsDownloadURL, "")
+	NodeConfig.SetDefault(CfgLocalSnapshotsDownloadURL, "https://ls.manapotion.io/export.bin")
 	NodeConfig.SetDefault(CfgGlobalSnapshotPath, "snapshotMainnet.txt")
 	NodeConfig.SetDefault(CfgGlobalSnapshotSpentAddressesPaths, []string{
 		"previousEpochsSpentAddresses1.txt",
