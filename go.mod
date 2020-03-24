@@ -2,6 +2,8 @@ module github.com/gohornet/hornet
 
 go 1.14
 
+replace github.com/dgraph-io/badger/v2 v2.0.1 => github.com/muXxer/badger/v2 v2.0.3-hotfix
+
 require (
 	github.com/OneOfOne/xxhash v1.2.7 // indirect
 	github.com/dgraph-io/badger/v2 v2.0.1
@@ -10,14 +12,14 @@ require (
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-contrib/gzip v0.0.1
-	github.com/gin-gonic/gin v1.5.0
+	github.com/gin-gonic/gin v1.6.1
 	github.com/go-zeromq/zmq4 v0.9.0
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200320195708-fd90470d74d1
+	github.com/iotaledger/hive.go v0.0.0-20200324163707-7e01cfa438d9
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200204161139-dfb0acdec240
 	github.com/labstack/echo/v4 v4.1.15
 	github.com/mitchellh/mapstructure v1.2.2
