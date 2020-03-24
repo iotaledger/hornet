@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc3] - 24.03.2020
+
+### Added
+
+    - Balance check on snapshot import
+    - Toolset
+    - Snapshot file download when no local snapshot is found
+    - Debug api call searchConfirmedApprovers
+    - Set coordinator address in database
+    - Default comnet settings
+    - Snapshot download URLs for mainnet and comnet
+    - Tanglebay autopeering entry nodes for mainnet and comnet
+    - ARMv7 pre-build binary
+
+### Removed
+
+    - Auto snapshot download from nfpm service file
+    - Wrong `omitempty` from json tags
+
+### Changed
+
+    - Debian package structure
+
+### Fixed
+
+    - High memory usage
+    - Revalidation OOM
+    - URL scheme in monitor and graph plugin
+    - Local peer string character encoding
+    - snapshot.csv reading
+
+### Config file changes
+
+New options:
+
+`config.json`
+
+```diff
+"snapshots": {
+  "loadType": "local",
+  "local": {
+  "enabled": true,
+  "depth": 50,
+  "intervalSynced": 50,
+  "intervalUnsynced": 1000,
+  "path": "export.bin",
++ "downloadURL": "https://ls.manapotion.io/export.bin"
+},
+```
+
+New config file:<br>
+`config_comnet.json`
+
 ## [0.4.0-rc2] - 21.03.2020
 
 ### Added
