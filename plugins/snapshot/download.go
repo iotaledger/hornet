@@ -2,11 +2,12 @@ package snapshot
 
 import (
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/dustin/go-humanize"
 )
 
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
@@ -45,6 +46,7 @@ func downloadSnapshotFile(filepath string, url string) error {
 	// Get the data
 	resp, err := http.Get(url)
 	if resp.StatusCode != 200 {
+		out.Close()
 		return fmt.Errorf("Server returned %d", resp.StatusCode)
 	}
 	if err != nil {
