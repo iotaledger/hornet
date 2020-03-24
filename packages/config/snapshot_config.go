@@ -13,6 +13,8 @@ const (
 	CfgLocalSnapshotsIntervalUnsynced = "snapshots.local.intervalUnsynced"
 	// path to the local snapshot file
 	CfgLocalSnapshotsPath = "snapshots.local.path"
+	// URL to load the local snapshot file from
+	CfgLocalSnapshotsDownloadURL = "snapshots.local.downloadURL"
 	// path to the global snapshot file containing the ledger state
 	CfgGlobalSnapshotPath = "snapshots.global.path"
 	// paths to the spent addresses files
@@ -34,6 +36,7 @@ func init() {
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalSynced, 50)
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalUnsynced, 1000)
 	NodeConfig.SetDefault(CfgLocalSnapshotsPath, "export.bin")
+	NodeConfig.SetDefault(CfgLocalSnapshotsDownloadURL, "")
 	NodeConfig.SetDefault(CfgGlobalSnapshotPath, "snapshotMainnet.txt")
 	NodeConfig.SetDefault(CfgGlobalSnapshotSpentAddressesPaths, []string{
 		"previousEpochsSpentAddresses1.txt",
