@@ -41,7 +41,7 @@ func init() {
 		"previousEpochsSpentAddresses3.txt",
 	})
 	NodeConfig.SetDefault(CfgGlobalSnapshotIndex, 1050000)
-	NodeConfig.SetDefault(CfgPruningEnabled, false)
+	NodeConfig.SetDefault(CfgPruningEnabled, true)
 	NodeConfig.SetDefault(CfgPruningDelay, 40000)
 	NodeConfig.SetDefault(CfgSpentAddressesEnabled, true)
 }
