@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -97,6 +98,20 @@ func configure(plugin *node.Plugin) {
 		}
 	case "local":
 		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
+
+			if _, fileErr := os.Stat(path); os.IsNotExist(fileErr) {
+				if url := config.NodeConfig.GetString(config.CfgLocalSnapshotsDownloadURL); url != "" {
+					log.Infof("Downloading snapshot from %s", url)
+					downloadErr := downloadSnapshotFile(path, url)
+					if downloadErr != nil {
+						log.Fatalf("Error downloading snapshot file: %v", downloadErr)
+					}
+					log.Info("Snapshot download finished")
+				} else {
+					log.Fatalf("No download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
+				}
+			}
+
 			err = LoadSnapshotFromFile(path)
 		}
 	default:
