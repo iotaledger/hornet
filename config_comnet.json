@@ -53,7 +53,8 @@
       "depth": 50,
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
-      "path": "export_comnet.bin"
+      "path": "export_comnet.bin",
+      "downloadURL": ""
     },
     "global": {
       "path": "snapshot.csv",
