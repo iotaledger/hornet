@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
@@ -160,6 +161,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 			}
 
 			cachedBndlTx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			metrics.SharedServerMetrics.IncrConfirmedTransactionsCount()
 			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
 		}
 	}
