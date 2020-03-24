@@ -54,7 +54,7 @@
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
       "path": "export.bin",
-      "downloadURL": ""
+      "downloadURL": "https://ls.manapotion.io/export.bin"
     },
     "global": {
       "path": "snapshotMainnet.txt",
@@ -89,7 +89,8 @@
       "runAsEntryNode": false,
       "entryNodes": [
         "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
-        "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626"
+        "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
+        "npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@autopeering.tanglebay.org:14626"
       ],
       "seed": ""
     }

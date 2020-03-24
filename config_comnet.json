@@ -54,7 +54,7 @@
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
       "path": "export_comnet.bin",
-      "downloadURL": ""
+      "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
     },
     "global": {
       "path": "snapshot.csv",
@@ -84,7 +84,8 @@
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "entryNodes": [
-        "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641"
+        "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641",
+        "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@autopeering.comnet.tanglebay.org:14636"
       ],
       "seed": ""
     }
