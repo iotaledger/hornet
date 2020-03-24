@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+    - Object storage deadlock
     - High memory usage
     - Revalidation OOM
     - URL scheme in monitor and graph plugin
