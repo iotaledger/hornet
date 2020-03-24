@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -30,6 +31,7 @@ var (
 	log    *logger.Logger
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
+	ErrNoSnapshotDownloadURL           = fmt.Errorf("No download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
 	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
 	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
@@ -104,11 +106,13 @@ func configure(plugin *node.Plugin) {
 					log.Infof("Downloading snapshot from %s", url)
 					downloadErr := downloadSnapshotFile(path, url)
 					if downloadErr != nil {
-						log.Fatalf("Error downloading snapshot file: %v", downloadErr)
+						err = errors.Wrap(downloadErr, "Error downloading snapshot file")
+						break
 					}
 					log.Info("Snapshot download finished")
 				} else {
-					log.Fatalf("No download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
+					err = ErrNoSnapshotDownloadURL
+					break
 				}
 			}
 
