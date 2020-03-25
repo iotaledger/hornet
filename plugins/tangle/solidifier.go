@@ -35,6 +35,8 @@ var (
 	revalidationMilestoneIndex = milestone_index.MilestoneIndex(0)
 
 	ErrMilestoneNotFound = errors.New("Milestone not found")
+	ErrIntOverflow       = errors.New("Integer overflow")
+	ErrDivisionByZero    = errors.New("Division by zero")
 )
 
 // checkSolidity checks if a single transaction is solid
@@ -461,12 +463,8 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	tangle.SetSolidMilestone(cachedMsToSolidify.Retain())    // bundle pass +1
 	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 
-	newConfirmedTxCount := metrics.SharedServerMetrics.GetConfirmedTransactionsCount()
-	confirmedTxDiff := newConfirmedTxCount - oldConfirmedTxCount
-	oldConfirmedTxCount = newConfirmedTxCount
-
 	var ctpsMessage string
-	if ctps, err := getConfirmedTransactionsPerSecond(cachedMsToSolidify.GetBundle().GetTail(), milestoneIndexToSolidify, confirmedTxDiff); err == nil {
+	if ctps, err := getConfirmedTransactionsPerSecond(cachedMsToSolidify.GetBundle().GetTail(), milestoneIndexToSolidify); err == nil {
 		ctpsMessage = fmt.Sprintf(", %0.2f CTPS", ctps)
 	}
 
@@ -483,7 +481,14 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
 }
 
-func getConfirmedTransactionsPerSecond(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone_index.MilestoneIndex, confirmedTxDiff uint32) (float64, error) {
+func getConfirmedTransactionsPerSecond(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone_index.MilestoneIndex) (float64, error) {
+	newConfirmedTxCount := metrics.SharedServerMetrics.GetConfirmedTransactionsCount()
+	if newConfirmedTxCount < oldConfirmedTxCount {
+		return 0, ErrIntOverflow
+	}
+	confirmedTxDiff := newConfirmedTxCount - oldConfirmedTxCount
+	oldConfirmedTxCount = newConfirmedTxCount
+
 	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetTransaction().GetTimestamp(), 0)
 	cachedMsTailTx.Release()
 
@@ -500,8 +505,12 @@ func getConfirmedTransactionsPerSecond(cachedMsTailTx *tangle.CachedTransaction,
 	defer oldMilestoneTailTx.Release(true)
 
 	oldMilestoneTimestamp := time.Unix(oldMilestoneTailTx.GetTransaction().GetTimestamp(), 0)
-	timeDiff := newMilestoneTimestamp.Sub(oldMilestoneTimestamp)
-	return float64(confirmedTxDiff) / timeDiff.Seconds(), nil
+	timeDiff := newMilestoneTimestamp.Sub(oldMilestoneTimestamp).Seconds()
+	if timeDiff == 0 {
+		return 0, ErrDivisionByZero
+	}
+
+	return float64(confirmedTxDiff) / timeDiff, nil
 }
 
 func setSolidifierMilestoneIndex(index milestone_index.MilestoneIndex) {
