@@ -19,7 +19,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200324163707-7e01cfa438d9
+	github.com/iotaledger/hive.go v0.0.0-20200325194302-59eef48f0291
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200204161139-dfb0acdec240
 	github.com/labstack/echo/v4 v4.1.15
 	github.com/mitchellh/mapstructure v1.2.2
@@ -29,6 +29,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
-	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
-	golang.org/x/net v0.0.0-20200320181208-1c781a10960a
+	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 )
