@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/iotaledger/iota.go/transaction"
@@ -272,20 +271,13 @@ func getTailApproversOfSameBundle(bundleHash trinary.Hash, txHash trinary.Hash, 
 	return tailTxHashes
 }
 
-// approversFromSameBundleExist returns if there are other transactions in the same bundle, that approve this transaction
+// approversFromSameBundleExist returns whether there are other transactions in the same bundle, that approve this transaction
 func approversFromSameBundleExist(bundleHash trinary.Hash, txHash trinary.Hash, forceRelease bool) bool {
 
 	for _, approverHash := range GetApproverHashes(txHash, forceRelease) {
-		cachedApproverTx := GetCachedTransactionOrNil(approverHash) // tx +1
-		if cachedApproverTx != nil {
-			approverTx := cachedApproverTx.GetTransaction()
-
-			if approverTx.Tx.Bundle == bundleHash {
-				// Tx is used in another bundle instance => do not delete
-				cachedApproverTx.Release(forceRelease) // tx -1
-				return true
-			}
-			cachedApproverTx.Release(forceRelease) // tx -1
+		if ContainsBundleTransaction(bundleHash, approverHash, true) || ContainsBundleTransaction(bundleHash, approverHash, false) {
+			// Tx is used in another bundle instance => do not delete
+			return true
 		}
 	}
 
@@ -326,22 +318,33 @@ func RemoveTransactionFromBundle(tx *transaction.Transaction) map[trinary.Hash]s
 		// check whether the trunk transaction is known to the bundle storage.
 		// this also ensures that the transaction has to be in the database
 		if !ContainsBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false) {
-			panic(fmt.Sprintf("bundle %s has a reference to a non persisted transaction: %s", tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk()))
+			// Tx may not exist if the bundle was not received completly
+			// Do not force release, since it is loaded again for pruning
+			cachedCurrentTx.Release() // tx -1
+			return txsToRemove
 		}
 
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the bucket
 		if approversFromSameBundleExist(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), true) {
-			cachedCurrentTx.Release(true) // tx -1
+			// Do not force release, since it is loaded again for pruning
+			cachedCurrentTx.Release() // tx -1
 			return txsToRemove
 		}
 
 		DeleteBundleTransaction(tx.Bundle, cachedCurrentTx.GetTransaction().GetTrunk(), false)
 		txsToRemove[cachedCurrentTx.GetTransaction().GetTrunk()] = struct{}{}
 
+		cachedTx := GetCachedTransactionOrNil(cachedCurrentTx.GetTransaction().GetTrunk()) // tx +1
+		if cachedTx == nil {
+			// Tx may not exist if the bundle was not received completly
+			// Do not force release, since it is loaded again for pruning
+			cachedCurrentTx.Release() // tx -1
+			return txsToRemove
+		}
+
 		// Do not force release, since it is loaded again for pruning
 		cachedCurrentTx.Release() // tx -1
-
-		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), tx.Bundle) // tx +1
+		cachedCurrentTx = cachedTx
 	}
 
 	// Do not force release, since it is loaded again for pruning
