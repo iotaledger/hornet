@@ -1,6 +1,8 @@
 package tangle
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -9,6 +11,7 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -27,7 +30,13 @@ var (
 
 	solidifierLock syncutils.RWMutex
 
+	oldConfirmedTxCount uint32
+
 	revalidationMilestoneIndex = milestone_index.MilestoneIndex(0)
+
+	ErrMilestoneNotFound = errors.New("Milestone not found")
+	ErrIntOverflow       = errors.New("Integer overflow")
+	ErrDivisionByZero    = errors.New("Division by zero")
 )
 
 // checkSolidity checks if a single transaction is solid
@@ -453,7 +462,13 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 
 	tangle.SetSolidMilestone(cachedMsToSolidify.Retain())    // bundle pass +1
 	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
-	log.Infof("New solid milestone: %d", milestoneIndexToSolidify)
+
+	var ctpsMessage string
+	if ctps, err := getConfirmedTransactionsPerSecond(cachedMsToSolidify.GetBundle().GetTail(), milestoneIndexToSolidify); err == nil {
+		ctpsMessage = fmt.Sprintf(", %0.2f CTPS", ctps)
+	}
+
+	log.Infof("New solid milestone: %d%s", milestoneIndexToSolidify, ctpsMessage)
 
 	if (revalidationMilestoneIndex != 0) && milestoneIndexToSolidify > revalidationMilestoneIndex {
 		revalidationMilestoneIndex = 0
@@ -464,6 +479,38 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	setSolidifierMilestoneIndex(0)
 
 	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
+}
+
+func getConfirmedTransactionsPerSecond(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone_index.MilestoneIndex) (float64, error) {
+	newConfirmedTxCount := metrics.SharedServerMetrics.GetConfirmedTransactionsCount()
+	if newConfirmedTxCount < oldConfirmedTxCount {
+		return 0, ErrIntOverflow
+	}
+	confirmedTxDiff := newConfirmedTxCount - oldConfirmedTxCount
+	oldConfirmedTxCount = newConfirmedTxCount
+
+	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetTransaction().GetTimestamp(), 0)
+	cachedMsTailTx.Release()
+
+	oldMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndexToSolidify - 1)
+	if oldMilestone == nil {
+		return 0, ErrMilestoneNotFound
+	}
+	defer oldMilestone.Release(true)
+
+	oldMilestoneTailTx := tangle.GetCachedTransactionOrNil(oldMilestone.GetMilestone().Hash)
+	if oldMilestoneTailTx == nil {
+		return 0, ErrMilestoneNotFound
+	}
+	defer oldMilestoneTailTx.Release(true)
+
+	oldMilestoneTimestamp := time.Unix(oldMilestoneTailTx.GetTransaction().GetTimestamp(), 0)
+	timeDiff := newMilestoneTimestamp.Sub(oldMilestoneTimestamp).Seconds()
+	if timeDiff == 0 {
+		return 0, ErrDivisionByZero
+	}
+
+	return float64(confirmedTxDiff) / timeDiff, nil
 }
 
 func setSolidifierMilestoneIndex(index milestone_index.MilestoneIndex) {

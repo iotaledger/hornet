@@ -14,6 +14,7 @@ type ServerMetrics struct {
 	allTxsCount               uint32
 	newTxsCount               uint32
 	knownTxsCount             uint32
+	confirmedTxsCount         uint32
 	invalidTxsCount           uint32
 	invalidRequestsCount      uint32
 	staleTxsCount             uint32
@@ -66,6 +67,16 @@ func (sm *ServerMetrics) GetKnownTransactionsCount() uint32 {
 // Increments the known transactions count.
 func (sm *ServerMetrics) IncrKnownTransactionsCount() uint32 {
 	return atomic.AddUint32(&sm.knownTxsCount, 1)
+}
+
+// Gets the number of confirmed transactions.
+func (sm *ServerMetrics) GetConfirmedTransactionsCount() uint32 {
+	return atomic.LoadUint32(&sm.confirmedTxsCount)
+}
+
+// Increments the confirmed transactions count.
+func (sm *ServerMetrics) IncrConfirmedTransactionsCount() uint32 {
+	return atomic.AddUint32(&sm.confirmedTxsCount, 1)
 }
 
 // Gets the number of invalid transactions.
