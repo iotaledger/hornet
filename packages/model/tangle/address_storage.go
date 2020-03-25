@@ -30,14 +30,14 @@ func (c *CachedAddress) GetAddress() *hornet.Address {
 	return c.Get().(*hornet.Address)
 }
 
-func addressFactory(key []byte) objectstorage.StorableObject {
+func addressFactory(key []byte) (objectstorage.StorableObject, error) {
 	address := &hornet.Address{
 		Address: make([]byte, 49),
 		TxHash:  make([]byte, 49),
 	}
 	copy(address.Address, key[:49])
 	copy(address.TxHash, key[49:])
-	return address
+	return address, nil
 }
 
 func GetAddressesStorageSize() int {
@@ -97,7 +97,7 @@ func StoreAddress(address trinary.Hash, txHash trinary.Hash) *CachedAddress {
 		TxHash:  trinary.MustTrytesToBytes(txHash)[:49],
 	}
 
-	cachedObj := addressesStorage.ComputeIfAbsent(addressObj.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // address +1
+	cachedObj := addressesStorage.ComputeIfAbsent(addressObj.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // address +1
 		addressObj.Persist()
 		addressObj.SetModified()
 		return addressObj

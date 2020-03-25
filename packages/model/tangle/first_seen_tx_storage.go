@@ -32,13 +32,13 @@ func (c *CachedFirstSeenTx) GetFirstSeenTx() *hornet.FirstSeenTx {
 	return c.Get().(*hornet.FirstSeenTx)
 }
 
-func firstSeenTxFactory(key []byte) objectstorage.StorableObject {
+func firstSeenTxFactory(key []byte) (objectstorage.StorableObject, error) {
 	firstSeenTx := &hornet.FirstSeenTx{
 		FirstSeenLatestMilestoneIndex: milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key[:4])),
 		TxHash:                        make([]byte, 49),
 	}
 	copy(firstSeenTx.TxHash, key[4:])
-	return firstSeenTx
+	return firstSeenTx, nil
 }
 
 func GetFirstSeenTxStorageSize() int {
@@ -101,7 +101,7 @@ func StoreFirstSeenTx(msIndex milestone_index.MilestoneIndex, txHash trinary.Has
 		TxHash:                        trinary.MustTrytesToBytes(txHash)[:49],
 	}
 
-	cachedObj := firstSeenTxStorage.ComputeIfAbsent(firstSeenTx.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // firstSeenTx +1
+	cachedObj := firstSeenTxStorage.ComputeIfAbsent(firstSeenTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // firstSeenTx +1
 		firstSeenTx.Persist()
 		firstSeenTx.SetModified()
 		return firstSeenTx

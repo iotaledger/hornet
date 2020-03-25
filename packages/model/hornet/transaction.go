@@ -85,20 +85,20 @@ func (tx *Transaction) Update(other objectstorage.StorableObject) {
 	panic("Transaction should never be updated")
 }
 
-func (tx *Transaction) GetStorageKey() []byte {
+func (tx *Transaction) ObjectStorageKey() []byte {
 	return tx.TxHash
 }
 
-func (tx *Transaction) MarshalBinary() (data []byte, err error) {
+func (tx *Transaction) ObjectStorageValue() (data []byte) {
 
 	/*
 		x bytes RawBytes
 	*/
 
-	return tx.RawBytes, nil
+	return tx.RawBytes
 }
 
-func (tx *Transaction) UnmarshalBinary(data []byte) error {
+func (tx *Transaction) UnmarshalObjectStorageValue(data []byte) error {
 
 	/*
 		x bytes RawBytes

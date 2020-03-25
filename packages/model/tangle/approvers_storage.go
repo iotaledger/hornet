@@ -30,14 +30,14 @@ func (c *CachedApprover) GetApprover() *hornet.Approver {
 	return c.Get().(*hornet.Approver)
 }
 
-func approversFactory(key []byte) objectstorage.StorableObject {
+func approversFactory(key []byte) (objectstorage.StorableObject, error) {
 	approver := &hornet.Approver{
 		TxHash:       make([]byte, 49),
 		ApproverHash: make([]byte, 49),
 	}
 	copy(approver.TxHash, key[:49])
 	copy(approver.ApproverHash, key[49:])
-	return approver
+	return approver, nil
 }
 
 func GetApproversStorageSize() int {
@@ -97,7 +97,7 @@ func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *Cac
 		ApproverHash: trinary.MustTrytesToBytes(approverHash)[:49],
 	}
 
-	cachedObj := approversStorage.ComputeIfAbsent(approver.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // approvers +1
+	cachedObj := approversStorage.ComputeIfAbsent(approver.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // approvers +1
 		approver.Persist()
 		approver.SetModified()
 		return approver

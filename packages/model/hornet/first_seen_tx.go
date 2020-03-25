@@ -30,16 +30,16 @@ func (t *FirstSeenTx) Update(other objectstorage.StorableObject) {
 	panic("FirstSeenTx should never be updated")
 }
 
-func (t *FirstSeenTx) GetStorageKey() []byte {
+func (t *FirstSeenTx) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(t.FirstSeenLatestMilestoneIndex))
 	return append(key, t.TxHash...)
 }
 
-func (t *FirstSeenTx) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (t *FirstSeenTx) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (t *FirstSeenTx) UnmarshalBinary(data []byte) error {
+func (t *FirstSeenTx) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }

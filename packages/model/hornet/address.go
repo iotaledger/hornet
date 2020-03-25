@@ -26,14 +26,14 @@ func (a *Address) Update(other objectstorage.StorableObject) {
 	panic("Address should never be updated")
 }
 
-func (a *Address) GetStorageKey() []byte {
+func (a *Address) ObjectStorageKey() []byte {
 	return append(a.Address, a.TxHash...)
 }
 
-func (a *Address) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (a *Address) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (a *Address) UnmarshalBinary(data []byte) error {
+func (a *Address) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }

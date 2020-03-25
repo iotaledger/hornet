@@ -25,14 +25,14 @@ func (a *Approver) Update(other objectstorage.StorableObject) {
 	panic("Approver should never be updated")
 }
 
-func (a *Approver) GetStorageKey() []byte {
+func (a *Approver) ObjectStorageKey() []byte {
 	return append(a.TxHash, a.ApproverHash...)
 }
 
-func (a *Approver) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (a *Approver) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (a *Approver) UnmarshalBinary(data []byte) error {
+func (a *Approver) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }

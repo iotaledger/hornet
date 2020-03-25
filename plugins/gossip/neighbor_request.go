@@ -62,15 +62,15 @@ func (p *PendingNeighborRequests) Update(other objectstorage.StorableObject) {
 	panic("PendingNeighborRequests should never be updated")
 }
 
-func (p *PendingNeighborRequests) GetStorageKey() []byte {
+func (p *PendingNeighborRequests) ObjectStorageKey() []byte {
 	return p.recTxBytes
 }
 
-func (p *PendingNeighborRequests) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (p *PendingNeighborRequests) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (p *PendingNeighborRequests) UnmarshalBinary(data []byte) error {
+func (p *PendingNeighborRequests) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }
 
