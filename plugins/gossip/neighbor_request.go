@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 type NeighborRequest struct {
@@ -194,10 +195,13 @@ func (p *PendingNeighborRequests) process(neighbor *Neighbor) {
 	p.statusLock.Unlock()
 
 	if !stale {
+		// Check existence before the event is fired
+		containsTx := tangle.ContainsTransaction(hornetTx.GetHash())
+
 		// Ignore stale transactions until they are requested
 		Events.ReceivedTransaction.Trigger(hornetTx, requested, reqMilestoneIndex, neighbor.Metrics)
 
-		if !requested && broadcast {
+		if !requested && broadcast && !containsTx {
 			p.broadcast()
 		}
 	} else {
