@@ -34,7 +34,7 @@ func databaseKeyForBundleTransaction(bundleHash trinary.Hash, txHash trinary.Has
 	return append(result, trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
-func bundleTransactionFactory(key []byte) objectstorage.StorableObject {
+func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, error) {
 	bundleTx := &BundleTransaction{
 		BundleHash: make([]byte, 49),
 		IsTail:     key[49] == BUNDLE_TX_IS_TAIL,
@@ -43,7 +43,7 @@ func bundleTransactionFactory(key []byte) objectstorage.StorableObject {
 	copy(bundleTx.BundleHash, key[:49])
 	copy(bundleTx.TxHash, key[50:])
 
-	return bundleTx
+	return bundleTx, nil
 }
 
 func GetBundleTransactionsStorageSize() int {
@@ -93,7 +93,7 @@ func (bt *BundleTransaction) Update(other objectstorage.StorableObject) {
 	panic("BundleTransaction should never be updated")
 }
 
-func (bt *BundleTransaction) GetStorageKey() []byte {
+func (bt *BundleTransaction) ObjectStorageKey() []byte {
 	var isTailByte byte
 	if bt.IsTail {
 		isTailByte = BUNDLE_TX_IS_TAIL
@@ -103,11 +103,11 @@ func (bt *BundleTransaction) GetStorageKey() []byte {
 	return append(result, bt.TxHash...)
 }
 
-func (bt *BundleTransaction) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (bt *BundleTransaction) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (bt *BundleTransaction) UnmarshalBinary(data []byte) error {
+func (bt *BundleTransaction) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }
 
@@ -210,7 +210,7 @@ func StoreBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Has
 		TxHash:     trinary.MustTrytesToBytes(transactionHash)[:49],
 	}
 
-	cachedObj := bundleTransactionsStorage.ComputeIfAbsent(bundleTx.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundleTx +1
+	cachedObj := bundleTransactionsStorage.ComputeIfAbsent(bundleTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // bundleTx +1
 		bundleTx.Persist()
 		bundleTx.SetModified()
 		return bundleTx

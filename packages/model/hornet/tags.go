@@ -25,14 +25,14 @@ func (t *Tag) Update(other objectstorage.StorableObject) {
 	panic("Tag should never be updated")
 }
 
-func (t *Tag) GetStorageKey() []byte {
+func (t *Tag) ObjectStorageKey() []byte {
 	return append(t.Tag, t.TxHash...)
 }
 
-func (t *Tag) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (t *Tag) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (t *Tag) UnmarshalBinary(data []byte) error {
+func (t *Tag) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }

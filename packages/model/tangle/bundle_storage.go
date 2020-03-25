@@ -24,11 +24,11 @@ func databaseKeyForBundle(tailTxHash trinary.Hash) []byte {
 	return trinary.MustTrytesToBytes(tailTxHash)[:49]
 }
 
-func bundleFactory(key []byte) objectstorage.StorableObject {
+func bundleFactory(key []byte) (objectstorage.StorableObject, error) {
 	return &Bundle{
 		tailTx: trinary.MustBytesToTrytes(key[:49], 81),
 		txs:    make(map[trinary.Hash]struct{}),
-	}
+	}, nil
 }
 
 func GetBundleStorageSize() int {
@@ -58,11 +58,11 @@ func (bundle *Bundle) Update(other objectstorage.StorableObject) {
 	panic("Bundle should never be updated")
 }
 
-func (bundle *Bundle) GetStorageKey() []byte {
+func (bundle *Bundle) ObjectStorageKey() []byte {
 	return databaseKeyForBundle(bundle.tailTx)
 }
 
-func (bundle *Bundle) MarshalBinary() (data []byte, err error) {
+func (bundle *Bundle) ObjectStorageValue() (data []byte) {
 
 	/*
 		 1 byte  	   				metadata
@@ -100,10 +100,10 @@ func (bundle *Bundle) MarshalBinary() (data []byte, err error) {
 		offset += 8
 	}
 
-	return value, nil
+	return value
 }
 
-func (bundle *Bundle) UnmarshalBinary(data []byte) error {
+func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) error {
 
 	/*
 		 1 byte  	   				metadata
@@ -372,7 +372,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	}
 
 	newlyAdded := false
-	cachedObj := bundleStorage.ComputeIfAbsent(bndl.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
+	cachedObj := bundleStorage.ComputeIfAbsent(bndl.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // bundle +1
 		newlyAdded = true
 
 		if bndl.validate() {

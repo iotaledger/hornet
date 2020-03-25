@@ -107,11 +107,11 @@ func (m *TransactionMetadata) Update(other objectstorage.StorableObject) {
 	panic("TransactionMetadata should never be updated")
 }
 
-func (m *TransactionMetadata) GetStorageKey() []byte {
+func (m *TransactionMetadata) ObjectStorageKey() []byte {
 	return m.TxHash
 }
 
-func (m *TransactionMetadata) MarshalBinary() (data []byte, err error) {
+func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -126,10 +126,10 @@ func (m *TransactionMetadata) MarshalBinary() (data []byte, err error) {
 	binary.LittleEndian.PutUint32(value[1:], uint32(m.solidificationTimestamp))
 	binary.LittleEndian.PutUint32(value[5:], uint32(m.confirmationIndex))
 
-	return value, nil
+	return value
 }
 
-func (m *TransactionMetadata) UnmarshalBinary(data []byte) error {
+func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) error {
 	m.Lock()
 	defer m.Unlock()
 

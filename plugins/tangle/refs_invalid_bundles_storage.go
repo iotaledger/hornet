@@ -26,24 +26,24 @@ func (r *invalidBundleReference) Update(other objectstorage.StorableObject) {
 	panic("invalidBundleReference should never be updated")
 }
 
-func (r *invalidBundleReference) GetStorageKey() []byte {
+func (r *invalidBundleReference) ObjectStorageKey() []byte {
 	return r.hashBytes
 }
 
-func (r *invalidBundleReference) MarshalBinary() (data []byte, err error) {
-	return nil, nil
-}
-
-func (r *invalidBundleReference) UnmarshalBinary(data []byte) error {
+func (r *invalidBundleReference) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func invalidBundleFactory(key []byte) objectstorage.StorableObject {
+func (r *invalidBundleReference) UnmarshalObjectStorageValue(data []byte) error {
+	return nil
+}
+
+func invalidBundleFactory(key []byte) (objectstorage.StorableObject, error) {
 	invalidBndl := &invalidBundleReference{
 		hashBytes: make([]byte, len(key)),
 	}
 	copy(invalidBndl.hashBytes, key)
-	return invalidBndl
+	return invalidBndl, nil
 }
 
 func configureRefsAnInvalidBundleStorage() {
@@ -70,10 +70,10 @@ func GetRefsAnInvalidBundleStorageSize() int {
 
 // +-0
 func PutInvalidBundleReference(txHash trinary.Hash) {
-	invalidBundleRef := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
+	invalidBundleRef, _ := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
 
 	// Do not force the release, otherwise the object is gone (no persistence enabled)
-	refsAnInvalidBundleStorage.ComputeIfAbsent(invalidBundleRef.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
+	refsAnInvalidBundleStorage.ComputeIfAbsent(invalidBundleRef.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject {
 		return invalidBundleRef
 	}).Release()
 }

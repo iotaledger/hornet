@@ -92,7 +92,7 @@ func (s *RequestQueue) ContainsRequest(transactionHash trinary.Hash) bool {
 func (s *RequestQueue) PutRequest(request *request) *CachedRequest {
 
 	newlyAdded := false
-	cachedRequest := s.requestedStorage.ComputeIfAbsent(request.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // request +1
+	cachedRequest := s.requestedStorage.ComputeIfAbsent(request.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // request +1
 		newlyAdded = true
 		request.SetModified()
 

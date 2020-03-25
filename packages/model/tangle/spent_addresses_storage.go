@@ -44,12 +44,12 @@ func (c *CachedSpentAddress) GetSpentAddress() *hornet.SpentAddress {
 	return c.Get().(*hornet.SpentAddress)
 }
 
-func spentAddressFactory(key []byte) objectstorage.StorableObject {
+func spentAddressFactory(key []byte) (objectstorage.StorableObject, error) {
 	sa := &hornet.SpentAddress{
 		Address: make([]byte, 49),
 	}
 	copy(sa.Address, key[:49])
-	return sa
+	return sa, nil
 }
 
 func GetSpentAddressesStorageSize() int {
@@ -85,10 +85,10 @@ func MarkAddressAsSpent(address trinary.Trytes) bool {
 	spentAddressesLock.Lock()
 	defer spentAddressesLock.Unlock()
 
-	spentAddress := spentAddressFactory(trinary.MustTrytesToBytes(address)[:49])
+	spentAddress, _ := spentAddressFactory(trinary.MustTrytesToBytes(address)[:49])
 
 	newlyAdded := false
-	spentAddressesStorage.ComputeIfAbsent(spentAddress.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
+	spentAddressesStorage.ComputeIfAbsent(spentAddress.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
 		spentAddress.Persist()
 		spentAddress.SetModified()
@@ -101,10 +101,10 @@ func MarkAddressAsSpent(address trinary.Trytes) bool {
 // spentAddress +-0
 func MarkAddressAsSpentBinaryWithoutLocking(address []byte) bool {
 
-	spentAddress := spentAddressFactory(address[:49])
+	spentAddress, _ := spentAddressFactory(address[:49])
 
 	newlyAdded := false
-	spentAddressesStorage.ComputeIfAbsent(spentAddress.GetStorageKey(), func(key []byte) objectstorage.StorableObject {
+	spentAddressesStorage.ComputeIfAbsent(spentAddress.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject {
 		newlyAdded = true
 		spentAddress.Persist()
 		spentAddress.SetModified()
