@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
     - Balance check on snapshot import
-    - Toolset
+    - Toolset (Autopeering seed generator & Password SHA256 sum)
     - Snapshot file download when no local snapshot is found
     - Debug api call searchConfirmedApprovers
     - Set coordinator address in database
@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+    - Object storage deadlock
     - High memory usage
     - Revalidation OOM
     - URL scheme in monitor and graph plugin
