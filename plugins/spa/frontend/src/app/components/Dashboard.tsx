@@ -11,6 +11,7 @@ import PruningIndex from "app/components/PruningIndex";
 import SnapshotIndex from "app/components/SnapshotIndex";
 import RequestQueue from "app/components/RequestQueue";
 import TPSChart from "app/components/TPSChart";
+import ConfirmedMilestoneChart from "app/components/ConfirmedMilestoneChart";
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -64,6 +65,9 @@ export class Dashboard extends React.Component<Props, any> {
                 </Row>
                 <Row className={"mb-3"}>
                     <Col><TPSChart/></Col>
+                </Row>
+                <Row className={"mb-3"}>
+                    <Col><ConfirmedMilestoneChart/></Col>
                 </Row>
                 <Row className={"mb-3"}>
                     <Col><MemChart/></Col>

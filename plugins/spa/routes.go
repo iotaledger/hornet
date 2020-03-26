@@ -130,6 +130,7 @@ func websocketRoute(c echo.Context) error {
 		log.Info("WebSocket client connection established")
 
 		client.Send(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+		client.Send(&msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
 		start := tangle.GetLatestMilestoneIndex()
 		for i := start - 10; i <= start; i++ {
 			if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1

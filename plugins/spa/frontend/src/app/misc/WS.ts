@@ -5,6 +5,7 @@ export enum WSMsgType {
     Tx,
     Ms,
     NeighborStats,
+    ConfirmedMsMetrics,
 }
 
 export interface WSMessage {

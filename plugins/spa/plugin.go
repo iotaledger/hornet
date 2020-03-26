@@ -45,6 +45,8 @@ var (
 
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
+
+	cachedMilestoneMetrics []*tangle_plugin.ConfirmedMilestoneMetric
 )
 
 const (
@@ -76,6 +78,8 @@ func configure(plugin *node.Plugin) {
 			hub.BroadcastMsg(&msg{MsgTypeNeighborMetric, neighborMetrics()})
 		case *tangle.Bundle:
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+		case []*tangle_plugin.ConfirmedMilestoneMetric:
+			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
@@ -127,17 +131,27 @@ func run(plugin *node.Plugin) {
 		cachedBndl.Release(true) // bundle -1
 	})
 
+	notifyConfirmedMsMetrics := events.NewClosure(func(metric *tangle_plugin.ConfirmedMilestoneMetric) {
+		cachedMilestoneMetrics = append(cachedMilestoneMetrics, metric)
+		if len(cachedMilestoneMetrics) > 20 {
+			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
+		}
+		wsSendWorkerPool.TrySubmit([]*tangle_plugin.ConfirmedMilestoneMetric{metric})
+	})
+
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
 		metrics_plugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
+		tangle_plugin.Events.NewConfirmedMilestoneMetric.Attach(notifyConfirmedMsMetrics)
 		wsSendWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping SPA[WSSend] ...")
 		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
+		tangle_plugin.Events.NewConfirmedMilestoneMetric.Detach(notifyConfirmedMsMetrics)
 		wsSendWorkerPool.StopAndWait()
 		log.Info("Stopping SPA[WSSend] ... done")
 	}, shutdown.ShutdownPrioritySPA)
@@ -165,6 +179,7 @@ const (
 	MsgTypeTx
 	MsgTypeMs
 	MsgTypeNeighborMetric
+	MsgTypeConfirmedMsMetrics
 )
 
 type msg struct {

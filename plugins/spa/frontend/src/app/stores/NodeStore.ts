@@ -97,6 +97,13 @@ class ServerMetrics {
     ts: number;
 }
 
+class ConfirmedMilestoneMetric {
+    ms_index: number;
+    tps: number;
+    ctps: number;
+    time_since_last_ms: number;
+}
+
 class NetworkIO {
     tx: number;
     rx: number;
@@ -273,6 +280,8 @@ const chartSeriesOpts = {
     pointRadius: 0,
     pointHitRadius: 20,
     pointHoverRadius: 5,
+    barPercentage: 1.0,
+    categoryPercentage: 0.95,
 };
 
 function series(name: string, color: string, bgColor: string) {
@@ -302,12 +311,15 @@ export class NodeStore {
     @observable collected_mem_metrics: Array<MemoryMetrics> = [];
     @observable collected_cache_metrics: Array<CacheMetrics> = [];
     @observable neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
+    @observable last_confirmed_ms_metric: ConfirmedMilestoneMetric = new ConfirmedMilestoneMetric();
+    @observable collected_confirmed_ms_metrics: Array<ConfirmedMilestoneMetric> = [];
 
     constructor() {
         registerHandler(WSMsgType.Status, this.updateStatus);
         registerHandler(WSMsgType.TPSMetrics, this.updateLastTPSMetric);
         registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
         registerHandler(WSMsgType.NeighborStats, this.updateNeighborMetrics);
+        registerHandler(WSMsgType.ConfirmedMsMetrics, this.updateConfirmedMilestoneMetrics);
     }
 
     connect() {
@@ -429,6 +441,16 @@ export class NodeStore {
         this.collected_tip_sel_metrics.push(tipSelMetric);
     };
 
+    @action
+    updateConfirmedMilestoneMetrics = (msMetrics: Array<ConfirmedMilestoneMetric>) => {
+        this.last_confirmed_ms_metric = msMetrics[msMetrics.length - 1];
+        this.collected_confirmed_ms_metrics = this.collected_confirmed_ms_metrics.concat(msMetrics);
+        console.log(msMetrics);
+        if (this.collected_confirmed_ms_metrics.length > 20) {
+            this.collected_confirmed_ms_metrics = this.collected_confirmed_ms_metrics.slice(-20);
+        }
+    }
+
     @computed
     get tipSelSeries() {
         let stepsTaken = Object.assign({}, chartSeriesOpts,
@@ -507,6 +529,67 @@ export class NodeStore {
         return {
             labels: labels,
             datasets: [incoming, ne, outgoing],
+        };
+    }
+
+    @computed
+    get confirmedMilestonesSeries() {
+        let tps = Object.assign({}, chartSeriesOpts,
+            series("TPS", 'rgba(159, 53, 230,1)', 'rgba(159, 53, 230,0.4)')
+        );
+        let ctps = Object.assign({}, chartSeriesOpts,
+            series("CTPS", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_confirmed_ms_metrics.length; i++) {
+            let metric: ConfirmedMilestoneMetric = this.collected_confirmed_ms_metrics[i];
+            labels.push(metric.ms_index);
+            tps.data.push(metric.tps);
+            ctps.data.push(metric.ctps);
+        }
+
+        return {
+            labels: labels,
+            datasets: [tps, ctps]
+        };
+    }
+
+    @computed
+    get confirmedMilestonesConfirmationSeries() {
+        let confirmation = Object.assign({}, chartSeriesOpts,
+            series("Confirmation", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_confirmed_ms_metrics.length; i++) {
+            let metric: ConfirmedMilestoneMetric = this.collected_confirmed_ms_metrics[i];
+            labels.push(metric.ms_index);
+            confirmation.data.push((metric.ctps / metric.tps) * 100);
+        }
+
+        return {
+            labels: labels,
+            datasets: [confirmation],
+        };
+    }
+
+    @computed
+    get confirmedMilestonesTimeSeries() {
+        let timeDiff = Object.assign({}, chartSeriesOpts,
+            series("Time Between Milestones", 'rgba(230, 14, 147,1)', 'rgba(230, 14, 147,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_confirmed_ms_metrics.length; i++) {
+            let metric: ConfirmedMilestoneMetric = this.collected_confirmed_ms_metrics[i];
+            labels.push(metric.ms_index);
+            timeDiff.data.push(metric.time_since_last_ms);
+        }
+
+        return {
+            labels: labels,
+            datasets: [timeDiff],
         };
     }
 
