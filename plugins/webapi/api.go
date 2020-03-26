@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
@@ -66,7 +67,17 @@ func webAPIRoute() {
 func healthRoute() {
 	api.GET(healthPath, func(c *gin.Context) {
 		synced := tangle.IsNodeSyncedWithThreshold()
-		newerMilestone := false
+		if !synced {
+			c.Status(http.StatusServiceUnavailable)
+			return
+		}
+
+		// Get the number of connected neighbors
+		connectedNeighbors := len(gossip.GetConnectedNeighbors())
+		if connectedNeighbors == 0 {
+			c.Status(http.StatusServiceUnavailable)
+			return
+		}
 
 		// Latest milestone timestamp
 		var milestoneTimestamp int64
@@ -81,12 +92,7 @@ func healthRoute() {
 
 		// Check whether the milestone is not older than 5 minutes
 		timeMs := time.Unix(int64(milestoneTimestamp), 0)
-		newerMilestone = time.Now().Sub(timeMs) < (time.Minute * 5)
-
-		// Get the number of connected neighbors
-		connectedNeighbors := len(gossip.GetConnectedNeighbors())
-
-		if synced && newerMilestone && (connectedNeighbors > 0) {
+		if newerMilestone := time.Since(timeMs) < (time.Minute * 5); newerMilestone {
 			c.Status(http.StatusOK)
 			return
 		}
