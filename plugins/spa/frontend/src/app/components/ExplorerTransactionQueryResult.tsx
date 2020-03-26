@@ -258,17 +258,6 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                         Nonce: {tx.nonce}
                                     </ListGroup.Item>
                                     <ListGroup.Item className="text-break">
-                                        Approvers: {' '}
-                                        <If condition={approversEle.length > 0}>
-                                            <ListGroup variant="flush">
-                                                {approversEle}
-                                            </ListGroup>
-                                        </If>
-                                        <If condition={approversEle.length === 0}>
-                                            No approvers yet
-                                        </If>
-                                    </ListGroup.Item>
-                                    <ListGroup.Item className="text-break">
                                         Message:<br/>
                                         <Tab.Container id="left-tabs-message" defaultActiveKey="trytes">
                                             <Row>
@@ -308,6 +297,17 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                 </Col>
                                             </Row>
                                         </Tab.Container>
+                                    </ListGroup.Item>
+                                    <ListGroup.Item className="text-break">
+                                        Approvers: {' '}
+                                        <If condition={approversEle.length > 0}>
+                                            <ListGroup variant="flush">
+                                                {approversEle}
+                                            </ListGroup>
+                                        </If>
+                                        <If condition={approversEle.length === 0}>
+                                            No approvers yet
+                                        </If>
                                     </ListGroup.Item>
                                 </ListGroup>
                             </Col>
