@@ -38,6 +38,7 @@ type ExplorerTx struct {
 		State     bool                           `json:"state"`
 		Milestone milestone_index.MilestoneIndex `json:"milestone_index"`
 	} `json:"confirmed"`
+	Approvers      []string                       `json:"approvers"`
 	Solid          bool                           `json:"solid"`
 	MWM            int                            `json:"mwm"`
 	Previous       Hash                           `json:"previous"`
@@ -76,6 +77,9 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 		}{confirmed, by},
 		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
+
+	// Approvers
+	t.Approvers = tangle.GetApproverHashes(originTx.Hash, true, 100)
 
 	// compute mwm
 	trits, err := TrytesToTrits(hash)

@@ -26,6 +26,7 @@ export class Transaction {
     attachment_timestamp_lower_bound: number;
     attachment_timestamp_upper_bound: number;
     confirmed: ConfirmedState;
+    approvers: Array<string>;
     solid: boolean;
     mwm: number;
     next: string;
