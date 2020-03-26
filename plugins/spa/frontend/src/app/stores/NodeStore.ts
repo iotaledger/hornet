@@ -443,11 +443,14 @@ export class NodeStore {
 
     @action
     updateConfirmedMilestoneMetrics = (msMetrics: Array<ConfirmedMilestoneMetric>) => {
-        this.last_confirmed_ms_metric = msMetrics[msMetrics.length - 1];
-        this.collected_confirmed_ms_metrics = this.collected_confirmed_ms_metrics.concat(msMetrics);
-        console.log(msMetrics);
-        if (this.collected_confirmed_ms_metrics.length > 20) {
-            this.collected_confirmed_ms_metrics = this.collected_confirmed_ms_metrics.slice(-20);
+        if (msMetrics !== null) {
+            if (msMetrics.length > 0) {
+                this.last_confirmed_ms_metric = msMetrics[msMetrics.length - 1];
+                this.collected_confirmed_ms_metrics = this.collected_confirmed_ms_metrics.concat(msMetrics);
+                if (this.collected_confirmed_ms_metrics.length > 20) {
+                    this.collected_confirmed_ms_metrics = this.collected_confirmed_ms_metrics.slice(-20);
+                }
+            }
         }
     }
 
