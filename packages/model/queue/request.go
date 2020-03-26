@@ -42,8 +42,8 @@ func (r *request) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (r *request) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (r *request) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }
 
 func newRequest(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, requested bool) *request {
@@ -94,10 +94,10 @@ func (c *CachedRequest) GetRequest() *request {
 	return c.Get().(*request)
 }
 
-func requestFactory(key []byte) (objectstorage.StorableObject, error) {
+func requestFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	req := &request{
 		hashBytes: make([]byte, len(key)),
 	}
 	copy(req.hashBytes, key)
-	return req, nil
+	return req, nil, len(key)
 }

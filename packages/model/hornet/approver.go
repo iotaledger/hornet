@@ -33,6 +33,6 @@ func (a *Approver) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (a *Approver) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (a *Approver) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }

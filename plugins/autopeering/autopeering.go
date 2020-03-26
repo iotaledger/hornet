@@ -13,6 +13,8 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/autopeering/server"
+	"github.com/iotaledger/hive.go/crypto/ed25519"
+	"github.com/iotaledger/hive.go/identity"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
@@ -111,7 +113,7 @@ func start(shutdownSignal <-chan struct{}) {
 	}
 
 	ID = lPeer.ID().String()
-	log.Infof("%s started: ID=%s Address=%s/%s PublicKey=%s", name, lPeer.ID(), localAddr.String(), localAddr.Network(), base64.StdEncoding.EncodeToString(lPeer.PublicKey()))
+	log.Infof("%s started: ID=%s Address=%s/%s PublicKey=%s", name, lPeer.ID(), localAddr.String(), localAddr.Network(), base64.StdEncoding.EncodeToString(lPeer.PublicKey().Bytes()))
 
 	<-shutdownSignal
 	log.Info("Stopping Autopeering ...")
@@ -143,11 +145,16 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 			return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
 		}
 
+		publicKey, err, _ := ed25519.PublicKeyFromBytes(pubKey)
+		if err != nil {
+			return nil, err
+		}
+
 		services := service.New()
 		services.Update(service.PeeringKey, "udp", int(entryAddr.Port))
 
 		ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6))
-		result = append(result, peer.NewPeer(pubKey, ip, services))
+		result = append(result, peer.NewPeer(identity.NewIdentity(publicKey), ip, services))
 	}
 
 	return result, nil

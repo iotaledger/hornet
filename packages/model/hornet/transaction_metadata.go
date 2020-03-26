@@ -129,7 +129,7 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) error {
+func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -143,5 +143,5 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) error {
 	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
 	m.confirmationIndex = milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(data[5:9]))
 
-	return nil
+	return nil, 10
 }

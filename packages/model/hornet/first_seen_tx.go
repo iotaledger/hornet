@@ -40,6 +40,6 @@ func (t *FirstSeenTx) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (t *FirstSeenTx) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (t *FirstSeenTx) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }

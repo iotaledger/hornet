@@ -20,13 +20,13 @@ func (c *CachedNeighborRequest) GetRequest() *PendingNeighborRequests {
 	return c.Get().(*PendingNeighborRequests)
 }
 
-func incomingFactory(key []byte) (objectstorage.StorableObject, error) {
+func incomingFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	req := &PendingNeighborRequests{
 		recTxBytes: make([]byte, len(key)),
 		requests:   make([]*NeighborRequest, 0),
 	}
 	copy(req.recTxBytes, key)
-	return req, nil
+	return req, nil, len(key)
 }
 
 func configureIncomingStorage() {
@@ -55,7 +55,7 @@ func GetIncomingStorageSize() int {
 func GetCachedPendingNeighborRequest(recTxBytes []byte) *CachedNeighborRequest {
 	return &CachedNeighborRequest{
 		CachedObject: incomingStorage.ComputeIfAbsent(recTxBytes, func(key []byte) objectstorage.StorableObject { // neighborReq +1
-			cachedNeighborReq, _ := incomingFactory(recTxBytes)
+			cachedNeighborReq, _, _ := incomingFactory(recTxBytes)
 			return cachedNeighborReq
 		}),
 	}
