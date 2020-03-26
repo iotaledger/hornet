@@ -33,9 +33,10 @@ const (
 
 var (
 	SupportedLocalSnapshotFileVersions = []byte{4}
-)
 
-var ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
+	ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
+	ErrApproverTxNotFound       = errors.New("Approver transaction not found")
+)
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.MilestoneIndex) (bool, milestone_index.MilestoneIndex) {
@@ -43,7 +44,9 @@ func isSolidEntryPoint(txHash trinary.Hash, targetIndex milestone_index.Mileston
 	for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
 		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
 		if cachedTx == nil {
-			log.Panicf("isSolidEntryPoint: Transaction not found: %v", approverHash)
+			// Ignore this transaction since it doesn't exist anymore
+			log.Warnf(errors.Wrapf(ErrApproverTxNotFound, "TxHash: %v, ApproverHash: %v", txHash, approverHash).Error())
+			continue
 		}
 
 		// HINT: Check for orphaned Tx as solid entry points is skipped in HORNET, since this operation is heavy and not necessary, and
