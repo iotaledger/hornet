@@ -91,6 +91,11 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 			log.Warnf("pruneTransactions: Transaction not found: %v", txHash)
 			continue
 		}
+
+		// Delete the reference in the approvees
+		tangle.DeleteApprover(cachedTx.GetTransaction().GetTrunk(), txHash)
+		tangle.DeleteApprover(cachedTx.GetTransaction().GetBranch(), txHash)
+
 		tangle.DeleteTag(cachedTx.GetTransaction().Tx.Tag, txHash)
 		tangle.DeleteAddress(cachedTx.GetTransaction().Tx.Address, txHash)
 		tangle.DeleteApprovers(txHash)
