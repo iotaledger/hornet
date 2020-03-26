@@ -317,15 +317,31 @@ export class NodeStore {
             () => this.updateWebSocketConnected(false))
     }
 
-    isNodeSync = (): boolean => {
+    @computed
+    get documentTitle(): string {
+        let title = "HORNET";
+
+        if (this.status.node_alias !== "") {
+            title = `${title} (${this.status.node_alias})`;
+        }
+        if (this.status.lmi > 0) {
+            title = `${title} ${this.status.lsmi} / ${this.status.lmi}`;
+        }
+
+        return title;
+    }
+
+    @computed
+    get isNodeSync(): boolean {
         if (this.status.lmi == 0) return false;
         return this.status.lsmi == this.status.lmi;
     };
 
-    isLatestVersion = (): boolean => {
+    @computed
+    get isLatestVersion(): boolean {
         if (!this.status.latest_version) return true;
         return this.status.version == this.status.latest_version;
-    };
+    }
 
     @computed
     get percentageSynced(): number {
