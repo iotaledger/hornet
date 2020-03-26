@@ -208,7 +208,7 @@ export class ExplorerStore {
                         tx.json_obj = JSON.parse(tx.ascii_message)
                     }
                 } catch (error) {
-                    console.log(error)
+                
                 }
             } catch (error) {
                 console.log(error);
