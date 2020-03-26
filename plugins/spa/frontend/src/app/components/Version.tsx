@@ -15,7 +15,7 @@ export default class Version extends React.Component<Props, any> {
         return (
             <React.Fragment>
                 Version {this.props.nodeStore.status.version}
-                <If condition={!this.props.nodeStore.isLatestVersion()}>
+                <If condition={!this.props.nodeStore.isLatestVersion}>
                     {' '}
                     <Button href="https://github.com/gohornet/hornet/releases/latest"
                             size="sm"

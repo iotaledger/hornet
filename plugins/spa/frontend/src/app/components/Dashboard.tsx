@@ -11,14 +11,13 @@ import PruningIndex from "app/components/PruningIndex";
 import SnapshotIndex from "app/components/SnapshotIndex";
 import RequestQueue from "app/components/RequestQueue";
 import TPSChart from "app/components/TPSChart";
-import RequestQueueChart from "app/components/RequestQueueChart";
+import ConfirmedMilestoneChart from "app/components/ConfirmedMilestoneChart";
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
-import TipSelChart from "app/components/TipSelChart";
 import ListGroup from "react-bootstrap/ListGroup";
 import Card from "react-bootstrap/Card";
 import MemChart from "app/components/MemChart";
-import {If} from 'tsx-control-statements/components';
+import {Choose, Otherwise, When} from 'tsx-control-statements/components';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -30,7 +29,13 @@ export class Dashboard extends React.Component<Props, any> {
     render() {
         return (
             <Container>
-                <h3>Dashboard <If condition={this.props.nodeStore.status.node_alias !== ""}>({this.props.nodeStore.status.node_alias})</If></h3>
+                <h3>
+                    <Choose>
+                        <When
+                            condition={this.props.nodeStore.status.node_alias !== ""}>{this.props.nodeStore.status.node_alias}</When>
+                        <Otherwise>Dashboard</Otherwise>
+                    </Choose>
+                </h3>
                 <Row className={"mb-3"}>
                     <Col>
                         <Card>
@@ -62,13 +67,10 @@ export class Dashboard extends React.Component<Props, any> {
                     <Col><TPSChart/></Col>
                 </Row>
                 <Row className={"mb-3"}>
+                    <Col><ConfirmedMilestoneChart/></Col>
+                </Row>
+                <Row className={"mb-3"}>
                     <Col><MemChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><TipSelChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><RequestQueueChart/></Col>
                 </Row>
             </Container>
         );

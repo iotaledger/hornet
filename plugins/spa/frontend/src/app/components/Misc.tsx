@@ -73,6 +73,46 @@ const reqLineChartOptions = Object.assign({
     }
 }, defaultChartOptions);
 
+const cacheLineChartOpts = Object.assign({}, {
+    scales: {
+        xAxes: [{
+            ticks: {
+                autoSkip: true,
+                maxTicksLimit: 8,
+                fontSize: 8,
+                minRotation: 0,
+                maxRotation: 0,
+            },
+            showXLabels: 10,
+            gridLines: {
+                display: false
+            }
+        }],
+        yAxes: [{
+            gridLines: {
+                display: false
+            },
+            ticks: {
+                fontSize: 10,
+                maxTicksLimit: 4,
+                suggestedMin: 0,
+                beginAtZero: true,
+                suggestedMax: 100,
+                callback: function (value, index, values) {
+                    return `${value}%`;
+                }
+            },
+        }],
+    },
+    tooltips: {
+        callbacks: {
+            label: function (tooltipItem, data) {
+                return `Hit Rate: ${tooltipItem.value}%`;
+            }
+        }
+    }
+}, defaultChartOptions);
+
 @inject("nodeStore")
 @observer
 export class Misc extends React.Component<Props, any> {
@@ -80,6 +120,30 @@ export class Misc extends React.Component<Props, any> {
         return (
             <Container>
                 <h3>Misc</h3>
+                <Row className={"mb-3"}>
+                    <Col>
+                        <Card>
+                            <Card.Body>
+                                <Card.Title>Tip-Selection Performance</Card.Title>
+                                <Line height={50} data={this.props.nodeStore.tipSelSeries}
+                                      options={lineChartOptions}/>
+                                <Line height={30} data={this.props.nodeStore.tipSelCacheSeries}
+                                      options={cacheLineChartOpts}/>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+                <Row className={"mb-3"}>
+                    <Col>
+                        <Card>
+                            <Card.Body>
+                                <Card.Title>Request Queue</Card.Title>
+                                <Line height={60} data={this.props.nodeStore.reqQSizeSeries}
+                                      options={lineChartOptions}/>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
                 <Row className={"mb-3"}>
                     <Col>
                         <Card>

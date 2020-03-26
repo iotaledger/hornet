@@ -18,6 +18,7 @@ import {Explorer404} from "app/components/Explorer404";
 import {Misc} from "app/components/Misc";
 import {Neighbors} from "app/components/Neighbors";
 import {Explorer420} from "app/components/Explorer420";
+import {Helmet} from 'react-helmet'
 
 interface Props {
     history: any;
@@ -43,6 +44,9 @@ export class Root extends React.Component<Props, any> {
     render() {
         return (
             <div className="container">
+                <Helmet>
+                    <title>{this.props.nodeStore.documentTitle}</title>
+                </Helmet>
                 <Navbar expand="lg" bg="light" variant="light" className={"mb-4"}>
                     <Navbar.Brand>
                         <img
