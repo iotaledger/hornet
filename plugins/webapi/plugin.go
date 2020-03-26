@@ -34,6 +34,7 @@ var (
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
+	healthPath           = "health"
 	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
@@ -143,6 +144,9 @@ func configure(plugin *node.Plugin) {
 
 	// WebAPI route
 	webAPIRoute()
+
+	// Node health (GET /health)
+	healthRoute()
 
 	// return error, if route is not there
 	api.NoRoute(func(c *gin.Context) {
