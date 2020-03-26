@@ -34,15 +34,15 @@ func (r *request) Update(other objectstorage.StorableObject) {
 	panic("request should never be updated")
 }
 
-func (r *request) GetStorageKey() []byte {
+func (r *request) ObjectStorageKey() []byte {
 	return r.hashBytes
 }
 
-func (r *request) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (r *request) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (r *request) UnmarshalBinary(data []byte) error {
+func (r *request) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }
 
@@ -94,10 +94,10 @@ func (c *CachedRequest) GetRequest() *request {
 	return c.Get().(*request)
 }
 
-func requestFactory(key []byte) objectstorage.StorableObject {
+func requestFactory(key []byte) (objectstorage.StorableObject, error) {
 	req := &request{
 		hashBytes: make([]byte, len(key)),
 	}
 	copy(req.hashBytes, key)
-	return req
+	return req, nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 type NeighborRequest struct {
@@ -61,15 +62,15 @@ func (p *PendingNeighborRequests) Update(other objectstorage.StorableObject) {
 	panic("PendingNeighborRequests should never be updated")
 }
 
-func (p *PendingNeighborRequests) GetStorageKey() []byte {
+func (p *PendingNeighborRequests) ObjectStorageKey() []byte {
 	return p.recTxBytes
 }
 
-func (p *PendingNeighborRequests) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (p *PendingNeighborRequests) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (p *PendingNeighborRequests) UnmarshalBinary(data []byte) error {
+func (p *PendingNeighborRequests) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }
 
@@ -194,10 +195,13 @@ func (p *PendingNeighborRequests) process(neighbor *Neighbor) {
 	p.statusLock.Unlock()
 
 	if !stale {
+		// Check existence before the event is fired
+		containsTx := tangle.ContainsTransaction(hornetTx.GetHash())
+
 		// Ignore stale transactions until they are requested
 		Events.ReceivedTransaction.Trigger(hornetTx, requested, reqMilestoneIndex, neighbor.Metrics)
 
-		if !requested && broadcast {
+		if !requested && broadcast && !containsTx {
 			p.broadcast()
 		}
 	} else {

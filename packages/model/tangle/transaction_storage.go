@@ -89,20 +89,20 @@ func (c *CachedTransaction) Release(force ...bool) {
 	c.metadata.Release(force...)
 }
 
-func transactionFactory(key []byte) objectstorage.StorableObject {
+func transactionFactory(key []byte) (objectstorage.StorableObject, error) {
 	tx := &hornet.Transaction{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
-	return tx
+	return tx, nil
 }
 
-func metadataFactory(key []byte) objectstorage.StorableObject {
+func metadataFactory(key []byte) (objectstorage.StorableObject, error) {
 	tx := &hornet.TransactionMetadata{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
-	return tx
+	return tx, nil
 }
 
 func GetTransactionStorageSize() int {
@@ -175,15 +175,15 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 
 	// Store metadata first, because existence is checked via tx
 	newlyAddedMetadata := false
-	metadata := metadataFactory(txHash)
-	cachedMeta := metadataStorage.ComputeIfAbsent(metadata.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
+	metadata, _ := metadataFactory(txHash)
+	cachedMeta := metadataStorage.ComputeIfAbsent(metadata.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
 		newlyAddedMetadata = true
 		metadata.Persist()
 		metadata.SetModified()
 		return metadata
 	})
 
-	cachedTxData := txStorage.ComputeIfAbsent(transaction.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // tx +1
+	cachedTxData := txStorage.ComputeIfAbsent(transaction.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // tx +1
 		newlyAdded = true
 
 		if !newlyAddedMetadata {

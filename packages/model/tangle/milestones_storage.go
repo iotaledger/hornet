@@ -26,10 +26,10 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone_index.MilestoneIndex {
 	return milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key))
 }
 
-func milestoneFactory(key []byte) objectstorage.StorableObject {
+func milestoneFactory(key []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index: milestoneIndexFromDatabaseKey(key),
-	}
+	}, nil
 }
 
 func GetMilestoneStorageSize() int {
@@ -68,20 +68,20 @@ func (ms *Milestone) Update(other objectstorage.StorableObject) {
 	panic("Milestone should never be updated")
 }
 
-func (ms *Milestone) GetStorageKey() []byte {
+func (ms *Milestone) ObjectStorageKey() []byte {
 	return databaseKeyForMilestoneIndex(ms.Index)
 }
 
-func (ms *Milestone) MarshalBinary() (data []byte, err error) {
+func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
 		49 byte transaction hash
 	*/
 	value := trinary.MustTrytesToBytes(ms.Hash)[:49]
 
-	return value, nil
+	return value
 }
 
-func (ms *Milestone) UnmarshalBinary(data []byte) error {
+func (ms *Milestone) UnmarshalObjectStorageValue(data []byte) error {
 
 	ms.Hash = trinary.MustBytesToTrytes(data, 81)
 	return nil
@@ -141,7 +141,7 @@ func StoreMilestone(bndl *Bundle) (bool, *CachedMilestone) {
 			Hash:  bndl.GetMilestoneHash(),
 		}
 
-		cachedMilestone := milestoneStorage.ComputeIfAbsent(milestone.GetStorageKey(), func(key []byte) objectstorage.StorableObject { // milestone +1
+		cachedMilestone := milestoneStorage.ComputeIfAbsent(milestone.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // milestone +1
 			newlyAdded = true
 			milestone.Persist()
 			milestone.SetModified()

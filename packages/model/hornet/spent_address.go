@@ -21,14 +21,14 @@ func (sa *SpentAddress) Update(other objectstorage.StorableObject) {
 	panic("SpentAddress should never be updated")
 }
 
-func (sa *SpentAddress) GetStorageKey() []byte {
+func (sa *SpentAddress) ObjectStorageKey() []byte {
 	return sa.Address
 }
 
-func (sa *SpentAddress) MarshalBinary() (data []byte, err error) {
-	return nil, nil
+func (sa *SpentAddress) ObjectStorageValue() (data []byte) {
+	return nil
 }
 
-func (sa *SpentAddress) UnmarshalBinary(data []byte) error {
+func (sa *SpentAddress) UnmarshalObjectStorageValue(data []byte) error {
 	return nil
 }
