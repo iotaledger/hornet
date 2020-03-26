@@ -14,6 +14,9 @@ import {Link} from 'react-router-dom';
 import {If} from 'tsx-control-statements/components';
 import ReactJson from 'react-json-view';
 import Alert from "react-bootstrap/Alert";
+import {CopyToClipboard} from 'react-copy-to-clipboard';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faClipboard, faClipboardCheck, faCode, faCheck } from '@fortawesome/free-solid-svg-icons';
 
 import * as style from '../../assets/main.css';
 
@@ -43,6 +46,11 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
         }
         return null;
     }
+
+    state = {
+        copied_hash: false,
+        copied_raw: false,
+    };
 
     render() {
         let {hash} = this.props.match.params;
@@ -74,6 +82,27 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                     {
                         tx &&
                         <React.Fragment>
+                            <CopyToClipboard text={hash} onCopy={() => { 
+                                this.setState({copied_hash: true}); 
+                                const timer_hash = setTimeout(() => {
+                                    this.setState({copied_hash: false});
+                                }, 1000);
+                                return () => clearTimeout(timer_hash);
+                                }
+                            }>
+                                {this.state.copied_hash ? <FontAwesomeIcon icon={faClipboardCheck} /> : <FontAwesomeIcon icon={faClipboard} />}
+                            </CopyToClipboard>
+                            {' '}
+                            <CopyToClipboard text={tx.raw_trytes} onCopy={() => { 
+                                this.setState({copied_raw: true}); 
+                                const timer_raw = setTimeout(() => {
+                                    this.setState({copied_raw: false});
+                                }, 1000);
+                                return () => clearTimeout(timer_raw);
+                                }
+                            }>
+                                {this.state.copied_raw ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCode} />}
+                            </CopyToClipboard>
                             <br/>
                             <span>
                                 <Badge variant="light">
