@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -18,9 +18,7 @@ import (
 )
 
 var (
-	milestoneSolidifierWorkerCount = 2 // must be two, so a new request can abort another, in case it is an older milestone
-	milestoneSolidifierQueueSize   = 2
-	milestoneSolidifierWorkerPool  *workerpool.WorkerPool
+	milestoneSolidifierWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(2) // must be two, so a new request can abort another, in case it is an older milestone
 
 	signalChanMilestoneStopSolidification     chan struct{}
 	signalChanMilestoneStopSolidificationLock syncutils.Mutex
@@ -334,10 +332,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 							continue
 						}
 
-						if _, added := gossipSolidifierWorkerPool.Submit(cachedApproverTx.Retain()); !added { // tx pass +1
-							// Do no force release here, otherwise cacheTime for new Tx could be ignored
-							cachedApproverTx.Release() // tx -1
-						}
+						gossipSolidifierWorkerPool.Submit(func() { processGossipSolidificationTask(cachedApproverTx.Retain()) }) // tx pass +1
 
 						// Do no force release here, otherwise cacheTime for new Tx could be ignored
 						cachedApproverTx.Release() // tx -1
@@ -460,7 +455,7 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 		// rerun to solidify the older one
 		setSolidifierMilestoneIndex(0)
 
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), true)
+		milestoneSolidifierWorkerPool.Submit(func() { processSolidificationTask(milestone_index.MilestoneIndex(0), true) })
 		return
 	}
 
@@ -487,7 +482,7 @@ func solidifyMilestone(newMilestoneIndex milestone_index.MilestoneIndex, force b
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
 
-	milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
+	milestoneSolidifierWorkerPool.Submit(func() { processSolidificationTask(milestone_index.MilestoneIndex(0), false) })
 }
 
 func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone_index.MilestoneIndex) (*ConfirmedMilestoneMetric, error) {

@@ -1,16 +1,14 @@
 package tangle
 
 import (
-	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hive.go/async"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 var (
-	processValidMilestoneWorkerCount = 1 // This must not be done in parallel
-	processValidMilestoneQueueSize   = 10000
-	processValidMilestoneWorkerPool  *workerpool.WorkerPool
+	processValidMilestoneWorkerPool = (&async.WorkerPool{}).Tune(1)
 )
 
 func processValidMilestone(cachedBndl *tangle.CachedBundle) {
@@ -30,7 +28,7 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 
 		Events.LatestMilestoneChanged.Trigger(cachedBndl) // bundle pass +1
 	}
-	milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex, false)
+	milestoneSolidifierWorkerPool.Submit(func() { processSolidificationTask(bundleMsIndex, false) })
 
 	if bundleMsIndex > solidMsIndex {
 		log.Infof("Valid milestone detected! Index: %d, Hash: %v", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash())

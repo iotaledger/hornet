@@ -3,8 +3,8 @@ package gossip
 import (
 	"runtime"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/metrics"
@@ -15,28 +15,17 @@ import (
 )
 
 var (
-	stingRequestsWorkerCount = runtime.NumCPU()
-	stingRequestsQueueSize   = 10000
-	stingRequestsWorkerPool  *workerpool.WorkerPool
+	stingRequestsWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(runtime.NumCPU())
 )
-
-func configureSTINGRequestsProcessor() {
-
-	stingRequestsWorkerPool = workerpool.New(func(task workerpool.Task) {
-		sendSTINGRequest(task.Param(0).(trinary.Hash), task.Param(1).(milestone_index.MilestoneIndex))
-		task.Return(nil)
-	}, workerpool.WorkerCount(stingRequestsWorkerCount), workerpool.QueueSize(stingRequestsQueueSize))
-}
 
 func runSTINGRequestsProcessor() {
 
 	daemon.BackgroundWorker("STINGRequestsProcessor", func(shutdownSignal <-chan struct{}) {
 		gossipLogger.Info("Starting STINGRequestsProcessor ... done")
-		stingRequestsWorkerPool.Start()
 		<-shutdownSignal
 		gossipLogger.Info("Stopping STINGRequestsProcessor ...")
 		RequestQueue.Stop()
-		stingRequestsWorkerPool.StopAndWait()
+		stingRequestsWorkerPool.Shutdown()
 		gossipLogger.Info("Stopping STINGRequestsProcessor ... done")
 	}, shutdown.ShutdownPriorityRequestsProcessor)
 }
@@ -85,7 +74,7 @@ func RequestMulti(hashes []trinary.Hash, reqMilestoneIndex milestone_index.Miles
 	added := RequestQueue.AddMulti(hashes, reqMilestoneIndex, false)
 	for x, txHash := range hashes {
 		if added[x] {
-			stingRequestsWorkerPool.TrySubmit(txHash, reqMilestoneIndex)
+			stingRequestsWorkerPool.Submit(func() { sendSTINGRequest(txHash, reqMilestoneIndex) })
 		}
 	}
 }
@@ -104,7 +93,7 @@ func Request(hashes []trinary.Hash, reqMilestoneIndex milestone_index.MilestoneI
 		}
 
 		if RequestQueue.Add(txHash, reqMilestoneIndex, false) {
-			stingRequestsWorkerPool.TrySubmit(txHash, reqMilestoneIndex)
+			stingRequestsWorkerPool.Submit(func() { sendSTINGRequest(txHash, reqMilestoneIndex) })
 		}
 	}
 }
@@ -142,7 +131,7 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction, reqMilestoneIndex mile
 		reqsAdded := RequestQueue.AddMulti(approvesToAdd, reqMilestoneIndex, false)
 		for i, added := range reqsAdded {
 			if added {
-				stingRequestsWorkerPool.TrySubmit(approvesToAdd[i], reqMilestoneIndex)
+				stingRequestsWorkerPool.Submit(func() { sendSTINGRequest(approvesToAdd[i], reqMilestoneIndex) })
 			}
 		}
 	})
@@ -177,7 +166,7 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 		// Tx is unknown, request it!
 		if RequestQueue.Add(approveeHash, reqMilestoneIndex, false) {
 			requested = true
-			stingRequestsWorkerPool.TrySubmit(approveeHash, reqMilestoneIndex)
+			stingRequestsWorkerPool.Submit(func() { sendSTINGRequest(approveeHash, reqMilestoneIndex) })
 		}
 	}
 

@@ -11,12 +11,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
@@ -30,6 +30,10 @@ import (
 	tangle_plugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
+const (
+	BROADCAST_QUEUE_SIZE = 1000
+)
+
 var (
 	PLUGIN = node.NewPlugin("SPA", node.Enabled, configure, run)
 	log    *logger.Logger
@@ -40,19 +44,13 @@ var (
 	clients             = make(map[uint64]chan interface{}, 0)
 	nextClientID uint64 = 0
 
-	wsSendWorkerPool      *workerpool.WorkerPool
+	wsSendWorkerPool      = (&async.NonBlockingWorkerPool{}).Tune(1)
 	webSocketWriteTimeout = time.Duration(3) * time.Second
 
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
 	cachedMilestoneMetrics []*tangle_plugin.ConfirmedMilestoneMetric
-)
-
-const (
-	BROADCAST_QUEUE_SIZE  = 1000
-	wsSendWorkerCount     = 1
-	wsSendWorkerQueueSize = 250
 )
 
 func configure(plugin *node.Plugin) {
@@ -69,23 +67,6 @@ func configure(plugin *node.Plugin) {
 	}
 
 	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
-
-	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
-		switch x := task.Param(0).(type) {
-		case *metrics_plugin.TPSMetrics:
-			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			hub.BroadcastMsg(&msg{MsgTypeNeighborMetric, neighborMetrics()})
-		case *tangle.Bundle:
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-		case []*tangle_plugin.ConfirmedMilestoneMetric:
-			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
-		}
-		task.Return(nil)
-	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
-
-	configureTipSelMetric()
-	configureLiveFeed()
 }
 
 func run(plugin *node.Plugin) {
@@ -123,11 +104,15 @@ func run(plugin *node.Plugin) {
 	go e.Start(bindAddr)
 
 	notifyStatus := events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
-		wsSendWorkerPool.TrySubmit(tpsMetrics)
+		wsSendWorkerPool.Submit(func() {
+			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, tpsMetrics})
+			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&msg{MsgTypeNeighborMetric, neighborMetrics()})
+		})
 	})
 
 	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
+		wsSendWorkerPool.Submit(func() { hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()}) })
 		cachedBndl.Release(true) // bundle -1
 	})
 
@@ -136,7 +121,9 @@ func run(plugin *node.Plugin) {
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
 		}
-		wsSendWorkerPool.TrySubmit([]*tangle_plugin.ConfirmedMilestoneMetric{metric})
+		wsSendWorkerPool.Submit(func() {
+			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, []*tangle_plugin.ConfirmedMilestoneMetric{metric}})
+		})
 	})
 
 	daemon.BackgroundWorker("SPA[WSSend]", func(shutdownSignal <-chan struct{}) {
@@ -145,14 +132,13 @@ func run(plugin *node.Plugin) {
 		tangle_plugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
 		tangle_plugin.Events.NewConfirmedMilestoneMetric.Attach(notifyConfirmedMsMetrics)
-		wsSendWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping SPA[WSSend] ...")
 		metrics_plugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
 		tangle_plugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
 		tangle_plugin.Events.NewConfirmedMilestoneMetric.Detach(notifyConfirmedMsMetrics)
-		wsSendWorkerPool.StopAndWait()
+		wsSendWorkerPool.Shutdown()
 		log.Info("Stopping SPA[WSSend] ... done")
 	}, shutdown.ShutdownPrioritySPA)
 

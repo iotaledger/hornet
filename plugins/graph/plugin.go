@@ -8,12 +8,12 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/gorilla/websocket"
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -31,17 +31,9 @@ var (
 
 	log *logger.Logger
 
-	newTxWorkerCount     = 1
-	newTxWorkerQueueSize = 10000
-	newTxWorkerPool      *workerpool.WorkerPool
-
-	confirmedTxWorkerCount     = 1
-	confirmedTxWorkerQueueSize = 10000
-	confirmedTxWorkerPool      *workerpool.WorkerPool
-
-	newMilestoneWorkerCount     = 1
-	newMilestoneWorkerQueueSize = 100
-	newMilestoneWorkerPool      *workerpool.WorkerPool
+	newTxWorkerPool        = (&async.NonBlockingWorkerPool{}).Tune(1)
+	confirmedTxWorkerPool  = (&async.NonBlockingWorkerPool{}).Tune(1)
+	newMilestoneWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(1)
 
 	wasSyncBefore = false
 
@@ -89,21 +81,6 @@ func configure(plugin *node.Plugin) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
-
-	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) // tx pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	newMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 }
 
 func run(plugin *node.Plugin) {
@@ -119,8 +96,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(cachedTx) // tx pass +1
-			if added {
+			if added := newTxWorkerPool.Submit(func() { onNewTx(cachedTx) }); added { // tx pass +1
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
@@ -129,8 +105,7 @@ func run(plugin *node.Plugin) {
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
-			if added {
+			if added := confirmedTxWorkerPool.Submit(func() { onConfirmedTx(cachedTx, msIndex, confTime) }); added { // tx pass +1
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
@@ -139,8 +114,7 @@ func run(plugin *node.Plugin) {
 
 	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if wasSyncBefore {
-			_, added := newMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
+			if added := newMilestoneWorkerPool.Submit(func() { onNewMilestone(cachedBndl) }); added { // bundle pass +1
 				return // Avoid bundle -1 (done inside workerpool task)
 			}
 		}
@@ -150,30 +124,27 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Graph[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Graph[NewTxWorker] ... done")
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		newTxWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		newTxWorkerPool.StopAndWait()
+		newTxWorkerPool.ShutdownGracefully()
 		log.Info("Stopping Graph[NewTxWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Graph[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Graph[ConfirmedTxWorker] ... done")
 		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedTx)
-		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
-		confirmedTxWorkerPool.StopAndWait()
+		confirmedTxWorkerPool.ShutdownGracefully()
 		log.Info("Stopping Graph[ConfirmedTxWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Graph[NewMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Graph[NewMilestoneWorker] ... done")
 		tangle.Events.ReceivedNewMilestone.Attach(notifyNewMilestone)
-		newMilestoneWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.ReceivedNewMilestone.Detach(notifyNewMilestone)
-		newMilestoneWorkerPool.StopAndWait()
+		newMilestoneWorkerPool.ShutdownGracefully()
 		log.Info("Stopping Graph[NewMilestoneWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 

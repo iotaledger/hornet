@@ -3,11 +3,11 @@ package mqtt
 import (
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
@@ -24,25 +24,11 @@ var (
 	PLUGIN = node.NewPlugin("MQTT", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	newTxWorkerCount     = 1
-	newTxWorkerQueueSize = 10000
-	newTxWorkerPool      *workerpool.WorkerPool
-
-	confirmedTxWorkerCount     = 1
-	confirmedTxWorkerQueueSize = 10000
-	confirmedTxWorkerPool      *workerpool.WorkerPool
-
-	newLatestMilestoneWorkerCount     = 1
-	newLatestMilestoneWorkerQueueSize = 100
-	newLatestMilestoneWorkerPool      *workerpool.WorkerPool
-
-	newSolidMilestoneWorkerCount     = 1
-	newSolidMilestoneWorkerQueueSize = 100
-	newSolidMilestoneWorkerPool      *workerpool.WorkerPool
-
-	spentAddressWorkerCount     = 1
-	spentAddressWorkerQueueSize = 1000
-	spentAddressWorkerPool      *workerpool.WorkerPool
+	newTxWorkerPool              = (&async.NonBlockingWorkerPool{}).Tune(1)
+	confirmedTxWorkerPool        = (&async.NonBlockingWorkerPool{}).Tune(1)
+	newLatestMilestoneWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(1)
+	newSolidMilestoneWorkerPool  = (&async.NonBlockingWorkerPool{}).Tune(1)
+	spentAddressWorkerPool       = (&async.NonBlockingWorkerPool{}).Tune(1)
 
 	wasSyncBefore = false
 
@@ -52,31 +38,6 @@ var (
 // Configure the MQTT plugin
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-
-	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) // tx pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewLatestMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newLatestMilestoneWorkerCount), workerpool.QueueSize(newLatestMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewSolidMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newSolidMilestoneWorkerCount), workerpool.QueueSize(newSolidMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	spentAddressWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onSpentAddress(task.Param(0).(trinary.Hash))
-		task.Return(nil)
-	}, workerpool.WorkerCount(spentAddressWorkerCount), workerpool.QueueSize(spentAddressWorkerQueueSize))
 
 	var err error
 	mqttBroker, err = NewBroker()
@@ -101,8 +62,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(cachedTx) // tx pass +1
-			if added {
+			if added := newTxWorkerPool.Submit(func() { onNewTx(cachedTx) }); added { // tx pass +1
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
@@ -111,8 +71,7 @@ func run(plugin *node.Plugin) {
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
-			if added {
+			if added := confirmedTxWorkerPool.Submit(func() { onConfirmedTx(cachedTx, msIndex, confTime) }); added { // tx pass +1
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
@@ -121,8 +80,7 @@ func run(plugin *node.Plugin) {
 
 	notifyNewLatestMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if wasSyncBefore {
-			_, added := newLatestMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
+			if added := newLatestMilestoneWorkerPool.Submit(func() { onNewLatestMilestone(cachedBndl) }); added { // bundle pass +1
 				return // Avoid bundle -1 (done inside workerpool task)
 			}
 		}
@@ -131,8 +89,7 @@ func run(plugin *node.Plugin) {
 
 	notifyNewSolidMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if wasSyncBefore {
-			_, added := newSolidMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
+			if added := newSolidMilestoneWorkerPool.Submit(func() { onNewSolidMilestone(cachedBndl) }); added { // bundle pass +1
 				return // Avoid bundle -1 (done inside workerpool task)
 			}
 		}
@@ -140,7 +97,7 @@ func run(plugin *node.Plugin) {
 	})
 
 	notifySpentAddress := events.NewClosure(func(addr trinary.Hash) {
-		spentAddressWorkerPool.TrySubmit(addr)
+		spentAddressWorkerPool.Submit(func() { onSpentAddress(addr) })
 	})
 
 	daemon.BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
@@ -180,51 +137,46 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("MQTT[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[NewTxWorker] ... done")
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		newTxWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		newTxWorkerPool.StopAndWait()
+		newTxWorkerPool.ShutdownGracefully()
 		log.Info("Stopping MQTT[NewTxWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[ConfirmedTxWorker] ... done")
 		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedTx)
-		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
-		confirmedTxWorkerPool.StopAndWait()
+		confirmedTxWorkerPool.ShutdownGracefully()
 		log.Info("Stopping MQTT[ConfirmedTxWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[NewLatestMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[NewLatestMilestoneWorker] ... done")
 		tangle.Events.LatestMilestoneChanged.Attach(notifyNewLatestMilestone)
-		newLatestMilestoneWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.LatestMilestoneChanged.Detach(notifyNewLatestMilestone)
-		newLatestMilestoneWorkerPool.StopAndWait()
+		newLatestMilestoneWorkerPool.ShutdownGracefully()
 		log.Info("Stopping MQTT[NewLatestMilestoneWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[NewSolidMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[NewSolidMilestoneWorker] ... done")
 		tangle.Events.SolidMilestoneChanged.Attach(notifyNewSolidMilestone)
-		newSolidMilestoneWorkerPool.Start()
 		<-shutdownSignal
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
-		newSolidMilestoneWorkerPool.StopAndWait()
+		newSolidMilestoneWorkerPool.ShutdownGracefully()
 		log.Info("Stopping MQTT[NewSolidMilestoneWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[SpentAddress]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[SpentAddress] ... done")
 		tanglePackage.Events.AddressSpent.Attach(notifySpentAddress)
-		spentAddressWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping MQTT[SpentAddress] ...")
 		tanglePackage.Events.AddressSpent.Detach(notifySpentAddress)
-		spentAddressWorkerPool.StopAndWait()
+		spentAddressWorkerPool.Shutdown()
 		log.Info("Stopping MQTT[SpentAddress] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 }

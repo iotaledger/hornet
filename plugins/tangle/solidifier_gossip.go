@@ -3,9 +3,9 @@ package tangle
 import (
 	"time"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -17,50 +17,39 @@ const (
 )
 
 var (
-	gossipSolidifierWorkerCount = 1
-	gossipSolidifierQueueSize   = 5000
-	gossipSolidifierWorkerPool  *workerpool.WorkerPool
+	gossipSolidifierWorkerPool = (&async.WorkerPool{}).Tune(1)
 )
 
-func configureGossipSolidifier() {
-	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		// Check solidity of gossip txs if the node is synced
-		cachedTx := task.Param(0).(*tangle.CachedTransaction)
-		if tangle.IsNodeSyncedWithThreshold() {
-			checkSolidityAndPropagate(cachedTx) // tx pass +1
-		} else {
-			// Force release allowed if the node is not synced
-			cachedTx.Release(true) // tx -1
-		}
+func processGossipSolidificationTask(cachedTx *tangle.CachedTransaction) {
+	// Check solidity of gossip txs if the node is synced
+	if !tangle.IsNodeSyncedWithThreshold() {
+		// Force release allowed if the node is not synced
+		cachedTx.Release(true) // tx -1
+		return
+	}
 
-		task.Return(nil)
-	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
+	checkSolidityAndPropagate(cachedTx) // tx pass +1
 }
 
 func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		if tangle.IsNodeSyncedWithThreshold() {
-			_, added := gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
-			if !added {
-				// Force release possible here, since processIncomingTx still holds a reference
-				cachedTx.Release(true) // tx -1
-			}
-		} else {
+		if !tangle.IsNodeSyncedWithThreshold() {
 			// Force release possible here, since processIncomingTx still holds a reference
 			cachedTx.Release(true) // tx -1
+			return
 		}
+		gossipSolidifierWorkerPool.Submit(func() { processGossipSolidificationTask(cachedTx) }) // tx pass +1
 	})
 
 	daemon.BackgroundWorker("Tangle Solidifier", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Solidifier ... done")
 		Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		gossipSolidifierWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Solidifier ...")
 		Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		gossipSolidifierWorkerPool.StopAndWait()
+		gossipSolidifierWorkerPool.ShutdownGracefully()
 
 		log.Info("Stopping Solidifier ... done")
 	}, shutdown.ShutdownPrioritySolidifierGossip)

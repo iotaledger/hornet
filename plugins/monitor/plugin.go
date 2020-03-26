@@ -10,13 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
-	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/milestone_index"
@@ -35,21 +34,10 @@ var (
 	PLUGIN = node.NewPlugin("Monitor", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	newTxWorkerCount     = 1
-	newTxWorkerQueueSize = 10000
-	newTxWorkerPool      *workerpool.WorkerPool
-
-	confirmedTxWorkerCount     = 1
-	confirmedTxWorkerQueueSize = 10000
-	confirmedTxWorkerPool      *workerpool.WorkerPool
-
-	newMilestoneWorkerCount     = 1
-	newMilestoneWorkerQueueSize = 100
-	newMilestoneWorkerPool      *workerpool.WorkerPool
-
-	reattachmentWorkerCount     = 1
-	reattachmentWorkerQueueSize = 100
-	reattachmentWorkerPool      *workerpool.WorkerPool
+	newTxWorkerPool        = (&async.NonBlockingWorkerPool{}).Tune(1)
+	confirmedTxWorkerPool  = (&async.NonBlockingWorkerPool{}).Tune(1)
+	newMilestoneWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(1)
+	reattachmentWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(1)
 
 	wasSyncBefore = false
 
@@ -114,27 +102,6 @@ func configure(plugin *node.Plugin) {
 	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
 
 	api.GET("/api/v1/getRecentTransactions", handleAPI)
-
-	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) // tx pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	newMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	reattachmentWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onReattachment(task.Param(0).(trinary.Hash))
-		task.Return(nil)
-	}, workerpool.WorkerCount(reattachmentWorkerCount), workerpool.QueueSize(reattachmentWorkerQueueSize))
-
 }
 
 func run(plugin *node.Plugin) {
@@ -150,8 +117,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(cachedTx) // tx pass +1
-			if added {
+			if added := newTxWorkerPool.Submit(func() { onNewTx(cachedTx) }); added { // tx pass +1
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
@@ -160,8 +126,7 @@ func run(plugin *node.Plugin) {
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
 		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
-			if added {
+			if added := confirmedTxWorkerPool.Submit(func() { onConfirmedTx(cachedTx, msIndex, confTime) }); added { // tx pass +1
 				return // Avoid tx -1 (done inside workerpool task)
 			}
 		}
@@ -170,8 +135,7 @@ func run(plugin *node.Plugin) {
 
 	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if wasSyncBefore {
-			_, added := newMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
+			if added := newMilestoneWorkerPool.Submit(func() { onNewMilestone(cachedBndl) }); added { // bundle pass +1
 				return // Avoid bundle -1 (done inside workerpool task)
 			}
 		}
@@ -181,42 +145,38 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Monitor[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[NewTxWorker] ... done")
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		newTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Monitor[NewTxWorker] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		newTxWorkerPool.StopAndWait()
+		newTxWorkerPool.ShutdownGracefully()
 		log.Info("Stopping Monitor[NewTxWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[ConfirmedTxWorker] ... done")
 		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedTx)
-		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Monitor[ConfirmedTxWorker] ...")
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
-		confirmedTxWorkerPool.StopAndWait()
+		confirmedTxWorkerPool.ShutdownGracefully()
 		log.Info("Stopping Monitor[ConfirmedTxWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor[NewMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[NewMilestoneWorker] ... done")
 		tangle.Events.ReceivedNewMilestone.Attach(notifyNewMilestone)
-		newMilestoneWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Monitor[NewMilestoneWorker] ...")
 		tangle.Events.ReceivedNewMilestone.Detach(notifyNewMilestone)
-		newMilestoneWorkerPool.StopAndWait()
+		newMilestoneWorkerPool.ShutdownGracefully()
 		log.Info("Stopping Monitor[NewMilestoneWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor[ReattachmentWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[ReattachmentWorker] ... done")
-		reattachmentWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Monitor[ReattachmentWorker] ...")
-		reattachmentWorkerPool.StopAndWait()
+		reattachmentWorkerPool.Shutdown()
 		log.Info("Stopping Monitor[ReattachmentWorker] ... done")
 	}, shutdown.ShutdownPriorityMetricsPublishers)
 

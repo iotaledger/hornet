@@ -18,9 +18,7 @@ func configure(plugin *node.Plugin) {
 	configureNeighbors()
 	configureReconnectPool()
 	configureServer()
-	configureBroadcastQueue()
 	configurePacketProcessor()
-	configureSTINGRequestsProcessor()
 	configureConfigObserver()
 }
 

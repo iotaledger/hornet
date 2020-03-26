@@ -10,10 +10,10 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/math"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/metrics"
@@ -24,13 +24,9 @@ import (
 	"github.com/gohornet/hornet/packages/shutdown"
 )
 
-const (
-	PACKET_PROCESSOR_WORKER_QUEUE_SIZE = 50000
-)
-
 var (
 	packetProcessorWorkerCount = batchhasher.CURLP81.GetBatchSize() * batchhasher.CURLP81.GetWorkerCount()
-	packetProcessorWorkerPool  *workerpool.WorkerPool
+	packetProcessorWorkerPool  = (&async.WorkerPool{}).Tune(packetProcessorWorkerCount)
 
 	RequestQueue *queue.RequestQueue
 
@@ -43,25 +39,6 @@ func configurePacketProcessor() {
 	configureIncomingStorage()
 
 	gossipLogger.Infof("Configuring packetProcessorWorkerPool with %d workers", packetProcessorWorkerCount)
-	packetProcessorWorkerPool = workerpool.New(func(task workerpool.Task) {
-
-		switch task.Param(2).(ProtocolMsgType) {
-
-		case PROTOCOL_MSG_TYPE_LEGACY_TX_GOSSIP:
-			ProcessReceivedLegacyTransactionGossipData(task.Param(0).(*protocol), task.Param(1).([]byte))
-
-		case PROTOCOL_MSG_TYPE_TX_GOSSIP:
-			ProcessReceivedTransactionGossipData(task.Param(0).(*protocol), task.Param(1).([]byte))
-
-		case PROTOCOL_MSG_TYPE_TX_REQ_GOSSIP:
-			ProcessReceivedTransactionRequestData(task.Param(0).(*protocol), task.Param(1).([]byte))
-
-		case PROTOCOL_MSG_TYPE_MS_REQUEST:
-			ProcessReceivedMilestoneRequest(task.Param(0).(*protocol), task.Param(1).([]byte))
-		}
-
-		task.Return(nil)
-	}, workerpool.WorkerCount(packetProcessorWorkerCount), workerpool.QueueSize(PACKET_PROCESSOR_WORKER_QUEUE_SIZE))
 }
 
 func runPacketProcessor() {
@@ -69,10 +46,9 @@ func runPacketProcessor() {
 
 	daemon.BackgroundWorker("PacketProcessor", func(shutdownSignal <-chan struct{}) {
 		gossipLogger.Info("Starting PacketProcessor ... done")
-		packetProcessorWorkerPool.Start()
 		<-shutdownSignal
 		gossipLogger.Info("Stopping PacketProcessor ...")
-		packetProcessorWorkerPool.StopAndWait()
+		packetProcessorWorkerPool.Shutdown()
 		gossipLogger.Info("Stopping PacketProcessor ... done")
 	}, shutdown.ShutdownPriorityPacketProcessor)
 }

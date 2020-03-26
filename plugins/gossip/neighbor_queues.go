@@ -6,9 +6,9 @@ import (
 	"log"
 	"runtime"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -71,9 +71,7 @@ var (
 	neighborQueues      = make(map[string]*neighborQueue)
 	neighborQueuesMutex syncutils.RWMutex
 	broadcastQueue      = make(chan *broadcastTransaction, BROADCAST_QUEUE_SIZE)
-	replyWorkerCount    = runtime.NumCPU()
-	replyQueueSize      = 10000
-	replyWorkerPool     *workerpool.WorkerPool
+	replyWorkerPool     = (&async.WorkerPool{}).Tune(runtime.NumCPU())
 )
 
 func DebugPrintQueueStats() {
@@ -82,14 +80,6 @@ func DebugPrintQueueStats() {
 	for _, neighbor := range neighborQueues {
 		gossipLogger.Infof("   Neighbor (%s): TxQueue: %d, MilestoneReqQueue: %d", neighbor.protocol.Neighbor.Identity, len(neighbor.legacyTxQueue), len(neighbor.sendMilestoneRequestQueue))
 	}
-}
-
-func configureBroadcastQueue() {
-
-	replyWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processReplies(task.Param(0).(*replyItem))
-		task.Return(nil)
-	}, workerpool.WorkerCount(replyWorkerCount), workerpool.QueueSize(replyQueueSize))
 }
 
 func runBroadcastQueue() {
@@ -103,10 +93,9 @@ func runBroadcastQueue() {
 
 	daemon.BackgroundWorker("ReplyProcessor", func(shutdownSignal <-chan struct{}) {
 		gossipLogger.Info("Starting ReplyProcessor ... done")
-		replyWorkerPool.Start()
 		<-shutdownSignal
 		gossipLogger.Info("Stopping ReplyProcessor ...")
-		replyWorkerPool.StopAndWait()
+		replyWorkerPool.Shutdown()
 		gossipLogger.Info("Stopping ReplyProcessor ... done")
 	}, shutdown.ShutdownPriorityReplyProcessor)
 
@@ -179,7 +168,9 @@ func (neighbor *Neighbor) Reply(recHashBytes []byte, neighborReq *NeighborReques
 	// If we don't have any request, we signal the neighbor that we are synced, by sending the same reqHash like the hash of the data
 	// 	- If the neighbor was also synced, we stop the gossip by not replying
 
-	replyWorkerPool.Submit(&replyItem{neighborIdentity: neighbor.Identity, recHashBytes: recHashBytes, neighborRequest: neighborReq})
+	replyWorkerPool.Submit(func() {
+		processReplies(&replyItem{neighborIdentity: neighbor.Identity, recHashBytes: recHashBytes, neighborRequest: neighborReq})
+	})
 }
 
 // Requests the latest milestone from the neigbor

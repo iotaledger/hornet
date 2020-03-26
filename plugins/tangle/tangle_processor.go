@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/iotaledger/hive.go/async"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
@@ -19,9 +19,7 @@ import (
 )
 
 var (
-	receiveTxWorkerCount = 2 * runtime.NumCPU()
-	receiveTxQueueSize   = 10000
-	receiveTxWorkerPool  *workerpool.WorkerPool
+	receiveTxWorkerPool = (&async.WorkerPool{}).Tune(2 * runtime.NumCPU())
 
 	lastIncomingTPS uint32
 	lastNewTPS      uint32
@@ -29,26 +27,6 @@ var (
 )
 
 func configureTangleProcessor(plugin *node.Plugin) {
-
-	configureGossipSolidifier()
-
-	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(bool), task.Param(2).(milestone_index.MilestoneIndex), task.Param(3).(*metrics.NeighborMetrics))
-		task.Return(nil)
-	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
-
-	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processValidMilestone(task.Param(0).(*tangle.CachedBundle)) // bundle pass +1
-		task.Return(nil)
-	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		if daemon.IsStopped() {
-			return
-		}
-		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex), task.Param(1).(bool))
-		task.Return(nil)
-	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 
 	metrics_plugin.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
@@ -66,40 +44,44 @@ func runTangleProcessor(plugin *node.Plugin) {
 	runGossipSolidifier()
 
 	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighborMetrics *metrics.NeighborMetrics) {
-		receiveTxWorkerPool.Submit(transaction, requested, reqMilestoneIndex, neighborMetrics)
+		receiveTxWorkerPool.Submit(func() { processIncomingTx(transaction, requested, reqMilestoneIndex, neighborMetrics) })
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		gossip.Events.ReceivedTransaction.Attach(notifyReceivedTx)
-		receiveTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
 		gossip.Events.ReceivedTransaction.Detach(notifyReceivedTx)
-		receiveTxWorkerPool.StopAndWait()
+		receiveTxWorkerPool.Shutdown()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.ShutdownPriorityReceiveTxWorker)
 
 	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
-		processValidMilestoneWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
-		processValidMilestoneWorkerPool.StopAndWait()
+		processValidMilestoneWorkerPool.ShutdownGracefully()
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.ShutdownPriorityMilestoneProcessor)
 
 	daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
-		milestoneSolidifierWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
-		milestoneSolidifierWorkerPool.StopAndWait()
+		milestoneSolidifierWorkerPool.Shutdown()
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighborMetrics *metrics.NeighborMetrics) {
+func processSolidificationTask(newMilestoneIndex milestone_index.MilestoneIndex, force bool) {
+	if daemon.IsStopped() {
+		return
+	}
+	solidifyMilestone(newMilestoneIndex, force)
+}
+
+func processIncomingTx(incomingTx *hornet.Transaction, requested bool, reqMilestoneIndex milestone_index.MilestoneIndex, neighborMetrics *metrics.NeighborMetrics) {
 
 	txHash := incomingTx.GetHash()
 
@@ -143,16 +125,12 @@ func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, requ
 
 	if !tangle.IsNodeSynced() && gossip.RequestQueue.IsEmpty() {
 		// The node is not synced, but the request queue seems empty => trigger the solidifer
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0), false)
+		milestoneSolidifierWorkerPool.Submit(func() { processSolidificationTask(milestone_index.MilestoneIndex(0), false) })
 	}
 }
 
 func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
-	_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
-	if !added {
-		// Release shouldn't be forced, to cache the latest milestones
-		cachedBndl.Release() // bundle -1
-	}
+	processValidMilestoneWorkerPool.Submit(func() { processValidMilestone(cachedBndl) }) // bundle pass +1
 }
 
 func onReceivedInvalidMilestone(err error) {
@@ -166,7 +144,7 @@ func printStatus() {
 		fmt.Sprintf(
 			"reqQ: %05d, "+
 				"reqQMs: %d, "+
-				"processor: %05d, "+
+				"processor: %d/%d, "+
 				"LSMI/LMI: %d/%d, "+
 				"seenSpentAddrs: %d, "+
 				"bndlsValidated: %d, "+
@@ -175,7 +153,7 @@ func printStatus() {
 				"TPS: %d (in) / %d (new) / %d (out)",
 			requestCount,
 			requestedMilestone,
-			receiveTxWorkerPool.GetPendingQueueSize(),
+			receiveTxWorkerPool.RunningWorkers(), receiveTxWorkerPool.Capacity(),
 			tangle.GetSolidMilestoneIndex(),
 			tangle.GetLatestMilestoneIndex(),
 			metrics.SharedServerMetrics.GetSeenSpentAddrCount(),

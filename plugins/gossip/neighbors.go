@@ -397,22 +397,24 @@ func setupNeighborEventHandlers(neighbor *Neighbor) {
 
 		// register packet routing events
 		receiveLegacyTransactionDataClosure := events.NewClosure(func(protocol *protocol, data []byte) {
-			packetProcessorWorkerPool.Submit(protocol, data, PROTOCOL_MSG_TYPE_LEGACY_TX_GOSSIP)
+			packetProcessorWorkerPool.Submit(func() { ProcessReceivedLegacyTransactionGossipData(protocol, data) })
 		})
 		neighbor.Protocol.Events.ReceivedLegacyTransactionGossipData.Attach(receiveLegacyTransactionDataClosure)
 
 		receiveTransactionDataClosure := events.NewClosure(func(protocol *protocol, data []byte) {
-			packetProcessorWorkerPool.Submit(protocol, data, PROTOCOL_MSG_TYPE_TX_GOSSIP)
+			packetProcessorWorkerPool.Submit(func() { ProcessReceivedTransactionGossipData(protocol, data) })
 		})
 		neighbor.Protocol.Events.ReceivedTransactionGossipData.Attach(receiveTransactionDataClosure)
 
 		transactionRequestDataClosure := events.NewClosure(func(protocol *protocol, data []byte) {
-			packetProcessorWorkerPool.Submit(protocol, data, PROTOCOL_MSG_TYPE_TX_REQ_GOSSIP)
+
+			packetProcessorWorkerPool.Submit(func() { ProcessReceivedTransactionRequestData(protocol, data) })
 		})
 		neighbor.Protocol.Events.ReceivedTransactionRequestGossipData.Attach(transactionRequestDataClosure)
 
 		receiveMilestoneRequestClosure := events.NewClosure(func(protocol *protocol, data []byte) {
-			packetProcessorWorkerPool.Submit(protocol, data, PROTOCOL_MSG_TYPE_MS_REQUEST)
+
+			packetProcessorWorkerPool.Submit(func() { ProcessReceivedMilestoneRequest(protocol, data) })
 		})
 		neighbor.Protocol.Events.ReceivedMilestoneRequestData.Attach(receiveMilestoneRequestClosure)
 

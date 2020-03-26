@@ -123,7 +123,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.M
 					ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
 					if len(ledgerChanges) > 0 {
 						// Mark all different Txs in all bundles as reattachment
-						reattachmentWorkerPool.TrySubmit(tx.Tx.Bundle)
+						reattachmentWorkerPool.Submit(func() { onReattachment(tx.Tx.Bundle) })
 					}
 				}
 				cachedBndl.Release(true) // bundle -1
