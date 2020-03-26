@@ -66,15 +66,15 @@ func webAPIRoute() {
 // GET /health
 func healthRoute() {
 	api.GET(healthPath, func(c *gin.Context) {
-		synced := tangle.IsNodeSyncedWithThreshold()
-		if !synced {
+
+		// Synced
+		if !tangle.IsNodeSyncedWithThreshold() {
 			c.Status(http.StatusServiceUnavailable)
 			return
 		}
 
-		// Get the number of connected neighbors
-		connectedNeighbors := len(gossip.GetConnectedNeighbors())
-		if connectedNeighbors == 0 {
+		// Has connected neighbors
+		if len(gossip.GetConnectedNeighbors()) == 0 {
 			c.Status(http.StatusServiceUnavailable)
 			return
 		}
@@ -90,13 +90,13 @@ func healthRoute() {
 			cachedLatestMs.Release(true) // bundle -1
 		}
 
-		// Check whether the milestone is not older than 5 minutes
+		// Check whether the milestone is older than 5 minutes
 		timeMs := time.Unix(int64(milestoneTimestamp), 0)
-		if newerMilestone := time.Since(timeMs) < (time.Minute * 5); newerMilestone {
-			c.Status(http.StatusOK)
+		if time.Since(timeMs) > (time.Minute * 5) {
+			c.Status(http.StatusServiceUnavailable)
 			return
 		}
 
-		c.Status(http.StatusServiceUnavailable)
+		c.Status(http.StatusOK)
 	})
 }
