@@ -14,6 +14,9 @@ import {Link} from 'react-router-dom';
 import {If} from 'tsx-control-statements/components';
 import ReactJson from 'react-json-view';
 import Alert from "react-bootstrap/Alert";
+import {CopyToClipboard} from 'react-copy-to-clipboard';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faClipboard, faClipboardCheck, faCode, faCheck } from '@fortawesome/free-solid-svg-icons';
 
 import * as style from '../../assets/main.css';
 
@@ -44,9 +47,29 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
         return null;
     }
 
+    state = {
+        copied_hash: false,
+        copied_raw: false,
+    };
+
     render() {
         let {hash} = this.props.match.params;
         let {tx, query_loading, query_err} = this.props.explorerStore;
+        let approversEle = [];
+        if (tx) {
+            if (tx.approvers) {
+                for (let i = 0; i < tx.approvers.length; i++) {
+                    let approversHash = tx.approvers[i];
+                    approversEle.push(
+                        <ListGroup.Item>
+                            <small>
+                                <Link to={`/explorer/tx/${approversHash}`}>{approversHash}</Link>
+                            </small>
+                        </ListGroup.Item>
+                    );
+                }
+            }
+        }
         return (
             <Container>
             <If condition={query_err !== null}>
@@ -74,6 +97,27 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                     {
                         tx &&
                         <React.Fragment>
+                            <CopyToClipboard text={hash} onCopy={() => { 
+                                this.setState({copied_hash: true}); 
+                                const timer_hash = setTimeout(() => {
+                                    this.setState({copied_hash: false});
+                                }, 1000);
+                                return () => clearTimeout(timer_hash);
+                                }
+                            }>
+                                {this.state.copied_hash ? <FontAwesomeIcon icon={faClipboardCheck} /> : <FontAwesomeIcon icon={faClipboard} />}
+                            </CopyToClipboard>
+                            {' '}
+                            <CopyToClipboard text={tx.raw_trytes} onCopy={() => { 
+                                this.setState({copied_raw: true}); 
+                                const timer_raw = setTimeout(() => {
+                                    this.setState({copied_raw: false});
+                                }, 1000);
+                                return () => clearTimeout(timer_raw);
+                                }
+                            }>
+                                {this.state.copied_raw ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCode} />}
+                            </CopyToClipboard>
                             <br/>
                             <span>
                                 <Badge variant="light">
@@ -212,6 +256,17 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                     </ListGroup.Item>
                                     <ListGroup.Item>
                                         Nonce: {tx.nonce}
+                                    </ListGroup.Item>
+                                    <ListGroup.Item className="text-break">
+                                        Approvers: {' '}
+                                        <If condition={approversEle.length > 0}>
+                                            <ListGroup variant="flush">
+                                                {approversEle}
+                                            </ListGroup>
+                                        </If>
+                                        <If condition={approversEle.length === 0}>
+                                            No approvers yet
+                                        </If>
                                     </ListGroup.Item>
                                     <ListGroup.Item className="text-break">
                                         Message:<br/>

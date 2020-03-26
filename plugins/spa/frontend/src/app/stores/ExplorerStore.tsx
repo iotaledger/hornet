@@ -4,6 +4,7 @@ import * as React from "react";
 import {Link} from 'react-router-dom';
 import {RouterStore} from "mobx-react-router";
 import { trytesToAscii } from '@iota/converter';
+import { asTransactionTrytes } from '@iota/transaction-converter';
 
 export class Transaction {
     hash: string;
@@ -25,6 +26,7 @@ export class Transaction {
     attachment_timestamp_lower_bound: number;
     attachment_timestamp_upper_bound: number;
     confirmed: ConfirmedState;
+    approvers: Array<string>;
     solid: boolean;
     mwm: number;
     next: string;
@@ -32,6 +34,7 @@ export class Transaction {
     bundle_complete: boolean;
     is_milestone: boolean;
     milestone_index: number;
+    raw_trytes: string;
 }
 
 class AddressResult {
@@ -169,6 +172,31 @@ export class ExplorerStore {
                 return;
             }
             let tx: Transaction = await res.json();
+
+            try {
+                const transactionObject = {
+                    hash: tx.hash,
+                    signatureMessageFragment: tx.signature_message_fragment,
+                    address: tx.address,
+                    value: tx.value,
+                    obsoleteTag: tx.obsolete_tag,
+                    timestamp: tx.timestamp,
+                    currentIndex: tx.current_index,
+                    lastIndex: tx.last_index,
+                    bundle: tx.bundle,
+                    trunkTransaction: tx.trunk,
+                    branchTransaction: tx.branch,
+                    tag: tx.tag,
+                    attachmentTimestamp: tx.attachment_timestamp,
+                    attachmentTimestampLowerBound: tx.attachment_timestamp_lower_bound,
+                    attachmentTimestampUpperBound: tx.attachment_timestamp_upper_bound,
+                    nonce: tx.nonce
+                };
+                tx.raw_trytes = asTransactionTrytes(transactionObject);
+            } catch (error) {
+                console.log(error);
+            }
+
             try {
                 if (tx.signature_message_fragment.replace(/9+$/, "").length%2 === 0) {
                     tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, ""));
