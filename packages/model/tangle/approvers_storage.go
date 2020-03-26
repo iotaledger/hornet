@@ -107,6 +107,17 @@ func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *Cac
 }
 
 // approvers +-0
+func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
+
+	approver := &hornet.Approver{
+		TxHash:       trinary.MustTrytesToBytes(transactionHash)[:49],
+		ApproverHash: trinary.MustTrytesToBytes(approverHash)[:49],
+	}
+
+	approversStorage.Delete(approver.ObjectStorageKey())
+}
+
+// approvers +-0
 func DeleteApprovers(transactionHash trinary.Hash) {
 
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
