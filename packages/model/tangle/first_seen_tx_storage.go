@@ -32,13 +32,13 @@ func (c *CachedFirstSeenTx) GetFirstSeenTx() *hornet.FirstSeenTx {
 	return c.Get().(*hornet.FirstSeenTx)
 }
 
-func firstSeenTxFactory(key []byte) (objectstorage.StorableObject, error) {
+func firstSeenTxFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	firstSeenTx := &hornet.FirstSeenTx{
 		FirstSeenLatestMilestoneIndex: milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key[:4])),
 		TxHash:                        make([]byte, 49),
 	}
 	copy(firstSeenTx.TxHash, key[4:])
-	return firstSeenTx, nil
+	return firstSeenTx, nil, 53
 }
 
 func GetFirstSeenTxStorageSize() int {

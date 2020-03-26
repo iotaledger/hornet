@@ -24,11 +24,11 @@ func databaseKeyForBundle(tailTxHash trinary.Hash) []byte {
 	return trinary.MustTrytesToBytes(tailTxHash)[:49]
 }
 
-func bundleFactory(key []byte) (objectstorage.StorableObject, error) {
+func bundleFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	return &Bundle{
 		tailTx: trinary.MustBytesToTrytes(key[:49], 81),
 		txs:    make(map[trinary.Hash]struct{}),
-	}, nil
+	}, nil, 49
 }
 
 func GetBundleStorageSize() int {
@@ -103,7 +103,7 @@ func (bundle *Bundle) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) error {
+func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
 
 	/*
 		 1 byte  	   				metadata
@@ -141,7 +141,7 @@ func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) error {
 		bundle.ledgerChanges[address] = balance
 	}
 
-	return nil
+	return nil, offset
 }
 
 // Cached Object

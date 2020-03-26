@@ -34,7 +34,7 @@ func databaseKeyForBundleTransaction(bundleHash trinary.Hash, txHash trinary.Has
 	return append(result, trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
-func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, error) {
+func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	bundleTx := &BundleTransaction{
 		BundleHash: make([]byte, 49),
 		IsTail:     key[49] == BUNDLE_TX_IS_TAIL,
@@ -43,7 +43,7 @@ func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, error) 
 	copy(bundleTx.BundleHash, key[:49])
 	copy(bundleTx.TxHash, key[50:])
 
-	return bundleTx, nil
+	return bundleTx, nil, 99
 }
 
 func GetBundleTransactionsStorageSize() int {
@@ -107,8 +107,8 @@ func (bt *BundleTransaction) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (bt *BundleTransaction) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (bt *BundleTransaction) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }
 
 // Cached Object

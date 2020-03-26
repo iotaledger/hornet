@@ -70,8 +70,8 @@ func (p *PendingNeighborRequests) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (p *PendingNeighborRequests) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (p *PendingNeighborRequests) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }
 
 func (p *PendingNeighborRequests) AddLegacyTxRequest(neighbor *protocol, reqHashBytes []byte) {

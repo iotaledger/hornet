@@ -34,6 +34,6 @@ func (a *Address) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (a *Address) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (a *Address) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }

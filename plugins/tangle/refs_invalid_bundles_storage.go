@@ -34,16 +34,16 @@ func (r *invalidBundleReference) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (r *invalidBundleReference) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (r *invalidBundleReference) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }
 
-func invalidBundleFactory(key []byte) (objectstorage.StorableObject, error) {
+func invalidBundleFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	invalidBndl := &invalidBundleReference{
 		hashBytes: make([]byte, len(key)),
 	}
 	copy(invalidBndl.hashBytes, key)
-	return invalidBndl, nil
+	return invalidBndl, nil, len(key)
 }
 
 func configureRefsAnInvalidBundleStorage() {
@@ -70,7 +70,7 @@ func GetRefsAnInvalidBundleStorageSize() int {
 
 // +-0
 func PutInvalidBundleReference(txHash trinary.Hash) {
-	invalidBundleRef, _ := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
+	invalidBundleRef, _, _ := invalidBundleFactory(trinary.MustTrytesToBytes(txHash)[:49])
 
 	// Do not force the release, otherwise the object is gone (no persistence enabled)
 	refsAnInvalidBundleStorage.ComputeIfAbsent(invalidBundleRef.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject {

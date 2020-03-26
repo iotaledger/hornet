@@ -33,6 +33,6 @@ func (t *Tag) ObjectStorageValue() (data []byte) {
 	return nil
 }
 
-func (t *Tag) UnmarshalObjectStorageValue(data []byte) error {
-	return nil
+func (t *Tag) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+	return nil, 0
 }
