@@ -6,6 +6,10 @@ import (
 	"github.com/iotaledger/hive.go/events"
 )
 
+func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{}) {
+	handler.(func(metric *ConfirmedMilestoneMetric))(params[0].(*ConfirmedMilestoneMetric))
+}
+
 var Events = pluginEvents{
 	ReceivedNewTransaction:        events.NewEvent(tangle.NewTransactionCaller),
 	ReceivedKnownTransaction:      events.NewEvent(tangle.TransactionCaller),
@@ -16,6 +20,7 @@ var Events = pluginEvents{
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),
 	SnapshotMilestoneIndexChanged: events.NewEvent(milestone_index.MilestoneIndexCaller),
+	NewConfirmedMilestoneMetric:   events.NewEvent(NewConfirmedMilestoneMetricCaller),
 }
 
 type pluginEvents struct {
@@ -28,4 +33,5 @@ type pluginEvents struct {
 	LatestMilestoneChanged        *events.Event
 	SolidMilestoneChanged         *events.Event
 	SnapshotMilestoneIndexChanged *events.Event
+	NewConfirmedMilestoneMetric   *events.Event
 }
