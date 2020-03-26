@@ -11,10 +11,8 @@ import PruningIndex from "app/components/PruningIndex";
 import SnapshotIndex from "app/components/SnapshotIndex";
 import RequestQueue from "app/components/RequestQueue";
 import TPSChart from "app/components/TPSChart";
-import RequestQueueChart from "app/components/RequestQueueChart";
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
-import TipSelChart from "app/components/TipSelChart";
 import ListGroup from "react-bootstrap/ListGroup";
 import Card from "react-bootstrap/Card";
 import MemChart from "app/components/MemChart";
@@ -63,12 +61,6 @@ export class Dashboard extends React.Component<Props, any> {
                 </Row>
                 <Row className={"mb-3"}>
                     <Col><MemChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><TipSelChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><RequestQueueChart/></Col>
                 </Row>
             </Container>
         );
