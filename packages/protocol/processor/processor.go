@@ -261,7 +261,9 @@ func (proc *Processor) processTransactionAndRequest(p *peer.Peer, data []byte) {
 func (proc *Processor) processTransaction(p *peer.Peer, data []byte) {
 	cachedWorkUnit := proc.workUnitFor(data) // workUnit +1
 	defer cachedWorkUnit.Release()           // workUnit -1
-	proc.processWorkUnit(cachedWorkUnit.WorkUnit(), p)
+	workUnit := cachedWorkUnit.WorkUnit()
+	workUnit.addRequest(p, nil)
+	proc.processWorkUnit(workUnit, p)
 }
 
 // tries to process the WorkUnit by first checking in what state it is.

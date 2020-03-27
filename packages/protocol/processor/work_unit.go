@@ -100,6 +100,8 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 }
 
 // adds a Request for the given peer to this WorkUnit.
+// requestedTxHashBytes can be nil to flag that this request just reflects a receive from the given
+// peer and has no associated request.
 func (wu *WorkUnit) addRequest(p *peer.Peer, requestedTxHashBytes []byte) {
 	wu.requestsLock.Lock()
 	defer wu.requestsLock.Unlock()
@@ -115,6 +117,11 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 	defer wu.requestsLock.Unlock()
 
 	for _, peerRequest := range wu.requests {
+		// this request might simply just represent that we received the underlying
+		// WorkUnit's transaction from the given peer
+		if peerRequest.Empty() {
+			continue
+		}
 
 		// if requested transaction hash is equal to the hash of the received transaction
 		// it means that the given peer is synchronized

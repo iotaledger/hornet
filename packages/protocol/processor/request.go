@@ -21,3 +21,9 @@ func (r *Request) Punish() {
 func (r *Request) Stale() {
 	r.p.Metrics.StaleTransactions.Inc()
 }
+
+// Empty tells whether this request holds a request or simply acts
+// as a way to determine that a transaction was received from a given peer.
+func (r *Request) Empty() bool {
+	return r.requestedTxHashBytes == nil
+}
