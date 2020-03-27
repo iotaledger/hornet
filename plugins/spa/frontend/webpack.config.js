@@ -49,7 +49,7 @@ module.exports = {
                     {
                         loader: 'ts-loader',
                         options: {
-                            getCustomTransformers: () => ({ before: [statements()] })
+                            getCustomTransformers: () => ({before: [statements()]})
                         }
                     }
                 ].filter(Boolean)
@@ -132,8 +132,8 @@ module.exports = {
             template: 'assets/index.html'
         }),
         new HtmlWebpackPlugin({
-            filename: 'index_dark.html',
-            template: 'assets/index_dark.html'
+            filename: 'index_light.html',
+            template: 'assets/index_light.html'
         }),
         new FaviconsWebpackPlugin('./assets/favicon.svg')
     ],
