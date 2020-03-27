@@ -36,16 +36,15 @@ func runLiveFeed() {
 	})
 
 	notifyLMChanged := events.NewClosure(func(cachedBndl *tangle_model.CachedBundle) {
-		if added := liveFeedWorkerPool.Submit(func() {
-			if cachedTailTx := cachedBndl.GetBundle().GetTail(); cachedTailTx != nil { // tx +1
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), cachedBndl.GetBundle().GetMilestoneIndex()}})
-				cachedTailTx.Release(true) // tx -1
-			}
-			cachedBndl.Release(true) // bundle -1
-		}); added {
-			return // Avoid bundle -1 (done inside workerpool task)
-		}
+		msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
+
+		cachedTailTx := cachedBndl.GetBundle().GetTail()
 		cachedBndl.Release(true) // bundle -1
+
+		txHash := cachedTailTx.GetTransaction().GetHash()
+		cachedTailTx.Release(true) // tx -1
+
+		liveFeedWorkerPool.Submit(func() { hub.BroadcastMsg(&msg{MsgTypeMs, &ms{txHash, msIndex}}) })
 	})
 
 	daemon.BackgroundWorker("SPA[TxUpdater]", func(shutdownSignal <-chan struct{}) {
