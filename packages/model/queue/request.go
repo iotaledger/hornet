@@ -7,7 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 type request struct {
@@ -15,7 +15,7 @@ type request struct {
 
 	hash      trinary.Hash
 	hashBytes []byte
-	msIndex   milestone_index.MilestoneIndex
+	msIndex   milestone.Index
 
 	received  bool
 	processed bool
@@ -46,7 +46,7 @@ func (r *request) UnmarshalObjectStorageValue(data []byte) (err error, consumedB
 	return nil, 0
 }
 
-func newRequest(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, requested bool) *request {
+func newRequest(txHash trinary.Hash, msIndex milestone.Index, requested bool) *request {
 	txHashBytes := trinary.MustTrytesToBytes(txHash)[:49]
 
 	r := &request{

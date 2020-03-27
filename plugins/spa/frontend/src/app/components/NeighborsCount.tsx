@@ -13,7 +13,7 @@ export default class NeighborsCount extends React.Component<Props, any> {
     return (
       <React.Fragment>
         Connected Neighbors:{' '}
-        {this.props.nodeStore.status.connected_neighbors_count}
+        {this.props.nodeStore.status.connected_peers_count}
       </React.Fragment>
     );
   }

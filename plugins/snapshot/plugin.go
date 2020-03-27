@@ -20,7 +20,7 @@ import (
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
@@ -44,15 +44,15 @@ var (
 	ErrWrongCoordinatorAddressDatabase = errors.New("Configured coordinator address does not match database information")
 
 	localSnapshotLock       = syncutils.Mutex{}
-	newSolidMilestoneSignal = make(chan milestone_index.MilestoneIndex)
+	newSolidMilestoneSignal = make(chan milestone.Index)
 
 	localSnapshotsEnabled    bool
-	snapshotDepth            milestone_index.MilestoneIndex
-	snapshotIntervalSynced   milestone_index.MilestoneIndex
-	snapshotIntervalUnsynced milestone_index.MilestoneIndex
+	snapshotDepth            milestone.Index
+	snapshotIntervalSynced   milestone.Index
+	snapshotIntervalUnsynced milestone.Index
 
 	pruningEnabled bool
-	pruningDelay   milestone_index.MilestoneIndex
+	pruningDelay   milestone.Index
 )
 
 func configure(plugin *node.Plugin) {
@@ -60,16 +60,16 @@ func configure(plugin *node.Plugin) {
 	installGenesisTransaction()
 
 	localSnapshotsEnabled = config.NodeConfig.GetBool(config.CfgLocalSnapshotsEnabled)
-	snapshotDepth = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
+	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgLocalSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
-	snapshotIntervalSynced = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalSynced))
-	snapshotIntervalUnsynced = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalUnsynced))
+	snapshotIntervalSynced = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalSynced))
+	snapshotIntervalUnsynced = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalUnsynced))
 
 	pruningEnabled = config.NodeConfig.GetBool(config.CfgPruningEnabled)
-	pruningDelay = milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgPruningDelay))
+	pruningDelay = milestone.Index(config.NodeConfig.GetInt(config.CfgPruningDelay))
 	pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
 	if pruningDelay < pruningDelayMin {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
@@ -96,7 +96,7 @@ func configure(plugin *node.Plugin) {
 		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
 			err = LoadGlobalSnapshot(path,
 				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPaths),
-				milestone_index.MilestoneIndex(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
+				milestone.Index(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
 		}
 	case "local":
 		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {

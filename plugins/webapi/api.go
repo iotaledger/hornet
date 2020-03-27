@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func webAPIRoute() {
@@ -73,8 +73,8 @@ func healthRoute() {
 			return
 		}
 
-		// Has connected neighbors
-		if len(gossip.GetConnectedNeighbors()) == 0 {
+		// Has connected peers
+		if peering.Manager().ConnectedPeerCount() == 0 {
 			c.Status(http.StatusServiceUnavailable)
 			return
 		}

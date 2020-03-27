@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/snapshot"
 )
@@ -55,7 +55,7 @@ func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 
 	snr := &CreateSnapshotReturn{}
 
-	err = snapshot.CreateLocalSnapshot(milestone_index.MilestoneIndex(sn.TargetIndex), sn.FilePath, abortSignal)
+	err = snapshot.CreateLocalSnapshot(milestone.Index(sn.TargetIndex), sn.FilePath, abortSignal)
 	if err != nil {
 		e.Error = err.Error()
 		c.JSON(http.StatusInternalServerError, e)

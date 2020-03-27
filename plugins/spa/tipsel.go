@@ -5,7 +5,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/tipselection"
 )
@@ -19,7 +19,7 @@ func configureTipSelMetric() {
 		switch x := task.Param(0).(type) {
 		case *tipselection.TipSelStats:
 			hub.BroadcastMsg(&msg{MsgTypeTipSelMetric, x})
-		case milestone_index.MilestoneIndex:
+		case milestone.Index:
 			if cachedMsTailTx := getMilestoneTail(x); cachedMsTailTx != nil { // tx +1
 				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().GetHash(), x}})
 				cachedMsTailTx.Release(true) // tx -1

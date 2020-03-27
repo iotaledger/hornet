@@ -13,7 +13,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -67,16 +67,17 @@ func configure(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityFlushToDatabase)
 
 	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		// notify neighbors about our new solid milestone index
-		gossip.SendHeartbeat()
-		gossip.SendMilestoneRequests(cachedBndl.GetBundle().GetMilestoneIndex(), tangle.GetLatestMilestoneIndex())
+		// notify peers about our new solid milestone index
+		gossip.BroadcastHeartbeat()
+		msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
+		gossip.BroadcastMilestoneRequests(msIndex, tangle.GetLatestMilestoneIndex())
 		cachedBndl.Release() // bundle -1
 	}))
 
-	Events.SnapshotMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone_index.MilestoneIndex) {
-		// notify neighbors about our new solid milestone index
-		gossip.SendHeartbeat()
-		gossip.SendMilestoneRequests(msIndex, tangle.GetLatestMilestoneIndex())
+	Events.SnapshotMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone.Index) {
+		// notify peers about our new solid milestone index
+		gossip.BroadcastHeartbeat()
+		gossip.BroadcastMilestoneRequests(msIndex, tangle.GetLatestMilestoneIndex())
 	}))
 
 	configureTangleProcessor(plugin)

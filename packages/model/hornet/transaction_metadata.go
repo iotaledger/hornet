@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 const (
@@ -29,7 +29,7 @@ type TransactionMetadata struct {
 	solidificationTimestamp int32
 
 	// The index of the milestone which confirmed this tx
-	confirmationIndex milestone_index.MilestoneIndex
+	confirmationIndex milestone.Index
 }
 
 func (m *TransactionMetadata) GetSolidificationTimestamp() int32 {
@@ -61,14 +61,14 @@ func (m *TransactionMetadata) SetSolid(solid bool) {
 	}
 }
 
-func (m *TransactionMetadata) GetConfirmed() (bool, milestone_index.MilestoneIndex) {
+func (m *TransactionMetadata) GetConfirmed() (bool, milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
 	return m.metadata.HasFlag(HORNET_TX_METADATA_CONFIRMED), m.confirmationIndex
 }
 
-func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex milestone_index.MilestoneIndex) {
+func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex milestone.Index) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -141,7 +141,7 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (err erro
 
 	m.metadata = bitmask.BitMask(data[0])
 	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
-	m.confirmationIndex = milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(data[5:9]))
+	m.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
 
 	return nil, 10
 }

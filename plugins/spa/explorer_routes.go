@@ -13,7 +13,7 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	. "github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
@@ -35,8 +35,8 @@ type ExplorerTx struct {
 	AttachmentTimestampLowerBound int64  `json:"attachment_timestamp_lower_bound"`
 	AttachmentTimestampUpperBound int64  `json:"attachment_timestamp_upper_bound"`
 	Confirmed                     struct {
-		State     bool                           `json:"state"`
-		Milestone milestone_index.MilestoneIndex `json:"milestone_index"`
+		State     bool            `json:"state"`
+		Milestone milestone.Index `json:"milestone_index"`
 	} `json:"confirmed"`
 	Approvers      []string                       `json:"approvers"`
 	Solid          bool                           `json:"solid"`
@@ -45,7 +45,7 @@ type ExplorerTx struct {
 	Next           Hash                           `json:"next"`
 	BundleComplete bool                           `json:"bundle_complete"`
 	IsMilestone    bool                           `json:"is_milestone"`
-	MilestoneIndex milestone_index.MilestoneIndex `json:"milestone_index"`
+	MilestoneIndex milestone.Index `json:"milestone_index"`
 }
 
 func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
@@ -72,8 +72,8 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 		AttachmentTimestampLowerBound: originTx.AttachmentTimestampLowerBound,
 		AttachmentTimestampUpperBound: originTx.AttachmentTimestampUpperBound,
 		Confirmed: struct {
-			State     bool                           `json:"state"`
-			Milestone milestone_index.MilestoneIndex `json:"milestone_index"`
+			State     bool            `json:"state"`
+			Milestone milestone.Index `json:"milestone_index"`
 		}{confirmed, by},
 		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
@@ -198,7 +198,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		if err != nil {
 			return errors.Wrapf(ErrInvalidParameter, "%s is not a valid index", indexStr)
 		}
-		msTailTx, err := findMilestone(milestone_index.MilestoneIndex(index))
+		msTailTx, err := findMilestone(milestone.Index(index))
 		if err != nil {
 			return err
 		}
@@ -212,7 +212,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		// milestone query
 		index, err := strconv.Atoi(search)
 		if err == nil {
-			msTailTx, err := findMilestone(milestone_index.MilestoneIndex(index))
+			msTailTx, err := findMilestone(milestone.Index(index))
 			if err == nil {
 				result.Milestone = msTailTx
 			}
@@ -265,7 +265,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 	})
 }
 
-func findMilestone(index milestone_index.MilestoneIndex) (*ExplorerTx, error) {
+func findMilestone(index milestone.Index) (*ExplorerTx, error) {
 	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
 	if cachedMs == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)

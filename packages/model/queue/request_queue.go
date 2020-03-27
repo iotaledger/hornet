@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
@@ -144,7 +144,7 @@ func (s *RequestQueue) Stop() {
 	s.tickerDone <- true
 }
 
-func (s *RequestQueue) GetNext() ([]byte, trinary.Hash, milestone_index.MilestoneIndex) {
+func (s *RequestQueue) GetNext() ([]byte, trinary.Hash, milestone.Index) {
 
 	s.Lock()
 	defer s.Unlock()
@@ -177,7 +177,7 @@ func (s *RequestQueue) GetNext() ([]byte, trinary.Hash, milestone_index.Mileston
 	return nil, "", 0
 }
 
-func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex, endIndex milestone_index.MilestoneIndex) ([]byte, trinary.Hash, milestone_index.MilestoneIndex) {
+func (s *RequestQueue) GetNextInRange(startIndex milestone.Index, endIndex milestone.Index) ([]byte, trinary.Hash, milestone.Index) {
 
 	s.Lock()
 	defer s.Unlock()
@@ -213,7 +213,7 @@ func (s *RequestQueue) GetNextInRange(startIndex milestone_index.MilestoneIndex,
 
 }
 
-func (s *RequestQueue) add(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, markRequested bool) bool {
+func (s *RequestQueue) add(txHash trinary.Hash, msIndex milestone.Index, markRequested bool) bool {
 
 	if len(txHash) == 0 {
 		return false
@@ -241,7 +241,7 @@ func (s *RequestQueue) add(txHash trinary.Hash, msIndex milestone_index.Mileston
 	return true
 }
 
-func (s *RequestQueue) AddMulti(hashes trinary.Hashes, msIndex milestone_index.MilestoneIndex, markRequested bool) []bool {
+func (s *RequestQueue) AddMulti(hashes trinary.Hashes, msIndex milestone.Index, markRequested bool) []bool {
 	if len(hashes) == 0 {
 		return nil
 	}
@@ -256,21 +256,21 @@ func (s *RequestQueue) AddMulti(hashes trinary.Hashes, msIndex milestone_index.M
 	return added
 }
 
-func (s *RequestQueue) Add(txHash trinary.Hash, msIndex milestone_index.MilestoneIndex, markRequested bool) bool {
+func (s *RequestQueue) Add(txHash trinary.Hash, msIndex milestone.Index, markRequested bool) bool {
 	s.Lock()
 	defer s.Unlock()
 
 	return s.add(txHash, msIndex, markRequested)
 }
 
-func (s *RequestQueue) MarkReceived(txHash trinary.Hash) (bool, milestone_index.MilestoneIndex) {
+func (s *RequestQueue) MarkReceived(txHash trinary.Hash) (bool, milestone.Index) {
 
 	s.Lock()
 	defer s.Unlock()
 
 	cachedRequest := s.GetCachedRequestOrNil(txHash) // request +1
 	if cachedRequest == nil {
-		return false, milestone_index.MilestoneIndex(0)
+		return false, milestone.Index(0)
 	}
 	defer cachedRequest.Release() // request -1
 
@@ -316,7 +316,7 @@ func (s *RequestQueue) IsEmpty() bool {
 	return true
 }
 
-func (s *RequestQueue) CurrentMilestoneIndexAndSize() (index milestone_index.MilestoneIndex, size int) {
+func (s *RequestQueue) CurrentMilestoneIndexAndSize() (index milestone.Index, size int) {
 	s.Lock()
 	defer s.Unlock()
 

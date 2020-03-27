@@ -9,11 +9,11 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 type SolidEntryPoints struct {
-	entryPointsMap   map[trinary.Hash]milestone_index.MilestoneIndex
+	entryPointsMap   map[trinary.Hash]milestone.Index
 	entryPointsSlice []trinary.Hash
 
 	// Status
@@ -23,7 +23,7 @@ type SolidEntryPoints struct {
 
 func NewSolidEntryPoints() *SolidEntryPoints {
 	return &SolidEntryPoints{
-		entryPointsMap: make(map[trinary.Hash]milestone_index.MilestoneIndex),
+		entryPointsMap: make(map[trinary.Hash]milestone.Index),
 	}
 }
 
@@ -38,7 +38,7 @@ func (s *SolidEntryPoints) Contains(transactionHash trinary.Hash) bool {
 	return exists
 }
 
-func (s *SolidEntryPoints) Add(transactionHash trinary.Hash, milestoneIndex milestone_index.MilestoneIndex) {
+func (s *SolidEntryPoints) Add(transactionHash trinary.Hash, milestoneIndex milestone.Index) {
 	if _, exists := s.entryPointsMap[transactionHash]; !exists {
 		s.entryPointsMap[transactionHash] = milestoneIndex
 		s.entryPointsSlice = append(s.entryPointsSlice, transactionHash)
@@ -47,7 +47,7 @@ func (s *SolidEntryPoints) Add(transactionHash trinary.Hash, milestoneIndex mile
 }
 
 func (s *SolidEntryPoints) Clear() {
-	s.entryPointsMap = make(map[trinary.Hash]milestone_index.MilestoneIndex)
+	s.entryPointsMap = make(map[trinary.Hash]milestone.Index)
 	s.entryPointsSlice = make([]trinary.Hash, 0)
 	s.SetModified(true)
 }
@@ -90,7 +90,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 		hash := trinary.MustBytesToTrytes(hashBuf, 81)
 
-		s.Add(hash[:81], milestone_index.MilestoneIndex(val))
+		s.Add(hash[:81], milestone.Index(val))
 	}
 
 	return s, nil

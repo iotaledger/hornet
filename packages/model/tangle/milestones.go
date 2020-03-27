@@ -15,7 +15,7 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	solidMilestoneIndex   milestone_index.MilestoneIndex
+	solidMilestoneIndex   milestone.Index
 	solidMilestoneLock    syncutils.RWMutex
 	latestMilestone       *Bundle
 	latestMilestoneLock   syncutils.RWMutex
@@ -33,7 +33,7 @@ var (
 	coordinatorAddress       string
 	coordinatorSecurityLevel int
 	numberOfKeysInAMilestone uint64
-	maxMilestoneIndex        milestone_index.MilestoneIndex
+	maxMilestoneIndex        milestone.Index
 
 	ErrInvalidMilestone = errors.New("invalid milestone")
 )
@@ -50,7 +50,7 @@ func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
 }
 
 // bundle +1
-func GetMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedBundle {
+func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
 
 	cachedMilestone := GetCachedMilestoneOrNil(milestoneIndex) // cachedMilestone +1
 	if cachedMilestone == nil {
@@ -69,7 +69,7 @@ func IsNodeSyncedWithThreshold() bool {
 	return isNodeSyncedThreshold
 }
 
-func updateNodeSynced(latestSolidIndex, latestIndex milestone_index.MilestoneIndex) {
+func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 {
 		isNodeSynced = false
 		isNodeSyncedThreshold = false
@@ -99,14 +99,14 @@ func SetSolidMilestone(cachedBndl *CachedBundle) {
 
 // SetSolidMilestoneIndex sets the solid milestone index at node startup
 // Do not use this function during normal node operation
-func SetSolidMilestoneIndex(index milestone_index.MilestoneIndex) {
+func SetSolidMilestoneIndex(index milestone.Index) {
 	solidMilestoneLock.Lock()
 	solidMilestoneIndex = index
 	solidMilestoneLock.Unlock()
 	updateNodeSynced(index, GetLatestMilestoneIndex())
 }
 
-func GetSolidMilestoneIndex() milestone_index.MilestoneIndex {
+func GetSolidMilestoneIndex() milestone.Index {
 	solidMilestoneLock.RLock()
 	defer solidMilestoneLock.RUnlock()
 
@@ -154,7 +154,7 @@ func GetLatestMilestone() *Bundle {
 	return latestMilestone
 }
 
-func GetLatestMilestoneIndex() milestone_index.MilestoneIndex {
+func GetLatestMilestoneIndex() milestone.Index {
 	latestMilestoneLock.RLock()
 	defer latestMilestoneLock.RUnlock()
 
@@ -165,7 +165,7 @@ func GetLatestMilestoneIndex() milestone_index.MilestoneIndex {
 }
 
 // bundle +1
-func FindClosestNextMilestoneOrNil(index milestone_index.MilestoneIndex) *CachedBundle {
+func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// No milestone received yet, check the next 100 milestones as a workaround
@@ -277,7 +277,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 }
 
 // Validates if the milestone has the correct signature
-func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone_index.MilestoneIndex, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
+func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone.Index, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
 	defer cachedSignatureTxs.Release() // tx -1
 	defer cachedSiblingsTx.Release()   // tx -1
@@ -352,8 +352,8 @@ func IsMaybeMilestoneTx(cachedTx *CachedTransaction) bool {
 }
 
 // Returns Milestone index of the milestone
-func getMilestoneIndex(cachedTx *CachedTransaction) (milestoneIndex milestone_index.MilestoneIndex) {
-	value := milestone_index.MilestoneIndex(trinary.TrytesToInt(cachedTx.GetTransaction().Tx.ObsoleteTag))
+func getMilestoneIndex(cachedTx *CachedTransaction) (milestoneIndex milestone.Index) {
+	value := milestone.Index(trinary.TrytesToInt(cachedTx.GetTransaction().Tx.ObsoleteTag))
 	cachedTx.Release(true) // tx -1
 	return value
 }

@@ -56,11 +56,11 @@ func configureAP() {
 	Discovery = discover.New(local.GetInstance(), protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
 
 	// enable peer selection only when gossip is enabled
-	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidNeighbor)))
+	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
 }
 
-// isValidNeighbor checks whether a peer is a valid neighbor.
-func isValidNeighbor(p *peer.Peer) bool {
+// isValidPeer checks whether a peer is a valid peer.
+func isValidPeer(p *peer.Peer) bool {
 	// gossip must be supported
 	gossipService := p.Services().Get(services.GossipServiceKey())
 	if gossipService == nil {

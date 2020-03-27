@@ -12,10 +12,7 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
-	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
 )
@@ -61,11 +58,11 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	durPOW := durationPOW.Truncate(time.Millisecond)
 
 	for _, tx := range b {
-		err = broadcastTransaction(&tx)
-		if err != nil {
+		txTrits, _ := transaction.TransactionToTrits(&tx)
+		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
 			return
 		}
-		metrics.SharedServerMetrics.IncrSentSpamTxsCount()
+		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
 
 	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
@@ -113,25 +110,5 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) er
 		b[i].Hash = transactionHash(&b[i])
 		prev = b[i].Hash
 	}
-	return nil
-}
-
-func broadcastTransaction(tx *transaction.Transaction) error {
-
-	if !transaction.HasValidNonce(tx, uint64(mwm)) {
-		return consts.ErrInvalidTransactionHash
-	}
-
-	txTrits, err := transaction.TransactionToTrits(tx)
-	if err != nil {
-		return err
-	}
-
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransaction(tx, txBytesTruncated)
-
-	gossip.Events.ReceivedTransaction.Trigger(hornetTx, false, milestone_index.MilestoneIndex(0), (*metrics.NeighborMetrics)(nil))
-	gossip.BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTrytesToBytes(hornetTx.GetHash())[:49])
-
 	return nil
 }

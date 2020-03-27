@@ -50,7 +50,7 @@ func broadcastTransactions(i interface{}, c *gin.Context, abortSignal <-chan str
 	}
 
 	for _, trytes := range bt.Trytes {
-		err = gossip.BroadcastTransactionFromAPI(trytes)
+		err := gossip.Processor().ValidateTransactionTrytesAndEmit(trytes)
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusBadRequest, e)

@@ -25,7 +25,7 @@ var (
 	once    = sync.Once{}
 	profile *Profile
 
-	ErrNotEnoughMemory = errors.New("Not enough system memory")
+	ErrNotEnoughMemory = errors.New("not enough system memory")
 )
 
 func GetProfile() *Profile {

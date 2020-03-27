@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 )
@@ -40,7 +40,7 @@ func configureGossipSolidifier() {
 func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
-	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if tangle.IsNodeSyncedWithThreshold() {
 			_, added := gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
 			if !added {

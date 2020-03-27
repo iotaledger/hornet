@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
@@ -59,7 +59,7 @@ func configure(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64)) // tx pass +1
+		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone.Index), task.Param(2).(int64)) // tx pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -90,7 +90,7 @@ func run(plugin *node.Plugin) {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.config.Port)
 
-	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
 				// Not sync
@@ -109,7 +109,7 @@ func run(plugin *node.Plugin) {
 		cachedTx.Release(true) // tx -1
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
 		if wasSyncBefore {
 			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
 			if added {
