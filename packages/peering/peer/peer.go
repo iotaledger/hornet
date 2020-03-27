@@ -221,5 +221,5 @@ type Info struct {
 	NumberOfDroppedSentPackets     uint64 `json:"numberOfDroppedSentPackets"`
 	ConnectionType                 string `json:"connectionType"`
 	Connected                      bool   `json:"connected"`
-	AutopeeringID                  string `json:"autopeering_id,omitempty"`
+	AutopeeringID                  string `json:"autopeeringId,omitempty"`
 }
