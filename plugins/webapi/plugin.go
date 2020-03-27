@@ -34,7 +34,6 @@ var (
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
-	healthPath           = "health"
 	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
@@ -88,6 +87,13 @@ func configure(plugin *node.Plugin) {
 			continue
 		}
 		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
+	}
+
+	// Handle route without auth
+	exclHealthCheckFromAuth := config.NodeConfig.GetBool(config.CfgWebAPIExcludeHealthCheckFromAuth)
+	if exclHealthCheckFromAuth {
+		// REST API route (health check)
+		restAPIRoute()
 	}
 
 	// set basic auth if enabled
@@ -145,8 +151,11 @@ func configure(plugin *node.Plugin) {
 	// WebAPI route
 	webAPIRoute()
 
-	// Node health (GET /health)
-	healthRoute()
+	// Handle route with auth
+	if !exclHealthCheckFromAuth {
+		// REST API route (health check)
+		restAPIRoute()
+	}
 
 	// return error, if route is not there
 	api.NoRoute(func(c *gin.Context) {

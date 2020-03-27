@@ -13,6 +13,11 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
+const (
+	healthzRoute = "healthz"
+	healthRoute  = "health"
+)
+
 func webAPIRoute() {
 	api.POST(webAPIBase, func(c *gin.Context) {
 
@@ -63,40 +68,57 @@ func webAPIRoute() {
 	})
 }
 
-// GET /health
-func healthRoute() {
-	api.GET(healthPath, func(c *gin.Context) {
+// health check
+func restAPIRoute() {
 
-		// Synced
-		if !tangle.IsNodeSyncedWithThreshold() {
-			c.Status(http.StatusServiceUnavailable)
-			return
-		}
-
-		// Has connected neighbors
-		if len(gossip.GetConnectedNeighbors()) == 0 {
-			c.Status(http.StatusServiceUnavailable)
-			return
-		}
-
-		// Latest milestone timestamp
-		var milestoneTimestamp int64
-		lmi := tangle.GetLatestMilestoneIndex()
-		cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
-		if cachedLatestMs != nil {
-			cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
-			milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
-			cachedMsTailTx.Release(true) // tx -1
-			cachedLatestMs.Release(true) // bundle -1
-		}
-
-		// Check whether the milestone is older than 5 minutes
-		timeMs := time.Unix(int64(milestoneTimestamp), 0)
-		if time.Since(timeMs) > (time.Minute * 5) {
+	// GET /health
+	api.GET(healthRoute, func(c *gin.Context) {
+		if !isNodeHealthy() {
 			c.Status(http.StatusServiceUnavailable)
 			return
 		}
 
 		c.Status(http.StatusOK)
 	})
+
+	// GET /healthz
+	api.GET(healthzRoute, func(c *gin.Context) {
+		if !isNodeHealthy() {
+			c.Status(http.StatusServiceUnavailable)
+			return
+		}
+
+		c.Status(http.StatusOK)
+	})
+}
+
+func isNodeHealthy() bool {
+	// Synced
+	if !tangle.IsNodeSyncedWithThreshold() {
+		return false
+	}
+
+	// Has connected neighbors
+	if len(gossip.GetConnectedNeighbors()) == 0 {
+		return false
+	}
+
+	// Latest milestone timestamp
+	var milestoneTimestamp int64
+	lmi := tangle.GetLatestMilestoneIndex()
+	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
+	if cachedLatestMs != nil {
+		cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
+		milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
+		cachedMsTailTx.Release(true) // tx -1
+		cachedLatestMs.Release(true) // bundle -1
+	}
+
+	// Check whether the milestone is older than 5 minutes
+	timeMs := time.Unix(int64(milestoneTimestamp), 0)
+	if time.Since(timeMs) > (time.Minute * 5) {
+		return false
+	}
+
+	return true
 }
