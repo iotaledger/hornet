@@ -36,13 +36,15 @@ func runLiveFeed() {
 	})
 
 	notifyLMChanged := events.NewClosure(func(cachedBndl *tangle_model.CachedBundle) {
-		liveFeedWorkerPool.Submit(func() {
+		if added := liveFeedWorkerPool.Submit(func() {
 			if cachedTailTx := cachedBndl.GetBundle().GetTail(); cachedTailTx != nil { // tx +1
 				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().GetHash(), cachedBndl.GetBundle().GetMilestoneIndex()}})
 				cachedTailTx.Release(true) // tx -1
 			}
-		})
-
+			cachedBndl.Release(true) // bundle -1
+		}); added {
+			return // Avoid bundle -1 (done inside workerpool task)
+		}
 		cachedBndl.Release(true) // bundle -1
 	})
 

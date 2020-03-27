@@ -332,10 +332,7 @@ func solidQueueCheck(milestoneIndex milestone_index.MilestoneIndex, cachedMsTail
 							continue
 						}
 
-						gossipSolidifierWorkerPool.Submit(func() { processGossipSolidificationTask(cachedApproverTx.Retain()) }) // tx pass +1
-
-						// Do no force release here, otherwise cacheTime for new Tx could be ignored
-						cachedApproverTx.Release() // tx -1
+						gossipSolidifierWorkerPool.Submit(func() { processGossipSolidificationTask(cachedApproverTx) }) // tx pass +1
 					}
 				}
 
