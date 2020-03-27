@@ -257,7 +257,7 @@ type memmetrics struct {
 type peermetric struct {
 	Identity         string                `json:"identity"`
 	Alias            string                `json:"alias,omitempty"`
-	OriginAdrr       string                `json:"origin_addr"`
+	OriginAddr       string                `json:"origin_addr"`
 	ConnectionOrigin peer.ConnectionOrigin `json:"connection_origin"`
 	ProtocolVersion  byte                  `json:"protocol_version"`
 	BytesRead        int                   `json:"bytes_read"`
@@ -287,7 +287,7 @@ func peerMetrics() []*peermetric {
 	var stats []*peermetric
 	for _, info := range infos {
 		m := &peermetric{
-			OriginAdrr: info.DomainWithPort,
+			OriginAddr: info.DomainWithPort,
 			Info:       info,
 		}
 		if info.Peer != nil && info.Peer.Protocol != nil {
