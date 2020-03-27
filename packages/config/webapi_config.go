@@ -7,6 +7,8 @@ const (
 	CfgWebAPIPermitRemoteAccess = "httpAPI.permitRemoteAccess"
 	// the whitelist of addresses which are allowed to access the HTTP API
 	CfgWebAPIWhitelistedAddresses = "httpAPI.whitelistedAddresses"
+	// whether to allow the health check route anyways
+	CfgWebAPIExcludeHealthCheckFromAuth = "httpAPI.excludeHealthCheckFromAuth"
 	// whether to use HTTP basic auth for the HTTP API
 	CfgWebAPIBasicAuthEnabled = "httpAPI.basicAuth.enabled"
 	// the username of the HTTP basic auth
@@ -42,6 +44,7 @@ func init() {
 			"getTrytes",
 		})
 	NodeConfig.SetDefault(CfgWebAPIWhitelistedAddresses, []string{})
+	NodeConfig.SetDefault(CfgWebAPIExcludeHealthCheckFromAuth, false)
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthEnabled, false)
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthUsername, "")
 	NodeConfig.SetDefault(CfgWebAPIBasicAuthPasswordHash, "")
