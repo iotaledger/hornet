@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc4] - 25.03.2020
+
+### Added
+
+    - Show approvers in tx explorer (dashboard)
+    - Copy transaction hash (dashboard)
+    - Copy transaction raw trytes (dashboard)
+    - CTPS graph (dashboard)
+    - Health check API route (`/healthz`)
+
+### Changed
+
+    - Do not broadcast known tx
+    - Use new object storage interface
+    - Update to latest hive.go
+    - Refactors networking packages and plugins
+    - Changes default theme to dark (dashboard)
+
+### Fixed
+
+    - Database flush deadlock
+    - Local snapshots
+    - Panics at pruning if bundle was not complete
+
+### Config file changes
+
+New options:
+
+`config.json`
+
+```diff
+ "httpAPI": {
++    "excludeHealthCheckFromAuth": false,
+   },
+```
+
+Renamed config:<br>
+
+`neighbors.json` --> `peering.json`
+
 ## [0.4.0-rc3] - 24.03.2020
 
 ### Added
