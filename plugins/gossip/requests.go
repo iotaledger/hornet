@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	stingRequestsWorkerPool = (&async.NonBlockingWorkerPool{}).Tune(runtime.NumCPU())
+	stingRequestsWorkerPool = (&async.WorkerPool{}).Tune(runtime.NumCPU())
 )
 
 func runSTINGRequestsProcessor() {
