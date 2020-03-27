@@ -9,7 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
@@ -23,11 +23,11 @@ func TransactionCaller(handler interface{}, params ...interface{}) {
 }
 
 func NewTransactionCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedTx *CachedTransaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex))(params[0].(*CachedTransaction).Retain(), params[1].(milestone_index.MilestoneIndex), params[2].(milestone_index.MilestoneIndex))
+	handler.(func(cachedTx *CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
 
 func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedTx *CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64))(params[0].(*CachedTransaction).Retain(), params[1].(milestone_index.MilestoneIndex), params[2].(int64))
+	handler.(func(cachedTx *CachedTransaction, msIndex milestone.Index, confTime int64))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(int64))
 }
 
 type CachedTransaction struct {

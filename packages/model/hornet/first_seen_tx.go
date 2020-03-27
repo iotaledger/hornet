@@ -7,16 +7,16 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 type FirstSeenTx struct {
 	objectstorage.StorableObjectFlags
-	FirstSeenLatestMilestoneIndex milestone_index.MilestoneIndex
+	FirstSeenLatestMilestoneIndex milestone.Index
 	TxHash                        []byte
 }
 
-func (t *FirstSeenTx) GetFirstSeenLatestMilestoneIndex() milestone_index.MilestoneIndex {
+func (t *FirstSeenTx) GetFirstSeenLatestMilestoneIndex() milestone.Index {
 	return t.FirstSeenLatestMilestoneIndex
 }
 

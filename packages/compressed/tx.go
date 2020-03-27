@@ -52,7 +52,7 @@ func expandTx(data []byte) []byte {
 
 	// we need to expand the tx data (signature message fragment) as
 	// it could have been truncated for transmission
-	//numOfBytesOfSigMsgFragToExpand := ProtocolTransactionGossipMsg.MaxLength - uint16(len(data))
+	//numOfBytesOfSigMsgFragToExpand := ProtocolTransactionGossipMsg.MaxBytesLength - uint16(len(data))
 	//sigMsgFragPadding := make([]byte, numOfBytesOfSigMsgFragToExpand)
 	sigMsgFragBytesToCopy := len(data) - NON_SIG_TX_PART_BYTES_LENGTH
 

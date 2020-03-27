@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -56,10 +56,10 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	}
 
 	lastSolidIndex := tangle.GetSolidMilestoneIndex()
-	msWalkStartIndex := milestone_index.MilestoneIndex(math.Max(0, float64(lastSolidIndex-milestone_index.MilestoneIndex(depth))))
+	msWalkStartIndex := milestone.Index(math.Max(0, float64(lastSolidIndex-milestone.Index(depth))))
 
 	// either take the valid wanted ms at the given depth or use the initial snapshot milestone
-	msWalkStartIndex = milestone_index.MilestoneIndex(math.Max(float64(msWalkStartIndex), float64(tangle.GetSnapshotInfo().SnapshotIndex+1)))
+	msWalkStartIndex = milestone.Index(math.Max(float64(msWalkStartIndex), float64(tangle.GetSnapshotInfo().SnapshotIndex+1)))
 	if msWalkStartIndex > lastSolidIndex {
 		msWalkStartIndex = lastSolidIndex
 	}

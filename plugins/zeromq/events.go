@@ -9,13 +9,13 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 var (
-	prevSMI milestone_index.MilestoneIndex = 0
-	prevLMI milestone_index.MilestoneIndex = 0
+	prevSMI milestone.Index = 0
+	prevLMI milestone.Index = 0
 )
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -35,7 +35,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, confTime int64) {
 
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 		err := publishConfTx(tx.Tx, msIndex)
@@ -82,7 +82,7 @@ func onSpentAddress(addr trinary.Hash) {
 }
 
 // Publish latest milestone index
-func publishLMI(lmi milestone_index.MilestoneIndex) error {
+func publishLMI(lmi milestone.Index) error {
 
 	messages := []string{
 		strconv.FormatInt(int64(prevLMI), 10), // Index of the previous solid subtangle milestone
@@ -96,7 +96,7 @@ func publishLMI(lmi milestone_index.MilestoneIndex) error {
 }
 
 // Publish latest solid subtangle milestone index
-func publishLMSI(smi milestone_index.MilestoneIndex) error {
+func publishLMSI(smi milestone.Index) error {
 
 	messages := []string{
 		strconv.FormatInt(int64(prevSMI), 10), // Index of the previous solid subtangle milestone
@@ -119,7 +119,7 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone_index.MilestoneIndex) error {
+func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
 
 	messages := []string{
 		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
@@ -171,7 +171,7 @@ func publishTx(iotaTx *transaction.Transaction) error {
 }
 
 // Publish a confirmed transaction for a specific address
-func publishConfTxForAddress(iotaTx *transaction.Transaction, msIndex milestone_index.MilestoneIndex) error {
+func publishConfTxForAddress(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
 
 	addr := strings.ToUpper(iotaTx.Address)
 	messages := []string{

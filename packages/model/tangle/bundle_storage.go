@@ -12,7 +12,7 @@ import (
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
@@ -271,7 +271,7 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) Cached
 ////////////////////////////////////////////////////////////////////////////////
 
 // tx +1
-func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, requested bool, forceRelease bool, reapply bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
+func AddTransactionToStorage(hornetTx *hornet.Transaction, firstSeenLatestMilestoneIndex milestone.Index, requested bool, forceRelease bool, reapply bool) (cachedTx *CachedTransaction, alreadyAdded bool) {
 
 	cachedTx, isNew := StoreTransactionIfAbsent(hornetTx) // tx +1
 	if !isNew && !reapply {
@@ -385,7 +385,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 			}
 		}
 
-		metrics.SharedServerMetrics.IncrValidatedBundlesCount()
+		metrics.SharedServerMetrics.ValidatedBundles.Inc()
 
 		bndl.Persist()
 		bndl.SetModified()
@@ -397,7 +397,6 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 
 		cachedBndl := &CachedBundle{CachedObject: cachedObj}
 		bndl := cachedBndl.GetBundle()
-
 		bndl.ApplySpentAddresses()
 
 		if bndl.IsMilestone() {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/database"
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
@@ -34,7 +34,7 @@ func (c *CachedFirstSeenTx) GetFirstSeenTx() *hornet.FirstSeenTx {
 
 func firstSeenTxFactory(key []byte) (objectstorage.StorableObject, error, int) {
 	firstSeenTx := &hornet.FirstSeenTx{
-		FirstSeenLatestMilestoneIndex: milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key[:4])),
+		FirstSeenLatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(key[:4])),
 		TxHash:                        make([]byte, 49),
 	}
 	copy(firstSeenTx.TxHash, key[4:])
@@ -66,7 +66,7 @@ func configureFirstSeenTxStorage() {
 }
 
 // firstSeenTx +-0
-func GetFirstSeenTxHashes(msIndex milestone_index.MilestoneIndex, forceRelease bool, maxFind ...int) []trinary.Hash {
+func GetFirstSeenTxHashes(msIndex milestone.Index, forceRelease bool, maxFind ...int) []trinary.Hash {
 	var firstSeenTxHashes []trinary.Hash
 
 	key := make([]byte, 4)
@@ -94,7 +94,7 @@ func GetFirstSeenTxHashes(msIndex milestone_index.MilestoneIndex, forceRelease b
 }
 
 // firstSeenTx +1
-func StoreFirstSeenTx(msIndex milestone_index.MilestoneIndex, txHash trinary.Hash) *CachedFirstSeenTx {
+func StoreFirstSeenTx(msIndex milestone.Index, txHash trinary.Hash) *CachedFirstSeenTx {
 
 	firstSeenTx := &hornet.FirstSeenTx{
 		FirstSeenLatestMilestoneIndex: msIndex,
@@ -111,7 +111,7 @@ func StoreFirstSeenTx(msIndex milestone_index.MilestoneIndex, txHash trinary.Has
 }
 
 // firstSeenTx +-0
-func DeleteFirstSeenTxs(msIndex milestone_index.MilestoneIndex) {
+func DeleteFirstSeenTxs(msIndex milestone.Index) {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
@@ -126,7 +126,7 @@ func ShutdownFirstSeenTxsStorage() {
 	firstSeenTxStorage.Shutdown()
 }
 
-func FixFirstSeenTxs(msIndex milestone_index.MilestoneIndex) {
+func FixFirstSeenTxs(msIndex milestone.Index) {
 
 	// Search all entries with milestone 0
 	for _, firstSeenTxHash := range GetFirstSeenTxHashes(0, true) {

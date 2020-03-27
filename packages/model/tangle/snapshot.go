@@ -11,7 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 var (
 	snapshot                             *SnapshotInfo
 	mutex                                syncutils.RWMutex
-	latestSeenMilestoneIndexFromSnapshot = milestone_index.MilestoneIndex(0)
+	latestSeenMilestoneIndexFromSnapshot = milestone.Index(0)
 
 	ErrParseSnapshotInfoFailed = errors.New("Parsing of snapshot info failed")
 )
@@ -29,9 +29,9 @@ var (
 type SnapshotInfo struct {
 	CoordinatorAddress trinary.Hash
 	Hash               trinary.Hash
-	SnapshotIndex      milestone_index.MilestoneIndex
-	PruningIndex       milestone_index.MilestoneIndex
-	RevalidationIndex  milestone_index.MilestoneIndex
+	SnapshotIndex      milestone.Index
+	PruningIndex       milestone.Index
+	RevalidationIndex  milestone.Index
 	Timestamp          int64
 	Metadata           bitmask.BitMask
 }
@@ -55,9 +55,9 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
 	cooAddr := trinary.MustBytesToTrytes(bytes[:49], 81)
 	hash := trinary.MustBytesToTrytes(bytes[49:98], 81)
-	snapshotIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[98:102]))
-	pruningIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[102:106]))
-	revalidationIndex := milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(bytes[106:110]))
+	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[98:102]))
+	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[102:106]))
+	revalidationIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[106:110]))
 	timestamp := int64(binary.LittleEndian.Uint64(bytes[110:118]))
 	metadata := bitmask.BitMask(bytes[118])
 
@@ -108,7 +108,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary.Hash, snapshotIndex milestone_index.MilestoneIndex, pruningIndex milestone_index.MilestoneIndex, timestamp int64, spentAddressesEnabled bool) {
+func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary.Hash, snapshotIndex milestone.Index, pruningIndex milestone.Index, timestamp int64, spentAddressesEnabled bool) {
 	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), coo address: %v,  pruning index: %d, Timestamp: %v, SpentAddressesEnabled: %v", snapshotIndex, milestoneHash, coordinatorAddress, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
 
 	sn := &SnapshotInfo{
@@ -143,12 +143,12 @@ func GetSnapshotInfo() *SnapshotInfo {
 	return snapshot
 }
 
-func SetLatestSeenMilestoneIndexFromSnapshot(milestoneIndex milestone_index.MilestoneIndex) {
+func SetLatestSeenMilestoneIndexFromSnapshot(milestoneIndex milestone.Index) {
 	if latestSeenMilestoneIndexFromSnapshot < milestoneIndex {
 		latestSeenMilestoneIndexFromSnapshot = milestoneIndex
 	}
 }
 
-func GetLatestSeenMilestoneIndexFromSnapshot() milestone_index.MilestoneIndex {
+func GetLatestSeenMilestoneIndexFromSnapshot() milestone.Index {
 	return latestSeenMilestoneIndexFromSnapshot
 }

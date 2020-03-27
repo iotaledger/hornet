@@ -124,7 +124,7 @@ archives:
       - LICENSE
       - config.json
       - config_comnet.json
-      - neighbors.json
+      - peering.json
       - profiles.json
       - mqtt_config.json
 
@@ -146,7 +146,7 @@ nfpms:
       "config.json": "/var/lib/hornet/config.json"
       "config_comnet.json": "/var/lib/hornet/config_comnet.json"
       "mqtt_config.json": "/var/lib/hornet/mqtt_config.json"
-      "neighbors.json": "/var/lib/hornet/neighbors.json"
+      "peering.json": "/var/lib/hornet/peering.json"
       "profiles.json": "/var/lib/hornet/profiles.json"
       "nfpm/shared_files/hornet.env": "/etc/default/hornet"
     dependencies:

@@ -35,13 +35,12 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 	if bundleMsIndex > solidMsIndex {
 		log.Infof("Valid milestone detected! Index: %d, Hash: %v", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash())
 
-		// Request trunk and branch
+		// request trunk and branch
 		gossip.RequestMilestoneApprovees(cachedBndl.Retain()) // bundle pass +1
-
 	} else {
 		pruningIndex := tangle.GetSnapshotInfo().PruningIndex
 		if bundleMsIndex < pruningIndex {
-			// This should not happen! We didn't request it and it should be filtered because of timestamp
+			// this should not happen. we didn't request it and it should be filtered because of timestamp
 			log.Panicf("Synced too far! Index: %d (%v), PruningIndex: %d", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash(), pruningIndex)
 		}
 	}

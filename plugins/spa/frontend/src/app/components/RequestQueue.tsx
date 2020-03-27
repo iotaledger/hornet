@@ -12,7 +12,8 @@ export default class RequestQueue extends React.Component<Props, any> {
     render() {
         return (
             <React.Fragment>
-                Request Queue Size: {this.props.nodeStore.status.request_queue_size}
+                Request Queue
+                Size: {this.props.nodeStore.status.request_queue_queued + this.props.nodeStore.status.request_queue_pending}
             </React.Fragment>
         );
     }

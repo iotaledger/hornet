@@ -5,16 +5,16 @@ import (
 )
 
 var (
-	lastIncomingTxCnt    uint32
-	lastIncomingNewTxCnt uint32
-	lastOutgoingTxCnt    uint32
+	lastIncomingTxCnt    uint64
+	lastIncomingNewTxCnt uint64
+	lastOutgoingTxCnt    uint64
 )
 
 // measures the TPS values
 func measureTPS() {
-	incomingTxCnt := metrics.SharedServerMetrics.GetAllTransactionsCount()
-	incomingNewTxCnt := metrics.SharedServerMetrics.GetNewTransactionsCount()
-	outgoingTxCnt := metrics.SharedServerMetrics.GetSentTransactionsCount()
+	incomingTxCnt := metrics.SharedServerMetrics.Transactions.Load()
+	incomingNewTxCnt := metrics.SharedServerMetrics.NewTransactions.Load()
+	outgoingTxCnt := metrics.SharedServerMetrics.SentTransactions.Load()
 
 	tpsMetrics := &TPSMetrics{
 		Incoming: incomingTxCnt - lastIncomingTxCnt,
@@ -29,7 +29,4 @@ func measureTPS() {
 
 	// trigger events for outside listeners
 	Events.TPSMetricsUpdated.Trigger(tpsMetrics)
-
-	// DEBUG
-	//gossip.DebugPrintQueueStats()
 }

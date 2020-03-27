@@ -8,7 +8,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
@@ -29,7 +29,7 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	smi := tangle.GetSolidMilestoneIndex()
-	requestedIndex := milestone_index.MilestoneIndex(ld.MilestoneIndex)
+	requestedIndex := milestone.Index(ld.MilestoneIndex)
 	if requestedIndex > smi {
 		e.Error = fmt.Sprintf("Invalid milestone index supplied, lsmi is %d", smi)
 		c.JSON(http.StatusBadRequest, e)
@@ -63,7 +63,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	}
 
 	smi := tangle.GetSolidMilestoneIndex()
-	requestedIndex := milestone_index.MilestoneIndex(ld.MilestoneIndex)
+	requestedIndex := milestone.Index(ld.MilestoneIndex)
 	if requestedIndex > smi {
 		e.Error = fmt.Sprintf("Invalid milestone index supplied, lsmi is %d", smi)
 		c.JSON(http.StatusBadRequest, e)
@@ -87,7 +87,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, abortSignal <-chan struct{}
 	c.JSON(http.StatusOK, ldr)
 }
 
-func getMilestoneStateDiff(milestoneIndex milestone_index.MilestoneIndex) (confirmedTxWithValue []*TxHashWithValue, confirmedBundlesWithValue []*BundleWithValue, totalLedgerChanges map[string]int64, err error) {
+func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue []*TxHashWithValue, confirmedBundlesWithValue []*BundleWithValue, totalLedgerChanges map[string]int64, err error) {
 
 	cachedReqMs := tangle.GetMilestoneOrNil(milestoneIndex) // bundle +1
 	if cachedReqMs == nil {

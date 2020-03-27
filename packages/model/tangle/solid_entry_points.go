@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 var (
@@ -70,7 +70,7 @@ func SolidEntryPointsContain(transactionHash trinary.Hash) bool {
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
-func SolidEntryPointsAdd(transactionHash trinary.Hash, milestoneIndex milestone_index.MilestoneIndex) {
+func SolidEntryPointsAdd(transactionHash trinary.Hash, milestoneIndex milestone.Index) {
 	if solidEntryPoints != nil {
 		solidEntryPoints.Add(transactionHash, milestoneIndex)
 	} else {

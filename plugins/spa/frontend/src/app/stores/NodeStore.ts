@@ -22,8 +22,9 @@ class TipSelMetric {
 }
 
 class ReqQMetric {
-    total_size: number;
-    ms_size: number;
+    queued: number;
+    pending;
+    latency: number;
     ts: string;
 }
 
@@ -37,10 +38,12 @@ class Status {
     uptime: number;
     autopeering_id: string;
     node_alias: string;
-    connected_neighbors_count: number;
+    connected_peers_count: number;
     current_requested_ms: number;
     ms_request_queue_size: number;
-    request_queue_size: number;
+    request_queue_queued: number;
+    request_queue_pending: number;
+    request_queue_avg_latency: number;
     server_metrics: ServerMetrics;
     mem: MemoryMetrics = new MemoryMetrics();
     caches: CacheMetrics = new CacheMetrics();
@@ -52,7 +55,7 @@ class CacheMetrics {
     bundles: CacheMetric;
     milestones: CacheMetric;
     transactions: CacheMetric;
-    incoming_transaction_filter: CacheMetric;
+    incoming_transaction_work_units: CacheMetric;
     refs_invalid_bundle: CacheMetric;
     ts: string;
 }
@@ -370,8 +373,9 @@ export class NodeStore {
     @action
     updateStatus = (status: Status) => {
         let reqQMetric = new ReqQMetric();
-        reqQMetric.ms_size = status.ms_request_queue_size;
-        reqQMetric.total_size = status.request_queue_size;
+        reqQMetric.queued = status.request_queue_queued;
+        reqQMetric.pending = status.request_queue_pending;
+        reqQMetric.latency = status.request_queue_avg_latency;
         reqQMetric.ts = dateformat(Date.now(), "HH:MM:ss");
 
         if (this.collected_req_q_metrics.length > maxMetricsDataPoints) {
@@ -613,8 +617,8 @@ export class NodeStore {
         let txs = Object.assign({}, chartSeriesOpts,
             series("Transactions", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
         );
-        let incomingTxsFilter = Object.assign({}, chartSeriesOpts,
-            series("Incoming Txs Filter", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
+        let incomingTxsWorkUnits = Object.assign({}, chartSeriesOpts,
+            series("Incoming Txs WorkUnits", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
         );
         let refsInvalidBundle = Object.assign({}, chartSeriesOpts,
             series("Ref. Invalid Bundle (Tip-Sel)", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
@@ -629,14 +633,14 @@ export class NodeStore {
             bundles.data.push(metric.bundles.size);
             milestones.data.push(metric.milestones.size);
             txs.data.push(metric.transactions.size);
-            incomingTxsFilter.data.push(metric.incoming_transaction_filter.size);
+            incomingTxsWorkUnits.data.push(metric.incoming_transaction_work_units.size);
             refsInvalidBundle.data.push(metric.refs_invalid_bundle.size);
         }
 
         return {
             labels: labels,
             datasets: [
-                reqQ, approvers, bundles, milestones, txs, incomingTxsFilter, refsInvalidBundle
+                reqQ, approvers, bundles, milestones, txs, incomingTxsWorkUnits, refsInvalidBundle
             ],
         };
     }
@@ -774,20 +778,32 @@ export class NodeStore {
 
     @computed
     get reqQSizeSeries() {
+        let queued = Object.assign({}, chartSeriesOpts,
+            series("Queued", 'rgba(14, 230, 183,1)', 'rgba(14, 230, 183,0.4)')
+        );
+        let pending = Object.assign({}, chartSeriesOpts,
+            series("Pending", 'rgba(222, 49, 182,1)', 'rgba(222, 49, 182,0.4)')
+        );
         let total = Object.assign({}, chartSeriesOpts,
-            series("Size", 'rgba(14, 230, 183,1)', 'rgba(14, 230, 183,0.4)')
+            series("Total", 'rgba(222, 49, 87,1)', 'rgba(222, 49, 87,0.4)')
+        );
+        let latency = Object.assign({}, chartSeriesOpts,
+            series("Request Latency", 'rgba(219, 111, 53,1)', 'rgba(219, 111, 53,0.4)')
         );
 
         let labels = [];
         for (let i = 0; i < this.collected_req_q_metrics.length; i++) {
             let metric = this.collected_req_q_metrics[i];
             labels.push(metric.ts);
-            total.data.push(metric.total_size);
+            queued.data.push(metric.queued);
+            pending.data.push(metric.pending);
+            latency.data.push(metric.latency);
+            total.data.push(metric.pending + metric.queued);
         }
 
         return {
             labels: labels,
-            datasets: [total],
+            datasets: [total, queued, pending, latency],
         };
     }
 

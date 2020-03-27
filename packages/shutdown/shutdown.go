@@ -9,13 +9,11 @@ const (
 	ShutdownPriorityMilestoneProcessor
 	ShutdownPrioritySolidifierGossip
 	ShutdownPriorityReceiveTxWorker
-	ShutdownPriorityReplyProcessor
 	ShutdownPriorityBroadcastQueue
-	ShutdownPriorityPacketProcessor
-	ShutdownPriorityNeighborSendQueue
-	ShutdownPriorityNeighbors
-	ShutdownPriorityNeighborTCPServer
-	ShutdownPriorityNeighborReconnecter
+	ShutdownPriorityMessageProcessor
+	ShutdownPriorityPeerSendQueue
+	ShutdownPriorityPeeringTCPServer
+	ShutdownPriorityPeerReconnecter
 	ShutdownPriorityBadgerGarbageCollection
 	ShutdownPriorityLocalSnapshots
 	ShutdownPriorityMetricsUpdater

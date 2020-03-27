@@ -5,9 +5,9 @@ import (
 )
 
 type TPSMetrics struct {
-	Incoming uint32 `json:"incoming"`
-	New      uint32 `json:"new"`
-	Outgoing uint32 `json:"outgoing"`
+	Incoming uint64 `json:"incoming"`
+	New      uint64 `json:"new"`
+	Outgoing uint64 `json:"outgoing"`
 }
 
 var Events = pluginEvents{

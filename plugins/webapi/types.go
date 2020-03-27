@@ -1,8 +1,8 @@
 package webapi
 
 import (
-	"github.com/gohornet/hornet/packages/model/queue"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/packages/model/milestone"
+	"github.com/gohornet/hornet/packages/peering/peer"
 )
 
 //////////////////// addNeighbors /////////////////////////////////
@@ -157,8 +157,8 @@ type GetNeighbors struct {
 
 // GetNeighborsReturn struct
 type GetNeighborsReturn struct {
-	Neighbors []gossip.NeighborInfo `json:"neighbors"`
-	Duration  int                   `json:"duration"`
+	Neighbors []*peer.Info `json:"neighbors"`
+	Duration  int         `json:"duration"`
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -384,7 +384,15 @@ type GetRequests struct {
 
 // GetRequestsReturn struct
 type GetRequestsReturn struct {
-	Requests []*queue.DebugRequest `json:"requests"`
+	Requests []*DebugRequest `json:"requests"`
+}
+
+type DebugRequest struct {
+	Hash             string          `json:"hash"`
+	InPending        bool            `json:"inPending"`
+	TxExists         bool            `json:"txExists"`
+	EnqueueTimestamp int64           `json:"enqueueTime"`
+	MilestoneIndex   milestone.Index `json:"milestoneIndex"`
 }
 
 ///////////////////////////////////////////////////////////////////

@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 const (
@@ -90,7 +90,7 @@ func isNodeHealthy() bool {
 	}
 
 	// Has connected neighbors
-	if len(gossip.GetConnectedNeighbors()) == 0 {
+	if peering.Manager().ConnectedPeerCount() == 0 {
 		return false
 	}
 

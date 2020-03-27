@@ -6,7 +6,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
@@ -88,7 +88,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 
 // computes the diff of the cone by collecting all mutations of transactions directly/indirectly referenced by the given tail.
 // only the non yet visited transactions are collected
-func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone_index.MilestoneIndex, forceRelease bool) (map[trinary.Trytes]int64, error) {
+func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone.Index, forceRelease bool) (map[trinary.Trytes]int64, error) {
 
 	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
 	cachedBndls := make(map[trinary.Hash]*tangle.CachedBundle)

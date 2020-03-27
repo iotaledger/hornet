@@ -22,10 +22,10 @@ services:
     volumes:
       - ./config.json:/app/config.json:ro
       - ./config_comnet.json:/app/config_comnet.json:ro
-      - ./neighbors.json:/app/neighbors.json
       - ./mqtt_config.json:/app/mqtt_config.json
       - ./profiles.json:/app/profiles.json
       - ./export.bin:/app/export.bin
       - ./export_comnet.bin:/app/export_comnet.bin
+      - ./peering.json:/app/peering.json
       - ./mainnetdb:/app/mainnetdb
       - ./comnetdb:/app/comnetdb

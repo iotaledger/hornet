@@ -3,12 +3,12 @@ package tangle
 import (
 	"errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 const (
-	RevalidationMilestoneThreshold = milestone_index.MilestoneIndex(50)
+	RevalidationMilestoneThreshold = milestone.Index(50)
 )
 
 var (
@@ -56,7 +56,7 @@ var (
 //			- Balances of snapshot milestone			=> should be consistent (total iotas are checked)
 //			- Balance diffs of every solid milestone	=> will be removed and added again by confirmation
 //
-func revalidateDatabase() (milestone_index.MilestoneIndex, error) {
+func revalidateDatabase() (milestone.Index, error) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {

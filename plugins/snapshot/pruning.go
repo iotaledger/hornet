@@ -5,7 +5,7 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
@@ -16,7 +16,7 @@ const (
 )
 
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
-func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) int {
+func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 
 	txsToRemoveMap := make(map[trinary.Hash]struct{})
 	var txsToRemoveSlice []trinary.Hash
@@ -54,7 +54,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone_index.MilestoneIndex) in
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func pruneMilestone(milestoneIndex milestone_index.MilestoneIndex) {
+func pruneMilestone(milestoneIndex milestone.Index) {
 
 	// state diffs
 	if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
@@ -107,7 +107,7 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 }
 
 // ToDo: Global pruning Lock needed?
-func pruneDatabase(solidMilestoneIndex milestone_index.MilestoneIndex, abortSignal <-chan struct{}) {
+func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struct{}) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {

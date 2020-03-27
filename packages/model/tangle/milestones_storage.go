@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/profile"
 )
 
@@ -16,14 +16,14 @@ var (
 	milestoneStorage *objectstorage.ObjectStorage
 )
 
-func databaseKeyForMilestoneIndex(milestoneIndex milestone_index.MilestoneIndex) []byte {
+func databaseKeyForMilestoneIndex(milestoneIndex milestone.Index) []byte {
 	bytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bytes, uint32(milestoneIndex))
 	return bytes
 }
 
-func milestoneIndexFromDatabaseKey(key []byte) milestone_index.MilestoneIndex {
-	return milestone_index.MilestoneIndex(binary.LittleEndian.Uint32(key))
+func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
+	return milestone.Index(binary.LittleEndian.Uint32(key))
 }
 
 func milestoneFactory(key []byte) (objectstorage.StorableObject, error, int) {
@@ -58,7 +58,7 @@ func configureMilestoneStorage() {
 type Milestone struct {
 	objectstorage.StorableObjectFlags
 
-	Index milestone_index.MilestoneIndex
+	Index milestone.Index
 	Hash  trinary.Hash
 }
 
@@ -97,7 +97,7 @@ func (c *CachedMilestone) GetMilestone() *Milestone {
 }
 
 // milestone +1
-func GetCachedMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *CachedMilestone {
+func GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMilestone {
 	cachedMilestone := milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
 	if !cachedMilestone.Exists() {
 		cachedMilestone.Release(true) // milestone -1
@@ -107,13 +107,13 @@ func GetCachedMilestoneOrNil(milestoneIndex milestone_index.MilestoneIndex) *Cac
 }
 
 // milestone +-0
-func ContainsMilestone(milestoneIndex milestone_index.MilestoneIndex) bool {
+func ContainsMilestone(milestoneIndex milestone.Index) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
 // milestone +-0
-func SearchLatestMilestoneIndex() milestone_index.MilestoneIndex {
-	var latestMilestoneIndex milestone_index.MilestoneIndex
+func SearchLatestMilestoneIndex() milestone.Index {
+	var latestMilestoneIndex milestone.Index
 
 	milestoneStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedObject.Release(true) // milestone -1
@@ -155,7 +155,7 @@ func StoreMilestone(bndl *Bundle) (bool, *CachedMilestone) {
 }
 
 // +-0
-func DeleteMilestone(milestoneIndex milestone_index.MilestoneIndex) {
+func DeleteMilestone(milestoneIndex milestone.Index) {
 	milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 

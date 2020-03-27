@@ -6,13 +6,14 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
+
+	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
 )
 
 // confirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTailTx *tangle.CachedTransaction) {
+func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction) {
 
 	ts := time.Now()
 
@@ -161,7 +162,7 @@ func confirmMilestone(milestoneIndex milestone_index.MilestoneIndex, cachedMsTai
 			}
 
 			cachedBndlTx.GetMetadata().SetConfirmed(true, milestoneIndex)
-			metrics.SharedServerMetrics.IncrConfirmedTransactionsCount()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
 			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
 		}
 	}

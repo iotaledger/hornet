@@ -9,12 +9,14 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/peering/peer"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {
@@ -44,21 +46,11 @@ func run(*node.Plugin) {
 }
 
 func configureEvents() {
-	// notify the selection when a connection is closed or failed.
-	gossip.Events.NeighborConnectionClosed.Attach(events.NewClosure(func(neighbor *gossip.Neighbor) {
-		// check whether autopeered neighbor
-		if neighbor.Autopeering == nil {
-			return
-		}
-		gossipService := neighbor.Autopeering.Services().Get(services.GossipServiceKey())
-		gossipAddr := net.JoinHostPort(neighbor.Autopeering.IP().String(), strconv.Itoa(gossipService.Port()))
-		log.Infof("removing: %s / %s", gossipAddr, neighbor.Autopeering.ID())
-		Selection.RemoveNeighbor(neighbor.Autopeering.ID())
-	}))
 
 	discover.Events.PeerDiscovered.Attach(events.NewClosure(func(ev *discover.DiscoveredEvent) {
 		log.Infof("discovered: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 	}))
+
 	discover.Events.PeerDeleted.Attach(events.NewClosure(func(ev *discover.DeletedEvent) {
 		log.Infof("removed offline: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 	}))
@@ -66,17 +58,71 @@ func configureEvents() {
 	selection.Events.SaltUpdated.Attach(events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
 		log.Infof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
 	}))
+
+	// only handle outgoing/incoming peering requests when the peering plugin is enabled
+	if node.IsSkipped(peering.PLUGIN) {
+		return
+	}
+
+	// notify the selection when a connection is closed or failed.
+	peering.Manager().Events.PeerDisconnected.Attach(events.NewClosure(func(p *peer.Peer) {
+		if p.Autopeering == nil {
+			return
+		}
+		gossipService := p.Autopeering.Services().Get(services.GossipServiceKey())
+		gossipAddr := net.JoinHostPort(p.Autopeering.IP().String(), strconv.Itoa(gossipService.Port()))
+		log.Infof("removing: %s / %s", gossipAddr, p.Autopeering.ID())
+		Selection.RemoveNeighbor(p.Autopeering.ID())
+	}))
+
 	selection.Events.OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
-		if ev.Status {
-			log.Infof("peering chosen: %s / %s", ev.Peer.Address(), ev.Peer.ID())
+		if !ev.Status {
+			return // ignore rejected peering
+		}
+		gossipService := ev.Peer.Services().Get(services.GossipServiceKey())
+		gossipAddr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipService.Port()))
+		log.Infof("[outgoing peering] adding autopeering peer %s / %s", gossipAddr, ev.Peer.ID())
+		if err := peering.Manager().Add(gossipAddr, false, "", ev.Peer); err != nil {
+			log.Warnf("couldn't add autopeering peer %s", err)
 		}
 	}))
+
 	selection.Events.IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
-		if ev.Status {
-			log.Infof("peering accepted: %s / %s", ev.Peer.Address(), ev.Peer.ID())
+		if !ev.Status {
+			return // ignore rejected peering
 		}
+		gossipService := ev.Peer.Services().Get(services.GossipServiceKey())
+		gossipAddr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipService.Port()))
+		log.Infof("[incoming peering] whitelisting %s / %s", gossipAddr, ev.Peer.ID())
+
+		// whitelist the peer
+		originAddr, _ := iputils.ParseOriginAddress(gossipAddr)
+		peering.Manager().Whitelist([]string{originAddr.Addr}, originAddr.Port, ev.Peer)
 	}))
+
 	selection.Events.Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
-		log.Infof("peering dropped: %s", ev.DroppedID.String())
+		log.Infof("[dropped event] trying to remove connection to %s", ev.DroppedID)
+
+		var found *peer.Peer
+		peering.Manager().ForAllConnected(func(p *peer.Peer) bool {
+			if p.Autopeering == nil || p.Autopeering.ID() != ev.DroppedID {
+				return false
+			}
+			found = p
+			return true
+		})
+
+		if found == nil {
+			log.Warnf("didn't find autopeered peer %s for removal", ev.DroppedID)
+			return
+		}
+
+		log.Infof("removing autopeered peer %s", found.InitAddress.String())
+		if err := peering.Manager().Remove(found.ID); err != nil {
+			log.Errorf("couldn't remove autopeered peer %s: %s", found.InitAddress.String(), err)
+			return
+		}
+
+		log.Infof("disconnected autopeered peer %s", found.InitAddress.String())
 	}))
 }

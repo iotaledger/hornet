@@ -218,7 +218,7 @@ func (bundle *Bundle) ApplySpentAddresses() {
 		for addr, change := range bundle.GetLedgerChanges() {
 			if change < 0 {
 				if spentAddressesEnabled && MarkAddressAsSpent(addr) {
-					metrics.SharedServerMetrics.IncrSeenSpentAddrCount()
+					metrics.SharedServerMetrics.SeenSpentAddresses.Inc()
 				}
 				Events.AddressSpent.Trigger(addr)
 			}

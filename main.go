@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"
@@ -39,6 +40,7 @@ func main() {
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		plugins = append(plugins, []*node.Plugin{
+			peering.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
 			tipselection.PLUGIN,
