@@ -27,6 +27,5 @@ services:
       - ./export.bin:/app/export.bin
       - ./export_comnet.bin:/app/export_comnet.bin
       - ./peering.json:/app/peering.json
-      - ./latest-export.gz.bin:/app/latest-export.gz.bin
       - ./mainnetdb:/app/mainnetdb
       - ./comnetdb:/app/comnetdb

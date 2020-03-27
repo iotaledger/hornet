@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/syncutils"
+
 	"github.com/gohornet/hornet/packages/protocol/handshake"
 	"github.com/gohornet/hornet/packages/protocol/legacy"
 	"github.com/gohornet/hornet/packages/protocol/message"
 	"github.com/gohornet/hornet/packages/protocol/sting"
 	"github.com/gohornet/hornet/packages/protocol/tlv"
-
-	"github.com/iotaledger/hive.go/byteutils"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
@@ -217,7 +217,9 @@ func (p *Protocol) Receive(data []byte) {
 			continue
 		}
 
-		// fire the message type's event handler
+		// fire the message type's event handler.
+		// note that the message id is valid here because we verified that the message type
+		// exists while parsing the TLV header
 		p.Events.Received[p.receivingMessage.ID].Trigger(p.receiveBuffer)
 
 		// reset to receiving a header

@@ -5,12 +5,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
 	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/packages/peering/peer"
+	"github.com/gohornet/hornet/packages/protocol"
 )
 
 // Reconnect instructs the manager to initiate connections to all peers residing in the reconnect pool.

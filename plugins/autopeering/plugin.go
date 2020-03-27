@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/daemon"
@@ -16,7 +14,9 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/packages/autopeering/services"
+	"github.com/gohornet/hornet/packages/peering/peer"
 	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {

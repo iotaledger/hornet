@@ -3,12 +3,13 @@ package peering
 import (
 	"bytes"
 
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol"
-	"github.com/gohornet/hornet/packages/protocol/handshake"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/packages/peering/peer"
+	"github.com/gohornet/hornet/packages/protocol"
+	"github.com/gohornet/hornet/packages/protocol/handshake"
 )
 
 func (m *Manager) setupHandshakeEventHandlers(p *peer.Peer) {

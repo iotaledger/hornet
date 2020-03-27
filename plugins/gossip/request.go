@@ -3,6 +3,9 @@ package gossip
 import (
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -10,8 +13,6 @@ import (
 	"github.com/gohornet/hornet/packages/protocol/rqueue"
 	"github.com/gohornet/hornet/packages/protocol/sting"
 	"github.com/gohornet/hornet/packages/shutdown"
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (

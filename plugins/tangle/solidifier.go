@@ -492,7 +492,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
 
-	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Inc()
+	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Load()
 	if newNewTxCount < oldNewTxCount {
 		return nil, ErrIntOverflow
 	}

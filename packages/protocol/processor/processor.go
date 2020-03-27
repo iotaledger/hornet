@@ -4,6 +4,16 @@ import (
 	"errors"
 	"time"
 
+	"github.com/iotaledger/hive.go/batchhasher"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/math"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/transaction"
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
@@ -16,15 +26,6 @@ import (
 	"github.com/gohornet/hornet/packages/protocol/message"
 	"github.com/gohornet/hornet/packages/protocol/rqueue"
 	"github.com/gohornet/hornet/packages/protocol/sting"
-	"github.com/iotaledger/hive.go/batchhasher"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/math"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
@@ -256,7 +257,7 @@ func (proc *Processor) processTransactionAndRequest(p *peer.Peer, data []byte) {
 	defer cachedWorkUnit.Release()             // workUnit -1
 	workUnit := cachedWorkUnit.WorkUnit()
 	workUnit.addRequest(p, requestedTxHash)
-	proc.processWorkUnit(cachedWorkUnit.WorkUnit(), p)
+	proc.processWorkUnit(workUnit, p)
 }
 
 // gets or creates a new WorkUnit for the given transaction and then processes the WorkUnit.
@@ -271,7 +272,7 @@ func (proc *Processor) processTransaction(p *peer.Peer, data []byte) {
 // tries to process the WorkUnit by first checking in what state it is.
 // if the WorkUnit is invalid (because the underlying transaction is invalid), the given peer is punished.
 // if the WorkUnit is already completed, and the transaction was requested, this function emits a TransactionProcessed event.
-// it is safe to call this function for the sae WorkUnit multiple times.
+// it is safe to call this function for the same WorkUnit multiple times.
 func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	wu.processingLock.Lock()
 
@@ -335,11 +336,14 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		return
 	}
 
+	// check the existence of the transaction before broadcasting it
+	containsTx := tangle.ContainsTransaction(hornetTx.GetHash())
+
 	proc.Events.TransactionProcessed.Trigger(hornetTx, request, p)
 
 	// broadcast the transaction if it wasn't requested and the timestamp is
 	// within what we consider a sensible delta from now
-	if request == nil && broadcast {
+	if request == nil && broadcast && !containsTx {
 		proc.Events.BroadcastTransaction.Trigger(wu.broadcast())
 	}
 

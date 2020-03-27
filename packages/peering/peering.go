@@ -7,10 +7,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol"
-	"github.com/gohornet/hornet/packages/protocol/handshake"
 	autopeering "github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
@@ -18,6 +14,11 @@ import (
 	"github.com/iotaledger/hive.go/network/tcp"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/atomic"
+
+	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/packages/peering/peer"
+	"github.com/gohornet/hornet/packages/protocol"
+	"github.com/gohornet/hornet/packages/protocol/handshake"
 )
 
 var (

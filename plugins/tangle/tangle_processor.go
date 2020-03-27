@@ -35,7 +35,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	configureGossipSolidifier()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
+		processIncomingTx(task.Param(0).(*hornet.Transaction), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
@@ -101,7 +101,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 	}, shutdown.ShutdownPriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
+func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 
 	txHash := incomingTx.GetHash()
 

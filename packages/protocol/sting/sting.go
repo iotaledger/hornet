@@ -51,7 +51,7 @@ const (
 	// The amount of bytes used for the requested milestone index.
 	RequestedMilestoneIndexMsgBytesLength = 4
 
-	// The amount of bytes used for the a milestone index within a heartbeat packet.
+	// The amount of bytes used for a milestone index within a heartbeat packet.
 	HeartbeatMilestoneIndexBytesLength = 4
 
 	// The index to use to request the latest milestone via a milestone request message.

@@ -5,9 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/iotaledger/iota.go/trinary"
 	"go.uber.org/atomic"
+
+	"github.com/gohornet/hornet/packages/model/milestone"
 )
 
 // Queue implements a queue which contains requests for needed data.

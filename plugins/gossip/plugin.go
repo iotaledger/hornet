@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/node"
+
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/peering"
 	"github.com/gohornet/hornet/packages/peering/peer"
@@ -15,10 +20,6 @@ import (
 	"github.com/gohornet/hornet/packages/protocol/sting"
 	"github.com/gohornet/hornet/packages/shutdown"
 	peeringplugin "github.com/gohornet/hornet/plugins/peering"
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 )
 
 var (

@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/protocol"
-	"github.com/gohornet/hornet/packages/protocol/sting"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
 	"go.uber.org/atomic"
+
+	"github.com/gohornet/hornet/packages/model/milestone"
+	"github.com/gohornet/hornet/packages/protocol"
+	"github.com/gohornet/hornet/packages/protocol/sting"
 )
 
 // ConnectionOrigin defines whether a connection was initialized inbound or outbound.
@@ -23,6 +24,9 @@ const (
 	Outbound
 )
 
+// SendQueueSize defines the size of the send queue of every created peer.
+const SendQueueSize = 1500
+
 func PeerCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*Peer))(params[0].(*Peer))
 }
@@ -33,9 +37,8 @@ func OriginAddressCaller(handler interface{}, params ...interface{}) {
 
 // NewInboundPeer creates a new peer instance which is marked as being inbound.
 func NewInboundPeer(remoteAddr net.Addr) *Peer {
-	ip := net.ParseIP(remoteAddr.(*net.TCPAddr).IP.String())
 	addresses := iputils.NewIPAddresses()
-	primaryAddr := ip
+	primaryAddr := net.ParseIP(remoteAddr.(*net.TCPAddr).IP.String())
 	addresses.Add(primaryAddr)
 
 	// InitAddress and ID are set after handshaking
@@ -43,7 +46,7 @@ func NewInboundPeer(remoteAddr net.Addr) *Peer {
 		PrimaryAddress:   primaryAddr,
 		Addresses:        addresses,
 		ConnectionOrigin: Inbound,
-		SendQueue:        make(chan []byte, 1500),
+		SendQueue:        make(chan []byte, SendQueueSize),
 	}
 }
 
@@ -56,7 +59,7 @@ func NewOutboundPeer(originAddr *iputils.OriginAddress, primaryAddr net.IP, port
 		Addresses:               addresses,
 		MoveBackToReconnectPool: true,
 		ConnectionOrigin:        Outbound,
-		SendQueue:               make(chan []byte, 1500),
+		SendQueue:               make(chan []byte, SendQueueSize),
 	}
 }
 
@@ -84,7 +87,7 @@ type Peer struct {
 	Duplicate bool
 	// The peer's latest heartbeat message.
 	LatestHeartbeat *sting.Heartbeat
-	// Holds the autopeering info if this peer  was added via autopeering.
+	// Holds the autopeering info if this peer was added via autopeering.
 	Autopeering *peer.Peer
 	// A channel which contains messages to be sent to the given peer.
 	SendQueue chan []byte

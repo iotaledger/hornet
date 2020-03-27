@@ -6,6 +6,7 @@ import (
 	"github.com/gohornet/hornet/packages/peering/peer"
 	"github.com/gohornet/hornet/packages/protocol/helpers"
 	"github.com/gohornet/hornet/packages/protocol/sting"
+
 	"github.com/iotaledger/hive.go/events"
 )
 

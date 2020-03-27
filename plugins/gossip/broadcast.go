@@ -78,7 +78,7 @@ func BroadcastMilestoneRequests(solidMilestoneIndex milestone.Index, knownLatest
 				return false
 			}
 			helpers.SendMilestoneRequest(p, msIndex)
-			return false
+			return true
 		})
 	}
 }

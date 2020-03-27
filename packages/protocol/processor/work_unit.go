@@ -3,6 +3,11 @@ package processor
 import (
 	"bytes"
 
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/tangle"
@@ -10,10 +15,6 @@ import (
 	"github.com/gohornet/hornet/packages/protocol/bqueue"
 	"github.com/gohornet/hornet/packages/protocol/legacy"
 	"github.com/gohornet/hornet/packages/protocol/rqueue"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.
@@ -97,7 +98,7 @@ func (wu *WorkUnit) UpdateState(state WorkUnitState) {
 func (wu *WorkUnit) Is(state WorkUnitState) bool {
 	wu.stateLock.Lock()
 	defer wu.stateLock.Unlock()
-	return wu.state&state == 1
+	return wu.state&state > 0
 }
 
 // adds a Request for the given peer to this WorkUnit.

@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/plugins/gossip"
 
 	"github.com/iotaledger/iota.go/consts"
 
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
@@ -31,7 +31,7 @@ func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	if config.NodeConfig.GetBool(config.CfgNodeShowAliasInGetNodeInfo) {
 		info.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 	}
-	
+
 	// Number of peers
 	info.Neighbors = uint(peering.Manager().PeerCount())
 

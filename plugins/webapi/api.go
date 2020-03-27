@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/plugins/peering"
 
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func webAPIRoute() {

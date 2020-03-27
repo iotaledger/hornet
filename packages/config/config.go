@@ -1,11 +1,12 @@
 package config
 
 import (
+	"sync"
+
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/parameter"
-	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
@@ -26,7 +27,7 @@ var (
 	ProfilesConfig = viper.New()
 
 	peeringConfigHotReloadAllowed = true
-	peeringConfigHotReloadLock    syncutils.RWMutex
+	peeringConfigHotReloadLock    sync.Mutex
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
@@ -68,8 +69,8 @@ func DenyPeeringConfigHotReload() {
 }
 
 func AcquirePeeringConfigHotReload() bool {
-	peeringConfigHotReloadLock.RLock()
-	defer peeringConfigHotReloadLock.RUnlock()
+	peeringConfigHotReloadLock.Lock()
+	defer peeringConfigHotReloadLock.Unlock()
 
 	if !peeringConfigHotReloadAllowed {
 		return false

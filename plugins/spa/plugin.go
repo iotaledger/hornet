@@ -6,11 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/packages/basicauth"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol/sting"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -22,14 +17,19 @@ import (
 	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/packages/basicauth"
 	"github.com/gohornet/hornet/packages/config"
 	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/milestone"
 	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/packages/peering/peer"
+	"github.com/gohornet/hornet/packages/protocol/sting"
 	"github.com/gohornet/hornet/packages/shutdown"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/gossip"
 	metrics_plugin "github.com/gohornet/hornet/plugins/metrics"
+	"github.com/gohornet/hornet/plugins/peering"
 	tangle_plugin "github.com/gohornet/hornet/plugins/tangle"
 )
 

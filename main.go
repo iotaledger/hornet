@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/packages/config"
@@ -10,11 +8,13 @@ import (
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/database"
+	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/graph"
 	"github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spa"

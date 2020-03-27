@@ -18,6 +18,9 @@ type Broadcast struct {
 	ExcludePeers map[string]struct{}
 }
 
+// Size defines the default size of the broadcast queue.
+const Size = 1000
+
 // Queue implements a queue which broadcasts its elements to all wanted peers.
 type Queue interface {
 	// EnqueueForBroadcast enqueues the given broadcast to be sent to all peers.
@@ -28,7 +31,7 @@ type Queue interface {
 
 // New creates a new Queue.
 func New(manager *peering.Manager, reqQueue rqueue.Queue) Queue {
-	return &queue{c: make(chan *Broadcast, 1000), manager: manager, reqQueue: reqQueue}
+	return &queue{c: make(chan *Broadcast, Size), manager: manager, reqQueue: reqQueue}
 }
 
 // queue is a broadcast queue which sends the given messages to all peers.
