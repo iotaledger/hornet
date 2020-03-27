@@ -41,7 +41,7 @@ curl -LO https://ls.manapotion.io/export.bin
 
 ii. Edit the `config.json` for alternative ports if needed.
 
-iii. Edit `neighbors.json` to your neighbors addresses.
+iii. Edit `peering.json` to your neighbors addresses.
 
 iv. The docker image runs under user with uid 39999. To make sure no permission issues, create the directory for the database, e.g.:
 ```sh
