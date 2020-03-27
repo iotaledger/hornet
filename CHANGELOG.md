@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
     - Copy transaction raw trytes (dashboard)
     - CTPS graph (dashboard)
     - Health check API route (`/healthz`)
+    - New topics to zmq and mqtt (`lm` & `lsm`)
 
 ### Changed
 
