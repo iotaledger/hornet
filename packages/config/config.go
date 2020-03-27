@@ -72,11 +72,13 @@ func AcquirePeeringConfigHotReload() bool {
 	defer peeringConfigHotReloadLock.Unlock()
 
 	if !peeringConfigHotReloadAllowed {
+		// It is already denied
 		return false
 	}
 
+	// Deny it for other calls
 	peeringConfigHotReloadAllowed = false
-	return peeringConfigHotReloadAllowed
+	return true
 }
 
 func hasFlag(name string) bool {
