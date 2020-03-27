@@ -15,7 +15,6 @@ import (
 
 const (
 	healthzRoute = "healthz"
-	healthRoute  = "health"
 )
 
 func webAPIRoute() {
@@ -70,16 +69,6 @@ func webAPIRoute() {
 
 // health check
 func restAPIRoute() {
-
-	// GET /health
-	api.GET(healthRoute, func(c *gin.Context) {
-		if !isNodeHealthy() {
-			c.Status(http.StatusServiceUnavailable)
-			return
-		}
-
-		c.Status(http.StatusOK)
-	})
 
 	// GET /healthz
 	api.GET(healthzRoute, func(c *gin.Context) {
