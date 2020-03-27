@@ -15,6 +15,8 @@ import (
 
 const (
 	healthzRoute = "healthz"
+
+	maxAllowedMilestoneAge = time.Minute * 5
 )
 
 func webAPIRoute() {
@@ -96,14 +98,16 @@ func isNodeHealthy() bool {
 	var milestoneTimestamp int64
 	lmi := tangle.GetLatestMilestoneIndex()
 	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
-	if cachedLatestMs != nil {
-		cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
-		milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
-		cachedMsTailTx.Release(true) // tx -1
-		cachedLatestMs.Release(true) // bundle -1
+	if cachedLatestMs == nil {
+		return false
 	}
+
+	cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
+	milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
+	cachedMsTailTx.Release(true) // tx -1
+	cachedLatestMs.Release(true) // bundle -1
 
 	// Check whether the milestone is older than 5 minutes
 	timeMs := time.Unix(int64(milestoneTimestamp), 0)
-	return time.Since(timeMs) < (time.Minute * 5)
+	return time.Since(timeMs) < maxAllowedMilestoneAge
 }
