@@ -105,9 +105,5 @@ func isNodeHealthy() bool {
 
 	// Check whether the milestone is older than 5 minutes
 	timeMs := time.Unix(int64(milestoneTimestamp), 0)
-	if time.Since(timeMs) > (time.Minute * 5) {
-		return false
-	}
-
-	return true
+	return time.Since(timeMs) < (time.Minute * 5)
 }
