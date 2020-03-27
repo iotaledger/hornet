@@ -17,5 +17,6 @@ func addLegacyMessageEventHandlers(p *peer.Peer) {
 
 	p.Protocol.Events.Sent[legacy.TransactionAndRequestMessageDefinition.ID].Attach(events.NewClosure(func() {
 		p.Metrics.SentTransactions.Inc()
+		metrics.SharedServerMetrics.SentTransactions.Inc()
 	}))
 }
