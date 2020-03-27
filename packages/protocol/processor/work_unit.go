@@ -3,6 +3,7 @@ package processor
 import (
 	"bytes"
 
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/peering/peer"
@@ -141,6 +142,7 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 			requestedTxHash, err := trinary.BytesToTrytes(peerRequest.requestedTxHashBytes, 81)
 			if err != nil {
 				peerRequest.p.Metrics.InvalidRequests.Inc()
+				metrics.SharedServerMetrics.InvalidRequests.Inc()
 				continue
 			}
 

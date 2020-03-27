@@ -6,6 +6,7 @@ import (
 
 	"github.com/gohornet/hornet/packages/compressed"
 	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/packages/metrics"
 	"github.com/gohornet/hornet/packages/model/hornet"
 	"github.com/gohornet/hornet/packages/model/tangle"
 	"github.com/gohornet/hornet/packages/peering/peer"
@@ -200,6 +201,7 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 	msIndex, err := sting.ExtractRequestedMilestoneIndex(data)
 	if err != nil {
 		p.Metrics.InvalidRequests.Inc()
+		metrics.SharedServerMetrics.InvalidRequests.Inc()
 		return
 	}
 

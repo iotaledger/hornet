@@ -372,7 +372,7 @@ func currentNodeStatus() *nodestatus {
 		NumberOfNewTransactions:        metrics.SharedServerMetrics.NewTransactions.Load(),
 		NumberOfKnownTransactions:      metrics.SharedServerMetrics.KnownTransactions.Load(),
 		NumberOfInvalidTransactions:    metrics.SharedServerMetrics.InvalidTransactions.Load(),
-		NumberOfInvalidRequests:        metrics.SharedServerMetrics.InvalidTransactionRequests.Load(),
+		NumberOfInvalidRequests:        metrics.SharedServerMetrics.InvalidRequests.Load(),
 		NumberOfStaleTransactions:      metrics.SharedServerMetrics.StaleTransactions.Load(),
 		NumberOfReceivedTransactionReq: metrics.SharedServerMetrics.ReceivedTransactionRequests.Load(),
 		NumberOfReceivedMilestoneReq:   metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),

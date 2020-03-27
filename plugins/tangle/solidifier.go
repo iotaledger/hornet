@@ -499,7 +499,7 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 	newTxDiff := newNewTxCount - oldNewTxCount
 	oldNewTxCount = newNewTxCount
 
-	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Load()
 
 	if newConfirmedTxCount < oldConfirmedTxCount {
 		return nil, ErrIntOverflow
