@@ -64,11 +64,19 @@ func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 	if err != nil {
 		log.Error(err.Error())
 	}
+	err = publishLM(cachedBndl.GetBundle())
+	if err != nil {
+		log.Error(err.Error())
+	}
 	cachedBndl.Release(true) // bundle -1
 }
 
 func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
 	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
+	if err != nil {
+		log.Error(err.Error())
+	}
+	err = publishLSM(cachedBndl.GetBundle())
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -116,6 +124,26 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 	}
 
 	return publisher.Send(topicLMHS, messages)
+}
+
+// Publish latest milestone
+func publishLM(bndl *tangle.Bundle) error {
+	messages := []string{
+		strconv.FormatUint(uint64(bndl.GetMilestoneIndex()), 10),
+		bndl.GetMilestoneHash(),
+	}
+
+	return publisher.Send(topicLM, messages)
+}
+
+// Publish latest solid subtangle milestone
+func publishLSM(bndl *tangle.Bundle) error {
+	messages := []string{
+		strconv.FormatUint(uint64(bndl.GetMilestoneIndex()), 10),
+		bndl.GetMilestoneHash(),
+	}
+
+	return publisher.Send(topicLSM, messages)
 }
 
 // Publish confirmed transaction
