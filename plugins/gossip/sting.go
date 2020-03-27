@@ -12,38 +12,38 @@ import (
 // sets up the event handlers which propagate STING messages.
 func addSTINGMessageEventHandlers(p *peer.Peer) {
 
-	p.Protocol.Events.Received[sting.TransactionMessageDefinition.ID].Attach(events.NewClosure(func(data []byte) {
+	p.Protocol.Events.Received[sting.MessageTypeTransaction].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedTransactions.Inc()
 		metrics.SharedServerMetrics.Transactions.Inc()
-		msgProcessor.Process(p, sting.TransactionMessageDefinition.ID, data)
+		msgProcessor.Process(p, sting.MessageTypeTransaction, data)
 	}))
 
-	p.Protocol.Events.Sent[sting.TransactionMessageDefinition.ID].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[sting.MessageTypeTransaction].Attach(events.NewClosure(func() {
 		p.Metrics.SentTransactions.Inc()
 		metrics.SharedServerMetrics.SentTransactions.Inc()
 	}))
 
-	p.Protocol.Events.Received[sting.TransactionRequestMessageDefinition.ID].Attach(events.NewClosure(func(data []byte) {
+	p.Protocol.Events.Received[sting.MessageTypeTransactionRequest].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedTransactionRequests.Inc()
-		msgProcessor.Process(p, sting.TransactionRequestMessageDefinition.ID, data)
+		msgProcessor.Process(p, sting.MessageTypeTransactionRequest, data)
 	}))
 
-	p.Protocol.Events.Sent[sting.TransactionRequestMessageDefinition.ID].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[sting.MessageTypeTransactionRequest].Attach(events.NewClosure(func() {
 		p.Metrics.SentTransactionRequests.Inc()
 		metrics.SharedServerMetrics.SentTransactionRequests.Inc()
 	}))
 
-	p.Protocol.Events.Received[sting.MilestoneRequestMessageDefinition.ID].Attach(events.NewClosure(func(data []byte) {
+	p.Protocol.Events.Received[sting.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedMilestoneRequests.Inc()
-		msgProcessor.Process(p, sting.MilestoneRequestMessageDefinition.ID, data)
+		msgProcessor.Process(p, sting.MessageTypeMilestoneRequest, data)
 	}))
 
-	p.Protocol.Events.Sent[sting.MilestoneRequestMessageDefinition.ID].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[sting.MessageTypeMilestoneRequest].Attach(events.NewClosure(func() {
 		p.Metrics.SentMilestoneRequests.Inc()
 		metrics.SharedServerMetrics.SentMilestoneRequests.Inc()
 	}))
 
-	p.Protocol.Events.Received[sting.HeartbeatMessageDefinition.ID].Attach(events.NewClosure(func(data []byte) {
+	p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedHeartbeats.Inc()
 
 		// update heartbeat
@@ -59,7 +59,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 		}
 	}))
 
-	p.Protocol.Events.Sent[sting.HeartbeatMessageDefinition.ID].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func() {
 		p.Metrics.SentHeartbeats.Inc()
 		metrics.SharedServerMetrics.SentHeartbeats.Inc()
 	}))

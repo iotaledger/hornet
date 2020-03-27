@@ -13,12 +13,12 @@ import (
 
 func (m *Manager) setupHandshakeEventHandlers(p *peer.Peer) {
 	// mark when a handshake was sent off
-	p.Protocol.Events.Sent[handshake.HandshakeMessageDefinition.ID].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[handshake.MessageTypeHandshake].Attach(events.NewClosure(func() {
 		p.Protocol.Handshaked()
 	}))
 
 	// verify received handshake
-	p.Protocol.Events.Received[handshake.HandshakeMessageDefinition.ID].Attach(events.NewClosure(func(data []byte) {
+	p.Protocol.Events.Received[handshake.MessageTypeHandshake].Attach(events.NewClosure(func(data []byte) {
 		handshakeMsg, err := handshake.ParseHandshake(data)
 		if err != nil {
 			p.Protocol.Events.Error.Trigger(err)

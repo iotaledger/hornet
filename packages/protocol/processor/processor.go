@@ -64,13 +64,13 @@ func New(requestQueue rqueue.Queue, opts *Options) *Processor {
 		data := task.Param(2).([]byte)
 
 		switch task.Param(1).(message.Type) {
-		case legacy.TransactionAndRequestMessageDefinition.ID:
+		case legacy.MessageTypeTransactionAndRequest:
 			proc.processTransactionAndRequest(p, data)
-		case sting.TransactionMessageDefinition.ID:
+		case sting.MessageTypeTransaction:
 			proc.processTransaction(p, data)
-		case sting.TransactionRequestMessageDefinition.ID:
+		case sting.MessageTypeTransactionRequest:
 			proc.processTransactionRequest(p, data)
-		case sting.MilestoneRequestMessageDefinition.ID:
+		case sting.MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
 		}
 
