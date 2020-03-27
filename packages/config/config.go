@@ -1,8 +1,7 @@
 package config
 
 import (
-	"sync"
-
+	"github.com/iotaledger/hive.go/syncutils"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
@@ -27,7 +26,7 @@ var (
 	ProfilesConfig = viper.New()
 
 	peeringConfigHotReloadAllowed = true
-	peeringConfigHotReloadLock    sync.Mutex
+	peeringConfigHotReloadLock    syncutils.Mutex
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
