@@ -12,8 +12,8 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -23,7 +23,7 @@ func init() {
 	addEndpoint("storeTransactions", storeTransactions, implementedAPIcalls)
 }
 
-func broadcastTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	bt := &BroadcastTransactions{}
 	e := ErrorReturn{}
@@ -60,7 +60,7 @@ func broadcastTransactions(i interface{}, c *gin.Context, abortSignal <-chan str
 	c.JSON(http.StatusOK, BradcastTransactionsReturn{})
 }
 
-func findTransactions(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	ft := &FindTransactions{}
 	e := ErrorReturn{}
 

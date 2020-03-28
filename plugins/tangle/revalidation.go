@@ -3,8 +3,8 @@ package tangle
 import (
 	"errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 const (
@@ -12,9 +12,9 @@ const (
 )
 
 var (
-	ErrSnapshotInfoMissing                   = errors.New("Snapshot information not found in database")
-	ErrLatestMilestoneOlderThanSnapshotIndex = errors.New("Latest milestone in the database is older than the snapshot index")
-	ErrSnapshotIndexWrong                    = errors.New("Snapshot index does not fit the snapshot ledger index")
+	ErrSnapshotInfoMissing                   = errors.New("snapshot information not found in database")
+	ErrLatestMilestoneOlderThanSnapshotIndex = errors.New("latest milestone in the database is older than the snapshot index")
+	ErrSnapshotIndexWrong                    = errors.New("snapshot index does not fit the snapshot ledger index")
 )
 
 // revalidateDatabase tries to revalidate a corrupted database (after an unclean node shutdown/crash)

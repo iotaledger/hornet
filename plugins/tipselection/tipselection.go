@@ -9,8 +9,8 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 

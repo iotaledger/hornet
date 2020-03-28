@@ -7,9 +7,9 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 const (
@@ -63,7 +63,7 @@ func runGossipSolidifier() {
 		gossipSolidifierWorkerPool.StopAndWait()
 
 		log.Info("Stopping Solidifier ... done")
-	}, shutdown.ShutdownPrioritySolidifierGossip)
+	}, shutdown.PrioritySolidifierGossip)
 }
 
 // Checks and updates the solid flag of a transaction and its approvers (future cone).

@@ -12,7 +12,7 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
-	"github.com/gohornet/hornet/packages/metrics"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
 )

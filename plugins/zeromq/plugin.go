@@ -12,10 +12,10 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	tanglePackage "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -84,7 +84,7 @@ func configure(plugin *node.Plugin) {
 }
 
 // Start the zeromq plugin
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	log.Info("Starting ZeroMQ Publisher ...")
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
@@ -158,11 +158,11 @@ func run(plugin *node.Plugin) {
 		} else {
 			log.Info("Stopping ZeroMQ Publisher ... done")
 		}
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZeroMQ address topic updater", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(updateAddressTopics, 5*time.Second, shutdownSignal)
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZeroMQ[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ[NewTxWorker] ... done")
@@ -173,7 +173,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZeroMQ[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ[ConfirmedTxWorker] ... done")
@@ -184,7 +184,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[ConfirmedTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZeroMQ[NewLatestMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ[NewLatestMilestoneWorker] ... done")
@@ -195,7 +195,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.LatestMilestoneChanged.Detach(notifyNewLatestMilestone)
 		newLatestMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewLatestMilestoneWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZeroMQ[NewSolidMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ[NewSolidMilestoneWorker] ... done")
@@ -206,7 +206,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[NewSolidMilestoneWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZeroMQ[SpentAddress]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZeroMQ[SpentAddress] ... done")
@@ -217,7 +217,7 @@ func run(plugin *node.Plugin) {
 		tanglePackage.Events.AddressSpent.Detach(notifySpentAddress)
 		spentAddressWorkerPool.StopAndWait()
 		log.Info("Stopping ZeroMQ[SpentAddress] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 }
 
 // Start the zmq publisher.

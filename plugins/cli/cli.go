@@ -12,7 +12,7 @@ import (
 
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/pkg/config"
 )
 
 var enabledPlugins []string
@@ -33,12 +33,12 @@ func getList(a []string) string {
 }
 
 func ParseConfig() {
-	ignoreSettingsAtPrint := []string{}
+	var ignoreSettingsAtPrint []string
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPasswordHash)
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPasswordSalt)
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPasswordHash)
 	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPasswordSalt)
-	if err := config.FetchConfig(true, ignoreSettingsAtPrint); err != nil {
+	if err := config.FetchConfig(ignoreSettingsAtPrint); err != nil {
 		panic(err)
 	}
 	parseParameters()

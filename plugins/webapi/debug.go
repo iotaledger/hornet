@@ -12,7 +12,7 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -21,7 +21,7 @@ func init() {
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
 }
 
-func getRequests(interf interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	grr := &GetRequestsReturn{}
 	queued, pending := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
@@ -79,7 +79,7 @@ func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([
 	return tanglePath, nil
 }
 
-func searchConfirmedApprover(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &SearchConfirmedApprover{}
 	result := &SearchConfirmedApproverReturn{}

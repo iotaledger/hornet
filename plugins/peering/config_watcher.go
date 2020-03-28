@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/pkg/config"
 )
 
 func configurePeerConfigWatcher() {
@@ -67,7 +67,7 @@ func runConfigWatcher() {
 // calculates the diffs between the loaded peers and the modified config.
 func getPeerConfigDiff() (modified, added, removed []config.PeerConfig) {
 	currentPeers := Manager().PeerInfos()
-	configPeers := []config.PeerConfig{}
+	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
 		log.Error(err)
 		return

@@ -3,11 +3,11 @@ package gossip
 import (
 	"math"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol/helpers"
-	"github.com/gohornet/hornet/packages/protocol/sting"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/helpers"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.

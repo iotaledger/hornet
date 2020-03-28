@@ -9,14 +9,14 @@ import (
 
 	"github.com/iotaledger/iota.go/guards"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("getInclusionStates", getInclusionStates, implementedAPIcalls)
 }
 
-func getInclusionStates(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	gis := &GetInclusionStates{}
 	e := ErrorReturn{}
 

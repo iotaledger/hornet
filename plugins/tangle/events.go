@@ -1,8 +1,8 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -19,7 +19,7 @@ var Events = pluginEvents{
 	ReceivedNewMilestone:          events.NewEvent(tangle.BundleCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),
-	SnapshotMilestoneIndexChanged: events.NewEvent(milestone.MilestoneIndexCaller),
+	SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 	NewConfirmedMilestoneMetric:   events.NewEvent(NewConfirmedMilestoneMetricCaller),
 }
 

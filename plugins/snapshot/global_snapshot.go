@@ -12,10 +12,10 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/compressed"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -100,8 +100,8 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 		total += value
 	}
 
-	if total != compressed.TOTAL_SUPPLY {
-		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, compressed.TOTAL_SUPPLY)
+	if total != compressed.TotalSupply {
+		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, compressed.TotalSupply)
 	}
 
 	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, snapshotIndex)

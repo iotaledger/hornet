@@ -8,8 +8,8 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
@@ -20,7 +20,7 @@ func init() {
 	addEndpoint("getNodeAPIConfiguration", getNodeAPIConfiguration, implementedAPIcalls)
 }
 
-func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Basic info data
 	info := GetNodeInfoReturn{
 		AppName:    cli.AppName,

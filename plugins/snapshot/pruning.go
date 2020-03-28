@@ -5,8 +5,8 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 const (
@@ -120,7 +120,7 @@ func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struc
 	}
 
 	targetIndex := solidMilestoneIndex - pruningDelay
-	targetIndexMax := (snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1)
+	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
 	if targetIndex > targetIndexMax {
 		targetIndex = targetIndexMax
 	}

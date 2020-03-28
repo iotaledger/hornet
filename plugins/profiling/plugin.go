@@ -5,7 +5,7 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/pkg/config"
 	"github.com/iotaledger/hive.go/node"
 )
 
@@ -13,11 +13,11 @@ var (
 	PLUGIN = node.NewPlugin("Profiling", node.Enabled, configure, run)
 )
 
-func configure(plugin *node.Plugin) {
+func configure(_ *node.Plugin) {
 	// nothing
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 

@@ -9,16 +9,16 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/peering"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/profile"
-	"github.com/gohornet/hornet/packages/protocol/bqueue"
-	"github.com/gohornet/hornet/packages/protocol/legacy"
-	"github.com/gohornet/hornet/packages/protocol/processor"
-	"github.com/gohornet/hornet/packages/protocol/rqueue"
-	"github.com/gohornet/hornet/packages/protocol/sting"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/peering"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/protocol/bqueue"
+	"github.com/gohornet/hornet/pkg/protocol/legacy"
+	"github.com/gohornet/hornet/pkg/protocol/processor"
+	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	peeringplugin "github.com/gohornet/hornet/plugins/peering"
 )
 
@@ -55,7 +55,7 @@ func Processor() *processor.Processor {
 	msgProcessorOnce.Do(func() {
 		msgProcessor = processor.New(requestQueue, &processor.Options{
 			ValidMWM:          config.NodeConfig.GetUint64(config.CfgProtocolMWM),
-			WorkUnitCacheOpts: profile.GetProfile().Caches.IncomingTransactionFilter,
+			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingTransactionFilter,
 		})
 	})
 	return msgProcessor
@@ -106,23 +106,23 @@ func configure(plugin *node.Plugin) {
 					}
 				}
 			}
-		}, shutdown.ShutdownPriorityPeerSendQueue)
+		}, shutdown.PriorityPeerSendQueue)
 	}))
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running BroadcastQueue")
 		broadcastQueue.Run(shutdownSignal)
 		log.Info("Stopped BroadcastQueue")
-	}, shutdown.ShutdownPriorityBroadcastQueue)
+	}, shutdown.PriorityBroadcastQueue)
 
 	daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
 		msgProcessor.Run(shutdownSignal)
 		log.Info("Stopped MessageProcessor")
-	}, shutdown.ShutdownPriorityMessageProcessor)
+	}, shutdown.PriorityMessageProcessor)
 
 	runRequestWorkers()
 }

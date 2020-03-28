@@ -45,13 +45,13 @@ func downloadSnapshotFile(filepath string, url string) error {
 
 	// Get the data
 	resp, err := http.Get(url)
-	if resp.StatusCode != 200 {
-		out.Close()
-		return fmt.Errorf("Server returned %d", resp.StatusCode)
-	}
 	if err != nil {
 		out.Close()
 		return err
+	}
+	if resp.StatusCode != 200 {
+		out.Close()
+		return fmt.Errorf("server returned %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
 

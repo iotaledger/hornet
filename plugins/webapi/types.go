@@ -1,8 +1,8 @@
 package webapi
 
 import (
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/peering/peer"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/peering/peer"
 )
 
 //////////////////// addNeighbors /////////////////////////////////

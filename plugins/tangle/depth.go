@@ -4,8 +4,8 @@ import (
 	"math"
 	"sync"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/iotaledger/iota.go/trinary"
 )
 

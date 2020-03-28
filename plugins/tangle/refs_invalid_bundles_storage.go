@@ -7,7 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/packages/profile"
+	"github.com/gohornet/hornet/pkg/profile"
 )
 
 var (
@@ -47,7 +47,7 @@ func invalidBundleFactory(key []byte) (objectstorage.StorableObject, error, int)
 }
 
 func configureRefsAnInvalidBundleStorage() {
-	opts := profile.GetProfile().Caches.RefsInvalidBundle
+	opts := profile.LoadProfile().Caches.RefsInvalidBundle
 
 	refsAnInvalidBundleStorage = objectstorage.New(
 		nil,

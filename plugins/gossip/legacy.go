@@ -3,9 +3,9 @@ package gossip
 import (
 	"github.com/iotaledger/hive.go/events"
 
-	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol/legacy"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/legacy"
 )
 
 // sets up the event handlers which propagate legacy messages.

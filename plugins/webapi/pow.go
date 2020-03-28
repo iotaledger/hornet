@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +16,7 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
-	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/pkg/config"
 )
 
 func init() {
@@ -28,11 +27,9 @@ var (
 	powSet  = false
 	powFunc pow.ProofOfWorkFunc
 	powType string
-
-	powLock = &sync.Mutex{}
 )
 
-func attachToTangle(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	mwm := config.NodeConfig.GetInt(config.CfgProtocolMWM)
 

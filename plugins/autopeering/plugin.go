@@ -13,9 +13,9 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/autopeering/services"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
@@ -42,7 +42,7 @@ func configure(*node.Plugin) {
 }
 
 func run(*node.Plugin) {
-	daemon.BackgroundWorker(name, start, shutdown.ShutdownPriorityAutopeering)
+	daemon.BackgroundWorker(name, start, shutdown.PriorityAutopeering)
 }
 
 func configureEvents() {

@@ -17,12 +17,12 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/compressed"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -31,7 +31,7 @@ var (
 	log    *logger.Logger
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL           = fmt.Errorf("No download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
+	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
 	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
 	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
@@ -128,7 +128,7 @@ func configure(plugin *node.Plugin) {
 	}
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
 	notifyNewSolidMilestone := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		select {
@@ -170,7 +170,7 @@ func run(plugin *node.Plugin) {
 				}
 			}
 		}
-	}, shutdown.ShutdownPriorityLocalSnapshots)
+	}, shutdown.PriorityLocalSnapshots)
 }
 
 func installGenesisTransaction() {

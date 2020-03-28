@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"github.com/gohornet/hornet/packages/metrics"
+	"github.com/gohornet/hornet/pkg/metrics"
 )
 
 var (
