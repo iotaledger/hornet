@@ -114,7 +114,7 @@ func (m *Manager) moveInitialPeersToReconnectPool(peers []*config.PeerConfig) {
 
 // creates and initiates the connection to the given peer.
 func (m *Manager) connect(p *peer.Peer) error {
-	addr := fmt.Sprintf("%s:%d", p.PrimaryAddress, p.InitAddress.Port)
+	addr := fmt.Sprintf("%s:%d", iputils.IPToString(p.PrimaryAddress), p.InitAddress.Port)
 	conn, err := net.DialTimeout("tcp", addr, time.Duration(2)*time.Second)
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %w", p.ID, err)
