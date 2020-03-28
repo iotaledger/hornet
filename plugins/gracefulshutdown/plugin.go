@@ -12,8 +12,8 @@ import (
 	"github.com/iotaledger/hive.go/node"
 )
 
-// maximum amount of time to wait for background processes to terminate. After that the process is killed.
-const WAIT_TO_KILL_TIME_IN_SECONDS = 120
+// the maximum amount of time to wait for background processes to terminate. After that the process is killed.
+const waitToKillTimeInSeconds = 120
 
 var (
 	PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, configure, run)
@@ -31,21 +31,21 @@ func configure(plugin *node.Plugin) {
 	go func() {
 		<-gracefulStop
 
-		log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", WAIT_TO_KILL_TIME_IN_SECONDS)
+		log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
 
 		go func() {
 			start := time.Now()
 			for x := range time.Tick(1 * time.Second) {
 				secondsSinceStart := x.Sub(start).Seconds()
 
-				if secondsSinceStart <= WAIT_TO_KILL_TIME_IN_SECONDS {
+				if secondsSinceStart <= waitToKillTimeInSeconds {
 					processList := ""
 					runningBackgroundWorkers := daemon.GetRunningBackgroundWorkers()
 					if len(runningBackgroundWorkers) >= 1 {
 						processList = "(" + strings.Join(runningBackgroundWorkers, ", ") + ") "
 					}
 
-					log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing %s...", WAIT_TO_KILL_TIME_IN_SECONDS-int(secondsSinceStart), processList)
+					log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing %s...", waitToKillTimeInSeconds-int(secondsSinceStart), processList)
 				} else {
 					log.Fatal("Background processes did not terminate in time! Forcing shutdown ...")
 				}
@@ -56,6 +56,6 @@ func configure(plugin *node.Plugin) {
 	}()
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	// nothing
 }

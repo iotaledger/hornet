@@ -6,15 +6,15 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 const (
-	TX_BUFFER_SIZE       = 1800
-	MS_BUFFER_SIZE       = 20
-	BROADCAST_QUEUE_SIZE = 20000
+	TxBufferSize       = 1800
+	MsBufferSize       = 20
+	BroadcastQueueSize = 20000
 )
 
 var (
@@ -58,9 +58,9 @@ type wsMessage struct {
 }
 
 func initRingBuffers() {
-	txRingBuffer = ring.New(TX_BUFFER_SIZE)
-	snRingBuffer = ring.New(TX_BUFFER_SIZE)
-	msRingBuffer = ring.New(MS_BUFFER_SIZE)
+	txRingBuffer = ring.New(TxBufferSize)
+	snRingBuffer = ring.New(TxBufferSize)
+	msRingBuffer = ring.New(MsBufferSize)
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -89,7 +89,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, confTime int64) {
+func onConfirmedTx(cachedTx *tangle.CachedTransaction, _ milestone.Index, _ int64) {
 
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 		snTx := &wsTransactionSn{

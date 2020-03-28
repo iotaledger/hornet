@@ -5,11 +5,11 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/profile"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &profile.GetProfile().Badger)
+	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &profile.LoadProfile().Badger)
 
 	if !tangle.IsCorrectDatabaseVersion() {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
@@ -38,9 +38,9 @@ func configure(plugin *node.Plugin) {
 		log.Info("Syncing database to disk...")
 		database.GetHornetBadgerInstance().Close()
 		log.Info("Syncing database to disk... done")
-	}, shutdown.ShutdownPriorityCloseDatabase)
+	}, shutdown.PriorityCloseDatabase)
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	// nothing
 }

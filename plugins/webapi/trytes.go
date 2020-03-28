@@ -12,15 +12,15 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("getTrytes", getTrytes, implementedAPIcalls)
 }
 
-func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	maxGetTrytes := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes)
 

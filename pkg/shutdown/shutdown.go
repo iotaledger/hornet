@@ -1,0 +1,26 @@
+package shutdown
+
+const (
+	PriorityCloseDatabase = iota
+	PriorityFlushToDatabase
+	PriorityRequestsProcessor
+	PriorityMilestoneSolidifier
+	PriorityMilestoneProcessor
+	PrioritySolidifierGossip
+	PriorityReceiveTxWorker
+	PriorityBroadcastQueue
+	PriorityMessageProcessor
+	PriorityPeerSendQueue
+	PriorityPeeringTCPServer
+	PriorityPeerReconnecter
+	PriorityBadgerGarbageCollection
+	PriorityLocalSnapshots
+	PriorityMetricsUpdater
+	PriorityDashboard
+	PriorityAPI
+	PriorityMetricsPublishers
+	PrioritySpammer
+	PriorityStatusReport
+	PriorityAutopeering
+	PriorityUpdateCheck
+)

@@ -16,7 +16,7 @@ func init() {
 	addEndpoint("getTransactionsToApprove", getTransactionsToApprove, implementedAPIcalls)
 }
 
-func getTransactionsToApprove(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &GetTransactionsToApprove{}
 	result := GetTransactionsToApproveReturn{}

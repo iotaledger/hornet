@@ -1,11 +1,11 @@
 package gossip
 
 import (
-	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol/helpers"
-	"github.com/gohornet/hornet/packages/protocol/sting"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/helpers"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
 
 	"github.com/iotaledger/hive.go/events"
 )

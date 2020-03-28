@@ -19,8 +19,8 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
 
-	"github.com/gohornet/hornet/packages/autopeering/services"
-	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/pkg/autopeering/services"
+	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/plugins/autopeering/local"
 )
 

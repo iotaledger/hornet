@@ -11,9 +11,9 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -35,9 +35,9 @@ var (
 
 	revalidationMilestoneIndex = milestone.Index(0)
 
-	ErrMilestoneNotFound = errors.New("Milestone not found")
-	ErrIntOverflow       = errors.New("Integer overflow")
-	ErrDivisionByZero    = errors.New("Division by zero")
+	ErrMilestoneNotFound = errors.New("milestone not found")
+	ErrIntOverflow       = errors.New("integer overflow")
+	ErrDivisionByZero    = errors.New("division by zero")
 )
 
 type ConfirmedMilestoneMetric struct {
@@ -391,7 +391,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 		solidifierMilestoneIndexLock.RLock()
 		triggerSignal := (newMilestoneIndex == 0) && (solidifierMilestoneIndex == 0)
-		nextMilestoneSignal := (newMilestoneIndex == tangle.GetSolidMilestoneIndex()+1)
+		nextMilestoneSignal := newMilestoneIndex == tangle.GetSolidMilestoneIndex()+1
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((solidifierMilestoneIndex != 0) && (newMilestoneIndex < solidifierMilestoneIndex))
 		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected) {
 			// Do not run solidifier

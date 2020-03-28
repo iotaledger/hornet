@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/peering"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol"
-	"github.com/gohornet/hornet/packages/protocol/handshake"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/peering"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol"
+	"github.com/gohornet/hornet/pkg/protocol/handshake"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
@@ -43,7 +43,7 @@ func Manager() *peering.Manager {
 		}
 
 		// load seed peers
-		peers := []*config.PeerConfig{}
+		var peers []*config.PeerConfig
 		if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &peers); err != nil {
 			panic(err)
 		}
@@ -136,7 +136,7 @@ func configureManagerEventHandlers() {
 	}))
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
 	runConfigWatcher()
 
@@ -154,7 +154,7 @@ func run(plugin *node.Plugin) {
 		log.Info("Stopping Peering Server ...")
 		manager.Shutdown()
 		log.Info("Stopping Peering Server ... done")
-	}, shutdown.ShutdownPriorityPeeringTCPServer)
+	}, shutdown.PriorityPeeringTCPServer)
 
 	// get reconnect config
 	intervalSec := config.NodeConfig.GetInt(config.CfgNetGossipReconnectAttemptIntervalSeconds)
@@ -175,6 +175,6 @@ func run(plugin *node.Plugin) {
 				manager.Reconnect()
 			}
 		}
-	}, shutdown.ShutdownPriorityPeerReconnecter)
+	}, shutdown.PriorityPeerReconnecter)
 
 }

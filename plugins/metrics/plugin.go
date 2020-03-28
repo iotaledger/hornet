@@ -7,18 +7,18 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 var PLUGIN = node.NewPlugin("Metrics", node.Enabled, configure, run)
 
-func configure(plugin *node.Plugin) {
+func configure(_ *node.Plugin) {
 	// nothing
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	// create a background worker that "measures" the TPS value every second
 	daemon.BackgroundWorker("Metrics TPS Updater", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(measureTPS, 1*time.Second, shutdownSignal)
-	}, shutdown.ShutdownPriorityMetricsUpdater)
+	}, shutdown.PriorityMetricsUpdater)
 }

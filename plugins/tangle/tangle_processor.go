@@ -9,15 +9,15 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/metrics"
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol/rqueue"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
-	metrics_plugin "github.com/gohornet/hornet/plugins/metrics"
+	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 	lastOutgoingTPS uint64
 )
 
-func configureTangleProcessor(plugin *node.Plugin) {
+func configureTangleProcessor(_ *node.Plugin) {
 
 	configureGossipSolidifier()
 
@@ -52,7 +52,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 
-	metrics_plugin.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics_plugin.TPSMetrics) {
+	metricsplugin.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
 		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
@@ -62,7 +62,7 @@ func configureTangleProcessor(plugin *node.Plugin) {
 	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
 }
 
-func runTangleProcessor(plugin *node.Plugin) {
+func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
 	runGossipSolidifier()
@@ -80,7 +80,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 		gossip.Processor().Events.TransactionProcessed.Detach(submitReceivedTxForProcessing)
 		receiveTxWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
-	}, shutdown.ShutdownPriorityReceiveTxWorker)
+	}, shutdown.PriorityReceiveTxWorker)
 
 	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
@@ -89,7 +89,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		processValidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
-	}, shutdown.ShutdownPriorityMilestoneProcessor)
+	}, shutdown.PriorityMilestoneProcessor)
 
 	daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
@@ -98,7 +98,7 @@ func runTangleProcessor(plugin *node.Plugin) {
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		milestoneSolidifierWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
-	}, shutdown.ShutdownPriorityMilestoneSolidifier)
+	}, shutdown.PriorityMilestoneSolidifier)
 }
 
 func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {

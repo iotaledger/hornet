@@ -14,9 +14,9 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/profile"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 var (
@@ -81,9 +81,9 @@ func configure(plugin *node.Plugin) {
 	checkLatestVersion()
 
 	if config.NodeConfig.GetString(profile.CfgUseProfile) == profile.AutoProfileName {
-		log.Infof("Profile mode 'auto', Using profile '%s'", profile.GetProfile().Name)
+		log.Infof("Profile mode 'auto', Using profile '%s'", profile.LoadProfile().Name)
 	} else {
-		log.Infof("Using profile '%s'", profile.GetProfile().Name)
+		log.Infof("Using profile '%s'", profile.LoadProfile().Name)
 	}
 
 	log.Info("Loading plugins ...")
@@ -99,10 +99,10 @@ func checkLatestVersion() {
 	}
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
 	// create a background worker that checks for latest version every hour
 	daemon.BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
-	}, shutdown.ShutdownPriorityUpdateCheck)
+	}, shutdown.PriorityUpdateCheck)
 }

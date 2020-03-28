@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
@@ -108,6 +108,6 @@ func isNodeHealthy() bool {
 	cachedLatestMs.Release(true) // bundle -1
 
 	// Check whether the milestone is older than 5 minutes
-	timeMs := time.Unix(int64(milestoneTimestamp), 0)
+	timeMs := time.Unix(milestoneTimestamp, 0)
 	return time.Since(timeMs) < maxAllowedMilestoneAge
 }

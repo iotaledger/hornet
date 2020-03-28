@@ -9,14 +9,14 @@ import (
 
 	"github.com/iotaledger/iota.go/address"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("getBalances", getBalances, implementedAPIcalls)
 }
 
-func getBalances(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	gb := &GetBalances{}
 	e := ErrorReturn{}
 

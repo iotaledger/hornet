@@ -11,11 +11,11 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/database"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -64,7 +64,7 @@ func configure(plugin *node.Plugin) {
 		tangle.ShutdownSpentAddressesStorage()
 		log.Info("Flushing caches to database... done")
 
-	}, shutdown.ShutdownPriorityFlushToDatabase)
+	}, shutdown.PriorityFlushToDatabase)
 
 	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		// notify peers about our new solid milestone index
@@ -101,10 +101,10 @@ func run(plugin *node.Plugin) {
 	// create a background worker that prints a status message every second
 	daemon.BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
-	}, shutdown.ShutdownPriorityStatusReport)
+	}, shutdown.PriorityStatusReport)
 
 	// create a db cleanup worker
 	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(database.CleanupHornetBadgerInstance, 5*time.Minute, shutdownSignal)
-	}, shutdown.ShutdownPriorityBadgerGarbageCollection)
+	}, shutdown.PriorityBadgerGarbageCollection)
 }

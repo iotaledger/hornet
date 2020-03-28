@@ -8,8 +8,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
@@ -51,7 +51,7 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	c.JSON(http.StatusOK, ldr)
 }
 
-func getLedgerDiffExt(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	ld := &GetLedgerDiffExt{}
 	e := ErrorReturn{}
 

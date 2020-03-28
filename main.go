@@ -3,10 +3,11 @@ package main
 import (
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/toolset"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/toolset"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
@@ -17,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/snapshot"
-	"github.com/gohornet/hornet/plugins/spa"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/tipselection"
@@ -47,7 +47,7 @@ func main() {
 			metrics.PLUGIN,
 			snapshot.PLUGIN,
 			webapi.PLUGIN,
-			spa.PLUGIN,
+			dashboard.PLUGIN,
 			zeromq.PLUGIN,
 			mqtt.PLUGIN,
 			graph.PLUGIN,

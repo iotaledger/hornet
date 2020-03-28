@@ -11,7 +11,7 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -19,7 +19,7 @@ func init() {
 	addEndpoint("checkConsistency", checkConsistency, implementedAPIcalls)
 }
 
-func checkConsistency(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	checkCon := &CheckConsistency{}
 	e := ErrorReturn{}
 

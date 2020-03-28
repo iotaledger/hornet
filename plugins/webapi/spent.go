@@ -9,14 +9,14 @@ import (
 
 	"github.com/iotaledger/iota.go/address"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("wereAddressesSpentFrom", wereAddressesSpentFrom, implementedAPIcalls)
 }
 
-func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	sp := &WereAddressesSpentFrom{}
 	e := ErrorReturn{}
 

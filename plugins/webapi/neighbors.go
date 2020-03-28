@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/packages/config"
+	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
@@ -17,7 +17,7 @@ func init() {
 	addEndpoint("getNeighbors", getNeighbors, implementedAPIcalls)
 }
 
-func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	// Check if HORNET style addNeighbors call was made
 	han := &AddNeighborsHornet{}
@@ -42,7 +42,7 @@ func addNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	added := false
 
-	configPeers := []config.PeerConfig{}
+	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
 		log.Error(err)
 	}
@@ -95,7 +95,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 
 	added := false
 
-	configPeers := []config.PeerConfig{}
+	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
 		log.Error(err)
 	}
@@ -143,7 +143,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
 }
 
-func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	rn := &RemoveNeighbors{}
 	e := ErrorReturn{}
@@ -157,7 +157,7 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 
 	removed := false
 
-	configNeighbors := []config.PeerConfig{}
+	var configNeighbors []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configNeighbors); err != nil {
 		log.Error(err)
 	}
@@ -219,7 +219,7 @@ func removeNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})
 }
 
-func getNeighbors(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	nb := &GetNeighborsReturn{}
 	nb.Neighbors = peering.Manager().PeerInfos()
 	c.JSON(http.StatusOK, nb)

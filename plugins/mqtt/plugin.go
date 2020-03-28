@@ -9,9 +9,9 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/milestone"
-	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	tanglePackage "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -169,12 +169,12 @@ func run(plugin *node.Plugin) {
 		} else {
 			log.Info("Stopping MQTT Broker ... done")
 		}
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	/*
 		daemon.BackgroundWorker("MQTT address topic updater", func(shutdownSignal <-chan struct{}) {
 			timeutil.Ticker(updateAddressTopics, 5*time.Second, shutdownSignal)
-		}, shutdown.ShutdownPriorityMetricsPublishers)
+		}, shutdown.PriorityMetricsPublishers)
 	*/
 
 	daemon.BackgroundWorker("MQTT[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
@@ -185,7 +185,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[NewTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[ConfirmedTxWorker] ... done")
@@ -195,7 +195,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[ConfirmedTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[NewLatestMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[NewLatestMilestoneWorker] ... done")
@@ -205,7 +205,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.LatestMilestoneChanged.Detach(notifyNewLatestMilestone)
 		newLatestMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[NewLatestMilestoneWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[NewSolidMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[NewSolidMilestoneWorker] ... done")
@@ -215,7 +215,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[NewSolidMilestoneWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[SpentAddress]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[SpentAddress] ... done")
@@ -226,10 +226,10 @@ func run(plugin *node.Plugin) {
 		tanglePackage.Events.AddressSpent.Detach(notifySpentAddress)
 		spentAddressWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[SpentAddress] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 }
 
 // Start the mqtt broker.
-func startBroker(plugin *node.Plugin) error {
+func startBroker(_ *node.Plugin) error {
 	return mqttBroker.Start()
 }

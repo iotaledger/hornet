@@ -18,17 +18,17 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	tanglePackage "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
-	TX_BUFFER_SIZE       = 50000
-	BROADCAST_QUEUE_SIZE = 20000
-	isSyncThreshold      = 1
+	TxBufferSize       = 50000
+	BroadcastQueueSize = 20000
+	isSyncThreshold    = 1
 )
 
 var (
@@ -111,7 +111,7 @@ func configure(plugin *node.Plugin) {
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	hub = websockethub.NewHub(log, upgrader, BROADCAST_QUEUE_SIZE)
+	hub = websockethub.NewHub(log, upgrader, BroadcastQueueSize)
 
 	api.GET("/api/v1/getRecentTransactions", handleAPI)
 
@@ -137,7 +137,7 @@ func configure(plugin *node.Plugin) {
 
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
@@ -187,7 +187,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[NewTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[ConfirmedTxWorker] ... done")
@@ -198,7 +198,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[ConfirmedTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor[NewMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[NewMilestoneWorker] ... done")
@@ -209,7 +209,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewMilestone.Detach(notifyNewMilestone)
 		newMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[NewMilestoneWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor[ReattachmentWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Monitor[ReattachmentWorker] ... done")
@@ -218,7 +218,7 @@ func run(plugin *node.Plugin) {
 		log.Info("Stopping Monitor[ReattachmentWorker] ...")
 		reattachmentWorkerPool.StopAndWait()
 		log.Info("Stopping Monitor[ReattachmentWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Monitor Webserver", func(shutdownSignal <-chan struct{}) {
 
@@ -260,5 +260,5 @@ func run(plugin *node.Plugin) {
 		_ = server.Shutdown(ctx)
 		_ = apiServer.Shutdown(ctx)
 		log.Info("Stopping Monitor ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 }

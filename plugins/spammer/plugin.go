@@ -11,9 +11,9 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 var (
@@ -63,7 +63,7 @@ func configure(plugin *node.Plugin) {
 					// Channel full
 				}
 			}, time.Duration(int64(float64(time.Second)/rateLimit)), shutdownSignal)
-		}, shutdown.ShutdownPrioritySpammer)
+		}, shutdown.PrioritySpammer)
 	}
 
 	if len(tagSubstring) > 20 {
@@ -71,7 +71,7 @@ func configure(plugin *node.Plugin) {
 	}
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
 	for i := 0; i < spammerWorkerCount; i++ {
 		daemon.BackgroundWorker("Spammer", func(shutdownSignal <-chan struct{}) {
@@ -89,6 +89,6 @@ func run(plugin *node.Plugin) {
 					}
 				}
 			}
-		}, shutdown.ShutdownPrioritySpammer)
+		}, shutdown.PrioritySpammer)
 	}
 }

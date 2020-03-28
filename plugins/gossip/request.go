@@ -3,16 +3,17 @@ package gossip
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/peering/peer"
-	"github.com/gohornet/hornet/packages/protocol/rqueue"
-	"github.com/gohornet/hornet/packages/protocol/sting"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 var (
@@ -38,7 +39,7 @@ func runRequestWorkers() {
 				}
 			}
 		}
-	}, shutdown.ShutdownPriorityRequestsProcessor)
+	}, shutdown.PriorityRequestsProcessor)
 
 	daemon.BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
 		for {
@@ -57,16 +58,13 @@ func runRequestWorkers() {
 							return false
 						}
 
-						// enqueue request for sending
-						transactionRequestMsg, _ := sting.NewTransactionRequestMessage(r.HashBytesEncoded)
-						p.EnqueueForSending(transactionRequestMsg)
-						// send the request to only one peer
+						helpers.SendTransactionRequest(p, r.HashBytesEncoded)
 						return true
 					})
 				}
 			}
 		}
-	}, shutdown.ShutdownPriorityRequestsProcessor)
+	}, shutdown.PriorityRequestsProcessor)
 }
 
 // adds the request to the request queue and signals the request to drain it.

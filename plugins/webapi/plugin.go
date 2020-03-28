@@ -10,16 +10,16 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/packages/basicauth"
+	"github.com/gohornet/hornet/pkg/basicauth"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/config"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 // PLUGIN WebAPI
@@ -163,7 +163,7 @@ func configure(plugin *node.Plugin) {
 	})
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	log.Info("Starting WebAPI server ...")
 
 	// Check for features
@@ -202,5 +202,5 @@ func run(plugin *node.Plugin) {
 			cancel()
 		}
 		log.Info("Stopping WebAPI server ... done")
-	}, shutdown.ShutdownPriorityAPI)
+	}, shutdown.PriorityAPI)
 }
