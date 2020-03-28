@@ -36,7 +36,6 @@ var (
 	revalidationMilestoneIndex = milestone.Index(0)
 
 	ErrMilestoneNotFound = errors.New("milestone not found")
-	ErrIntOverflow       = errors.New("integer overflow")
 	ErrDivisionByZero    = errors.New("division by zero")
 )
 
