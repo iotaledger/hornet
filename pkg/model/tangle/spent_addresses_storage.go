@@ -134,7 +134,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (i
 		}
 
 		addressesWritten++
-		return 	binary.Write(buf, binary.LittleEndian, key) == nil
+		return binary.Write(buf, binary.LittleEndian, key) == nil
 	})
 
 	if wasAborted {
