@@ -58,7 +58,7 @@ If you want to disable autopeering, you can do so by adding it to the `disablePl
 
 - Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
 - Extract the files in a folder of your choice
-- Add neighbors to the `neighbors.json` file (optional)
+- Add neighbors to the `peering.json` file (optional)
 - Download the latest HORNET snapshot from [https://ls.manapotion.io](https://ls.manapotion.io/export.bin)
 - Run HORNET: `./hornet -c config`
 

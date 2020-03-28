@@ -13,6 +13,8 @@ const (
 	topicLMI          = "lmi"
 	topicLMSI         = "lmsi"
 	topicLMHS         = "lmhs"
+	topicLM           = "lm"
+	topicLSM          = "lsm"
 	topicSN           = "sn"
 	topicTxTrytes     = "trytes"
 	topicTX           = "tx"
@@ -25,6 +27,8 @@ var (
 		topicLMI,
 		topicLMSI,
 		topicLMHS,
+		topicLM,
+		topicLSM,
 		topicSN,
 		topicTxTrytes,
 		topicTX,

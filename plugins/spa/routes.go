@@ -38,8 +38,8 @@ func indexRoute(e echo.Context) error {
 	}
 	theme := config.NodeConfig.GetString(config.CfgDashboardTheme)
 	indexHTML, err := appBox.Find("index.html")
-	if theme == "dark" {
-		indexHTML, err = appBox.Find("index_dark.html")
+	if theme == "light" {
+		indexHTML, err = appBox.Find("index_light.html")
 	}
 	if err != nil {
 		return err
