@@ -25,9 +25,9 @@ var (
 	receiveTxQueueSize   = 10000
 	receiveTxWorkerPool  *workerpool.WorkerPool
 
-	lastIncomingTPS uint64
-	lastNewTPS      uint64
-	lastOutgoingTPS uint64
+	lastIncomingTPS uint32
+	lastNewTPS      uint32
+	lastOutgoingTPS uint32
 )
 
 func configureTangleProcessor(_ *node.Plugin) {

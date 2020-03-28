@@ -216,23 +216,23 @@ type nodestatus struct {
 }
 
 type servermetrics struct {
-	NumberOfAllTransactions        uint64 `json:"all_txs"`
-	NumberOfNewTransactions        uint64 `json:"new_txs"`
-	NumberOfKnownTransactions      uint64 `json:"known_txs"`
-	NumberOfInvalidTransactions    uint64 `json:"invalid_txs"`
-	NumberOfInvalidRequests        uint64 `json:"invalid_req"`
-	NumberOfStaleTransactions      uint64 `json:"stale_txs"`
-	NumberOfReceivedTransactionReq uint64 `json:"rec_tx_req"`
-	NumberOfReceivedMilestoneReq   uint64 `json:"rec_ms_req"`
-	NumberOfReceivedHeartbeats     uint64 `json:"rec_heartbeat"`
-	NumberOfSentTransactions       uint64 `json:"sent_txs"`
-	NumberOfSentTransactionsReq    uint64 `json:"sent_tx_req"`
-	NumberOfSentMilestoneReq       uint64 `json:"sent_ms_req"`
-	NumberOfSentHeartbeats         uint64 `json:"sent_heartbeat"`
-	NumberOfDroppedSentPackets     uint64 `json:"dropped_sent_packets"`
-	NumberOfSentSpamTxsCount       uint64 `json:"sent_spam_txs"`
-	NumberOfValidatedBundles       uint64 `json:"validated_bundles"`
-	NumberOfSeenSpentAddr          uint64 `json:"spent_addr"`
+	NumberOfAllTransactions        uint32 `json:"all_txs"`
+	NumberOfNewTransactions        uint32 `json:"new_txs"`
+	NumberOfKnownTransactions      uint32 `json:"known_txs"`
+	NumberOfInvalidTransactions    uint32 `json:"invalid_txs"`
+	NumberOfInvalidRequests        uint32 `json:"invalid_req"`
+	NumberOfStaleTransactions      uint32 `json:"stale_txs"`
+	NumberOfReceivedTransactionReq uint32 `json:"rec_tx_req"`
+	NumberOfReceivedMilestoneReq   uint32 `json:"rec_ms_req"`
+	NumberOfReceivedHeartbeats     uint32 `json:"rec_heartbeat"`
+	NumberOfSentTransactions       uint32 `json:"sent_txs"`
+	NumberOfSentTransactionsReq    uint32 `json:"sent_tx_req"`
+	NumberOfSentMilestoneReq       uint32 `json:"sent_ms_req"`
+	NumberOfSentHeartbeats         uint32 `json:"sent_heartbeat"`
+	NumberOfDroppedSentPackets     uint32 `json:"dropped_sent_packets"`
+	NumberOfSentSpamTxsCount       uint32 `json:"sent_spam_txs"`
+	NumberOfValidatedBundles       uint32 `json:"validated_bundles"`
+	NumberOfSeenSpentAddr          uint32 `json:"spent_addr"`
 }
 
 type memmetrics struct {
