@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc5] - 28.03.2020
+
+### Changed
+
+    - Send integer values as integers in MQTT topics
+    - Renamed packages to pkg
+
+### Fixed
+
+    - Panics at concurrent write/iterations over the connected peers map
+    - Atomic uint64 panics on ARM 32bit
+    - Code inspection warnings
+    - Wrong handling of IPv6 addresses
+
 ## [0.4.0-rc4] - 27.03.2020
 
 ### Added
