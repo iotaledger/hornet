@@ -5,9 +5,9 @@ import (
 )
 
 var (
-	lastIncomingTxCnt    uint64
-	lastIncomingNewTxCnt uint64
-	lastOutgoingTxCnt    uint64
+	lastIncomingTxCnt    uint32
+	lastIncomingNewTxCnt uint32
+	lastOutgoingTxCnt    uint32
 )
 
 // measures the TPS values
@@ -17,9 +17,9 @@ func measureTPS() {
 	outgoingTxCnt := metrics.SharedServerMetrics.SentTransactions.Load()
 
 	tpsMetrics := &TPSMetrics{
-		Incoming: incomingTxCnt - lastIncomingTxCnt,
-		New:      incomingNewTxCnt - lastIncomingNewTxCnt,
-		Outgoing: outgoingTxCnt - lastOutgoingTxCnt,
+		Incoming: metrics.GetUint32Diff(incomingTxCnt, lastIncomingTxCnt),
+		New:      metrics.GetUint32Diff(incomingNewTxCnt, lastIncomingNewTxCnt),
+		Outgoing: metrics.GetUint32Diff(outgoingTxCnt, lastOutgoingTxCnt),
 	}
 
 	// store the new counters

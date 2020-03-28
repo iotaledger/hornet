@@ -30,8 +30,8 @@ var (
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewTxCount       uint64
-	oldConfirmedTxCount uint64
+	oldNewTxCount       uint32
+	oldConfirmedTxCount uint32
 
 	revalidationMilestoneIndex = milestone.Index(0)
 
@@ -493,18 +493,11 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
 
 	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Load()
-	if newNewTxCount < oldNewTxCount {
-		return nil, ErrIntOverflow
-	}
-	newTxDiff := newNewTxCount - oldNewTxCount
+	newTxDiff := metrics.GetUint32Diff(newNewTxCount, oldNewTxCount)
 	oldNewTxCount = newNewTxCount
 
 	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Load()
-
-	if newConfirmedTxCount < oldConfirmedTxCount {
-		return nil, ErrIntOverflow
-	}
-	confirmedTxDiff := newConfirmedTxCount - oldConfirmedTxCount
+	confirmedTxDiff := metrics.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
 	oldConfirmedTxCount = newConfirmedTxCount
 
 	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetTransaction().GetTimestamp(), 0)

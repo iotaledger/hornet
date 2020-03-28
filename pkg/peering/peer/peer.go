@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net"
 
+	"go.uber.org/atomic"
+
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
-	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/protocol"
@@ -167,33 +168,33 @@ func NewID(ip string, port uint16) string {
 // Metrics defines a set of metrics regarding a peer.
 type Metrics struct {
 	// The number of received transactions which are new.
-	NewTransactions atomic.Uint64
+	NewTransactions atomic.Uint32
 	// The number of received transactions which are already known.
-	KnownTransactions atomic.Uint64
+	KnownTransactions atomic.Uint32
 	// The number of received invalid transactions.
-	InvalidTransactions atomic.Uint64
+	InvalidTransactions atomic.Uint32
 	// The number of received transactions of which their timestamp is stale.
-	StaleTransactions atomic.Uint64
+	StaleTransactions atomic.Uint32
 	// The number of received invalid requests (both transactions and milestones).
-	InvalidRequests atomic.Uint64
+	InvalidRequests atomic.Uint32
 	// The number of received transactions.
-	ReceivedTransactions atomic.Uint64
+	ReceivedTransactions atomic.Uint32
 	// The number of received transaction requests.
-	ReceivedTransactionRequests atomic.Uint64
+	ReceivedTransactionRequests atomic.Uint32
 	// The number of received milestone requests.
-	ReceivedMilestoneRequests atomic.Uint64
+	ReceivedMilestoneRequests atomic.Uint32
 	// The number of received heartbeats.
-	ReceivedHeartbeats atomic.Uint64
+	ReceivedHeartbeats atomic.Uint32
 	// The number of sent transactions.
-	SentTransactions atomic.Uint64
+	SentTransactions atomic.Uint32
 	// The number of sent transaction requests.
-	SentTransactionRequests atomic.Uint64
+	SentTransactionRequests atomic.Uint32
 	// The number of sent milestone requests.
-	SentMilestoneRequests atomic.Uint64
+	SentMilestoneRequests atomic.Uint32
 	// The number of sent heartbeats.
-	SentHeartbeats atomic.Uint64
+	SentHeartbeats atomic.Uint32
 	// The number of dropped messages.
-	DroppedMessages atomic.Uint64
+	DroppedMessages atomic.Uint32
 }
 
 // Info acts as a static snapshot of information about a peer.
@@ -205,20 +206,20 @@ type Info struct {
 	DomainWithPort                 string `json:"-"`
 	Alias                          string `json:"alias,omitempty"`
 	PreferIPv6                     bool   `json:"-"`
-	NumberOfAllTransactions        uint64 `json:"numberOfAllTransactions"`
-	NumberOfNewTransactions        uint64 `json:"numberOfNewTransactions"`
-	NumberOfKnownTransactions      uint64 `json:"numberOfKnownTransactions"`
-	NumberOfInvalidTransactions    uint64 `json:"numberOfInvalidTransactions"`
-	NumberOfInvalidRequests        uint64 `json:"numberOfInvalidRequests"`
-	NumberOfStaleTransactions      uint64 `json:"numberOfStaleTransactions"`
-	NumberOfReceivedTransactionReq uint64 `json:"numberOfReceivedTransactionReq"`
-	NumberOfReceivedMilestoneReq   uint64 `json:"numberOfReceivedMilestoneReq"`
-	NumberOfReceivedHeartbeats     uint64 `json:"numberOfReceivedHeartbeats"`
-	NumberOfSentTransactions       uint64 `json:"numberOfSentTransactions"`
-	NumberOfSentTransactionsReq    uint64 `json:"numberOfSentTransactionsReq"`
-	NumberOfSentMilestoneReq       uint64 `json:"numberOfSentMilestoneReq"`
-	NumberOfSentHeartbeats         uint64 `json:"numberOfSentHeartbeats"`
-	NumberOfDroppedSentPackets     uint64 `json:"numberOfDroppedSentPackets"`
+	NumberOfAllTransactions        uint32 `json:"numberOfAllTransactions"`
+	NumberOfNewTransactions        uint32 `json:"numberOfNewTransactions"`
+	NumberOfKnownTransactions      uint32 `json:"numberOfKnownTransactions"`
+	NumberOfInvalidTransactions    uint32 `json:"numberOfInvalidTransactions"`
+	NumberOfInvalidRequests        uint32 `json:"numberOfInvalidRequests"`
+	NumberOfStaleTransactions      uint32 `json:"numberOfStaleTransactions"`
+	NumberOfReceivedTransactionReq uint32 `json:"numberOfReceivedTransactionReq"`
+	NumberOfReceivedMilestoneReq   uint32 `json:"numberOfReceivedMilestoneReq"`
+	NumberOfReceivedHeartbeats     uint32 `json:"numberOfReceivedHeartbeats"`
+	NumberOfSentTransactions       uint32 `json:"numberOfSentTransactions"`
+	NumberOfSentTransactionsReq    uint32 `json:"numberOfSentTransactionsReq"`
+	NumberOfSentMilestoneReq       uint32 `json:"numberOfSentMilestoneReq"`
+	NumberOfSentHeartbeats         uint32 `json:"numberOfSentHeartbeats"`
+	NumberOfDroppedSentPackets     uint32 `json:"numberOfDroppedSentPackets"`
 	ConnectionType                 string `json:"connectionType"`
 	Connected                      bool   `json:"connected"`
 	AutopeeringID                  string `json:"autopeeringId,omitempty"`
