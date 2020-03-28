@@ -268,6 +268,8 @@ func (m *Manager) ConnectedPeerCount() int {
 
 // SlotsFilled checks whether all available peer slots are filled.
 func (m *Manager) SlotsFilled() bool {
+	m.RLock()
+	defer m.RUnlock()
 	return len(m.connected) >= m.Opts.MaxConnected
 }
 
@@ -296,7 +298,9 @@ func (m *Manager) SetupEventHandlers(p *peer.Peer) {
 	}))
 
 	p.Conn.Events.Close.Attach(events.NewClosure(func() {
+		m.Lock()
 		m.moveFromConnectedToReconnectPool(p)
+		m.Unlock()
 	}))
 
 	m.setupHandshakeEventHandlers(p)
@@ -494,13 +498,12 @@ func (m *Manager) moveFromReconnectPoolToHandshaking(p *peer.Peer) {
 // moves the given peer from connected to the reconnect pool.
 // and deletes any excess pending reconnects.
 func (m *Manager) moveFromConnectedToReconnectPool(p *peer.Peer) {
-	// prevents non handshaked connections to be put back into the reconnect pool
 	if _, ok := m.connected[p.ID]; !ok {
 		return
 	}
 	delete(m.connected, p.ID)
 
-	// check whether manually removed or autopeered peer
+	// prevent non handshaked, manually removed or autopeering peers to be put back into the reconnect pool
 	if !p.MoveBackToReconnectPool || p.Autopeering != nil {
 		return
 	}
