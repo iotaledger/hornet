@@ -76,14 +76,17 @@ type Request struct {
 
 // implements a priority queue where requests with the lowest milestone index are popped first.
 type priorityqueue struct {
-	sync.RWMutex
+	// must be first field for 64-bit alignment.
+	// otherwise it crashes under 32-bit ARM systems
+	// see: https://golang.org/pkg/sync/atomic/#pkg-note-BUG
+	avgLatency        atomic.Int64
 	queue             []*Request
 	queued            map[string]struct{}
 	pending           map[string]*Request
-	avgLatency        atomic.Int64
 	latencyResolution int64
 	latencySum        int64
 	latencyEntries    int64
+	sync.RWMutex
 }
 
 func (pq *priorityqueue) Next() (r *Request) {
