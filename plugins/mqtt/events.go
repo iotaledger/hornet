@@ -82,7 +82,7 @@ func onSpentAddress(addr trinary.Hash) {
 // Publish latest milestone index
 func publishLMI(lmi milestone.Index) error {
 
-	err := mqttBroker.Send(topicLMI, fmt.Sprintf(`{"prevLMI":"%d","lmi":%d,"timestamp":"%s"}`,
+	err := mqttBroker.Send(topicLMI, fmt.Sprintf(`{"prevLMI":%d,"lmi":%d,"timestamp":"%s"}`,
 		prevLMI, // Index of the previous solid subtangle milestone
 		lmi,     // Index of the latest solid subtangle milestone
 		time.Now().UTC().Format(time.RFC3339)))
@@ -96,7 +96,7 @@ func publishLMI(lmi milestone.Index) error {
 // Publish latest solid subtangle milestone index
 func publishLMSI(smi milestone.Index) error {
 
-	err := mqttBroker.Send(topicLMSI, fmt.Sprintf(`{"prevSMI":"%d","smi":%d,"timestamp":"%s"}`,
+	err := mqttBroker.Send(topicLMSI, fmt.Sprintf(`{"prevSMI":%d,"smi":%d,"timestamp":"%s"}`,
 		prevSMI, // Index of the previous solid subtangle milestone
 		smi,     // Index of the latest solid subtangle milestone
 		time.Now().UTC().Format(time.RFC3339)))
@@ -118,7 +118,7 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 func publishLM(bndl *tangle.Bundle) error {
 	return mqttBroker.Send(topicLM, fmt.Sprintf(`{"index":%d,"hash":"%v","timestamp":"%s"}`,
 		bndl.GetMilestoneIndex(), // Milestone transaction index
-		bndl.GetMilestoneHash(), // Milestone transaction hash
+		bndl.GetMilestoneHash(),  // Milestone transaction hash
 		time.Now().UTC().Format(time.RFC3339)))
 }
 
@@ -126,14 +126,14 @@ func publishLM(bndl *tangle.Bundle) error {
 func publishLSM(bndl *tangle.Bundle) error {
 	return mqttBroker.Send(topicLSM, fmt.Sprintf(`{"index":%d,"hash":"%v","timestamp":"%s"}`,
 		bndl.GetMilestoneIndex(), // Solid milestone transaction index
-		bndl.GetMilestoneHash(), // Solid milestone transaction hash
+		bndl.GetMilestoneHash(),  // Solid milestone transaction hash
 		time.Now().UTC().Format(time.RFC3339)))
 }
 
 // Publish confirmed transaction
 func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
 
-	return mqttBroker.Send(topicSN, fmt.Sprintf(`{"msIndex":"%d","txHash":"%v","address":"%v","trunk":"%v","branch":"%v","bundle":"%v","timestamp":"%s"}`,
+	return mqttBroker.Send(topicSN, fmt.Sprintf(`{"msIndex":%d,"txHash":"%v","address":"%v","trunk":"%v","branch":"%v","bundle":"%v","timestamp":"%s"}`,
 		msIndex,                  // Index of the milestone that confirmed the transaction
 		iotaTx.Hash,              // Transaction hash
 		iotaTx.Address,           // Address
@@ -161,7 +161,7 @@ func publishTxTrytes(iotaTx *transaction.Transaction) error {
 // Publish a transaction that has recently been added to the ledger
 func publishTx(iotaTx *transaction.Transaction) error {
 
-	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":"%d","obsoleteTag":"%v","txTimestamp":"%d","currentIndex":"%d","lastIndex":"%d","bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":"%d","tag":"%v","timestamp":"%s"}`,
+	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":%d,"obsoleteTag":"%v","txTimestamp":%d,"currentIndex":%d,"lastIndex":%d,"bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":%d,"tag":"%v","timestamp":"%s"}`,
 		iotaTx.Hash,              // Transaction hash
 		iotaTx.Address,           // Address
 		iotaTx.Value,             // Value
