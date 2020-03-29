@@ -29,7 +29,6 @@ var (
 	latestMilestoneLock   syncutils.RWMutex
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
-	wasSyncBefore         bool
 
 	coordinatorAddress       string
 	coordinatorSecurityLevel int
@@ -71,13 +70,12 @@ func IsNodeSyncedWithThreshold() bool {
 }
 
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
-	if latestIndex == 0 || (!wasSyncBefore && (latestIndex < GetLatestSeenMilestoneIndexFromSnapshot())) {
+	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
 		isNodeSynced = false
 		isNodeSyncedThreshold = false
 		return
 	}
 
-	wasSyncBefore = true
 	isNodeSynced = latestSolidIndex == latestIndex
 	isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - NodeSyncedThreshold)
 }
