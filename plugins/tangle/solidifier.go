@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bep/debounce"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
@@ -28,11 +27,6 @@ var (
 
 	solidifierMilestoneIndex     milestone.Index = 0
 	solidifierMilestoneIndexLock syncutils.RWMutex
-
-	debouncedSolidifierTrigger = debounce.New(1500 * time.Millisecond)
-	solidifierTriggerFunc      = func() {
-		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
-	}
 
 	solidifierLock syncutils.RWMutex
 

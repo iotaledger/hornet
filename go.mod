@@ -6,7 +6,6 @@ replace github.com/dgraph-io/badger/v2 v2.0.1 => github.com/muXxer/badger/v2 v2.
 
 require (
 	github.com/OneOfOne/xxhash v1.2.7 // indirect
-	github.com/bep/debounce v1.2.0
 	github.com/dgraph-io/badger/v2 v2.0.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200121105743-0d940dd29fd2
