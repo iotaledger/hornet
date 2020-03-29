@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -85,6 +87,12 @@ func configure(plugin *node.Plugin) {
 
 		if p.Protocol.Supports(sting.FeatureSet) {
 			addSTINGMessageEventHandlers(p)
+
+			// send heartbeat and latest milestone request
+			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
+				helpers.SendHeartbeat(p, tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex)
+				helpers.SendLatestMilestoneRequest(p)
+			}
 		}
 
 		disconnectSignal := make(chan struct{})

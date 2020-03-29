@@ -106,15 +106,15 @@ func Request(hash trinary.Hash, msIndex milestone.Index, preventDiscard ...bool)
 }
 
 // RequestMultiple works like Request but takes multiple transaction hashes.
-func RequestMultiple(hashes trinary.Hashes, msIndex milestone.Index) {
+func RequestMultiple(hashes trinary.Hashes, msIndex milestone.Index, preventDiscard ...bool) {
 	for _, hash := range hashes {
-		Request(hash, msIndex)
+		Request(hash, msIndex, preventDiscard...)
 	}
 }
 
 // RequestApprovees enqueues requests for the approvees of the given transaction to the request queue, if the
 // given transaction is not a solid entry point and neither its approvees are and also not in the database.
-func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Index) {
+func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, preventDiscard ...bool) {
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 		txHash := tx.GetHash()
 
@@ -122,9 +122,9 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Inde
 			return
 		}
 
-		Request(tx.GetTrunk(), msIndex)
+		Request(tx.GetTrunk(), msIndex, preventDiscard...)
 		if tx.GetTrunk() != tx.GetBranch() {
-			Request(tx.GetBranch(), msIndex)
+			Request(tx.GetBranch(), msIndex, preventDiscard...)
 		}
 	})
 }
@@ -140,9 +140,9 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 	msIndex := cachedMsBndl.GetBundle().GetMilestoneIndex()
 
 	tx := cachedHeadTx.GetTransaction()
-	enqueued := Request(tx.GetTrunk(), msIndex)
+	enqueued := Request(tx.GetTrunk(), msIndex, true)
 	if tx.GetTrunk() != tx.GetBranch() {
-		enqueuedTwo := Request(tx.GetBranch(), msIndex)
+		enqueuedTwo := Request(tx.GetBranch(), msIndex, true)
 		if !enqueued && enqueuedTwo {
 			enqueued = true
 		}
