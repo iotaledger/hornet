@@ -50,6 +50,8 @@ var (
 	reattachmentWorkerQueueSize = 100
 	reattachmentWorkerPool      *workerpool.WorkerPool
 
+	wasSyncBefore = false
+
 	server            *http.Server
 	apiServer         *http.Server
 	router            *http.ServeMux
@@ -137,10 +139,12 @@ func configure(plugin *node.Plugin) {
 func run(_ *node.Plugin) {
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		if !tanglePackage.IsNodeSyncedWithThreshold() {
-			// Not sync
-			cachedTx.Release(true) // tx -1
-			return
+		if !wasSyncBefore {
+			if !tanglePackage.IsNodeSyncedWithThreshold() {
+				cachedTx.Release(true) // tx -1
+				return
+			}
+			wasSyncBefore = true
 		}
 
 		if _, added := newTxWorkerPool.TrySubmit(cachedTx); added { // tx pass +1
@@ -150,7 +154,7 @@ func run(_ *node.Plugin) {
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
-		if !tanglePackage.IsNodeSyncedWithThreshold() {
+		if !wasSyncBefore {
 			// Not sync
 			cachedTx.Release(true) // tx -1
 			return
@@ -163,7 +167,7 @@ func run(_ *node.Plugin) {
 	})
 
 	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		if !tanglePackage.IsNodeSyncedWithThreshold() {
+		if !wasSyncBefore {
 			// Not sync
 			cachedBndl.Release(true) // tx -1
 			return
