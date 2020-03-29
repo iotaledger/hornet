@@ -7,6 +7,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
@@ -179,4 +180,6 @@ func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struc
 
 	snapshotInfo.PruningIndex = targetIndex
 	tangle.SetSnapshotInfo(snapshotInfo)
+
+	tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(targetIndex)
 }
