@@ -147,10 +147,10 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		gossip.RequestQueue().Received(txHash)
 	}
 
-	if !tangle.IsNodeSynced() && gossip.RequestQueue().Empty() {
+	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
-		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
+		debouncedSolidifierTrigger(solidifierTriggerFunc)
 	}
 }
 

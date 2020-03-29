@@ -2,9 +2,7 @@ package gossip
 
 import (
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 
 	"github.com/iotaledger/hive.go/events"
@@ -46,18 +44,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 
 	p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedHeartbeats.Inc()
-
-		// update heartbeat
-		firstHeartbeat := p.LatestHeartbeat == nil
 		p.LatestHeartbeat = sting.ParseHeartbeat(data)
-
-		// set the first heartbeat
-		if firstHeartbeat {
-			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
-				helpers.SendHeartbeat(p, tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex)
-				helpers.SendLatestMilestoneRequest(p)
-			}
-		}
 	}))
 
 	p.Protocol.Events.Sent[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func() {
