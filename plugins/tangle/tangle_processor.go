@@ -140,7 +140,7 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
-	// we check whether the request is empty, so we only trigger the solidifier when
+	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a transaction stemming from a request (as otherwise the solidifier
 	// is triggered too often through transactions received from normal gossip)
 	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
