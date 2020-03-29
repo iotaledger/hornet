@@ -23,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
+	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
@@ -512,6 +513,8 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 
 	log.Infof("Created local snapshot for targetIndex %d (%x), took %v", targetIndex, hash, time.Since(ts))
 
+	tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
+
 	return nil
 }
 
@@ -844,5 +847,8 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 
 	log.Info("Finished loading snapshot")
+
+	tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(milestone.Index(msIndex))
+
 	return nil
 }
