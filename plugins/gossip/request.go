@@ -20,6 +20,8 @@ var (
 	requestQueueEnqueueSignal      = make(chan struct{}, 2)
 	enqueuePendingRequestsInterval = 1500 * time.Millisecond
 	discardRequestsOlderThan       = 10 * time.Second
+
+	isIncomingPressureTooHighCallback func() bool
 )
 
 func runRequestWorkers() {
@@ -30,6 +32,11 @@ func runRequestWorkers() {
 			case <-shutdownSignal:
 				return
 			case <-enqueueTicker.C:
+				// Check if incoming pressure is too high
+				if isIncomingPressureTooHighCallback != nil && isIncomingPressureTooHighCallback() {
+					continue
+				}
+
 				newlyEnqueued := requestQueue.EnqueuePending(discardRequestsOlderThan)
 				if newlyEnqueued > 0 {
 					select {
@@ -81,6 +88,10 @@ func enqueueAndSignal(r *rqueue.Request) bool {
 		// as the requester will drain everything present in the queue
 	}
 	return true
+}
+
+func SetIncomingPressureTooHighCallback(callback func() bool) {
+	isIncomingPressureTooHighCallback = callback
 }
 
 // Request enqueues a request to the request queue for the given transaction if it isn't a solid entry point

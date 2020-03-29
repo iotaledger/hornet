@@ -83,6 +83,7 @@ func configure(plugin *node.Plugin) {
 	}))
 
 	configureTangleProcessor(plugin)
+	gossip.SetIncomingPressureTooHighCallback(IsReceiveTxWorkerPoolBusy)
 }
 
 func run(plugin *node.Plugin) {

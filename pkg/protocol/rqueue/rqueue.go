@@ -40,7 +40,9 @@ type Queue interface {
 	AvgLatency() int64
 }
 
-const DefaultLatencyResolution = 100
+const (
+	DefaultLatencyResolution = 100
+)
 
 // New creates a new Queue where request are prioritized over their milestone index (lower = higher priority).
 func New(latencyResolution ...int32) Queue {
@@ -72,6 +74,8 @@ type Request struct {
 	// the time at which this request was first enqueued.
 	// do not modify this time
 	EnqueueTime time.Time
+	// the time at which this request was requested the last time.
+	LastRequestTime time.Time
 }
 
 // implements a priority queue where requests with the lowest milestone index are popped first.
@@ -205,8 +209,8 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request) {
 func (pq *priorityqueue) Len() int { return len(pq.queue) }
 
 func (pq *priorityqueue) Less(i, j int) bool {
-	// requests for older milestones (lower number) have priority
-	return pq.queue[i].MilestoneIndex < pq.queue[j].MilestoneIndex
+	// older requests have priority
+	return pq.queue[i].LastRequestTime.Before(pq.queue[j].LastRequestTime)
 }
 
 func (pq *priorityqueue) Swap(i, j int) {
@@ -234,6 +238,8 @@ func (pq *priorityqueue) Pop() interface{} {
 	// mark as pending and remove from queued
 	delete(pq.queued, r.Hash)
 	pq.pending[r.Hash] = r
+
+	r.LastRequestTime = time.Now()
 	return r
 }
 

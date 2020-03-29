@@ -35,7 +35,7 @@ func BroadcastLatestMilestoneRequest() {
 	})
 }
 
-// BroadcastMilestoneRequests broadcasts requests for all missing milestones between LSMI and LSI
+// BroadcastMilestoneRequests broadcasts requests for all missing milestones between LSMI and LMI
 // to every connected peer who supports STING.
 func BroadcastMilestoneRequests(solidMilestoneIndex milestone.Index, knownLatestMilestone milestone.Index) {
 

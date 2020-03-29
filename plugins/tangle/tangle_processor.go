@@ -162,6 +162,10 @@ func onReceivedInvalidMilestone(err error) {
 	log.Info(err)
 }
 
+func IsReceiveTxWorkerPoolBusy() bool {
+	return receiveTxWorkerPool.GetPendingQueueSize() > (receiveTxQueueSize / 2)
+}
+
 func printStatus() {
 	var currentLowestMilestoneIndexInReqQ milestone.Index
 	if peekedRequest := gossip.RequestQueue().Peek(); peekedRequest != nil {
