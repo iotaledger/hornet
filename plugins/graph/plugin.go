@@ -22,10 +22,6 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-const (
-	isSyncThreshold = 1
-)
-
 var (
 	PLUGIN = node.NewPlugin("Graph", node.Disabled, configure, run)
 
@@ -110,39 +106,39 @@ func run(_ *node.Plugin) {
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
-			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
-				// Not sync
+			if !tanglePackage.IsNodeSyncedWithThreshold() {
 				cachedTx.Release(true) // tx -1
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(cachedTx) // tx pass +1
-			if added {
-				return // Avoid tx -1 (done inside workerpool task)
-			}
+		if _, added := newTxWorkerPool.TrySubmit(cachedTx); added { // tx pass +1
+			return // Avoid tx -1 (done inside workerpool task)
 		}
 		cachedTx.Release(true) // tx -1
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
-		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
-			if added {
-				return // Avoid tx -1 (done inside workerpool task)
-			}
+		if !wasSyncBefore {
+			cachedTx.Release(true) // tx -1
+			return
+		}
+
+		if _, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime); added { // tx pass +1
+			return // Avoid tx -1 (done inside workerpool task)
 		}
 		cachedTx.Release(true) // tx -1
 	})
 
 	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		if wasSyncBefore {
-			_, added := newMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
-				return // Avoid bundle -1 (done inside workerpool task)
-			}
+		if !wasSyncBefore {
+			cachedBndl.Release(true) // tx -1
+			return
+		}
+
+		if _, added := newMilestoneWorkerPool.TrySubmit(cachedBndl); added { // bundle pass +1
+			return // Avoid bundle -1 (done inside workerpool task)
 		}
 		cachedBndl.Release(true) // bundle -1
 	})

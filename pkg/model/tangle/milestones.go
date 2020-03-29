@@ -70,7 +70,7 @@ func IsNodeSyncedWithThreshold() bool {
 }
 
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
-	if latestIndex == 0 {
+	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
 		isNodeSynced = false
 		isNodeSyncedThreshold = false
 		return

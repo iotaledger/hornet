@@ -32,14 +32,6 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		c.JSON(http.StatusBadRequest, e)
 	}
 
-	if !tangle.IsNodeSyncedWithThreshold() {
-		e.Error = "Node not synced"
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
-	gbr := &GetBalancesReturn{}
-
 	for _, addr := range gb.Addresses {
 		// Check if address is valid
 		if err := address.ValidAddress(addr); err != nil {
@@ -52,6 +44,12 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
+	if !tangle.IsNodeSynced() {
+		e.Error = "Node not synced"
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
 	cachedLatestSolidMs := tangle.GetMilestoneOrNil(tangle.GetSolidMilestoneIndex()) // bundle +1
 	if cachedLatestSolidMs == nil {
 		e.Error = "Ledger state invalid - Milestone not found"
@@ -59,6 +57,8 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 	defer cachedLatestSolidMs.Release(true) // bundle -1
+
+	gbr := &GetBalancesReturn{}
 
 	for _, addr := range gb.Addresses {
 

@@ -36,12 +36,6 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	if !tangle.IsNodeSyncedWithThreshold() {
-		e.Error = "Node not synced"
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
 	for _, t := range checkCon.Tails {
 		if !guards.IsTransactionHash(t) {
 			e.Error = fmt.Sprintf("Invalid reference hash supplied: %s", t)
@@ -50,11 +44,17 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	// compute the range in which we allow approvers to reference transactions in
-	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
-
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
+
+	if !tangle.IsNodeSynced() {
+		e.Error = "Node not synced"
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	// compute the range in which we allow approvers to reference transactions in
+	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
 
 	diff := map[trinary.Hash]int64{}
 	approved := map[trinary.Hash]struct{}{}
