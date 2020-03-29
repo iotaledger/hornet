@@ -103,8 +103,6 @@ func runTangleProcessor(_ *node.Plugin) {
 
 func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 
-	txHash := incomingTx.GetHash()
-
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
 
@@ -142,11 +140,9 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
-	// mark the transaction as received if it originated from a request we made
-	if request != nil {
-		gossip.RequestQueue().Received(txHash)
-	}
-
+	// we check whether the request is empty, so we only trigger the solidifier when
+	// we actually handled a transaction stemming from a request (as otherwise the solidifier
+	// is triggered too often through transactions received from normal gossip)
 	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
