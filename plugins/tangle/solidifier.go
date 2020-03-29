@@ -35,6 +35,9 @@ var (
 
 	revalidationMilestoneIndex = milestone.Index(0)
 
+	// Index of the first milestone that was sync after node start
+	firstSyncedMilestone = milestone.Index(0)
+
 	ErrMilestoneNotFound = errors.New("milestone not found")
 	ErrDivisionByZero    = errors.New("division by zero")
 )
@@ -43,6 +46,7 @@ type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
 	TPS                    float64         `json:"tps"`
 	CTPS                   float64         `json:"ctps"`
+	ConfirmationRate       float64         `json:"conf_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
 
@@ -472,8 +476,18 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	var ctpsMessage string
 	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetBundle().GetTail(), milestoneIndexToSolidify); err == nil {
-		ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CTPS)
-		Events.NewConfirmedMilestoneMetric.Trigger(metric)
+		ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.TPS, metric.CTPS, metric.ConfirmationRate)
+		if tangle.IsNodeSynced() {
+			// Only trigger the metrics event if the node is sync (otherwise the TPS and conf.rate is wrong)
+			if firstSyncedMilestone == 0 {
+				firstSyncedMilestone = milestoneIndexToSolidify
+			}
+
+			if milestoneIndexToSolidify > firstSyncedMilestone+1 {
+				// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
+				Events.NewConfirmedMilestoneMetric.Trigger(metric)
+			}
+		}
 	}
 
 	log.Infof("New solid milestone: %d%s", milestoneIndexToSolidify, ctpsMessage)
@@ -490,14 +504,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 }
 
 func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
-
-	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Load()
-	newTxDiff := metrics.GetUint32Diff(newNewTxCount, oldNewTxCount)
-	oldNewTxCount = newNewTxCount
-
-	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Load()
-	confirmedTxDiff := metrics.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
-	oldConfirmedTxCount = newConfirmedTxCount
 
 	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetTransaction().GetTimestamp(), 0)
 	cachedMsTailTx.Release()
@@ -520,10 +526,24 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 		return nil, ErrDivisionByZero
 	}
 
+	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Load()
+	newTxDiff := metrics.GetUint32Diff(newNewTxCount, oldNewTxCount)
+	oldNewTxCount = newNewTxCount
+
+	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Load()
+	confirmedTxDiff := metrics.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
+	oldConfirmedTxCount = newConfirmedTxCount
+
+	confRate := 0.0
+	if newTxDiff != 0 {
+		confRate = (float64(confirmedTxDiff) / float64(newTxDiff)) * 100.0
+	}
+
 	metric := &ConfirmedMilestoneMetric{
 		MilestoneIndex:         milestoneIndexToSolidify,
 		TPS:                    float64(newTxDiff) / timeDiff,
 		CTPS:                   float64(confirmedTxDiff) / timeDiff,
+		ConfirmationRate:       confRate,
 		TimeSinceLastMilestone: timeDiff,
 	}
 
