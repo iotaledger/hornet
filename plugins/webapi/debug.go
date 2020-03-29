@@ -37,7 +37,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 	for i := 0; i < len(pending); i++ {
-		req := queued[i]
+		req := pending[i]
 		debugReqs[offset+i] = &DebugRequest{
 			Hash:             req.Hash,
 			InPending:        true,

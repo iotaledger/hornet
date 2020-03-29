@@ -15,10 +15,6 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-const (
-	isSyncThreshold = 1
-)
-
 var (
 	// MQTT is disabled by default
 	PLUGIN = node.NewPlugin("MQTT", node.Disabled, configure, run)
@@ -43,8 +39,6 @@ var (
 	spentAddressWorkerCount     = 1
 	spentAddressWorkerQueueSize = 1000
 	spentAddressWorkerPool      *workerpool.WorkerPool
-
-	wasSyncBefore = false
 
 	mqttBroker *Broker
 )
@@ -91,50 +85,53 @@ func run(plugin *node.Plugin) {
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.config.Port)
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		if !wasSyncBefore {
-			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
-				// Not sync
-				cachedTx.Release(true) // tx -1
-				return
-			}
-			wasSyncBefore = true
+		if !tanglePackage.IsNodeSyncedWithThreshold() {
+			// Not sync
+			cachedTx.Release(true) // tx -1
+			return
 		}
 
-		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			_, added := newTxWorkerPool.TrySubmit(cachedTx) // tx pass +1
-			if added {
-				return // Avoid tx -1 (done inside workerpool task)
-			}
+		if _, added := newTxWorkerPool.TrySubmit(cachedTx); added { // tx pass +1
+			return // Avoid tx -1 (done inside workerpool task)
 		}
 		cachedTx.Release(true) // tx -1
 	})
 
 	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
-		if wasSyncBefore {
-			_, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime) // tx pass +1
-			if added {
-				return // Avoid tx -1 (done inside workerpool task)
-			}
+		if !tanglePackage.IsNodeSyncedWithThreshold() {
+			// Not sync
+			cachedTx.Release(true) // tx -1
+			return
+		}
+
+		if _, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime); added { // tx pass +1
+			return // Avoid tx -1 (done inside workerpool task)
 		}
 		cachedTx.Release(true) // tx -1
 	})
 
 	notifyNewLatestMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		if wasSyncBefore {
-			_, added := newLatestMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
-				return // Avoid bundle -1 (done inside workerpool task)
-			}
+		if !tanglePackage.IsNodeSyncedWithThreshold() {
+			// Not sync
+			cachedBndl.Release(true) // tx -1
+			return
+		}
+
+		if _, added := newLatestMilestoneWorkerPool.TrySubmit(cachedBndl); added { // bundle pass +1
+			return // Avoid bundle -1 (done inside workerpool task)
 		}
 		cachedBndl.Release(true) // bundle -1
 	})
 
 	notifyNewSolidMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		if wasSyncBefore {
-			_, added := newSolidMilestoneWorkerPool.TrySubmit(cachedBndl) // bundle pass +1
-			if added {
-				return // Avoid bundle -1 (done inside workerpool task)
-			}
+		if !tanglePackage.IsNodeSyncedWithThreshold() {
+			// Not sync
+			cachedBndl.Release(true) // tx -1
+			return
+		}
+
+		if _, added := newSolidMilestoneWorkerPool.TrySubmit(cachedBndl); added { // bundle pass +1
+			return // Avoid bundle -1 (done inside workerpool task)
 		}
 		cachedBndl.Release(true) // bundle -1
 	})
