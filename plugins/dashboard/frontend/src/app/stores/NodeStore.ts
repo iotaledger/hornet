@@ -104,6 +104,7 @@ class ConfirmedMilestoneMetric {
     ms_index: number;
     tps: number;
     ctps: number;
+    conf_rate: number;
     time_since_last_ms: number;
 }
 
@@ -572,7 +573,7 @@ export class NodeStore {
         for (let i = 0; i < this.collected_confirmed_ms_metrics.length; i++) {
             let metric: ConfirmedMilestoneMetric = this.collected_confirmed_ms_metrics[i];
             labels.push(metric.ms_index);
-            confirmation.data.push((metric.ctps / metric.tps) * 100);
+            confirmation.data.push(metric.conf_rate);
         }
 
         return {

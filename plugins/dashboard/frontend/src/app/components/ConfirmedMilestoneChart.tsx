@@ -138,7 +138,7 @@ export default class ConfirmedMilestoneChart extends React.Component<Props, any>
                     <If condition={!!this.props.nodeStore.last_confirmed_ms_metric.ctps}>
                         <small>
                             CTPS: {(this.props.nodeStore.last_confirmed_ms_metric.ctps).toFixed(2)}.
-                            Confirmation: {((this.props.nodeStore.last_confirmed_ms_metric.ctps / this.props.nodeStore.last_confirmed_ms_metric.tps) * 100).toFixed(2)}%
+                            Confirmation: {(this.props.nodeStore.last_confirmed_ms_metric.conf_rate).toFixed(2)}%
                         </small>
                     </If>
                     <Bar height={30} data={this.props.nodeStore.confirmedMilestonesSeries}
