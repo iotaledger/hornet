@@ -123,7 +123,7 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		// request them for transactions which should be part of milestone cones
 		if request != nil {
 			// add this newly received transaction's approvees to the request queue
-			gossip.RequestApprovees(cachedTx.Retain(), request.MilestoneIndex)
+			gossip.RequestApprovees(cachedTx.Retain(), request.MilestoneIndex, true)
 		}
 
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
@@ -146,7 +146,7 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
-		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
+		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 	}
 }
 
