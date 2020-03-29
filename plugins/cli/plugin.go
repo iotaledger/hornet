@@ -91,7 +91,11 @@ func configure(plugin *node.Plugin) {
 
 func checkLatestVersion() {
 
-	res, _ := latest.Check(githubTag, AppVersion)
+	res, err := latest.Check(githubTag, AppVersion)
+	if err != nil {
+		log.Warnf("Update check failed: %s", err.Error())
+		return
+	}
 
 	if res.Outdated {
 		log.Infof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
