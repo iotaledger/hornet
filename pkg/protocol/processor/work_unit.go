@@ -184,6 +184,7 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 		}
 
 		transactionAndRequestMsg, _ := legacy.NewTransactionAndRequestMessage(cachedTxToSend.GetTransaction().RawBytes, ownRequestHash)
+		cachedTxToSend.Release(true) // tx -1
 		peerRequest.p.EnqueueForSending(transactionAndRequestMsg)
 	}
 }
