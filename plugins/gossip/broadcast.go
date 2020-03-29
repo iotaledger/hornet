@@ -1,8 +1,6 @@
 package gossip
 
 import (
-	"math"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -37,17 +35,14 @@ func BroadcastLatestMilestoneRequest() {
 	})
 }
 
-const milestoneRequestRange = 50
-
-// BroadcastMilestoneRequests broadcasts up to 50 requests for milestones nearest to the current solid milestone index
+// BroadcastMilestoneRequests broadcasts requests for all missing milestones between LSMI and LSI
 // to every connected peer who supports STING.
 func BroadcastMilestoneRequests(solidMilestoneIndex milestone.Index, knownLatestMilestone milestone.Index) {
-	var rangeToRequest int
-	if solidMilestoneIndex != 0 && knownLatestMilestone != 0 {
-		rangeToRequest = int(math.Min(float64(milestoneRequestRange), float64(knownLatestMilestone-solidMilestoneIndex)))
-	} else {
-		rangeToRequest = milestoneRequestRange
+
+	if solidMilestoneIndex == 0 || knownLatestMilestone == 0 {
+		return
 	}
+	rangeToRequest := int(knownLatestMilestone - solidMilestoneIndex)
 
 	// don't request anything if we are sync (or don't know about a newer ms)
 	if rangeToRequest == 0 {
