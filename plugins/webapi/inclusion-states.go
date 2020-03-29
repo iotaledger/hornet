@@ -27,14 +27,6 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	if !tangle.IsNodeSyncedWithThreshold() {
-		e.Error = "Node not synced"
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
-	inclusionStates := []bool{}
-
 	for _, tx := range gis.Transactions {
 		if !guards.IsTransactionHash(tx) {
 			e.Error = fmt.Sprintf("Invalid reference hash supplied: %s", tx)
@@ -42,6 +34,17 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 	}
+
+	tangle.ReadLockLedger()
+	defer tangle.ReadUnlockLedger()
+
+	if !tangle.IsNodeSynced() {
+		e.Error = "Node not synced"
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	inclusionStates := []bool{}
 
 	for _, tx := range gis.Transactions {
 		// get tx data
