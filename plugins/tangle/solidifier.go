@@ -280,7 +280,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		for txHash := range txsToRequest {
 			txHashes = append(txHashes, txHash)
 		}
-		gossip.RequestMultiple(txHashes, milestoneIndex)
+		gossip.RequestMultiple(txHashes, milestoneIndex, true)
 		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d)", len(txHashes))
 		return false, false
 	}

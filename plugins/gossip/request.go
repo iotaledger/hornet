@@ -106,9 +106,9 @@ func Request(hash trinary.Hash, msIndex milestone.Index, preventDiscard ...bool)
 }
 
 // RequestMultiple works like Request but takes multiple transaction hashes.
-func RequestMultiple(hashes trinary.Hashes, msIndex milestone.Index) {
+func RequestMultiple(hashes trinary.Hashes, msIndex milestone.Index, preventDiscard ...bool) {
 	for _, hash := range hashes {
-		Request(hash, msIndex, true)
+		Request(hash, msIndex, preventDiscard...)
 	}
 }
 
