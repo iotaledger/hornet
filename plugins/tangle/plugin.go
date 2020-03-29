@@ -74,10 +74,9 @@ func configure(plugin *node.Plugin) {
 		cachedBndl.Release() // bundle -1
 	}))
 
-	Events.SnapshotMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone.Index) {
-		// notify peers about our new solid milestone index
+	Events.PruningMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone.Index) {
+		// notify peers about our new pruning milestone index
 		gossip.BroadcastHeartbeat()
-		gossip.BroadcastMilestoneRequests(msIndex, tangle.GetLatestMilestoneIndex())
 	}))
 
 	configureTangleProcessor(plugin)
