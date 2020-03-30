@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+install)
+    # if hornet user doesn't exist, create it
+    if ! id hornet >/dev/null 2>&1; then
+        useradd --no-create-home --system hornet >/dev/null
+    fi
+    mkdir -p /var/lib/hornet
+    chown -R hornet:hornet /var/lib/hornet
+    ;;
+
+upgrade)
+    systemctl stop hornet.service
+    ;;
+
+abort-upgrade) ;;
+
+*)
+    echo "preinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

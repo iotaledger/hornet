@@ -1,16 +1,23 @@
 #!/bin/sh
-[ "$1" != "upgrade" ] || exit 0
+
 set -e
-OPTS=""
 
-if [ -n "$D" ]; then
-    OPTS="--root=$D"
-fi
-
-if type systemctl >/dev/null 2>/dev/null; then
-	if [ -z "$D" ]; then
+case "$1" in
+remove)
+	if type systemctl >/dev/null 2>/dev/null; then
 		systemctl stop hornet.service
+		if systemctl is-enabled -q hornet.service; then
+			systemctl disable hornet.service >/dev/null 2>/dev/null
+		fi
 	fi
+	;;
 
-	systemctl $OPTS disable hornet.service
-fi
+failed-upgrade | deconfigure | upgrade) ;;
+
+*)
+	echo "prerm called with unknown argument \`$1'" >&2
+	exit 1
+	;;
+esac
+
+exit 0
