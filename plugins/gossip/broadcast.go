@@ -39,23 +39,16 @@ func BroadcastLatestMilestoneRequest() {
 // to every connected peer who supports STING.
 func BroadcastMilestoneRequests(solidMilestoneIndex milestone.Index, knownLatestMilestone milestone.Index) {
 
-	if solidMilestoneIndex == 0 || knownLatestMilestone == 0 {
-		return
-	}
-	rangeToRequest := int(knownLatestMilestone - solidMilestoneIndex)
-
-	// don't request anything if we are sync (or don't know about a newer ms)
-	if rangeToRequest == 0 {
+	if solidMilestoneIndex == 0 || knownLatestMilestone == 0 || solidMilestoneIndex == knownLatestMilestone {
+		// don't request anything if we are sync (or don't know about a newer ms)
 		return
 	}
 
-	// make sure we only request what we don't have
 	var msIndexes []milestone.Index
-	for i := 1; i <= rangeToRequest; i++ {
-		toReq := solidMilestoneIndex + milestone.Index(i)
-		// only request if we do not have the milestone
-		if !tangle.ContainsMilestone(toReq) {
-			msIndexes = append(msIndexes, toReq)
+	for milestoneIndex := solidMilestoneIndex + 1; milestoneIndex < knownLatestMilestone; milestoneIndex++ {
+		// make sure we only request what we don't have
+		if !tangle.ContainsMilestone(milestoneIndex) {
+			msIndexes = append(msIndexes, milestoneIndex)
 		}
 	}
 
