@@ -1,27 +1,25 @@
 #!/bin/sh
 set -e
-OPTS=""
 
-if [ -n "$D" ]; then
-    OPTS="--root=$D"
-fi
-
-if type systemctl >/dev/null 2>/dev/null; then
-	if [ -z "$D" ]; then
+case "$1" in
+configure)
+	if type systemctl >/dev/null 2>/dev/null; then
 		systemctl daemon-reload
-	fi
 
-	# if hornet user doesn't exist, create it
-	if [ ! $(getent passwd hornet) ]; then
-		useradd --no-create-home --system hornet > /dev/null
-	fi
+		if ! systemctl is-enabled -q hornet.service; then
+			systemctl enable hornet.service >/dev/null 2>/dev/null
+		fi
 
-	mkdir -p /var/lib/hornet
-	chown -R hornet:hornet /var/lib/hornet
-
-	systemctl $OPTS disable hornet.service
-
-	if [ -z "$D" -a "disable" = "enable" ]; then
 		systemctl --no-block restart hornet.service
 	fi
-fi
+	;;
+
+abort-upgrade | abort-remove | abort-deconfigure) ;;
+
+*)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+	;;
+esac
+
+exit 0

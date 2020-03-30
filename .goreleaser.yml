@@ -133,9 +133,11 @@ nfpms:
   - id: nfpm
     package_name: hornet
     file_name_template: '{{ tolower .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Arch }}'
-    vendor: HORNET
-    maintainer: HORNET
-    description: HORNET is a lightweight alternative to IOTA's fullnode software “IRI”.
+    vendor: GoReleaser
+    license: Apache 2.0
+    maintainer: GoHORNET
+    homepage: https://github.com/gohornet/hornet
+    description: HORNET is a powerful IOTA fullnode software.
     formats:
       - deb
       - rpm
@@ -156,6 +158,7 @@ nfpms:
     scripts:
       preremove: "nfpm/deb_files/prerm"
       postremove: "nfpm/deb_files/postrm"
+      preinstall: "nfpm/deb_files/preinst"
       postinstall: "nfpm/deb_files/postinst"
     replacements:
       arm: armhf
