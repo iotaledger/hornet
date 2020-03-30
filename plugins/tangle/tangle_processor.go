@@ -140,6 +140,11 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
+	if request != nil {
+		// Mark the received request as processed
+		gossip.RequestQueue().Processed(incomingTx.GetHash())
+	}
+
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a transaction stemming from a request (as otherwise the solidifier
 	// is triggered too often through transactions received from normal gossip)
@@ -172,30 +177,21 @@ func printStatus() {
 		currentLowestMilestoneIndexInReqQ = peekedRequest.MilestoneIndex
 	}
 
-	queued, pending := gossip.RequestQueue().Size()
+	queued, pending, processing := gossip.RequestQueue().Size()
 	avgLatency := gossip.RequestQueue().AvgLatency()
 
 	println(
 		fmt.Sprintf(
-			"reqQ(q/p/l): %d/%d/%dms, "+
+			"req(qu/pe/proc/lat): %05d/%05d/%05d/%04dms, "+
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"seenSpentAddrs: %d, "+
-				"bndlsValidated: %d, "+
-				"txReqs(Tx/Rx): %d/%d, "+
-				"newTxs: %d, "+
-				"TPS: %d (in) / %d (new) / %d (out)",
-			queued, pending, avgLatency,
+				"TPS (in/new/out): %05d/%05d/%05d",
+			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			receiveTxWorkerPool.GetPendingQueueSize(),
 			tangle.GetSolidMilestoneIndex(),
 			tangle.GetLatestMilestoneIndex(),
-			metrics.SharedServerMetrics.SeenSpentAddresses.Load(),
-			metrics.SharedServerMetrics.ValidatedBundles.Load(),
-			metrics.SharedServerMetrics.SentTransactionRequests.Load(),
-			metrics.SharedServerMetrics.ReceivedTransactionRequests.Load(),
-			metrics.SharedServerMetrics.NewTransactions.Load(),
 			lastIncomingTPS,
 			lastNewTPS,
 			lastOutgoingTPS))

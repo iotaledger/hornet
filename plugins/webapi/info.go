@@ -83,7 +83,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// TX to request
-	queued, pending := gossip.RequestQueue().Size()
+	queued, pending, _ := gossip.RequestQueue().Size()
 	info.TransactionsToRequest = queued + pending
 
 	// Coo addr

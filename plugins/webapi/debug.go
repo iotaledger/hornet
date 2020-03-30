@@ -23,24 +23,37 @@ func init() {
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	grr := &GetRequestsReturn{}
-	queued, pending := gossip.RequestQueue().Requests()
+	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
-	var offset int
-	for i := 0; i < len(queued); offset, i = offset+1, i+1 {
+
+	offset := 0
+	for i := 0; i < len(queued); i++ {
 		req := queued[i]
-		debugReqs[i] = &DebugRequest{
+		debugReqs[offset+i] = &DebugRequest{
 			Hash:             req.Hash,
-			InPending:        false,
+			Type:             "queued",
 			TxExists:         tangle.ContainsTransaction(req.Hash),
 			MilestoneIndex:   req.MilestoneIndex,
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
 	}
+	offset += len(queued)
 	for i := 0; i < len(pending); i++ {
 		req := pending[i]
 		debugReqs[offset+i] = &DebugRequest{
 			Hash:             req.Hash,
-			InPending:        true,
+			Type:             "pending",
+			TxExists:         tangle.ContainsTransaction(req.Hash),
+			MilestoneIndex:   req.MilestoneIndex,
+			EnqueueTimestamp: req.EnqueueTime.Unix(),
+		}
+	}
+	offset += len(pending)
+	for i := 0; i < len(processing); i++ {
+		req := processing[i]
+		debugReqs[offset+i] = &DebugRequest{
+			Hash:             req.Hash,
+			Type:             "processing",
 			TxExists:         tangle.ContainsTransaction(req.Hash),
 			MilestoneIndex:   req.MilestoneIndex,
 			EnqueueTimestamp: req.EnqueueTime.Unix(),

@@ -2,6 +2,7 @@ package rqueue_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/stretchr/testify/assert"
@@ -10,26 +11,33 @@ import (
 func TestRequestQueue(t *testing.T) {
 	q := rqueue.New()
 
+	lastRequestTime := time.Now()
+
 	requests := []*rqueue.Request{
 		{
-			Hash:           "A",
-			MilestoneIndex: 10,
+			Hash:            "A",
+			MilestoneIndex:  10,
+			LastRequestTime: lastRequestTime.Add(5 * time.Second),
 		},
 		{
-			Hash:           "B",
-			MilestoneIndex: 7,
+			Hash:            "B",
+			MilestoneIndex:  7,
+			LastRequestTime: lastRequestTime.Add(4 * time.Second),
 		},
 		{
-			Hash:           "Z",
-			MilestoneIndex: 7,
+			Hash:            "Z",
+			MilestoneIndex:  7,
+			LastRequestTime: lastRequestTime.Add(4 * time.Second),
 		},
 		{
-			Hash:           "C",
-			MilestoneIndex: 5,
+			Hash:            "C",
+			MilestoneIndex:  5,
+			LastRequestTime: lastRequestTime.Add(3 * time.Second),
 		},
 		{
-			Hash:           "D",
-			MilestoneIndex: 2,
+			Hash:            "D",
+			MilestoneIndex:  2,
+			LastRequestTime: lastRequestTime.Add(2 * time.Second),
 		},
 	}
 
@@ -38,9 +46,10 @@ func TestRequestQueue(t *testing.T) {
 		assert.True(t, q.IsQueued(r.Hash))
 	}
 
-	queued, pending := q.Size()
-	assert.Zero(t, pending)
+	queued, pending, processing := q.Size()
 	assert.Equal(t, len(requests), queued)
+	assert.Zero(t, pending)
+	assert.Zero(t, processing)
 
 	for i := len(requests) - 1; i >= -1; i-- {
 		r := q.Next()
@@ -60,30 +69,56 @@ func TestRequestQueue(t *testing.T) {
 	}
 
 	// queued drained, therefore all reqs pending and non queued
-	queued, pending = q.Size()
+	queued, pending, processing = q.Size()
 	assert.Zero(t, queued)
 	assert.Equal(t, len(requests), pending)
+	assert.Zero(t, processing)
 
 	// mark last from test set as received
 	q.Received(requests[len(requests)-1].Hash)
 
+	// Check processing
+	queued, pending, processing = q.Size()
+	assert.Zero(t, queued)
+	assert.Equal(t, len(requests)-1, pending)
+	assert.Equal(t, processing, 1)
+
+	q.Processed(requests[len(requests)-1].Hash)
+
+	// Check processed
+	queued, pending, processing = q.Size()
+	assert.Zero(t, queued)
+	assert.Equal(t, len(requests)-1, pending)
+	assert.Zero(t, processing)
+
 	// enqueue pending again
 	newlyEnqueued := q.EnqueuePending(0)
-	queued, pending = q.Size()
+	queued, pending, processing = q.Size()
 	assert.Equal(t, queued, newlyEnqueued)
 	assert.Zero(t, pending)
+	assert.Zero(t, processing)
 	// -1 since we marked one request as received
 	assert.Equal(t, len(requests)-1, queued)
 
 	// request with the highest priority should be in the front
 	assert.Equal(t, requests[0], q.Peek())
 
+	// mark last from test set as received and processed
+	q.Received(requests[len(requests)-1].Hash)
+	q.Processed(requests[len(requests)-1].Hash)
+
+	queued, pending, processing = q.Size()
+	assert.Equal(t, queued, len(requests)-1)
+	assert.Zero(t, pending)
+	assert.Zero(t, processing)
+
 	// use debug call to get all requests
-	queuedReqs, pendingReqs := q.Requests()
-	assert.Zero(t, len(pendingReqs))
+	queuedReqs, pendingReqs, processingReq := q.Requests()
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
 		assert.False(t, queuedReq.Hash == requests[len(requests)-1].Hash)
 	}
+	assert.Zero(t, len(pendingReqs))
+	assert.Zero(t, len(processingReq))
 }
