@@ -550,6 +550,99 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 	return metric, nil
 }
 
+func requestAllMissingTxsOfKnownMilestones(solidMilestoneIndex milestone.Index, knownLatestMilestone milestone.Index) {
+
+	if solidMilestoneIndex == 0 || knownLatestMilestone == 0 || solidMilestoneIndex == knownLatestMilestone {
+		// don't request anything if we are sync (or don't know about a newer ms)
+		return
+	}
+
+	ts := time.Now()
+	log.Info("Requesting non-solid milestones...")
+
+	txsChecked := make(map[trinary.Hash]struct{})
+	for milestoneIndex := solidMilestoneIndex + 1; milestoneIndex < knownLatestMilestone; milestoneIndex++ {
+		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex)
+		if cachedMs == nil {
+			// Milestone unknown => continue
+			continue
+		}
+
+		cachedBndl := tangle.GetCachedBundleOrNil(cachedMs.GetMilestone().Hash)
+		if cachedBndl == nil {
+			// Milestone unknown => continue
+			cachedMs.Release(true)
+			continue
+		}
+		cachedMs.Release(true)
+
+		cachedTailTx := cachedBndl.GetBundle().GetTail()
+		cachedBndl.Release(true)
+
+		txsToTraverse := make(map[trinary.Hash]struct{})
+		txsToTraverse[cachedTailTx.GetTransaction().GetHash()] = struct{}{}
+
+		// Do not force release since it is loaded again
+		cachedTailTx.Release()
+
+		// Collect all tx to check by traversing the tangle
+		// Loop as long as new transactions are added in every loop cycle
+		for len(txsToTraverse) != 0 {
+
+			for txHash := range txsToTraverse {
+				delete(txsToTraverse, txHash)
+
+				if daemon.IsStopped() {
+					return
+				}
+
+				cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+				if cachedTx == nil {
+					log.Panicf("requestAllMissingTxsOfKnownMilestones: Tx not found: %v", txHash)
+				}
+
+				approveeHashes := []trinary.Hash{cachedTx.GetTransaction().GetTrunk()}
+				if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
+					approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranch())
+				}
+				cachedTx.Release(true)
+
+				for _, approveeHash := range approveeHashes {
+					if tangle.SolidEntryPointsContain(approveeHash) {
+						// Ignore solid entry points (snapshot milestone included)
+						continue
+					}
+
+					if _, checked := txsChecked[approveeHash]; checked {
+						// Approvee Tx was already checked
+						continue
+					}
+					txsChecked[approveeHash] = struct{}{}
+
+					cachedApproveeTx := tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
+					if cachedApproveeTx == nil {
+						// Tx does not exist => request it
+						gossip.Request(approveeHash, milestoneIndex, true)
+						continue
+					}
+
+					if cachedApproveeTx.GetMetadata().IsSolid() {
+						cachedApproveeTx.Release(true)
+						continue
+					}
+
+					// Do not force release since it is loaded again
+					cachedApproveeTx.Release()
+
+					// Traverse this approvee
+					txsToTraverse[approveeHash] = struct{}{}
+				}
+			}
+		}
+	}
+	log.Infof("Requesting non-solid milestones finished, took: %v", time.Since(ts).Truncate(time.Second))
+}
+
 func setSolidifierMilestoneIndex(index milestone.Index) {
 	solidifierMilestoneIndexLock.Lock()
 	solidifierMilestoneIndex = index

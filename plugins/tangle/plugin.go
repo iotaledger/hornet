@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -23,6 +24,8 @@ var (
 	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
 	belowMaxDepthTransactionLimit int
 	log                           *logger.Logger
+
+	requestAllMilestoneCones sync.Once
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 )
@@ -51,6 +54,7 @@ func configure(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
+		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
 		tangle.ShutdownMilestoneStorage()
@@ -67,6 +71,9 @@ func configure(plugin *node.Plugin) {
 	}, shutdown.PriorityFlushToDatabase)
 
 	Events.LatestMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		requestAllMilestoneCones.Do(func() {
+			requestAllMissingTxsOfKnownMilestones(tangle.GetSolidMilestoneIndex(), tangle.GetLatestMilestoneIndex())
+		})
 		gossip.BroadcastMilestoneRequests(tangle.GetSolidMilestoneIndex(), tangle.GetLatestMilestoneIndex())
 		cachedBndl.Release() // bundle -1
 	}))
