@@ -2,7 +2,7 @@ import * as React from 'react';
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import {Tab, Nav} from "react-bootstrap";
+import {Tab, Nav, OverlayTrigger, Tooltip} from "react-bootstrap";
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
 import ExplorerStore from "app/stores/ExplorerStore";
@@ -29,6 +29,18 @@ interface Props {
         }
     }
 }
+
+const tooltip_hash = (
+  <Tooltip id="tooltip_hash">
+    Copy TX hash
+  </Tooltip>
+);
+
+const tooltip_trytes = (
+  <Tooltip id="tooltip_trytes">
+    Copy TX raw trytes
+  </Tooltip>
+);
 
 @inject("nodeStore")
 @inject("explorerStore")
@@ -97,27 +109,31 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                     {
                         tx &&
                         <React.Fragment>
-                            <CopyToClipboard text={hash} onCopy={() => { 
-                                this.setState({copied_hash: true}); 
-                                const timer_hash = setTimeout(() => {
-                                    this.setState({copied_hash: false});
-                                }, 1000);
-                                return () => clearTimeout(timer_hash);
-                                }
-                            }>
-                                {this.state.copied_hash ? <FontAwesomeIcon icon={faClipboardCheck} /> : <FontAwesomeIcon icon={faClipboard} />}
-                            </CopyToClipboard>
+                            <OverlayTrigger placement="bottom" overlay={tooltip_hash}>
+                                <CopyToClipboard text={hash} onCopy={() => { 
+                                    this.setState({copied_hash: true}); 
+                                    const timer_hash = setTimeout(() => {
+                                        this.setState({copied_hash: false});
+                                    }, 1000);
+                                    return () => clearTimeout(timer_hash);
+                                    }
+                                }>
+                                    {this.state.copied_hash ? <FontAwesomeIcon icon={faClipboardCheck} /> : <FontAwesomeIcon icon={faClipboard} />}
+                                </CopyToClipboard>
+                            </OverlayTrigger>
                             {' '}
-                            <CopyToClipboard text={tx.raw_trytes} onCopy={() => { 
-                                this.setState({copied_raw: true}); 
-                                const timer_raw = setTimeout(() => {
-                                    this.setState({copied_raw: false});
-                                }, 1000);
-                                return () => clearTimeout(timer_raw);
-                                }
-                            }>
-                                {this.state.copied_raw ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCode} />}
-                            </CopyToClipboard>
+                            <OverlayTrigger placement="bottom" overlay={tooltip_trytes}>
+                                <CopyToClipboard text={tx.raw_trytes} onCopy={() => { 
+                                    this.setState({copied_raw: true}); 
+                                    const timer_raw = setTimeout(() => {
+                                        this.setState({copied_raw: false});
+                                    }, 1000);
+                                    return () => clearTimeout(timer_raw);
+                                    }
+                                }>
+                                    {this.state.copied_raw ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCode} />}
+                                </CopyToClipboard>
+                            </OverlayTrigger>
                             <br/>
                             <span>
                                 <Badge variant="light">
