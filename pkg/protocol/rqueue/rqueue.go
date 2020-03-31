@@ -54,7 +54,7 @@ const (
 func New(latencyResolution ...int32) Queue {
 	q := &priorityqueue{
 		queue:      make([]*Request, 0),
-		queued:     make(map[string]struct{}),
+		queued:     make(map[string]*Request),
 		pending:    make(map[string]*Request),
 		processing: make(map[string]*Request),
 	}
@@ -92,7 +92,7 @@ type priorityqueue struct {
 	// see: https://golang.org/pkg/sync/atomic/#pkg-note-BUG
 	avgLatency        atomic.Int64
 	queue             []*Request
-	queued            map[string]struct{}
+	queued            map[string]*Request
 	pending           map[string]*Request
 	processing        map[string]*Request
 	latencyResolution int64
@@ -151,8 +151,9 @@ func (pq *priorityqueue) IsProcessing(hash trinary.Hash) bool {
 
 func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 	pq.Lock()
-	req, wasPending := pq.pending[hash]
-	if wasPending {
+	defer pq.Unlock()
+
+	if req, wasPending := pq.pending[hash]; wasPending {
 		pq.latencySum += time.Since(req.EnqueueTime).Milliseconds()
 		pq.latencyEntries++
 		if pq.latencyEntries == pq.latencyResolution {
@@ -168,9 +169,10 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 
 		// Add the request to processing
 		pq.processing[hash] = req
+		return req
 	}
-	pq.Unlock()
-	return req
+
+	return pq.queued[hash]
 }
 
 func (pq *priorityqueue) Processed(hash trinary.Hash) *Request {
@@ -226,20 +228,22 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, proc
 	pq.Lock()
 	defer pq.Unlock()
 	queued = make([]*Request, len(pq.queue))
-	for i := range pq.queue {
-		queued[i] = pq.queue[i]
-	}
-	pending = make([]*Request, len(pq.pending))
 	var i int
-	for _, v := range pq.pending {
-		pending[i] = v
+	for _, v := range pq.queued {
+		queued[i] = v
 		i++
 	}
-	processing = make([]*Request, len(pq.processing))
+	pending = make([]*Request, len(pq.pending))
 	var j int
-	for _, v := range pq.processing {
-		processing[j] = v
+	for _, v := range pq.pending {
+		pending[j] = v
 		j++
+	}
+	processing = make([]*Request, len(pq.processing))
+	var k int
+	for _, v := range pq.processing {
+		processing[k] = v
+		k++
 	}
 	return queued, pending, processing
 }
@@ -263,7 +267,7 @@ func (pq *priorityqueue) Push(x interface{}) {
 
 	// mark as queued and remove from pending
 	delete(pq.pending, r.Hash)
-	pq.queued[r.Hash] = struct{}{}
+	pq.queued[r.Hash] = r
 }
 
 func (pq *priorityqueue) Pop() interface{} {
