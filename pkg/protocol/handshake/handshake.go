@@ -49,7 +49,6 @@ var (
 
 // Handshake defines information exchanged during the handshake phase between two peers.
 type Handshake struct {
-
 	ServerSocketPort      uint16
 	SentTimestamp         uint64
 	ByteEncodedCooAddress []byte
