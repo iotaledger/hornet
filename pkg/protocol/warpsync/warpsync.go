@@ -76,8 +76,7 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 		// in order to have a continuous stream of solidifications
 		if int(currentToCheckpointDelta) >= ws.checkpointRange/2 || ws.current >= ws.checkpoint {
 			// advance checkpoint
-			msRange := ws.advanceCheckpoint()
-			if msRange != 0 {
+			if msRange := ws.advanceCheckpoint(); msRange != 0 {
 				ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, msRange)
 			}
 		}
