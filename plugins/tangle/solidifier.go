@@ -296,6 +296,14 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 					continue
 				}
 
+				if cachedApproverTx.GetMetadata().IsSolid() {
+					// Do not propagate already solid Txs
+
+					// Do no force release here, otherwise cacheTime for new Tx could be ignored
+					cachedApproverTx.Release() // tx -1
+					continue
+				}
+
 				if _, added := gossipSolidifierWorkerPool.Submit(cachedApproverTx.Retain()); !added { // tx pass +1
 					// Do no force release here, otherwise cacheTime for new Tx could be ignored
 					cachedApproverTx.Release() // tx -1
