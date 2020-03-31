@@ -38,7 +38,14 @@ type Queue interface {
 	Requests() (queued []*Request, pending []*Request)
 	// AvgLatency returns the average latency of enqueueing and then receiving a request.
 	AvgLatency() int64
+	// Filter adds the given filter function to the queue. Passing nil resets the current one.
+	// Setting a filter automatically clears all queued and pending requests which do not fulfill
+	// the filter criteria.
+	Filter(f FilterFunc)
 }
+
+// FilterFunc is a function which determines whether a request should be enqueued or not.
+type FilterFunc func(r *Request) bool
 
 const DefaultLatencyResolution = 100
 
@@ -86,6 +93,7 @@ type priorityqueue struct {
 	latencyResolution int64
 	latencySum        int64
 	latencyEntries    int64
+	filter            FilterFunc
 	sync.RWMutex
 }
 
@@ -106,6 +114,9 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 		return false
 	}
 	if _, pending := pq.pending[r.Hash]; pending {
+		return false
+	}
+	if pq.filter != nil && !pq.filter(r) {
 		return false
 	}
 	r.EnqueueTime = time.Now()
@@ -153,7 +164,12 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 	defer pq.Unlock()
 	enqueued := len(pq.pending)
 	s := time.Now()
-	for _, v := range pq.pending {
+	for k, v := range pq.pending {
+		if pq.filter != nil && !pq.filter(v) {
+			delete(pq.pending, k)
+			enqueued--
+			continue
+		}
 		if discardOlderThan == 0 || v.PreventDiscard || s.Sub(v.EnqueueTime) < discardOlderThan {
 			// no need to examine the queued set
 			// as addition and removal are synced over Push and Pops
@@ -161,7 +177,7 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 			continue
 		}
 		// discard request from the queue
-		delete(pq.pending, v.Hash)
+		delete(pq.pending, k)
 		enqueued--
 	}
 	return enqueued
@@ -200,6 +216,28 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request) {
 		i++
 	}
 	return queued, pending
+}
+
+func (pq *priorityqueue) Filter(f FilterFunc) {
+	pq.Lock()
+	defer pq.Unlock()
+	if f != nil {
+		filteredQueue := make([]*Request, 0)
+		for _, r := range pq.queue {
+			if !f(r) {
+				delete(pq.queued, r.Hash)
+				continue
+			}
+			filteredQueue = append(filteredQueue, r)
+		}
+		pq.queue = filteredQueue
+		for k, v := range pq.pending {
+			if !f(v) {
+				delete(pq.pending, k)
+			}
+		}
+	}
+	pq.filter = f
 }
 
 func (pq *priorityqueue) Len() int { return len(pq.queue) }

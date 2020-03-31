@@ -67,11 +67,9 @@ func configure(plugin *node.Plugin) {
 	}, shutdown.PriorityFlushToDatabase)
 
 	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		defer cachedBndl.Release() // bundle -1
 		// notify peers about our new solid milestone index
 		gossip.BroadcastHeartbeat()
-		msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
-		gossip.BroadcastMilestoneRequests(msIndex, tangle.GetLatestMilestoneIndex())
-		cachedBndl.Release() // bundle -1
 	}))
 
 	Events.PruningMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone.Index) {
