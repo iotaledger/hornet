@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -42,6 +43,7 @@ func main() {
 		plugins = append(plugins, []*node.Plugin{
 			peering.PLUGIN,
 			gossip.PLUGIN,
+			warpsync.PLUGIN,
 			tangle.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,

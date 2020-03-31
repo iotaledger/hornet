@@ -1,8 +1,6 @@
 package gossip
 
 import (
-	"math"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -37,24 +35,12 @@ func BroadcastLatestMilestoneRequest() {
 	})
 }
 
-const milestoneRequestRange = 50
-
-// BroadcastMilestoneRequests broadcasts up to 50 requests for milestones nearest to the current solid milestone index
+// BroadcastMilestoneRequests broadcasts up to N requests for milestones nearest to the current solid milestone index
 // to every connected peer who supports STING.
-func BroadcastMilestoneRequests(solidMilestoneIndex milestone.Index, knownLatestMilestone milestone.Index) {
-	var rangeToRequest int
-	if solidMilestoneIndex != 0 && knownLatestMilestone != 0 {
-		rangeToRequest = int(math.Min(float64(milestoneRequestRange), float64(knownLatestMilestone-solidMilestoneIndex)))
-	} else {
-		rangeToRequest = milestoneRequestRange
-	}
-
-	// don't request anything if we are sync (or don't know about a newer ms)
-	if rangeToRequest == 0 {
-		return
-	}
+func BroadcastMilestoneRequests(rangeToRequest int) {
 
 	// make sure we only request what we don't have
+	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 	var msIndexes []milestone.Index
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := solidMilestoneIndex + milestone.Index(i)
