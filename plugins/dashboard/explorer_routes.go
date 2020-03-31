@@ -38,13 +38,13 @@ type ExplorerTx struct {
 		State     bool            `json:"state"`
 		Milestone milestone.Index `json:"milestone_index"`
 	} `json:"confirmed"`
-	Approvers      []string                       `json:"approvers"`
-	Solid          bool                           `json:"solid"`
-	MWM            int                            `json:"mwm"`
-	Previous       Hash                           `json:"previous"`
-	Next           Hash                           `json:"next"`
-	BundleComplete bool                           `json:"bundle_complete"`
-	IsMilestone    bool                           `json:"is_milestone"`
+	Approvers      []string        `json:"approvers"`
+	Solid          bool            `json:"solid"`
+	MWM            int             `json:"mwm"`
+	Previous       Hash            `json:"previous"`
+	Next           Hash            `json:"next"`
+	BundleComplete bool            `json:"bundle_complete"`
+	IsMilestone    bool            `json:"is_milestone"`
 	MilestoneIndex milestone.Index `json:"milestone_index"`
 }
 
