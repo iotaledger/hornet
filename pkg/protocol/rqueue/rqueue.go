@@ -53,7 +53,7 @@ const DefaultLatencyResolution = 100
 func New(latencyResolution ...int32) Queue {
 	q := &priorityqueue{
 		queue:   make([]*Request, 0),
-		queued:  make(map[string]struct{}),
+		queued:  make(map[string]*Request),
 		pending: make(map[string]*Request),
 	}
 	if len(latencyResolution) == 0 {
@@ -88,7 +88,7 @@ type priorityqueue struct {
 	// see: https://golang.org/pkg/sync/atomic/#pkg-note-BUG
 	avgLatency        atomic.Int64
 	queue             []*Request
-	queued            map[string]struct{}
+	queued            map[string]*Request
 	pending           map[string]*Request
 	latencyResolution int64
 	latencySum        int64
@@ -140,8 +140,9 @@ func (pq *priorityqueue) IsPending(hash trinary.Hash) bool {
 
 func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 	pq.Lock()
-	req, wasPending := pq.pending[hash]
-	if wasPending {
+	defer pq.Unlock()
+
+	if req, wasPending := pq.pending[hash]; wasPending {
 		pq.latencySum += time.Since(req.EnqueueTime).Milliseconds()
 		pq.latencyEntries++
 		if pq.latencyEntries == pq.latencyResolution {
@@ -154,8 +155,11 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 			pq.latencySum = 0
 			pq.avgLatency.Store(0)
 		}
+		return req
 	}
-	pq.Unlock()
+
+	// Check if the request is in the queue (was enqueued again after request)
+	req, _ := pq.queued[hash]
 	return req
 }
 
@@ -206,14 +210,16 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request) {
 	pq.Lock()
 	defer pq.Unlock()
 	queued = make([]*Request, len(pq.queue))
-	for i := range pq.queue {
-		queued[i] = pq.queue[i]
+	var i int
+	for _, v := range pq.queued {
+		queued[i] = v
+		i++
 	}
 	pending = make([]*Request, len(pq.pending))
-	var i int
+	var j int
 	for _, v := range pq.pending {
-		pending[i] = v
-		i++
+		pending[j] = v
+		j++
 	}
 	return queued, pending
 }
@@ -259,7 +265,7 @@ func (pq *priorityqueue) Push(x interface{}) {
 
 	// mark as queued and remove from pending
 	delete(pq.pending, r.Hash)
-	pq.queued[r.Hash] = struct{}{}
+	pq.queued[r.Hash] = r
 }
 
 func (pq *priorityqueue) Pop() interface{} {
