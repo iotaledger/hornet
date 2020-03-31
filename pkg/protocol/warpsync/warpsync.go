@@ -1,6 +1,7 @@
 package warpsync
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,7 +14,7 @@ func New(rangePerCheckpoint int) *WarpSync {
 	ws := &WarpSync{
 		Events: Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
-			Start:             events.NewEvent(milestone.IndexCaller),
+			Start:             events.NewEvent(SyncStartCaller),
 			Done:              events.NewEvent(SyncDoneCaller),
 		},
 		current:         0,
@@ -33,6 +34,10 @@ type WarpSync struct {
 	checkpoint      milestone.Index
 	target          milestone.Index
 	checkpointRange int
+}
+
+func SyncStartCaller(handler interface{}, params ...interface{}) {
+	handler.(func(target milestone.Index, newCheckpoint milestone.Index, msRange int32))(params[0].(milestone.Index), params[1].(milestone.Index), params[2].(int32))
 }
 
 func SyncDoneCaller(handler interface{}, params ...interface{}) {
@@ -59,7 +64,15 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 	defer ws.mu.Unlock()
 
 	// prevent warp sync during normal operation when the node is already synced
-	if ws.checkpoint == 0 && len(target) == 0 || (len(target) > 0 && target[0]-current <= 1) {
+	if ws.checkpoint == 0 && len(target) == 0 ||
+		(len(target) > 0 && target[0]-current <= 1) {
+		return
+	}
+
+	if len(target) != 0 && ws.target != 0 {
+		if ws.target < target[0] {
+			ws.target = target[0]
+		}
 		return
 	}
 
@@ -75,10 +88,10 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 		// as an optimization we also update the checkpoint when we're at half the range
 		// in order to have a continuous stream of solidifications
 		if int(currentToCheckpointDelta) >= ws.checkpointRange/2 || ws.current >= ws.checkpoint {
-			lastCheckpoint := ws.checkpoint
 			// advance checkpoint
+			oldCheckpoint := ws.checkpoint
 			if msRange := ws.advanceCheckpoint(); msRange != 0 {
-				ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, lastCheckpoint, msRange)
+				ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, oldCheckpoint, msRange)
 			}
 		}
 	}
@@ -103,9 +116,8 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 	if ws.checkpoint == 0 && ws.target != 0 && ws.current < ws.target {
 		ws.start = time.Now()
 		ws.init = ws.current
-		ws.Events.Start.Trigger(ws.target)
 		msRange := ws.advanceCheckpoint()
-		ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, ws.current, msRange)
+		ws.Events.Start.Trigger(ws.target, ws.checkpoint, msRange)
 	}
 
 	if target[0] <= ws.target {
@@ -118,13 +130,19 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 // via the checkpoint range or max to the target of the synchronization.
 // returns the chosen range.
 func (ws *WarpSync) advanceCheckpoint() int32 {
+	fmt.Println("old", ws.checkpoint)
 	msRange := milestone.Index(ws.checkpointRange)
 	if ws.current+msRange > ws.target {
 		ws.checkpoint = ws.target
 		msRange = ws.target - ws.current
 	} else {
-		ws.checkpoint = ws.current + msRange
+		if ws.checkpoint == 0 {
+			ws.checkpoint = ws.current + msRange
+		} else {
+			ws.checkpoint = ws.checkpoint + msRange
+		}
 	}
+	fmt.Println("new", ws.checkpoint)
 	return int32(msRange)
 }
 

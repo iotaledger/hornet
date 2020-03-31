@@ -20,7 +20,7 @@ import (
 var (
 	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure)
 	log      *logger.Logger
-	warpSync = warpsync.New(300)
+	warpSync = warpsync.New(10)
 )
 
 func configure(plugin *node.Plugin) {
@@ -52,8 +52,12 @@ func configure(plugin *node.Plugin) {
 		gossip.BroadcastMilestoneRequests(int(msRange), oldCheckpoint)
 	}))
 
-	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index) {
+	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, msRange int32) {
 		log.Infof("Synchronizing to milestone %d", targetMsIndex)
+		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
+			return r.MilestoneIndex <= nextCheckpoint
+		})
+		gossip.BroadcastMilestoneRequests(int(msRange))
 	}))
 
 	warpSync.Events.Done.Attach(events.NewClosure(func(deltaSynced int, took time.Duration) {
