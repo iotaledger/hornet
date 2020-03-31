@@ -43,13 +43,13 @@ func configure(plugin *node.Plugin) {
 		warpSync.Update(cachedMsBundle.GetBundle().GetMilestoneIndex())
 	}))
 
-	warpSync.Events.CheckpointUpdated.Attach(events.NewClosure(func(nextCheckpoint milestone.Index, msRange int32) {
+	warpSync.Events.CheckpointUpdated.Attach(events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, msRange int32) {
 		log.Infof("Checkpoint updated to milestone %d", nextCheckpoint)
 		// prevent any requests in the queue above our next checkpoint
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(msRange))
+		gossip.BroadcastMilestoneRequests(int(msRange), oldCheckpoint)
 	}))
 
 	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index) {

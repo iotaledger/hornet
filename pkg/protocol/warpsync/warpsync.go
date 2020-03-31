@@ -40,7 +40,7 @@ func SyncDoneCaller(handler interface{}, params ...interface{}) {
 }
 
 func CheckpointCaller(handler interface{}, params ...interface{}) {
-	handler.(func(checkpoint milestone.Index, msRange int32))(params[0].(milestone.Index), params[1].(int32))
+	handler.(func(newCheckpoint milestone.Index, oldCheckpoint milestone.Index, msRange int32))(params[0].(milestone.Index), params[1].(milestone.Index), params[2].(int32))
 }
 
 // Events holds WarpSync related events.
@@ -75,9 +75,10 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 		// as an optimization we also update the checkpoint when we're at half the range
 		// in order to have a continuous stream of solidifications
 		if int(currentToCheckpointDelta) >= ws.checkpointRange/2 || ws.current >= ws.checkpoint {
+			lastCheckpoint := ws.checkpoint
 			// advance checkpoint
 			if msRange := ws.advanceCheckpoint(); msRange != 0 {
-				ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, msRange)
+				ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, lastCheckpoint, msRange)
 			}
 		}
 	}
@@ -104,7 +105,7 @@ func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
 		ws.init = ws.current
 		ws.Events.Start.Trigger(ws.target)
 		msRange := ws.advanceCheckpoint()
-		ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, msRange)
+		ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, ws.current, msRange)
 	}
 
 	if target[0] <= ws.target {
