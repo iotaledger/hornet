@@ -158,7 +158,7 @@ type GetNeighbors struct {
 // GetNeighborsReturn struct
 type GetNeighborsReturn struct {
 	Neighbors []*peer.Info `json:"neighbors"`
-	Duration  int         `json:"duration"`
+	Duration  int          `json:"duration"`
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -389,7 +389,7 @@ type GetRequestsReturn struct {
 
 type DebugRequest struct {
 	Hash             string          `json:"hash"`
-	InPending        bool            `json:"inPending"`
+	Type             string          `json:"type"`
 	TxExists         bool            `json:"txExists"`
 	EnqueueTimestamp int64           `json:"enqueueTime"`
 	MilestoneIndex   milestone.Index `json:"milestoneIndex"`

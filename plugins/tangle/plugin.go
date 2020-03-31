@@ -51,6 +51,7 @@ func configure(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
+		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
 		tangle.ShutdownMilestoneStorage()
