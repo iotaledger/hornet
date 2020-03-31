@@ -20,7 +20,7 @@ import (
 var (
 	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure)
 	log      *logger.Logger
-	warpSync = warpsync.New(1000)
+	warpSync = warpsync.New(300)
 )
 
 func configure(plugin *node.Plugin) {
