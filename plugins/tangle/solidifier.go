@@ -133,7 +133,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 	txsToTraverse := make(map[trinary.Hash]struct{})
 	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
 
-	txsChecked := make(map[trinary.Hash]bool) // isSolid
+	txsChecked := make(map[trinary.Hash]struct{})
 	txsToSolidify := make(map[trinary.Hash]struct{})
 	txsToRequest := make(map[trinary.Hash]struct{})
 
@@ -188,8 +188,8 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 						// Tx does not exist => request missing tx
 						txsToRequest[approveeHash] = struct{}{}
 
-						// Mark the tx as checked and non-solid
-						txsChecked[approveeHash] = false
+						// Mark the tx as checked
+						txsChecked[approveeHash] = struct{}{}
 						continue
 					}
 					cachedTxs[approveeHash] = cachedApproveeTx
@@ -244,7 +244,9 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 						}
 					}
 				}
-				txsChecked[approveeHash] = approveeSolid
+
+				// Mark the tx as checked
+				txsChecked[approveeHash] = struct{}{}
 
 				if !approveeSolid {
 					// Traverse this approvee
