@@ -51,7 +51,7 @@ func configure(plugin *node.Plugin) {
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(advRange), oldCheckpoint)
+		gossip.BroadcastMilestoneRequests(int(advRange), gossip.MemoizedRequestMissingMilestoneApprovees(), oldCheckpoint)
 	}))
 
 	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
@@ -59,7 +59,7 @@ func configure(plugin *node.Plugin) {
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(advRange))
+		gossip.BroadcastMilestoneRequests(int(advRange), gossip.MemoizedRequestMissingMilestoneApprovees())
 	}))
 
 	warpSync.Events.Done.Attach(events.NewClosure(func(deltaSynced int, took time.Duration) {

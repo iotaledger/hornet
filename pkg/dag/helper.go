@@ -57,3 +57,74 @@ func FindAllTails(txHash trinary.Hash, forceRelease bool) (map[string]struct{}, 
 	}
 	return tails, nil
 }
+
+// Predicate defines the condition whether the traversal should continue or not
+type Predicate func(cachedTx *tangle.CachedTransaction) bool
+
+// Consumer consumes the given transaction doing traversal
+type Consumer func(cachedTx *tangle.CachedTransaction)
+
+// OnMissingApprovee gets called when during traversal an approvee is missing.
+type OnMissingApprovee func(approveeHash trinary.Hash)
+
+// TraverseApprovees starts to traverse the approvees of the given start transaction until
+// the traversal stops due to transaction not passing the given condition.
+func TraverseApprovees(startTxHash trinary.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee) {
+
+	if tangle.SolidEntryPointsContain(startTxHash) {
+		return
+	}
+
+	processed := map[trinary.Hash]struct{}{}
+	txsToTraverse := map[trinary.Hash]struct{}{startTxHash: {}}
+	for len(txsToTraverse) != 0 {
+		for txHash := range txsToTraverse {
+			delete(txsToTraverse, txHash)
+
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
+				continue
+			}
+
+			if txHash != startTxHash && !condition(cachedTx.Retain()) { // tx + 1
+				cachedTx.Release()
+				continue
+			}
+
+			// do not consume the start transaction
+			if txHash != startTxHash {
+				consumer(cachedTx.Retain()) // tx +1
+			}
+
+			approveeHashes := map[trinary.Hash]struct{}{
+				cachedTx.GetTransaction().GetTrunk():  {},
+				cachedTx.GetTransaction().GetBranch(): {},
+			}
+
+			cachedTx.Release(true) // tx -1
+
+			for approveeHash := range approveeHashes {
+				if tangle.SolidEntryPointsContain(approveeHash) {
+					continue
+				}
+
+				if _, checked := processed[approveeHash]; checked {
+					continue
+				}
+
+				processed[approveeHash] = struct{}{}
+
+				cachedApproveeTx := tangle.GetCachedTransactionOrNil(approveeHash) // approvee +1
+				if cachedApproveeTx == nil {
+					onMissingApprovee(approveeHash)
+					continue
+				}
+
+				// do not force release since it is loaded again
+				cachedApproveeTx.Release() // approvee -1
+
+				txsToTraverse[approveeHash] = struct{}{}
+			}
+		}
+	}
+}
