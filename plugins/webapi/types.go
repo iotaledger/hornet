@@ -422,6 +422,27 @@ type SearchConfirmedApproverReturn struct {
 	TanglePathLength          int               `json:"tanglePathLength"`
 }
 
+///////////////////////////////////////////////////////////////////
+
+///////////////// searchEntryPoint /////////////////////////
+
+// SearchEntryPoint struct
+type SearchEntryPoint struct {
+	Command string       `mapstructure:"command"`
+	TxHash  trinary.Hash `mapstructure:"txHash"`
+}
+
+// EntryPoint struct
+type EntryPoint struct {
+	TxHash                    trinary.Hash    `json:"txHash"`
+	ConfirmedByMilestoneIndex milestone.Index `json:"confirmedByMilestoneIndex"`
+}
+
+// SearchEntryPointReturn struct
+type SearchEntryPointReturn struct {
+	EntryPoints      []*EntryPoint     `json:"entryPoints"`
+	TanglePath       []*ApproverStruct `json:"tanglePath"`
+	TanglePathLength int               `json:"tanglePathLength"`
 }
 
 ///////////////////////////////////////////////////////////////////

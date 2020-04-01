@@ -19,6 +19,7 @@ import (
 func init() {
 	addEndpoint("getRequests", getRequests, implementedAPIcalls)
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
+	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -191,4 +192,85 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	e.Error = fmt.Sprintf("No confirmed approver found: %s", query.TxHash)
 	c.JSON(http.StatusInternalServerError, e)
+}
+
+func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &SearchEntryPoint{}
+	result := &SearchEntryPointReturn{}
+
+	err := mapstructure.Decode(i, query)
+	if err != nil {
+		e.Error = "Internal error"
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	if !guards.IsTransactionHash(query.TxHash) {
+		e.Error = fmt.Sprintf("Invalid hash supplied: %s", query.TxHash)
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	cachedStartTx := tangle.GetCachedTransactionOrNil(query.TxHash) // tx +1
+	if cachedStartTx == nil {
+		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+	_, startTxConfirmedAt := cachedStartTx.GetMetadata().GetConfirmed()
+	cachedStartTx.Release(true)
+
+	txsToTraverse := make(map[trinary.Hash]struct{})
+	txsToTraverse[query.TxHash] = struct{}{}
+
+	// Collect all tx to check by traversing the tangle
+	// Loop as long as new transactions are added in every loop cycle
+	for len(txsToTraverse) != 0 {
+		for txHash := range txsToTraverse {
+			delete(txsToTraverse, txHash)
+
+			if daemon.IsStopped() {
+				e.Error = "operation aborted"
+				c.JSON(http.StatusInternalServerError, e)
+				return
+			}
+
+			if tangle.SolidEntryPointsContain(txHash) {
+				result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash, ConfirmedByMilestoneIndex: 0})
+				continue
+			}
+
+			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			if cachedTx == nil {
+				log.Warnf("searchEntryPoint: Transaction not found: %v", txHash)
+				continue
+			}
+
+			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
+					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash, ConfirmedByMilestoneIndex: at})
+					cachedTx.Release(true) // tx -1
+					continue
+				}
+			}
+
+			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
+			result.TanglePath = append(result.TanglePath, &ApproverStruct{TxHash: cachedTx.GetTransaction().GetTrunk(), ReferencedByTrunk: true})
+			if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
+				txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+				result.TanglePath = append(result.TanglePath, &ApproverStruct{TxHash: cachedTx.GetTransaction().GetBranch(), ReferencedByTrunk: false})
+			}
+			cachedTx.Release(true) // tx -1
+		}
+	}
+
+	result.TanglePathLength = len(result.TanglePath)
+
+	if len(result.EntryPoints) == 0 {
+		e.Error = fmt.Sprintf("No confirmed approvee found: %s", query.TxHash)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
