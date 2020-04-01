@@ -58,17 +58,17 @@ func FindAllTails(txHash trinary.Hash, forceRelease bool) (map[string]struct{}, 
 	return tails, nil
 }
 
-// Predicate defines the condition whether the traversal should continue or not
+// Predicate defines whether a traversal should continue or not.
 type Predicate func(cachedTx *tangle.CachedTransaction) bool
 
-// Consumer consumes the given transaction doing traversal
+// Consumer consumes the given transaction during traversal.
 type Consumer func(cachedTx *tangle.CachedTransaction)
 
 // OnMissingApprovee gets called when during traversal an approvee is missing.
 type OnMissingApprovee func(approveeHash trinary.Hash)
 
 // TraverseApprovees starts to traverse the approvees of the given start transaction until
-// the traversal stops due to transaction not passing the given condition.
+// the traversal stops due to no more transactions passing the given condition.
 func TraverseApprovees(startTxHash trinary.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee) {
 
 	if tangle.SolidEntryPointsContain(startTxHash) {
