@@ -3,6 +3,7 @@ package gossip
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/trinary"
@@ -20,6 +21,10 @@ var (
 	requestQueueEnqueueSignal      = make(chan struct{}, 2)
 	enqueuePendingRequestsInterval = 1500 * time.Millisecond
 	discardRequestsOlderThan       = 10 * time.Second
+
+	RequestBackpressureSignal = func() bool {
+		return false
+	}
 )
 
 func runRequestWorkers() {
@@ -47,6 +52,9 @@ func runRequestWorkers() {
 			case <-shutdownSignal:
 				return
 			case <-requestQueueEnqueueSignal:
+				if RequestBackpressureSignal() {
+					continue
+				}
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					manager.ForAllConnected(func(p *peer.Peer) bool {
@@ -149,4 +157,38 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 	}
 
 	return enqueued
+}
+
+// MemoizedRequestMissingMilestoneApprovees returns a function which traverses the approvees
+// of a given milestone and requests each missing approvee. As a special property, invocations
+// of the yielded function share the same 'already traversed' set to circumvent requesting
+// the same approvees multiple times.
+func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms milestone.Index) {
+	traversed := map[trinary.Hash]struct{}{}
+	return func(ms milestone.Index) {
+		cachedMsBundle := tangle.GetMilestoneOrNil(ms) // bundle +1
+		if cachedMsBundle == nil {
+			log.Panicf("milestone %d wasn't found", ms)
+		}
+
+		msBundleTailHash := cachedMsBundle.GetBundle().GetTailHash()
+		cachedMsBundle.Release(true) // bundle -1
+
+		dag.TraverseApprovees(msBundleTailHash,
+			// predicate
+			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
+				defer cachedTx.Release(true) // tx -1
+				_, previouslyTraversed := traversed[cachedTx.GetTransaction().GetHash()]
+				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed
+			},
+			// consumer
+			func(cachedTx *tangle.CachedTransaction) { // tx +1
+				defer cachedTx.Release(true) // tx -1
+				traversed[cachedTx.GetTransaction().GetHash()] = struct{}{}
+			},
+			// called on missing approvees
+			func(approveeHash trinary.Hash) {
+				Request(approveeHash, ms, preventDiscard...)
+			}, true)
+	}
 }

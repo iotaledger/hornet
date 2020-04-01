@@ -79,6 +79,8 @@ func configure(plugin *node.Plugin) {
 	}))
 
 	configureTangleProcessor(plugin)
+
+	gossip.RequestBackpressureSignal = IsReceiveTxWorkerPoolBusy
 }
 
 func run(plugin *node.Plugin) {

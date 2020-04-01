@@ -37,7 +37,7 @@ func BroadcastLatestMilestoneRequest() {
 
 // BroadcastMilestoneRequests broadcasts up to N requests for milestones nearest to the current solid milestone index
 // to every connected peer who supports STING.
-func BroadcastMilestoneRequests(rangeToRequest int, from ...milestone.Index) {
+func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange func(index milestone.Index), from ...milestone.Index) {
 
 	// make sure we only request what we don't have
 	startingPoint := tangle.GetSolidMilestoneIndex()
@@ -50,6 +50,10 @@ func BroadcastMilestoneRequests(rangeToRequest int, from ...milestone.Index) {
 		// only request if we do not have the milestone
 		if !tangle.ContainsMilestone(toReq) {
 			msIndexes = append(msIndexes, toReq)
+			continue
+		}
+		if onExistingMilestoneInRange != nil {
+			onExistingMilestoneInRange(toReq)
 		}
 	}
 
