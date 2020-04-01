@@ -9,7 +9,7 @@ import (
 )
 
 // New creates a new WarpSync instance with the given advancement range and criteria func.
-// If no advancement func is provided, the WarpSync uses AdvanceAtPercentReached with DefaultAdvancementThreshold.
+// If no advancement func is provided, the WarpSync uses AdvanceAtPercentageReached with DefaultAdvancementThreshold.
 func New(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
 	ws := &WarpSync{
 		Events: Events{
@@ -22,7 +22,7 @@ func New(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteri
 	if len(advanceCheckpointCriteriaFunc) > 0 {
 		ws.advCheckpointCriteria = advanceCheckpointCriteriaFunc[0]
 	} else {
-		ws.advCheckpointCriteria = AdvanceAtPercentReached(DefaultAdvancementThreshold)
+		ws.advCheckpointCriteria = AdvanceAtPercentageReached(DefaultAdvancementThreshold)
 	}
 	return ws
 }
@@ -57,9 +57,9 @@ type AdvanceCheckpointCriteria func(currentSolid, previousCheckpoint, currentChe
 // the previous and current checkpoint.
 const DefaultAdvancementThreshold = 0.0
 
-// AdvanceAtPercentReached is an AdvanceCheckpointCriteria which advances the checkpoint
+// AdvanceAtPercentageReached is an AdvanceCheckpointCriteria which advances the checkpoint
 // when the current one was reached by >=X% by the current solid milestone in relation to the previous checkpoint.
-func AdvanceAtPercentReached(threshold float64) AdvanceCheckpointCriteria {
+func AdvanceAtPercentageReached(threshold float64) AdvanceCheckpointCriteria {
 	return func(currentSolid, previousCheckpoint, currentCheckpoint milestone.Index) bool {
 		// the previous checkpoint can be over the current solid one, as advancements
 		// move the checkpoint window above the solid milestone

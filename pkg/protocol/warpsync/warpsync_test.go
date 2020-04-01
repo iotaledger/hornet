@@ -8,14 +8,14 @@ import (
 )
 
 func TestAdvanceAtEightyPercentReached(t *testing.T) {
-	f := warpsync.AdvanceAtPercentReached(0.8)
+	f := warpsync.AdvanceAtPercentageReached(0.8)
 	assert.False(t, f(0, 0, 10))
 	assert.False(t, f(5, 0, 10))
 	assert.True(t, f(8, 0, 10))
 }
 
 func TestWarpSync_Update(t *testing.T) {
-	ws := warpsync.New(50, warpsync.AdvanceAtPercentReached(0.8))
+	ws := warpsync.New(50, warpsync.AdvanceAtPercentageReached(0.8))
 
 	ws.UpdateCurrent(100)
 	ws.UpdateTarget(1000)
