@@ -177,18 +177,18 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 		dag.TraverseApprovees(msBundleTailHash,
 			// predicate
 			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
-				defer cachedTx.Release() // tx -1
+				defer cachedTx.Release(true) // tx -1
 				_, previouslyTraversed := traversed[cachedTx.GetTransaction().GetHash()]
 				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed
 			},
 			// consumer
 			func(cachedTx *tangle.CachedTransaction) { // tx +1
-				defer cachedTx.Release() // tx -1
+				defer cachedTx.Release(true) // tx -1
 				traversed[cachedTx.GetTransaction().GetHash()] = struct{}{}
 			},
 			// called on missing approvees
 			func(approveeHash trinary.Hash) {
 				Request(approveeHash, ms, preventDiscard...)
-			})
+			}, true)
 	}
 }

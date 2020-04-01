@@ -69,7 +69,7 @@ type OnMissingApprovee func(approveeHash trinary.Hash)
 
 // TraverseApprovees starts to traverse the approvees of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
-func TraverseApprovees(startTxHash trinary.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee) {
+func TraverseApprovees(startTxHash trinary.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, forceRelease bool) {
 
 	if tangle.SolidEntryPointsContain(startTxHash) {
 		return
@@ -87,7 +87,7 @@ func TraverseApprovees(startTxHash trinary.Hash, condition Predicate, consumer C
 			}
 
 			if txHash != startTxHash && !condition(cachedTx.Retain()) { // tx + 1
-				cachedTx.Release()
+				cachedTx.Release(forceRelease)
 				continue
 			}
 
@@ -101,7 +101,7 @@ func TraverseApprovees(startTxHash trinary.Hash, condition Predicate, consumer C
 				cachedTx.GetTransaction().GetBranch(): {},
 			}
 
-			cachedTx.Release(true) // tx -1
+			cachedTx.Release(forceRelease) // tx -1
 
 			for approveeHash := range approveeHashes {
 				if tangle.SolidEntryPointsContain(approveeHash) {

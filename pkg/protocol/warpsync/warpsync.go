@@ -61,8 +61,8 @@ const DefaultAdvancementThreshold = 0.0
 // when the current one was reached by >=X% by the current solid milestone in relation to the previous checkpoint.
 func AdvanceAtPercentageReached(threshold float64) AdvanceCheckpointCriteria {
 	return func(currentSolid, previousCheckpoint, currentCheckpoint milestone.Index) bool {
-		// the previous checkpoint can be over the current solid one, as advancements
-		// move the checkpoint window above the solid milestone
+		// the previous checkpoint can be over the current solid milestone,
+		// as advancements move the checkpoint window above the solid milestone
 		if currentSolid < previousCheckpoint {
 			return false
 		}

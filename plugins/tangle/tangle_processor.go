@@ -116,18 +116,18 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
 
-	// since we only add the approvees if there was a source request, we only
-	// request them for transactions which should be part of milestone cones
-	if request != nil {
-		// add this newly received transaction's approvees to the request queue
-		gossip.RequestApprovees(cachedTx.Retain(), request.MilestoneIndex, true)
-	}
-
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewTransactions.Inc()
 
 		if p != nil {
 			p.Metrics.NewTransactions.Inc()
+		}
+
+		// since we only add the approvees if there was a source request, we only
+		// request them for transactions which should be part of milestone cones
+		if request != nil {
+			// add this newly received transaction's approvees to the request queue
+			gossip.RequestApprovees(cachedTx.Retain(), request.MilestoneIndex, true)
 		}
 
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
