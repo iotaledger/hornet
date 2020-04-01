@@ -20,7 +20,7 @@ import (
 var (
 	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure)
 	log      *logger.Logger
-	warpSync = warpsync.New(10)
+	warpSync = warpsync.New(25)
 )
 
 func configure(plugin *node.Plugin) {
@@ -34,30 +34,32 @@ func configure(plugin *node.Plugin) {
 
 		p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 			hb := sting.ParseHeartbeat(data)
-			warpSync.Update(tangle.GetSolidMilestoneIndex(), hb.SolidMilestoneIndex)
+			warpSync.UpdateCurrent(tangle.GetSolidMilestoneIndex())
+			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
 	}))
 
 	tangleplugin.Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedMsBundle *tangle.CachedBundle) { // bundle +1
 		defer cachedMsBundle.Release() // bundle -1
-		warpSync.Update(cachedMsBundle.GetBundle().GetMilestoneIndex())
+		index := cachedMsBundle.GetBundle().GetMilestoneIndex()
+		warpSync.UpdateCurrent(index)
 	}))
 
-	warpSync.Events.CheckpointUpdated.Attach(events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, msRange int32) {
+	warpSync.Events.CheckpointUpdated.Attach(events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Checkpoint updated to milestone %d", nextCheckpoint)
 		// prevent any requests in the queue above our next checkpoint
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(msRange), oldCheckpoint)
+		gossip.BroadcastMilestoneRequests(int(advRange), oldCheckpoint)
 	}))
 
-	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, msRange int32) {
+	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Synchronizing to milestone %d", targetMsIndex)
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(msRange))
+		gossip.BroadcastMilestoneRequests(int(advRange))
 	}))
 
 	warpSync.Events.Done.Attach(events.NewClosure(func(deltaSynced int, took time.Duration) {

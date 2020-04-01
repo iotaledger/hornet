@@ -155,10 +155,11 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 			pq.latencySum = 0
 			pq.avgLatency.Store(0)
 		}
+
 		return req
 	}
 
-	// Check if the request is in the queue (was enqueued again after request)
+	// check if the request is in the queue (was enqueued again after request)
 	req, _ := pq.queued[hash]
 	return req
 }
@@ -166,6 +167,9 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 	pq.Lock()
 	defer pq.Unlock()
+	if len(pq.queued) != 0 {
+		return 0
+	}
 	enqueued := len(pq.pending)
 	s := time.Now()
 	for k, v := range pq.pending {
