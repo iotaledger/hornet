@@ -101,6 +101,10 @@ func runTangleProcessor(_ *node.Plugin) {
 	}, shutdown.PriorityMilestoneSolidifier)
 }
 
+func IsReceiveTxWorkerPoolBusy() bool {
+	return receiveTxWorkerPool.GetPendingQueueSize() > (receiveTxQueueSize / 2)
+}
+
 func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()

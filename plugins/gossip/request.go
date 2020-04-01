@@ -20,6 +20,10 @@ var (
 	requestQueueEnqueueSignal      = make(chan struct{}, 2)
 	enqueuePendingRequestsInterval = 1500 * time.Millisecond
 	discardRequestsOlderThan       = 10 * time.Second
+
+	RequestBackpressureSignal = func() bool {
+		return false
+	}
 )
 
 func runRequestWorkers() {
@@ -47,6 +51,9 @@ func runRequestWorkers() {
 			case <-shutdownSignal:
 				return
 			case <-requestQueueEnqueueSignal:
+				if RequestBackpressureSignal() {
+					continue
+				}
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					manager.ForAllConnected(func(p *peer.Peer) bool {
