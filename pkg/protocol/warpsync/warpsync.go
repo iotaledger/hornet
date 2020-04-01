@@ -8,31 +8,27 @@ import (
 	"github.com/iotaledger/hive.go/events"
 )
 
-// New creates a new WarpSync instance.
-func New(rangePerCheckpoint int) *WarpSync {
+// New creates a new WarpSync instance with the given advancement range and criteria func.
+// If no advancement func is provided, the WarpSync uses AdvanceAtPercentageReached with DefaultAdvancementThreshold.
+func New(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
 	ws := &WarpSync{
 		Events: Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
-			Start:             events.NewEvent(milestone.IndexCaller),
+			Start:             events.NewEvent(SyncStartCaller),
 			Done:              events.NewEvent(SyncDoneCaller),
 		},
-		current:         0,
-		target:          0,
-		checkpointRange: rangePerCheckpoint,
+		AdvancementRange: advRange,
+	}
+	if len(advanceCheckpointCriteriaFunc) > 0 {
+		ws.advCheckpointCriteria = advanceCheckpointCriteriaFunc[0]
+	} else {
+		ws.advCheckpointCriteria = AdvanceAtPercentageReached(DefaultAdvancementThreshold)
 	}
 	return ws
 }
 
-// WarpSync is metadata about doing a synchronization via STING messages.
-type WarpSync struct {
-	mu sync.Mutex
-	Events
-	start           time.Time
-	init            milestone.Index
-	current         milestone.Index
-	checkpoint      milestone.Index
-	target          milestone.Index
-	checkpointRange int
+func SyncStartCaller(handler interface{}, params ...interface{}) {
+	handler.(func(target milestone.Index, newCheckpoint milestone.Index, msRange int32))(params[0].(milestone.Index), params[1].(milestone.Index), params[2].(int32))
 }
 
 func SyncDoneCaller(handler interface{}, params ...interface{}) {
@@ -53,85 +49,133 @@ type Events struct {
 	Done *events.Event
 }
 
-// Update updates the WarpSync state.
-func (ws *WarpSync) Update(current milestone.Index, target ...milestone.Index) {
+// AdvanceCheckpointCriteria is a function which determines whether the checkpoint should be advanced.
+type AdvanceCheckpointCriteria func(currentSolid, previousCheckpoint, currentCheckpoint milestone.Index) bool
+
+// DefaultAdvancementThreshold is the default threshold at which a checkpoint advancement is done.
+// Per default an advancement is always done as soon the solid milestone enters the range between
+// the previous and current checkpoint.
+const DefaultAdvancementThreshold = 0.0
+
+// AdvanceAtPercentageReached is an AdvanceCheckpointCriteria which advances the checkpoint
+// when the current one was reached by >=X% by the current solid milestone in relation to the previous checkpoint.
+func AdvanceAtPercentageReached(threshold float64) AdvanceCheckpointCriteria {
+	return func(currentSolid, previousCheckpoint, currentCheckpoint milestone.Index) bool {
+		// the previous checkpoint can be over the current solid milestone,
+		// as advancements move the checkpoint window above the solid milestone
+		if currentSolid < previousCheckpoint {
+			return false
+		}
+		checkpointDelta := currentCheckpoint - previousCheckpoint
+		progress := currentSolid - previousCheckpoint
+		return float64(progress)/float64(checkpointDelta) >= threshold
+	}
+}
+
+// WarpSync is metadata about doing a synchronization via STING messages.
+type WarpSync struct {
+	mu                    sync.Mutex
+	start                 time.Time
+	advCheckpointCriteria AdvanceCheckpointCriteria
+	Events                Events
+	// The starting point of the synchronization.
+	Init milestone.Index
+	// The current solid milestone of the node.
+	CurrentSolidMs milestone.Index
+	// The target milestone to which to synchronize to.
+	TargetMs milestone.Index
+	// The previous checkpoint of the synchronization.
+	PreviousCheckpoint milestone.Index
+	// The current checkpoint of the synchronization.
+	CurrentCheckpoint milestone.Index
+	// The used advancement range per checkpoint.
+	AdvancementRange int
+}
+
+// UpdateCurrent updates the current solid milestone index state.
+func (ws *WarpSync) UpdateCurrent(current milestone.Index) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
+	if current <= ws.CurrentSolidMs {
+		return
+	}
+	ws.CurrentSolidMs = current
 
-	// prevent warp sync during normal operation when the node is already synced
-	if ws.checkpoint == 0 && len(target) == 0 || (len(target) > 0 && target[0]-current <= 1) {
+	// synchronization not started
+	if ws.CurrentCheckpoint == 0 {
 		return
 	}
 
-	if current >= ws.current {
-		ws.current = current
-	}
-
-	// we're over the checkpoint, trigger a milestone request trigger
-	if ws.checkpoint != 0 {
-		currentToCheckpointDelta := ws.checkpoint - ws.current
-
-		// advance checkpoint when when're over/equal the checkpoint.
-		// as an optimization we also update the checkpoint when we're at half the range
-		// in order to have a continuous stream of solidifications
-		if int(currentToCheckpointDelta) >= ws.checkpointRange/2 || ws.current >= ws.checkpoint {
-			lastCheckpoint := ws.checkpoint
-			// advance checkpoint
-			if msRange := ws.advanceCheckpoint(); msRange != 0 {
-				ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, lastCheckpoint, msRange)
-			}
-		}
-	}
-
-	// done
-	if ws.current >= ws.target && ws.target != 0 {
-		ws.Events.Done.Trigger(int(ws.target-ws.init), time.Since(ws.start))
+	// finished
+	if ws.TargetMs != 0 && ws.CurrentSolidMs >= ws.TargetMs {
+		ws.Events.Done.Trigger(int(ws.TargetMs-ws.Init), time.Since(ws.start))
 		ws.reset()
 		return
 	}
 
-	if len(target) == 0 {
+	// check whether advancement criteria is fulfilled
+	if !ws.advCheckpointCriteria(ws.CurrentSolidMs, ws.PreviousCheckpoint, ws.CurrentCheckpoint) {
 		return
 	}
 
-	// auto. set on first call
-	if ws.target == 0 {
-		ws.target = target[0]
+	oldCheckpoint := ws.CurrentCheckpoint
+	if msRange := ws.advanceCheckpoint(); msRange != 0 {
+		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, msRange)
 	}
+}
 
-	// set checkpoint for the first time
-	if ws.checkpoint == 0 && ws.target != 0 && ws.current < ws.target {
-		ws.start = time.Now()
-		ws.init = ws.current
-		ws.Events.Start.Trigger(ws.target)
-		msRange := ws.advanceCheckpoint()
-		ws.Events.CheckpointUpdated.Trigger(ws.checkpoint, ws.current, msRange)
-	}
-
-	if target[0] <= ws.target {
+// UpdateTarget updates the synchronization target if it is higher than the current one and
+// triggers a synchronization start if the target was set for the first time.
+func (ws *WarpSync) UpdateTarget(target milestone.Index) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	if target <= ws.TargetMs {
 		return
 	}
-	ws.target = target[0]
+
+	ws.TargetMs = target
+
+	if ws.CurrentCheckpoint != 0 || ws.CurrentSolidMs >= ws.TargetMs || target-ws.CurrentSolidMs <= 1 {
+		return
+	}
+
+	ws.start = time.Now()
+	ws.Init = ws.CurrentSolidMs
+	ws.PreviousCheckpoint = ws.CurrentSolidMs
+	advancementRange := ws.advanceCheckpoint()
+	ws.Events.Start.Trigger(ws.TargetMs, ws.CurrentCheckpoint, advancementRange)
 }
 
 // advances the next checkpoint by either incrementing from the current
 // via the checkpoint range or max to the target of the synchronization.
 // returns the chosen range.
 func (ws *WarpSync) advanceCheckpoint() int32 {
-	msRange := milestone.Index(ws.checkpointRange)
-	if ws.current+msRange > ws.target {
-		ws.checkpoint = ws.target
-		msRange = ws.target - ws.current
-	} else {
-		ws.checkpoint = ws.current + msRange
+	if ws.CurrentCheckpoint != 0 {
+		ws.PreviousCheckpoint = ws.CurrentCheckpoint
 	}
-	return int32(msRange)
+
+	advRange := milestone.Index(ws.AdvancementRange)
+
+	// if we reach the target, just take the delta from target to current solid
+	if ws.CurrentSolidMs+advRange >= ws.TargetMs {
+		ws.CurrentCheckpoint = ws.TargetMs
+		return int32(ws.TargetMs - ws.CurrentSolidMs)
+	}
+
+	// at start simply advance from the current solid
+	if ws.CurrentCheckpoint == 0 {
+		ws.CurrentCheckpoint = ws.CurrentSolidMs + advRange
+		return int32(ws.AdvancementRange)
+	}
+
+	ws.CurrentCheckpoint = ws.CurrentCheckpoint + advRange
+	return int32(advRange)
 }
 
 // resets the warp sync.
 func (ws *WarpSync) reset() {
-	ws.current = 0
-	ws.checkpoint = 0
-	ws.target = 0
-	ws.init = 0
+	ws.CurrentSolidMs = 0
+	ws.CurrentCheckpoint = 0
+	ws.TargetMs = 0
+	ws.Init = 0
 }
