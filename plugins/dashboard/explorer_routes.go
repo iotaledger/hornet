@@ -206,7 +206,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET("/search/:search", func(c echo.Context) error {
-		search := strings.ToUpper(c.Param("search"))
+		search := strings.TrimSpace(strings.ToUpper(c.Param("search")))
 		result := &SearchResult{}
 
 		// milestone query
@@ -219,6 +219,12 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 			return c.JSON(http.StatusOK, result)
 		}
 
+		// check for valid trytes
+		if err := ValidTrytes(search); err != nil {
+			return c.JSON(http.StatusOK, result)
+		}
+
+		// tag query
 		if len(search) <= 27 {
 			txs, err := findTag(search)
 			if err == nil && len(txs.Txs) > 0 {
