@@ -160,8 +160,7 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 	}
 
 	// check if the request is in the queue (was enqueued again after request)
-	req, _ := pq.queued[hash]
-	return req
+	return pq.queued[hash]
 }
 
 func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
