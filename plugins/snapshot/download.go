@@ -49,7 +49,7 @@ func downloadSnapshotFile(filepath string, url string) error {
 		out.Close()
 		return err
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		out.Close()
 		return fmt.Errorf("server returned %d", resp.StatusCode)
 	}
