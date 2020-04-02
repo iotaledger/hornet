@@ -32,10 +32,9 @@ func configure(plugin *node.Plugin) {
 			return
 		}
 
-		p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
-			p.LatestHeartbeat = sting.ParseHeartbeat(data)
+		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *sting.Heartbeat) {
 			warpSync.UpdateCurrent(tangle.GetSolidMilestoneIndex())
-			warpSync.UpdateTarget(p.LatestHeartbeat.SolidMilestoneIndex)
+			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
 	}))
 

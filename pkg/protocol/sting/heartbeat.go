@@ -19,3 +19,7 @@ func ParseHeartbeat(data []byte) *Heartbeat {
 		PrunedMilestoneIndex: milestone.Index(binary.BigEndian.Uint32(data[4:])),
 	}
 }
+
+func HeartbeatCaller(handler interface{}, params ...interface{}) {
+	handler.(func(heartbeat *Heartbeat))(params[0].(*Heartbeat))
+}
