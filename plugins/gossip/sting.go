@@ -45,6 +45,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 	p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedHeartbeats.Inc()
 		p.LatestHeartbeat = sting.ParseHeartbeat(data)
+		p.Events.HeartbeatUpdated.Trigger(p.LatestHeartbeat)
 	}))
 
 	p.Protocol.Events.Sent[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func() {

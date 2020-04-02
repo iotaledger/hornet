@@ -34,17 +34,17 @@ func main() {
 	plugins := []*node.Plugin{
 		cli.PLUGIN,
 		gracefulshutdown.PLUGIN,
+		profiling.PLUGIN,
 		database.PLUGIN,
 		autopeering.PLUGIN,
-		profiling.PLUGIN,
 	}
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		plugins = append(plugins, []*node.Plugin{
-			peering.PLUGIN,
 			gossip.PLUGIN,
-			warpsync.PLUGIN,
 			tangle.PLUGIN,
+			peering.PLUGIN,
+			warpsync.PLUGIN,
 			tipselection.PLUGIN,
 			metrics.PLUGIN,
 			snapshot.PLUGIN,

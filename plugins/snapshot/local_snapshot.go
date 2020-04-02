@@ -506,7 +506,6 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		Hash:               cachedTargetMs.GetBundle().GetMilestoneHash(),
 		SnapshotIndex:      targetIndex,
 		PruningIndex:       snapshotInfo.PruningIndex,
-		RevalidationIndex:  snapshotInfo.RevalidationIndex,
 		Timestamp:          cachedTargetMsTail.GetTransaction().GetTimestamp(),
 		Metadata:           snapshotInfo.Metadata,
 	})

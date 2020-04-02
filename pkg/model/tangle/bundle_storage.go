@@ -204,6 +204,10 @@ func ShutdownBundleStorage() {
 	bundleStorage.Shutdown()
 }
 
+func FlushBundleStorage() {
+	bundleStorage.Flush()
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 
 // GetBundles returns all existing bundle instances for that bundle hash

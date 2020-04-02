@@ -228,6 +228,10 @@ func ShutdownBundleTransactionsStorage() {
 	bundleTransactionsStorage.Shutdown()
 }
 
+func FlushBundleTransactionsStorage() {
+	bundleTransactionsStorage.Flush()
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // getTailApproversOfSameBundle returns all tailTx hashes of the same bundle that approve this transaction

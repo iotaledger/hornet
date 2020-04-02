@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DbVersion = 6
+	DbVersion = 7
 )
 
 var (

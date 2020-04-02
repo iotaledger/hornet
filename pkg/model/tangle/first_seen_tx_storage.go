@@ -126,6 +126,10 @@ func ShutdownFirstSeenTxsStorage() {
 	firstSeenTxStorage.Shutdown()
 }
 
+func FlushFirstSeenTxsStorage() {
+	firstSeenTxStorage.Flush()
+}
+
 func FixFirstSeenTxs(msIndex milestone.Index) {
 
 	// Search all entries with milestone 0

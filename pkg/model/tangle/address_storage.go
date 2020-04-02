@@ -114,3 +114,7 @@ func DeleteAddress(address trinary.Hash, txHash trinary.Hash) {
 func ShutdownAddressStorage() {
 	addressesStorage.Shutdown()
 }
+
+func FlushAddressStorage() {
+	addressesStorage.Flush()
+}

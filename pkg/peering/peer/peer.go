@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/iotaledger/hive.go/events"
 	"go.uber.org/atomic"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
@@ -48,6 +49,9 @@ func NewInboundPeer(remoteAddr net.Addr) *Peer {
 		Addresses:        addresses,
 		ConnectionOrigin: Inbound,
 		SendQueue:        make(chan []byte, SendQueueSize),
+		Events: Events{
+			HeartbeatUpdated: events.NewEvent(sting.HeartbeatCaller),
+		},
 	}
 }
 
@@ -61,7 +65,15 @@ func NewOutboundPeer(originAddr *iputils.OriginAddress, primaryAddr net.IP, port
 		MoveBackToReconnectPool: true,
 		ConnectionOrigin:        Outbound,
 		SendQueue:               make(chan []byte, SendQueueSize),
+		Events: Events{
+			HeartbeatUpdated: events.NewEvent(sting.HeartbeatCaller),
+		},
 	}
+}
+
+// Events happening on the peer instance.
+type Events struct {
+	HeartbeatUpdated *events.Event
 }
 
 // Peer is a node to which the node is connected to.
@@ -95,6 +107,8 @@ type Peer struct {
 	// Whether this peer is marked as disconnected.
 	// Used to suppress errors stemming from connection closure.
 	Disconnected bool
+	// Events happening on the peer.
+	Events Events
 }
 
 // IsInbound tells whether the peer's connection was inbound.

@@ -86,14 +86,12 @@ func configure(plugin *node.Plugin) {
 func run(plugin *node.Plugin) {
 
 	if tangle.IsDatabaseCorrupted() {
-		log.Warnf("HORNET was not shut down correctly. Database is corrupted. Starting revalidation...")
+		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		var err error
-		revalidationMilestoneIndex, err = revalidateDatabase()
-		if err != nil {
+		if err := revalidateDatabase(); err != nil {
 			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
 		}
-		log.Infof("First stage of database revalidation successful (RevalidationIndex: %d). Solidifcation will be slower due to stage two.", revalidationMilestoneIndex)
+		log.Info("database revalidation successful")
 	}
 
 	runTangleProcessor(plugin)

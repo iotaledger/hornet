@@ -125,3 +125,7 @@ func DeleteTags(txTag trinary.Trytes) {
 func ShutdownTagsStorage() {
 	tagsStorage.Shutdown()
 }
+
+func FlushTagsStorage() {
+	tagsStorage.Flush()
+}

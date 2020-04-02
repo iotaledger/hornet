@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -32,8 +31,6 @@ var (
 
 	oldNewTxCount       uint32
 	oldConfirmedTxCount uint32
-
-	revalidationMilestoneIndex = milestone.Index(0)
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone = milestone.Index(0)
@@ -113,11 +110,9 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
-func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, revalidate bool, abortSignal chan struct{}) (solid bool, aborted bool) {
+func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, abortSignal chan struct{}) (solid bool, aborted bool) {
 
 	ts := time.Now()
-
-	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 
 	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
 	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
@@ -196,54 +191,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 				}
 
 				// Mark the tx as checked
-				var approveeSolid bool
-				if !revalidate {
-					approveeSolid = cachedApproveeTx.GetMetadata().IsSolid()
-				} else {
-					// The metadata of this cone may be corrupted => do not trust the solid flags
-					if confirmed, at := cachedApproveeTx.GetMetadata().GetConfirmed(); confirmed {
-						if at <= solidMilestoneIndex {
-							// Mark the tx as solid if it was confirmed by an valid milestone
-							approveeSolid = true
-						} else {
-							// Corrupted Tx was confirmed by an invalid milestone => reset metadata
-							cachedApproveeTx.GetMetadata().Reset()
-						}
-					} else {
-						// Corrupted Tx was not confirmed, but could be solid => reset metadata
-						cachedApproveeTx.GetMetadata().Reset()
-					}
-
-					// We should also delete corrupted bundle information (it will be reapplied at solidification and confirmation).
-					// This also handles the special case if a milestone bundle was stored, but the milestone is missing in the database.
-					if !approveeSolid && cachedApproveeTx.GetTransaction().IsTail() && (approveeHash != consts.NullHashTrytes) {
-						if cachedBndl := tangle.GetCachedBundleOrNil(approveeHash); cachedBndl != nil {
-
-							// Reset corrupted meta tags of the bundle
-							cachedBndl.GetBundle().ResetSolidAndConfirmed()
-
-							// Reapplies missing spent addresses to the database
-							cachedBndl.GetBundle().ApplySpentAddresses()
-
-							if cachedBndl.GetBundle().IsMilestone() {
-								// Reapply milestone information to database
-								_, cachedMilestone := tangle.StoreMilestone(cachedBndl.GetBundle())
-
-								// Do not force release, since it is loaded again
-								cachedMilestone.Release() // milestone +-0
-
-								// Always fire the event to abort the walk and release the cached transactions
-								// => otherwise the walked cone could become to big and lead to OOM
-								tangle.Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
-
-								// Do not force release, since it is loaded again
-								cachedBndl.Release()
-								return false, true
-							}
-							cachedBndl.Release(true)
-						}
-					}
-				}
+				approveeSolid := cachedApproveeTx.GetMetadata().IsSolid()
 
 				// Mark the tx as checked
 				txsChecked[approveeHash] = struct{}{}
@@ -276,16 +224,10 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 			log.Panicf("solidQueueCheck: Tx not found: %v", txHash)
 		}
 
-		if revalidate {
-			// If this cone is maybe corrupted, the transaction is added again to the database to store all additional information
-			cachedTx, _ := tangle.AddTransactionToStorage(cachedTx.GetTransaction(), tangle.GetLatestMilestoneIndex(), true, true, true)
-			cachedTx.Release(true)
-		}
-
 		markTransactionAsSolid(cachedTx.Retain())
 	}
 
-	if !revalidate && tangle.IsNodeSyncedWithThreshold() {
+	if tangle.IsNodeSyncedWithThreshold() {
 		// Propagate solidity to the future cone (txs attached to the txs of this milestone)
 
 		// All solidified txs are newly solidified => propagate all
@@ -394,9 +336,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	signalChanMilestoneStopSolidificationLock.Unlock()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	revalidateMilestone := (revalidationMilestoneIndex != 0) && (milestoneIndexToSolidify <= revalidationMilestoneIndex)
-
-	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), revalidateMilestone, signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
+	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -449,11 +389,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}
 
 	log.Infof("New solid milestone: %d%s", milestoneIndexToSolidify, ctpsMessage)
-
-	if (revalidationMilestoneIndex != 0) && milestoneIndexToSolidify > revalidationMilestoneIndex {
-		revalidationMilestoneIndex = 0
-		log.Info("Final stage of database revalidation successful. Your database is consistent again.")
-	}
 
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
