@@ -113,7 +113,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, abortSignal chan struct{}) (solid bool, aborted bool) {
 
 	ts := time.Now()
-	
+
 	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
 	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
 
