@@ -68,7 +68,7 @@ func configure(plugin *node.Plugin) {
 		FixVersionStrFunc: latest.DeleteFrontV(),
 	}
 
-	fmt.Print(fmt.Sprintf(`
+	fmt.Printf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
               ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
@@ -76,7 +76,7 @@ func configure(plugin *node.Plugin) {
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
                                    v%s
-`+"\n\n", AppVersion))
+`+"\n\n", AppVersion)
 
 	checkLatestVersion()
 
