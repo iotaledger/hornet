@@ -23,19 +23,25 @@ type Queue interface {
 	IsQueued(hash trinary.Hash) bool
 	// IsPending tells whether a given request was popped from the queue and is now pending.
 	IsPending(hash trinary.Hash) bool
-	// Received marks a request as fulfilled and thereby removes it from the pending set.
+	// IsProcessing tells whether a given request was popped from the queue, received and is now processing.
+	IsProcessing(hash trinary.Hash) bool
+	// Received marks a request as received and thereby removes it from the pending set.
+	// It is added to the processing set.
 	// Returns the origin request which was pending or nil if the hash was not requested.
 	Received(hash trinary.Hash) *Request
+	// Processed marks a request as fulfilled and thereby removes it from the processing set.
+	// Returns the origin request which was pending or nil if the hash was not requested.
+	Processed(hash trinary.Hash) *Request
 	// EnqueuePending enqueues all pending requests back into the queue.
 	// It also discards requests in the pending set of which their enqueue time is over the given delta threshold.
 	// If discardOlderThan is zero, no requests are discarded.
 	EnqueuePending(discardOlderThan time.Duration) (enqueued int)
-	// Size returns the size of currently queued and requested/pending requests.
-	Size() (queued int, pending int)
+	// Size returns the size of currently queued, requested/pending and processing requests.
+	Size() (queued int, pending int, processing int)
 	// Empty tells whether the queue has no queued and pending requests.
 	Empty() bool
-	// Requests returns a snapshot of all queued and pending requests in the queue.
-	Requests() (queued []*Request, pending []*Request)
+	// Requests returns a snapshot of all queued, pending and processing requests in the queue.
+	Requests() (queued []*Request, pending []*Request, processing []*Request)
 	// AvgLatency returns the average latency of enqueueing and then receiving a request.
 	AvgLatency() int64
 	// Filter adds the given filter function to the queue. Passing nil resets the current one.
@@ -52,9 +58,10 @@ const DefaultLatencyResolution = 100
 // New creates a new Queue where request are prioritized over their milestone index (lower = higher priority).
 func New(latencyResolution ...int32) Queue {
 	q := &priorityqueue{
-		queue:   make([]*Request, 0),
-		queued:  make(map[string]*Request),
-		pending: make(map[string]*Request),
+		queue:      make([]*Request, 0),
+		queued:     make(map[string]*Request),
+		pending:    make(map[string]*Request),
+		processing: make(map[string]*Request),
 	}
 	if len(latencyResolution) == 0 {
 		q.latencyResolution = DefaultLatencyResolution
@@ -90,6 +97,7 @@ type priorityqueue struct {
 	queue             []*Request
 	queued            map[string]*Request
 	pending           map[string]*Request
+	processing        map[string]*Request
 	latencyResolution int64
 	latencySum        int64
 	latencyEntries    int64
@@ -116,6 +124,9 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 	if _, pending := pq.pending[r.Hash]; pending {
 		return false
 	}
+	if _, processing := pq.processing[r.Hash]; processing {
+		return false
+	}
 	if pq.filter != nil && !pq.filter(r) {
 		return false
 	}
@@ -138,6 +149,13 @@ func (pq *priorityqueue) IsPending(hash trinary.Hash) bool {
 	return k
 }
 
+func (pq *priorityqueue) IsProcessing(hash trinary.Hash) bool {
+	pq.RLock()
+	_, k := pq.processing[hash]
+	pq.RUnlock()
+	return k
+}
+
 func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 	pq.Lock()
 	defer pq.Unlock()
@@ -156,11 +174,24 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 			pq.avgLatency.Store(0)
 		}
 
+		// Add the request to processing
+		pq.processing[hash] = req
+
 		return req
 	}
 
 	// check if the request is in the queue (was enqueued again after request)
 	return pq.queued[hash]
+}
+
+func (pq *priorityqueue) Processed(hash trinary.Hash) *Request {
+	pq.Lock()
+	req, wasProcessing := pq.processing[hash]
+	if wasProcessing {
+		delete(pq.processing, hash)
+	}
+	pq.Unlock()
+	return req
 }
 
 func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
@@ -190,17 +221,18 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 	return enqueued
 }
 
-func (pq *priorityqueue) Size() (int, int) {
+func (pq *priorityqueue) Size() (int, int, int) {
 	pq.RLock()
 	x := len(pq.queued)
 	y := len(pq.pending)
+	z := len(pq.processing)
 	pq.RUnlock()
-	return x, y
+	return x, y, z
 }
 
 func (pq *priorityqueue) Empty() bool {
 	pq.RLock()
-	empty := len(pq.queued) == 0 && len(pq.pending) == 0
+	empty := len(pq.queued) == 0 && len(pq.pending) == 0 && len(pq.processing) == 0
 	pq.RUnlock()
 	return empty
 }
@@ -209,7 +241,7 @@ func (pq *priorityqueue) AvgLatency() int64 {
 	return pq.avgLatency.Load()
 }
 
-func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request) {
+func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, processing []*Request) {
 	pq.Lock()
 	defer pq.Unlock()
 	queued = make([]*Request, len(pq.queue))
@@ -224,7 +256,13 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request) {
 		pending[j] = v
 		j++
 	}
-	return queued, pending
+	processing = make([]*Request, len(pq.processing))
+	var k int
+	for _, v := range pq.processing {
+		processing[k] = v
+		k++
+	}
+	return queued, pending, processing
 }
 
 func (pq *priorityqueue) Filter(f FilterFunc) {
