@@ -195,49 +195,6 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 				// Mark the tx as checked
 				approveeSolid := cachedApproveeTx.GetMetadata().IsSolid()
-				// The metadata of this cone may be corrupted => do not trust the solid flags
-				if confirmed, at := cachedApproveeTx.GetMetadata().GetConfirmed(); confirmed {
-					if at <= solidMilestoneIndex {
-						// Mark the tx as solid if it was confirmed by an valid milestone
-						approveeSolid = true
-					} else {
-						// Corrupted Tx was confirmed by an invalid milestone => reset metadata
-						cachedApproveeTx.GetMetadata().Reset()
-					}
-				} else {
-					// Corrupted Tx was not confirmed, but could be solid => reset metadata
-					cachedApproveeTx.GetMetadata().Reset()
-				}
-
-				// We should also delete corrupted bundle information (it will be reapplied at solidification and confirmation).
-				// This also handles the special case if a milestone bundle was stored, but the milestone is missing in the database.
-				if !approveeSolid && cachedApproveeTx.GetTransaction().IsTail() && (approveeHash != consts.NullHashTrytes) {
-					if cachedBndl := tangle.GetCachedBundleOrNil(approveeHash); cachedBndl != nil {
-
-						// Reset corrupted meta tags of the bundle
-						cachedBndl.GetBundle().ResetSolidAndConfirmed()
-
-						// Reapplies missing spent addresses to the database
-						cachedBndl.GetBundle().ApplySpentAddresses()
-
-						if cachedBndl.GetBundle().IsMilestone() {
-							// Reapply milestone information to database
-							_, cachedMilestone := tangle.StoreMilestone(cachedBndl.GetBundle())
-
-							// Do not force release, since it is loaded again
-							cachedMilestone.Release() // milestone +-0
-
-							// Always fire the event to abort the walk and release the cached transactions
-							// => otherwise the walked cone could become to big and lead to OOM
-							tangle.Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
-
-							// Do not force release, since it is loaded again
-							cachedBndl.Release()
-							return false, true
-						}
-						cachedBndl.Release(true)
-					}
-				}
 
 				// Mark the tx as checked
 				txsChecked[approveeHash] = struct{}{}
