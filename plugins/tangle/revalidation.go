@@ -2,9 +2,14 @@ package tangle
 
 import (
 	"errors"
+	"fmt"
+	"time"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
@@ -85,11 +90,14 @@ func revalidateDatabase() (milestone.Index, error) {
 	for milestoneIndex := snapshotInfo.SnapshotIndex + 1; milestoneIndex <= snapshotInfo.RevalidationIndex; milestoneIndex++ {
 		// Delete the information about this milestone (it will be reapplied during solidification walk)
 		tangle.DeleteMilestone(milestoneIndex)
-
+		tangle.DeleteFirstSeenTxs(milestoneIndex)
 		if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
 			return 0, err
 		}
 	}
+
+	// clean up transactions which are above the local snapshot
+	cleanupTransactions(snapshotInfo)
 
 	// Get the ledger state of the last snapshot
 	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
@@ -116,4 +124,83 @@ func revalidateDatabase() (milestone.Index, error) {
 
 	// Add a treshold in case the milestones don't exist, but parts of confirmed cones were already stored
 	return snapshotInfo.RevalidationIndex, nil
+}
+
+// holds data about a transaction which should be deleted
+type deletionMeta struct {
+	isTail  bool
+	bundle  trinary.Hash
+	address trinary.Hash
+	tag     trinary.Trytes
+}
+
+func deletionMetaFor(tx *hornet.Transaction) deletionMeta {
+	return deletionMeta{
+		isTail:  tx.IsTail(),
+		bundle:  tx.Tx.Bundle,
+		address: tx.Tx.Address,
+		tag:     tx.Tx.Tag,
+	}
+}
+
+// deletes all transactions (and their bundle, first seen tx, etc.) which are not confirmed,
+// not solid, their confirmation milestone is newer/ of which their solidification time is younger
+// than the last local snapshot's milestone
+func cleanupTransactions(info *tangle.SnapshotInfo) {
+	txsToDelete := map[string]deletionMeta{}
+	start := time.Now()
+	log.Info("gathering transactions to cleanup...")
+	var counter int64
+	tangle.ForEachTransaction(func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject) {
+		defer cachedTx.Release(true) // tx -1
+		tx := cachedTx.Get().(*hornet.Transaction)
+
+		counter++
+		fmt.Printf("checked %d\t\t\r", counter)
+
+		// delete transaction if no metadata
+		if cachedTxMeta == nil {
+			txsToDelete[tx.GetHash()] = deletionMeta{
+				isTail:  false, // we just assume it is
+				bundle:  tx.Tx.Bundle,
+				address: tx.Tx.Address,
+				tag:     tx.Tx.Tag,
+			}
+			return
+		} else {
+			defer cachedTxMeta.Release(true) // tx meta -1
+		}
+
+		txMeta := cachedTxMeta.Get().(*hornet.TransactionMetadata)
+
+		// not solid
+		if !txMeta.IsSolid() {
+			txsToDelete[tx.GetHash()] = deletionMetaFor(tx)
+			return
+		}
+
+		if confirmed, by := txMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
+			txsToDelete[tx.GetHash()] = deletionMetaFor(tx)
+			return
+		}
+	})
+
+	log.Infof("cleaning up data for %d transactions", len(txsToDelete))
+	for txToDeleteHash, meta := range txsToDelete {
+		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, meta.isTail)
+		tangle.DeleteAddress(meta.address, txToDeleteHash)
+		tangle.DeleteTag(meta.tag, txToDeleteHash)
+		tangle.DeleteApprovers(txToDeleteHash)
+		tangle.DeleteTransaction(txToDeleteHash)
+	}
+
+	// flush storages
+	tangle.FlushBundleStorage()
+	tangle.FlushAddressStorage()
+	tangle.FlushTagsStorage()
+	tangle.FlushApproversStorage()
+	tangle.FlushTransactionStorage()
+
+	log.Infof("cleaning up %d transactions, took %v", len(txsToDelete), time.Since(start))
+
 }

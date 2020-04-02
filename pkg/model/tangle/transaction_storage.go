@@ -199,6 +199,24 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 	return &CachedTransaction{tx: cachedTxData, metadata: cachedMeta}, newlyAdded
 }
 
+type TransactionConsumer func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject)
+
+func ForEachTransaction(consumer TransactionConsumer) {
+	txStorage.ForEach(func(txHash []byte, cachedTx objectstorage.CachedObject) bool {
+		defer cachedTx.Release(true) // tx -1
+
+		cachedMeta := metadataStorage.Load(txHash) // tx meta +1
+		if cachedMeta.Exists() {
+			defer cachedMeta.Release(true) // tx meta -1
+			consumer(cachedTx.Retain(), cachedMeta.Retain())
+			return true
+		}
+
+		consumer(cachedTx.Retain(), nil)
+		return true
+	})
+}
+
 // tx +-0
 func DeleteTransaction(transactionHash trinary.Hash) {
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
@@ -209,4 +227,9 @@ func DeleteTransaction(transactionHash trinary.Hash) {
 func ShutdownTransactionStorage() {
 	txStorage.Shutdown()
 	metadataStorage.Shutdown()
+}
+
+func FlushTransactionStorage() {
+	txStorage.Flush()
+	metadataStorage.Flush()
 }

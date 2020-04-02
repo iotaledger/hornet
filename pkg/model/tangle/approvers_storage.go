@@ -132,3 +132,7 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 func ShutdownApproversStorage() {
 	approversStorage.Shutdown()
 }
+
+func FlushApproversStorage() {
+	approversStorage.Flush()
+}

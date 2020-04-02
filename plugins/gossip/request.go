@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/dag"
@@ -188,6 +189,7 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 			},
 			// called on missing approvees
 			func(approveeHash trinary.Hash) {
+				fmt.Println("REQUESTING MISSING APPROVEES")
 				Request(approveeHash, ms, preventDiscard...)
 			}, true)
 	}
