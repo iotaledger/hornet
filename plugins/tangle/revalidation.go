@@ -140,6 +140,7 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 		tangle.DeleteMilestone(index)
 	}
 
+	tangle.FlushFirstSeenTxsStorage()
 	tangle.FlushMilestoneStorage()
 }
 
