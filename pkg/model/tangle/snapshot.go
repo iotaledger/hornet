@@ -49,7 +49,7 @@ func loadSnapshotInfo() {
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
 	if len(bytes) != 115 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 119", len(bytes))
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 115", len(bytes))
 	}
 
 	cooAddr := trinary.MustBytesToTrytes(bytes[:49], 81)
