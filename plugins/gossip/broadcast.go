@@ -1,8 +1,6 @@
 package gossip
 
 import (
-	"fmt"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -51,7 +49,6 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 		toReq := startingPoint + milestone.Index(i)
 		// only request if we do not have the milestone
 		if !tangle.ContainsMilestone(toReq) {
-			fmt.Println("REQUESTING MILESTONE", toReq)
 			msIndexes = append(msIndexes, toReq)
 			continue
 		}

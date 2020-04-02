@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 )
 
@@ -70,7 +71,7 @@ func revalidateDatabase() error {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	log.Infof("collapsing database state back to local snapshot %d...", snapshotInfo.SnapshotIndex)
+	log.Infof("reverting database state back to local snapshot %d...", snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
 	cleanMilestones(snapshotInfo)
@@ -106,7 +107,6 @@ func revalidateDatabase() error {
 
 // holds data about a transaction which should be deleted
 type deletionMeta struct {
-	isTail  bool
 	bundle  trinary.Hash
 	address trinary.Hash
 	tag     trinary.Trytes
@@ -114,7 +114,6 @@ type deletionMeta struct {
 
 func deletionMetaFor(tx *hornet.Transaction) deletionMeta {
 	return deletionMeta{
-		isTail:  tx.IsTail(),
 		bundle:  tx.Tx.Bundle,
 		address: tx.Tx.Address,
 		tag:     tx.Tx.Tag,
@@ -160,12 +159,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 
 		// delete transaction if no metadata
 		if cachedTxMeta == nil {
-			txsToDelete[tx.GetHash()] = deletionMeta{
-				isTail:  false, // we just assume it is
-				bundle:  tx.Tx.Bundle,
-				address: tx.Tx.Address,
-				tag:     tx.Tx.Tag,
-			}
+			txsToDelete[tx.GetHash()] = deletionMetaFor(tx)
 			return
 		} else {
 			defer cachedTxMeta.Release(true) // tx meta -1
@@ -185,13 +179,17 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		}
 	})
 
-	log.Infof("collapsing (this might take a while)...")
 	var deletionCounter float64
 	total := float64(len(txsToDelete))
 	for txToDeleteHash, meta := range txsToDelete {
 		deletionCounter++
-		fmt.Printf("%d%% transactions\t\t\r", int((deletionCounter/total)*100))
-		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, meta.isTail)
+		if txToDeleteHash == consts.NullHashTrytes {
+			continue
+		}
+		fmt.Printf("reverting (this might take a while)... %d%%\t\t\r", int((deletionCounter/total)*100))
+		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, true)
+		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, false)
+		tangle.DeleteBundle(txToDeleteHash)
 		tangle.DeleteAddress(meta.address, txToDeleteHash)
 		tangle.DeleteTag(meta.tag, txToDeleteHash)
 		tangle.DeleteApprovers(txToDeleteHash)
@@ -200,10 +198,11 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 
 	// flush object storage
 	tangle.FlushBundleStorage()
-	tangle.FlushAddressStorage()
+	tangle.FlushBundleTransactionsStorage()
 	tangle.FlushTagsStorage()
+	tangle.FlushAddressStorage()
 	tangle.FlushApproversStorage()
 	tangle.FlushTransactionStorage()
 
-	log.Infof("collapsed state back to local snapshot %d, took %v", info.SnapshotIndex, time.Since(start))
+	log.Infof("reverted state back to local snapshot %d, took %v", info.SnapshotIndex, time.Since(start))
 }

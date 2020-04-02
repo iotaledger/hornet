@@ -154,7 +154,7 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 		services.Update(service.PeeringKey, "udp", int(entryAddr.Port))
 
 		ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6))
-		result = append(result, peer.NewPeer(identity.NewIdentity(publicKey), ip, services))
+		result = append(result, peer.NewPeer(identity.New(publicKey), ip, services))
 	}
 
 	return result, nil

@@ -206,8 +206,8 @@ func ForEachTransaction(consumer TransactionConsumer) {
 		defer cachedTx.Release(true) // tx -1
 
 		cachedMeta := metadataStorage.Load(txHash) // tx meta +1
+		defer cachedMeta.Release(true)             // tx meta -1
 		if cachedMeta.Exists() {
-			defer cachedMeta.Release(true) // tx meta -1
 			consumer(cachedTx.Retain(), cachedMeta.Retain())
 			return true
 		}

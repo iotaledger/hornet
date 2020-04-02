@@ -34,9 +34,9 @@ func main() {
 	plugins := []*node.Plugin{
 		cli.PLUGIN,
 		gracefulshutdown.PLUGIN,
+		profiling.PLUGIN,
 		database.PLUGIN,
 		autopeering.PLUGIN,
-		profiling.PLUGIN,
 	}
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
