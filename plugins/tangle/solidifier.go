@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -114,9 +113,7 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, abortSignal chan struct{}) (solid bool, aborted bool) {
 
 	ts := time.Now()
-
-	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
-
+	
 	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
 	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
 
