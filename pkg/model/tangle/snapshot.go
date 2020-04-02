@@ -31,7 +31,6 @@ type SnapshotInfo struct {
 	Hash               trinary.Hash
 	SnapshotIndex      milestone.Index
 	PruningIndex       milestone.Index
-	RevalidationIndex  milestone.Index
 	Timestamp          int64
 	Metadata           bitmask.BitMask
 }
@@ -49,7 +48,7 @@ func loadSnapshotInfo() {
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 119 {
+	if len(bytes) != 115 {
 		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 119", len(bytes))
 	}
 
@@ -57,16 +56,14 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	hash := trinary.MustBytesToTrytes(bytes[49:98], 81)
 	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[98:102]))
 	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[102:106]))
-	revalidationIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[106:110]))
-	timestamp := int64(binary.LittleEndian.Uint64(bytes[110:118]))
-	metadata := bitmask.BitMask(bytes[118])
+	timestamp := int64(binary.LittleEndian.Uint64(bytes[106:114]))
+	metadata := bitmask.BitMask(bytes[114])
 
 	return &SnapshotInfo{
 		CoordinatorAddress: cooAddr,
 		Hash:               hash,
 		SnapshotIndex:      snapshotIndex,
 		PruningIndex:       pruningIndex,
-		RevalidationIndex:  revalidationIndex,
 		Timestamp:          timestamp,
 		Metadata:           metadata,
 	}, nil
@@ -95,10 +92,6 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	binary.LittleEndian.PutUint32(pruningIndexBytes, uint32(i.PruningIndex))
 	bytes = append(bytes, pruningIndexBytes...)
 
-	revalidationIndexBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(revalidationIndexBytes, uint32(i.RevalidationIndex))
-	bytes = append(bytes, revalidationIndexBytes...)
-
 	timestampBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(timestampBytes, uint64(i.Timestamp))
 	bytes = append(bytes, timestampBytes...)
@@ -116,7 +109,6 @@ func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary
 		Hash:               milestoneHash,
 		SnapshotIndex:      snapshotIndex,
 		PruningIndex:       pruningIndex,
-		RevalidationIndex:  0,
 		Timestamp:          timestamp,
 		Metadata:           bitmask.BitMask(0),
 	}

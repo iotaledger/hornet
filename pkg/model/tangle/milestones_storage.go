@@ -129,6 +129,16 @@ func SearchLatestMilestoneIndex() milestone.Index {
 	return latestMilestoneIndex
 }
 
+type MilestoneConsumer func(cachedMs objectstorage.CachedObject)
+
+func ForEachMilestone(consumer MilestoneConsumer) {
+	milestoneStorage.ForEach(func(key []byte, cachedMs objectstorage.CachedObject) bool {
+		defer cachedMs.Release(true) // tx -1
+		consumer(cachedMs.Retain())
+		return true
+	})
+}
+
 // milestone +1
 func StoreMilestone(bndl *Bundle) (bool, *CachedMilestone) {
 
@@ -161,4 +171,8 @@ func DeleteMilestone(milestoneIndex milestone.Index) {
 
 func ShutdownMilestoneStorage() {
 	milestoneStorage.Shutdown()
+}
+
+func FlushMilestoneStorage() {
+	milestoneStorage.Flush()
 }

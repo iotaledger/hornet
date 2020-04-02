@@ -12,10 +12,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-const (
-	RevalidationMilestoneThreshold = milestone.Index(50)
-)
-
 var (
 	ErrSnapshotInfoMissing                   = errors.New("snapshot information not found in database")
 	ErrLatestMilestoneOlderThanSnapshotIndex = errors.New("latest milestone in the database is older than the snapshot index")
@@ -61,40 +57,23 @@ var (
 //			- Balances of snapshot milestone			=> should be consistent (total iotas are checked)
 //			- Balance diffs of every solid milestone	=> will be removed and added again by confirmation
 //
-func revalidateDatabase() (milestone.Index, error) {
+func revalidateDatabase() error {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
-		return 0, ErrSnapshotInfoMissing
+		return ErrSnapshotInfoMissing
 	}
 
 	latestMilestoneIndex := tangle.SearchLatestMilestoneIndex()
 
-	// Resume old revalidation attempts
-	if snapshotInfo.RevalidationIndex != 0 && latestMilestoneIndex < (snapshotInfo.RevalidationIndex-RevalidationMilestoneThreshold) {
-		latestMilestoneIndex = snapshotInfo.RevalidationIndex - RevalidationMilestoneThreshold
-	}
-
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
-		return 0, ErrLatestMilestoneOlderThanSnapshotIndex
+		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	// It has to be stored in the snapshot info, otherwise a failed revalidation attempt would lead to missing info about latestMilestoneIndex
-	snapshotInfo.RevalidationIndex = latestMilestoneIndex + RevalidationMilestoneThreshold
-	tangle.SetSnapshotInfo(snapshotInfo)
+	log.Infof("collapsing database state back to local snapshot %d...", snapshotInfo.SnapshotIndex)
 
-	// Walk all milestones since SnapshotIndex and delete all corrupted balances diffs and milestones.
-	// Add a treshold in case the milestones don't exist, but the ledger data was stored already.
-	// Existing milestone bundles or transactions don't have to be deleted. Their metadata will be resetted or ignored
-	// during the solidification walk, and milestones will be reapplied to the database.
-	for milestoneIndex := snapshotInfo.SnapshotIndex + 1; milestoneIndex <= snapshotInfo.RevalidationIndex; milestoneIndex++ {
-		// Delete the information about this milestone (it will be reapplied during solidification walk)
-		tangle.DeleteMilestone(milestoneIndex)
-		tangle.DeleteFirstSeenTxs(milestoneIndex)
-		if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
-			return 0, err
-		}
-	}
+	// delete milestone data newer than the local snapshot
+	cleanMilestones(snapshotInfo)
 
 	// clean up transactions which are above the local snapshot
 	cleanupTransactions(snapshotInfo)
@@ -102,28 +81,27 @@ func revalidateDatabase() (milestone.Index, error) {
 	// Get the ledger state of the last snapshot
 	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if snapshotInfo.SnapshotIndex != snapshotIndex {
-		return 0, ErrSnapshotIndexWrong
+		return ErrSnapshotIndexWrong
 	}
 
 	// Delete the corrupted ledger state
 	if err = tangle.DeleteLedgerBalancesInDatabase(); err != nil {
-		return 0, err
+		return err
 	}
 
 	// Store the snapshot balances as the current valid ledger
 	if err = tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
-		return 0, err
+		return err
 	}
 
 	// Set the valid solid milestone index
 	tangle.SetSolidMilestoneIndex(snapshotInfo.SnapshotIndex)
 
-	// Add a treshold in case the milestones don't exist, but parts of confirmed cones were already stored
-	return snapshotInfo.RevalidationIndex, nil
+	return nil
 }
 
 // holds data about a transaction which should be deleted
@@ -143,20 +121,41 @@ func deletionMetaFor(tx *hornet.Transaction) deletionMeta {
 	}
 }
 
+// deletes milestones above the given snapshot's milestone index.
+func cleanMilestones(info *tangle.SnapshotInfo) {
+	milestonesToDelete := map[milestone.Index]struct{}{}
+	tangle.ForEachMilestone(func(cachedMs objectstorage.CachedObject) {
+		defer cachedMs.Release(true)
+		msIndex := cachedMs.Get().(*tangle.Milestone).Index
+		if msIndex > info.SnapshotIndex {
+			milestonesToDelete[msIndex] = struct{}{}
+			tangle.DeleteFirstSeenTxs(msIndex)
+			if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
+				panic(err)
+			}
+		}
+	})
+
+	for index := range milestonesToDelete {
+		tangle.DeleteMilestone(index)
+	}
+
+	tangle.FlushMilestoneStorage()
+}
+
 // deletes all transactions (and their bundle, first seen tx, etc.) which are not confirmed,
 // not solid, their confirmation milestone is newer/ of which their solidification time is younger
-// than the last local snapshot's milestone
+// than the last local snapshot's milestone.
 func cleanupTransactions(info *tangle.SnapshotInfo) {
 	txsToDelete := map[string]deletionMeta{}
 	start := time.Now()
-	log.Info("gathering transactions to cleanup...")
-	var counter int64
+	var txCounter int64
 	tangle.ForEachTransaction(func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject) {
 		defer cachedTx.Release(true) // tx -1
 		tx := cachedTx.Get().(*hornet.Transaction)
 
-		counter++
-		fmt.Printf("checked %d\t\t\r", counter)
+		txCounter++
+		fmt.Printf("analyzed %d transactions\t\t\r", txCounter)
 
 		// delete transaction if no metadata
 		if cachedTxMeta == nil {
@@ -185,8 +184,12 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		}
 	})
 
-	log.Infof("cleaning up data for %d transactions", len(txsToDelete))
+	log.Infof("collapsing (this might take a while)...")
+	var deletionCounter float64
+	total := float64(len(txsToDelete))
 	for txToDeleteHash, meta := range txsToDelete {
+		deletionCounter++
+		fmt.Printf("%d%% transactions\t\t\r", int((deletionCounter/total)*100))
 		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, meta.isTail)
 		tangle.DeleteAddress(meta.address, txToDeleteHash)
 		tangle.DeleteTag(meta.tag, txToDeleteHash)
@@ -194,13 +197,12 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		tangle.DeleteTransaction(txToDeleteHash)
 	}
 
-	// flush storages
+	// flush object storage
 	tangle.FlushBundleStorage()
 	tangle.FlushAddressStorage()
 	tangle.FlushTagsStorage()
 	tangle.FlushApproversStorage()
 	tangle.FlushTransactionStorage()
 
-	log.Infof("cleaning up %d transactions, took %v", len(txsToDelete), time.Since(start))
-
+	log.Infof("collapsed state back to local snapshot %d, took %v", info.SnapshotIndex, time.Since(start))
 }
