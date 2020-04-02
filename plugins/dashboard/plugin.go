@@ -209,6 +209,7 @@ type nodestatus struct {
 	CurrentRequestedMs     milestone.Index `json:"current_requested_ms"`
 	RequestQueueQueued     int             `json:"request_queue_queued"`
 	RequestQueuePending    int             `json:"request_queue_pending"`
+	RequestQueueProcessing int             `json:"request_queue_processing"`
 	RequestQueueAvgLatency int64           `json:"request_queue_avg_latency"`
 	ServerMetrics          *servermetrics  `json:"server_metrics"`
 	Mem                    *memmetrics     `json:"mem"`
@@ -310,7 +311,7 @@ func currentNodeStatus() *nodestatus {
 	// node status
 	var requestedMilestone milestone.Index
 	peekedRequest := gossip.RequestQueue().Peek()
-	queued, pending := gossip.RequestQueue().Size()
+	queued, pending, processing := gossip.RequestQueue().Size()
 	if peekedRequest != nil {
 		requestedMilestone = peekedRequest.MilestoneIndex
 	}
@@ -332,8 +333,9 @@ func currentNodeStatus() *nodestatus {
 		status.PruningIndex = snapshotInfo.PruningIndex
 	}
 	status.CurrentRequestedMs = requestedMilestone
-	status.RequestQueuePending = pending
 	status.RequestQueueQueued = queued
+	status.RequestQueuePending = pending
+	status.RequestQueueProcessing = processing
 	status.RequestQueueAvgLatency = gossip.RequestQueue().AvgLatency()
 
 	// cache metrics

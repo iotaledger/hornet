@@ -23,7 +23,7 @@ func init() {
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	grr := &GetRequestsReturn{}
-	queued, pending := gossip.RequestQueue().Requests()
+	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
 
 	offset := 0
@@ -43,6 +43,17 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 		debugReqs[offset+i] = &DebugRequest{
 			Hash:             req.Hash,
 			Type:             "pending",
+			TxExists:         tangle.ContainsTransaction(req.Hash),
+			MilestoneIndex:   req.MilestoneIndex,
+			EnqueueTimestamp: req.EnqueueTime.Unix(),
+		}
+	}
+	offset += len(pending)
+	for i := 0; i < len(processing); i++ {
+		req := processing[i]
+		debugReqs[offset+i] = &DebugRequest{
+			Hash:             req.Hash,
+			Type:             "processing",
 			TxExists:         tangle.ContainsTransaction(req.Hash),
 			MilestoneIndex:   req.MilestoneIndex,
 			EnqueueTimestamp: req.EnqueueTime.Unix(),

@@ -23,7 +23,8 @@ class TipSelMetric {
 
 class ReqQMetric {
     queued: number;
-    pending;
+    pending: number;
+    processing: number;
     latency: number;
     ts: string;
 }
@@ -43,6 +44,7 @@ class Status {
     ms_request_queue_size: number;
     request_queue_queued: number;
     request_queue_pending: number;
+    request_queue_processing: number;
     request_queue_avg_latency: number;
     server_metrics: ServerMetrics;
     mem: MemoryMetrics = new MemoryMetrics();
@@ -376,6 +378,7 @@ export class NodeStore {
         let reqQMetric = new ReqQMetric();
         reqQMetric.queued = status.request_queue_queued;
         reqQMetric.pending = status.request_queue_pending;
+        reqQMetric.processing = status.request_queue_processing;
         reqQMetric.latency = status.request_queue_avg_latency;
         reqQMetric.ts = dateformat(Date.now(), "HH:MM:ss");
 
@@ -787,6 +790,9 @@ export class NodeStore {
         let pending = Object.assign({}, chartSeriesOpts,
             series("Pending", 'rgba(222, 49, 182,1)', 'rgba(222, 49, 182,0.4)')
         );
+        let processing = Object.assign({}, chartSeriesOpts,
+            series("Processing", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
+        );
         let total = Object.assign({}, chartSeriesOpts,
             series("Total", 'rgba(222, 49, 87,1)', 'rgba(222, 49, 87,0.4)')
         );
@@ -800,13 +806,14 @@ export class NodeStore {
             labels.push(metric.ts);
             queued.data.push(metric.queued);
             pending.data.push(metric.pending);
+            processing.data.push(metric.processing);
             latency.data.push(metric.latency);
             total.data.push(metric.pending + metric.queued);
         }
 
         return {
             labels: labels,
-            datasets: [total, queued, pending, latency],
+            datasets: [total, queued, pending, processing, latency],
         };
     }
 
