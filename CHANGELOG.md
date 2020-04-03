@@ -2,6 +2,78 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc6] - 03.04.2020
+
+**Breaking change:**
+Database version changed
+
+### Added
+
+    - Warp synchronization (high speed syncing)
+    - Tooltip for copy buttons (dashboard)
+    - Debug call `searchEntryPoints`
+
+### Changed
+
+    - Improve solidifier
+    - Local snapshots are always enabled now
+    - Database revalidation now reverts back to the last local snapshot (newer transactions are deleted)
+    - Simplify node sync check
+    - Use JSON view dark theme (dashboard)
+
+### Fixed
+
+    - Confirmation rate spikes in dashboard
+    - Leak in replyToAllRequests
+    - Update check panic
+    - Heartbeats
+    - Dashboard bugs
+    - Disconnected peers are not deleted in some cases
+
+### Config file changes
+
+Added option:
+
+`config_comnet.json`
+
+```diff
+"httpAPI": {
++  "excludeHealthCheckFromAuth": false
+}
+```
+
+Removed option:
+
+`config.json`
+
+```diff
+"snapshots": {
+  "loadType": "local",
+  "local": {
+-   "enabled": true,
+    "depth": 50,
+    "intervalSynced": 50,
+    "intervalUnsynced": 1000,
+    "path": "export.bin",
+    "downloadURL": "https://ls.manapotion.io/export.bin"
+  },
+```
+
+`config_comnet.json`
+
+```diff
+"snapshots": {
+  "loadType": "local",
+  "local": {
+-   "enabled": true,
+    "depth": 50,
+    "intervalSynced": 50,
+    "intervalUnsynced": 1000,
+    "path": "export.bin",
+    "downloadURL": "https://ls.manapotion.io/export.bin"
+  },
+```
+
 ## [0.4.0-rc5] - 28.03.2020
 
 ### Changed
