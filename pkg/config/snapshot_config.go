@@ -3,8 +3,6 @@ package config
 const (
 	// which snapshot type to load. 'local' or 'global'
 	CfgSnapshotLoadType = "snapshots.loadType"
-	// whether to do local snapshots
-	CfgLocalSnapshotsEnabled = "snapshots.local.enabled"
 	// the depth, respectively the starting point, at which a local snapshot of the ledger is generated
 	CfgLocalSnapshotsDepth = "snapshots.local.depth"
 	// interval, in milestone transactions, at which snapshot files are created if the ledger is fully synchronized
@@ -31,7 +29,6 @@ const (
 
 func init() {
 	NodeConfig.SetDefault(CfgSnapshotLoadType, "local")
-	NodeConfig.SetDefault(CfgLocalSnapshotsEnabled, true)
 	NodeConfig.SetDefault(CfgLocalSnapshotsDepth, 50)
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalSynced, 50)
 	NodeConfig.SetDefault(CfgLocalSnapshotsIntervalUnsynced, 1000)

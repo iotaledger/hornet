@@ -174,7 +174,7 @@ func (pq *priorityqueue) Received(hash trinary.Hash) *Request {
 			pq.avgLatency.Store(0)
 		}
 
-		// Add the request to processing
+		// add the request to processing
 		pq.processing[hash] = req
 
 		return req

@@ -46,7 +46,6 @@ var (
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone.Index)
 
-	localSnapshotsEnabled    bool
 	snapshotDepth            milestone.Index
 	snapshotIntervalSynced   milestone.Index
 	snapshotIntervalUnsynced milestone.Index
@@ -59,7 +58,6 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 	installGenesisTransaction()
 
-	localSnapshotsEnabled = config.NodeConfig.GetBool(config.CfgLocalSnapshotsEnabled)
 	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgLocalSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
@@ -152,22 +150,20 @@ func run(_ *node.Plugin) {
 				return
 
 			case solidMilestoneIndex := <-newSolidMilestoneSignal:
-				if localSnapshotsEnabled {
-					localSnapshotLock.Lock()
+				localSnapshotLock.Lock()
 
-					if shouldTakeSnapshot(solidMilestoneIndex) {
-						localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
-						if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, shutdownSignal); err != nil {
-							log.Warnf(ErrSnapshotCreationFailed.Error(), err)
-						}
+				if shouldTakeSnapshot(solidMilestoneIndex) {
+					localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
+					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, shutdownSignal); err != nil {
+						log.Warnf(ErrSnapshotCreationFailed.Error(), err)
 					}
-
-					if pruningEnabled {
-						pruneDatabase(solidMilestoneIndex, shutdownSignal)
-					}
-
-					localSnapshotLock.Unlock()
 				}
+
+				if pruningEnabled {
+					pruneDatabase(solidMilestoneIndex, shutdownSignal)
+				}
+
+				localSnapshotLock.Unlock()
 			}
 		}
 	}, shutdown.PriorityLocalSnapshots)
