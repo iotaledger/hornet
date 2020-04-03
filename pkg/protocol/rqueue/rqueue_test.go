@@ -69,7 +69,7 @@ func TestRequestQueue(t *testing.T) {
 	// mark last from test set as received
 	q.Received(requests[len(requests)-1].Hash)
 
-	// Check processing
+	// check processing
 	queued, pending, processing = q.Size()
 	assert.Zero(t, queued)
 	assert.Equal(t, len(requests)-1, pending)
@@ -77,7 +77,7 @@ func TestRequestQueue(t *testing.T) {
 
 	q.Processed(requests[len(requests)-1].Hash)
 
-	// Check processed
+	// check processed
 	queued, pending, processing = q.Size()
 	assert.Zero(t, queued)
 	assert.Equal(t, len(requests)-1, pending)

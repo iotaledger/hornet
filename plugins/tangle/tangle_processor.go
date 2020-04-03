@@ -145,7 +145,7 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	}
 
 	if request != nil {
-		// Mark the received request as processed
+		// mark the received request as processed
 		gossip.RequestQueue().Processed(incomingTx.GetHash())
 	}
 

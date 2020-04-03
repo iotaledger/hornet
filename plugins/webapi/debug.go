@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
@@ -19,6 +20,7 @@ import (
 func init() {
 	addEndpoint("getRequests", getRequests, implementedAPIcalls)
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
+	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -165,6 +167,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 					result.ConfirmedTxHash = txHash
 					result.ConfirmedByMilestoneIndex = uint32(at)
 					result.TanglePath = approversResult
+					result.TanglePathLength = len(approversResult)
 
 					c.JSON(http.StatusOK, result)
 					return
@@ -190,4 +193,82 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	e.Error = fmt.Sprintf("No confirmed approver found: %s", query.TxHash)
 	c.JSON(http.StatusInternalServerError, e)
+}
+
+func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &SearchEntryPoint{}
+	result := &SearchEntryPointReturn{}
+
+	err := mapstructure.Decode(i, query)
+	if err != nil {
+		e.Error = "Internal error"
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	if !guards.IsTransactionHash(query.TxHash) {
+		e.Error = fmt.Sprintf("Invalid hash supplied: %s", query.TxHash)
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	cachedStartTx := tangle.GetCachedTransactionOrNil(query.TxHash) // tx +1
+	if cachedStartTx == nil {
+		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+	_, startTxConfirmedAt := cachedStartTx.GetMetadata().GetConfirmed()
+	defer cachedStartTx.Release(true)
+
+	if !tangle.SolidEntryPointsContain(cachedStartTx.GetTransaction().GetHash()) {
+
+		dag.TraverseApprovees(cachedStartTx.GetTransaction().GetHash(),
+			// predicate
+			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
+				defer cachedTx.Release(true) // tx -1
+
+				if tangle.SolidEntryPointsContain(cachedTx.GetTransaction().GetHash()) {
+					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetHash(), ConfirmedByMilestoneIndex: 0})
+					return false
+				}
+
+				if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+					if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
+						result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetHash(), ConfirmedByMilestoneIndex: at})
+						return false
+					}
+				}
+
+				return true
+			},
+
+			// consumer
+			func(cachedTx *tangle.CachedTransaction) { // tx +1
+				defer cachedTx.Release(true) // tx -1
+
+				result.TanglePath = append(result.TanglePath,
+					&TransactionWithApprovers{
+						TxHash:            cachedTx.GetTransaction().GetHash(),
+						TrunkTransaction:  cachedTx.GetTransaction().GetTrunk(),
+						BranchTransaction: cachedTx.GetTransaction().GetBranch(),
+					},
+				)
+			},
+			// called on missing approvees
+			func(approveeHash trinary.Hash) {}, true)
+
+	} else {
+		result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedStartTx.GetTransaction().GetHash(), ConfirmedByMilestoneIndex: 0})
+	}
+
+	result.TanglePathLength = len(result.TanglePath)
+
+	if len(result.EntryPoints) == 0 {
+		e.Error = fmt.Sprintf("No confirmed approvee found: %s", query.TxHash)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
