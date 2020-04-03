@@ -50,7 +50,6 @@
   "snapshots": {
     "loadType": "local",
     "local": {
-      "enabled": true,
       "depth": 50,
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
