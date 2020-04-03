@@ -33,7 +33,6 @@ func (m *Manager) setupHandshakeEventHandlers(p *peer.Peer) {
 
 	// propagate handshake completion to the manager
 	p.Protocol.Events.HandshakeCompleted.Attach(events.NewClosure(func() {
-		p.MoveBackToReconnectPool = true
 		m.Events.PeerConnected.Trigger(p)
 	}))
 }
@@ -108,13 +107,17 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 	}
 
 	// check whether the peer is whitelisted
-	if !m.Opts.AcceptAnyPeer {
-		if _, whitelisted := m.Whitelisted(p.ID); !whitelisted {
-			m.Unlock()
-			m.Blacklist(p.PrimaryAddress.String())
-			return errors.Wrapf(ErrUnknownPeerID, p.ID)
-		}
+	_, whitelisted := m.Whitelisted(p.ID)
+	if !m.Opts.AcceptAnyPeer && !whitelisted {
+		m.Unlock()
+		m.Blacklist(p.PrimaryAddress.String())
+		return errors.Wrapf(ErrUnknownPeerID, p.ID)
 	}
+
+	// we mark this peer to be put back into the reconnect pool
+	// if it was whitelisted, which therefore means that we want to keep
+	// a connection to this peer.
+	p.MoveBackToReconnectPool = whitelisted
 
 	// mark inbound peer now as connected
 	if p.IsInbound() {
