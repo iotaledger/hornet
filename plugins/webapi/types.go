@@ -438,11 +438,17 @@ type EntryPoint struct {
 	ConfirmedByMilestoneIndex milestone.Index `json:"confirmedByMilestoneIndex"`
 }
 
+type TransactionWithApprovers struct {
+	TxHash            trinary.Hash `json:"txHash"`
+	TrunkTransaction  trinary.Hash `json:"trunkTransaction"`
+	BranchTransaction trinary.Hash `json:"branchTransaction"`
+}
+
 // SearchEntryPointReturn struct
 type SearchEntryPointReturn struct {
-	EntryPoints      []*EntryPoint     `json:"entryPoints"`
-	TanglePath       []*ApproverStruct `json:"tanglePath"`
-	TanglePathLength int               `json:"tanglePathLength"`
+	TanglePath       []*TransactionWithApprovers `json:"tanglePath"`
+	EntryPoints      []*EntryPoint               `json:"entryPoints"`
+	TanglePathLength int                         `json:"tanglePathLength"`
 }
 
 ///////////////////////////////////////////////////////////////////
