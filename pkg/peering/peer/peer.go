@@ -1,8 +1,9 @@
 package peer
 
 import (
-	"fmt"
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/iotaledger/hive.go/events"
 	"go.uber.org/atomic"
@@ -176,7 +177,10 @@ func (p *Peer) Handshaked() bool {
 
 // NewID returns a peer ID which consists of the given IP address and server socket port number.
 func NewID(ip string, port uint16) string {
-	return fmt.Sprintf("%s:%d", ip, port)
+	// prevent double square brackets
+	ip = strings.ReplaceAll(ip, "[", "")
+	ip = strings.ReplaceAll(ip, "]", "")
+	return net.JoinHostPort(ip, strconv.FormatUint(uint64(port), 10))
 }
 
 // Metrics defines a set of metrics regarding a peer.
