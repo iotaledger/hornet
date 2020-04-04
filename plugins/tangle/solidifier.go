@@ -47,6 +47,11 @@ type ConfirmedMilestoneMetric struct {
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
 
+// TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
+func TriggerSolidifier() {
+	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
+}
+
 func markTransactionAsSolid(cachedTx *tangle.CachedTransaction) {
 	// Construct the complete bundle if the tail got solid (before setting solid flag => otherwise not threadsafe)
 	if cachedTx.GetTransaction().IsTail() {
