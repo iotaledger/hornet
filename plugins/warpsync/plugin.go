@@ -50,7 +50,8 @@ func configure(plugin *node.Plugin) {
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(advRange), gossip.MemoizedRequestMissingMilestoneApprovees(), oldCheckpoint)
+		requestMissingMilestoneApprovees := gossip.MemoizedRequestMissingMilestoneApprovees()
+		gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees, oldCheckpoint)
 	}))
 
 	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
@@ -58,7 +59,15 @@ func configure(plugin *node.Plugin) {
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		gossip.BroadcastMilestoneRequests(int(advRange), gossip.MemoizedRequestMissingMilestoneApprovees())
+		requestMissingMilestoneApprovees := gossip.MemoizedRequestMissingMilestoneApprovees()
+		msRequested := gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees)
+		// if the amount of requested milestones doesn't correspond to the range,
+		// it means we already had the milestones in the database, which suggests
+		// that we should manually kick start the milestone solidifier.
+		if msRequested != int(advRange) {
+			log.Info("Manually starting solidifier, as some milestones are already in the database")
+			tangleplugin.TriggerSolidifier()
+		}
 	}))
 
 	warpSync.Events.Done.Attach(events.NewClosure(func(deltaSynced int, took time.Duration) {
