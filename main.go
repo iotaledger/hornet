@@ -37,6 +37,7 @@ func main() {
 		profiling.PLUGIN,
 		database.PLUGIN,
 		autopeering.PLUGIN,
+		webapi.PLUGIN,
 	}
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
@@ -48,7 +49,6 @@ func main() {
 			tipselection.PLUGIN,
 			metrics.PLUGIN,
 			snapshot.PLUGIN,
-			webapi.PLUGIN,
 			dashboard.PLUGIN,
 			zeromq.PLUGIN,
 			mqtt.PLUGIN,
