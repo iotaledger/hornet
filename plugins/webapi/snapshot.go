@@ -17,15 +17,7 @@ func init() {
 }
 
 func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	sn := &GetSnapshot{}
 	e := ErrorReturn{}
-
-	err := mapstructure.Decode(i, sn)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
 
 	snr := &GetSnapshotReturn{}
 

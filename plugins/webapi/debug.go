@@ -276,17 +276,6 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func triggerSolidifier(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	trigger := &TriggerSolidifier{}
-
-	err := mapstructure.Decode(i, trigger)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
 	tanglePlugin.TriggerSolidifier()
-
 	c.Status(http.StatusAccepted)
 }
