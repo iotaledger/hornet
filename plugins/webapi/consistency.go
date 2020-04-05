@@ -20,23 +20,23 @@ func init() {
 }
 
 func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	checkCon := &CheckConsistency{}
+	query := &CheckConsistency{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, checkCon)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	if len(checkCon.Tails) == 0 {
+	if len(query.Tails) == 0 {
 		e.Error = "No tails provided"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	for _, t := range checkCon.Tails {
+	for _, t := range query.Tails {
 		if !guards.IsTransactionHash(t) {
 			e.Error = fmt.Sprintf("Invalid reference hash supplied: %s", t)
 			c.JSON(http.StatusBadRequest, e)
@@ -66,7 +66,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	// it is safe to cache the below max depth flag of transactions as long as the same milestone is solid.
 	tanglePlugin.BelowDepthMemoizationCache.ResetIfNewerMilestone(tangle.GetSolidMilestoneIndex())
 
-	for _, t := range checkCon.Tails {
+	for _, t := range query.Tails {
 
 		cachedTx := tangle.GetCachedTransactionOrNil(t) // tx +1
 

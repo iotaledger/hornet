@@ -18,10 +18,10 @@ func init() {
 }
 
 func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	ld := &GetLedgerDiff{}
+	query := &GetLedgerDiff{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, ld)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -29,14 +29,14 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	}
 
 	smi := tangle.GetSolidMilestoneIndex()
-	requestedIndex := milestone.Index(ld.MilestoneIndex)
+	requestedIndex := milestone.Index(query.MilestoneIndex)
 	if requestedIndex > smi {
 		e.Error = fmt.Sprintf("Invalid milestone index supplied, lsmi is %d", smi)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	ldr := &GetLedgerDiffReturn{}
+	result := &GetLedgerDiffReturn{}
 
 	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex, abortSignal)
 	if err != nil {
@@ -45,17 +45,17 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	ldr.Diff = diff
-	ldr.MilestoneIndex = ld.MilestoneIndex
+	result.Diff = diff
+	result.MilestoneIndex = query.MilestoneIndex
 
-	c.JSON(http.StatusOK, ldr)
+	c.JSON(http.StatusOK, result)
 }
 
 func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	ld := &GetLedgerDiffExt{}
+	query := &GetLedgerDiffExt{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, ld)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -63,7 +63,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	smi := tangle.GetSolidMilestoneIndex()
-	requestedIndex := milestone.Index(ld.MilestoneIndex)
+	requestedIndex := milestone.Index(query.MilestoneIndex)
 	if requestedIndex > smi {
 		e.Error = fmt.Sprintf("Invalid milestone index supplied, lsmi is %d", smi)
 		c.JSON(http.StatusBadRequest, e)
@@ -77,14 +77,14 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	ldr := &GetLedgerDiffExtReturn{}
+	result := &GetLedgerDiffExtReturn{}
 
-	ldr.ConfirmedTxWithValue = confirmedTxWithValue
-	ldr.ConfirmedBundlesWithValue = confirmedBundlesWithValue
-	ldr.Diff = ledgerChanges
-	ldr.MilestoneIndex = ld.MilestoneIndex
+	result.ConfirmedTxWithValue = confirmedTxWithValue
+	result.ConfirmedBundlesWithValue = confirmedBundlesWithValue
+	result.Diff = ledgerChanges
+	result.MilestoneIndex = query.MilestoneIndex
 
-	c.JSON(http.StatusOK, ldr)
+	c.JSON(http.StatusOK, result)
 }
 
 func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue []*TxHashWithValue, confirmedBundlesWithValue []*BundleWithValue, totalLedgerChanges map[string]int64, err error) {

@@ -20,21 +20,21 @@ func init() {
 func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	// Check if HORNET style addNeighbors call was made
-	han := &AddNeighborsHornet{}
-	if err := mapstructure.Decode(i, han); err == nil {
-		if len(han.Neighbors) != 0 {
-			addNeighborsWithAlias(han, c)
+	queryHornet := &AddNeighborsHornet{}
+	if err := mapstructure.Decode(i, queryHornet); err == nil {
+		if len(queryHornet.Neighbors) != 0 {
+			addNeighborsWithAlias(queryHornet, c)
 			return
 		}
 	}
 
-	an := &AddNeighbors{}
+	query := &AddNeighbors{}
 	e := ErrorReturn{}
 	addedPeers := 0
 
 	preferIPv6 := config.NodeConfig.GetBool(config.CfgNetPreferIPv6)
 
-	if err := mapstructure.Decode(i, an); err != nil {
+	if err := mapstructure.Decode(i, query); err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
@@ -47,7 +47,7 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		log.Error(err)
 	}
 
-	for _, uri := range an.Uris {
+	for _, uri := range query.Uris {
 
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
@@ -145,10 +145,10 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 
 func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
-	rn := &RemoveNeighbors{}
+	query := &RemoveNeighbors{}
 	e := ErrorReturn{}
 	removedNeighbors := 0
-	err := mapstructure.Decode(i, rn)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -163,7 +163,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	peers := peering.Manager().PeerInfos()
-	for _, uri := range rn.Uris {
+	for _, uri := range query.Uris {
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
 		}
@@ -220,7 +220,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func getNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	nb := &GetNeighborsReturn{}
-	nb.Neighbors = peering.Manager().PeerInfos()
-	c.JSON(http.StatusOK, nb)
+	result := &GetNeighborsReturn{}
+	result.Neighbors = peering.Manager().PeerInfos()
+	c.JSON(http.StatusOK, result)
 }

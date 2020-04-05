@@ -26,7 +26,7 @@ func init() {
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
-	grr := &GetRequestsReturn{}
+	result := &GetRequestsReturn{}
 	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
 
@@ -63,8 +63,8 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
 	}
-	grr.Requests = debugReqs
-	c.JSON(http.StatusOK, grr)
+	result.Requests = debugReqs
+	c.JSON(http.StatusOK, result)
 }
 
 func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([]*ApproverStruct, error) {

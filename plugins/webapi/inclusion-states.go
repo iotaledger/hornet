@@ -17,17 +17,17 @@ func init() {
 }
 
 func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	gis := &GetInclusionStates{}
+	query := &GetInclusionStates{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, gis)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	for _, tx := range gis.Transactions {
+	for _, tx := range query.Transactions {
 		if !guards.IsTransactionHash(tx) {
 			e.Error = fmt.Sprintf("Invalid reference hash supplied: %s", tx)
 			c.JSON(http.StatusBadRequest, e)
@@ -46,7 +46,7 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	inclusionStates := []bool{}
 
-	for _, tx := range gis.Transactions {
+	for _, tx := range query.Transactions {
 		// get tx data
 		cachedTx := tangle.GetCachedTransactionOrNil(tx) // tx +1
 

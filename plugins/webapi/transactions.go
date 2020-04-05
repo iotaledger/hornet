@@ -25,23 +25,23 @@ func init() {
 
 func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
-	bt := &BroadcastTransactions{}
+	query := &BroadcastTransactions{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, bt)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	if len(bt.Trytes) == 0 {
+	if len(query.Trytes) == 0 {
 		e.Error = "No trytes provided"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	for _, trytes := range bt.Trytes {
+	for _, trytes := range query.Trytes {
 		if err := trinary.ValidTrytes(trytes); err != nil {
 			e.Error = "Trytes invalid"
 			c.JSON(http.StatusBadRequest, e)
@@ -49,7 +49,7 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	for _, trytes := range bt.Trytes {
+	for _, trytes := range query.Trytes {
 		err := gossip.Processor().ValidateTransactionTrytesAndEmit(trytes)
 		if err != nil {
 			e.Error = err.Error()
@@ -61,10 +61,10 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	ft := &FindTransactions{}
+	query := &FindTransactions{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, ft)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -72,11 +72,11 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	maxResults := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions)
-	if (ft.MaxResults != 0) && (ft.MaxResults < maxResults) {
-		maxResults = ft.MaxResults
+	if (query.MaxResults != 0) && (query.MaxResults < maxResults) {
+		maxResults = query.MaxResults
 	}
 
-	if (len(ft.Bundles) + len(ft.Addresses) + len(ft.Approvees) + len(ft.Tags)) > maxResults {
+	if (len(query.Bundles) + len(query.Addresses) + len(query.Approvees) + len(query.Tags)) > maxResults {
 		e.Error = "Too many bundle, address, approvee or tag hashes. Max. allowed: " + strconv.Itoa(maxResults)
 		c.JSON(http.StatusBadRequest, e)
 		return
@@ -84,13 +84,13 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	txHashes := []string{}
 
-	if len(ft.Bundles) == 0 && len(ft.Addresses) == 0 && len(ft.Approvees) == 0 && len(ft.Tags) == 0 {
+	if len(query.Bundles) == 0 && len(query.Addresses) == 0 && len(query.Approvees) == 0 && len(query.Tags) == 0 {
 		c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: []string{}})
 		return
 	}
 
 	// Searching for transactions that contains the given bundle hash
-	for _, bdl := range ft.Bundles {
+	for _, bdl := range query.Bundles {
 		if err := trinary.ValidTrytes(bdl); err != nil {
 			e.Error = fmt.Sprintf("Bundle hash invalid: %s", bdl)
 			c.JSON(http.StatusBadRequest, e)
@@ -101,7 +101,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Searching for transactions that contains the given address
-	for _, addr := range ft.Addresses {
+	for _, addr := range query.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
 			e.Error = fmt.Sprintf("address hash invalid: %s", addr)
 			c.JSON(http.StatusBadRequest, e)
@@ -116,7 +116,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Searching for all approovers of the given transactions
-	for _, approveeHash := range ft.Approvees {
+	for _, approveeHash := range query.Approvees {
 		if !guards.IsTransactionHash(approveeHash) {
 			e.Error = fmt.Sprintf("Aprovee hash invalid: %s", approveeHash)
 			c.JSON(http.StatusBadRequest, e)
@@ -127,7 +127,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Searching for transactions that contain the given tag
-	for _, tag := range ft.Tags {
+	for _, tag := range query.Tags {
 		if err := trinary.ValidTrytes(tag); err != nil {
 			e.Error = fmt.Sprintf("Tag invalid: %s", tag)
 			c.JSON(http.StatusBadRequest, e)

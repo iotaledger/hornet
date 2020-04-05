@@ -17,22 +17,22 @@ func init() {
 }
 
 func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	gb := &GetBalances{}
+	query := &GetBalances{}
 	e := ErrorReturn{}
 
-	err := mapstructure.Decode(i, gb)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	if len(gb.Addresses) == 0 {
+	if len(query.Addresses) == 0 {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
 	}
 
-	for _, addr := range gb.Addresses {
+	for _, addr := range query.Addresses {
 		// Check if address is valid
 		if err := address.ValidAddress(addr); err != nil {
 			e.Error = "Invalid address: " + addr
@@ -58,9 +58,9 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 	defer cachedLatestSolidMs.Release(true) // bundle -1
 
-	gbr := &GetBalancesReturn{}
+	result := &GetBalancesReturn{}
 
-	for _, addr := range gb.Addresses {
+	for _, addr := range query.Addresses {
 
 		balance, _, err := tangle.GetBalanceForAddressWithoutLocking(addr[:81])
 		if err != nil {
@@ -70,11 +70,11 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Address balance
-		gbr.Balances = append(gbr.Balances, strconv.FormatUint(balance, 10))
+		result.Balances = append(result.Balances, strconv.FormatUint(balance, 10))
 	}
 
 	// The index of the milestone that confirmed the most recent balance
-	gbr.MilestoneIndex = uint32(cachedLatestSolidMs.GetBundle().GetMilestoneIndex())
-	gbr.References = []string{cachedLatestSolidMs.GetBundle().GetMilestoneHash()}
-	c.JSON(http.StatusOK, gbr)
+	result.MilestoneIndex = uint32(cachedLatestSolidMs.GetBundle().GetMilestoneIndex())
+	result.References = []string{cachedLatestSolidMs.GetBundle().GetMilestoneHash()}
+	c.JSON(http.StatusOK, result)
 }
