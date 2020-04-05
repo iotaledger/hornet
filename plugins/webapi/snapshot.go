@@ -17,17 +17,7 @@ func init() {
 }
 
 func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	sn := &GetSnapshot{}
 	e := ErrorReturn{}
-
-	err := mapstructure.Decode(i, sn)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	snr := &GetSnapshotReturn{}
 
 	balances, index, err := tangle.GetAllLedgerBalances(abortSignal)
 	if err != nil {
@@ -36,31 +26,26 @@ func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	snr.Balances = balances
-	snr.MilestoneIndex = uint64(index)
-
-	c.JSON(http.StatusOK, snr)
+	c.JSON(http.StatusOK, GetSnapshotReturn{Balances: balances, MilestoneIndex: uint64(index)})
 }
 
 func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	sn := &CreateSnapshot{}
 	e := ErrorReturn{}
+	query := &CreateSnapshot{}
 
-	err := mapstructure.Decode(i, sn)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	snr := &CreateSnapshotReturn{}
-
-	err = snapshot.CreateLocalSnapshot(milestone.Index(sn.TargetIndex), sn.FilePath, abortSignal)
+	err = snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), query.FilePath, abortSignal)
 	if err != nil {
 		e.Error = err.Error()
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	c.JSON(http.StatusOK, snr)
+	c.JSON(http.StatusOK, CreateSnapshotReturn{})
 }

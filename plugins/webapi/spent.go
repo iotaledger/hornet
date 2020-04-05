@@ -17,8 +17,8 @@ func init() {
 }
 
 func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	sp := &WereAddressesSpentFrom{}
 	e := ErrorReturn{}
+	query := &WereAddressesSpentFrom{}
 
 	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
 		e.Error = "wereAddressesSpentFrom not available in this node"
@@ -26,7 +26,7 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	err := mapstructure.Decode(i, sp)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -39,14 +39,14 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	if len(sp.Addresses) == 0 {
+	if len(query.Addresses) == 0 {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
 	}
 
-	spr := &WereAddressesSpentFromReturn{}
+	result := WereAddressesSpentFromReturn{}
 
-	for _, addr := range sp.Addresses {
+	for _, addr := range query.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
 			e.Error = fmt.Sprintf("Provided address invalid: %s", addr)
 			c.JSON(http.StatusBadRequest, e)
@@ -54,8 +54,8 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// State
-		spr.States = append(spr.States, tangle.WasAddressSpentFrom(addr[:81]))
+		result.States = append(result.States, tangle.WasAddressSpentFrom(addr[:81]))
 	}
 
-	c.JSON(http.StatusOK, spr)
+	c.JSON(http.StatusOK, result)
 }

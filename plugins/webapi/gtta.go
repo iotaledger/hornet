@@ -19,7 +19,6 @@ func init() {
 func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &GetTransactionsToApprove{}
-	result := GetTransactionsToApproveReturn{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -49,7 +48,5 @@ func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) 
 		return
 	}
 
-	result.TrunkTransaction = tips[0]
-	result.BranchTransaction = tips[1]
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0], BranchTransaction: tips[1]})
 }

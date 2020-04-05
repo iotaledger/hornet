@@ -30,13 +30,12 @@ var (
 )
 
 func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &AttachToTangle{}
 
 	mwm := config.NodeConfig.GetInt(config.CfgProtocolMWM)
 
-	aTT := &AttachToTangle{}
-	e := ErrorReturn{}
-
-	err := mapstructure.Decode(i, aTT)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
@@ -44,8 +43,8 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Reject unnecessarily high MWM
-	if aTT.MinWeightMagnitude > mwm {
-		e.Error = fmt.Sprintf("MWM too high. MWM: %v, Max allowed: %v", aTT.MinWeightMagnitude, mwm)
+	if query.MinWeightMagnitude > mwm {
+		e.Error = fmt.Sprintf("MWM too high. MWM: %v, Max allowed: %v", query.MinWeightMagnitude, mwm)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
@@ -57,7 +56,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		log.Infof("PoW method: \"%v\"", powType)
 	}
 
-	txs, err := transaction.AsTransactionObjects(aTT.Trytes, nil)
+	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
 	if err != nil {
 		e.Error = fmt.Sprint(err)
 		c.JSON(http.StatusInternalServerError, e)
@@ -90,11 +89,11 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 		switch {
 		case i == 0:
-			txs[i].TrunkTransaction = aTT.TrunkTransaction
-			txs[i].BranchTransaction = aTT.BranchTransaction
+			txs[i].TrunkTransaction = query.TrunkTransaction
+			txs[i].BranchTransaction = query.BranchTransaction
 		default:
 			txs[i].TrunkTransaction = prev
-			txs[i].BranchTransaction = aTT.TrunkTransaction
+			txs[i].BranchTransaction = query.TrunkTransaction
 		}
 
 		txs[i].AttachmentTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
@@ -110,7 +109,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Do the PoW
-		txs[i].Nonce, err = powFunc(trytes, aTT.MinWeightMagnitude)
+		txs[i].Nonce, err = powFunc(trytes, query.MinWeightMagnitude)
 		if err != nil {
 			e.Error = fmt.Sprint(err)
 			c.JSON(http.StatusInternalServerError, e)
@@ -132,7 +131,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		prev = txs[i].Hash
 
 		// Check tx
-		if !transaction.HasValidNonce(&txs[i], uint64(aTT.MinWeightMagnitude)) {
+		if !transaction.HasValidNonce(&txs[i], uint64(query.MinWeightMagnitude)) {
 			e.Error = fmt.Sprint(err)
 			c.JSON(http.StatusInternalServerError, e)
 			return
