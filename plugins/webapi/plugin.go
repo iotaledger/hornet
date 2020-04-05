@@ -148,8 +148,10 @@ func configure(plugin *node.Plugin) {
 		})
 	}
 
-	// WebAPI route
-	webAPIRoute()
+	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		// WebAPI route
+		webAPIRoute()
+	}
 
 	// Handle route with auth
 	if !exclHealthCheckFromAuth {
@@ -166,13 +168,15 @@ func configure(plugin *node.Plugin) {
 func run(_ *node.Plugin) {
 	log.Info("Starting WebAPI server ...")
 
-	// Check for features
-	if _, ok := permitedEndpoints["attachtotangle"]; ok {
-		features = append(features, "RemotePOW")
-	}
+	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		// Check for features
+		if _, ok := permitedEndpoints["attachtotangle"]; ok {
+			features = append(features, "RemotePOW")
+		}
 
-	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
-		features = append(features, "WereAddressesSpentFrom")
+		if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
+			features = append(features, "WereAddressesSpentFrom")
+		}
 	}
 
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
