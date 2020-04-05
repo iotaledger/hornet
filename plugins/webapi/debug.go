@@ -15,12 +15,14 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
+	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 func init() {
 	addEndpoint("getRequests", getRequests, implementedAPIcalls)
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
 	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
+	addEndpoint("triggerSolidifier", triggerSolidifier, implementedAPIcalls)
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -271,4 +273,20 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func triggerSolidifier(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	trigger := &TriggerSolidifier{}
+
+	err := mapstructure.Decode(i, trigger)
+	if err != nil {
+		e.Error = "Internal error"
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	tanglePlugin.TriggerSolidifier()
+
+	c.Status(http.StatusAccepted)
 }
