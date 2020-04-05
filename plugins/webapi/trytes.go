@@ -21,11 +21,11 @@ func init() {
 }
 
 func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &GetTrytes{}
 
 	maxGetTrytes := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes)
 
-	query := &GetTrytes{}
-	e := ErrorReturn{}
 	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"

@@ -30,11 +30,10 @@ var (
 )
 
 func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &AttachToTangle{}
 
 	mwm := config.NodeConfig.GetInt(config.CfgProtocolMWM)
-
-	query := &AttachToTangle{}
-	e := ErrorReturn{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {

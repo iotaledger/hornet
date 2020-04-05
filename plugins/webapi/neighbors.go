@@ -28,8 +28,8 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	query := &AddNeighbors{}
 	e := ErrorReturn{}
+	query := &AddNeighbors{}
 	addedPeers := 0
 
 	preferIPv6 := config.NodeConfig.GetBool(config.CfgNetPreferIPv6)
@@ -144,9 +144,9 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 }
 
 func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-
-	query := &RemoveNeighbors{}
 	e := ErrorReturn{}
+	query := &RemoveNeighbors{}
+
 	removedNeighbors := 0
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -220,7 +220,5 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func getNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	result := &GetNeighborsReturn{}
-	result.Neighbors = peering.Manager().PeerInfos()
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, GetNeighborsReturn{Neighbors: peering.Manager().PeerInfos()})
 }

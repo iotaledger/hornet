@@ -24,9 +24,8 @@ func init() {
 }
 
 func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
-
-	query := &BroadcastTransactions{}
 	e := ErrorReturn{}
+	query := &BroadcastTransactions{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -61,8 +60,8 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	query := &FindTransactions{}
 	e := ErrorReturn{}
+	query := &FindTransactions{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {

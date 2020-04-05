@@ -20,8 +20,8 @@ func init() {
 }
 
 func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	query := &CheckConsistency{}
 	e := ErrorReturn{}
+	query := &CheckConsistency{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {

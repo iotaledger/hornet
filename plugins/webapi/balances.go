@@ -17,8 +17,8 @@ func init() {
 }
 
 func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	query := &GetBalances{}
 	e := ErrorReturn{}
+	query := &GetBalances{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -58,7 +58,7 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 	defer cachedLatestSolidMs.Release(true) // bundle -1
 
-	result := &GetBalancesReturn{}
+	result := GetBalancesReturn{}
 
 	for _, addr := range query.Addresses {
 

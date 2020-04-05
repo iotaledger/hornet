@@ -17,8 +17,8 @@ func init() {
 }
 
 func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	query := &GetInclusionStates{}
 	e := ErrorReturn{}
+	query := &GetInclusionStates{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {

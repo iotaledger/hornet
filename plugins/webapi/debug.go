@@ -26,7 +26,6 @@ func init() {
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
-	result := &GetRequestsReturn{}
 	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
 
@@ -63,8 +62,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
 	}
-	result.Requests = debugReqs
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, GetRequestsReturn{Requests: debugReqs})
 }
 
 func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([]*ApproverStruct, error) {
@@ -99,7 +97,7 @@ func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([
 func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &SearchConfirmedApprover{}
-	result := &SearchConfirmedApproverReturn{}
+	result := SearchConfirmedApproverReturn{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {

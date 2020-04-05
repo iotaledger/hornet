@@ -17,8 +17,8 @@ func init() {
 }
 
 func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	query := &WereAddressesSpentFrom{}
 	e := ErrorReturn{}
+	query := &WereAddressesSpentFrom{}
 
 	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
 		e.Error = "wereAddressesSpentFrom not available in this node"
@@ -44,7 +44,7 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		c.JSON(http.StatusBadRequest, e)
 	}
 
-	result := &WereAddressesSpentFromReturn{}
+	result := WereAddressesSpentFromReturn{}
 
 	for _, addr := range query.Addresses {
 		if err := address.ValidAddress(addr); err != nil {

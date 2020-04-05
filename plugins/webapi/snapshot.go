@@ -18,7 +18,6 @@ func init() {
 
 func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
-	result := &GetSnapshotReturn{}
 
 	balances, index, err := tangle.GetAllLedgerBalances(abortSignal)
 	if err != nil {
@@ -27,15 +26,12 @@ func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	result.Balances = balances
-	result.MilestoneIndex = uint64(index)
-
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, GetSnapshotReturn{Balances: balances, MilestoneIndex: uint64(index)})
 }
 
 func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	query := &CreateSnapshot{}
 	e := ErrorReturn{}
+	query := &CreateSnapshot{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -44,8 +40,6 @@ func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 		return
 	}
 
-	result := &CreateSnapshotReturn{}
-
 	err = snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), query.FilePath, abortSignal)
 	if err != nil {
 		e.Error = err.Error()
@@ -53,5 +47,5 @@ func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, CreateSnapshotReturn{})
 }

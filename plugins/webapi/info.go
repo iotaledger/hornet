@@ -95,7 +95,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
 func getNodeAPIConfiguration(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
-	config := GetNodeAPIConfigurationReturn{
+	result := GetNodeAPIConfigurationReturn{
 		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions),
 		MaxRequestsList:     config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxRequestsList),
 		MaxGetTrytes:        config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes),
@@ -105,8 +105,8 @@ func getNodeAPIConfiguration(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Milestone start index
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		config.MilestoneStartIndex = uint32(snapshotInfo.PruningIndex)
+		result.MilestoneStartIndex = uint32(snapshotInfo.PruningIndex)
 	}
 
-	c.JSON(http.StatusOK, config)
+	c.JSON(http.StatusOK, result)
 }

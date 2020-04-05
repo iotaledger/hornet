@@ -18,8 +18,8 @@ func init() {
 }
 
 func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	query := &GetLedgerDiff{}
 	e := ErrorReturn{}
+	query := &GetLedgerDiff{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -36,8 +36,6 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	result := &GetLedgerDiffReturn{}
-
 	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex, abortSignal)
 	if err != nil {
 		e.Error = "Internal error"
@@ -45,15 +43,12 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	result.Diff = diff
-	result.MilestoneIndex = query.MilestoneIndex
-
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, GetLedgerDiffReturn{Diff: diff, MilestoneIndex: query.MilestoneIndex})
 }
 
 func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	query := &GetLedgerDiffExt{}
 	e := ErrorReturn{}
+	query := &GetLedgerDiffExt{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -77,7 +72,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	result := &GetLedgerDiffExtReturn{}
+	result := GetLedgerDiffExtReturn{}
 
 	result.ConfirmedTxWithValue = confirmedTxWithValue
 	result.ConfirmedBundlesWithValue = confirmedBundlesWithValue
