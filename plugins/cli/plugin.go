@@ -21,7 +21,7 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion          = "0.4.0-rc6"
+	AppVersion          = "0.4.0-rc7"
 	LatestGithubVersion = AppVersion
 
 	// AppName app code name

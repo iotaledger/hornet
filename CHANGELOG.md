@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc7] - 05.04.2020
+
+### Added
+
+    - Autopeering entry node health API (`/healthz`)
+    - Debug webapi command `triggerSolidifier`
+
+### Changed
+
+    - Manually trigger solidifer from warp sync start if range already contains milestones
+    - Do not start HORNET automatically during an initial installation with the DEB package
+    - Badger (database) settings
+
 ## [0.4.0-rc6] - 03.04.2020
 
 **Breaking change:**
