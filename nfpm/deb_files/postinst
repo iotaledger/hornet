@@ -6,11 +6,11 @@ configure)
 	if type systemctl >/dev/null 2>/dev/null; then
 		systemctl daemon-reload
 
-		if ! systemctl is-enabled -q hornet.service; then
-			systemctl enable hornet.service >/dev/null 2>/dev/null
+		# Only restart if the HORNET service is enabled
+		if systemctl is-enabled -q hornet.service; then
+			systemctl --no-block restart hornet.service
 		fi
 
-		systemctl --no-block restart hornet.service
 	fi
 	;;
 
