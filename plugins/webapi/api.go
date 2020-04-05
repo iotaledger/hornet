@@ -73,25 +73,25 @@ func webAPIRoute() {
 // health check
 func restAPIRoute() {
 
-	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
-		// node mode
-		// GET /healthz
-		api.GET(healthzRoute, func(c *gin.Context) {
-			if !isNodeHealthy() {
-				c.Status(http.StatusServiceUnavailable)
-				return
-			}
-
-			c.Status(http.StatusOK)
-		})
-	} else {
+	if config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		// autopeering entry node mode
 		// GET /healthz
 		api.GET(healthzRoute, func(c *gin.Context) {
 			c.Status(http.StatusOK)
 		})
+		return
 	}
 
+	// node mode
+	// GET /healthz
+	api.GET(healthzRoute, func(c *gin.Context) {
+		if !isNodeHealthy() {
+			c.Status(http.StatusServiceUnavailable)
+			return
+		}
+
+		c.Status(http.StatusOK)
+	})
 }
 
 func isNodeHealthy() bool {
