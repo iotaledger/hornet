@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/peering"
 )
@@ -72,6 +73,16 @@ func webAPIRoute() {
 // health check
 func restAPIRoute() {
 
+	if config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		// autopeering entry node mode
+		// GET /healthz
+		api.GET(healthzRoute, func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+		return
+	}
+
+	// node mode
 	// GET /healthz
 	api.GET(healthzRoute, func(c *gin.Context) {
 		if !isNodeHealthy() {
