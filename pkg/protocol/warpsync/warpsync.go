@@ -156,10 +156,11 @@ func (ws *WarpSync) advanceCheckpoint() int32 {
 
 	advRange := milestone.Index(ws.AdvancementRange)
 
-	// if we reach the target, just take the delta from target to current solid
-	if ws.CurrentSolidMs+advRange >= ws.TargetMs {
+	// make sure we advance max to the target milestone
+	if ws.CurrentSolidMs+advRange >= ws.TargetMs || ws.CurrentCheckpoint+advRange >= ws.TargetMs {
+		deltaRange := ws.TargetMs - ws.CurrentCheckpoint
 		ws.CurrentCheckpoint = ws.TargetMs
-		return int32(ws.TargetMs - ws.CurrentSolidMs)
+		return int32(deltaRange)
 	}
 
 	// at start simply advance from the current solid
