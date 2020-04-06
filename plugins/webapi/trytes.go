@@ -21,19 +21,19 @@ func init() {
 }
 
 func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &GetTrytes{}
 
 	maxGetTrytes := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes)
 
-	gt := &GetTrytes{}
-	e := ErrorReturn{}
-	err := mapstructure.Decode(i, gt)
+	err := mapstructure.Decode(i, query)
 	if err != nil {
 		e.Error = "Internal error"
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	if len(gt.Hashes) > maxGetTrytes {
+	if len(query.Hashes) > maxGetTrytes {
 		e.Error = "Too many hashes. Max. allowed: " + strconv.Itoa(maxGetTrytes)
 		c.JSON(http.StatusBadRequest, e)
 		return
@@ -41,7 +41,7 @@ func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	trytes := []string{}
 
-	for _, hash := range gt.Hashes {
+	for _, hash := range query.Hashes {
 		if !guards.IsTransactionHash(hash) {
 			e.Error = fmt.Sprintf("Invalid hash supplied: %s", hash)
 			c.JSON(http.StatusBadRequest, e)
@@ -49,7 +49,7 @@ func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	for _, hash := range gt.Hashes {
+	for _, hash := range query.Hashes {
 		cachedTx := tangle.GetCachedTransactionOrNil(hash) // tx +1
 
 		if cachedTx == nil {

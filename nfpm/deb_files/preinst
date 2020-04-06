@@ -13,7 +13,9 @@ install)
     ;;
 
 upgrade)
+    echo "Stopping HORNET. This may take a while..."
     systemctl stop hornet.service
+    echo "HORNET stopped, start update..."
     ;;
 
 abort-upgrade) ;;

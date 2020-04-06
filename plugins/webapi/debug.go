@@ -15,16 +15,17 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
+	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 func init() {
 	addEndpoint("getRequests", getRequests, implementedAPIcalls)
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
 	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
+	addEndpoint("triggerSolidifier", triggerSolidifier, implementedAPIcalls)
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
-	grr := &GetRequestsReturn{}
 	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
 
@@ -61,8 +62,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
 	}
-	grr.Requests = debugReqs
-	c.JSON(http.StatusOK, grr)
+	c.JSON(http.StatusOK, GetRequestsReturn{Requests: debugReqs})
 }
 
 func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([]*ApproverStruct, error) {
@@ -97,7 +97,7 @@ func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([
 func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &SearchConfirmedApprover{}
-	result := &SearchConfirmedApproverReturn{}
+	result := SearchConfirmedApproverReturn{}
 
 	err := mapstructure.Decode(i, query)
 	if err != nil {
@@ -271,4 +271,9 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func triggerSolidifier(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	tanglePlugin.TriggerSolidifier()
+	c.Status(http.StatusAccepted)
 }
