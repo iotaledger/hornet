@@ -14,6 +14,7 @@ func New(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteri
 	ws := &WarpSync{
 		Events: Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
+			TargetUpdated:     events.NewEvent(milestone.IndexCaller),
 			Start:             events.NewEvent(SyncStartCaller),
 			Done:              events.NewEvent(SyncDoneCaller),
 		},
@@ -43,6 +44,8 @@ func CheckpointCaller(handler interface{}, params ...interface{}) {
 type Events struct {
 	// Fired when a new set of milestones should be requested.
 	CheckpointUpdated *events.Event
+	// Fired when the target milestone is updated.
+	TargetUpdated *events.Event
 	// Fired when warp synchronization starts.
 	Start *events.Event
 	// Fired when the warp synchronization is done.
@@ -135,7 +138,25 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 
 	ws.TargetMs = target
 
-	if ws.CurrentCheckpoint != 0 || ws.CurrentSolidMs >= ws.TargetMs || target-ws.CurrentSolidMs <= 1 {
+	// as a special case, while we are warp syncing and within the last checkpoint range,
+	// new target milestones need to shift the checkpoint to the new target, in order
+	// to fire an 'updated checkpoint event'/respectively updating the request queue filter.
+	// since we will request missing approvees for the new target, it will still solidify
+	// even though we discarded requests for a short period of time approvees when the
+	// request filter wasn't yet updated.
+	if ws.TargetMs != 0 && ws.CurrentCheckpoint+milestone.Index(ws.AdvancementRange) > ws.TargetMs {
+		oldCheckpoint := ws.CurrentCheckpoint
+		reqRange := ws.TargetMs - ws.CurrentCheckpoint
+		ws.CurrentCheckpoint = ws.TargetMs
+		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, int32(reqRange))
+	}
+
+	if ws.CurrentCheckpoint != 0 {
+		ws.Events.TargetUpdated.Trigger(ws.TargetMs)
+		return
+	}
+
+	if ws.CurrentSolidMs >= ws.TargetMs || target-ws.CurrentSolidMs <= 1 {
 		return
 	}
 
@@ -156,10 +177,11 @@ func (ws *WarpSync) advanceCheckpoint() int32 {
 
 	advRange := milestone.Index(ws.AdvancementRange)
 
-	// if we reach the target, just take the delta from target to current solid
-	if ws.CurrentSolidMs+advRange >= ws.TargetMs {
+	// make sure we advance max to the target milestone
+	if ws.CurrentSolidMs+advRange >= ws.TargetMs || ws.CurrentCheckpoint+advRange >= ws.TargetMs {
+		deltaRange := ws.TargetMs - ws.CurrentCheckpoint
 		ws.CurrentCheckpoint = ws.TargetMs
-		return int32(ws.TargetMs - ws.CurrentSolidMs)
+		return int32(deltaRange)
 	}
 
 	// at start simply advance from the current solid

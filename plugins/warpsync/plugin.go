@@ -54,6 +54,10 @@ func configure(plugin *node.Plugin) {
 		gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees, oldCheckpoint)
 	}))
 
+	warpSync.Events.TargetUpdated.Attach(events.NewClosure(func(newTarget milestone.Index) {
+		log.Infof("Target updated to milestone %d", newTarget)
+	}))
+
 	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Synchronizing to milestone %d", targetMsIndex)
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
