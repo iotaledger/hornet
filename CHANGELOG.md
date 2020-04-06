@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc8] - 06.04.2020
+
+### Fixed
+
+    - Warp sync not completing
+    - Dashboard frontend dependencies
+
 ## [0.4.0-rc7] - 05.04.2020
 
 ### Added
