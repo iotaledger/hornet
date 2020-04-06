@@ -151,8 +151,12 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, int32(reqRange))
 	}
 
-	if ws.CurrentCheckpoint != 0 || ws.CurrentSolidMs >= ws.TargetMs || target-ws.CurrentSolidMs <= 1 {
+	if ws.CurrentCheckpoint != 0 {
 		ws.Events.TargetUpdated.Trigger(ws.TargetMs)
+		return
+	}
+
+	if ws.CurrentSolidMs >= ws.TargetMs || target-ws.CurrentSolidMs <= 1 {
 		return
 	}
 
