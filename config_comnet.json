@@ -30,9 +30,6 @@
       "requestsList": 1000
     }
   },
-  "compass": {
-    "loadLSMIAsLMI": false
-  },
   "dashboard": {
     "bindAddress": "localhost:8081",
     "theme": "default",
@@ -69,10 +66,14 @@
   "spentAddresses": {
     "enabled": true
   },
-  "milestones": {
-    "coordinator": "ZNCCPOTBCDZXCBQYBWUYYFO9PLRHNAROWOS9KGMYWNVIXWGYGUSJBZUTUQBNQRADHPUEONZZTYGVMSRZD",
-    "coordinatorSecurityLevel": 2,
-    "numberOfKeysInAMilestone": 23
+  "coordinator": {
+    "address": "ZNCCPOTBCDZXCBQYBWUYYFO9PLRHNAROWOS9KGMYWNVIXWGYGUSJBZUTUQBNQRADHPUEONZZTYGVMSRZD",
+    "securityLevel": 2,
+    "merkleTreeDepth": 23,
+    "mwm": 10,
+    "startIndex": 0,
+    "intervalSeconds": 60,
+    "checkpointTransactions": 5
   },
   "network": {
     "preferIPv6": false,
@@ -89,9 +90,6 @@
       ],
       "seed": ""
     }
-  },
-  "protocol": {
-    "mwm": 10
   },
   "tipsel": {
     "belowMaxDepthTransactionLimit": 20000,
@@ -132,7 +130,7 @@
   "monitor": {
     "tangleMonitorPath": "tanglemonitor/frontend",
     "domain": "",
-    "initialTransactionsCount": 15000,
+    "initialTransactions": 15000,
     "remoteApiPort": 4433,
     "webBindAddress": "localhost:4434",
     "apiBindAddress": "localhost:4433",

@@ -25,15 +25,8 @@ var (
 // If the node crashes, it is not guaranteed that all data in the cache was already persisted to the disk.
 // Thats why we flag the database as corrupted.
 //
-// This function tries to restore a clean database state by searching all existing milestones
-// since last local snapshot, deleting all ledger states and changes, loading valid snapshot ledger state,
-// and reapplying all known milestones.
-//
-// It returns a milestone index, which is later used by the solidifier to revalidate all transaction
-// related data (metadata, tags, addresses, bundles etc.).
-// The solidifier will ignore all metadata (solid/confirmed flags, confirmation index) of cones that are older
-// than this milestone index. Additional information of the transactions (Addresses, Tags, etc) will
-// be reapplied by the solidifer.
+// This function tries to restore a clean database state by deleting all existing transactions
+// since last local snapshot, deleting all ledger states and changes, loading valid snapshot ledger state.
 //
 // This way HORNET should be able to re-solidify the existing tangle in the database.
 //

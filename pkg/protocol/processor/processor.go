@@ -157,7 +157,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 		}
 	}
 
-	if !transaction.HasValidNonce(tx, config.NodeConfig.GetUint64(config.CfgProtocolMWM)) {
+	if !transaction.HasValidNonce(tx, config.NodeConfig.GetUint64(config.CfgCoordinatorMWM)) {
 		return consts.ErrInvalidTransactionHash
 	}
 

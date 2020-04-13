@@ -83,7 +83,7 @@ git clone https://github.com/unioproject/tanglemonitor.git
   "monitor": {
     "tangleMonitorPath": "tanglemonitor/frontend",
     "domain": "",
-    "initialTransactionsCount": 15000,
+    "initialTransactions": 15000,
     "remoteApiPort": 4433,
     "webBindAddress": "localhost:4434",
     "apiBindAddress": "localhost:4433",

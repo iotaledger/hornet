@@ -30,23 +30,23 @@ var (
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
 
-	coordinatorAddress       string
-	coordinatorSecurityLevel int
-	numberOfKeysInAMilestone uint64
-	maxMilestoneIndex        milestone.Index
+	coordinatorAddress         string
+	coordinatorSecurityLevel   int
+	coordinatorMerkleTreeDepth uint64
+	maxMilestoneIndex          milestone.Index
 
 	ErrInvalidMilestone = errors.New("invalid milestone")
 )
 
-func ConfigureMilestones(cooAddr string, cooSecLvl int, numOfKeysInMS uint64) {
+func ConfigureMilestones(cooAddr string, cooSecLvl int, cooMerkleTreeDepth uint64) {
 	err := address.ValidAddress(cooAddr)
 	if err != nil {
 		panic(err)
 	}
 	coordinatorAddress = cooAddr
 	coordinatorSecurityLevel = cooSecLvl
-	numberOfKeysInAMilestone = numOfKeysInMS
-	maxMilestoneIndex = 1 << numberOfKeysInAMilestone
+	coordinatorMerkleTreeDepth = cooMerkleTreeDepth
+	maxMilestoneIndex = 1 << coordinatorMerkleTreeDepth
 }
 
 // bundle +1
@@ -266,7 +266,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	}
 
 	// Verify milestone signature
-	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, numberOfKeysInAMilestone, coordinatorAddress) // tx pass +2
+	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, coordinatorMerkleTreeDepth, coordinatorAddress) // tx pass +2
 	if !valid {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash)
 	}
@@ -277,7 +277,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 }
 
 // Validates if the milestone has the correct signature
-func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone.Index, securityLvl int, numberOfKeysInAMilestone uint64, coordinatorAddress trinary.Hash) (valid bool) {
+func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone.Index, securityLvl int, coordinatorMerkleTreeDepth uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
 	defer cachedSignatureTxs.Release() // tx -1
 	defer cachedSiblingsTx.Release()   // tx -1
@@ -320,7 +320,7 @@ func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *
 	merkleRoot, err := merkle.MerkleRoot(
 		addressTrits,
 		siblingsTrits,
-		numberOfKeysInAMilestone,
+		coordinatorMerkleTreeDepth,
 		uint64(milestoneIndex),
 		kerl.NewKerl(),
 	)

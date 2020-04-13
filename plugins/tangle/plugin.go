@@ -44,9 +44,9 @@ func configure(plugin *node.Plugin) {
 	})
 
 	tangle.ConfigureMilestones(
-		config.NodeConfig.GetString(config.CfgMilestoneCoordinator),
-		config.NodeConfig.GetInt(config.CfgMilestoneCoordinatorSecurityLevel),
-		uint64(config.NodeConfig.GetInt(config.CfgMilestoneNumberOfKeysInAMilestone)),
+		config.NodeConfig.GetString(config.CfgCoordinatorAddress),
+		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
+		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
 	)
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {

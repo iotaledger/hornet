@@ -11,7 +11,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/compressed"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
@@ -55,9 +54,7 @@ func configureLedgerDatabase() {
 		ledgerDatabase = db
 	}
 
-	loadLSMIAsLSM := config.NodeConfig.GetBool(config.CfgCompassLoadLSMIAsLMI)
-	err := readLedgerMilestoneIndexFromDatabase(loadLSMIAsLSM)
-	if err != nil {
+	if err := readLedgerMilestoneIndexFromDatabase(); err != nil {
 		panic(err)
 	}
 }
@@ -112,7 +109,7 @@ func entryForLedgerMilestoneIndex(index milestone.Index) database.Entry {
 	}
 }
 
-func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
+func readLedgerMilestoneIndexFromDatabase() error {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
@@ -122,22 +119,12 @@ func readLedgerMilestoneIndexFromDatabase(setLSMIAsLMI bool) error {
 		if err == database.ErrKeyNotFound {
 			return nil
 		}
-		return errors.Wrap(NewDatabaseError(err), "failed to retrieve ledger milestone index")
+		return errors.Wrap(NewDatabaseError(err), "failed to load ledger milestone index")
 	}
 	ledgerMilestoneIndex = milestoneIndexFromBytes(entry.Value)
 
 	// Set the solid milestone index based on the ledger milestone
 	SetSolidMilestoneIndex(ledgerMilestoneIndex)
-	if setLSMIAsLMI && ledgerMilestoneIndex != 0 {
-		cachedSolidMs := GetMilestoneOrNil(ledgerMilestoneIndex) // bundle +1
-		if cachedSolidMs != nil {
-			err = SetLatestMilestone(cachedSolidMs.Retain()) // bundle pass +1
-			cachedSolidMs.Release()                          // bundle -1
-			if err != nil {
-				return errors.Wrap(NewDatabaseError(err), "failed to set the latest milestone")
-			}
-		}
-	}
 
 	return nil
 }

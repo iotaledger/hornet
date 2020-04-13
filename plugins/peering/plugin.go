@@ -35,8 +35,8 @@ var (
 func Manager() *peering.Manager {
 	managerOnce.Do(func() {
 		// init protocol package with handshake data
-		cooAddrBytes := trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgMilestoneCoordinator))[:handshake.ByteEncodedCooAddressBytesLength]
-		mwm := config.NodeConfig.GetInt(config.CfgProtocolMWM)
+		cooAddrBytes := trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:handshake.ByteEncodedCooAddressBytesLength]
+		mwm := config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 		bindAddr := config.NodeConfig.GetString(config.CfgNetGossipBindAddress)
 		if err := protocol.Init(cooAddrBytes, mwm, bindAddr); err != nil {
 			log.Fatalf("couldn't initialize protocol: %s", err)
