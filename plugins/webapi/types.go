@@ -377,6 +377,20 @@ type CreateSnapshotReturn struct {
 	Duration int `json:"duration"`
 }
 
+/////////////////// pruneDatabase ////////////////////////
+
+// PruneDatabase struct
+type PruneDatabase struct {
+	Command     string          `mapstructure:"command"`
+	TargetIndex milestone.Index `mapstructure:"targetIndex"`
+	Depth       milestone.Index `mapstructure:"depth"`
+}
+
+// PruneDatabaseReturn struct
+type PruneDatabaseReturn struct {
+	Duration int `json:"duration"`
+}
+
 ///////////////////// getRequests /////////////////////////////////
 
 // GetRequests struct
