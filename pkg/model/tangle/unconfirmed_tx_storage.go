@@ -96,6 +96,11 @@ func GetFirstSeenTxHashes(msIndex milestone.Index, forceRelease bool, maxFind ..
 // firstSeenTx +1
 func StoreFirstSeenTx(msIndex milestone.Index, txHash trinary.Hash) *CachedFirstSeenTx {
 
+	if msIndex == 0 {
+		// Index has to be at least 1, otherwise first txs of a bootstrapped network won't get pruned
+		msIndex = 1
+	}
+
 	firstSeenTx := &hornet.FirstSeenTx{
 		FirstSeenLatestMilestoneIndex: msIndex,
 		TxHash:                        trinary.MustTrytesToBytes(txHash)[:49],
@@ -128,18 +133,4 @@ func ShutdownFirstSeenTxsStorage() {
 
 func FlushFirstSeenTxsStorage() {
 	firstSeenTxStorage.Flush()
-}
-
-func FixFirstSeenTxs(msIndex milestone.Index) {
-
-	// Search all entries with milestone 0
-	for _, firstSeenTxHash := range GetFirstSeenTxHashes(0, true) {
-
-		key := make([]byte, 4)
-		binary.LittleEndian.PutUint32(key, uint32(0))
-		key = append(key, trinary.MustTrytesToBytes(firstSeenTxHash)[:49]...)
-		firstSeenTxStorage.Delete(key)
-
-		StoreFirstSeenTx(msIndex, firstSeenTxHash).Release(true)
-	}
 }
