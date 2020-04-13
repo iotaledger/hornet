@@ -23,7 +23,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 	var txsToRemoveSlice []trinary.Hash
 
 	// Check if tx is still unconfirmed
-	for _, txHash := range tangle.GetFirstSeenTxHashes(targetIndex, true) {
+	for _, txHash := range tangle.GetUnconfirmedTxHashes(targetIndex, true) {
 		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 		if cachedTx == nil {
 			// Tx was already pruned
@@ -49,7 +49,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 	}
 
 	txCount := pruneTransactions(txsToRemoveSlice)
-	tangle.DeleteFirstSeenTxs(targetIndex)
+	tangle.DeleteUnconfirmedTxs(targetIndex)
 
 	return txCount
 }

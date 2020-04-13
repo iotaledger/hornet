@@ -23,7 +23,7 @@ func TransactionCaller(handler interface{}, params ...interface{}) {
 }
 
 func NewTransactionCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedTx *CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
+	handler.(func(cachedTx *CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
 
 func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {

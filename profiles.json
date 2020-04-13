@@ -57,7 +57,7 @@
           "maxConsumerHoldTimeSec": 100
         }
       },
-      "firstSeenTx": {
+      "unconfirmedTx": {
         "cacheTimeMs": 100,
         "leakDetection": {
           "enabled": false,
@@ -169,7 +169,7 @@
           "maxConsumerHoldTimeSec": 100
         }
       },
-      "firstSeenTx": {
+      "unconfirmedTx": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": true,

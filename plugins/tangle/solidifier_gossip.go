@@ -40,7 +40,7 @@ func configureGossipSolidifier() {
 func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
-	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if tangle.IsNodeSyncedWithThreshold() {
 			_, added := gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
 			if !added {
