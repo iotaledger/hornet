@@ -26,7 +26,7 @@ func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	c.JSON(http.StatusOK, GetSnapshotReturn{Balances: balances, MilestoneIndex: uint64(index)})
+	c.JSON(http.StatusOK, GetSnapshotReturn{Balances: balances, MilestoneIndex: index})
 }
 
 func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {

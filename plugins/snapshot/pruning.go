@@ -107,20 +107,18 @@ func pruneTransactions(txHashes []trinary.Hash) int {
 	return len(txsToRemove)
 }
 
-// ToDo: Global pruning Lock needed?
-func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struct{}) {
+func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		log.Panic("No snapshotInfo found!")
 	}
 
-	if solidMilestoneIndex <= pruningDelay || (snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1) {
+	if snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1 {
 		// Not enough history
-		return
+		return ErrNotEnoughHistory
 	}
 
-	targetIndex := solidMilestoneIndex - pruningDelay
 	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
 	if targetIndex > targetIndexMax {
 		targetIndex = targetIndexMax
@@ -128,7 +126,7 @@ func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struc
 
 	if snapshotInfo.PruningIndex >= targetIndex {
 		// No pruning needed
-		return
+		return ErrNoPruningNeeded
 	}
 
 	// Iterate through all milestones that have to be pruned
@@ -136,7 +134,7 @@ func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struc
 		select {
 		case <-abortSignal:
 			// Stop pruning the next milestone
-			return
+			return ErrPruningAborted
 		default:
 		}
 
@@ -182,4 +180,6 @@ func pruneDatabase(solidMilestoneIndex milestone.Index, abortSignal <-chan struc
 	tangle.SetSnapshotInfo(snapshotInfo)
 
 	tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(targetIndex)
+
+	return nil
 }

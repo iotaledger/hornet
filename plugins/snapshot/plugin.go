@@ -39,6 +39,8 @@ var (
 	ErrTargetIndexTooNew               = errors.New("snapshot target is too new.")
 	ErrTargetIndexTooOld               = errors.New("snapshot target is too old.")
 	ErrNotEnoughHistory                = errors.New("not enough history.")
+	ErrNoPruningNeeded                 = errors.New("no pruning needed.")
+	ErrPruningAborted                  = errors.New("pruning was aborted.")
 	ErrUnconfirmedTxInSubtangle        = errors.New("Unconfirmed tx in subtangle")
 	ErrInvalidBalance                  = errors.New("Invalid balance! Total does not match supply:")
 	ErrWrongCoordinatorAddressDatabase = errors.New("Configured coordinator address does not match database information")
@@ -160,13 +162,39 @@ func run(_ *node.Plugin) {
 				}
 
 				if pruningEnabled {
-					pruneDatabase(solidMilestoneIndex, shutdownSignal)
+					if solidMilestoneIndex <= pruningDelay {
+						// Not enough history
+						return
+					}
+
+					pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal)
 				}
 
 				localSnapshotLock.Unlock()
 			}
 		}
 	}, shutdown.PriorityLocalSnapshots)
+}
+
+func PruneDatabaseByDepth(depth milestone.Index) error {
+	localSnapshotLock.Lock()
+	defer localSnapshotLock.Unlock()
+
+	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+
+	if solidMilestoneIndex <= depth {
+		// Not enough history
+		return ErrNotEnoughHistory
+	}
+
+	return pruneDatabase(solidMilestoneIndex-depth, nil)
+}
+
+func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
+	localSnapshotLock.Lock()
+	defer localSnapshotLock.Unlock()
+
+	return pruneDatabase(targetIndex, nil)
 }
 
 func installGenesisTransaction() {
