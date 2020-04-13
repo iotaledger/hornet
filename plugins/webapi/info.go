@@ -37,7 +37,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
-	result.LatestMilestoneIndex = uint32(lmi)
+	result.LatestMilestoneIndex = lmi
 	result.LatestMilestone = consts.NullHashTrytes
 
 	// Latest milestone hash
@@ -51,7 +51,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	// Solid milestone index
 	smi := tangle.GetSolidMilestoneIndex()
-	result.LatestSolidSubtangleMilestoneIndex = uint32(smi)
+	result.LatestSolidSubtangleMilestoneIndex = smi
 	result.LatestSolidSubtangleMilestone = consts.NullHashTrytes
 	result.IsSynced = tangle.IsNodeSyncedWithThreshold()
 
@@ -67,8 +67,8 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Milestone start index
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		result.MilestoneStartIndex = uint32(snapshotInfo.PruningIndex)
-		result.LastSnapshottedMilestoneIndex = uint32(snapshotInfo.PruningIndex)
+		result.MilestoneStartIndex = snapshotInfo.PruningIndex
+		result.LastSnapshottedMilestoneIndex = snapshotInfo.PruningIndex
 	}
 
 	// System time
@@ -105,7 +105,7 @@ func getNodeAPIConfiguration(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Milestone start index
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		result.MilestoneStartIndex = uint32(snapshotInfo.PruningIndex)
+		result.MilestoneStartIndex = snapshotInfo.PruningIndex
 	}
 
 	c.JSON(http.StatusOK, result)

@@ -165,7 +165,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 					}
 
 					result.ConfirmedTxHash = txHash
-					result.ConfirmedByMilestoneIndex = uint32(at)
+					result.ConfirmedByMilestoneIndex = at
 					result.TanglePath = approversResult
 					result.TanglePathLength = len(approversResult)
 
