@@ -79,8 +79,8 @@ func configure(plugin *node.Plugin) {
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		// Check coordinator address in database
-		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81] {
-			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgMilestoneCoordinator)[:81]))
+		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81] {
+			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
 		}
 
 		// Check the ledger state

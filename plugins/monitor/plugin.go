@@ -73,7 +73,7 @@ func wrapHandler(h http.Handler) http.HandlerFunc {
 			data := PageData{
 				WebsocketURI: config.NodeConfig.GetString(config.CfgMonitorWebSocketURI),
 				APIPort:      config.NodeConfig.GetString(config.CfgMonitorRemoteAPIPort),
-				InitTxAmount: config.NodeConfig.GetInt(config.CfgMonitorInitialTransactionsCount),
+				InitTxAmount: config.NodeConfig.GetInt(config.CfgMonitorInitialTransactions),
 			}
 			tmpl, _ := template.New("monitorIndex").Parse(index)
 			tmpl.Execute(w, data)

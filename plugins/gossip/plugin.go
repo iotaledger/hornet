@@ -56,7 +56,7 @@ func BroadcastQueue() bqueue.Queue {
 func Processor() *processor.Processor {
 	msgProcessorOnce.Do(func() {
 		msgProcessor = processor.New(requestQueue, &processor.Options{
-			ValidMWM:          config.NodeConfig.GetUint64(config.CfgProtocolMWM),
+			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingTransactionFilter,
 		})
 	})

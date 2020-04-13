@@ -2,19 +2,28 @@ package config
 
 const (
 	// the address of the coordinator
-	CfgMilestoneCoordinator = "milestones.coordinator"
+	CfgCoordinatorAddress = "coordinator.address"
 	// the security level used in coordinator signatures
-	CfgMilestoneCoordinatorSecurityLevel = "milestones.coordinatorSecurityLevel"
+	CfgCoordinatorSecurityLevel = "coordinator.securityLevel"
 	// the depth of the Merkle tree which in turn determines the number of leaves (private keys) that the coordinator can use to sign a message.
-	CfgMilestoneNumberOfKeysInAMilestone = "milestones.numberOfKeysInAMilestone"
+	CfgCoordinatorMerkleTreeDepth = "coordinator.merkleTreeDepth"
 	// the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash.
 	// increasing this number by 1 will result in proof of work that is 3 times as hard.
-	CfgProtocolMWM = "protocol.mwm"
+	CfgCoordinatorMWM = "coordinator.mwm"
+	// start index of the first milestone
+	CfgCoordinatorStartIndex = "coordinator.startIndex"
+	// the interval milestones are issued
+	CfgCoordinatorIntervalSeconds = "coordinator.intervalSeconds"
+	// the amount of checkpoints issued between two milestones
+	CfgCoordinatorCheckpointTransactions = "coordinator.checkpointTransactions"
 )
 
 func init() {
-	NodeConfig.SetDefault(CfgMilestoneCoordinator, "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9")
-	NodeConfig.SetDefault(CfgMilestoneCoordinatorSecurityLevel, 2)
-	NodeConfig.SetDefault(CfgMilestoneNumberOfKeysInAMilestone, 23)
-	NodeConfig.SetDefault(CfgProtocolMWM, 14)
+	NodeConfig.SetDefault(CfgCoordinatorAddress, "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9")
+	NodeConfig.SetDefault(CfgCoordinatorSecurityLevel, 2)
+	NodeConfig.SetDefault(CfgCoordinatorMerkleTreeDepth, 23)
+	NodeConfig.SetDefault(CfgCoordinatorMWM, 14)
+	NodeConfig.SetDefault(CfgCoordinatorStartIndex, 0)
+	NodeConfig.SetDefault(CfgCoordinatorIntervalSeconds, 60)
+	NodeConfig.SetDefault(CfgCoordinatorCheckpointTransactions, 5)
 }

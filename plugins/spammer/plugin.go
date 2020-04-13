@@ -37,7 +37,7 @@ func configure(plugin *node.Plugin) {
 	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
 	depth = config.NodeConfig.GetUint(config.CfgSpammerDepth)
 	rateLimit = config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
-	mwm = config.NodeConfig.GetInt(config.CfgProtocolMWM)
+	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
 
 	if spammerWorkerCount >= runtime.NumCPU() {

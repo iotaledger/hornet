@@ -87,7 +87,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	result.TransactionsToRequest = queued + pending
 
 	// Coo addr
-	result.CoordinatorAddress = config.NodeConfig.GetString(config.CfgMilestoneCoordinator)
+	result.CoordinatorAddress = config.NodeConfig.GetString(config.CfgCoordinatorAddress)
 
 	// Return node info
 	c.JSON(http.StatusOK, result)
