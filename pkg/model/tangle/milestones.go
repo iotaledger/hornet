@@ -25,7 +25,7 @@ const (
 var (
 	solidMilestoneIndex   milestone.Index
 	solidMilestoneLock    syncutils.RWMutex
-	latestMilestone       *Bundle
+	latestMilestoneIndex  milestone.Index
 	latestMilestoneLock   syncutils.RWMutex
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
@@ -69,95 +69,89 @@ func IsNodeSyncedWithThreshold() bool {
 	return isNodeSyncedThreshold
 }
 
+// The node is synced if LMI != 0, LMI >= "recentSeenMilestones" from snapshot and LSMI == LMI
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
+		// Node can't be sync if not all "recentSeenMilestones" from the snapshot file have been solidified
 		isNodeSynced = false
 		isNodeSyncedThreshold = false
 		return
 	}
 
 	isNodeSynced = latestSolidIndex == latestIndex
+
+	// catch overflow
+	if latestIndex < NodeSyncedThreshold {
+		isNodeSyncedThreshold = true
+		return
+	}
+
 	isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - NodeSyncedThreshold)
 }
 
-func SetSolidMilestone(cachedBndl *CachedBundle) {
-	defer cachedBndl.Release() // bundle -1
-
-	if !cachedBndl.GetBundle().IsSolid() {
-		panic(fmt.Sprintf("SetSolidMilestone: Milestone was not solid: %d", cachedBndl.GetBundle().GetMilestoneIndex()))
-	}
-
+// SetSolidMilestoneIndex sets the solid milestone index
+func SetSolidMilestoneIndex(index milestone.Index, updateSynced ...bool) {
 	solidMilestoneLock.Lock()
-	if cachedBndl.GetBundle().GetMilestoneIndex() < solidMilestoneIndex {
-		panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, cachedBndl.GetBundle().GetMilestoneIndex()))
+	if solidMilestoneIndex > index {
+		panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, index))
 	}
-	solidMilestoneIndex = cachedBndl.GetBundle().GetMilestoneIndex()
+	solidMilestoneIndex = index
 	solidMilestoneLock.Unlock()
 
-	updateNodeSynced(cachedBndl.GetBundle().GetMilestoneIndex(), GetLatestMilestoneIndex())
+	if len(updateSynced) > 0 && !updateSynced[0] {
+		// Always call updateNodeSynced if parameter is not given
+		return
+	}
+
+	updateNodeSynced(index, GetLatestMilestoneIndex())
 }
 
-// SetSolidMilestoneIndex sets the solid milestone index at node startup
-// Do not use this function during normal node operation
-func SetSolidMilestoneIndex(index milestone.Index) {
+// OverwriteSolidMilestoneIndex is used to set older solid milestones (revalidation)
+func OverwriteSolidMilestoneIndex(index milestone.Index) {
 	solidMilestoneLock.Lock()
 	solidMilestoneIndex = index
 	solidMilestoneLock.Unlock()
-	updateNodeSynced(index, GetLatestMilestoneIndex())
+
+	if isNodeSynced {
+		updateNodeSynced(index, GetLatestMilestoneIndex())
+	}
 }
 
 func GetSolidMilestoneIndex() milestone.Index {
 	solidMilestoneLock.RLock()
 	defer solidMilestoneLock.RUnlock()
 
-	if solidMilestoneIndex != 0 {
-		return solidMilestoneIndex
-	}
-
-	if snapshot != nil {
-		return snapshot.SnapshotIndex
-	}
-
-	return 0
+	return solidMilestoneIndex
 }
 
-func SetLatestMilestone(cachedBndl *CachedBundle) error {
-	defer cachedBndl.Release() // bundle -1
+func SetLatestMilestoneIndex(index milestone.Index, updateSynced ...bool) bool {
 
 	latestMilestoneLock.Lock()
 
-	index := cachedBndl.GetBundle().GetMilestoneIndex()
-
-	if latestMilestone != nil && latestMilestone.GetMilestoneIndex() >= index {
+	if latestMilestoneIndex >= index {
+		// Current LMI is bigger than new LMI => Abort
 		latestMilestoneLock.Unlock()
-		return nil
+		return false
 	}
 
-	var err error
-
-	latestMilestone = cachedBndl.GetBundle()
+	latestMilestoneIndex = index
 	latestMilestoneLock.Unlock()
+
+	if len(updateSynced) > 0 && !updateSynced[0] {
+		// Always call updateNodeSynced if parameter is not given
+		return true
+	}
 
 	updateNodeSynced(GetSolidMilestoneIndex(), index)
 
-	return err
-}
-
-func GetLatestMilestone() *Bundle {
-	latestMilestoneLock.RLock()
-	defer latestMilestoneLock.RUnlock()
-
-	return latestMilestone
+	return true
 }
 
 func GetLatestMilestoneIndex() milestone.Index {
 	latestMilestoneLock.RLock()
 	defer latestMilestoneLock.RUnlock()
 
-	if latestMilestone != nil {
-		return latestMilestone.GetMilestoneIndex()
-	}
-	return 0
+	return latestMilestoneIndex
 }
 
 // bundle +1

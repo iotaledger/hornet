@@ -93,7 +93,7 @@ func revalidateDatabase() error {
 	}
 
 	// Set the valid solid milestone index
-	tangle.SetSolidMilestoneIndex(snapshotInfo.SnapshotIndex)
+	tangle.OverwriteSolidMilestoneIndex(snapshotInfo.SnapshotIndex)
 
 	return nil
 }

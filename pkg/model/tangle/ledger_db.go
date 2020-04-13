@@ -124,7 +124,7 @@ func readLedgerMilestoneIndexFromDatabase() error {
 	ledgerMilestoneIndex = milestoneIndexFromBytes(entry.Value)
 
 	// Set the solid milestone index based on the ledger milestone
-	SetSolidMilestoneIndex(ledgerMilestoneIndex)
+	SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
 
 	return nil
 }
