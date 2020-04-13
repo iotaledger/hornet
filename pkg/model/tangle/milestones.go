@@ -134,10 +134,6 @@ func SetLatestMilestone(cachedBndl *CachedBundle) error {
 	}
 
 	var err error
-	if latestMilestone == nil {
-		// Milestone was 0 before, so we have to fix all entries for all first seen tx until now
-		FixFirstSeenTxs(index)
-	}
 
 	latestMilestone = cachedBndl.GetBundle()
 	latestMilestoneLock.Unlock()
