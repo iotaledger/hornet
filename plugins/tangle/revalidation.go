@@ -41,7 +41,7 @@ var (
 // 		Stored without caching:
 //			- Tag								=> will be added again if missing by solidifcation
 //			- Address							=> will be added again if missing by solidifcation
-//			- FirstSeenTx 						=> will be removed at pruning anyway
+//			- UnconfirmedTx 						=> will be removed at pruning anyway
 //			- Milestone							=> will be added again at bundle creation if missing
 //			- SpentAddresses					=> will be added again if missing by confirmation
 //
@@ -121,7 +121,7 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 		msIndex := cachedMs.Get().(*tangle.Milestone).Index
 		if msIndex > info.SnapshotIndex {
 			milestonesToDelete[msIndex] = struct{}{}
-			tangle.DeleteFirstSeenTxs(msIndex)
+			tangle.DeleteUnconfirmedTxs(msIndex)
 			if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 				panic(err)
 			}
@@ -132,7 +132,7 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 		tangle.DeleteMilestone(index)
 	}
 
-	tangle.FlushFirstSeenTxsStorage()
+	tangle.FlushUnconfirmedTxsStorage()
 	tangle.FlushMilestoneStorage()
 }
 

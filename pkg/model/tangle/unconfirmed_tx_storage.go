@@ -14,45 +14,45 @@ import (
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
-var firstSeenTxStorage *objectstorage.ObjectStorage
+var unconfirmedTxStorage *objectstorage.ObjectStorage
 
-type CachedFirstSeenTx struct {
+type CachedUnconfirmedTx struct {
 	objectstorage.CachedObject
 }
 
-type CachedFirstSeenTxs []*CachedFirstSeenTx
+type CachedUnconfirmedTxs []*CachedUnconfirmedTx
 
-func (cachedFirstSeenTxs CachedFirstSeenTxs) Release(force ...bool) {
-	for _, cachedFirstSeenTx := range cachedFirstSeenTxs {
-		cachedFirstSeenTx.Release(force...)
+func (cachedUnconfirmedTxs CachedUnconfirmedTxs) Release(force ...bool) {
+	for _, cachedUnconfirmedTx := range cachedUnconfirmedTxs {
+		cachedUnconfirmedTx.Release(force...)
 	}
 }
 
-func (c *CachedFirstSeenTx) GetFirstSeenTx() *hornet.FirstSeenTx {
-	return c.Get().(*hornet.FirstSeenTx)
+func (c *CachedUnconfirmedTx) GetUnconfirmedTx() *hornet.UnconfirmedTx {
+	return c.Get().(*hornet.UnconfirmedTx)
 }
 
-func firstSeenTxFactory(key []byte) (objectstorage.StorableObject, error, int) {
-	firstSeenTx := &hornet.FirstSeenTx{
-		FirstSeenLatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(key[:4])),
-		TxHash:                        make([]byte, 49),
+func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, error, int) {
+	unconfirmedTx := &hornet.UnconfirmedTx{
+		LatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(key[:4])),
+		TxHash:               make([]byte, 49),
 	}
-	copy(firstSeenTx.TxHash, key[4:])
-	return firstSeenTx, nil, 53
+	copy(unconfirmedTx.TxHash, key[4:])
+	return unconfirmedTx, nil, 53
 }
 
-func GetFirstSeenTxStorageSize() int {
-	return firstSeenTxStorage.GetSize()
+func GetUnconfirmedTxStorageSize() int {
+	return unconfirmedTxStorage.GetSize()
 }
 
-func configureFirstSeenTxStorage() {
+func configureUnconfirmedTxStorage() {
 
-	opts := profile.LoadProfile().Caches.FirstSeenTx
+	opts := profile.LoadProfile().Caches.UnconfirmedTx
 
-	firstSeenTxStorage = objectstorage.New(
+	unconfirmedTxStorage = objectstorage.New(
 		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixFirstSeenTransactions},
-		firstSeenTxFactory,
+		[]byte{DBPrefixUnconfirmedTransactions},
+		unconfirmedTxFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(4, 49),
@@ -65,72 +65,72 @@ func configureFirstSeenTxStorage() {
 	)
 }
 
-// firstSeenTx +-0
-func GetFirstSeenTxHashes(msIndex milestone.Index, forceRelease bool, maxFind ...int) []trinary.Hash {
-	var firstSeenTxHashes []trinary.Hash
+// unconfirmedTx +-0
+func GetUnconfirmedTxHashes(msIndex milestone.Index, forceRelease bool, maxFind ...int) []trinary.Hash {
+	var unconfirmedTxHashes []trinary.Hash
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
 	i := 0
-	firstSeenTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+	unconfirmedTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release(true) // firstSeenTx -1
+			cachedObject.Release(true) // unconfirmedTx -1
 			return false
 		}
 
 		if !cachedObject.Exists() {
-			cachedObject.Release(true) // firstSeenTx -1
+			cachedObject.Release(true) // unconfirmedTx -1
 			return true
 		}
 
-		firstSeenTxHashes = append(firstSeenTxHashes, (&CachedFirstSeenTx{CachedObject: cachedObject}).GetFirstSeenTx().GetTransactionHash())
-		cachedObject.Release(forceRelease) // firstSeenTx -1
+		unconfirmedTxHashes = append(unconfirmedTxHashes, (&CachedUnconfirmedTx{CachedObject: cachedObject}).GetUnconfirmedTx().GetTransactionHash())
+		cachedObject.Release(forceRelease) // unconfirmedTx -1
 		return true
 	}, key)
 
-	return firstSeenTxHashes
+	return unconfirmedTxHashes
 }
 
-// firstSeenTx +1
-func StoreFirstSeenTx(msIndex milestone.Index, txHash trinary.Hash) *CachedFirstSeenTx {
+// unconfirmedTx +1
+func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnconfirmedTx {
 
 	if msIndex == 0 {
 		// Index has to be at least 1, otherwise first txs of a bootstrapped network won't get pruned
 		msIndex = 1
 	}
 
-	firstSeenTx := &hornet.FirstSeenTx{
-		FirstSeenLatestMilestoneIndex: msIndex,
-		TxHash:                        trinary.MustTrytesToBytes(txHash)[:49],
+	unconfirmedTx := &hornet.UnconfirmedTx{
+		LatestMilestoneIndex: msIndex,
+		TxHash:               trinary.MustTrytesToBytes(txHash)[:49],
 	}
 
-	cachedObj := firstSeenTxStorage.ComputeIfAbsent(firstSeenTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // firstSeenTx +1
-		firstSeenTx.Persist()
-		firstSeenTx.SetModified()
-		return firstSeenTx
+	cachedObj := unconfirmedTxStorage.ComputeIfAbsent(unconfirmedTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // unconfirmedTx +1
+		unconfirmedTx.Persist()
+		unconfirmedTx.SetModified()
+		return unconfirmedTx
 	})
 
-	return &CachedFirstSeenTx{CachedObject: cachedObj}
+	return &CachedUnconfirmedTx{CachedObject: cachedObj}
 }
 
-// firstSeenTx +-0
-func DeleteFirstSeenTxs(msIndex milestone.Index) {
+// unconfirmedTx +-0
+func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
-	firstSeenTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		firstSeenTxStorage.Delete(key)
+	unconfirmedTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		unconfirmedTxStorage.Delete(key)
 		cachedObject.Release(true)
 		return true
 	}, key)
 }
 
-func ShutdownFirstSeenTxsStorage() {
-	firstSeenTxStorage.Shutdown()
+func ShutdownUnconfirmedTxsStorage() {
+	unconfirmedTxStorage.Shutdown()
 }
 
-func FlushFirstSeenTxsStorage() {
-	firstSeenTxStorage.Flush()
+func FlushUnconfirmedTxsStorage() {
+	unconfirmedTxStorage.Flush()
 }

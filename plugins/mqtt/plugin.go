@@ -86,7 +86,7 @@ func run(plugin *node.Plugin) {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.config.Port)
 
-	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, firstSeenLatestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSyncedWithThreshold() {
 				cachedTx.Release(true) // tx -1
