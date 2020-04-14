@@ -845,6 +845,9 @@ func LoadSnapshotFromFile(filePath string) error {
 		}
 	}
 
+	// set the solid milestone index based on the snapshot milestone
+	tangle.SetSolidMilestoneIndex(milestone.Index(msIndex), false)
+
 	log.Info("Finished loading snapshot")
 
 	tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(milestone.Index(msIndex))

@@ -358,7 +358,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
-		if cachedClosestNextMs.GetBundle().GetMilestoneIndex() == cachedMsToSolidify.GetBundle().GetMilestoneIndex() {
+		if cachedClosestNextMs.GetBundle().GetMilestoneIndex() == milestoneIndexToSolidify {
 			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetBundle().GetMilestoneIndex())
 		}
 		cachedClosestNextMs.Release() // bundle -1
@@ -374,7 +374,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	defer tangle.WriteUnlockLedger()
 	confirmMilestone(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail()) // tx pass +1
 
-	tangle.SetSolidMilestone(cachedMsToSolidify.Retain())    // bundle pass +1
+	tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
 	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 
 	var ctpsMessage string

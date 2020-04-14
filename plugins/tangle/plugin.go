@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -24,8 +25,14 @@ var (
 	belowMaxDepthTransactionLimit int
 	log                           *logger.Logger
 
+	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
+
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 )
+
+func init() {
+	pflag.CommandLine.MarkHidden("syncedAtStartup")
+}
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
@@ -93,6 +100,8 @@ func run(plugin *node.Plugin) {
 		}
 		log.Info("database revalidation successful")
 	}
+
+	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), *syncedAtStartup)
 
 	runTangleProcessor(plugin)
 

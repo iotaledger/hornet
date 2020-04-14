@@ -21,13 +21,7 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 	solidMsIndex := tangle.GetSolidMilestoneIndex()
 	bundleMsIndex := cachedBndl.GetBundle().GetMilestoneIndex()
 
-	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
-	if latestMilestoneIndex < bundleMsIndex {
-		err := tangle.SetLatestMilestone(cachedBndl.Retain()) // bundle pass +1
-		if err != nil {
-			log.Error(err)
-		}
-
+	if tangle.SetLatestMilestoneIndex(bundleMsIndex) {
 		Events.LatestMilestoneChanged.Trigger(cachedBndl) // bundle pass +1
 	}
 	milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex, false)

@@ -19,13 +19,13 @@ import (
 )
 
 const (
-	NodeSyncedThreshold = 2
+	isNodeSyncedWithinThreshold = 2
 )
 
 var (
 	solidMilestoneIndex   milestone.Index
 	solidMilestoneLock    syncutils.RWMutex
-	latestMilestone       *Bundle
+	latestMilestoneIndex  milestone.Index
 	latestMilestoneLock   syncutils.RWMutex
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
@@ -49,6 +49,7 @@ func ConfigureMilestones(cooAddr string, cooSecLvl int, cooMerkleTreeDepth uint6
 	maxMilestoneIndex = 1 << coordinatorMerkleTreeDepth
 }
 
+// GetMilestoneOrNil returns the CachedBundle of a milestone index or nil if it doesn't exist.
 // bundle +1
 func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
 
@@ -61,110 +62,109 @@ func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
 	return GetCachedBundleOrNil(cachedMilestone.GetMilestone().Hash)
 }
 
+// IsNodeSynced returns whether the node is synced.
 func IsNodeSynced() bool {
 	return isNodeSynced
 }
 
+// IsNodeSyncedWithThreshold returns whether the node is synced within a certain threshold.
 func IsNodeSyncedWithThreshold() bool {
 	return isNodeSyncedThreshold
 }
 
+// The node is synced if LMI != 0, LMI >= "recentSeenMilestones" from snapshot and LSMI == LMI.
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
+		// the node can't be sync if not all "recentSeenMilestones" from the snapshot file have been solidified.
 		isNodeSynced = false
 		isNodeSyncedThreshold = false
 		return
 	}
 
 	isNodeSynced = latestSolidIndex == latestIndex
-	isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - NodeSyncedThreshold)
-}
 
-func SetSolidMilestone(cachedBndl *CachedBundle) {
-	defer cachedBndl.Release() // bundle -1
-
-	if !cachedBndl.GetBundle().IsSolid() {
-		panic(fmt.Sprintf("SetSolidMilestone: Milestone was not solid: %d", cachedBndl.GetBundle().GetMilestoneIndex()))
+	// catch overflow
+	if latestIndex < isNodeSyncedWithinThreshold {
+		isNodeSyncedThreshold = true
+		return
 	}
 
-	solidMilestoneLock.Lock()
-	if cachedBndl.GetBundle().GetMilestoneIndex() < solidMilestoneIndex {
-		panic(fmt.Sprintf("Current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, cachedBndl.GetBundle().GetMilestoneIndex()))
-	}
-	solidMilestoneIndex = cachedBndl.GetBundle().GetMilestoneIndex()
-	solidMilestoneLock.Unlock()
-
-	updateNodeSynced(cachedBndl.GetBundle().GetMilestoneIndex(), GetLatestMilestoneIndex())
+	isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - isNodeSyncedWithinThreshold)
 }
 
-// SetSolidMilestoneIndex sets the solid milestone index at node startup
-// Do not use this function during normal node operation
-func SetSolidMilestoneIndex(index milestone.Index) {
+// SetSolidMilestoneIndex sets the solid milestone index.
+func SetSolidMilestoneIndex(index milestone.Index, updateSynced ...bool) {
 	solidMilestoneLock.Lock()
+	if solidMilestoneIndex > index {
+		panic(fmt.Sprintf("current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, index))
+	}
 	solidMilestoneIndex = index
 	solidMilestoneLock.Unlock()
+
+	if len(updateSynced) > 0 && !updateSynced[0] {
+		// always call updateNodeSynced if parameter is not given.
+		return
+	}
+
 	updateNodeSynced(index, GetLatestMilestoneIndex())
 }
 
+// OverwriteSolidMilestoneIndex is used to set older solid milestones (revalidation).
+func OverwriteSolidMilestoneIndex(index milestone.Index) {
+	solidMilestoneLock.Lock()
+	solidMilestoneIndex = index
+	solidMilestoneLock.Unlock()
+
+	if isNodeSynced {
+		updateNodeSynced(index, GetLatestMilestoneIndex())
+	}
+}
+
+// GetSolidMilestoneIndex returns the latest solid milestone index.
 func GetSolidMilestoneIndex() milestone.Index {
 	solidMilestoneLock.RLock()
 	defer solidMilestoneLock.RUnlock()
 
-	if solidMilestoneIndex != 0 {
-		return solidMilestoneIndex
-	}
-
-	if snapshot != nil {
-		return snapshot.SnapshotIndex
-	}
-
-	return 0
+	return solidMilestoneIndex
 }
 
-func SetLatestMilestone(cachedBndl *CachedBundle) error {
-	defer cachedBndl.Release() // bundle -1
+// SetLatestMilestoneIndex sets the latest milestone index.
+func SetLatestMilestoneIndex(index milestone.Index, updateSynced ...bool) bool {
 
 	latestMilestoneLock.Lock()
 
-	index := cachedBndl.GetBundle().GetMilestoneIndex()
-
-	if latestMilestone != nil && latestMilestone.GetMilestoneIndex() >= index {
+	if latestMilestoneIndex >= index {
+		// current LMI is bigger than new LMI => abort
 		latestMilestoneLock.Unlock()
-		return nil
+		return false
 	}
 
-	var err error
-
-	latestMilestone = cachedBndl.GetBundle()
+	latestMilestoneIndex = index
 	latestMilestoneLock.Unlock()
+
+	if len(updateSynced) > 0 && !updateSynced[0] {
+		// always call updateNodeSynced if parameter is not given
+		return true
+	}
 
 	updateNodeSynced(GetSolidMilestoneIndex(), index)
 
-	return err
+	return true
 }
 
-func GetLatestMilestone() *Bundle {
-	latestMilestoneLock.RLock()
-	defer latestMilestoneLock.RUnlock()
-
-	return latestMilestone
-}
-
+// GetLatestMilestoneIndex returns the latest milestone index.
 func GetLatestMilestoneIndex() milestone.Index {
 	latestMilestoneLock.RLock()
 	defer latestMilestoneLock.RUnlock()
 
-	if latestMilestone != nil {
-		return latestMilestone.GetMilestoneIndex()
-	}
-	return 0
+	return latestMilestoneIndex
 }
 
 // bundle +1
 func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
-		// No milestone received yet, check the next 100 milestones as a workaround
+		// no milestone received yet, check the next 100 milestones as a workaround
 		lmi = GetSolidMilestoneIndex() + 100
 	}
 
@@ -185,7 +185,7 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
 func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 
 	if len(bndl.txs) != (coordinatorSecurityLevel + 1) {
-		// Wrong amount of txs in bundle
+		// wrong amount of txs in bundle
 		return false, nil
 	}
 
@@ -193,13 +193,13 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 
 	if !IsMaybeMilestone(cachedTailTx.Retain()) { // tx pass +1
 		cachedTailTx.Release() // tx -1
-		// Transaction is not issued by compass => no milestone
+		// transaction is not issued by compass => no milestone
 		return false, nil
 	}
 
 	tailTxHash := cachedTailTx.GetTransaction().GetHash()
 
-	// Check the structure of the milestone
+	// check the structure of the milestone
 	milestoneIndex := getMilestoneIndex(cachedTailTx.Retain()) // tx pass +1
 	if milestoneIndex <= GetSolidMilestoneIndex() {
 		// Milestone older than solid milestone
@@ -217,7 +217,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	if cachedMs != nil {
 		cachedTailTx.Release() // tx -1
 		cachedMs.Release()     // bundle -1
-		// It could be issued again since several transactions of the same bundle were processed in parallel
+		// it could be issued again since several transactions of the same bundle were processed in parallel
 		return false, nil
 	}
 
@@ -233,7 +233,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 
 		if !IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
 			cachedTx.Release() // tx -1
-			// Transaction is not issued by compass => no milestone
+			// transaction is not issued by compass => no milestone
 			cachedSignatureTxs.Release() // tx -1
 			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
 		}
@@ -251,7 +251,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	defer cachedSiblingsTx.Release() // tx -1
 
 	if (cachedSiblingsTx.GetTransaction().Tx.Value != 0) || (cachedSiblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
-		// Transaction is not issued by compass => no milestone
+		// transaction is not issued by compass => no milestone
 		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
 	}
 
@@ -261,7 +261,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		}
 	}
 
-	// Verify milestone signature
+	// verify milestone signature
 	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, coordinatorMerkleTreeDepth, coordinatorAddress) // tx pass +2
 	if !valid {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash)
@@ -272,7 +272,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	return true, nil
 }
 
-// Validates if the milestone has the correct signature
+// Validates if the milestone has the correct signature.
 func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone.Index, securityLvl int, coordinatorMerkleTreeDepth uint64, coordinatorAddress trinary.Hash) (valid bool) {
 
 	defer cachedSignatureTxs.Release() // tx -1
@@ -332,14 +332,14 @@ func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *
 	return merkleAddress == coordinatorAddress
 }
 
-// Checks if the the tx could be part of a milestone
+// Checks if the the tx could be part of a milestone.
 func IsMaybeMilestone(cachedTx *CachedTransaction) bool {
 	value := (cachedTx.GetTransaction().Tx.Value == 0) && (cachedTx.GetTransaction().Tx.Address == coordinatorAddress)
 	cachedTx.Release(true) // tx -1
 	return value
 }
 
-// Checks if the the tx could be part of a milestone
+// Checks if the the tx could be part of a milestone.
 func IsMaybeMilestoneTx(cachedTx *CachedTransaction) bool {
 	tx := cachedTx.GetTransaction().Tx
 	value := (tx.Value == 0) && ((tx.Address == coordinatorAddress) || (tx.Address == consts.NullHashTrytes))
@@ -347,7 +347,7 @@ func IsMaybeMilestoneTx(cachedTx *CachedTransaction) bool {
 	return value
 }
 
-// Returns Milestone index of the milestone
+// Returns Milestone index of the milestone.
 func getMilestoneIndex(cachedTx *CachedTransaction) (milestoneIndex milestone.Index) {
 	value := milestone.Index(trinary.TrytesToInt(cachedTx.GetTransaction().Tx.ObsoleteTag))
 	cachedTx.Release(true) // tx -1
