@@ -845,7 +845,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		}
 	}
 
-	// Set the solid milestone index based on the snapshot milestone
+	// set the solid milestone index based on the snapshot milestone
 	tangle.SetSolidMilestoneIndex(milestone.Index(msIndex), false)
 
 	log.Info("Finished loading snapshot")

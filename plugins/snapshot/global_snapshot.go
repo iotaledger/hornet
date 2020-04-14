@@ -129,7 +129,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81], consts.NullHashTrytes, snapshotIndex, snapshotIndex, 0, spentAddrEnabled)
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(snapshotIndex)
 
-	// Set the solid milestone index based on the snapshot milestone
+	// set the solid milestone index based on the snapshot milestone
 	tangle.SetSolidMilestoneIndex(snapshotIndex, false)
 
 	log.Info("Finished loading snapshot")
