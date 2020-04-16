@@ -96,11 +96,6 @@ func GetUnconfirmedTxHashes(msIndex milestone.Index, forceRelease bool, maxFind 
 // unconfirmedTx +1
 func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnconfirmedTx {
 
-	if msIndex == 0 {
-		// Index has to be at least 1, otherwise first txs of a bootstrapped network won't get pruned
-		msIndex = 1
-	}
-
 	unconfirmedTx := &hornet.UnconfirmedTx{
 		LatestMilestoneIndex: msIndex,
 		TxHash:               trinary.MustTrytesToBytes(txHash)[:49],

@@ -39,3 +39,8 @@ snapshot/
 
 # log files
 hornet.log
+
+# coordinator files
+layer*.csv
+coordinator.state
+coordinator.tree

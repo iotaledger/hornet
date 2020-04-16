@@ -22,5 +22,6 @@ const (
 	PrioritySpammer
 	PriorityStatusReport
 	PriorityAutopeering
+	PriorityCoordinator
 	PriorityUpdateCheck
 )
