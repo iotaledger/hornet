@@ -1,6 +1,9 @@
 package tipselection
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
@@ -15,6 +18,10 @@ var (
 	// config options
 	maxDepth int
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func WalkerStatsCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*TipSelStats))(params[0].(*TipSelStats))
