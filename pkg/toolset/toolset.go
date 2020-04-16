@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/gohornet/hornet/plugins/coordinator"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -46,6 +47,8 @@ func HandleTools() {
 	tools["pwdhash"] = hashPasswordAndSalt
 	tools["seedgen"] = seedGen
 	tools["list"] = listTools
+	tools["merkletreecreate"] = merkleTreeCreate
+	tools["merkletreeconvert"] = merkleTreeConvert
 
 	for tool, f := range tools {
 		if strings.ToLower(args[1]) == tool {
@@ -129,8 +132,19 @@ func seedGen() {
 	os.Exit(0)
 }
 
+func merkleTreeCreate() {
+	coordinator.InitLogger("Coordinator")
+	coordinator.CreateMerkleTreeFile("coordinator.tree", "", 2, 10)
+}
+
+func merkleTreeConvert() {
+	//coordinator.ConvertMerkleTreeFiles()
+}
+
 func listTools() {
 	fmt.Println("pwdhash: Generates an sha265 sum from your password and salt")
 	fmt.Println("seedgen: Generates an autopeering seed")
+	fmt.Println("merkletreecreate: Creates a merkle tree for the coordinator plugin")
+	fmt.Println("merkletreeconvert: Converts compass merkle tree files to new format")
 	os.Exit(0)
 }

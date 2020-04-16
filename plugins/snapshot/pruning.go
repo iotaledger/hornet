@@ -129,6 +129,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		return ErrNoPruningNeeded
 	}
 
+	// unconfirmed txs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
+	pruneUnconfirmedTransactions(snapshotInfo.PruningIndex)
+
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
 		select {
