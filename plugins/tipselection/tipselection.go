@@ -1,8 +1,8 @@
 package tipselection
 
 import (
-	"crypto/rand"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/iotaledger/iota.go/consts"
@@ -161,17 +161,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 			}
 
 			for len(approverHashes) != 0 {
-				b := make([]byte, 1)
-				_, err := rand.Read(b)
-				if err != nil {
-					return nil, nil, err
-				}
-				var candidateIndex int
-				if len(approverHashes) == 1 {
-					candidateIndex = 0
-				} else {
-					candidateIndex = int(b[0]) % len(approverHashes)
-				}
+				candidateIndex := rand.Intn(len(approverHashes))
 				candidateHash := approverHashes[candidateIndex]
 
 				// skip validating the tx if we already approved it
@@ -184,7 +174,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				// check whether we determined by a previous tip-sel whether this
 				// transaction references an invalid bundle
 				if tanglePlugin.ContainsInvalidBundleReference(candidateHash) {
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					continue
 				}
 
@@ -193,12 +183,12 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				cachedCandidateTx := tangle.GetCachedTransactionOrNil(candidateHash) // tx +1
 
 				if cachedCandidateTx == nil {
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					continue
 				}
 
 				if !cachedCandidateTx.GetMetadata().IsSolid() {
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					continue
 				}
@@ -210,7 +200,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 				// isn't in any bundle instance
 				if cachedBndls == nil {
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					continue
 				}
@@ -220,33 +210,33 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 				if len(cachedBndls) == 1 {
 					cachedBndl = cachedBndls[0]
 				} else {
-					randomIndex := int(b[0]) % len(cachedBndls)
-					cachedBndl = cachedBndls[randomIndex]
+					bundleIndex := rand.Intn(len(cachedBndls))
+					cachedBndl = cachedBndls[bundleIndex]
 
 					// Release unused bundles
 					for i := 0; i < len(cachedBndls); i++ {
-						if i != randomIndex {
+						if i != bundleIndex {
 							cachedBndls[i].Release() // bundle -1
 						}
 					}
 				}
 
 				if cachedBndl == nil {
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					continue
 				}
 
 				if !cachedBndl.GetBundle().IsValid() || !cachedBndl.GetBundle().ValidStrictSemantics() {
 					tanglePlugin.PutInvalidBundleReference(candidateHash)
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndl.Release()        // bundle -1
 					continue
 				}
 
 				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, false) { // tx pass +1
-					approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndl.Release()        // bundle -1
 					continue
@@ -263,7 +253,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 					}
 					// check whether the bundle's approved cone is consistent with our current diff
 					if !tanglePlugin.CheckConsistencyOfConeAndMutateDiff(cachedBndl.GetBundle().GetTailHash(), approved, diff, false) {
-						approverHashes = removeElementAtIndex(approverHashes, candidateIndex)
+						approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 						cachedCandidateTx.Release() // tx -1
 						cachedBndl.Release()        // bundle -1
 						continue
@@ -294,7 +284,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 	return tips, walkStats, nil
 }
 
-func removeElementAtIndex(s []trinary.Hash, index int) []trinary.Hash {
+func removeElementWithoutPreservingOrder(s []trinary.Hash, index int) []trinary.Hash {
 	s[index] = s[len(s)-1]
 	return s[:len(s)-1]
 }
