@@ -2,17 +2,16 @@ package toolset
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math/rand"
-	"os"
 	"time"
 )
 
-func seedGen(args []string) {
+func seedGen(args []string) error {
 
 	if len(args) > 0 {
-		fmt.Println("Too many arguments for 'seedGen'")
-		os.Exit(0)
+		return errors.New("too many arguments for 'seedGen'")
 	}
 
 	rand.Seed(time.Now().UnixNano())
@@ -25,5 +24,6 @@ func seedGen(args []string) {
 	}
 
 	fmt.Println("Your autopeering seed: ", base64.StdEncoding.EncodeToString([]byte(string(b))))
-	os.Exit(0)
+
+	return nil
 }
