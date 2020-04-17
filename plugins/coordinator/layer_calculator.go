@@ -61,11 +61,13 @@ func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, d
 		return err
 	}
 
+	fmt.Printf("Creating merkle tree successful (took %v).\n", time.Since(ts).Truncate(time.Second))
+
 	return nil
 }
 
 func calculateAllAddresses(seed trinary.Hash, securityLvl int, count int) []trinary.Hash {
-	log.Infof("Calculating %d addresses.", count)
+	fmt.Printf("Calculating %d addresses...\n", count)
 
 	resultLock := syncutils.Mutex{}
 	result := make([]trinary.Hash, count)
@@ -91,12 +93,22 @@ func calculateAllAddresses(seed trinary.Hash, securityLvl int, count int) []trin
 		}()
 	}
 
+	ts := time.Now()
 	for index := 0; index < count; index++ {
 		input <- milestone.Index(index)
+
+		if index%5000 == 0 && index != 0 {
+			ratio := float64(index) / float64(count)
+			total := time.Duration(float64(time.Since(ts)) / ratio)
+			duration := ts.Add(total).Sub(time.Now())
+			fmt.Printf("Calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, ratio*100.0, duration.Truncate(time.Second))
+		}
 	}
 
 	close(input)
 	wg.Wait()
+
+	fmt.Printf("Calculated %d/%d (100.00%%) addresses (took %v).\n", count, count, time.Since(ts).Truncate(time.Second))
 
 	return result
 }
@@ -110,7 +122,7 @@ func calculateAllLayers(addresses []trinary.Hash) [][]trinary.Hash {
 	layers = append(layers, last)
 
 	for i := depth - 1; i >= 0; i-- {
-		log.Infof("Calculating nodes for depth %d", i)
+		fmt.Printf("Calculating nodes for layer %d\n", i)
 		last = calculateNextLayer(last)
 		layers = append(layers, last)
 	}
