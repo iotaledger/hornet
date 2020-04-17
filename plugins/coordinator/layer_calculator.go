@@ -1,13 +1,11 @@
 package coordinator
 
 import (
-	"bufio"
 	"fmt"
 	"math"
-	"os"
-	"path"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -16,35 +14,11 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-var (
-	depth = 10
-)
-
-func CreateCoordinatorFiles(outputDir string, seed trinary.Hash, securityLvl int, depth int) {
-
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		// outputDor does not exist
-		os.MkdirAll(outputDir, os.ModePerm)
-	}
-
-	addresses := calculateAllAddresses(seed, securityLvl, 1<<depth)
-	log.Info("Calculated all addresses.")
-
-	layers := calculateAllLayers(addresses)
-
-	for i, layer := range layers {
-		if err := writeLayer(outputDir, i, layer); err != nil {
-			panic(err)
-		}
-	}
-
-	log.Infof("Successfully wrote Merkle Tree with root: %v", layers[0][0])
-}
-
 func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, depth int) error {
 
+	ts := time.Now()
+
 	addresses := calculateAllAddresses(seed, securityLvl, 1<<depth)
-	log.Info("Calculated all addresses.")
 
 	layers := calculateAllLayers(addresses)
 
@@ -169,28 +143,4 @@ func calculateNextLayer(lastLayer []trinary.Hash) []trinary.Hash {
 	wg.Wait()
 
 	return result
-}
-
-func writeLayer(outputDir string, depth int, layer []trinary.Hash) error {
-
-	filePath := path.Join(outputDir, fmt.Sprintf("layer.%d.csv", depth))
-
-	outputFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0660)
-	if err != nil {
-		return err
-	}
-	defer outputFile.Close()
-
-	// write into the file with an 8kB buffer
-	fileBufWriter := bufio.NewWriterSize(outputFile, 8192)
-
-	for _, element := range layer {
-		fileBufWriter.WriteString(element + "\n")
-	}
-
-	if err := fileBufWriter.Flush(); err != nil {
-		return err
-	}
-
-	return nil
 }
