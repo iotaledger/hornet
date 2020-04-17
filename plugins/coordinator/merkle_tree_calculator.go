@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
+// CreateMerkleTreeFile calculates the merkle tree and stores it into a file
 func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, depth int) error {
 
 	ts := time.Now()
@@ -31,7 +32,7 @@ func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, d
 
 	mt.Root = mt.Layers[0].Hashes[0]
 
-	if err := WriteMerkleTreeFile(filePath, mt); err != nil {
+	if err := StoreMerkleTreeFile(filePath, mt); err != nil {
 		return err
 	}
 
