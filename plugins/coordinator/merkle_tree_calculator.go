@@ -32,7 +32,7 @@ func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, d
 
 	mt.Root = mt.Layers[0].Hashes[0]
 
-	if err := StoreMerkleTreeFile(filePath, mt); err != nil {
+	if err := storeMerkleTreeFile(filePath, mt); err != nil {
 		return err
 	}
 
@@ -118,7 +118,7 @@ func calculateNextLayer(lastLayer []trinary.Hash) []trinary.Hash {
 	wg := sync.WaitGroup{}
 	wg.Add(runtime.NumCPU())
 
-	// calculate all layers in parallel
+	// calculate all nodes in parallel
 	input := make(chan int)
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
