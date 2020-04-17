@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -12,6 +11,8 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/tipselection"
 )
 
 // Bundle represents grouped together transactions for creating a transfer.
@@ -38,13 +39,15 @@ func siblings(leafIndex milestone.Index, merkleTree *MerkleTree) []trinary.Hash 
 	return siblings
 }
 
+// getTagForIndex creates a tag for a specific index
 func getTagForIndex(index milestone.Index) trinary.Trytes {
 	return trinary.IntToTrytes(int64(index), 27)
 }
 
+// createMilestone create a signed milestone bundle
 func createMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, index milestone.Index, merkleTree *MerkleTree) (Bundle, error) {
 
-	// Get the siblings in the current merkle tree
+	// get the siblings in the current merkle tree
 	leafSiblings := siblings(index, merkleTree)
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
@@ -52,8 +55,8 @@ func createMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, index mile
 
 	tag := getTagForIndex(index)
 
-	// A milestone consists of two transactions.
-	// The last transaction (currentIndex == lastIndex) contains the siblings for the merkle tree.
+	// a milestone consists of two transactions.
+	// the last transaction (currentIndex == lastIndex) contains the siblings for the merkle tree.
 	txSiblings := &transaction.Transaction{}
 	txSiblings.SignatureMessageFragment = paddedSiblingsTrytes
 	txSiblings.Address = consts.NullHashTrytes
@@ -68,7 +71,7 @@ func createMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, index mile
 	txSiblings.Tag = consts.NullTagTrytes
 	txSiblings.Nonce = consts.NullTagTrytes
 
-	// The other transactions contain a signature that signs the siblings and thereby ensures the integrity.
+	// the other transactions contain a signature that signs the siblings and thereby ensures the integrity.
 	var b Bundle
 
 	for txIndex := 0; txIndex < securityLvl; txIndex++ {
@@ -94,11 +97,11 @@ func createMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, index mile
 	// finalize bundle by adding the bundle hash
 	b, err := finalizeInsecure(b)
 	if err != nil {
-		return nil, fmt.Errorf("Bundle.Finalize: %v", err.Error())
+		return nil, err
 	}
 
 	if err = doPow(txSiblings, mwm); err != nil {
-		return nil, fmt.Errorf("doPow: %v", err.Error())
+		return nil, err
 	}
 
 	signature, err := GetSignature(seed, index, securityLvl, txSiblings.Hash)
@@ -117,6 +120,7 @@ func createMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, index mile
 	return b, nil
 }
 
+// doPow calculates the transaction nonce and the hash
 func doPow(tx *transaction.Transaction, mwm int) error {
 
 	tx.AttachmentTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
@@ -148,7 +152,8 @@ func transactionHash(t *transaction.Transaction) trinary.Hash {
 	return trinary.MustTritsToTrytes(hashTrits)
 }
 
-// We don't need to care about the M-Bug here => we use a fixed version of the ISS
+// finalizeInsecure sets the bundle hash for all transactions in the bundle
+// we do not care about the M-Bug since we use a fixed version of the ISS
 func finalizeInsecure(bundle Bundle) (Bundle, error) {
 
 	k := kerl.NewKerl()
@@ -176,6 +181,7 @@ func finalizeInsecure(bundle Bundle) (Bundle, error) {
 	return bundle, nil
 }
 
+// chainTransactionsFillSignatures fills the signature message fragments with the signature and sets the trunk to chain the txs in a bundle
 func chainTransactionsFillSignatures(b Bundle, signature trinary.Trytes, mwm int) error {
 	// to chain transactions we start from the LastIndex and move towards index 0.
 	prev := b[len(b)-1].Hash
@@ -192,10 +198,145 @@ func chainTransactionsFillSignatures(b Bundle, signature trinary.Trytes, mwm int
 
 		// perform PoW
 		if err := doPow(tx, mwm); err != nil {
-			return fmt.Errorf("doPow: %v", err.Error())
+			return err
 		}
 
 		prev = tx.Hash
 	}
 	return nil
+}
+
+// issueCheckpoint sends a secret checkpoint transaction to the network
+// we do that to prevent parasite chain attacks
+// only honest tipselection will reference our checkpoints, so the milestone will reference honest tips
+func issueCheckpoint(lastCheckpointHash *trinary.Hash) (trinary.Hash, error) {
+
+	tips, _, err := tipselection.SelectTips(0, lastCheckpointHash)
+	if err != nil {
+		return "", err
+	}
+
+	tx := &transaction.Transaction{}
+	tx.SignatureMessageFragment = consts.NullSignatureMessageFragmentTrytes
+	tx.Address = consts.NullHashTrytes
+	tx.Value = 0
+	tx.ObsoleteTag = consts.NullTagTrytes
+	tx.Timestamp = uint64(time.Now().Unix())
+	tx.CurrentIndex = 0
+	tx.LastIndex = 0
+	tx.Bundle = consts.NullHashTrytes
+	tx.TrunkTransaction = tips[0]
+	tx.BranchTransaction = tips[1]
+	tx.Tag = consts.NullTagTrytes
+	tx.AttachmentTimestamp = 0
+	tx.AttachmentTimestampLowerBound = consts.LowerBoundAttachmentTimestamp
+	tx.AttachmentTimestampUpperBound = consts.UpperBoundAttachmentTimestamp
+	tx.Nonce = consts.NullTagTrytes
+
+	b := Bundle{tx}
+
+	// finalize bundle by adding the bundle hash
+	b, err = finalizeInsecure(b)
+	if err != nil {
+		return "", err
+	}
+
+	if err = doPow(tx, mwm); err != nil {
+		return "", err
+	}
+
+	for _, tx := range b {
+		txTrits, _ := transaction.TransactionToTrits(tx)
+		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
+			return "", err
+		}
+	}
+
+	return tx.Hash, nil
+}
+
+// createAndSendMilestone create a milestone, sends it to the network and stores a new coordinator state file
+func createAndSendMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index, merkleTree *MerkleTree) (trinary.Hash, error) {
+
+	b, err := createMilestone(trunkHash, branchHash, newMilestoneIndex, coordinatorMerkleTree)
+	if err != nil {
+		return "", err
+	}
+
+	txHashes := []trinary.Hash{}
+	for _, tx := range b {
+		txTrits, err := transaction.TransactionToTrits(tx)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
+			log.Panic(err)
+		}
+		txHashes = append(txHashes, tx.Hash)
+	}
+
+	tailTx := b[0]
+	coordinatorState.latestMilestoneHash = tailTx.Hash
+	coordinatorState.latestMilestoneIndex = newMilestoneIndex
+	coordinatorState.latestMilestoneTime = int64(tailTx.Timestamp)
+	coordinatorState.latestMilestoneTransactions = txHashes
+
+	if err := coordinatorState.storeStateFile(stateFilePath); err != nil {
+		log.Panic(err)
+	}
+
+	log.Infof("Milestone created (%d): %v", coordinatorState.latestMilestoneIndex, coordinatorState.latestMilestoneHash)
+	return tailTx.Hash, nil
+}
+
+// issueNextCheckpointOrMilestone creates the next checkpoint or milestone
+// if the network was not bootstrapped yet, it creates the first milestone
+func issueNextCheckpointOrMilestone() {
+
+	milestoneLock.Lock()
+	defer milestoneLock.Unlock()
+
+	if !bootstrapped {
+		// create first milestone to bootstrap the network
+		msHash, err := createAndSendMilestone(consts.NullHashTrytes, consts.NullHashTrytes, coordinatorState.latestMilestoneIndex, coordinatorMerkleTree)
+		if err != nil {
+			log.Warn(err)
+			return
+		}
+		lastCheckpointHash = &msHash
+		bootstrapped = true
+		return
+	}
+
+	if lastCheckpointCount < checkpointTransactions {
+		// issue a checkpoint
+		checkpointHash, err := issueCheckpoint(lastCheckpointHash)
+		if err != nil {
+			log.Warn(err)
+			return
+		}
+
+		lastCheckpointCount++
+		log.Infof("Issued checkpoint (%d): %v", lastCheckpointCount, checkpointHash)
+		lastCheckpointHash = &checkpointHash
+		return
+	}
+
+	// issue new milestone
+	tips, _, err := tipselection.SelectTips(0, lastCheckpointHash)
+	if err != nil {
+		log.Warn(err)
+		return
+	}
+
+	msHash, err := createAndSendMilestone(tips[0], tips[1], coordinatorState.latestMilestoneIndex+1, coordinatorMerkleTree)
+	if err != nil {
+		log.Warn(err)
+		return
+	}
+
+	// always reference the last milestone directly to speed up syncing (or indirectly via checkpoints)
+	lastCheckpointHash = &msHash
+	lastCheckpointCount = 0
 }
