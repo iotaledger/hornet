@@ -62,17 +62,19 @@ var (
 	ErrNoMerkleTree = errors.New("no merkle tree file found")
 )
 
-func loadSeed() {
+func LoadSeedFromEnvironment() (trinary.Hash, error) {
 	viper.BindEnv("COO_SEED")
-	seed = viper.GetString("COO_SEED")
+	seed := viper.GetString("COO_SEED")
 
 	if len(seed) == 0 {
-		log.Panic("Environment variable COO_SEED not set!")
+		return "", errors.New("Environment variable COO_SEED not set!")
 	}
 
 	if !guards.IsTransactionHash(seed) {
-		log.Panicf("Invalid coordinator seed. Check environment variable COO_SEED.")
+		return "", errors.New("Invalid coordinator seed. Check environment variable COO_SEED.")
 	}
+
+	return seed, nil
 }
 
 func InitLogger(pluginName string) {
@@ -85,7 +87,11 @@ func configure(plugin *node.Plugin) {
 
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
-	loadSeed()
+	var err error
+	seed, err = LoadSeedFromEnvironment()
+	if err != nil {
+		log.Panic(err)
+	}
 
 	cooAddress := config.NodeConfig.GetString(config.CfgCoordinatorAddress)
 	securityLvl = config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel)
@@ -96,7 +102,6 @@ func configure(plugin *node.Plugin) {
 	milestoneIntervalSec = config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds)
 	checkpointTransactions = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions)
 
-	var err error
 	if _, err = os.Stat(merkleTreeFilePath); os.IsNotExist(err) {
 		log.Panicf("COO merkle tree file not found. %v", merkleTreeFilePath)
 	}

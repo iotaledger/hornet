@@ -33,26 +33,29 @@ var (
 //
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
 // and ending with: .json, .toml, .yaml or .yml (in this sequence).
-func FetchConfig(ignoreSettingsAtPrint ...[]string) error {
+func FetchConfig() error {
 	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
 	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, false, !hasFlag(defaultPeeringConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(PeeringConfig)
 
 	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(ProfilesConfig)
 
 	return nil
+}
+
+func PrintConfig(ignoreSettingsAtPrint ...[]string) {
+	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
+	parameter.PrintConfig(PeeringConfig)
+	parameter.PrintConfig(ProfilesConfig)
 }
 
 func AllowPeeringConfigHotReload() {
