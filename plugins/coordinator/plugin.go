@@ -77,13 +77,9 @@ func LoadSeedFromEnvironment() (trinary.Hash, error) {
 	return seed, nil
 }
 
-func InitLogger(pluginName string) {
-	log = logger.NewLogger(pluginName)
-}
-
 func configure(plugin *node.Plugin) {
 
-	InitLogger(plugin.Name)
+	log = logger.NewLogger(plugin.Name)
 
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
