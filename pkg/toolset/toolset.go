@@ -9,11 +9,18 @@ import (
 // HandleTools handles available tools
 func HandleTools() {
 	args := os.Args[1:]
-	if len(args) == 0 {
-		return
+
+	toolFound := false
+	for i, arg := range args {
+		if strings.ToLower(arg) == "tool" {
+			args = args[i:]
+			toolFound = true
+			break
+		}
 	}
 
-	if strings.ToLower(args[0]) != "tool" {
+	if !toolFound {
+		// 'tool' was not found
 		return
 	}
 
