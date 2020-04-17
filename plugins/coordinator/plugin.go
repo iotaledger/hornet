@@ -81,6 +81,7 @@ func configure(plugin *node.Plugin) {
 
 	log = logger.NewLogger(plugin.Name)
 
+	// set the node as synced at startup, so the coo plugin can select tips
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
@@ -102,7 +103,7 @@ func configure(plugin *node.Plugin) {
 		log.Panic(errors.Wrapf(ErrMerkleTreeFileNotFound, "%v", merkleTreeFilePath))
 	}
 
-	coordinatorMerkleTree, err = LoadMerkleTreeFile(merkleTreeFilePath)
+	coordinatorMerkleTree, err = loadMerkleTreeFile(merkleTreeFilePath)
 	if err != nil {
 		log.Panic(err)
 	}
