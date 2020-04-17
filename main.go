@@ -31,6 +31,7 @@ func main() {
 	cli.PrintVersion()
 	cli.ParseConfig()
 	toolset.HandleTools()
+	cli.PrintConfig()
 
 	plugins := []*node.Plugin{
 		cli.PLUGIN,
