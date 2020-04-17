@@ -16,25 +16,29 @@ func merkleTree(args []string) {
 		os.Exit(0)
 	}
 
-	if strings.ToLower(args[0]) == "create" {
+	switch strings.ToLower(args[0]) {
+	case "create":
 		merkleTreeCreate(args[1:])
-	}
-
-	if strings.ToLower(args[0]) == "convert" {
+	case "convert":
 		merkleTreeConvert(args[1:])
+	case "list":
+		merkleListTools()
+	default:
+		fmt.Printf("Tool '%s' is no merkle tool. 'merkle list' will list all available merkle tools.\n", args[0])
+		os.Exit(0)
 	}
 }
 
 func merkleTreeCreate(args []string) {
 
 	if len(args) > 0 {
-		fmt.Println("Too many arguments for 'merkle create'")
+		fmt.Printf("Too many arguments for 'merkle create'. Got %d, expected 0\n", len(args))
 		os.Exit(0)
 	}
 
 	seed, err := coordinator.LoadSeedFromEnvironment()
 	if err != nil {
-		println(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
@@ -50,7 +54,7 @@ func merkleTreeCreate(args []string) {
 
 	coordinator.InitLogger("Coordinator")
 	if err = coordinator.CreateMerkleTreeFile(merkleFilePath, seed, secLvl, depth); err != nil {
-		println(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -59,12 +63,12 @@ func merkleTreeCreate(args []string) {
 func merkleTreeConvert(args []string) {
 
 	if len(args) < 1 {
-		fmt.Println("Not enough arguments for 'merkle convert'")
+		fmt.Printf("Not enough arguments for 'merkle convert'. Got %d, expected 1\n", len(args))
 		os.Exit(0)
 	}
 
 	if len(args) > 1 {
-		fmt.Println("Too many arguments for 'merkle convert'")
+		fmt.Printf("Too many arguments for 'merkle convert'. Got %d, expected 1\n", len(args))
 		os.Exit(0)
 	}
 
@@ -89,8 +93,15 @@ func merkleTreeConvert(args []string) {
 
 	coordinator.InitLogger("Coordinator")
 	if err := coordinator.ConvertMerkleTreeFiles(inputDir, merkleFilePath); err != nil {
-		println(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	os.Exit(0)
+}
+
+func merkleListTools() {
+	fmt.Println("Available merkle tools:")
+	fmt.Println("create: Calculate an new merkle tree")
+	fmt.Println("convert <inputDir>: Convert a Compass created merkle tree into a HORNET compatible format")
 	os.Exit(0)
 }

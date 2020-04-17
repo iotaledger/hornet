@@ -17,8 +17,7 @@ import (
 )
 
 var (
-	depth     = 10
-	outputDir = "layers"
+	depth = 10
 )
 
 func CreateCoordinatorFiles(outputDir string, seed trinary.Hash, securityLvl int, depth int) {
