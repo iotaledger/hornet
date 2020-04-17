@@ -98,7 +98,7 @@ func configure(plugin *node.Plugin) {
 	merkleTreeDepth = config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)
 	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 	stateFilePath = config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath)
-	merkleTreeFilePath := config.NodeConfig.GetString(config.CfgCoordinatorMerkleTreeFilePath)
+	merkleTreeFilePath = config.NodeConfig.GetString(config.CfgCoordinatorMerkleTreeFilePath)
 	milestoneIntervalSec = config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds)
 	checkpointTransactions = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions)
 
