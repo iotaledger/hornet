@@ -18,7 +18,7 @@ func HandleTools() {
 	}
 
 	if len(args) == 1 {
-		fmt.Println("no tool specified. enter 'tool list' to list available tools.\n")
+		fmt.Print("no tool specified. enter 'tool list' to list available tools.\n\n")
 		listTools([]string{})
 		os.Exit(1)
 	}
@@ -40,7 +40,7 @@ func HandleTools() {
 		}
 	}
 
-	fmt.Println("Tool not found.\n")
+	fmt.Print("Tool not found.\n\n")
 	listTools([]string{})
 	os.Exit(1)
 }
