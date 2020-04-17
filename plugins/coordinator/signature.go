@@ -1,7 +1,7 @@
 package coordinator
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
@@ -75,7 +75,7 @@ func GetSignature(seed trinary.Hash, index milestone.Index, securityLvl int, has
 	return signature, nil
 }
 
-// Validates if the milestone has the correct signature
+// validateSignature checks if the milestone has the correct signature
 func validateSignature(root trinary.Hash, milestoneIndex milestone.Index, securityLvl int, hashToSign trinary.Hash, signature trinary.Trytes, siblingsTrytes trinary.Hash) error {
 
 	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
@@ -130,7 +130,7 @@ func validateSignature(root trinary.Hash, milestoneIndex milestone.Index, securi
 	}
 
 	if merkleAddress != root {
-		return fmt.Errorf("MerkleRoot does not match %v != %v", merkleAddress, root)
+		return errors.Wrapf(ErrMerkleRootDoesNotMatch, "%v != %v", merkleAddress, root)
 	}
 
 	return nil
