@@ -59,7 +59,7 @@ func createMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, index mile
 	// the last transaction (currentIndex == lastIndex) contains the siblings for the merkle tree.
 	txSiblings := &transaction.Transaction{}
 	txSiblings.SignatureMessageFragment = paddedSiblingsTrytes
-	txSiblings.Address = consts.NullHashTrytes
+	txSiblings.Address = merkleTree.Root
 	txSiblings.CurrentIndex = uint64(securityLvl)
 	txSiblings.LastIndex = uint64(securityLvl)
 	txSiblings.Timestamp = uint64(time.Now().Unix())
