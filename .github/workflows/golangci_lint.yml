@@ -1,8 +1,6 @@
 name: GolangCIlint
 
-on:
-  pull_request:
-    types: [opened, reopened]
+on: [push, pull_request]
 
 jobs:
   golangci-lint:
