@@ -39,12 +39,13 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	if len(query.Addresses) == 0 {
+	if query.Addresses == nil {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
+		return
 	}
 
-	result := WereAddressesSpentFromReturn{}
+	result := WereAddressesSpentFromReturn{States: []bool{}}
 
 	for _, addr := range query.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
