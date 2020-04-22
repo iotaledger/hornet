@@ -168,6 +168,11 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
 		lmi = GetSolidMilestoneIndex() + 100
 	}
 
+	if index == 4294967295 {
+		// prevent overflow (2**32 -1)
+		return nil
+	}
+
 	for {
 		index++
 
