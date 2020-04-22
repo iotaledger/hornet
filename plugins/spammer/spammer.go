@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
 )
@@ -25,12 +26,16 @@ var (
 
 func doSpam(shutdownSignal <-chan struct{}) {
 
-	if int64(rateLimit) != 0 {
+	if rateLimit != 0 {
 		select {
 		case <-shutdownSignal:
 			return
 		case <-rateLimitChannel:
 		}
+	}
+
+	if !tangle.IsNodeSyncedWithThreshold() {
+		return
 	}
 
 	timeStart := time.Now()
