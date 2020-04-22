@@ -2,7 +2,6 @@ package tangle
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -148,15 +147,17 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		tx := cachedTx.Get().(*hornet.Transaction)
 
 		txCounter++
-		fmt.Printf("analyzed %d transactions\t\t\r", txCounter)
+
+		if (txCounter % 50000) == 0 {
+			log.Infof("analyzed %d transactions", txCounter)
+		}
 
 		// delete transaction if no metadata
 		if cachedTxMeta == nil {
 			txsToDelete[tx.GetHash()] = deletionMetaFor(tx)
 			return
-		} else {
-			defer cachedTxMeta.Release(true) // tx meta -1
 		}
+		defer cachedTxMeta.Release(true) // tx meta -1
 
 		txMeta := cachedTxMeta.Get().(*hornet.TransactionMetadata)
 
@@ -174,12 +175,17 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 
 	var deletionCounter float64
 	total := float64(len(txsToDelete))
+	lastPercentage := 0
 	for txToDeleteHash, meta := range txsToDelete {
 		deletionCounter++
 		if txToDeleteHash == consts.NullHashTrytes {
 			continue
 		}
-		fmt.Printf("reverting (this might take a while)... %d%%\t\t\r", int((deletionCounter/total)*100))
+		percentage := int((deletionCounter / total) * 100)
+		if lastPercentage+5 <= percentage {
+			lastPercentage = percentage
+			log.Infof("reverting (this might take a while)... %d%%", percentage)
+		}
 		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, true)
 		tangle.DeleteBundleTransaction(meta.bundle, txToDeleteHash, false)
 		tangle.DeleteBundle(txToDeleteHash)
