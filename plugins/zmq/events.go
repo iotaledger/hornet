@@ -1,4 +1,4 @@
-package zeromq
+package zmq
 
 import (
 	"strconv"

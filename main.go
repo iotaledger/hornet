@@ -23,7 +23,7 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/tipselection"
 	"github.com/gohornet/hornet/plugins/webapi"
-	"github.com/gohornet/hornet/plugins/zeromq"
+	"github.com/gohornet/hornet/plugins/zmq"
 )
 
 func main() {
@@ -50,7 +50,7 @@ func main() {
 			metrics.PLUGIN,
 			snapshot.PLUGIN,
 			dashboard.PLUGIN,
-			zeromq.PLUGIN,
+			zmq.PLUGIN,
 			mqtt.PLUGIN,
 			graph.PLUGIN,
 			monitor.PLUGIN,

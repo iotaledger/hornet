@@ -1,4 +1,4 @@
-package zeromq
+package zmq
 
 import (
 	"time"
@@ -19,9 +19,8 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-// PLUGIN ZeroMQ
 var (
-	PLUGIN = node.NewPlugin("ZeroMQ", node.Disabled, configure, run)
+	PLUGIN = node.NewPlugin("ZMQ", node.Disabled, configure, run)
 	log    *logger.Logger
 
 	newTxWorkerCount     = 1
@@ -49,7 +48,7 @@ var (
 	publisher *Publisher
 )
 
-// Configure the zeromq plugin
+// Configure the zmq plugin
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
@@ -79,9 +78,9 @@ func configure(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(spentAddressWorkerCount), workerpool.QueueSize(spentAddressWorkerQueueSize))
 }
 
-// Start the zeromq plugin
+// Start the zmq plugin
 func run(_ *node.Plugin) {
-	log.Info("Starting ZeroMQ Publisher ...")
+	log.Info("Starting ZMQ Publisher ...")
 
 	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
@@ -141,8 +140,8 @@ func run(_ *node.Plugin) {
 		spentAddressWorkerPool.TrySubmit(addr)
 	})
 
-	daemon.BackgroundWorker("ZeroMQ Publisher", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting ZeroMQ Publisher ... done")
+	daemon.BackgroundWorker("ZMQ Publisher", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZMQ Publisher ... done")
 		log.Infof("You can now listen to ZMQ via: %s://%s", config.NodeConfig.GetString(config.CfgZMQProtocol), config.NodeConfig.GetString(config.CfgZMQBindAddress))
 
 		go func() {
@@ -152,72 +151,72 @@ func run(_ *node.Plugin) {
 		}()
 
 		<-shutdownSignal
-		log.Info("Stopping ZeroMQ Publisher ...")
+		log.Info("Stopping ZMQ Publisher ...")
 
 		if err := publisher.Shutdown(); err != nil {
-			log.Errorf("Stopping ZeroMQ Publisher: %s", err.Error())
+			log.Errorf("Stopping ZMQ Publisher: %s", err.Error())
 		} else {
-			log.Info("Stopping ZeroMQ Publisher ... done")
+			log.Info("Stopping ZMQ Publisher ... done")
 		}
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("ZeroMQ address topic updater", func(shutdownSignal <-chan struct{}) {
+	daemon.BackgroundWorker("ZMQ address topic updater", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(updateAddressTopics, 5*time.Second, shutdownSignal)
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("ZeroMQ[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting ZeroMQ[NewTxWorker] ... done")
+	daemon.BackgroundWorker("ZMQ[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZMQ[NewTxWorker] ... done")
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
 		newTxWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping ZeroMQ[NewTxWorker] ...")
+		log.Info("Stopping ZMQ[NewTxWorker] ...")
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
-		log.Info("Stopping ZeroMQ[NewTxWorker] ... done")
+		log.Info("Stopping ZMQ[NewTxWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("ZeroMQ[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting ZeroMQ[ConfirmedTxWorker] ... done")
+	daemon.BackgroundWorker("ZMQ[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZMQ[ConfirmedTxWorker] ... done")
 		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedTx)
 		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping ZeroMQ[ConfirmedTxWorker] ...")
+		log.Info("Stopping ZMQ[ConfirmedTxWorker] ...")
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
-		log.Info("Stopping ZeroMQ[ConfirmedTxWorker] ... done")
+		log.Info("Stopping ZMQ[ConfirmedTxWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("ZeroMQ[NewLatestMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting ZeroMQ[NewLatestMilestoneWorker] ... done")
+	daemon.BackgroundWorker("ZMQ[NewLatestMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZMQ[NewLatestMilestoneWorker] ... done")
 		tangle.Events.LatestMilestoneChanged.Attach(notifyNewLatestMilestone)
 		newLatestMilestoneWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping ZeroMQ[NewLatestMilestoneWorker] ...")
+		log.Info("Stopping ZMQ[NewLatestMilestoneWorker] ...")
 		tangle.Events.LatestMilestoneChanged.Detach(notifyNewLatestMilestone)
 		newLatestMilestoneWorkerPool.StopAndWait()
-		log.Info("Stopping ZeroMQ[NewLatestMilestoneWorker] ... done")
+		log.Info("Stopping ZMQ[NewLatestMilestoneWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("ZeroMQ[NewSolidMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting ZeroMQ[NewSolidMilestoneWorker] ... done")
+	daemon.BackgroundWorker("ZMQ[NewSolidMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZMQ[NewSolidMilestoneWorker] ... done")
 		tangle.Events.SolidMilestoneChanged.Attach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping ZeroMQ[NewSolidMilestoneWorker] ...")
+		log.Info("Stopping ZMQ[NewSolidMilestoneWorker] ...")
 		tangle.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 		newSolidMilestoneWorkerPool.StopAndWait()
-		log.Info("Stopping ZeroMQ[NewSolidMilestoneWorker] ... done")
+		log.Info("Stopping ZMQ[NewSolidMilestoneWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("ZeroMQ[SpentAddress]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting ZeroMQ[SpentAddress] ... done")
+	daemon.BackgroundWorker("ZMQ[SpentAddress]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting ZMQ[SpentAddress] ... done")
 		tanglePackage.Events.AddressSpent.Attach(notifySpentAddress)
 		spentAddressWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping ZeroMQ[SpentAddress] ...")
+		log.Info("Stopping ZMQ[SpentAddress] ...")
 		tanglePackage.Events.AddressSpent.Detach(notifySpentAddress)
 		spentAddressWorkerPool.StopAndWait()
-		log.Info("Stopping ZeroMQ[SpentAddress] ... done")
+		log.Info("Stopping ZMQ[SpentAddress] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 }
 
