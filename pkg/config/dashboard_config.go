@@ -12,9 +12,9 @@ const (
 	// the HTTP basic auth username
 	CfgDashboardBasicAuthUsername = "dashboard.basicAuth.username"
 	// the HTTP basic auth password+salt as a sha256 hash
-	CfgDashboardBasicAuthPasswordHash = "dashboard.basicauth.passwordhash" // must be lower cased
+	CfgDashboardBasicAuthPasswordHash = "dashboard.basicauth.passwordhash" // config key must be lower cased (for hiding passwords in PrintConfig)
 	// the HTTP basic auth salt used for hashing the password
-	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordsalt" // must be lower cased
+	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordsalt" // config key must be lower cased (for hiding passwords in PrintConfig)
 )
 
 func init() {
