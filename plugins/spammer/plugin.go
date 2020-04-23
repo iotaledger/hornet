@@ -12,7 +12,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -47,7 +46,7 @@ func configure(plugin *node.Plugin) {
 		spammerWorkerCount = 1
 	}
 
-	if int64(rateLimit) != 0 {
+	if rateLimit != 0 {
 		rateLimitChannelSize := int64(rateLimit) * 2
 		if rateLimitChannelSize < 2 {
 			rateLimitChannelSize = 2
@@ -84,9 +83,7 @@ func run(_ *node.Plugin) {
 					log.Infof("Stopping Spammer %d... done", i)
 					return
 				default:
-					if tangle.IsNodeSyncedWithThreshold() {
-						doSpam(shutdownSignal)
-					}
+					doSpam(shutdownSignal)
 				}
 			}
 		}, shutdown.PrioritySpammer)

@@ -421,7 +421,7 @@ export class NodeStore {
                 neighbMetrics.addMetric(metric);
                 this.neighbor_metrics.set(metric.identity, neighbMetrics);
                 updated.push(metric.identity);
-            }   
+            }
             // remove duplicates
             for (const k of this.neighbor_metrics.keys()) {
                 if (!updated.includes(k)) {
@@ -615,10 +615,10 @@ export class NodeStore {
             series("Approvers", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
         );
         let bundles = Object.assign({}, chartSeriesOpts,
-            series("Bundles", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
+            series("Bundles", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
         );
         let milestones = Object.assign({}, chartSeriesOpts,
-            series("Milestones", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
+            series("Milestones", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
         );
         let txs = Object.assign({}, chartSeriesOpts,
             series("Transactions", 'rgba(114, 53, 219,1)', 'rgba(114, 53, 219,0.4)')
@@ -674,6 +674,9 @@ export class NodeStore {
         let droppedSent = Object.assign({}, chartSeriesOpts,
             series("Dropped Packets", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
         );
+        let sentSpamTxs = Object.assign({}, chartSeriesOpts,
+            series("Sent spam Txs", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
+        );
 
         let labels = [];
         for (let i = 0; i < this.collected_server_metrics.length; i++) {
@@ -686,12 +689,13 @@ export class NodeStore {
             stale.data.push(metric.stale_txs);
             sent.data.push(metric.sent_txs);
             droppedSent.data.push(metric.dropped_sent_packets);
+            sentSpamTxs.data.push(metric.sent_spam_txs);
         }
 
         return {
             labels: labels,
             datasets: [
-                all, newTx, knownTx, invalid, stale, sent, droppedSent
+                all, newTx, knownTx, invalid, stale, sent, droppedSent, sentSpamTxs
             ],
         };
     }
@@ -819,20 +823,20 @@ export class NodeStore {
 
     @computed
     get memSeries() {
-        let heapAlloc = Object.assign({}, chartSeriesOpts,
-            series("Heap Alloc", 'rgba(168, 50, 76,1)', 'rgba(168, 50, 76,0.4)')
-        );
-        let heapInuse = Object.assign({}, chartSeriesOpts,
-            series("Heap In-Use", 'rgba(222, 49, 87,1)', 'rgba(222, 49, 87,0.4)')
-        );
-        let heapIdle = Object.assign({}, chartSeriesOpts,
-            series("Heap Idle", 'rgba(222, 49, 182,1)', 'rgba(222, 49, 182,0.4)')
+        let stackAlloc = Object.assign({}, chartSeriesOpts,
+            series("Stack Alloc", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
         );
         let heapReleased = Object.assign({}, chartSeriesOpts,
-            series("Heap Released", 'rgba(250, 76, 252,1)', 'rgba(250, 76, 252,0.4)')
+            series("Heap Released", 'rgba(14, 230, 100,1)', 'rgba(14, 230, 100,0.4)')
         );
-        let stackAlloc = Object.assign({}, chartSeriesOpts,
-            series("Stack Alloc", 'rgba(54, 191, 173,1)', 'rgba(54, 191, 173,0.4)')
+        let heapInuse = Object.assign({}, chartSeriesOpts,
+            series("Heap In-Use", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
+        );
+        let heapIdle = Object.assign({}, chartSeriesOpts,
+            series("Heap Idle", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
+        );
+        let heapSys = Object.assign({}, chartSeriesOpts,
+            series("Heap Sys", 'rgba(168, 50, 76,1)', 'rgba(168, 50, 76,0.4)')
         );
         let sys = Object.assign({}, chartSeriesOpts,
             series("Total Alloc", 'rgba(160, 50, 168,1)', 'rgba(160, 50, 168,0.4)')
@@ -842,17 +846,17 @@ export class NodeStore {
         for (let i = 0; i < this.collected_mem_metrics.length; i++) {
             let metric = this.collected_mem_metrics[i];
             labels.push(metric.ts);
-            heapAlloc.data.push(metric.heap_sys);
+            stackAlloc.data.push(metric.stack_sys);
+            heapReleased.data.push(metric.heap_released);
             heapInuse.data.push(metric.heap_inuse);
             heapIdle.data.push(metric.heap_idle);
-            heapReleased.data.push(metric.heap_released);
-            stackAlloc.data.push(metric.stack_sys);
+            heapSys.data.push(metric.heap_sys);
             sys.data.push(metric.sys);
         }
 
         return {
             labels: labels,
-            datasets: [sys, heapAlloc, heapInuse, heapIdle, heapReleased, stackAlloc],
+            datasets: [stackAlloc, heapReleased, heapInuse, heapIdle, heapSys, sys],
         };
     }
 

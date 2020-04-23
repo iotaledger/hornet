@@ -168,6 +168,11 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
 		lmi = GetSolidMilestoneIndex() + 100
 	}
 
+	if index == 4294967295 {
+		// prevent overflow (2**32 -1)
+		return nil
+	}
+
 	for {
 		index++
 
@@ -250,7 +255,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 	}
 	defer cachedSiblingsTx.Release() // tx -1
 
-	if (cachedSiblingsTx.GetTransaction().Tx.Value != 0) || (cachedSiblingsTx.GetTransaction().Tx.Address != consts.NullHashTrytes) {
+	if !IsMaybeMilestoneTx(cachedSiblingsTx.Retain()) {
 		// transaction is not issued by compass => no milestone
 		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
 	}

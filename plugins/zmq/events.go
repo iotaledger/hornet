@@ -1,4 +1,4 @@
-package zeromq
+package zmq
 
 import (
 	"strconv"
@@ -201,14 +201,12 @@ func publishTx(iotaTx *transaction.Transaction) error {
 // Publish a confirmed transaction for a specific address
 func publishConfTxForAddress(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
 
-	addr := strings.ToUpper(iotaTx.Address)
 	messages := []string{
-		addr,
 		iotaTx.Hash,
 		strconv.FormatInt(int64(msIndex), 10),
 	}
 
-	return publisher.Send(addr, messages)
+	return publisher.Send(strings.ToUpper(iotaTx.Address), messages)
 }
 
 func publishSpentAddress(addr trinary.Hash) error {
