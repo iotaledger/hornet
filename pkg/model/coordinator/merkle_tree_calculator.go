@@ -80,7 +80,7 @@ func calculateAllAddresses(seed trinary.Hash, securityLvl int, count int) []trin
 		if index%5000 == 0 && index != 0 {
 			ratio := float64(index) / float64(count)
 			total := time.Duration(float64(time.Since(ts)) / ratio)
-			duration := ts.Add(total).Sub(time.Now())
+			duration := time.Until(ts.Add(total))
 			fmt.Printf("calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, ratio*100.0, duration.Truncate(time.Second))
 		}
 	}
