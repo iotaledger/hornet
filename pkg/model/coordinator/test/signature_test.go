@@ -17,5 +17,5 @@ func TestAddress(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.NotEqual(t, address, expectedResult)
+	assert.Equal(t, address, expectedResult)
 }
