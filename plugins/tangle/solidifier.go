@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -425,11 +426,11 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 	}
 
 	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Load()
-	newTxDiff := metrics.GetUint32Diff(newNewTxCount, oldNewTxCount)
+	newTxDiff := utils.GetUint32Diff(newNewTxCount, oldNewTxCount)
 	oldNewTxCount = newNewTxCount
 
 	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Load()
-	confirmedTxDiff := metrics.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
+	confirmedTxDiff := utils.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
 	oldConfirmedTxCount = newConfirmedTxCount
 
 	confRate := 0.0

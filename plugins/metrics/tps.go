@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 var (
@@ -17,9 +18,9 @@ func measureTPS() {
 	outgoingTxCnt := metrics.SharedServerMetrics.SentTransactions.Load()
 
 	tpsMetrics := &TPSMetrics{
-		Incoming: metrics.GetUint32Diff(incomingTxCnt, lastIncomingTxCnt),
-		New:      metrics.GetUint32Diff(incomingNewTxCnt, lastIncomingNewTxCnt),
-		Outgoing: metrics.GetUint32Diff(outgoingTxCnt, lastOutgoingTxCnt),
+		Incoming: utils.GetUint32Diff(incomingTxCnt, lastIncomingTxCnt),
+		New:      utils.GetUint32Diff(incomingNewTxCnt, lastIncomingNewTxCnt),
+		Outgoing: utils.GetUint32Diff(outgoingTxCnt, lastOutgoingTxCnt),
 	}
 
 	// store the new counters
