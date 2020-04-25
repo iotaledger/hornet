@@ -2,7 +2,6 @@ package tipselection
 
 import (
 	"math"
-	"math/rand"
 	"time"
 
 	"github.com/iotaledger/iota.go/consts"
@@ -12,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/tipselection"
+	"github.com/gohornet/hornet/pkg/utils"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -144,7 +144,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *tipselect
 			}
 
 			for len(approverHashes) != 0 {
-				candidateIndex := rand.Intn(len(approverHashes))
+				candidateIndex := utils.RandomInsecure(0, len(approverHashes))
 				candidateHash := approverHashes[candidateIndex]
 
 				// skip validating the tx if we already approved it
@@ -193,7 +193,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *tipselect
 				if len(cachedBndls) == 1 {
 					cachedBndl = cachedBndls[0]
 				} else {
-					bundleIndex := rand.Intn(len(cachedBndls))
+					bundleIndex := utils.RandomInsecure(0, len(cachedBndls))
 					cachedBndl = cachedBndls[bundleIndex]
 
 					// Release unused bundles
