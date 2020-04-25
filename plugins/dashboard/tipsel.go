@@ -6,8 +6,9 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tipselection"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	tipselectionPlugin "github.com/gohornet/hornet/plugins/tipselection"
 )
 
 var tipSelMetricWorkerCount = 1
@@ -36,11 +37,11 @@ func runTipSelMetricWorker() {
 	})
 
 	daemon.BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
-		tipselection.Events.TipSelPerformed.Attach(notifyTipSelPerformed)
+		tipselectionPlugin.Events.TipSelPerformed.Attach(notifyTipSelPerformed)
 		tipSelMetricWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[TipSelMetricUpdater] ...")
-		tipselection.Events.TipSelPerformed.Detach(notifyTipSelPerformed)
+		tipselectionPlugin.Events.TipSelPerformed.Detach(notifyTipSelPerformed)
 		tipSelMetricWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[TipSelMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)

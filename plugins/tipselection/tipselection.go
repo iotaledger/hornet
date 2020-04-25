@@ -11,39 +11,22 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/tipselection"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
-var ErrNodeNotSynced = errors.New("node is not synchronized")
-var ErrMilestoneNotFound = errors.New("milestone not found")
-var ErrDepthTooHigh = errors.New("depth is too high")
-var ErrReferenceNotValid = errors.New("reference transaction is not valid")
-var ErrReferenceNotConsistent = errors.New("reference transaction is not consistent")
-
-type TipSelStats struct {
-	// The duration of the tip-selection for both walks.
-	Duration time.Duration `json:"duration"`
-	// The entry point of the tip-selection.
-	EntryPoint trinary.Hash `json:"entry_point"`
-	// The optional supplied reference transaction hash.
-	Reference *trinary.Hash `json:"reference"`
-	// The used depth for the tip-selection.
-	Depth uint64 `json:"depth"`
-	// The amount of steps taken, respectively transactions walked towards the present of the graph.
-	StepsTaken uint64 `json:"steps_taken"`
-	// The amount of steps jumped, meaning approvers selected without validating, as they were
-	// walked/validated into by the previous walk.
-	StepsJumped uint64 `json:"steps_jumped"`
-	// The amount of transactions which were evaluated.
-	Evaluated uint64 `json:"evaluated"`
-	// Represents the cache hit ration for every call to belowMaxDepth globally over all tip-selections.
-	GlobalBelowMaxDepthCacheHitRatio float64 `json:"global_below_max_depth_cache_hit_ratio"`
-}
+var (
+	ErrNodeNotSynced          = errors.New("node is not synchronized")
+	ErrMilestoneNotFound      = errors.New("milestone not found")
+	ErrDepthTooHigh           = errors.New("depth is too high")
+	ErrReferenceNotValid      = errors.New("reference transaction is not valid")
+	ErrReferenceNotConsistent = errors.New("reference transaction is not consistent")
+)
 
 // SelectTips selects two tips
 // Most Release calls inside this function shouldn't be forced, to cache the latest cone,
 // except reference transaction
-func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelStats, error) {
+func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *tipselection.TipSelStats, error) {
 	if int(depth) > maxDepth {
 		return nil, nil, errors.Wrapf(ErrDepthTooHigh, "max supported is: %d", maxDepth)
 	}
@@ -72,7 +55,7 @@ func SelectTips(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelSta
 
 	// record stats
 	start := time.Now()
-	walkStats := &TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash(), Depth: uint64(depth)}
+	walkStats := &tipselection.TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash(), Depth: uint64(depth)}
 
 	// compute the range in which we allow approvers to reference transactions in
 	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))

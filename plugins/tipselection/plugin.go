@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tipselection"
 )
 
 var (
@@ -24,7 +25,7 @@ func init() {
 }
 
 func WalkerStatsCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*TipSelStats))(params[0].(*TipSelStats))
+	handler.(func(*tipselection.TipSelStats))(params[0].(*tipselection.TipSelStats))
 }
 
 var Events = tipselevents{
