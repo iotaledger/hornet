@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"unicode"
 
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -54,19 +53,13 @@ func hashPasswordAndSalt(args []string) error {
 		return errors.New("re-entered password doesn't match")
 	}
 
-	fmt.Print("\nEnter a salt (lower cased): ")
+	fmt.Print("\nEnter a salt: ")
 	salt, err := reader.ReadString('\n')
 	if err != nil {
 		return err
 	}
 
 	salt = strings.TrimSuffix(salt, "\n")
-
-	for _, r := range salt {
-		if unicode.IsUpper(r) {
-			return fmt.Errorf("salt (%s) contains upper cased characters", salt)
-		}
-	}
 
 	hash := sha256.Sum256(append([]byte(password), []byte(salt)...))
 
