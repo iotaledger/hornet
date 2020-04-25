@@ -6,7 +6,16 @@ import (
 	"strings"
 )
 
-// HandleTools handles available tools
+var (
+	tools = map[string]func([]string) error{
+		"pwdhash": hashPasswordAndSalt,
+		"seedgen": seedGen,
+		"list":    listTools,
+		"merkle":  merkleTreeCreate,
+	}
+)
+
+// HandleTools handles available tools.
 func HandleTools() {
 	args := os.Args[1:]
 
@@ -30,32 +39,25 @@ func HandleTools() {
 		os.Exit(1)
 	}
 
-	// register tools
-	tools := make(map[string]func([]string) error)
-	tools["pwdhash"] = hashPasswordAndSalt
-	tools["seedgen"] = seedGen
-	tools["list"] = listTools
-	tools["merkle"] = merkleTreeCreate
-
-	for tool, f := range tools {
-		if strings.ToLower(args[1]) == tool {
-			if err := f(args[2:]); err != nil {
-				fmt.Printf("\nError: %v\n", err.Error())
-				os.Exit(1)
-			}
-			os.Exit(0)
-		}
+	tool, exists := tools[strings.ToLower(args[1])]
+	if !exists {
+		fmt.Print("Tool not found.\n\n")
+		listTools([]string{})
+		os.Exit(1)
 	}
 
-	fmt.Print("Tool not found.\n\n")
-	listTools([]string{})
-	os.Exit(1)
+	if err := tool(args[2:]); err != nil {
+		fmt.Printf("\nError: %v\n", err.Error())
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }
 
 func listTools(args []string) error {
-	fmt.Println("pwdhash: generates an sha265 sum from your password and salt")
+	fmt.Println("pwdhash: generates a sha265 sum from your password and salt")
 	fmt.Println("seedgen: generates an autopeering seed")
-	fmt.Println("merkle: generates a merkle tree for coordinator")
+	fmt.Println("merkle: generates a merkle tree for coordinator plugin")
 
 	return nil
 }
