@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 )
 
 func merkleTreeCreate(args []string) error {
@@ -29,9 +30,11 @@ func merkleTreeCreate(args []string) error {
 		return fmt.Errorf("merkle tree file already exists. %v", merkleFilePath)
 	}
 
+	ts := time.Now()
 	if err = coordinator.CreateMerkleTreeFile(merkleFilePath, seed, secLvl, depth); err != nil {
 		return err
 	}
 
+	fmt.Printf("successfully created merkle tree (took %v).\n", time.Since(ts).Truncate(time.Second))
 	return nil
 }

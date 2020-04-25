@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"runtime"
@@ -14,13 +15,18 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-// CreateMerkleTreeFile calculates the merkle tree and stores it into a file
+var (
+	ErrDepthTooSmall = errors.New("depth is set too low, must be >0")
+)
+
+// CreateMerkleTreeFile calculates a merkle tree and persists it into a file.
 func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, depth int) error {
 
-	ts := time.Now()
+	if depth < 1 {
+		return ErrDepthTooSmall
+	}
 
 	addresses := calculateAllAddresses(seed, securityLvl, 1<<depth)
-
 	layers := calculateAllLayers(addresses)
 
 	mt := &MerkleTree{Depth: depth}
@@ -36,13 +42,12 @@ func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, d
 		return err
 	}
 
-	fmt.Printf("Creating merkle tree successful (took %v).\n", time.Since(ts).Truncate(time.Second))
-
 	return nil
 }
 
+// calculateAllAddresses calculates all addresses that are used for the merkle tree of the coordinator.
 func calculateAllAddresses(seed trinary.Hash, securityLvl int, count int) []trinary.Hash {
-	fmt.Printf("Calculating %d addresses...\n", count)
+	fmt.Printf("calculating %d addresses...\n", count)
 
 	resultLock := syncutils.Mutex{}
 	result := make([]trinary.Hash, count)
@@ -57,7 +62,7 @@ func calculateAllAddresses(seed trinary.Hash, securityLvl int, count int) []trin
 			defer wg.Done()
 
 			for index := range input {
-				address, err := GetAddress(seed, index, securityLvl)
+				address, err := Address(seed, index, securityLvl)
 				if err != nil {
 					panic(err)
 				}
@@ -76,18 +81,18 @@ func calculateAllAddresses(seed trinary.Hash, securityLvl int, count int) []trin
 			ratio := float64(index) / float64(count)
 			total := time.Duration(float64(time.Since(ts)) / ratio)
 			duration := ts.Add(total).Sub(time.Now())
-			fmt.Printf("Calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, ratio*100.0, duration.Truncate(time.Second))
+			fmt.Printf("calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, ratio*100.0, duration.Truncate(time.Second))
 		}
 	}
 
 	close(input)
 	wg.Wait()
 
-	fmt.Printf("Calculated %d/%d (100.00%%) addresses (took %v).\n", count, count, time.Since(ts).Truncate(time.Second))
-
+	fmt.Printf("calculated %d/%d (100.00%%) addresses (took %v).\n", count, count, time.Since(ts).Truncate(time.Second))
 	return result
 }
 
+// calculateAllLayers calculates all layers of the merkle tree used for coordinator signatures.
 func calculateAllLayers(addresses []trinary.Hash) [][]trinary.Hash {
 	depth := int64(math.Floor(math.Log2(float64(len(addresses)))))
 
@@ -97,7 +102,7 @@ func calculateAllLayers(addresses []trinary.Hash) [][]trinary.Hash {
 	layers = append(layers, last)
 
 	for i := depth - 1; i >= 0; i-- {
-		fmt.Printf("Calculating nodes for layer %d\n", i)
+		fmt.Printf("calculating nodes for layer %d\n", i)
 		last = calculateNextLayer(last)
 		layers = append(layers, last)
 	}
@@ -110,6 +115,7 @@ func calculateAllLayers(addresses []trinary.Hash) [][]trinary.Hash {
 	return layers
 }
 
+// calculateNextLayer calculates a single layer of the merkle tree used for coordinator signatures.
 func calculateNextLayer(lastLayer []trinary.Hash) []trinary.Hash {
 
 	resultLock := syncutils.Mutex{}
@@ -126,6 +132,9 @@ func calculateNextLayer(lastLayer []trinary.Hash) []trinary.Hash {
 
 			for index := range input {
 				sp := kerl.NewKerl()
+
+				// merkle trees are calculated layer by layer by hashing two corresponding nodes of the last layer
+				// https://en.wikipedia.org/wiki/Merkle_tree
 				sp.AbsorbTrytes(lastLayer[index*2])
 				sp.AbsorbTrytes(lastLayer[index*2+1])
 

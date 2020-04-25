@@ -1,7 +1,7 @@
 package coordinator
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
@@ -13,7 +13,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-func GetAddress(seed trinary.Hash, index milestone.Index, securityLvl int) (trinary.Hash, error) {
+// Address generates an address deterministically, according to the given seed, milestone index and security level.
+// a modified key derivation function is used to avoid the M-bug.
+func Address(seed trinary.Hash, index milestone.Index, securityLvl int) (trinary.Hash, error) {
 
 	subSeedTrits, err := signing.Subseed(seed, uint64(index), kerl.NewKerl())
 	if err != nil {
@@ -43,7 +45,8 @@ func GetAddress(seed trinary.Hash, index milestone.Index, securityLvl int) (trin
 	return address, nil
 }
 
-func GetSignature(seed trinary.Hash, index milestone.Index, securityLvl int, hashToSign trinary.Trytes) (trinary.Trytes, error) {
+// signature signs the normalized hash of a given hash, according to the given seed, milestone index and security level.
+func signature(seed trinary.Hash, index milestone.Index, securityLvl int, hashToSign trinary.Trytes) (trinary.Trytes, error) {
 
 	subSeedTrits, err := signing.Subseed(seed, uint64(index), kerl.NewKerl())
 	if err != nil {
@@ -75,7 +78,7 @@ func GetSignature(seed trinary.Hash, index milestone.Index, securityLvl int, has
 	return signature, nil
 }
 
-// validateSignature checks if the milestone has the correct signature
+// validateSignature checks if the milestone has the correct signature.
 func validateSignature(root trinary.Hash, milestoneIndex milestone.Index, securityLvl int, hashToSign trinary.Hash, signature trinary.Trytes, siblingsTrytes trinary.Hash) error {
 
 	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
@@ -130,7 +133,7 @@ func validateSignature(root trinary.Hash, milestoneIndex milestone.Index, securi
 	}
 
 	if merkleAddress != root {
-		return errors.Wrapf(ErrMerkleRootDoesNotMatch, "%v != %v", merkleAddress, root)
+		return fmt.Errorf("merkle root does not match: %v != %v", merkleAddress, root)
 	}
 
 	return nil

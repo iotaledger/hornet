@@ -3,7 +3,8 @@ package test
 import (
 	"testing"
 
-	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/go-playground/assert/v2"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 )
 
 func TestAddress(t *testing.T) {
@@ -11,12 +12,10 @@ func TestAddress(t *testing.T) {
 	expectedResult := "SPYSMYNKAFXBBNKUEMQGEMNVOJVXYK9YPPJZVRNPNLEYPLZEYIXZHVIBILBFHWGKVPRHTCWUFNEJMRRZX"
 	securityLvl := 2
 
-	address, err := coordinator.GetAddress(seed, 1074, securityLvl)
+	address, err := coordinator.Address(seed, 1074, securityLvl)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if address != expectedResult {
-		t.Errorf("Wrong address %v != %v", expectedResult, address)
-	}
+	assert.NotEqual(t, address, expectedResult)
 }

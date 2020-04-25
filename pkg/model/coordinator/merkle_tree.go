@@ -8,12 +8,17 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
+// MerkleTree contains the merkle tree used for the coordinator signatures.
 type MerkleTree struct {
-	Depth  int
-	Root   trinary.Hash
+	// depth of the merkle tree
+	Depth int
+	// root address of the merkle tree
+	Root trinary.Hash
+	// merkle tree layers indexed by their level
 	Layers map[int]*MerkleTreeLayer
 }
 
+// Marshal writes the binary representation of the merkle tree to a buffer.
 func (mt *MerkleTree) Marshal(buf *bufio.Writer) (err error) {
 
 	/*
@@ -39,6 +44,7 @@ func (mt *MerkleTree) Marshal(buf *bufio.Writer) (err error) {
 	return nil
 }
 
+// Unmarshal parses the binary encoded representation of the merkle tree from a buffer.
 func (mt *MerkleTree) Unmarshal(buf *bufio.Reader) error {
 
 	/*
@@ -70,15 +76,18 @@ func (mt *MerkleTree) Unmarshal(buf *bufio.Reader) error {
 	}
 
 	mt.Root = mt.Layers[0].Hashes[0]
-
 	return nil
 }
 
+// MerkleTreeLayer contains the nodes of layer of a merkle tree.
 type MerkleTreeLayer struct {
-	Level  int
+	// level of the layer in the tree
+	Level int
+	// nodes of the layer
 	Hashes []trinary.Hash
 }
 
+// Marshal writes the binary representation of the merkle tree layer to a buffer.
 func (mtl *MerkleTreeLayer) Marshal(buf *bufio.Writer) error {
 
 	if err := binary.Write(buf, binary.LittleEndian, uint32(mtl.Level)); err != nil {
@@ -97,6 +106,7 @@ func (mtl *MerkleTreeLayer) Marshal(buf *bufio.Writer) error {
 	return nil
 }
 
+// Unmarshal parses the binary encoded representation of the merkle tree layer from a buffer.
 func (mtl *MerkleTreeLayer) Unmarshal(buf *bufio.Reader) error {
 
 	var level uint32
@@ -122,7 +132,7 @@ func (mtl *MerkleTreeLayer) Unmarshal(buf *bufio.Reader) error {
 	return nil
 }
 
-// storeMerkleTreeFile stores the merkle tree in a file
+// storeMerkleTreeFile stores the merkle tree in a file.
 func storeMerkleTreeFile(filePath string, merkleTree *MerkleTree) error {
 
 	outputFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0660)

@@ -1,27 +1,24 @@
 package coordinator
 
 import (
-	"os"
-	"time"
-
-	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/pow"
+	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/gohornet/hornet/plugins/tipselection"
 )
 
 func init() {
@@ -33,33 +30,10 @@ var (
 	PLUGIN = node.NewPlugin("Coordinator", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	// config options
-	seed                   trinary.Hash
-	securityLvl            int
-	merkleTreeDepth        int
-	mwm                    int
-	stateFilePath          string
-	merkleTreeFilePath     string
-	milestoneIntervalSec   int
-	checkpointTransactions int
+	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
+	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
-	coordinatorState      *CoordinatorState
-	coordinatorMerkleTree *MerkleTree
-	milestoneLock         = syncutils.Mutex{}
-	lastCheckpointCount   int
-	lastCheckpointHash    *trinary.Hash
-	_, powFunc            = pow.GetFastestProofOfWorkImpl()
-	bootstrapped          = false
-	bootstrap             = pflag.Bool("cooBootstrap", false, "bootstrap the network")
-	startIndex            = pflag.Uint32("cooStartIndex", 0, "first index of network")
-
-	ErrMerkleTreeFileNotFound           = errors.New("merkle tree file not found")
-	ErrStateFileNotFound                = errors.New("state file not found")
-	ErrNetworkBootstrapped              = errors.New("network already bootstrapped")
-	ErrMerkleRootDoesNotMatch           = errors.New("merkle root does not match")
-	ErrCooAddressDoesNotMatchMerkleTree = errors.New("coordinator address does not match merkle tree")
-	ErrEnvironmentVariableSeedNotSet    = errors.New("environment variable COO_SEED not set")
-	ErrEnvironmentVariableInvalidSeed   = errors.New("invalid coordinator seed. check environment variable COO_SEED")
+	coo *coordinator.Coordinator
 )
 
 func configure(plugin *node.Plugin) {
@@ -69,69 +43,74 @@ func configure(plugin *node.Plugin) {
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
-	seed, err = LoadSeedFromEnvironment()
+	coo, err = initCoordinator(*bootstrap, *startIndex)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	cooAddress := config.NodeConfig.GetString(config.CfgCoordinatorAddress)
-	securityLvl = config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel)
-	merkleTreeDepth = config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)
-	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
-	stateFilePath = config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath)
-	merkleTreeFilePath = config.NodeConfig.GetString(config.CfgCoordinatorMerkleTreeFilePath)
-	milestoneIntervalSec = config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds)
-	checkpointTransactions = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions)
+	coordinator.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash trinary.Hash) {
+		log.Infof("Issued checkpoint (%d/%d): %v", index, lastIndex, txHash)
+	}))
 
-	if _, err = os.Stat(merkleTreeFilePath); os.IsNotExist(err) {
-		log.Panic(errors.Wrapf(ErrMerkleTreeFileNotFound, "%v", merkleTreeFilePath))
-	}
+	coordinator.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash trinary.Hash) {
+		log.Infof("milestone issued (%d): %v", index, tailTxHash)
+	}))
+}
 
-	coordinatorMerkleTree, err = loadMerkleTreeFile(merkleTreeFilePath)
+func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinator, error) {
+
+	seed, err := config.LoadHashFromEnvironment("COO_SEED")
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
-	if cooAddress != coordinatorMerkleTree.Root {
-		log.Panic(errors.Wrapf(ErrCooAddressDoesNotMatchMerkleTree, "%v != %v", cooAddress, coordinatorMerkleTree.Root))
+	_, powFunc := pow.GetFastestProofOfWorkImpl()
+
+	coo := coordinator.New(
+		seed,
+		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
+		config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth),
+		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
+		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
+		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
+		config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions),
+		powFunc,
+		tipselection.SelectTips,
+		sendBundle,
+	)
+
+	if err := coo.InitMerkleTree(config.NodeConfig.GetString(config.CfgCoordinatorMerkleTreeFilePath), config.NodeConfig.GetString(config.CfgCoordinatorAddress)); err != nil {
+		return nil, err
 	}
 
-	_, err = os.Stat(stateFilePath)
-	stateFileExists := !os.IsNotExist(err)
-
-	if *bootstrap {
-		if stateFileExists {
-			log.Panic(ErrNetworkBootstrapped)
-		}
-
-		coordinatorState = &CoordinatorState{}
-		coordinatorState.latestMilestoneHash = consts.NullHashTrytes
-		coordinatorState.latestMilestoneIndex = milestone.Index(*startIndex)
-		if coordinatorState.latestMilestoneIndex == 0 {
-			// start with milestone 1 at least
-			coordinatorState.latestMilestoneIndex = 1
-		}
-		coordinatorState.latestMilestoneTime = 0
-		coordinatorState.latestMilestoneTransactions = []trinary.Hash{consts.NullHashTrytes}
-		bootstrapped = false
-	} else {
-		if !stateFileExists {
-			log.Panic(ErrStateFileNotFound)
-		}
-
-		coordinatorState, err = loadStateFile(stateFilePath)
-		if err != nil {
-			log.Panic(err)
-		}
-		bootstrapped = true
+	if err := coo.InitState(bootstrap, milestone.Index(startIndex)); err != nil {
+		return nil, err
 	}
+
+	return coo, nil
 }
 
 func run(plugin *node.Plugin) {
-
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(issueNextCheckpointOrMilestone, time.Second*time.Duration(milestoneIntervalSec)/time.Duration(checkpointTransactions), shutdownSignal)
+		timeutil.Ticker(func() {
+			err, criticalErr := coo.IssueNextCheckpointOrMilestone()
+			if criticalErr != nil {
+				log.Panic(err)
+			}
+			if err != nil {
+				log.Warn(err)
+			}
+		}, coo.GetInterval(), shutdownSignal)
 	}, shutdown.PriorityCoordinator)
+}
 
+func sendBundle(b coordinator.Bundle) error {
+	for _, tx := range b {
+		txTrits, _ := transaction.TransactionToTrits(tx)
+		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
+			return err
+		}
+	}
+	return nil
 }
