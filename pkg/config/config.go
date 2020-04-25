@@ -1,11 +1,15 @@
 package config
 
 import (
-	"github.com/iotaledger/hive.go/syncutils"
+	"fmt"
+
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -92,4 +96,20 @@ func hasFlag(name string) bool {
 		}
 	})
 	return has
+}
+
+// LoadHashFromEnvironment loads a hash from the given environment variable.
+func LoadHashFromEnvironment(name string) (trinary.Hash, error) {
+	viper.BindEnv(name)
+	hash := viper.GetString(name)
+
+	if len(hash) == 0 {
+		return "", fmt.Errorf("environment variable '%s' not set", name)
+	}
+
+	if !guards.IsHash(hash) {
+		return "", fmt.Errorf("environment variable '%s' contains an invalid hash", name)
+	}
+
+	return hash, nil
 }

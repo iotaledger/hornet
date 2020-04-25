@@ -15,7 +15,7 @@ func merkleTreeCreate(args []string) error {
 		return errors.New("too many arguments for 'merkle'")
 	}
 
-	seed, err := coordinator.LoadSeedFromEnvironment()
+	seed, err := config.LoadHashFromEnvironment("COO_SEED")
 	if err != nil {
 		return err
 	}

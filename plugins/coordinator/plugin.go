@@ -62,23 +62,7 @@ var (
 	ErrEnvironmentVariableInvalidSeed   = errors.New("invalid coordinator seed. check environment variable COO_SEED")
 )
 
-func LoadSeedFromEnvironment() (trinary.Hash, error) {
-	viper.BindEnv("COO_SEED")
-	seed := viper.GetString("COO_SEED")
-
-	if len(seed) == 0 {
-		return "", ErrEnvironmentVariableSeedNotSet
-	}
-
-	if !guards.IsTransactionHash(seed) {
-		return "", ErrEnvironmentVariableInvalidSeed
-	}
-
-	return seed, nil
-}
-
 func configure(plugin *node.Plugin) {
-
 	log = logger.NewLogger(plugin.Name)
 
 	// set the node as synced at startup, so the coo plugin can select tips
