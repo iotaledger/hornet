@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	_, powFunc       = pow.GetFastestProofOfWorkImpl()
+	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = 0
 )
@@ -104,7 +104,7 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) er
 			return err
 		}
 
-		nonce, err := powFunc(trytes, mwm)
+		nonce, err := powFunc(trytes, mwm, 1)
 		if err != nil {
 			return err
 		}
