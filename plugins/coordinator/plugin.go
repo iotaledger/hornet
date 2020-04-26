@@ -49,7 +49,7 @@ func configure(plugin *node.Plugin) {
 	}
 
 	coordinator.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash trinary.Hash) {
-		log.Infof("Issued checkpoint (%d/%d): %v", index, lastIndex, txHash)
+		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash)
 	}))
 
 	coordinator.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash trinary.Hash) {
