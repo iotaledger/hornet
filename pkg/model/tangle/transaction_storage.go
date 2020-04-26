@@ -30,9 +30,15 @@ func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedTx *CachedTransaction, msIndex milestone.Index, confTime int64))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(int64))
 }
 
+// CachedTransaction contains two cached objects, one for transaction data and one for metadata.
 type CachedTransaction struct {
 	tx       objectstorage.CachedObject
 	metadata objectstorage.CachedObject
+}
+
+// Cached Object for metadata.
+type CachedMetadata struct {
+	objectstorage.CachedObject
 }
 
 type CachedTransactions []*CachedTransaction
@@ -59,6 +65,10 @@ func (c *CachedTransaction) GetTransaction() *hornet.Transaction {
 
 func (c *CachedTransaction) GetMetadata() *hornet.TransactionMetadata {
 	return c.metadata.Get().(*hornet.TransactionMetadata)
+}
+
+func (c *CachedMetadata) GetMetadata() *hornet.TransactionMetadata {
+	return c.Get().(*hornet.TransactionMetadata)
 }
 
 // tx +1
@@ -163,6 +173,18 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 	}
 }
 
+// GetCachedTransactionMetadataOrNil returns the metadata for a transaction hash or nil if it doesn't exist.
+// txHash must be in binary representation.
+// tx meta +1
+func GetCachedTransactionMetadataOrNil(txHashBytes []byte) *CachedMetadata {
+	cachedMeta := metadataStorage.Load(txHashBytes) // tx meta +1
+	if !cachedMeta.Exists() {
+		cachedMeta.Release(true) // tx meta -1
+		return nil
+	}
+	return &CachedMetadata{CachedObject: cachedMeta}
+}
+
 // tx +-0
 func ContainsTransaction(transactionHash trinary.Hash) bool {
 	return txStorage.Contains(trinary.MustTrytesToBytes(transactionHash)[:49])
@@ -201,6 +223,8 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 
 type TransactionConsumer func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject)
 
+type TransactionHashBytesConsumer func(txHash []byte)
+
 func ForEachTransaction(consumer TransactionConsumer) {
 	txStorage.ForEach(func(txHash []byte, cachedTx objectstorage.CachedObject) bool {
 		defer cachedTx.Release(true) // tx -1
@@ -215,6 +239,15 @@ func ForEachTransaction(consumer TransactionConsumer) {
 		consumer(cachedTx.Retain(), nil)
 		return true
 	})
+}
+
+// ForEachTransactionHashBytes loops over all transaction hashes (binary representation) in the database.
+// Transaction that only exist in the cache are ignored.
+func ForEachTransactionHashBytes(consumer TransactionHashBytesConsumer) {
+	txStorage.ForEachKeyOnly(func(txHashBytes []byte) bool {
+		consumer(txHashBytes)
+		return true
+	}, true)
 }
 
 // tx +-0
