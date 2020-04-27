@@ -431,3 +431,16 @@ type SearchEntryPointReturn struct {
 type TriggerSolidifier struct {
 	Command string `mapstructure:"command"`
 }
+
+/////////////////// getFundsOnSpentAddresses //////////////////////////////
+
+// GetFundsOnSpentAddressesReturn struct
+type GetFundsOnSpentAddressesReturn struct {
+	Command   string                `mapstructure:"command"`
+	Addresses []*AddressWithBalance `mapstructure:"addresses"`
+}
+
+type AddressWithBalance struct {
+	Address trinary.Hash `mapstructure:"address"`
+	Balance uint64       `mapstructure:"balance"`
+}

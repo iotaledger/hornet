@@ -23,6 +23,7 @@ func init() {
 	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
 	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
 	addEndpoint("triggerSolidifier", triggerSolidifier, implementedAPIcalls)
+	addEndpoint("getFundsOnSpentAddresses", getFundsOnSpentAddresses, implementedAPIcalls)
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -274,4 +275,30 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 func triggerSolidifier(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	tanglePlugin.TriggerSolidifier()
 	c.Status(http.StatusAccepted)
+}
+
+func getFundsOnSpentAddresses(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+	result := &GetFundsOnSpentAddressesReturn{}
+
+	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
+		e.Error = "getFundsOnSpentAddresses not available in this node"
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	balances, _, err := tangle.GetLedgerStateForLSMI(nil)
+	if err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	for address := range balances {
+		if tangle.WasAddressSpentFrom(address) {
+			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: address, Balance: balances[address]})
+		}
+	}
+
+	c.JSON(http.StatusOK, result)
 }
