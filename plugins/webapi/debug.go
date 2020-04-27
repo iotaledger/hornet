@@ -99,9 +99,8 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	query := &SearchConfirmedApprover{}
 	result := SearchConfirmedApproverReturn{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -159,7 +158,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if resultFound {
 					approversResult, err := createConfirmedApproverResult(txHash, txsToTraverse[txHash])
 					if err != nil {
-						e.Error = err.Error()
+						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 						c.JSON(http.StatusInternalServerError, e)
 						return
 					}
@@ -200,9 +199,8 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	query := &SearchEntryPoint{}
 	result := &SearchEntryPointReturn{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}

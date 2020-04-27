@@ -26,9 +26,8 @@ func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	maxGetTrytes := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes)
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -59,7 +58,7 @@ func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 		tx, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
 		if err != nil {
-			e.Error = "Internal error"
+			e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 			c.JSON(http.StatusInternalServerError, e)
 			cachedTx.Release(true) // tx -1
 			return

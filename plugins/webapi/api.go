@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -18,6 +19,13 @@ const (
 	healthzRoute = "healthz"
 
 	maxAllowedMilestoneAge = time.Minute * 5
+)
+
+var (
+	// ErrNodeNotSync is returned when the node was not synced.
+	ErrNodeNotSync = errors.New("node not synced")
+	// ErrInternalError is returned when there was an internal node error.
+	ErrInternalError = errors.New("internal error")
 )
 
 func webAPIRoute() {

@@ -26,15 +26,14 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
 	if !tangle.IsNodeSynced() {
-		e.Error = "Node not synced"
+		e.Error = ErrNodeNotSync.Error()
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}

@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -35,7 +36,7 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	preferIPv6 := config.NodeConfig.GetBool(config.CfgNetPreferIPv6)
 
 	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = "Internal error"
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -74,10 +75,9 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 		if err := peering.Manager().Add(uri, preferIPv6, uri); err != nil {
 			log.Warnf("can't add peer %s, Error: %s", uri, err)
-		} else {
-			addedPeers++
-			log.Infof("added peer: %s", uri)
+			continue
 		}
+		addedPeers++
 	}
 
 	if added {
@@ -91,7 +91,7 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
-	addedNeighbors := 0
+	addedPeers := 0
 
 	added := false
 
@@ -127,10 +127,9 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 
 		if err := peering.Manager().Add(peer.Identity, peer.PreferIPv6, peer.Alias); err != nil {
 			log.Warnf("Can't add peer %s, Error: %s", peer.Identity, err)
-		} else {
-			addedNeighbors++
-			log.Infof("Added peer: %s", peer.Identity)
+			continue
 		}
+		addedPeers++
 	}
 
 	if added {
@@ -140,7 +139,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 		config.AllowPeeringConfigHotReload()
 	}
 
-	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedNeighbors})
+	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedPeers})
 }
 
 func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -148,9 +147,9 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	query := &RemoveNeighbors{}
 
 	removedNeighbors := 0
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -185,8 +184,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if strings.EqualFold(p.Peer.ID, uri) || strings.EqualFold(p.DomainWithPort, uri) {
 					err := peering.Manager().Remove(uri)
 					if err != nil {
-						log.Errorf("Can't remove neighbor, Error: %s", err.Error())
-						e.Error = "Internal error"
+						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 						c.JSON(http.StatusInternalServerError, e)
 						return
 					}
@@ -197,13 +195,11 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if strings.EqualFold(p.Address, uri) {
 					err := peering.Manager().Remove(uri)
 					if err != nil {
-						log.Errorf("Can't remove neighbor, Error: %s", err.Error())
-						e.Error = "Internal error"
+						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 						c.JSON(http.StatusInternalServerError, e)
 						return
 					}
 					removedNeighbors++
-					log.Infof("Removed neighbor: %s", uri)
 				}
 			}
 		}
