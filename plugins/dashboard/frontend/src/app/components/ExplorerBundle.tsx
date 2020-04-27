@@ -6,6 +6,7 @@ import ExplorerStore, {Transaction} from "app/stores/ExplorerStore";
 import Card from "react-bootstrap/Card";
 import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
+import {IOTAValue} from "app/components/IOTAValue";
 
 interface Props {
     bundle?: Array<Transaction>;
@@ -63,7 +64,7 @@ class TransactionCard extends React.Component<any, any> {
                         <br/>
                         Transaction: <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         <br/>
-                        Value: {tx.value > 0 && '+'}{tx.value}
+                        Value: <IOTAValue showSign={true}>{tx.value}</IOTAValue>
                     </small>
                 </Card.Body>
             </Card>

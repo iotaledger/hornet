@@ -11,6 +11,7 @@ import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
+import {IOTAValue} from "app/components/IOTAValue";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -80,10 +81,10 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                                         <Badge variant="secondary">
                                             Unspent
                                         </Badge>
-                                :
-                                <Badge variant="warning">
-                                    Spent status unknown! - Disabled on this node
-                                </Badge>   
+                                    :
+                                    <Badge variant="warning">
+                                        Spent status unknown! - Disabled on this node
+                                    </Badge>
                             }
                         </React.Fragment>
                     }
@@ -92,7 +93,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                     addr !== null ?
                         <React.Fragment>
                             <p>
-                                Balance: {addr.balance}i
+                                Balance: <IOTAValue>{addr.balance}</IOTAValue>
                             </p>
                             {
                                 addr.txs !== null && addr.txs.length === 100 &&
