@@ -32,8 +32,10 @@ var (
 
 // coordinatorEvents are the events issued by the coordinator.
 type coordinatorEvents struct {
+	// Fired when a checkpoint transaction is issued.
 	IssuedCheckpoint *events.Event
-	IssuedMilestone  *events.Event
+	// Fired when a milestone is issued.
+	IssuedMilestone *events.Event
 }
 
 // Coordinator is used to issue signed transactions, called "milestones" to secure an IOTA network and prevent double spends.
