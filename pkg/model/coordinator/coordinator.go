@@ -197,7 +197,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 	coo.lastCheckpointCount++
 	coo.lastCheckpointHash = &(b[0].Hash)
 
-	Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, *coo.lastCheckpointHash)
+	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, *coo.lastCheckpointHash)
 
 	return nil
 }
@@ -236,7 +236,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHas
 		return err
 	}
 
-	Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneHash)
+	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneHash)
 
 	return nil
 }
