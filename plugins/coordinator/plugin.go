@@ -48,11 +48,11 @@ func configure(plugin *node.Plugin) {
 		log.Panic(err)
 	}
 
-	coordinator.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash trinary.Hash) {
+	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash trinary.Hash) {
 		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash)
 	}))
 
-	coordinator.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash trinary.Hash) {
+	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash trinary.Hash) {
 		log.Infof("milestone issued (%d): %v", index, tailTxHash)
 	}))
 }

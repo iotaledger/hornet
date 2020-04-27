@@ -79,7 +79,7 @@ func (mt *MerkleTree) Unmarshal(buf *bufio.Reader) error {
 	return nil
 }
 
-// MerkleTreeLayer contains the nodes of layer of a merkle tree.
+// MerkleTreeLayer contains the nodes of a layer of a merkle tree.
 type MerkleTreeLayer struct {
 	// level of the layer in the tree
 	Level int

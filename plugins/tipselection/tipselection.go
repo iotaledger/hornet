@@ -16,10 +16,15 @@ import (
 )
 
 var (
-	ErrNodeNotSynced          = errors.New("node is not synchronized")
-	ErrMilestoneNotFound      = errors.New("milestone not found")
-	ErrDepthTooHigh           = errors.New("depth is too high")
-	ErrReferenceNotValid      = errors.New("reference transaction is not valid")
+	// ErrNodeNotSynced is return when the node is not synchronized during tipselection.
+	ErrNodeNotSynced = errors.New("node is not synchronized")
+	// ErrMilestoneNotFound is return when the entry point milestone is not found in the database during tipselection.
+	ErrMilestoneNotFound = errors.New("milestone not found")
+	// ErrDepthTooHigh is return when the given depth for tipselection exceeds the maximum depth of the node.
+	ErrDepthTooHigh = errors.New("depth is too high")
+	// ErrReferenceNotValid is return when the given reference transaction is not valid.
+	ErrReferenceNotValid = errors.New("reference transaction is not valid")
+	// ErrReferenceNotConsistent is return when the given reference transaction is not consistent with the other tip or the ledger.
 	ErrReferenceNotConsistent = errors.New("reference transaction is not consistent")
 )
 

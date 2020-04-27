@@ -6,8 +6,8 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-// TipselectionFunc is a function which performs a tipselection and returns two tips.
-type TipselectionFunc = func(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelStats, error)
+// TipSelectionFunc is a function which performs a tipselection and returns two tips.
+type TipSelectionFunc = func(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelStats, error)
 
 // TipSelStats holds the stats for a tipselection run.
 type TipSelStats struct {

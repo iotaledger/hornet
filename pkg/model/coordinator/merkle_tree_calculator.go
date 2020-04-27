@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// ErrDepthTooSmall is returned when the depth for creating the merkle tree is too low.
 	ErrDepthTooSmall = errors.New("depth is set too low, must be >0")
 )
 

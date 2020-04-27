@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/pow"
@@ -18,17 +19,24 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tipselection"
 )
 
-// Bundle represents grouped together transactions for creating a transfer.
+// Bundle represents grouped together transactions forming a transfer.
 type Bundle = []*transaction.Transaction
 
-// SendBundleFunc is a function which sends a bundle via gossip to all neighbors.
+// SendBundleFunc is a function which sends a bundle to the network.
 type SendBundleFunc = func(b Bundle) error
 
 var (
+	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
 )
 
-// Coordinator is used to issue signed transactions, called "milestones" to secure an IOTA network and prevent double spents.
+// coordinatorEvents are the events issued by the coordinator.
+type coordinatorEvents struct {
+	IssuedCheckpoint *events.Event
+	IssuedMilestone  *events.Event
+}
+
+// Coordinator is used to issue signed transactions, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
@@ -41,19 +49,22 @@ type Coordinator struct {
 	milestoneIntervalSec   int
 	checkpointTransactions int
 	powFunc                pow.ProofOfWorkFunc
-	tipselFunc             tipselection.TipselectionFunc
+	tipselFunc             tipselection.TipSelectionFunc
 	sendBundleFunc         SendBundleFunc
 
-	// internal states
+	// internal state
 	state               *State
 	merkleTree          *MerkleTree
 	lastCheckpointCount int
 	lastCheckpointHash  *trinary.Hash
 	bootstrapped        bool
+
+	// events of the coordinator
+	Events *coordinatorEvents
 }
 
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl int, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipselectionFunc, sendBundleFunc SendBundleFunc) *Coordinator {
+func New(seed trinary.Hash, securityLvl int, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipSelectionFunc, sendBundleFunc SendBundleFunc) *Coordinator {
 	result := &Coordinator{
 		seed:                   seed,
 		securityLvl:            securityLvl,
@@ -65,6 +76,10 @@ func New(seed trinary.Hash, securityLvl int, merkleTreeDepth int, minWeightMagni
 		powFunc:                powFunc,
 		tipselFunc:             tipselFunc,
 		sendBundleFunc:         sendBundleFunc,
+		Events: &coordinatorEvents{
+			IssuedCheckpoint: events.NewEvent(CheckpointCaller),
+			IssuedMilestone:  events.NewEvent(MilestoneCaller),
+		},
 	}
 
 	return result
@@ -187,7 +202,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 	return nil
 }
 
-// createAndSendMilestone create a milestone, sends it to the network and stores a new coordinator state file.
+// createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) error {
 
 	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, coo.powFunc)
