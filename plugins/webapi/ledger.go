@@ -15,6 +15,7 @@ import (
 func init() {
 	addEndpoint("getLedgerDiff", getLedgerDiff, implementedAPIcalls)
 	addEndpoint("getLedgerDiffExt", getLedgerDiffExt, implementedAPIcalls)
+	addEndpoint("getLedgerState", getLedgerState, implementedAPIcalls)
 }
 
 func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
@@ -188,4 +189,24 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 	}
 
 	return confirmedTxWithValue, confirmedBundlesWithValue, totalLedgerChanges, nil
+}
+
+func getLedgerState(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &GetLedgerState{}
+
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	balances, index, err := tangle.GetLedgerStateForMilestone(query.TargetIndex, abortSignal)
+	if err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	c.JSON(http.StatusOK, GetLedgerStateReturn{Balances: balances, MilestoneIndex: index})
 }
