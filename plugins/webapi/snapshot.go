@@ -12,12 +12,12 @@ import (
 )
 
 func init() {
-	addEndpoint("createSnapshot", createSnapshot, implementedAPIcalls)
+	addEndpoint("createSnapshotFile", createSnapshotFile, implementedAPIcalls)
 }
 
-func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func createSnapshotFile(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
-	query := &CreateSnapshot{}
+	query := &CreateSnapshotFile{}
 
 	if err := mapstructure.Decode(i, query); err != nil {
 		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
@@ -25,12 +25,11 @@ func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 		return
 	}
 
-	err = snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), query.FilePath, abortSignal)
-	if err != nil {
+	if err := snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), query.FilePath, abortSignal); err != nil {
 		e.Error = err.Error()
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	c.JSON(http.StatusOK, CreateSnapshotReturn{})
+	c.JSON(http.StatusOK, CreateSnapshotFileReturn{})
 }

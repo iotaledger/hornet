@@ -328,15 +328,17 @@ type GetLedgerStateReturn struct {
 	Duration       int                     `json:"duration"`
 }
 
-// CreateSnapshot struct
-type CreateSnapshot struct {
+/////////////////// createSnapshotFile ////////////////////////
+
+// CreateSnapshotFile struct
+type CreateSnapshotFile struct {
 	Command     string          `mapstructure:"command"`
 	TargetIndex milestone.Index `mapstructure:"targetIndex"`
 	FilePath    string          `mapstructure:"filePath"`
 }
 
-// CreateSnapshotReturn struct
-type CreateSnapshotReturn struct {
+// CreateSnapshotFileReturn struct
+type CreateSnapshotFileReturn struct {
 	Duration int `json:"duration"`
 }
 
