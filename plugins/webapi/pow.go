@@ -41,6 +41,11 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
+	// mwm is an optional parameter
+	if query.MinWeightMagnitude == 0 {
+		query.MinWeightMagnitude = mwm
+	}
+
 	// Reject unnecessarily high MWM
 	if query.MinWeightMagnitude > mwm {
 		e.Error = fmt.Sprintf("MWM too high. MWM: %v, Max allowed: %v", query.MinWeightMagnitude, mwm)
