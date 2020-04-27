@@ -11,7 +11,6 @@ type Props = {
 @inject("explorerStore")
 @observer
 export class IOTAValue extends React.Component<Props, any> {
-// export const FormattedValue = React.forwardRef<Ref, Props>((props, ref) => (
 
     render() {
 

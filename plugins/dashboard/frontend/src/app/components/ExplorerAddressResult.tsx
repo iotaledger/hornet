@@ -40,6 +40,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
         return null;
     }
 
+
     render() {
         let {hash} = this.props.match.params;
         let {addr, query_loading} = this.props.explorerStore;
@@ -48,11 +49,13 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
             for (let i = 0; i < addr.txs.length; i++) {
                 let tx = addr.txs[i];
                 txsEle.push(
-                    <ListGroup.Item key={tx.hash}>
+                    <ListGroup.Item key={tx.hash}
+                                    className="d-flex justify-content-between align-items-center">
                         <small>
                             {dateformat(new Date(tx.timestamp * 1000), "dd.mm.yyyy HH:MM:ss")} {' '}
                             <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         </small>
+                        <Badge variant="info"><IOTAValue>{tx.value}</IOTAValue></Badge>
                     </ListGroup.Item>
                 );
             }
