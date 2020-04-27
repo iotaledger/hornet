@@ -1,11 +1,15 @@
 package config
 
 import (
-	"github.com/iotaledger/hive.go/syncutils"
+	"fmt"
+
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -33,26 +37,29 @@ var (
 //
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
 // and ending with: .json, .toml, .yaml or .yml (in this sequence).
-func FetchConfig(ignoreSettingsAtPrint ...[]string) error {
+func FetchConfig() error {
 	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
 
 	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, false, !hasFlag(defaultPeeringConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(PeeringConfig)
 
 	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
 	if err != nil {
 		return err
 	}
-	parameter.PrintConfig(ProfilesConfig)
 
 	return nil
+}
+
+func PrintConfig(ignoreSettingsAtPrint ...[]string) {
+	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
+	parameter.PrintConfig(PeeringConfig)
+	parameter.PrintConfig(ProfilesConfig)
 }
 
 func AllowPeeringConfigHotReload() {
@@ -89,4 +96,20 @@ func hasFlag(name string) bool {
 		}
 	})
 	return has
+}
+
+// LoadHashFromEnvironment loads a hash from the given environment variable.
+func LoadHashFromEnvironment(name string) (trinary.Hash, error) {
+	viper.BindEnv(name)
+	hash := viper.GetString(name)
+
+	if len(hash) == 0 {
+		return "", fmt.Errorf("environment variable '%s' not set", name)
+	}
+
+	if !guards.IsHash(hash) {
+		return "", fmt.Errorf("environment variable '%s' contains an invalid hash", name)
+	}
+
+	return hash, nil
 }

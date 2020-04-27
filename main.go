@@ -8,6 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/toolset"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -28,8 +29,9 @@ import (
 
 func main() {
 	cli.PrintVersion()
-	toolset.HandleTools()
 	cli.ParseConfig()
+	toolset.HandleTools()
+	cli.PrintConfig()
 
 	plugins := []*node.Plugin{
 		cli.PLUGIN,
@@ -55,6 +57,7 @@ func main() {
 			graph.PLUGIN,
 			monitor.PLUGIN,
 			spammer.PLUGIN,
+			coordinator.PLUGIN,
 		}...)
 	}
 

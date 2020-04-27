@@ -33,12 +33,7 @@ func getList(a []string) string {
 }
 
 func ParseConfig() {
-	var ignoreSettingsAtPrint []string
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPasswordHash)
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgWebAPIBasicAuthPasswordSalt)
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPasswordHash)
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, config.CfgDashboardBasicAuthPasswordSalt)
-	if err := config.FetchConfig(ignoreSettingsAtPrint); err != nil {
+	if err := config.FetchConfig(); err != nil {
 		panic(err)
 	}
 	parseParameters()
@@ -46,6 +41,10 @@ func ParseConfig() {
 	if err := logger.InitGlobalLogger(config.NodeConfig); err != nil {
 		panic(err)
 	}
+}
+
+func PrintConfig() {
+	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 }
 
 // PrintVersion prints out the HORNET version

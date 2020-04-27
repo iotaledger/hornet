@@ -24,6 +24,7 @@ var (
 	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
 	belowMaxDepthTransactionLimit int
 	log                           *logger.Logger
+	updateSyncedAtStartup         bool
 
 	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
@@ -41,6 +42,8 @@ func configure(plugin *node.Plugin) {
 	configureRefsAnInvalidBundleStorage()
 
 	tangle.LoadInitialValuesFromDatabase()
+
+	updateSyncedAtStartup = *syncedAtStartup
 
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
@@ -101,7 +104,7 @@ func run(plugin *node.Plugin) {
 		log.Info("database revalidation successful")
 	}
 
-	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), *syncedAtStartup)
+	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), updateSyncedAtStartup)
 
 	runTangleProcessor(plugin)
 
@@ -114,4 +117,9 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(database.CleanupHornetBadgerInstance, 5*time.Minute, shutdownSignal)
 	}, shutdown.PriorityBadgerGarbageCollection)
+}
+
+// SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup
+func SetUpdateSyncedAtStartup(updateSynced bool) {
+	updateSyncedAtStartup = updateSynced
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
@@ -29,6 +30,8 @@ import (
 var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
+
+	overwriteCooAddress = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
@@ -80,7 +83,13 @@ func configure(plugin *node.Plugin) {
 	if snapshotInfo != nil {
 		// Check coordinator address in database
 		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81] {
-			log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
+			if !*overwriteCooAddress {
+				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
+			}
+
+			// Overwrite old coordinator address
+			snapshotInfo.CoordinatorAddress = config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]
+			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 
 		// Check the ledger state

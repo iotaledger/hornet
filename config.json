@@ -75,7 +75,8 @@
     "securityLevel": 2,
     "merkleTreeDepth": 23,
     "mwm": 14,
-    "startIndex": 0,
+    "stateFilePath": "coordinator.state",
+    "merkleTreeFilePath": "coordinator.tree",
     "intervalSeconds": 60,
     "checkpointTransactions": 5
   },
