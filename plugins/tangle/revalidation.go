@@ -173,22 +173,14 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		if storedTx == nil {
 			continue
 		}
-		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHashToDelete, true)
-		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHashToDelete, false)
-		tangle.DeleteBundle(txHashToDelete)
-		tangle.DeleteAddress(storedTx.Tx.Address, txHashToDelete)
-		tangle.DeleteTag(storedTx.Tx.Tag, txHashToDelete)
-		tangle.DeleteApprovers(txHashToDelete)
-		tangle.DeleteTransaction(txHashToDelete)
+		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashToDelete, true)
+		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashToDelete, false)
+		tangle.DeleteBundleFromBadger(txHashToDelete)
+		tangle.DeleteAddressFromBadger(storedTx.Tx.Address, txHashToDelete)
+		tangle.DeleteTagFromBadger(storedTx.Tx.Tag, txHashToDelete)
+		tangle.DeleteApproversFromBadger(txHashToDelete)
+		tangle.DeleteTransactionFromBadger(txHashToDelete)
 	}
-
-	// flush object storage
-	tangle.FlushBundleStorage()
-	tangle.FlushBundleTransactionsStorage()
-	tangle.FlushTagsStorage()
-	tangle.FlushAddressStorage()
-	tangle.FlushApproversStorage()
-	tangle.FlushTransactionStorage()
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))
 }
