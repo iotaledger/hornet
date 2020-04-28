@@ -30,6 +30,7 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	if len(query.Addresses) == 0 {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
+		return
 	}
 
 	for _, addr := range query.Addresses {

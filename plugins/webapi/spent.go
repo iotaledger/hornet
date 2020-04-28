@@ -41,6 +41,7 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	if len(query.Addresses) == 0 {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
+		return
 	}
 
 	result := WereAddressesSpentFromReturn{}
