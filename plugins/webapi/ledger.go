@@ -15,15 +15,15 @@ import (
 func init() {
 	addEndpoint("getLedgerDiff", getLedgerDiff, implementedAPIcalls)
 	addEndpoint("getLedgerDiffExt", getLedgerDiffExt, implementedAPIcalls)
+	addEndpoint("getLedgerState", getLedgerState, implementedAPIcalls)
 }
 
 func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &GetLedgerDiff{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -38,7 +38,7 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	diff, err := tangle.GetLedgerDiffForMilestone(requestedIndex, abortSignal)
 	if err != nil {
-		e.Error = "Internal error"
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -50,9 +50,8 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &GetLedgerDiffExt{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -67,7 +66,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	confirmedTxWithValue, confirmedBundlesWithValue, ledgerChanges, err := getMilestoneStateDiff(requestedIndex)
 	if err != nil {
-		e.Error = errors.Wrapf(err, "Internal error").Error()
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -190,4 +189,24 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 	}
 
 	return confirmedTxWithValue, confirmedBundlesWithValue, totalLedgerChanges, nil
+}
+
+func getLedgerState(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+	e := ErrorReturn{}
+	query := &GetLedgerState{}
+
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	balances, index, err := tangle.GetLedgerStateForMilestone(query.TargetIndex, abortSignal)
+	if err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	c.JSON(http.StatusOK, GetLedgerStateReturn{Balances: balances, MilestoneIndex: index})
 }

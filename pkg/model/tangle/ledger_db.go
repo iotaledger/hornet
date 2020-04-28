@@ -217,6 +217,66 @@ func GetLedgerDiffForMilestone(index milestone.Index, abortSignal <-chan struct{
 	return GetLedgerDiffForMilestoneWithoutLocking(index, abortSignal)
 }
 
+func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+
+	solidMilestoneIndex := GetSolidMilestoneIndex()
+	if targetIndex == 0 {
+		targetIndex = solidMilestoneIndex
+	}
+
+	if targetIndex > solidMilestoneIndex {
+		return nil, 0, fmt.Errorf("target index is too new. maximum: %d, actual: %d", solidMilestoneIndex, targetIndex)
+	}
+
+	if targetIndex <= snapshot.PruningIndex {
+		return nil, 0, fmt.Errorf("target index is too old. minimum: %d, actual: %d", snapshot.PruningIndex+1, targetIndex)
+	}
+
+	balances, ledgerMilestone, err := GetLedgerStateForLSMIWithoutLocking(abortSignal)
+	if err != nil {
+		return nil, 0, fmt.Errorf("GetLedgerStateForLSMI failed! %v", err)
+	}
+
+	if ledgerMilestone != solidMilestoneIndex {
+		return nil, 0, fmt.Errorf("LedgerMilestone wrong! %d/%d", ledgerMilestone, solidMilestoneIndex)
+	}
+
+	// Calculate balances for targetIndex
+	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
+		diff, err := GetLedgerDiffForMilestoneWithoutLocking(milestoneIndex, abortSignal)
+		if err != nil {
+			return nil, 0, fmt.Errorf("GetLedgerDiffForMilestone: %v", err)
+		}
+
+		for address, change := range diff {
+			select {
+			case <-abortSignal:
+				return nil, 0, ErrOperationAborted
+			default:
+			}
+
+			newBalance := int64(balances[address]) - change
+
+			if newBalance < 0 {
+				return nil, 0, fmt.Errorf("Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", milestoneIndex, address, balances[address], change)
+			} else if newBalance == 0 {
+				delete(balances, address)
+			} else {
+				balances[address] = uint64(newBalance)
+			}
+		}
+	}
+	return balances, targetIndex, nil
+}
+
+func GetLedgerStateForMilestone(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return GetLedgerStateForMilestoneWithoutLocking(targetIndex, abortSignal)
+}
+
 // ApplyLedgerDiffWithoutLocking applies the changes to the ledger.
 // WriteLockLedger must be held while entering this function.
 func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone.Index) error {
@@ -421,9 +481,9 @@ func StoreLedgerBalancesInDatabase(balances map[trinary.Hash]uint64, index miles
 	return nil
 }
 
-// GetAllLedgerBalancesWithoutLocking returns all balances for the current solid milestone.
+// GetLedgerStateForLSMIWithoutLocking returns all balances for the current solid milestone.
 // ReadLockLedger must be held while entering this function.
-func GetAllLedgerBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
 
 	balances := make(map[trinary.Hash]uint64)
 
@@ -449,17 +509,17 @@ func GetAllLedgerBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trinar
 	}
 
 	if total != compressed.TotalSupply {
-		panic(fmt.Sprintf("GetAllLedgerBalances() Total does not match supply: %d != %d", total, compressed.TotalSupply))
+		panic(fmt.Sprintf("total does not match supply: %d != %d", total, compressed.TotalSupply))
 	}
 
 	return balances, ledgerMilestoneIndex, err
 }
 
-// GetAllLedgerBalances returns all balances for the current solid milestone.
-func GetAllLedgerBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+// GetLedgerStateForLSMI returns all balances for the current solid milestone.
+func GetLedgerStateForLSMI(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetAllLedgerBalancesWithoutLocking(abortSignal)
+	return GetLedgerStateForLSMIWithoutLocking(abortSignal)
 }

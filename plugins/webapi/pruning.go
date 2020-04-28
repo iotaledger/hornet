@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +19,7 @@ func pruneDatabase(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	query := &PruneDatabase{}
 
 	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = "Internal error"
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}

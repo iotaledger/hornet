@@ -41,7 +41,7 @@ type AttachToTangle struct {
 	Command            string           `mapstructure:"command"`
 	TrunkTransaction   trinary.Hash     `mapstructure:"trunkTransaction"`
 	BranchTransaction  trinary.Hash     `mapstructure:"branchTransaction"`
-	MinWeightMagnitude int              `mapstructure:"minWeightMagnitude"`
+	MinWeightMagnitude int              `mapstructure:"minWeightMagnitude,omitempty"`
 	Trytes             []trinary.Trytes `mapstructure:"trytes"`
 }
 
@@ -258,20 +258,6 @@ type WereAddressesSpentFromReturn struct {
 	Duration int    `json:"duration"`
 }
 
-/////////////////// getSnapshot ////////////////////////
-
-// GetSnapshot struct
-type GetSnapshot struct {
-	Command string `mapstructure:"command"`
-}
-
-// GetSnapshotReturn struct
-type GetSnapshotReturn struct {
-	Balances       map[trinary.Hash]uint64 `json:"balances"`
-	MilestoneIndex milestone.Index         `json:"milestoneIndex"`
-	Duration       int                     `json:"duration"`
-}
-
 /////////////////// getLedgerDiff ////////////////////////
 
 // GetLedgerDiff struct
@@ -327,17 +313,32 @@ type GetLedgerDiffExtReturn struct {
 	Duration                  int                    `json:"duration"`
 }
 
-/////////////////// createSnapshot ////////////////////////
+/////////////////// getLedgerState ////////////////////////
 
-// CreateSnapshot struct
-type CreateSnapshot struct {
+// GetLedgerState struct
+type GetLedgerState struct {
+	Command     string          `mapstructure:"command"`
+	TargetIndex milestone.Index `mapstructure:"targetIndex,omitempty"`
+}
+
+// GetLedgerStateReturn struct
+type GetLedgerStateReturn struct {
+	Balances       map[trinary.Hash]uint64 `json:"balances"`
+	MilestoneIndex milestone.Index         `json:"milestoneIndex"`
+	Duration       int                     `json:"duration"`
+}
+
+/////////////////// createSnapshotFile ////////////////////////
+
+// CreateSnapshotFile struct
+type CreateSnapshotFile struct {
 	Command     string          `mapstructure:"command"`
 	TargetIndex milestone.Index `mapstructure:"targetIndex"`
 	FilePath    string          `mapstructure:"filePath"`
 }
 
-// CreateSnapshotReturn struct
-type CreateSnapshotReturn struct {
+// CreateSnapshotFileReturn struct
+type CreateSnapshotFileReturn struct {
 	Duration int `json:"duration"`
 }
 
@@ -430,4 +431,17 @@ type SearchEntryPointReturn struct {
 // SearchConfirmedApprover struct
 type TriggerSolidifier struct {
 	Command string `mapstructure:"command"`
+}
+
+/////////////////// getFundsOnSpentAddresses //////////////////////////////
+
+// GetFundsOnSpentAddressesReturn struct
+type GetFundsOnSpentAddressesReturn struct {
+	Command   string                `mapstructure:"command"`
+	Addresses []*AddressWithBalance `mapstructure:"addresses"`
+}
+
+type AddressWithBalance struct {
+	Address trinary.Hash `mapstructure:"address"`
+	Balance uint64       `mapstructure:"balance"`
 }

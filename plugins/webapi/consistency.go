@@ -23,9 +23,8 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &CheckConsistency{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -48,7 +47,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	defer tangle.ReadUnlockLedger()
 
 	if !tangle.IsNodeSynced() {
-		e.Error = "Node not synced"
+		e.Error = ErrNodeNotSync.Error()
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
