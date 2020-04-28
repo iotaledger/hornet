@@ -279,36 +279,6 @@ func getSeenMilestones(targetIndex milestone.Index, abortSignal <-chan struct{})
 	return seenMilestones, nil
 }
 
-func getLedgerStateAtMilestone(balances map[trinary.Hash]uint64, targetIndex milestone.Index, solidMilestoneIndex milestone.Index, abortSignal <-chan struct{}) (map[trinary.Hash]uint64, error) {
-
-	// Calculate balances for targetIndex
-	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
-		diff, err := tangle.GetLedgerDiffForMilestoneWithoutLocking(milestoneIndex, abortSignal)
-		if err != nil {
-			log.Panicf("CreateLocalSnapshot: %v", err)
-		}
-
-		for address, change := range diff {
-			select {
-			case <-abortSignal:
-				return nil, ErrSnapshotCreationWasAborted
-			default:
-			}
-
-			newBalance := int64(balances[address]) - change
-
-			if newBalance < 0 {
-				panic(fmt.Sprintf("CreateLocalSnapshot: Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", milestoneIndex, address, balances[address], change))
-			} else if newBalance == 0 {
-				delete(balances, address)
-			} else {
-				balances[address] = uint64(newBalance)
-			}
-		}
-	}
-	return balances, nil
-}
-
 func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.SnapshotInfo) error {
 
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
@@ -427,26 +397,13 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	}
 	defer cachedTargetMs.Release(true) // bundle -1
 
-	tangle.ReadLockLedger()
-
-	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
-	if !tangle.ContainsMilestone(solidMilestoneIndex) {
-		log.Panicf("CreateLocalSnapshot: Solid milestone (%d) not found!", solidMilestoneIndex)
-	}
-
-	balances, ledgerMilestone, err := tangle.GetAllLedgerBalancesWithoutLocking(abortSignal)
+	newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(targetIndex, abortSignal)
 	if err != nil {
-		log.Panicf("CreateLocalSnapshot: GetAllLedgerBalances failed! %v", err)
+		log.Panicf("CreateLocalSnapshot: GetLedgerStateForMilestone failed! %v", err)
 	}
 
-	if ledgerMilestone != solidMilestoneIndex {
-		log.Panicf("CreateLocalSnapshot: LedgerMilestone wrong! %d/%d", ledgerMilestone, solidMilestoneIndex)
-	}
-
-	newBalances, err := getLedgerStateAtMilestone(balances, targetIndex, solidMilestoneIndex, abortSignal)
-	tangle.ReadUnlockLedger()
-	if err != nil {
-		return err
+	if ledgerIndex != targetIndex {
+		log.Panicf("CreateLocalSnapshot: ledger index wrong! %d/%d", ledgerIndex, targetIndex)
 	}
 
 	newSolidEntryPoints, err := getSolidEntryPoints(targetIndex, abortSignal)
