@@ -375,7 +375,7 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	return sha256Hash, nil
 }
 
-func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, abortSignal <-chan struct{}) error {
+func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 
 	log.Infof("creating local snapshot for targetIndex %d", targetIndex)
 
@@ -386,7 +386,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		return errors.Wrap(ErrCritical, "no snapshot info found")
 	}
 
-	if err := checkSnapshotLimits(targetIndex, snapshotInfo, true); err != nil {
+	if err := checkSnapshotLimits(targetIndex, snapshotInfo, writeToDatabase); err != nil {
 		return err
 	}
 
@@ -441,42 +441,44 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		return err
 	}
 
-	// This has to be done before acquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
-	// In "solidifyMilestone" the LedgerLock is acquired, but by traversing the tangle, the SolidEntryPoint Lock is also acquired.
-	err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
-	if err != nil {
-		return errors.Wrap(ErrCritical, err.Error())
+	if writeToDatabase {
+		// This has to be done before acquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
+		// In "solidifyMilestone" the LedgerLock is acquired, but by traversing the tangle, the SolidEntryPoint Lock is also acquired.
+		err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
+		if err != nil {
+			return errors.Wrap(ErrCritical, err.Error())
+		}
+
+		tangle.WriteLockSolidEntryPoints()
+		defer tangle.WriteUnlockSolidEntryPoints()
+
+		tangle.ResetSolidEntryPoints()
+		for solidEntryPoint, index := range newSolidEntryPoints {
+			tangle.SolidEntryPointsAdd(solidEntryPoint, index)
+		}
+		tangle.StoreSolidEntryPoints()
+
+		tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
+			CoordinatorAddress: snapshotInfo.CoordinatorAddress,
+			Hash:               cachedTargetMs.GetBundle().GetMilestoneHash(),
+			SnapshotIndex:      targetIndex,
+			PruningIndex:       snapshotInfo.PruningIndex,
+			Timestamp:          cachedTargetMsTail.GetTransaction().GetTimestamp(),
+			Metadata:           snapshotInfo.Metadata,
+		})
+
+		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
-
-	tangle.WriteLockSolidEntryPoints()
-	defer tangle.WriteUnlockSolidEntryPoints()
-
-	tangle.ResetSolidEntryPoints()
-	for solidEntryPoint, index := range newSolidEntryPoints {
-		tangle.SolidEntryPointsAdd(solidEntryPoint, index)
-	}
-	tangle.StoreSolidEntryPoints()
-
-	tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
-		CoordinatorAddress: snapshotInfo.CoordinatorAddress,
-		Hash:               cachedTargetMs.GetBundle().GetMilestoneHash(),
-		SnapshotIndex:      targetIndex,
-		PruningIndex:       snapshotInfo.PruningIndex,
-		Timestamp:          cachedTargetMsTail.GetTransaction().GetTimestamp(),
-		Metadata:           snapshotInfo.Metadata,
-	})
-
-	tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 
 	log.Infof("created local snapshot for target index %d (%x), took %v", targetIndex, hash, time.Since(ts))
 
 	return nil
 }
 
-func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, abortSignal <-chan struct{}) error {
+func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
-	return createLocalSnapshotWithoutLocking(targetIndex, filePath, abortSignal)
+	return createLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
 }
 
 type localSnapshotHeader struct {

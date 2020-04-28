@@ -165,7 +165,7 @@ func run(_ *node.Plugin) {
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
 					localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
-					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, shutdownSignal); err != nil {
+					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
 						}

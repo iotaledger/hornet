@@ -25,7 +25,7 @@ func createSnapshotFile(i interface{}, c *gin.Context, abortSignal <-chan struct
 		return
 	}
 
-	if err := snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), query.FilePath, abortSignal); err != nil {
+	if err := snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), query.FilePath, false, abortSignal); err != nil {
 		e.Error = err.Error()
 		c.JSON(http.StatusInternalServerError, e)
 		return
