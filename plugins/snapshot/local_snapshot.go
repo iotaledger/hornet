@@ -286,20 +286,27 @@ func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.Snaps
 		return errors.Wrapf(ErrNotEnoughHistory, "minimum solid index: %d, actual solid index: %d", SolidEntryPointCheckThresholdFuture+1, solidMilestoneIndex)
 	}
 
-	if targetIndex < SolidEntryPointCheckThresholdPast {
-		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", SolidEntryPointCheckThresholdPast+1, targetIndex)
+	minimumIndex := milestone.Index(SolidEntryPointCheckThresholdPast + 1)
+	maximumIndex := milestone.Index(solidMilestoneIndex - SolidEntryPointCheckThresholdFuture)
+
+	if checkSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
+		minimumIndex = snapshotInfo.SnapshotIndex + 1
 	}
 
-	if targetIndex > (solidMilestoneIndex - SolidEntryPointCheckThresholdFuture) {
-		return errors.Wrapf(ErrTargetIndexTooNew, "maximum: %d, actual: %d", solidMilestoneIndex-SolidEntryPointCheckThresholdFuture, targetIndex)
+	if minimumIndex < snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast {
+		minimumIndex = snapshotInfo.PruningIndex + 1 + SolidEntryPointCheckThresholdPast
 	}
 
-	if checkSnapshotIndex && targetIndex <= snapshotInfo.SnapshotIndex {
-		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", snapshotInfo.SnapshotIndex, targetIndex)
+	if minimumIndex > maximumIndex {
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index (%d) exceeds maximum index (%d)", minimumIndex, maximumIndex)
 	}
 
-	if targetIndex-SolidEntryPointCheckThresholdPast < snapshotInfo.PruningIndex+1 {
-		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", snapshotInfo.PruningIndex+1+SolidEntryPointCheckThresholdPast, targetIndex)
+	if targetIndex > maximumIndex {
+		return errors.Wrapf(ErrTargetIndexTooNew, "maximum: %d, actual: %d", maximumIndex, targetIndex)
+	}
+
+	if targetIndex < minimumIndex {
+		return errors.Wrapf(ErrTargetIndexTooOld, "minimum: %d, actual: %d", minimumIndex, targetIndex)
 	}
 
 	return nil
