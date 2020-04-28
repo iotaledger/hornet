@@ -481,9 +481,9 @@ func StoreLedgerBalancesInDatabase(balances map[trinary.Hash]uint64, index miles
 	return nil
 }
 
-// GetAllLedgerBalancesWithoutLocking returns all balances for the current solid milestone.
+// GetLedgerStateForLSMIWithoutLocking returns all balances for the current solid milestone.
 // ReadLockLedger must be held while entering this function.
-func GetAllLedgerBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
 
 	balances := make(map[trinary.Hash]uint64)
 
@@ -509,17 +509,17 @@ func GetAllLedgerBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trinar
 	}
 
 	if total != compressed.TotalSupply {
-		panic(fmt.Sprintf("GetAllLedgerBalances() Total does not match supply: %d != %d", total, compressed.TotalSupply))
+		panic(fmt.Sprintf("total does not match supply: %d != %d", total, compressed.TotalSupply))
 	}
 
 	return balances, ledgerMilestoneIndex, err
 }
 
-// GetAllLedgerBalances returns all balances for the current solid milestone.
-func GetAllLedgerBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+// GetLedgerStateForLSMI returns all balances for the current solid milestone.
+func GetLedgerStateForLSMI(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetAllLedgerBalancesWithoutLocking(abortSignal)
+	return GetLedgerStateForLSMIWithoutLocking(abortSignal)
 }
