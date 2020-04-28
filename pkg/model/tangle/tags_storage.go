@@ -113,8 +113,8 @@ func DeleteTag(txTag trinary.Trytes, txHash trinary.Hash) {
 }
 
 // DeleteTagFromBadger deletes the tag from the persistence layer without accessing the cache.
-func DeleteTagFromBadger(txTag trinary.Trytes, txHash trinary.Hash) {
-	tagsStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], trinary.MustTrytesToBytes(txHash)[:49]...))
+func DeleteTagFromBadger(txTag trinary.Trytes, txHashBytes []byte) {
+	tagsStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], txHashBytes...))
 }
 
 // tag +-0

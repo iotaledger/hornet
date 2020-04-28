@@ -1,14 +1,14 @@
 package tangle
 
 import (
+	"bytes"
 	"errors"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/iotaledger/hive.go/typeutils"
 )
 
 var (
@@ -123,7 +123,7 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 // not solid, their confirmation milestone is newer/ of which their solidification time is younger
 // than the last local snapshot's milestone.
 func cleanupTransactions(info *tangle.SnapshotInfo) {
-	txsToDelete := map[trinary.Hash]struct{}{}
+	txsToDelete := map[string]struct{}{}
 
 	start := time.Now()
 	var txCounter int64
@@ -139,18 +139,18 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 
 		// delete transaction if no metadata
 		if storedTxMeta == nil {
-			txsToDelete[trinary.MustBytesToTrytes(txHashBytes, 81)] = struct{}{}
+			txsToDelete[typeutils.BytesToString(txHashBytes)] = struct{}{}
 			return
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			txsToDelete[trinary.MustBytesToTrytes(txHashBytes, 81)] = struct{}{}
+			txsToDelete[typeutils.BytesToString(txHashBytes)] = struct{}{}
 			return
 		}
 
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			txsToDelete[trinary.MustBytesToTrytes(txHashBytes, 81)] = struct{}{}
+			txsToDelete[typeutils.BytesToString(txHashBytes)] = struct{}{}
 			return
 		}
 	})
@@ -158,28 +158,33 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	var deletionCounter float64
 	total := float64(len(txsToDelete))
 	lastPercentage := 0
+	nullHashBytes := make([]byte, 49)
 	for txHashToDelete := range txsToDelete {
 		deletionCounter++
-		if txHashToDelete == consts.NullHashTrytes {
+
+		txHashBytesToDelete := typeutils.StringToBytes(txHashToDelete)
+		if bytes.Equal(txHashBytesToDelete, nullHashBytes) {
+			// do not delete genesis transaction
 			continue
 		}
+
 		percentage := int((deletionCounter / total) * 100)
 		if lastPercentage+5 <= percentage {
 			lastPercentage = percentage
 			log.Infof("reverting (this might take a while)...%d/%d (%d%%)", int(deletionCounter), len(txsToDelete), percentage)
 		}
 
-		storedTx := tangle.GetStoredTransactionOrNil(txHashToDelete)
+		storedTx := tangle.GetStoredTransactionOrNil(txHashBytesToDelete)
 		if storedTx == nil {
 			continue
 		}
-		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashToDelete, true)
-		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashToDelete, false)
-		tangle.DeleteBundleFromBadger(txHashToDelete)
-		tangle.DeleteAddressFromBadger(storedTx.Tx.Address, txHashToDelete)
-		tangle.DeleteTagFromBadger(storedTx.Tx.Tag, txHashToDelete)
-		tangle.DeleteApproversFromBadger(txHashToDelete)
-		tangle.DeleteTransactionFromBadger(txHashToDelete)
+		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashBytesToDelete, true)
+		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashBytesToDelete, false)
+		tangle.DeleteBundleFromBadger(txHashBytesToDelete)
+		tangle.DeleteAddressFromBadger(storedTx.Tx.Address, txHashBytesToDelete)
+		tangle.DeleteTagFromBadger(storedTx.Tx.Tag, txHashBytesToDelete)
+		tangle.DeleteApproversFromBadger(txHashBytesToDelete)
+		tangle.DeleteTransactionFromBadger(txHashBytesToDelete)
 	}
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))

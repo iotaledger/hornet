@@ -165,10 +165,8 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 }
 
 // GetStoredTransactionOrNil returns a transaction object without accessing the cache layer.
-func GetStoredTransactionOrNil(transactionHash trinary.Hash) *hornet.Transaction {
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
-
-	storedTx := txStorage.LoadObjectFromBadger(txHash)
+func GetStoredTransactionOrNil(txHashBytes []byte) *hornet.Transaction {
+	storedTx := txStorage.LoadObjectFromBadger(txHashBytes)
 	if storedTx == nil {
 		return nil
 	}
@@ -257,10 +255,9 @@ func DeleteTransaction(transactionHash trinary.Hash) {
 }
 
 // DeleteTransactionFromBadger deletes the transaction and metadata from the persistence layer without accessing the cache.
-func DeleteTransactionFromBadger(transactionHash trinary.Hash) {
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
-	txStorage.DeleteEntryFromBadger(txHash)
-	metadataStorage.DeleteEntryFromBadger(txHash)
+func DeleteTransactionFromBadger(txHashBytes []byte) {
+	txStorage.DeleteEntryFromBadger(txHashBytes)
+	metadataStorage.DeleteEntryFromBadger(txHashBytes)
 }
 
 func ShutdownTransactionStorage() {

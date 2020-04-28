@@ -34,6 +34,16 @@ func databaseKeyForBundleTransaction(bundleHash trinary.Hash, txHash trinary.Has
 	return append(result, trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
+func databaseKeyForBundleTransactionTxHashBytes(bundleHash trinary.Hash, txHashBytes []byte, isTail bool) []byte {
+	var isTailByte byte
+	if isTail {
+		isTailByte = BundleTxIsTail
+	}
+
+	result := append(databaseKeyPrefixForBundleHash(bundleHash), isTailByte)
+	return append(result, txHashBytes...)
+}
+
 func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	bundleTx := &BundleTransaction{
 		BundleHash: make([]byte, 49),
@@ -225,8 +235,8 @@ func DeleteBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Ha
 }
 
 // DeleteBundleTransactionFromBadger deletes the bundle transaction from the persistence layer without accessing the cache.
-func DeleteBundleTransactionFromBadger(bundleHash trinary.Hash, transactionHash trinary.Hash, isTail bool) {
-	bundleTransactionsStorage.DeleteEntryFromBadger(databaseKeyForBundleTransaction(bundleHash, transactionHash, isTail))
+func DeleteBundleTransactionFromBadger(bundleHash trinary.Hash, txHashBytes []byte, isTail bool) {
+	bundleTransactionsStorage.DeleteEntryFromBadger(databaseKeyForBundleTransactionTxHashBytes(bundleHash, txHashBytes, isTail))
 }
 
 func ShutdownBundleTransactionsStorage() {
