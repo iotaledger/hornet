@@ -99,20 +99,20 @@ func (c *CachedTransaction) Release(force ...bool) {
 	c.metadata.Release(force...)
 }
 
-func transactionFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func transactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	tx := &hornet.Transaction{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
-	return tx, nil, len(key)
+	return tx, len(key), nil
 }
 
-func metadataFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func metadataFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	tx := &hornet.TransactionMetadata{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
-	return tx, nil, len(key)
+	return tx, len(key), nil
 }
 
 func GetTransactionStorageSize() int {

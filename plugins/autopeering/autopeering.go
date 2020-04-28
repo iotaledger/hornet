@@ -145,7 +145,7 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 			return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
 		}
 
-		publicKey, err, _ := ed25519.PublicKeyFromBytes(pubKey)
+		publicKey, _, err := ed25519.PublicKeyFromBytes(pubKey)
 		if err != nil {
 			return nil, err
 		}

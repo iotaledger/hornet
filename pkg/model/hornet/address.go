@@ -30,10 +30,10 @@ func (a *Address) ObjectStorageKey() []byte {
 	return append(a.Address, a.TxHash...)
 }
 
-func (a *Address) ObjectStorageValue() (data []byte) {
+func (a *Address) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (a *Address) UnmarshalObjectStorageValue(_ []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (a *Address) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }

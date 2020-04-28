@@ -31,14 +31,14 @@ func (c *CachedTag) GetTag() *hornet.Tag {
 	return c.Get().(*hornet.Tag)
 }
 
-func tagsFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func tagsFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	tag := &hornet.Tag{
 		Tag:    make([]byte, 17),
 		TxHash: make([]byte, 49),
 	}
 	copy(tag.Tag, key[:17])
 	copy(tag.TxHash, key[17:])
-	return tag, nil, 66
+	return tag, 66, nil
 }
 
 func GetTagsStorageSize() int {

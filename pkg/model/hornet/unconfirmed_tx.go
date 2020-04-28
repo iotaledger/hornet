@@ -36,10 +36,10 @@ func (t *UnconfirmedTx) ObjectStorageKey() []byte {
 	return append(key, t.TxHash...)
 }
 
-func (t *UnconfirmedTx) ObjectStorageValue() (data []byte) {
+func (t *UnconfirmedTx) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (t *UnconfirmedTx) UnmarshalObjectStorageValue(_ []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (t *UnconfirmedTx) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }

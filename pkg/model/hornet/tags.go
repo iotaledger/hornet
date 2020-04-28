@@ -29,10 +29,10 @@ func (t *Tag) ObjectStorageKey() []byte {
 	return append(t.Tag, t.TxHash...)
 }
 
-func (t *Tag) ObjectStorageValue() (data []byte) {
+func (t *Tag) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (t *Tag) UnmarshalObjectStorageValue(_ []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (t *Tag) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }
