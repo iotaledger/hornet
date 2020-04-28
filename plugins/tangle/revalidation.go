@@ -135,24 +135,21 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 			log.Infof("analyzed %d transactions", txCounter)
 		}
 
-		cachedTxMeta := tangle.GetCachedTransactionMetadataOrNil(txHashBytes)
+		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytes)
 
 		// delete transaction if no metadata
-		if cachedTxMeta == nil {
+		if storedTxMeta == nil {
 			txsToDelete[trinary.MustBytesToTrytes(txHashBytes, 81)] = struct{}{}
 			return
 		}
-		defer cachedTxMeta.Release(true) // tx meta -1
-
-		txMeta := cachedTxMeta.GetMetadata()
 
 		// not solid
-		if !txMeta.IsSolid() {
+		if !storedTxMeta.IsSolid() {
 			txsToDelete[trinary.MustBytesToTrytes(txHashBytes, 81)] = struct{}{}
 			return
 		}
 
-		if confirmed, by := txMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
+		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
 			txsToDelete[trinary.MustBytesToTrytes(txHashBytes, 81)] = struct{}{}
 			return
 		}
@@ -172,19 +169,17 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 			log.Infof("reverting (this might take a while)...%d/%d (%d%%)", int(deletionCounter), len(txsToDelete), percentage)
 		}
 
-		cachedTx := tangle.GetCachedTransactionOrNil(txHashToDelete)
-		if cachedTx == nil {
+		storedTx := tangle.GetStoredTransactionOrNil(txHashToDelete)
+		if storedTx == nil {
 			continue
 		}
-		tx := cachedTx.GetTransaction()
-		tangle.DeleteBundleTransaction(tx.Tx.Bundle, txHashToDelete, true)
-		tangle.DeleteBundleTransaction(tx.Tx.Bundle, txHashToDelete, false)
+		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHashToDelete, true)
+		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHashToDelete, false)
 		tangle.DeleteBundle(txHashToDelete)
-		tangle.DeleteAddress(tx.Tx.Address, txHashToDelete)
-		tangle.DeleteTag(tx.Tx.Tag, txHashToDelete)
+		tangle.DeleteAddress(storedTx.Tx.Address, txHashToDelete)
+		tangle.DeleteTag(storedTx.Tx.Tag, txHashToDelete)
 		tangle.DeleteApprovers(txHashToDelete)
 		tangle.DeleteTransaction(txHashToDelete)
-		cachedTx.Release(true)
 	}
 
 	// flush object storage

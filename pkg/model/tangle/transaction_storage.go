@@ -36,11 +36,6 @@ type CachedTransaction struct {
 	metadata objectstorage.CachedObject
 }
 
-// Cached Object for metadata.
-type CachedMetadata struct {
-	objectstorage.CachedObject
-}
-
 type CachedTransactions []*CachedTransaction
 
 // tx +1
@@ -65,10 +60,6 @@ func (c *CachedTransaction) GetTransaction() *hornet.Transaction {
 
 func (c *CachedTransaction) GetMetadata() *hornet.TransactionMetadata {
 	return c.metadata.Get().(*hornet.TransactionMetadata)
-}
-
-func (c *CachedMetadata) GetMetadata() *hornet.TransactionMetadata {
-	return c.Get().(*hornet.TransactionMetadata)
 }
 
 // tx +1
@@ -173,16 +164,24 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 	}
 }
 
-// GetCachedTransactionMetadataOrNil returns the metadata for a transaction hash or nil if it doesn't exist.
-// txHash must be in binary representation.
-// tx meta +1
-func GetCachedTransactionMetadataOrNil(txHashBytes []byte) *CachedMetadata {
-	cachedMeta := metadataStorage.Load(txHashBytes) // tx meta +1
-	if !cachedMeta.Exists() {
-		cachedMeta.Release(true) // tx meta -1
+// GetStoredTransactionOrNil returns a transaction object without accessing the cache layer.
+func GetStoredTransactionOrNil(transactionHash trinary.Hash) *hornet.Transaction {
+	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+
+	storedTx := txStorage.LoadObjectFromBadger(txHash)
+	if storedTx == nil {
 		return nil
 	}
-	return &CachedMetadata{CachedObject: cachedMeta}
+	return storedTx.(*hornet.Transaction)
+}
+
+// GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
+func GetStoredMetadataOrNil(txHashBytes []byte) *hornet.TransactionMetadata {
+	storedMeta := metadataStorage.LoadObjectFromBadger(txHashBytes)
+	if storedMeta == nil {
+		return nil
+	}
+	return storedMeta.(*hornet.TransactionMetadata)
 }
 
 // tx +-0
