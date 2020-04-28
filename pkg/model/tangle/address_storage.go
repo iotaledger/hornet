@@ -111,6 +111,11 @@ func DeleteAddress(address trinary.Hash, txHash trinary.Hash) {
 	addressesStorage.Delete(append(trinary.MustTrytesToBytes(address)[:49], trinary.MustTrytesToBytes(txHash)[:49]...))
 }
 
+// DeleteAddressFromBadger deletes the address from the persistence layer without accessing the cache.
+func DeleteAddressFromBadger(address trinary.Hash, txHash trinary.Hash) {
+	addressesStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(address)[:49], trinary.MustTrytesToBytes(txHash)[:49]...))
+}
+
 func ShutdownAddressStorage() {
 	addressesStorage.Shutdown()
 }

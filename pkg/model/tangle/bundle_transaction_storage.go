@@ -224,6 +224,11 @@ func DeleteBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Ha
 	bundleTransactionsStorage.Delete(databaseKeyForBundleTransaction(bundleHash, transactionHash, isTail))
 }
 
+// DeleteBundleTransactionFromBadger deletes the bundle transaction from the persistence layer without accessing the cache.
+func DeleteBundleTransactionFromBadger(bundleHash trinary.Hash, transactionHash trinary.Hash, isTail bool) {
+	bundleTransactionsStorage.DeleteEntryFromBadger(databaseKeyForBundleTransaction(bundleHash, transactionHash, isTail))
+}
+
 func ShutdownBundleTransactionsStorage() {
 	bundleTransactionsStorage.Shutdown()
 }
