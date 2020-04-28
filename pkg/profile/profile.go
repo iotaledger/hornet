@@ -189,7 +189,9 @@ var Profile8GB = &Profile{
 		CompactLevel0OnClose:    false,
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
-		MaxCacheSize:            200000000,
+		MaxCacheSize:            0,
+		MaxBfCacheSize:          50000,
+		LoadBloomsOnOpen:        false,
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
@@ -310,7 +312,9 @@ var Profile4GB = &Profile{
 		CompactLevel0OnClose:    false,
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
-		MaxCacheSize:            100000000,
+		MaxCacheSize:            0,
+		MaxBfCacheSize:          25000,
+		LoadBloomsOnOpen:        false,
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
@@ -431,7 +435,9 @@ var Profile2GB = &Profile{
 		CompactLevel0OnClose:    false,
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
-		MaxCacheSize:            50000000,
+		MaxCacheSize:            0,
+		MaxBfCacheSize:          10000,
+		LoadBloomsOnOpen:        false,
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        1073741823,
@@ -552,7 +558,9 @@ var Profile1GB = &Profile{
 		CompactLevel0OnClose:    false,
 		KeepL0InMemory:          false,
 		VerifyValueChecksum:     false,
-		MaxCacheSize:            50000000,
+		MaxCacheSize:            0,
+		MaxBfCacheSize:          5000,
+		LoadBloomsOnOpen:        false,
 		ZSTDCompressionLevel:    1,
 		CompressionType:         options.None,
 		ValueLogFileSize:        67108863,
@@ -614,6 +622,8 @@ type BadgerOpts struct {
 	KeepL0InMemory          bool                    `mapstructure:"keepL0InMemory"`
 	VerifyValueChecksum     bool                    `mapstructure:"verifyValueChecksum"`
 	MaxCacheSize            int64                   `mapstructure:"maxCacheSize"`
+	LoadBloomsOnOpen        bool                    `mapstructure:"loadBloomsOnOpen"`
+	MaxBfCacheSize          int64                   `mapstructure:"maxBfCacheSize"`
 	ZSTDCompressionLevel    int                     `mapstructure:"ZSTDCompressionLevel"`
 	CompressionType         options.CompressionType `mapstructure:"CompressionType"`
 	ValueLogFileSize        int64                   `mapstructure:"valueLogFileSize"`

@@ -64,6 +64,8 @@ func GetHornetBadgerInstance() *badger.DB {
 			WithKeepL0InMemory(badgerOpts.KeepL0InMemory).
 			WithVerifyValueChecksum(badgerOpts.VerifyValueChecksum).
 			WithMaxCacheSize(badgerOpts.MaxCacheSize).
+			WithMaxBfCacheSize(badgerOpts.MaxBfCacheSize).
+			WithLoadBloomsOnOpen(badgerOpts.LoadBloomsOnOpen).
 			WithZSTDCompressionLevel(badgerOpts.ZSTDCompressionLevel).
 			WithCompression(badgerOpts.CompressionType).
 			WithValueLogFileSize(badgerOpts.ValueLogFileSize).
