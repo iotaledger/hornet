@@ -143,9 +143,7 @@ func DeleteApproversFromBadger(txHashBytes []byte) {
 		return true
 	}, true, txHashBytes)
 
-	for _, approverToDelete := range approversToDelete {
-		approversStorage.DeleteEntryFromBadger(approverToDelete)
-	}
+	approversStorage.DeleteEntriesFromBadger(approversToDelete)
 }
 
 func ShutdownApproversStorage() {
