@@ -178,11 +178,19 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		if storedTx == nil {
 			continue
 		}
+		// No need to safely remove the transactions from the bundle,
+		// since reattachment txs confirmed by another milestone wouldn't be
+		// pruned anyway if they are confirmed before snapshot index.
 		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashBytesToDelete, true)
 		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashBytesToDelete, false)
 		tangle.DeleteBundleFromBadger(txHashBytesToDelete)
-		tangle.DeleteAddressFromBadger(storedTx.Tx.Address, txHashBytesToDelete)
+
+		// Delete the reference in the approvees
+		tangle.DeleteApproverFromBadger(storedTx.GetTrunk(), txHashBytesToDelete)
+		tangle.DeleteApproverFromBadger(storedTx.GetBranch(), txHashBytesToDelete)
+
 		tangle.DeleteTagFromBadger(storedTx.Tx.Tag, txHashBytesToDelete)
+		tangle.DeleteAddressFromBadger(storedTx.Tx.Address, txHashBytesToDelete)
 		tangle.DeleteApproversFromBadger(txHashBytesToDelete)
 		tangle.DeleteTransactionFromBadger(txHashBytesToDelete)
 	}
