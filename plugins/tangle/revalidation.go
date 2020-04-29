@@ -56,7 +56,7 @@ func revalidateDatabase() error {
 		return ErrSnapshotInfoMissing
 	}
 
-	latestMilestoneIndex := tangle.SearchLatestMilestoneIndex()
+	latestMilestoneIndex := tangle.SearchLatestMilestoneIndexInBadger()
 
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
