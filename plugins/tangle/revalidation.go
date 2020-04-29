@@ -7,7 +7,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/typeutils"
 )
 
@@ -99,24 +98,20 @@ func revalidateDatabase() error {
 // deletes milestones above the given snapshot's milestone index.
 func cleanMilestones(info *tangle.SnapshotInfo) {
 	milestonesToDelete := map[milestone.Index]struct{}{}
-	tangle.ForEachMilestone(func(cachedMs objectstorage.CachedObject) {
-		defer cachedMs.Release(true)
-		msIndex := cachedMs.Get().(*tangle.Milestone).Index
+
+	tangle.ForEachMilestoneIndex(func(msIndex milestone.Index) {
 		if msIndex > info.SnapshotIndex {
 			milestonesToDelete[msIndex] = struct{}{}
 		}
-	})
+	}, true)
 
 	for msIndex := range milestonesToDelete {
-		tangle.DeleteUnconfirmedTxs(msIndex)
+		tangle.DeleteUnconfirmedTxsFromBadger(msIndex)
 		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 			panic(err)
 		}
-		tangle.DeleteMilestone(msIndex)
+		tangle.DeleteMilestoneFromBadger(msIndex)
 	}
-
-	tangle.FlushUnconfirmedTxsStorage()
-	tangle.FlushMilestoneStorage()
 }
 
 // deletes all transactions (and their bundle, first seen tx, etc.) which are not confirmed,
