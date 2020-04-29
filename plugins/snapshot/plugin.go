@@ -38,15 +38,15 @@ var (
 	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
 	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
-	ErrSnapshotCreationFailed          = errors.New("creating snapshot failed: %v")
+	ErrSnapshotCreationFailed          = errors.New("creating snapshot failed")
 	ErrTargetIndexTooNew               = errors.New("snapshot target is too new.")
 	ErrTargetIndexTooOld               = errors.New("snapshot target is too old.")
 	ErrNotEnoughHistory                = errors.New("not enough history.")
 	ErrNoPruningNeeded                 = errors.New("no pruning needed.")
 	ErrPruningAborted                  = errors.New("pruning was aborted.")
-	ErrUnconfirmedTxInSubtangle        = errors.New("Unconfirmed tx in subtangle")
-	ErrInvalidBalance                  = errors.New("Invalid balance! Total does not match supply:")
-	ErrWrongCoordinatorAddressDatabase = errors.New("Configured coordinator address does not match database information")
+	ErrUnconfirmedTxInSubtangle        = errors.New("unconfirmed tx in subtangle")
+	ErrInvalidBalance                  = errors.New("invalid balance! total does not match supply:")
+	ErrWrongCoordinatorAddressDatabase = errors.New("configured coordinator address does not match database information")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone.Index)
@@ -93,7 +93,7 @@ func configure(plugin *node.Plugin) {
 		}
 
 		// Check the ledger state
-		tangle.GetAllLedgerBalances(nil)
+		tangle.GetLedgerStateForLSMI(nil)
 		return
 	}
 
@@ -165,8 +165,11 @@ func run(_ *node.Plugin) {
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
 					localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
-					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, shutdownSignal); err != nil {
-						log.Warnf(ErrSnapshotCreationFailed.Error(), err)
+					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
+						if errors.Is(err, ErrCritical) {
+							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
+						}
+						log.Warn(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
 					}
 				}
 

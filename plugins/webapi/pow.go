@@ -35,11 +35,15 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	mwm := config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
+	}
+
+	// mwm is an optional parameter
+	if query.MinWeightMagnitude == 0 {
+		query.MinWeightMagnitude = mwm
 	}
 
 	// Reject unnecessarily high MWM
@@ -58,7 +62,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
 	if err != nil {
-		e.Error = fmt.Sprint(err)
+		e.Error = err.Error()
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -103,7 +107,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// Convert tx to trytes
 		trytes, err := transaction.TransactionToTrytes(&txs[i])
 		if err != nil {
-			e.Error = fmt.Sprint(err)
+			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
@@ -111,7 +115,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// Do the PoW
 		txs[i].Nonce, err = powFunc(trytes, query.MinWeightMagnitude)
 		if err != nil {
-			e.Error = fmt.Sprint(err)
+			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
@@ -119,7 +123,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// Convert tx to trits
 		txTrits, err := transaction.TransactionToTrits(&txs[i])
 		if err != nil {
-			e.Error = fmt.Sprint(err)
+			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
@@ -132,7 +136,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 		// Check tx
 		if !transaction.HasValidNonce(&txs[i], uint64(query.MinWeightMagnitude)) {
-			e.Error = fmt.Sprint(err)
+			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}

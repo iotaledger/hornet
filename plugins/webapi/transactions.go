@@ -27,9 +27,8 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &BroadcastTransactions{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -42,7 +41,7 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, trytes := range query.Trytes {
 		if err := trinary.ValidTrytes(trytes); err != nil {
-			e.Error = "Trytes invalid"
+			e.Error = err.Error()
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
@@ -63,9 +62,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &FindTransactions{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}

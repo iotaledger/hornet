@@ -43,6 +43,8 @@ func CreateMerkleTreeFile(filePath string, seed trinary.Hash, securityLvl int, d
 		return err
 	}
 
+	fmt.Printf("merkle tree root: %v\n", mt.Root)
+
 	return nil
 }
 

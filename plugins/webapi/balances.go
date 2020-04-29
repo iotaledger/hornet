@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,9 +21,8 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &GetBalances{}
 
-	err := mapstructure.Decode(i, query)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
@@ -30,12 +30,13 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	if len(query.Addresses) == 0 {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
+		return
 	}
 
 	for _, addr := range query.Addresses {
 		// Check if address is valid
 		if err := address.ValidAddress(addr); err != nil {
-			e.Error = "Invalid address: " + addr
+			e.Error = fmt.Sprintf("%v: %v", err, addr)
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
@@ -45,7 +46,7 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	defer tangle.ReadUnlockLedger()
 
 	if !tangle.IsNodeSynced() {
-		e.Error = "Node not synced"
+		e.Error = ErrNodeNotSync.Error()
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
