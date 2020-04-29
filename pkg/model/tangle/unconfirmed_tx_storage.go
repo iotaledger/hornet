@@ -122,6 +122,21 @@ func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 	}, key)
 }
 
+// DeleteUnconfirmedTxsFromBadger deletes unconfirmed transactions without accessing the cache.
+func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
+
+	msIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
+
+	var txHashes [][]byte
+	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
+		txHashes = append(txHashes, key)
+		return true
+	}, true, msIndexBytes)
+
+	unconfirmedTxStorage.DeleteEntriesFromBadger(txHashes)
+}
+
 func ShutdownUnconfirmedTxsStorage() {
 	unconfirmedTxStorage.Shutdown()
 }
