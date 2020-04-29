@@ -129,12 +129,23 @@ func SearchLatestMilestoneIndexInBadger() milestone.Index {
 
 type MilestoneConsumer func(cachedMs objectstorage.CachedObject)
 
+// MilestoneIndexConsumer consumes the given index during looping though all milestones in the persistence layer.
+type MilestoneIndexConsumer func(index milestone.Index)
+
 func ForEachMilestone(consumer MilestoneConsumer) {
 	milestoneStorage.ForEach(func(key []byte, cachedMs objectstorage.CachedObject) bool {
 		defer cachedMs.Release(true) // tx -1
 		consumer(cachedMs.Retain())
 		return true
 	})
+}
+
+// ForEachMilestoneIndex loops though all milestones in the persistence layer.
+func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
+	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
+		consumer(milestoneIndexFromDatabaseKey(key))
+		return true
+	}, skipCache)
 }
 
 // milestone +1
