@@ -30,20 +30,20 @@ func (r *invalidBundleReference) ObjectStorageKey() []byte {
 	return r.hashBytes
 }
 
-func (r *invalidBundleReference) ObjectStorageValue() (data []byte) {
+func (r *invalidBundleReference) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (r *invalidBundleReference) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (r *invalidBundleReference) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }
 
-func invalidBundleFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func invalidBundleFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	invalidBndl := &invalidBundleReference{
 		hashBytes: make([]byte, len(key)),
 	}
 	copy(invalidBndl.hashBytes, key)
-	return invalidBndl, nil, len(key)
+	return invalidBndl, len(key), nil
 }
 
 func configureRefsAnInvalidBundleStorage() {

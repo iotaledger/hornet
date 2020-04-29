@@ -24,11 +24,11 @@ func databaseKeyForBundle(tailTxHash trinary.Hash) []byte {
 	return trinary.MustTrytesToBytes(tailTxHash)[:49]
 }
 
-func bundleFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func bundleFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	return &Bundle{
 		tailTx: trinary.MustBytesToTrytes(key[:49], 81),
 		txs:    make(map[trinary.Hash]struct{}),
-	}, nil, 49
+	}, 49, nil
 }
 
 func GetBundleStorageSize() int {
@@ -103,7 +103,7 @@ func (bundle *Bundle) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
 
 	/*
 		 1 byte  	   				metadata
@@ -141,7 +141,7 @@ func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (err error, consu
 		bundle.ledgerChanges[address] = balance
 	}
 
-	return nil, offset
+	return offset, nil
 }
 
 // Cached Object
@@ -198,6 +198,11 @@ func ContainsBundle(tailTxHash trinary.Hash) bool {
 // bundle +-0
 func DeleteBundle(tailTxHash trinary.Hash) {
 	bundleStorage.Delete(databaseKeyForBundle(tailTxHash))
+}
+
+// DeleteBundleFromBadger deletes the bundle from the persistence layer without accessing the cache.
+func DeleteBundleFromBadger(tailTxHashBytes []byte) {
+	bundleStorage.DeleteEntryFromBadger(tailTxHashBytes)
 }
 
 func ShutdownBundleStorage() {

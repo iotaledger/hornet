@@ -72,7 +72,7 @@ func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex mil
 	m.Lock()
 	defer m.Unlock()
 
-	if (confirmed != m.metadata.HasFlag(TransactionMetadataConfirmed)) || (m.confirmationIndex != confirmationIndex) {
+	if confirmed != m.metadata.HasFlag(TransactionMetadataConfirmed) {
 		if confirmed {
 			m.confirmationIndex = confirmationIndex
 		} else {
@@ -129,7 +129,7 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -143,5 +143,5 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (err erro
 	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
 	m.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
 
-	return nil, 10
+	return 10, nil
 }

@@ -34,7 +34,17 @@ func databaseKeyForBundleTransaction(bundleHash trinary.Hash, txHash trinary.Has
 	return append(result, trinary.MustTrytesToBytes(txHash)[:49]...)
 }
 
-func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func databaseKeyForBundleTransactionTxHashBytes(bundleHash trinary.Hash, txHashBytes []byte, isTail bool) []byte {
+	var isTailByte byte
+	if isTail {
+		isTailByte = BundleTxIsTail
+	}
+
+	result := append(databaseKeyPrefixForBundleHash(bundleHash), isTailByte)
+	return append(result, txHashBytes...)
+}
+
+func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	bundleTx := &BundleTransaction{
 		BundleHash: make([]byte, 49),
 		IsTail:     key[49] == BundleTxIsTail,
@@ -43,7 +53,7 @@ func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, error, 
 	copy(bundleTx.BundleHash, key[:49])
 	copy(bundleTx.TxHash, key[50:])
 
-	return bundleTx, nil, 99
+	return bundleTx, 99, nil
 }
 
 func GetBundleTransactionsStorageSize() int {
@@ -103,12 +113,12 @@ func (bt *BundleTransaction) ObjectStorageKey() []byte {
 	return append(result, bt.TxHash...)
 }
 
-func (bt *BundleTransaction) ObjectStorageValue() (data []byte) {
+func (bt *BundleTransaction) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (bt *BundleTransaction) UnmarshalObjectStorageValue(_ []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (bt *BundleTransaction) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }
 
 // Cached Object
@@ -222,6 +232,11 @@ func StoreBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Has
 // bundleTx +-0
 func DeleteBundleTransaction(bundleHash trinary.Hash, transactionHash trinary.Hash, isTail bool) {
 	bundleTransactionsStorage.Delete(databaseKeyForBundleTransaction(bundleHash, transactionHash, isTail))
+}
+
+// DeleteBundleTransactionFromBadger deletes the bundle transaction from the persistence layer without accessing the cache.
+func DeleteBundleTransactionFromBadger(bundleHash trinary.Hash, txHashBytes []byte, isTail bool) {
+	bundleTransactionsStorage.DeleteEntryFromBadger(databaseKeyForBundleTransactionTxHashBytes(bundleHash, txHashBytes, isTail))
 }
 
 func ShutdownBundleTransactionsStorage() {

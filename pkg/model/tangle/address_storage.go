@@ -30,14 +30,14 @@ func (c *CachedAddress) GetAddress() *hornet.Address {
 	return c.Get().(*hornet.Address)
 }
 
-func addressFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func addressFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	address := &hornet.Address{
 		Address: make([]byte, 49),
 		TxHash:  make([]byte, 49),
 	}
 	copy(address.Address, key[:49])
 	copy(address.TxHash, key[49:])
-	return address, nil, 98
+	return address, 98, nil
 }
 
 func GetAddressesStorageSize() int {
@@ -109,6 +109,11 @@ func StoreAddress(address trinary.Hash, txHash trinary.Hash) *CachedAddress {
 // address +-0
 func DeleteAddress(address trinary.Hash, txHash trinary.Hash) {
 	addressesStorage.Delete(append(trinary.MustTrytesToBytes(address)[:49], trinary.MustTrytesToBytes(txHash)[:49]...))
+}
+
+// DeleteAddressFromBadger deletes the address from the persistence layer without accessing the cache.
+func DeleteAddressFromBadger(address trinary.Hash, txHashBytes []byte) {
+	addressesStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(address)[:49], txHashBytes...))
 }
 
 func ShutdownAddressStorage() {

@@ -25,10 +25,10 @@ func (sa *SpentAddress) ObjectStorageKey() []byte {
 	return sa.Address
 }
 
-func (sa *SpentAddress) ObjectStorageValue() (data []byte) {
+func (sa *SpentAddress) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (sa *SpentAddress) UnmarshalObjectStorageValue(_ []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (sa *SpentAddress) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }

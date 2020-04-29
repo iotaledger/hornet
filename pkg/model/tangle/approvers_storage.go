@@ -30,14 +30,14 @@ func (c *CachedApprover) GetApprover() *hornet.Approver {
 	return c.Get().(*hornet.Approver)
 }
 
-func approversFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func approversFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	approver := &hornet.Approver{
 		TxHash:       make([]byte, 49),
 		ApproverHash: make([]byte, 49),
 	}
 	copy(approver.TxHash, key[:49])
 	copy(approver.ApproverHash, key[49:])
-	return approver, nil, 98
+	return approver, 98, nil
 }
 
 func GetApproversStorageSize() int {
@@ -117,6 +117,11 @@ func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 
+// DeleteApproverFromBadger deletes the approver from the persistence layer without accessing the cache.
+func DeleteApproverFromBadger(transactionHash trinary.Hash, approverHashBytes []byte) {
+	approversStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
+}
+
 // approvers +-0
 func DeleteApprovers(transactionHash trinary.Hash) {
 
@@ -127,6 +132,20 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 		cachedObject.Release(true)
 		return true
 	}, txHash)
+}
+
+// DeleteApproversFromBadger deletes the approvers from the persistence layer without accessing the cache.
+func DeleteApproversFromBadger(txHashBytes []byte) {
+
+	var approversToDelete [][]byte
+	approversStorage.ForEachKeyOnly(func(key []byte) bool {
+		approversToDelete = append(approversToDelete, key)
+		return true
+	}, true, txHashBytes)
+
+	for _, approverToDelete := range approversToDelete {
+		approversStorage.DeleteEntryFromBadger(approverToDelete)
+	}
 }
 
 func ShutdownApproversStorage() {

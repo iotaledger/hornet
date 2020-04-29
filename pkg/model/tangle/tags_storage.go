@@ -31,14 +31,14 @@ func (c *CachedTag) GetTag() *hornet.Tag {
 	return c.Get().(*hornet.Tag)
 }
 
-func tagsFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func tagsFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	tag := &hornet.Tag{
 		Tag:    make([]byte, 17),
 		TxHash: make([]byte, 49),
 	}
 	copy(tag.Tag, key[:17])
 	copy(tag.TxHash, key[17:])
-	return tag, nil, 66
+	return tag, 66, nil
 }
 
 func GetTagsStorageSize() int {
@@ -110,6 +110,11 @@ func StoreTag(txTag trinary.Trytes, txHash trinary.Hash) *CachedTag {
 // tag +-0
 func DeleteTag(txTag trinary.Trytes, txHash trinary.Hash) {
 	tagsStorage.Delete(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], trinary.MustTrytesToBytes(txHash)[:49]...))
+}
+
+// DeleteTagFromBadger deletes the tag from the persistence layer without accessing the cache.
+func DeleteTagFromBadger(txTag trinary.Trytes, txHashBytes []byte) {
+	tagsStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], txHashBytes...))
 }
 
 // tag +-0

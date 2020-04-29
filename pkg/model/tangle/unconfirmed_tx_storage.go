@@ -32,13 +32,13 @@ func (c *CachedUnconfirmedTx) GetUnconfirmedTx() *hornet.UnconfirmedTx {
 	return c.Get().(*hornet.UnconfirmedTx)
 }
 
-func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	unconfirmedTx := &hornet.UnconfirmedTx{
 		LatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(key[:4])),
 		TxHash:               make([]byte, 49),
 	}
 	copy(unconfirmedTx.TxHash, key[4:])
-	return unconfirmedTx, nil, 53
+	return unconfirmedTx, 53, nil
 }
 
 func GetUnconfirmedTxStorageSize() int {

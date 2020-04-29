@@ -88,7 +88,7 @@ func (tx *Transaction) ObjectStorageValue() (data []byte) {
 	return tx.RawBytes
 }
 
-func (tx *Transaction) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+func (tx *Transaction) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
 
 	/*
 		x bytes RawBytes
@@ -105,5 +105,5 @@ func (tx *Transaction) UnmarshalObjectStorageValue(data []byte) (err error, cons
 
 	tx.timestamp = getTimestampFromTx(transaction)
 
-	return nil, len(data)
+	return len(data), nil
 }

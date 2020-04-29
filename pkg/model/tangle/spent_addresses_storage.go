@@ -44,12 +44,12 @@ func (c *CachedSpentAddress) GetSpentAddress() *hornet.SpentAddress {
 	return c.Get().(*hornet.SpentAddress)
 }
 
-func spentAddressFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func spentAddressFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	sa := &hornet.SpentAddress{
 		Address: make([]byte, 49),
 	}
 	copy(sa.Address, key[:49])
-	return sa, nil, 49
+	return sa, 49, nil
 }
 
 func GetSpentAddressesStorageSize() int {
