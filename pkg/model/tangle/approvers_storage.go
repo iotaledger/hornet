@@ -117,6 +117,11 @@ func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 
+// DeleteApproverFromBadger deletes the approver from the persistence layer without accessing the cache.
+func DeleteApproverFromBadger(transactionHash trinary.Hash, approverHashBytes []byte) {
+	approversStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
+}
+
 // approvers +-0
 func DeleteApprovers(transactionHash trinary.Hash) {
 
