@@ -72,7 +72,7 @@ func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex mil
 	m.Lock()
 	defer m.Unlock()
 
-	if (confirmed != m.metadata.HasFlag(TransactionMetadataConfirmed)) || (m.confirmationIndex != confirmationIndex) {
+	if confirmed != m.metadata.HasFlag(TransactionMetadataConfirmed) {
 		if confirmed {
 			m.confirmationIndex = confirmationIndex
 		} else {
