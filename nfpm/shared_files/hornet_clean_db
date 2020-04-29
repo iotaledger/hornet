@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import os
+import shutil
+import sys
+import errno
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-m", "--mainnet",
+                  action="store_false", dest="comnet", default=True,
+                  help="Enable MainNet Dashboard (default).")
+parser.add_option("-c", "--comnet",
+                  action="store_true", dest="comnet", default=False,
+                  help="Enable ComNet Dashboard.")
+(options, args) = parser.parse_args()
+
+if os.geteuid() != 0:
+    print("You need root permissions to do this!")
+    sys.exit(1)
+
+status = os.system('systemctl is-active --quiet hornet') # will return 0 for active else inactive.
+if not status:
+    try:
+        print("Stopping hornet.service.")
+        os.system("systemctl stop hornet")
+    except:
+        print("Error while stopping hornet systemd service.")
+
+if options.comnet:
+    db_kind = "comnet"
+else:
+    db_kind = "mainnet"
+
+db_path = "/var/lib/hornet/" + db_kind + "db"
+
+exists = os.path.isdir(db_path)
+
+if not exists:
+    print("Hornet " + db_kind+ "db is already clean. Nothing to do.")
+else:
+    try:
+        shutil.rmtree(db_path)
+        print("Hornet " + db_kind + "db has been cleaned.")
+    except IOError as e:
+        errorn, strerror = e.args
+        if errorn == errno.EACCES:
+            print("You need root permissions to do this!")
+            sys.exit(1)
+
+if not status: # service was running, restart it
+    print("Starting hornet.service.")
+    os.system('systemctl start hornet')

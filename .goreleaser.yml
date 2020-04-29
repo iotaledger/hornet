@@ -143,6 +143,9 @@ nfpms:
       - rpm
     bindir: /usr/bin
     files:
+      "nfpm/shared_files/hornet_clean_export": "/usr/bin/hornet_clean_export"
+      "nfpm/shared_files/hornet_dashboard": "/usr/bin/hornet_dashboard"
+      "nfpm/shared_files/hornet_clean_db": "/usr/bin/hornet_clean_db"
       "nfpm/shared_files/hornet.service": "/lib/systemd/system/hornet.service"
     config_files:
       "config.json": "/var/lib/hornet/config.json"

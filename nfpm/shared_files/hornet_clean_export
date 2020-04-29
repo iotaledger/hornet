@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import os
+import shutil
+import sys
+import errno
+
+if os.geteuid() != 0:
+    print("You need root permissions to do this!")
+    sys.exit(1)
+
+status = os.system('systemctl is-active --quiet hornet') # will return 0 for active else inactive.
+if not status:
+    try:
+        print("Stopping hornet.service.")
+        os.system("systemctl stop hornet")
+    except:
+        print("Error while stopping hornet systemd service.")
+
+ss_path = "/var/lib/hornet/export.bin"
+
+exists = os.path.isdir(ss_path)
+
+if not exists:
+    print("Hornet export.bin is already clean. Nothing to do.")
+else:
+    try:
+        shutil.rmtree(ss_path)
+        print("Hornet export.bin has been cleaned.")
+    except IOError as e:
+        errorn, strerror = e.args
+        if errorn == errno.EACCES:
+            print("You need root permissions to do this!")
+            sys.exit(1)
+
+if not status: # service was running, restart it
+    print("Starting hornet.service.")
+    os.system('systemctl start hornet')

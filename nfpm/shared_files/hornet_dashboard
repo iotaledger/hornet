@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import os
+import json
+import errno
+import sys
+import subprocess
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("--off", action="store_false", dest="on", default=False, help="Disable Hornet Dashboard.")
+parser.add_option("--on", action="store_true", dest="on", default=True, help="Enable Hornet Dashboard (default).")
+parser.add_option("-m", "--mainnet", action="store_false", dest="comnet", default=True, help="MainNet (default).")
+parser.add_option("-c", "--comnet", action="store_true", dest="comnet", default=False, help="ComNet.")
+
+(options, args) = parser.parse_args()
+
+if os.geteuid() != 0:
+    print("You need root permissions to do this!")
+    sys.exit(1)
+
+status = os.system('systemctl is-active --quiet hornet') # will return 0 for active else inactive.
+if not status:
+    try:
+        print("Stopping hornet.service.")
+        os.system("systemctl stop hornet")
+    except:
+        print("Error while stopping hornet systemd service.")
+
+if options.comnet:
+    config_file = "/var/lib/hornet/config_comnet.json"
+else:
+    config_file = "/var/lib/hornet/config.json"
+
+lines = ""
+with open(config_file, "r") as f:
+    for line in f.readlines():
+        lines += line.replace("\n", "")
+
+config_json = json.loads(lines)
+
+if options.on:
+    config_json["dashboard"]["bindAddress"] = "0.0.0.0:8081"
+else:
+    config_json["dashboard"]["bindAddress"] = "localhost:8081"
+
+try:
+    f = open(config_file, "w")
+    f.write(json.dumps(config_json, indent=1))
+    f.close()
+
+    if options.comnet:
+        if options.on:
+            print("Hornet ComNet Dashboard was enabled.")
+        else:
+            print("Hornet ComNet Dashboard was disabled.")
+    else:
+        if options.on:
+            print("Hornet MainNet Dashboard was enabled.")
+        else:
+            print("Hornet MainNet Dashboard was disabled.")
+
+except IOError as e:
+    errorn, strerror = e.args
+    if errorn == errno.EACCES:
+        print("You need root permissions to do this!")
+        sys.exit(1)
+
+if not status: # service was running, restart it
+    print("Restarting hornet.service.\nIf Hornet is loading snapshot, it might take a while before the Dashboard is available. Please be patient.\nIf you note systemd errors, stop the service, run hornet_clean_db and hornet_clean_export and restart the service.")
+    os.system('systemctl start hornet')
+

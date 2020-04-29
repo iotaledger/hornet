@@ -22,4 +22,8 @@ abort-upgrade | abort-remove | abort-deconfigure) ;;
 	;;
 esac
 
+chmod +x /usr/bin/hornet_clean_export
+chmod +x /usr/bin/hornet_clean_db
+chmod +x /usr/bin/hornet_dashboard
+
 exit 0

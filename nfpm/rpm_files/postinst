@@ -16,4 +16,8 @@ EOF
     chmod 700 /var/lib/hornet
     chown hornet:hornet /var/lib/hornet
 
+    chmod +x /usr/bin/hornet_clean_export
+    chmod +x /usr/bin/hornet_clean_db
+    chmod +x /usr/bin/hornet_dashboard
+
 fi
