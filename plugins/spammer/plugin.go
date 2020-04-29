@@ -1,6 +1,7 @@
 package spammer
 
 import (
+	"fmt"
 	"runtime"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
+	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -72,15 +74,18 @@ func configure(plugin *node.Plugin) {
 
 func run(_ *node.Plugin) {
 
+	spammerCnt := atomic.NewInt32(0)
+
 	for i := 0; i < spammerWorkerCount; i++ {
-		daemon.BackgroundWorker("Spammer", func(shutdownSignal <-chan struct{}) {
-			log.Infof("Starting Spammer %d... done", i)
+		daemon.BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
+			spammerIndex := spammerCnt.Inc()
+			log.Infof("Starting Spammer %d... done", spammerIndex)
 
 			for {
 				select {
 				case <-shutdownSignal:
-					log.Infof("Stopping Spammer %d...", i)
-					log.Infof("Stopping Spammer %d... done", i)
+					log.Infof("Stopping Spammer %d...", spammerIndex)
+					log.Infof("Stopping Spammer %d... done", spammerIndex)
 					return
 				default:
 					doSpam(shutdownSignal)
