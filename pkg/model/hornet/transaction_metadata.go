@@ -61,6 +61,13 @@ func (m *TransactionMetadata) SetSolid(solid bool) {
 	}
 }
 
+func (m *TransactionMetadata) IsConfirmed() bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasFlag(TransactionMetadataConfirmed)
+}
+
 func (m *TransactionMetadata) GetConfirmed() (bool, milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()

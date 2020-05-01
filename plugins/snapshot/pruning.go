@@ -30,7 +30,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 			continue
 		}
 
-		if confirmed, _ := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+		if cachedTx.GetMetadata().IsConfirmed() {
 			// Tx was confirmed => skip
 			cachedTx.Release(true) // tx -1
 			continue

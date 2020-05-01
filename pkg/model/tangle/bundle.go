@@ -178,7 +178,7 @@ func (bundle *Bundle) IsConfirmed() bool {
 	// Check tail tx
 	cachedTailTx := bundle.GetTail() // tx +1
 	defer cachedTailTx.Release(true) // tx -1
-	tailConfirmed, _ := cachedTailTx.GetMetadata().GetConfirmed()
+	tailConfirmed := cachedTailTx.GetMetadata().IsConfirmed()
 
 	if tailConfirmed {
 		bundle.setConfirmed(true)
