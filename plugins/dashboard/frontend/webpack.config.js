@@ -49,7 +49,7 @@ module.exports = {
                     {
                         loader: 'ts-loader',
                         options: {
-                            getCustomTransformers: () => ({before: [statements()]})
+                            getCustomTransformers: () => ({ before: [statements()] })
                         }
                     }
                 ].filter(Boolean)
