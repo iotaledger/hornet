@@ -4,8 +4,13 @@ export enum WSMsgType {
     TipSelMetric,
     Tx,
     Ms,
-    NeighborStats,
+    PeerMetric,
     ConfirmedMsMetrics,
+    Vertex,
+    SolidInfo,
+    ConfirmedInfo,
+    MilestoneInfo,
+    TipInfo,
 }
 
 export interface WSMessage {
@@ -19,6 +24,10 @@ let handlers = {};
 
 export function registerHandler(msgTypeID: number, handler: DataHandler) {
     handlers[msgTypeID] = handler;
+}
+
+export function unregisterHandler(msgTypeID: number) {
+    delete handlers[msgTypeID];
 }
 
 export function connectWebSocket(path: string, onOpen, onClose, onError) {

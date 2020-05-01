@@ -82,8 +82,9 @@ func configure(plugin *node.Plugin) {
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
 
-	configureTipSelMetric()
 	configureLiveFeed()
+	configureVisualizer()
+	configureTipSelMetric()
 }
 
 func run(_ *node.Plugin) {
@@ -154,7 +155,11 @@ func run(_ *node.Plugin) {
 		log.Info("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
 
+	// run the message live feed
 	runLiveFeed()
+	// run the visualizer transaction feed
+	runVisualizer()
+	// run the tipselection feed
 	runTipSelMetricWorker()
 }
 
@@ -171,13 +176,30 @@ func getMilestoneTail(index milestone.Index) *tangle.CachedTransaction {
 }
 
 const (
+	// MsgTypeNodeStatus is the type of the NodeStatus message.
 	MsgTypeNodeStatus byte = iota
+	// MsgTypeTPSMetric is the type of the transactions per second (TPS) metric message.
 	MsgTypeTPSMetric
+	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
+	// MsgTypeTx is the type of the Tx message.
 	MsgTypeTx
+	// MsgTypeMs is the type of the Ms message.
 	MsgTypeMs
+	// MsgTypePeerMetric is the type of the PeerMetric message.
 	MsgTypePeerMetric
+	// MsgTypeConfirmedMsMetrics is the type of the ConfirmedMsMetrics message.
 	MsgTypeConfirmedMsMetrics
+	// MsgTypeVertex is the type of the Vertex message for the visualizer.
+	MsgTypeVertex
+	// MsgTypeSolidInfo is the type of the SolidInfo message for the visualizer.
+	MsgTypeSolidInfo
+	// MsgTypeConfirmedInfo is the type of the ConfirmedInfo message for the visualizer.
+	MsgTypeConfirmedInfo
+	// MsgTypeMilestoneInfo is the type of the MilestoneInfo message for the visualizer.
+	MsgTypeMilestoneInfo
+	// MsgTypeTipInfo is the type of the TipInfo message for the visualizer.
+	MsgTypeTipInfo
 )
 
 type msg struct {

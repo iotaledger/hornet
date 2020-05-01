@@ -58,12 +58,14 @@ func runLiveFeed() {
 
 	daemon.BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
+		defer tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		tangle.Events.LatestMilestoneChanged.Attach(notifyLMChanged)
+		defer tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
+
 		liveFeedWorkerPool.Start()
 		<-shutdownSignal
+
 		log.Info("Stopping Dashboard[TxUpdater] ...")
-		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
 		newTxRateLimiter.Stop()
 		liveFeedWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[TxUpdater] ... done")
