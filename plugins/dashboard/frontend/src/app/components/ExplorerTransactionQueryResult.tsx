@@ -110,8 +110,8 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                         tx &&
                         <React.Fragment>
                             <OverlayTrigger placement="bottom" overlay={tooltip_hash}>
-                                <CopyToClipboard text={hash} onCopy={() => { 
-                                    this.setState({copied_hash: true}); 
+                                <CopyToClipboard text={hash} onCopy={() => {
+                                    this.setState({copied_hash: true});
                                     const timer_hash = setTimeout(() => {
                                         this.setState({copied_hash: false});
                                     }, 1000);
@@ -123,8 +123,8 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                             </OverlayTrigger>
                             {' '}
                             <OverlayTrigger placement="bottom" overlay={tooltip_trytes}>
-                                <CopyToClipboard text={tx.raw_trytes} onCopy={() => { 
-                                    this.setState({copied_raw: true}); 
+                                <CopyToClipboard text={tx.raw_trytes} onCopy={() => {
+                                    this.setState({copied_raw: true});
                                     const timer_raw = setTimeout(() => {
                                         this.setState({copied_raw: false});
                                     }, 1000);
@@ -145,6 +145,13 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                         </span>
                                     }
                                 </Badge>
+                                {' '}
+                                {
+                                    tx.solid ?
+                                        <Badge variant="primary">Solid</Badge>
+                                        :
+                                        <Badge variant="light">Not solid</Badge>
+                                }
                                 {' '}
                                 {
                                     tx.is_milestone ?
@@ -229,7 +236,6 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                         }
                                     </ListGroup.Item>
                                     <ListGroup.Item>MWM: {tx.mwm}</ListGroup.Item>
-                                    <ListGroup.Item>Solid: {tx.solid ? 'Yes' : 'No'}</ListGroup.Item>
                                 </ListGroup>
                             </Col>
                         </Row>
