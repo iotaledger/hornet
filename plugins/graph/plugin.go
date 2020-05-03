@@ -49,14 +49,18 @@ var (
 
 // PageData struct for html template
 type PageData struct {
-	URI string
+	URI                string
+	ExplorerTxLink     string
+	ExplorerBundleLink string
 }
 
 func wrapHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
 			data := PageData{
-				URI: config.NodeConfig.GetString(config.CfgGraphWebSocketURI),
+				URI:                config.NodeConfig.GetString(config.CfgGraphWebSocketURI),
+				ExplorerTxLink:     config.NodeConfig.GetString(config.CfgGraphExplorerTxLink),
+				ExplorerBundleLink: config.NodeConfig.GetString(config.CfgGraphExplorerBundleLink),
 			}
 			tmpl, _ := template.New("graph").Parse(index)
 			tmpl.Execute(w, data)

@@ -24,13 +24,16 @@ const index string = `
     <div class="graph" id="graph"></div>
 
     <script type="application/javascript">
+
       const tg = TangleGlumb(document.getElementById("graph"), {
         CIRCLE_SIZE: 60,
         PIN_OLD_NODES: false,
         STATIC_FRONT: false,
         DARK_MODE: true,
         COLOR_BY_NUMBER: true,
-        REMOVE_OLD_NODES: true
+        REMOVE_OLD_NODES: true,
+        EXPLORER_TX_LINK: "{{.ExplorerTxLink}}",
+        EXPLORER_BUNDLE_LINK: "{{.ExplorerBundleLink}}"
       });
 
       var WebSocketURIConfig = "{{.URI}}";

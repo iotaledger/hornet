@@ -130,7 +130,9 @@
       "uri": ""
     },
     "bindAddress": "localhost:8083",
-    "networkName": "meets HORNET"
+    "networkName": "meets HORNET",
+    "explorerTxLink": "http://localhost:8081/explorer/tx/",
+    "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
   },
   "monitor": {
     "tangleMonitorPath": "tanglemonitor/frontend",

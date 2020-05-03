@@ -11,6 +11,10 @@ const (
 	CfgGraphBindAddress = "graph.bindAddress"
 	// the name of the network to be shown on the visualizer site
 	CfgGraphNetworkName = "graph.networkName"
+	// the explorer transaction link
+	CfgGraphExplorerTxLink = "graph.explorerTxLink"
+	// the explorer bundle link
+	CfgGraphExplorerBundleLink = "graph.explorerBundleLink"
 )
 
 func init() {
@@ -19,4 +23,6 @@ func init() {
 	NodeConfig.SetDefault(CfgGraphDomain, "")
 	NodeConfig.SetDefault(CfgGraphBindAddress, "localhost:8083")
 	NodeConfig.SetDefault(CfgGraphNetworkName, "meets HORNET")
+	NodeConfig.SetDefault(CfgGraphExplorerTxLink, "http://localhost:8081/explorer/tx/")
+	NodeConfig.SetDefault(CfgGraphExplorerBundleLink, "http://localhost:8081/explorer/bundle/")
 }
