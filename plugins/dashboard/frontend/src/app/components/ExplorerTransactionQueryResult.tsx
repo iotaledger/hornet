@@ -150,6 +150,13 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                 </Badge>
                                     {' '}
                                     {
+                                        tx.solid ?
+                                            <Badge variant="primary">Solid</Badge>
+                                            :
+                                            <Badge variant="light">Not solid</Badge>
+                                    }
+                                    {' '}
+                                    {
                                         tx.is_milestone ?
                                             tx.confirmed.state ?
                                                 <Badge variant="success">
@@ -232,7 +239,6 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                             }
                                         </ListGroup.Item>
                                         <ListGroup.Item>MWM: {tx.mwm}</ListGroup.Item>
-                                        <ListGroup.Item>Solid: {tx.solid ? 'Yes' : 'No'}</ListGroup.Item>
                                     </ListGroup>
                                 </Col>
                             </Row>
