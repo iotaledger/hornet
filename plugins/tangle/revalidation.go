@@ -123,6 +123,8 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	start := time.Now()
 	var txCounter int64
 	tangle.ForEachTransactionHashBytes(func(txHashBytes []byte) {
+		txHashBytesCopy := make([]byte, 49)
+		copy(txHashBytesCopy, txHashBytes)
 
 		txCounter++
 
@@ -130,22 +132,22 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 			log.Infof("analyzed %d transactions", txCounter)
 		}
 
-		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytes)
+		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytesCopy)
 
 		// delete transaction if no metadata
 		if storedTxMeta == nil {
-			txsToDelete[typeutils.BytesToString(txHashBytes)] = struct{}{}
+			txsToDelete[typeutils.BytesToString(txHashBytesCopy)] = struct{}{}
 			return
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			txsToDelete[typeutils.BytesToString(txHashBytes)] = struct{}{}
+			txsToDelete[typeutils.BytesToString(txHashBytesCopy)] = struct{}{}
 			return
 		}
 
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			txsToDelete[typeutils.BytesToString(txHashBytes)] = struct{}{}
+			txsToDelete[typeutils.BytesToString(txHashBytesCopy)] = struct{}{}
 			return
 		}
 	})
@@ -155,7 +157,6 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	lastPercentage := 0
 	nullHashBytes := make([]byte, 49)
 	for txHashToDelete := range txsToDelete {
-		deletionCounter++
 
 		txHashBytesToDelete := typeutils.StringToBytes(txHashToDelete)
 		if bytes.Equal(txHashBytesToDelete, nullHashBytes) {
@@ -173,6 +174,9 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		if storedTx == nil {
 			continue
 		}
+
+		deletionCounter++
+
 		// No need to safely remove the transactions from the bundle,
 		// since reattachment txs confirmed by another milestone wouldn't be
 		// pruned anyway if they are confirmed before snapshot index.
