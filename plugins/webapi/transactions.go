@@ -109,7 +109,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			addr = addr[:81]
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, false, true, maxResults-len(txHashes))...)
+		addressTxHashes, _ := tangle.GetTransactionHashesForAddress(addr, false, true, maxResults-len(txHashes))
+		txHashes = append(txHashes, addressTxHashes...)
 	}
 
 	// Searching for all approovers of the given transactions

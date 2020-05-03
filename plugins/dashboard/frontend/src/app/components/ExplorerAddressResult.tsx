@@ -10,8 +10,9 @@ import ListGroup from "react-bootstrap/ListGroup";
 import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
 import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import Badge, {BadgeProps} from "react-bootstrap/Badge";
 import {IOTAValue} from "app/components/IOTAValue";
+import FormCheck from "react-bootstrap/FormCheck";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -23,10 +24,18 @@ interface Props {
     }
 }
 
+interface State {
+    valueOnly: boolean
+}
+
 @inject("nodeStore")
 @inject("explorerStore")
 @observer
-export class ExplorerAddressQueryResult extends React.Component<Props, any> {
+export class ExplorerAddressQueryResult extends React.Component<Props, State> {
+
+    state: State = {
+        valueOnly: this.props.explorerStore.valueOnly
+    }
 
     componentDidMount() {
         this.props.explorerStore.resetSearch();
@@ -34,12 +43,16 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
     }
 
     getSnapshotBeforeUpdate(prevProps: Props, prevState) {
-        if (prevProps.match.params.hash !== this.props.match.params.hash) {
+        if (prevProps.match.params.hash !== this.props.match.params.hash || prevState.valueOnly != this.state.valueOnly) {
             this.props.explorerStore.searchAddress(this.props.match.params.hash);
         }
         return null;
     }
 
+    handleValueOnlyChange = () => {
+        this.props.explorerStore.toggleValueOnly()
+        this.setState({valueOnly: this.props.explorerStore.valueOnly})
+    }
 
     render() {
         let {hash} = this.props.match.params;
@@ -48,6 +61,14 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
         if (addr) {
             for (let i = 0; i < addr.txs.length; i++) {
                 let tx = addr.txs[i];
+
+                let badgeVariant: BadgeProps["variant"] = "secondary";
+                if (tx.value < 0) {
+                    badgeVariant = "danger";
+                } else if (tx.value > 0) {
+                    badgeVariant = "success";
+                }
+
                 txsEle.push(
                     <ListGroup.Item key={tx.hash}
                                     className="d-flex justify-content-between align-items-center">
@@ -55,14 +76,14 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                             {dateformat(new Date(tx.timestamp * 1000), "dd.mm.yyyy HH:MM:ss")} {' '}
                             <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         </small>
-                        <Badge variant="info"><IOTAValue>{tx.value}</IOTAValue></Badge>
+                        <Badge variant={badgeVariant}><IOTAValue>{tx.value}</IOTAValue></Badge>
                     </ListGroup.Item>
                 );
             }
         }
         return (
             <Container>
-                <h3>Address {addr !== null && <span>({addr.txs.length} Transactions)</span>}</h3>
+                <h3>Address</h3>
                 <p>
                     {hash} {' '}
                     {
@@ -99,14 +120,31 @@ export class ExplorerAddressQueryResult extends React.Component<Props, any> {
                                 Balance: <IOTAValue>{addr.balance}</IOTAValue>
                             </p>
                             {
-                                addr.txs !== null && addr.txs.length === 100 &&
+                                addr.txs !== null && addr.count > addr.txs.length &&
                                 <Alert variant={"warning"}>
-                                    Max. 100 transactions are shown.
+                                    Max. {addr.txs.length} transactions are shown.
                                 </Alert>
                             }
                             <Row className={"mb-3"}>
                                 <Col>
                                     <ListGroup variant={"flush"}>
+                                        <ListGroup.Item key={"row-check-value-only"}
+                                                        variant={"secondary"}
+                                                        className="d-flex justify-content-between align-items-center">
+                                            <div
+                                                className="d-flex align-items-center font-weight-bold">Transactions &nbsp;
+                                                <Badge
+                                                    pill
+                                                    variant={"secondary"}
+                                                    className={"align-middle"}>{addr.count}</Badge>
+                                            </div>
+                                            <FormCheck id={"check-value-only"}
+                                                       label={"Only show value Tx"}
+                                                       type={"switch"}
+                                                       checked={this.props.explorerStore.valueOnly}
+                                                       onChange={this.handleValueOnlyChange}
+                                            />
+                                        </ListGroup.Item>
                                         {txsEle}
                                     </ListGroup>
                                 </Col>

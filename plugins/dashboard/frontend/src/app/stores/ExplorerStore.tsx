@@ -41,6 +41,7 @@ export class Transaction {
 class AddressResult {
     balance: number;
     txs: Array<Transaction>;
+    count: number;
     spent: boolean;
     spent_enabled: boolean;
 }
@@ -97,6 +98,8 @@ export class ExplorerStore {
     @observable search: string = "";
     @observable search_result: SearchResult = null;
     @observable searching: boolean = false;
+
+    @observable valueOnly: boolean = false;
 
     // formatting
     @observable shortenedValues: boolean = true;
@@ -241,7 +244,7 @@ export class ExplorerStore {
     searchAddress = async (hash: string) => {
         this.updateQueryLoading(true);
         try {
-            let res = await fetch(`/api/addr/${hash}`);
+            let res = await fetch(`/api/addr/${hash}${this.valueOnly ? "/value" : ""}`);
             if (res.status === 404) {
                 this.updateQueryError(QueryError.NotFound);
                 return;
@@ -273,6 +276,11 @@ export class ExplorerStore {
         this.tx = null;
         this.bundles = null;
         this.query_err = null;
+    };
+
+    @action
+    toggleValueOnly = () => {
+        this.valueOnly = !this.valueOnly;
     };
 
     @action
