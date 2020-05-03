@@ -96,6 +96,7 @@ type FindTransactions struct {
 	Tags       []trinary.Hash `mapstructure:"tags"`
 	Approvees  []trinary.Hash `mapstructure:"approvees"`
 	MaxResults int            `mapstructure:"maxresults"`
+	ValueOnly  bool           `json:"valueOnly"`
 }
 
 // FindTransactionsReturn struct
