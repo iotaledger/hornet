@@ -1,6 +1,6 @@
 import {action, computed, observable, ObservableMap} from 'mobx';
 import * as dateformat from 'dateformat';
-import {connectWebSocket, registerHandler, WSMsgType} from "app/misc/WS";
+import {connectWebSocket, registerHandler, unregisterHandler, WSMsgType} from "app/misc/WS";
 
 class TPSMetric {
     incoming: number;
@@ -319,13 +319,48 @@ export class NodeStore {
     @observable neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
     @observable last_confirmed_ms_metric: ConfirmedMilestoneMetric = new ConfirmedMilestoneMetric();
     @observable collected_confirmed_ms_metrics: Array<ConfirmedMilestoneMetric> = [];
+    @observable collecting: boolean = true;
 
     constructor() {
+        this.registerHandlers();
+    }
+
+    registerHandlers = () => {
         registerHandler(WSMsgType.Status, this.updateStatus);
         registerHandler(WSMsgType.TPSMetrics, this.updateLastTPSMetric);
         registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
-        registerHandler(WSMsgType.NeighborStats, this.updateNeighborMetrics);
+        registerHandler(WSMsgType.PeerMetric, this.updateNeighborMetrics);
         registerHandler(WSMsgType.ConfirmedMsMetrics, this.updateConfirmedMilestoneMetrics);
+        this.updateCollecting(true);
+    }
+
+    unregisterHandlers = () => {
+        unregisterHandler(WSMsgType.Status);
+        unregisterHandler(WSMsgType.TPSMetrics);
+        unregisterHandler(WSMsgType.TipSelMetric);
+        unregisterHandler(WSMsgType.PeerMetric);
+        unregisterHandler(WSMsgType.ConfirmedMsMetrics);
+        this.updateCollecting(false);
+    }
+
+    @action
+    updateCollecting = (collecting: boolean) => {
+        this.collecting = collecting;
+    }
+
+    @action
+    reset() {
+        this.last_tps_metric = new TPSMetric();
+        this.last_tip_sel_metric = new TipSelMetric();
+        this.collected_tps_metrics = [];
+        this.collected_tip_sel_metrics = [];
+        this.collected_req_q_metrics = [];
+        this.collected_server_metrics = [];
+        this.collected_mem_metrics = [];
+        this.collected_cache_metrics = [];
+        this.neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
+        this.last_confirmed_ms_metric = new ConfirmedMilestoneMetric();
+        this.collected_confirmed_ms_metrics = [];
     }
 
     connect() {

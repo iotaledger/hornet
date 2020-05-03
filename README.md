@@ -4,9 +4,8 @@
 
 <p><img src="https://raw.githubusercontent.com/gohornet/logo/master/HORNET_logo.svg?sanitize=true"></p>
 
-HORNET is a lightweight alternative to IOTA's fullnode software “[IRI](https://github.com/iotaledger/iri)”.
-The main advantage is that it compiles to native code and does not need a Java Virtual Machine, which considerably decreases the amount of needed resources while significantly increasing the performance.
-This way, HORNET is easier to install and runs on low-end devices.
+HORNET is a powerful, community driven IOTA fullnode software written in Go.
+It is easy to install and runs on low-end devices like the Raspberry Pi 4.
 
 ---
 
@@ -18,20 +17,21 @@ This way, HORNET is easier to install and runs on low-end devices.
 
 ---
 
-*Table of contents*
+_Table of contents_
 
 <!--ts-->
-  * [Documentation](#documentation)
-  * [Autopeering](#autopeering)
-  * [Contributing](#contributing)
-  * [Run Hornet](#run-hornet)
-  * [Available Plugins](#available-plugins)
-    * [TangleMonitor](#tanglemonitor)
-    * [IOTA Tangle Visualiser](#iota-tangle-visualiser)
-    * [MQTT Broker](#mqtt-broker)
-    * [Spammer](#spammer)
-    * [Autopeering](#autopeering)
-  * [Docker](#docker)
+
+- [Documentation](#documentation)
+- [Autopeering](#autopeering)
+- [Contributing](#contributing)
+- [Installation](#installation)
+- [Available Plugins](#available-plugins)
+  - [TangleMonitor](#tanglemonitor)
+  - [IOTA Tangle Visualiser](#iota-tangle-visualiser)
+  - [MQTT Broker](#mqtt-broker)
+  - [Spammer](#spammer)
+  - [Autopeering](#autopeering)
+- [Docker](#docker)
 <!--te-->
 
 ## Documentation
@@ -40,7 +40,7 @@ Please have a look into our [HORNET wiki](https://github.com/gohornet/hornet/wik
 
 ## Autopeering
 
-The autopeering plugin is still in an early state. We recommend to add 1-2 static neighbors as well if you want to run a reliable node.
+The autopeering plugin is still in an early state. We recommend to add 1-2 static peers as well.
 If you want to disable autopeering, you can do so by adding it to the `disablePlugins` in your `config.json`:
 
 ```json
@@ -54,13 +54,24 @@ If you want to disable autopeering, you can do so by adding it to the `disablePl
 
 - See [CONTRIBUTING](/CONTRIBUTING.md)
 
-## Run HORNET
+## Installation
 
-- Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM.tar.gz` for the Raspberry Pi 3B)
+### Binary
+
+- Download the [latest release](https://github.com/gohornet/hornet/releases/latest) for your system (e.g. `HORNET-x.x.x_Linux_ARM64.tar.gz` for the Raspberry Pi 4)
 - Extract the files in a folder of your choice
 - Add neighbors to the `peering.json` file (optional)
-- Download the latest HORNET snapshot from [https://ls.manapotion.io](https://ls.manapotion.io/export.bin)
 - Run HORNET: `./hornet -c config`
+
+### APT
+
+```
+wget -qO - https://ppa.hornet.zone/pubkey.txt | sudo apt-key add -
+sudo sh -c 'echo "deb http://ppa.hornet.zone stable main" >> /etc/apt/sources.list.d/hornet.list'
+sudo apt install hornet
+```
+
+[Tutorial: Install HORNET with APT](https://github.com/gohornet/hornet/wiki/Tutorials%3A-Linux%3A-Install-HORNET)
 
 ---
 

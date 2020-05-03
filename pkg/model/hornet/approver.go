@@ -29,10 +29,10 @@ func (a *Approver) ObjectStorageKey() []byte {
 	return append(a.TxHash, a.ApproverHash...)
 }
 
-func (a *Approver) ObjectStorageValue() (data []byte) {
+func (a *Approver) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (a *Approver) UnmarshalObjectStorageValue(_ []byte) (err error, consumedBytes int) {
-	return nil, 0
+func (a *Approver) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }

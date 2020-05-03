@@ -26,10 +26,10 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 	return milestone.Index(binary.LittleEndian.Uint32(key))
 }
 
-func milestoneFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func milestoneFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	return &Milestone{
 		Index: milestoneIndexFromDatabaseKey(key),
-	}, nil, 4
+	}, 4, nil
 }
 
 func GetMilestoneStorageSize() int {
@@ -81,10 +81,10 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (ms *Milestone) UnmarshalObjectStorageValue(data []byte) (err error, consumedBytes int) {
+func (ms *Milestone) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
 
 	ms.Hash = trinary.MustBytesToTrytes(data, 81)
-	return nil, 49
+	return 49, nil
 }
 
 // Cached Object
@@ -111,25 +111,26 @@ func ContainsMilestone(milestoneIndex milestone.Index) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-// milestone +-0
-func SearchLatestMilestoneIndex() milestone.Index {
+// SearchLatestMilestoneIndexInBadger searches the latest milestone without accessing the cache layer.
+func SearchLatestMilestoneIndexInBadger() milestone.Index {
 	var latestMilestoneIndex milestone.Index
 
-	milestoneStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		cachedObject.Release(true) // milestone -1
-
+	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		msIndex := milestoneIndexFromDatabaseKey(key)
 		if latestMilestoneIndex < msIndex {
 			latestMilestoneIndex = msIndex
 		}
 
 		return true
-	})
+	}, true)
 
 	return latestMilestoneIndex
 }
 
 type MilestoneConsumer func(cachedMs objectstorage.CachedObject)
+
+// MilestoneIndexConsumer consumes the given index during looping though all milestones in the persistence layer.
+type MilestoneIndexConsumer func(index milestone.Index)
 
 func ForEachMilestone(consumer MilestoneConsumer) {
 	milestoneStorage.ForEach(func(key []byte, cachedMs objectstorage.CachedObject) bool {
@@ -137,6 +138,14 @@ func ForEachMilestone(consumer MilestoneConsumer) {
 		consumer(cachedMs.Retain())
 		return true
 	})
+}
+
+// ForEachMilestoneIndex loops though all milestones in the persistence layer.
+func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
+	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
+		consumer(milestoneIndexFromDatabaseKey(key))
+		return true
+	}, skipCache)
 }
 
 // milestone +1
@@ -167,6 +176,10 @@ func StoreMilestone(bndl *Bundle) (bool, *CachedMilestone) {
 // +-0
 func DeleteMilestone(milestoneIndex milestone.Index) {
 	milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
+}
+
+func DeleteMilestoneFromBadger(milestoneIndex milestone.Index) {
+	milestoneStorage.DeleteEntryFromBadger(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
 func ShutdownMilestoneStorage() {

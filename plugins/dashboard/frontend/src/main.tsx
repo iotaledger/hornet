@@ -8,15 +8,18 @@ import {RouterStore, syncHistoryWithStore} from 'mobx-react-router';
 import {Router} from 'react-router-dom';
 import NodeStore from "app/stores/NodeStore";
 import ExplorerStore from "app/stores/ExplorerStore";
+import VisualizerStore from "app/stores/VisualizerStore";
 
 // prepare MobX stores
 const routerStore = new RouterStore();
 const nodeStore = new NodeStore();
 const explorerStore = new ExplorerStore(routerStore);
+const visualizerStore = new VisualizerStore(routerStore);
 const stores = {
     "routerStore": routerStore,
     "nodeStore": nodeStore,
     "explorerStore": explorerStore,
+    "visualizerStore": visualizerStore,
 };
 
 const browserHistory = createBrowserHistory();
@@ -26,7 +29,7 @@ const history = syncHistoryWithStore(browserHistory, routerStore);
 ReactDOM.render(
     <Provider {...stores}>
         <Router history={history}>
-            <App/>
+            <App history={history}/>
         </Router>
     </Provider>,
     document.getElementById('root')

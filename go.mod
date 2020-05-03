@@ -21,11 +21,11 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200426181408-f92a274264e9
+	github.com/iotaledger/hive.go v0.0.0-20200429190727-be8d92308e70
 	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200424065559-3afb1c88e001
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
-	github.com/mitchellh/mapstructure v1.2.2
+	github.com/mitchellh/mapstructure v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/shirou/gopsutil v2.20.3+incompatible
@@ -34,6 +34,6 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5
-	golang.org/x/net v0.0.0-20200421231249-e086a090c8fd
+	golang.org/x/crypto v0.0.0-20200427165652-729f1e841bcc
+	golang.org/x/net v0.0.0-20200425230154-ff2c4b7c35a0
 )

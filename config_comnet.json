@@ -107,8 +107,7 @@
     "disableCaller": true,
     "encoding": "console",
     "outputPaths": [
-      "stdout",
-      "hornet.log"
+      "stdout"
     ]
   },
   "spammer": {

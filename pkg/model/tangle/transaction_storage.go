@@ -36,11 +36,6 @@ type CachedTransaction struct {
 	metadata objectstorage.CachedObject
 }
 
-// Cached Object for metadata.
-type CachedMetadata struct {
-	objectstorage.CachedObject
-}
-
 type CachedTransactions []*CachedTransaction
 
 // tx +1
@@ -65,10 +60,6 @@ func (c *CachedTransaction) GetTransaction() *hornet.Transaction {
 
 func (c *CachedTransaction) GetMetadata() *hornet.TransactionMetadata {
 	return c.metadata.Get().(*hornet.TransactionMetadata)
-}
-
-func (c *CachedMetadata) GetMetadata() *hornet.TransactionMetadata {
-	return c.Get().(*hornet.TransactionMetadata)
 }
 
 // tx +1
@@ -99,20 +90,20 @@ func (c *CachedTransaction) Release(force ...bool) {
 	c.metadata.Release(force...)
 }
 
-func transactionFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func transactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	tx := &hornet.Transaction{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
-	return tx, nil, len(key)
+	return tx, len(key), nil
 }
 
-func metadataFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func metadataFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	tx := &hornet.TransactionMetadata{
 		TxHash: make([]byte, len(key)),
 	}
 	copy(tx.TxHash, key)
-	return tx, nil, len(key)
+	return tx, len(key), nil
 }
 
 func GetTransactionStorageSize() int {
@@ -173,16 +164,22 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 	}
 }
 
-// GetCachedTransactionMetadataOrNil returns the metadata for a transaction hash or nil if it doesn't exist.
-// txHash must be in binary representation.
-// tx meta +1
-func GetCachedTransactionMetadataOrNil(txHashBytes []byte) *CachedMetadata {
-	cachedMeta := metadataStorage.Load(txHashBytes) // tx meta +1
-	if !cachedMeta.Exists() {
-		cachedMeta.Release(true) // tx meta -1
+// GetStoredTransactionOrNil returns a transaction object without accessing the cache layer.
+func GetStoredTransactionOrNil(txHashBytes []byte) *hornet.Transaction {
+	storedTx := txStorage.LoadObjectFromBadger(txHashBytes)
+	if storedTx == nil {
 		return nil
 	}
-	return &CachedMetadata{CachedObject: cachedMeta}
+	return storedTx.(*hornet.Transaction)
+}
+
+// GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
+func GetStoredMetadataOrNil(txHashBytes []byte) *hornet.TransactionMetadata {
+	storedMeta := metadataStorage.LoadObjectFromBadger(txHashBytes)
+	if storedMeta == nil {
+		return nil
+	}
+	return storedMeta.(*hornet.TransactionMetadata)
 }
 
 // tx +-0
@@ -255,6 +252,12 @@ func DeleteTransaction(transactionHash trinary.Hash) {
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
 	txStorage.Delete(txHash)
 	metadataStorage.Delete(txHash)
+}
+
+// DeleteTransactionFromBadger deletes the transaction and metadata from the persistence layer without accessing the cache.
+func DeleteTransactionFromBadger(txHashBytes []byte) {
+	txStorage.DeleteEntryFromBadger(txHashBytes)
+	metadataStorage.DeleteEntryFromBadger(txHashBytes)
 }
 
 func ShutdownTransactionStorage() {

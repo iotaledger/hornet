@@ -27,14 +27,14 @@ const (
 )
 
 // defines the factory function for WorkUnits.
-func workUnitFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func workUnitFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	req := &WorkUnit{
 		receivedTxBytes: make([]byte, len(key)),
 		requests:        make([]*Request, 0),
 	}
 	// TODO: check for a more efficient key instead of copying all tx bytes
 	copy(req.receivedTxBytes, key)
-	return req, nil, len(key)
+	return req, len(key), nil
 }
 
 // CachedWorkUnit represents a cached WorkUnit.
@@ -82,8 +82,8 @@ func (wu *WorkUnit) ObjectStorageValue() []byte {
 	return nil
 }
 
-func (wu *WorkUnit) UnmarshalObjectStorageValue(_ []byte) (error, int) {
-	return nil, 0
+func (wu *WorkUnit) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
+	return 0, nil
 }
 
 // UpdateState updates the WorkUnit's state.

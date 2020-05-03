@@ -32,13 +32,13 @@ func (c *CachedUnconfirmedTx) GetUnconfirmedTx() *hornet.UnconfirmedTx {
 	return c.Get().(*hornet.UnconfirmedTx)
 }
 
-func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, error, int) {
+func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	unconfirmedTx := &hornet.UnconfirmedTx{
 		LatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(key[:4])),
 		TxHash:               make([]byte, 49),
 	}
 	copy(unconfirmedTx.TxHash, key[4:])
-	return unconfirmedTx, nil, 53
+	return unconfirmedTx, 53, nil
 }
 
 func GetUnconfirmedTxStorageSize() int {
@@ -120,6 +120,21 @@ func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 		cachedObject.Release(true)
 		return true
 	}, key)
+}
+
+// DeleteUnconfirmedTxsFromBadger deletes unconfirmed transactions without accessing the cache.
+func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
+
+	msIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
+
+	var txHashes [][]byte
+	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
+		txHashes = append(txHashes, key)
+		return true
+	}, true, msIndexBytes)
+
+	unconfirmedTxStorage.DeleteEntriesFromBadger(txHashes)
 }
 
 func ShutdownUnconfirmedTxsStorage() {

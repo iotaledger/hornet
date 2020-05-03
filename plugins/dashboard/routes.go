@@ -15,9 +15,16 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-var ErrInvalidParameter = errors.New("invalid config")
+// ErrInvalidParameter defines the invalid parameter error.
+var ErrInvalidParameter = errors.New("invalid parameter")
+
+// ErrInternalError defines the internal error.
 var ErrInternalError = errors.New("internal error")
+
+// ErrNotFound defines the not found error.
 var ErrNotFound = errors.New("not found")
+
+// ErrForbidden defines the forbidden error.
 var ErrForbidden = errors.New("forbidden")
 
 // holds dashboard assets
