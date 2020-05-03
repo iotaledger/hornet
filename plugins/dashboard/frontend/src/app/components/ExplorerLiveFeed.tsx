@@ -6,6 +6,7 @@ import {inject, observer} from "mobx-react";
 import Card from "react-bootstrap/Card";
 import ExplorerStore from "app/stores/ExplorerStore";
 import Table from "react-bootstrap/Table";
+import FormCheck from "react-bootstrap/FormCheck";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -35,12 +36,23 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
                                         </tr>
                                         </thead>
                                         <tbody>
-                                            {mssLiveFeed}
+                                        {mssLiveFeed}
                                         </tbody>
                                     </Table>
                                 </Col>
                                 <Col xs={7}>
-                                    <h6>Transactions</h6>
+                                    <h6>
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            Transactions
+                                            <FormCheck inline
+                                                       id={"check-value-only"}
+                                                       label={"Only show value Tx"}
+                                                       type={"switch"}
+                                                       checked={this.props.explorerStore.valueOnly}
+                                                       onChange={this.props.explorerStore.toggleValueOnly}
+                                            />
+                                        </div>
+                                    </h6>
                                     <Table>
                                         <thead>
                                         <tr>

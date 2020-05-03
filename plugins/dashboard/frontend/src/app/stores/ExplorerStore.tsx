@@ -342,6 +342,11 @@ export class ExplorerStore {
 
     @action
     addLiveFeedTx = (tx: Tx) => {
+
+        if (this.valueOnly && tx.value == 0) {
+            return
+        }
+
         // prevent duplicates (should be fast with only size 10)
         if (this.latest_txs.findIndex((t) => t.hash == tx.hash) === -1) {
             if (this.latest_txs.length >= liveFeedSize) {
