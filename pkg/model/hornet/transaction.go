@@ -69,6 +69,10 @@ func (tx *Transaction) IsHead() bool {
 	return tx.Tx.CurrentIndex == tx.Tx.LastIndex
 }
 
+func (tx *Transaction) IsValue() bool {
+	return tx.Tx.Value != 0
+}
+
 // ObjectStorage interface
 
 func (tx *Transaction) Update(_ objectstorage.StorableObject) {

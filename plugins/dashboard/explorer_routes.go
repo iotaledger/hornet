@@ -185,7 +185,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 
 	routeGroup.GET("/addr/:hash", func(c echo.Context) error {
 		hash := strings.ToUpper(c.Param("hash"))
-		addr, err := findAddress(hash)
+		addr, err := findAddress(hash, false)
 		if err != nil {
 			return err
 		}
@@ -252,7 +252,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 
 		go func() {
 			defer wg.Done()
-			addr, err := findAddress(search)
+			addr, err := findAddress(search, false)
 			if err == nil {
 				result.Address = addr
 			}
@@ -358,7 +358,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	return expBndls, nil
 }
 
-func findAddress(hash Hash) (*ExplorerAddress, error) {
+func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 	if len(hash) > 81 {
 		hash = hash[:81]
 	}
@@ -366,7 +366,7 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	txHashes := tangle.GetTransactionHashesForAddress(hash, true, 100)
+	txHashes := tangle.GetTransactionHashesForAddress(hash, valueOnly, true, 100)
 
 	txs := make([]*ExplorerTx, 0, len(txHashes))
 	if len(txHashes) != 0 {
