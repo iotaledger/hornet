@@ -45,7 +45,7 @@ export class Root extends React.Component<Props, any> {
     render() {
         return (
             <div className="container">
-                <Helmet>
+                <Helmet defer={false}>
                     <title>{this.props.nodeStore.documentTitle}</title>
                 </Helmet>
                 <Navbar expand="lg" bg="light" variant="light" className={"mb-4"}>

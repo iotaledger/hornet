@@ -3,8 +3,9 @@ import {registerHandler, WSMsgType} from "app/misc/WS";
 import * as React from "react";
 import {Link} from 'react-router-dom';
 import {RouterStore} from "mobx-react-router";
-import { trytesToAscii } from '@iota/converter';
-import { asTransactionTrytes } from '@iota/transaction-converter';
+import {trytesToAscii} from '@iota/converter';
+import {asTransactionTrytes} from '@iota/transaction-converter';
+import {IOTAValue} from "app/components/IOTAValue";
 
 export class Transaction {
     hash: string;
@@ -40,6 +41,7 @@ export class Transaction {
 class AddressResult {
     balance: number;
     txs: Array<Transaction>;
+    count: number;
     spent: boolean;
     spent_enabled: boolean;
 }
@@ -96,6 +98,11 @@ export class ExplorerStore {
     @observable search: string = "";
     @observable search_result: SearchResult = null;
     @observable searching: boolean = false;
+
+    @observable valueOnly: boolean = false;
+
+    // formatting
+    @observable shortenedValues: boolean = true;
 
     routerStore: RouterStore;
 
@@ -198,7 +205,7 @@ export class ExplorerStore {
             }
 
             try {
-                if (tx.signature_message_fragment.replace(/9+$/, "").length%2 === 0) {
+                if (tx.signature_message_fragment.replace(/9+$/, "").length % 2 === 0) {
                     tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, ""));
                 } else {
                     tx.ascii_message = trytesToAscii(tx.signature_message_fragment.replace(/9+$/, "") + '9');
@@ -208,7 +215,7 @@ export class ExplorerStore {
                         tx.json_obj = JSON.parse(tx.ascii_message)
                     }
                 } catch (error) {
-                
+
                 }
             } catch (error) {
                 console.log(error);
@@ -237,7 +244,7 @@ export class ExplorerStore {
     searchAddress = async (hash: string) => {
         this.updateQueryLoading(true);
         try {
-            let res = await fetch(`/api/addr/${hash}`);
+            let res = await fetch(`/api/addr/${hash}${this.valueOnly ? "/value" : ""}`);
             if (res.status === 404) {
                 this.updateQueryError(QueryError.NotFound);
                 return;
@@ -269,6 +276,16 @@ export class ExplorerStore {
         this.tx = null;
         this.bundles = null;
         this.query_err = null;
+    };
+
+    @action
+    toggleValueOnly = () => {
+        this.valueOnly = !this.valueOnly;
+    };
+
+    @action
+    toggleValueFormat = () => {
+        this.shortenedValues = !this.shortenedValues;
     };
 
     @action
@@ -325,6 +342,11 @@ export class ExplorerStore {
 
     @action
     addLiveFeedTx = (tx: Tx) => {
+
+        if (this.valueOnly && tx.value == 0) {
+            return
+        }
+
         // prevent duplicates (should be fast with only size 10)
         if (this.latest_txs.findIndex((t) => t.hash == tx.hash) === -1) {
             if (this.latest_txs.length >= liveFeedSize) {
@@ -355,7 +377,7 @@ export class ExplorerStore {
                         </Link>
                     </td>
                     <td>
-                        {tx.value}
+                        <IOTAValue>{tx.value}</IOTAValue>
                     </td>
                 </tr>
             );

@@ -6,9 +6,14 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
+const (
+	AddressTxIsValue = 1
+)
+
 type Address struct {
 	objectstorage.StorableObjectFlags
 	Address []byte
+	IsValue bool
 	TxHash  []byte
 }
 
@@ -27,7 +32,14 @@ func (a *Address) Update(_ objectstorage.StorableObject) {
 }
 
 func (a *Address) ObjectStorageKey() []byte {
-	return append(a.Address, a.TxHash...)
+
+	var isValueByte byte
+	if a.IsValue {
+		isValueByte = AddressTxIsValue
+	}
+
+	result := append(a.Address, isValueByte)
+	return append(result, a.TxHash...)
 }
 
 func (a *Address) ObjectStorageValue() (_ []byte) {

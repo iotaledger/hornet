@@ -17,6 +17,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
+const (
+	MaxTransactionsForAddressResults = 100
+	MaxApproversResults              = 100
+)
+
 type ExplorerTx struct {
 	Hash                          Hash   `json:"hash"`
 	SignatureMessageFragment      Trytes `json:"signature_message_fragment"`
@@ -79,7 +84,7 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	}
 
 	// Approvers
-	t.Approvers = tangle.GetApproverHashes(originTx.Hash, true, 100)
+	t.Approvers = tangle.GetApproverHashes(originTx.Hash, true, MaxApproversResults)
 
 	// compute mwm
 	trits, err := TrytesToTrits(hash)
@@ -142,6 +147,7 @@ type ExplorerTag struct {
 type ExplorerAddress struct {
 	Balance      uint64        `json:"balance"`
 	Txs          []*ExplorerTx `json:"txs"`
+	Count        int           `json:"count"`
 	Spent        bool          `json:"spent"`
 	SpentEnabled bool          `json:"spent_enabled"`
 }
@@ -183,9 +189,18 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		return c.JSON(http.StatusOK, txs)
 	})
 
+	routeGroup.GET("/addr/:hash/value", func(c echo.Context) error {
+		hash := strings.ToUpper(c.Param("hash"))
+		addr, err := findAddress(hash, true)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, addr)
+	})
+
 	routeGroup.GET("/addr/:hash", func(c echo.Context) error {
 		hash := strings.ToUpper(c.Param("hash"))
-		addr, err := findAddress(hash)
+		addr, err := findAddress(hash, false)
 		if err != nil {
 			return err
 		}
@@ -252,7 +267,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 
 		go func() {
 			defer wg.Done()
-			addr, err := findAddress(search)
+			addr, err := findAddress(search, false)
 			if err == nil {
 				result.Address = addr
 			}
@@ -358,7 +373,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	return expBndls, nil
 }
 
-func findAddress(hash Hash) (*ExplorerAddress, error) {
+func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 	if len(hash) > 81 {
 		hash = hash[:81]
 	}
@@ -366,7 +381,7 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	txHashes := tangle.GetTransactionHashesForAddress(hash, true, 100)
+	txHashes, count := tangle.GetTransactionHashesForAddress(hash, valueOnly, true, MaxTransactionsForAddressResults)
 
 	txs := make([]*ExplorerTx, 0, len(txHashes))
 	if len(txHashes) != 0 {
@@ -390,9 +405,5 @@ func findAddress(hash Hash) (*ExplorerAddress, error) {
 		return nil, err
 	}
 
-	if len(txHashes) == 0 && balance == 0 {
-		return nil, errors.Wrapf(ErrNotFound, "address %s not found", hash)
-	}
-
-	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash), SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled()}, nil
+	return &ExplorerAddress{Balance: balance, Txs: txs, Count: count, Spent: tangle.WasAddressSpentFrom(hash), SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled()}, nil
 }
