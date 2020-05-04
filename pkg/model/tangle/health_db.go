@@ -3,8 +3,6 @@ package tangle
 import (
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/typeutils"
-
 	"github.com/gohornet/hornet/pkg/database"
 )
 
@@ -30,7 +28,7 @@ func MarkDatabaseCorrupted() {
 
 	if err := healthDatabase.Set(
 		database.Entry{
-			Key: typeutils.StringToBytes("dbCorrupted"),
+			Key: []byte("dbCorrupted"),
 		}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
@@ -38,14 +36,14 @@ func MarkDatabaseCorrupted() {
 
 func MarkDatabaseHealthy() {
 
-	if err := healthDatabase.Delete(typeutils.StringToBytes("dbCorrupted")); err != nil {
+	if err := healthDatabase.Delete([]byte("dbCorrupted")); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
 }
 
 func IsDatabaseCorrupted() bool {
 
-	contains, err := healthDatabase.Contains(typeutils.StringToBytes("dbCorrupted"))
+	contains, err := healthDatabase.Contains([]byte("dbCorrupted"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
 	}
@@ -53,12 +51,12 @@ func IsDatabaseCorrupted() bool {
 }
 
 func setDatabaseVersion() {
-	_, err := healthDatabase.Get(typeutils.StringToBytes("dbVersion"))
+	_, err := healthDatabase.Get([]byte("dbVersion"))
 	if err == database.ErrKeyNotFound {
 		// Only create the entry, if it doesn't exist already (fresh database)
 		if err := healthDatabase.Set(
 			database.Entry{
-				Key:   typeutils.StringToBytes("dbVersion"),
+				Key:   []byte("dbVersion"),
 				Value: []byte{DbVersion},
 			}); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))
@@ -68,7 +66,7 @@ func setDatabaseVersion() {
 
 func IsCorrectDatabaseVersion() bool {
 
-	entry, err := healthDatabase.Get(typeutils.StringToBytes("dbVersion"))
+	entry, err := healthDatabase.Get([]byte("dbVersion"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database version"))
 	}

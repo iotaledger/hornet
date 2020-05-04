@@ -5,8 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/typeutils"
-
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -25,7 +23,7 @@ func configureSnapshotDatabase() {
 func storeSnapshotInfoInDatabase(snapshot *SnapshotInfo) error {
 
 	if err := snapshotDatabase.Set(database.Entry{
-		Key:   typeutils.StringToBytes("snapshotInfo"),
+		Key:   []byte("snapshotInfo"),
 		Value: snapshot.GetBytes(),
 	}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot info")
@@ -35,7 +33,7 @@ func storeSnapshotInfoInDatabase(snapshot *SnapshotInfo) error {
 }
 
 func readSnapshotInfoFromDatabase() (*SnapshotInfo, error) {
-	entry, err := snapshotDatabase.Get(typeutils.StringToBytes("snapshotInfo"))
+	entry, err := snapshotDatabase.Get([]byte("snapshotInfo"))
 	if err != nil {
 		if err == database.ErrKeyNotFound {
 			return nil, nil
@@ -55,7 +53,7 @@ func storeSolidEntryPointsInDatabase(points *hornet.SolidEntryPoints) error {
 	if points.IsModified() {
 
 		if err := snapshotDatabase.Set(database.Entry{
-			Key:   typeutils.StringToBytes("solidEntryPoints"),
+			Key:   []byte("solidEntryPoints"),
 			Value: points.GetBytes(),
 		}); err != nil {
 			return errors.Wrap(NewDatabaseError(err), "failed to store solid entry points")
@@ -68,7 +66,7 @@ func storeSolidEntryPointsInDatabase(points *hornet.SolidEntryPoints) error {
 }
 
 func readSolidEntryPointsFromDatabase() (*hornet.SolidEntryPoints, error) {
-	entry, err := snapshotDatabase.Get(typeutils.StringToBytes("solidEntryPoints"))
+	entry, err := snapshotDatabase.Get([]byte("solidEntryPoints"))
 	if err != nil {
 		if err == database.ErrKeyNotFound {
 			return nil, nil
