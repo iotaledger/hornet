@@ -20,7 +20,11 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &profile.LoadProfile().Badger)
+	badgerOpts := profile.LoadProfile().Badger
+	if config.NodeConfig.GetBool(config.CfgDatabaseDebugLog) {
+		badgerOpts.Logger = NewBadgerLogger()
+	}
+	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &badgerOpts)
 
 	if !tangle.IsCorrectDatabaseVersion() {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
