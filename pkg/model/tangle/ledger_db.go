@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
@@ -409,8 +409,8 @@ func GetAllSnapshotBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trin
 		total += value
 	}
 
-	if total != compressed.TotalSupply {
-		panic(fmt.Sprintf("GetAllSnapshotBalances() Total does not match supply: %d != %d", total, compressed.TotalSupply))
+	if total != consts.TotalSupply {
+		panic(fmt.Sprintf("GetAllSnapshotBalances() Total does not match supply: %d != %d", total, consts.TotalSupply))
 	}
 
 	return balances, snapshotMilestoneIndex, err
@@ -507,8 +507,8 @@ func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[trina
 		total += value
 	}
 
-	if total != compressed.TotalSupply {
-		panic(fmt.Sprintf("total does not match supply: %d != %d", total, compressed.TotalSupply))
+	if total != consts.TotalSupply {
+		panic(fmt.Sprintf("total does not match supply: %d != %d", total, consts.TotalSupply))
 	}
 
 	return balances, ledgerMilestoneIndex, err

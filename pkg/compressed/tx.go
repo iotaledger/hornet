@@ -2,11 +2,11 @@ package compressed
 
 import (
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/batchhasher"
-	"github.com/iotaledger/hive.go/math"
 )
 
 const (
@@ -18,10 +18,6 @@ const (
 
 	// The max amount of bytes a signature message fragment is made up from.
 	SigDataMaxBytesLength = 1312
-
-	// Total supply of IOTA available in the network. Used for ensuring a balanced ledger state and bundle balances
-	// = (3^33 - 1) / 2
-	TotalSupply uint64 = 2779530283277761
 )
 
 // Truncates the given bytes encoded transaction data.
@@ -92,7 +88,7 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 			return nil, consts.ErrInvalidAddress
 		}
 
-		if uint64(math.Abs(tx.Value)) > TotalSupply {
+		if math.AbsInt64(tx.Value) > consts.TotalSupply {
 			return nil, consts.ErrInsufficientBalance
 		}
 	}
