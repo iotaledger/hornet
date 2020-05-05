@@ -5,6 +5,7 @@ import {default as Viva} from 'vivagraphjs';
 
 export class Vertex {
     id: string;
+    tag: string;
     trunk_id: string;
     branch_id: string;
     is_solid: boolean;
@@ -79,18 +80,11 @@ export class VisualizerStore {
 
     @action
     searchAndHighlight = () => {
-        this.clearSelected();
-        if (!this.search) return;
-        let iter: IterableIterator<string> = this.vertices.keys();
-        let found = null;
-        for (const key of iter) {
-            if (key.indexOf(this.search) >= 0) {
-                found = key;
-                break;
-            }
+        let iter: IterableIterator<Vertex> = this.vertices.values();
+        for (const vert of iter) {
+            let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
+            nodeUI.color = parseColor(this.colorForVertexState(vert));
         }
-        if (!found) return;
-        this.updateSelected(this.vertices.get(found), false);
     }
 
     @action
@@ -279,6 +273,9 @@ export class VisualizerStore {
 
     colorForVertexState = (vert: Vertex) => {
         if (!vert || (!vert.trunk_id && !vert.branch_id)) return colorUnknown;
+        if ((this.search) && ((vert.id.indexOf(this.search) >= 0) || (vert.tag.indexOf(this.search) >= 0))) {
+            return colorHighlighted;
+        }
         if (vert.is_milestone) {
             return colorMilestone;
         }

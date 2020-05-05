@@ -26,6 +26,7 @@ var (
 // vertex defines a vertex in a DAG.
 type vertex struct {
 	ID          string `json:"id"`
+	Tag         string `json:"tag"`
 	TrunkID     string `json:"trunk_id"`
 	BranchID    string `json:"branch_id"`
 	IsSolid     bool   `json:"is_solid"`
@@ -67,6 +68,7 @@ func runVisualizer() {
 					Type: MsgTypeVertex,
 					Data: &vertex{
 						ID:          tx.GetHash(),
+						Tag:         tx.Tx.Tag,
 						TrunkID:     tx.GetTrunk()[:VisualizerIdLength],
 						BranchID:    tx.GetBranch()[:VisualizerIdLength],
 						IsSolid:     metadata.IsSolid(),

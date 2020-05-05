@@ -96,12 +96,6 @@ export class Visualizer extends React.Component<Props, any> {
                                 Milestone
                             </Badge>
                             {' '}
-                            /*
-                            <Badge pill style={{background: VisuStore.colorTip, color: "white"}}>
-                                Tip
-                            </Badge>
-                            {' '}
-                            */
                             <Badge pill style={{background: VisuStore.colorUnknown, color: "white"}}>
                                 Unknown
                             </Badge>
@@ -139,7 +133,7 @@ export class Visualizer extends React.Component<Props, any> {
                         <InputGroup className="mr-1" size="sm">
                             <InputGroup.Prepend>
                                 <InputGroup.Text id="vertices-limit">
-                                    Search Transaction
+                                    Search TxHash/Tag
                                 </InputGroup.Text>
                             </InputGroup.Prepend>
                             <FormControl
