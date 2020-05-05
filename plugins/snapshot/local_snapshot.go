@@ -16,7 +16,6 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -765,8 +764,8 @@ func LoadSnapshotFromFile(filePath string) error {
 		total += value
 	}
 
-	if total != compressed.TotalSupply {
-		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, compressed.TotalSupply)
+	if total != consts.TotalSupply {
+		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, consts.TotalSupply)
 	}
 
 	err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, milestone.Index(msIndex))

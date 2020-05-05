@@ -18,10 +18,6 @@ const (
 
 	// The max amount of bytes a signature message fragment is made up from.
 	SigDataMaxBytesLength = 1312
-
-	// Total supply of IOTA available in the network. Used for ensuring a balanced ledger state and bundle balances
-	// = (3^33 - 1) / 2
-	TotalSupply uint64 = 2779530283277761
 )
 
 // Truncates the given bytes encoded transaction data.
