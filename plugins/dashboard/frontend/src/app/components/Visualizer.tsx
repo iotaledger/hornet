@@ -115,20 +115,6 @@ export class Visualizer extends React.Component<Props, any> {
                             Approvers/Approvees: {selected ?
                             <span>{selected_approvers_count}/{selected_approvees_count}</span>
                             : '-/-'}
-                            <br/>
-                            Trunk/Branch:{' '}
-                            {
-                                selected && selected.trunk_id && selected.branch_id ?
-                                    <span>
-                                        <Link to={`/explorer/tx/${selected.trunk_id}`} target="_blank" rel='noopener noreferrer'>
-                                            {selected.trunk_id.substr(0, 10)}
-                                        </Link>
-                                        /
-                                        <Link to={`/explorer/tx/${selected.branch_id}`} target="_blank" rel='noopener noreferrer'>
-                                            {selected.branch_id.substr(0, 10)}
-                                        </Link>
-                                    </span>
-                                    : "-"}
                         </p>
                     </Col>
                     <Col xs={{span: 3, offset: 4}}>

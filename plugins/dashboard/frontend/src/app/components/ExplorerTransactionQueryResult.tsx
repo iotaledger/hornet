@@ -153,7 +153,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                         tx.solid ?
                                             <Badge variant="primary">Solid</Badge>
                                             :
-                                            <Badge variant="light">Not solid</Badge>
+                                            <Badge variant="light">Unsolid</Badge>
                                     }
                                     {' '}
                                     {

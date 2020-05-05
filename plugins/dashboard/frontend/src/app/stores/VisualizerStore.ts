@@ -23,6 +23,7 @@ export class TipInfo {
 }
 
 const vertexSize = 20;
+const idLength = 5;
 
 export class VisualizerStore {
     @observable vertices = new ObservableMap<string, Vertex>();
@@ -100,7 +101,7 @@ export class VisualizerStore {
     addVertex = (vert: Vertex) => {
         if (!this.collect) return;
 
-        let existing = this.vertices.get(vert.id);
+        let existing = this.vertices.get(vert.id.substring(0,idLength));
         if (existing) {
             // can only go from unsolid to solid
             if (!existing.is_solid && vert.is_solid) {
@@ -110,8 +111,9 @@ export class VisualizerStore {
             if (!existing.is_confirmed && vert.is_confirmed) {
                 this.confirmed_count++;
             }
-            // update trunk and branch ids since we might be dealing
-            // with a vertex obj only created from a confirmed, milestone or tip info
+            // update all ids since we might be dealing
+            // with a vertex obj only created from a tip info
+            existing.id = vert.id;
             existing.trunk_id = vert.trunk_id;
             existing.branch_id = vert.branch_id;
             vert = existing
@@ -122,11 +124,11 @@ export class VisualizerStore {
             if (vert.is_confirmed) {
                 this.confirmed_count++;
             }
-            this.verticesIncomingOrder.push(vert.id);
+            this.verticesIncomingOrder.push(vert.id.substring(0,idLength));
             this.checkLimit();
         }
 
-        this.vertices.set(vert.id, vert);
+        this.vertices.set(vert.id.substring(0,idLength), vert);
         this.drawVertex(vert);
     };
 
@@ -141,7 +143,7 @@ export class VisualizerStore {
             this.solid_count++;
         }
         vert.is_solid = true;
-        this.vertices.set(vert.id, vert);
+        this.vertices.set(vert.id.substring(0,idLength), vert);
         this.drawVertex(vert);
     };
 
@@ -156,7 +158,7 @@ export class VisualizerStore {
             this.confirmed_count++;
         }
         vert.is_confirmed = true;
-        this.vertices.set(vert.id, vert);
+        this.vertices.set(vert.id.substring(0,idLength), vert);
         this.drawVertex(vert);
     };
 
@@ -168,7 +170,7 @@ export class VisualizerStore {
             return;
         }
         vert.is_milestone = true;
-        this.vertices.set(vert.id, vert);
+        this.vertices.set(vert.id.substring(0,idLength), vert);
         this.drawVertex(vert);
     };
 
@@ -185,7 +187,7 @@ export class VisualizerStore {
         }
         this.tips_count += tipInfo.is_tip ? 1 : vert.is_tip ? -1 : 0;
         vert.is_tip = tipInfo.is_tip;
-        this.vertices.set(vert.id, vert);
+        this.vertices.set(vert.id.substring(0,idLength), vert);
         this.drawVertex(vert);
     };
 
@@ -195,7 +197,7 @@ export class VisualizerStore {
             let deleteId = this.verticesIncomingOrder.shift();
             let vert = this.vertices.get(deleteId);
             // make sure we remove any markings if the vertex gets deleted
-            if (this.selected && deleteId === this.selected.id) {
+            if (this.selected && deleteId === this.selected.id.substring(0,idLength)) {
                 this.clearSelected();
             }
             this.vertices.delete(deleteId);
@@ -224,7 +226,7 @@ export class VisualizerStore {
         }
         let approvee = this.vertices.get(approveeId);
         if (approvee) {
-            if (this.selected && approveeId === this.selected.id) {
+            if (this.selected && approveeId === this.selected.id.substring(0,idLength)) {
                 this.clearSelected();
             }
             if (approvee.is_solid) {
@@ -243,23 +245,23 @@ export class VisualizerStore {
 
     drawVertex = (vert: Vertex) => {
         let node;
-        let existing = this.graph.getNode(vert.id);
+        let existing = this.graph.getNode(vert.id.substring(0,idLength));
         if (existing) {
             // update coloring
-            let nodeUI = this.graphics.getNodeUI(vert.id);
+            let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
             nodeUI.color = parseColor(this.colorForVertexState(vert));
             node = existing
         } else {
-            node = this.graph.addNode(vert.id, vert);
+            node = this.graph.addNode(vert.id.substring(0,idLength), vert);
         }
         if (vert.trunk_id && (!node.links || !node.links.some(link => link.fromId === vert.trunk_id))) {
-            this.graph.addLink(vert.trunk_id, vert.id);
+            this.graph.addLink(vert.trunk_id, vert.id.substring(0,idLength));
         }
         if (vert.trunk_id === vert.branch_id) {
             return;
         }
         if (vert.branch_id && (!node.links || !node.links.some(link => link.fromId === vert.branch_id))) {
-            this.graph.addLink(vert.branch_id, vert.id);
+            this.graph.addLink(vert.branch_id, vert.id.substring(0,idLength));
         }
     }
 
@@ -342,10 +344,8 @@ export class VisualizerStore {
         this.selected_via_click = !!viaClick;
 
         // mutate links
-        let node = this.graph.getNode(vert.id);
-        let nodeUI = this.graphics.getNodeUI(vert.id);
-        this.selected_origin_color = nodeUI.color
-        nodeUI.color = parseColor("#ffffff");
+        let node = this.graph.getNode(vert.id.substring(0,idLength));
+        let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
         nodeUI.size = vertexSize * 1.5;
 
         const seenForward = [];
@@ -396,15 +396,14 @@ export class VisualizerStore {
         }
 
         // clear link highlight
-        let node = this.graph.getNode(this.selected.id);
+        let node = this.graph.getNode(this.selected.id.substring(0,idLength));
         if (!node) {
             // clear links
             this.resetLinks();
             return;
         }
 
-        let nodeUI = this.graphics.getNodeUI(this.selected.id);
-        nodeUI.color = this.selected_origin_color;
+        let nodeUI = this.graphics.getNodeUI(this.selected.id.substring(0,idLength));
         nodeUI.size = vertexSize;
 
         const seenForward = [];
@@ -446,12 +445,12 @@ function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) 
         for (const link of node.links) {
             if (cbLinks) cbLinks(link);
 
-            if (!up && link.toId === node.id && !seenNodes.includes(graph.getNode(link.fromId))) {
+            if (!up && link.toId === node.id.substring(0,idLength) && !seenNodes.includes(graph.getNode(link.fromId))) {
                 seenNodes.push(graph.getNode(link.fromId));
                 continue;
             }
 
-            if (up && link.fromId === node.id && !seenNodes.includes(graph.getNode(link.toId))) {
+            if (up && link.fromId === node.id.substring(0,idLength) && !seenNodes.includes(graph.getNode(link.toId))) {
                 seenNodes.push(graph.getNode(link.toId));
             }
         }
