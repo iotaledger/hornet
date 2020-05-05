@@ -70,7 +70,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 		change += int64(currentLedgerBalance)
 
 		if math.AbsInt64(change) > consts.TotalSupply {
-			// transaction is not consistent with the current diff because ledger changes would overflow total supply
+			// the mutation is not consistent with the current diff because the address would overflow/underflow from the total supply
 			return false
 		}
 
