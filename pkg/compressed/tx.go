@@ -2,11 +2,11 @@ package compressed
 
 import (
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/batchhasher"
-	"github.com/iotaledger/hive.go/math"
 )
 
 const (
@@ -92,7 +92,7 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 			return nil, consts.ErrInvalidAddress
 		}
 
-		if uint64(math.Abs(tx.Value)) > TotalSupply {
+		if math.AbsInt64(tx.Value) > consts.TotalSupply {
 			return nil, consts.ErrInsufficientBalance
 		}
 	}

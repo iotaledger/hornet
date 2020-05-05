@@ -6,11 +6,11 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/math"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -152,7 +152,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 			return consts.ErrInvalidAddress
 		}
 
-		if uint64(math.Abs(tx.Value)) > compressed.TotalSupply {
+		if math.AbsInt64(tx.Value) > consts.TotalSupply {
 			return consts.ErrInsufficientBalance
 		}
 	}

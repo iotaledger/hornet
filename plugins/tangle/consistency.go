@@ -3,10 +3,10 @@ package tangle
 import (
 	"errors"
 
-	"github.com/iotaledger/hive.go/math"
+	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -52,7 +52,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 	// apply the walker diff to the cone diff
 	for addr, change := range diff {
 		coneDiff[addr] += change
-		if math.Abs(coneDiff[addr]) > int64(compressed.TotalSupply) {
+		if math.AbsInt64(coneDiff[addr]) > consts.TotalSupply {
 			return false
 		}
 	}
@@ -69,7 +69,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 		// apply the latest ledger state's balance of the given address to the cone diff
 		change += int64(currentLedgerBalance)
 
-		if math.Abs(change) > int64(compressed.TotalSupply) {
+		if math.AbsInt64(change) > consts.TotalSupply {
 			// transaction is not consistent with the current diff because ledger changes would overflow total supply
 			return false
 		}
@@ -177,7 +177,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
 				for addr, change := range ledgerChanges {
 					coneDiff[addr] += change
-					if math.Abs(coneDiff[addr]) > int64(compressed.TotalSupply) {
+					if math.AbsInt64(coneDiff[addr]) > consts.TotalSupply {
 						// referenced bundle is not valid because ledger changes would overflow total supply
 						return nil, ErrConeDiffNotConsistent
 					}
