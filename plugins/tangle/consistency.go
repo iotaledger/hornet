@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	ErrRefBundleNotValid    = errors.New("a referenced bundle is invalid")
-	ErrRefBundleNotComplete = errors.New("a referenced bundle is not complete")
+	ErrRefBundleNotValid     = errors.New("a referenced bundle is invalid")
+	ErrRefBundleNotComplete  = errors.New("a referenced bundle is not complete")
+	ErrConeDiffNotConsistent = errors.New("cone diff is not consistent")
 )
 
 // CheckConsistencyOfConeAndMutateDiff checks whether cone referenced by the given tail transaction is consistent with the current diff.
@@ -31,7 +32,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 	// compute the diff of the cone which the transaction references
 	coneDiff, err := computeConeDiff(visited, tailTxHash, tangle.GetSolidMilestoneIndex(), forceRelease)
 	if err != nil {
-		if err == ErrRefBundleNotValid {
+		if err == ErrRefBundleNotValid || err == ErrConeDiffNotConsistent {
 			// memorize for a certain time that this transaction references an invalid bundle
 			// to short circuit validation during a subsequent tip-sel on it again
 			PutInvalidBundleReference(tailTxHash)
@@ -52,7 +53,6 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 	for addr, change := range diff {
 		coneDiff[addr] += change
 		if math.Abs(coneDiff[addr]) > int64(compressed.TotalSupply) {
-			// transaction is not consistent with the current diff because ledger changes would overflow total supply
 			return false
 		}
 	}
@@ -179,7 +179,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 					coneDiff[addr] += change
 					if math.Abs(coneDiff[addr]) > int64(compressed.TotalSupply) {
 						// referenced bundle is not valid because ledger changes would overflow total supply
-						return nil, ErrRefBundleNotValid
+						return nil, ErrConeDiffNotConsistent
 					}
 				}
 			}

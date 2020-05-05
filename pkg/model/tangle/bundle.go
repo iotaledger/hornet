@@ -7,11 +7,9 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/bitmask"
-	"github.com/iotaledger/hive.go/math"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/metrics"
 )
 
@@ -323,12 +321,6 @@ func (bundle *Bundle) calcLedgerChanges() {
 		cachedTx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) // tx +1
 		if value := cachedTx.GetTransaction().Tx.Value; value != 0 {
 			changes[cachedTx.GetTransaction().Tx.Address] += value
-			if math.Abs(changes[cachedTx.GetTransaction().Tx.Address]) > int64(compressed.TotalSupply) {
-				// bundle is not valid because ledger changes would overflow total supply
-				bundle.setValid(false)
-				cachedTx.Release(true) // tx -1
-				return
-			}
 		}
 		cachedTx.Release(true) // tx -1
 	}
