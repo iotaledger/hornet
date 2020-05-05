@@ -13,6 +13,7 @@ import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import {toInputUppercase} from "app/misc/Utils";
 
 interface Props {
     visualizerStore?: VisualizerStore;
@@ -137,7 +138,7 @@ export class Visualizer extends React.Component<Props, any> {
                             </InputGroup.Prepend>
                             <FormControl
                                 placeholder="search"
-                                type="text" value={search} onChange={this.updateSearch}
+                                type="text" value={search} onChange={this.updateSearch} onInput={toInputUppercase}
                                 aria-label="vertices-search" onKeyUp={this.searchAndHighlight}
                                 aria-describedby="vertices-search"
                             />
