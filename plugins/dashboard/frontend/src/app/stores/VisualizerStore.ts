@@ -12,6 +12,8 @@ export class Vertex {
     is_confirmed: boolean;
     is_milestone: boolean;
     is_tip: boolean;
+    is_selected: boolean;
+    is_highlighted: boolean;
 }
 
 export class MetaInfo {
@@ -23,7 +25,9 @@ export class TipInfo {
     is_tip: boolean;
 }
 
-const vertexSize = 20;
+const vertexSizeSmall = 10;
+const vertexSizeMedium = 20;
+const vertexSizeBig = 30;
 const idLength = 5;
 
 // Solarized color palette
@@ -57,6 +61,7 @@ export class VisualizerStore {
 
     // search
     @observable search: string = "";
+    searchFilter: string = "";
 
     // viva graph objs
     graph;
@@ -80,10 +85,11 @@ export class VisualizerStore {
 
     @action
     searchAndHighlight = () => {
+        this.searchFilter = this.search;
         let iter: IterableIterator<Vertex> = this.vertices.values();
         for (const vert of iter) {
-            let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
-            nodeUI.color = parseColor(this.colorForVertexState(vert));
+            vert.is_highlighted = this.isHighlighted(vert);
+            this.updateNodeUI(vert);
         }
     }
 
@@ -107,6 +113,9 @@ export class VisualizerStore {
     addVertex = (vert: Vertex) => {
         if (!this.collect) return;
 
+        vert.is_selected = false;
+        vert.is_highlighted = this.isHighlighted(vert);
+
         let existing = this.vertices.get(vert.id.substring(0,idLength));
         if (existing) {
             // can only go from unsolid to solid
@@ -117,11 +126,18 @@ export class VisualizerStore {
             if (!existing.is_confirmed && vert.is_confirmed) {
                 this.confirmed_count++;
             }
-            // update all ids since we might be dealing
-            // with a vertex obj only created from a tip info
+            // update all infos since we might be dealing
+            // with a vertex obj only created from missing trunk/branch
             existing.id = vert.id;
+            existing.tag = vert.tag;
             existing.trunk_id = vert.trunk_id;
             existing.branch_id = vert.branch_id;
+            existing.is_solid = vert.is_solid;
+            existing.is_confirmed = vert.is_confirmed;
+            existing.is_milestone = vert.is_milestone;
+            existing.is_tip = vert.is_tip;
+            existing.is_selected = vert.is_selected;
+            existing.is_highlighted = vert.is_highlighted;
             vert = existing
         } else {
             if (vert.is_solid) {
@@ -149,8 +165,7 @@ export class VisualizerStore {
             this.solid_count++;
         }
         vert.is_solid = true;
-        this.vertices.set(vert.id.substring(0,idLength), vert);
-        this.drawVertex(vert);
+        this.updateNodeUI(vert);
     };
 
     @action
@@ -164,8 +179,7 @@ export class VisualizerStore {
             this.confirmed_count++;
         }
         vert.is_confirmed = true;
-        this.vertices.set(vert.id.substring(0,idLength), vert);
-        this.drawVertex(vert);
+        this.updateNodeUI(vert);
     };
 
     @action
@@ -176,8 +190,7 @@ export class VisualizerStore {
             return;
         }
         vert.is_milestone = true;
-        this.vertices.set(vert.id.substring(0,idLength), vert);
-        this.drawVertex(vert);
+        this.updateNodeUI(vert);
     };
 
     @action
@@ -185,16 +198,11 @@ export class VisualizerStore {
         if (!this.collect) return;
         let vert = this.vertices.get(tipInfo.id);
         if (!vert) {
-            // create a new empty one for now
-            vert = new Vertex();
-            vert.id = tipInfo.id;
-            this.verticesIncomingOrder.push(vert.id);
-            this.checkLimit();
+            return;
         }
         this.tips_count += tipInfo.is_tip ? 1 : vert.is_tip ? -1 : 0;
         vert.is_tip = tipInfo.is_tip;
-        this.vertices.set(vert.id.substring(0,idLength), vert);
-        this.drawVertex(vert);
+        this.updateNodeUI(vert);
     };
 
     @action
@@ -254,8 +262,7 @@ export class VisualizerStore {
         let existing = this.graph.getNode(vert.id.substring(0,idLength));
         if (existing) {
             // update coloring
-            let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
-            nodeUI.color = parseColor(this.colorForVertexState(vert));
+            this.updateNodeUI(vert);
             node = existing
         } else {
             node = this.graph.addNode(vert.id.substring(0,idLength), vert);
@@ -271,9 +278,18 @@ export class VisualizerStore {
         }
     }
 
+    isHighlighted = (vert: Vertex) => {
+        return ((this.searchFilter) && ((vert.id.indexOf(this.searchFilter) >= 0) || (vert.tag.indexOf(this.searchFilter) >= 0)))
+    }
+
     colorForVertexState = (vert: Vertex) => {
-        if (!vert || (!vert.trunk_id && !vert.branch_id)) return colorUnknown;
-        if ((this.search) && ((vert.id.indexOf(this.search) >= 0) || (vert.tag.indexOf(this.search) >= 0))) {
+        if (!vert || (!vert.trunk_id && !vert.branch_id)) {
+            return colorUnknown;
+        }
+        if (vert.is_selected) {
+            return colorSelected;
+        }
+        if (vert.is_highlighted) {
             return colorHighlighted;
         }
         if (vert.is_milestone) {
@@ -289,6 +305,28 @@ export class VisualizerStore {
             return colorSolid;
         }
         return colorUnsolid;
+    }
+
+    sizeForVertexState = (vert: Vertex) => {
+        if (!vert || (!vert.trunk_id && !vert.branch_id)) {
+            return vertexSizeSmall;
+        }
+        if (vert.is_selected) {
+            return vertexSizeBig;
+        }
+        if (vert.is_highlighted) {
+            return vertexSizeBig;
+        }
+        if (vert.is_milestone) {
+            return vertexSizeBig;
+        }
+        return vertexSizeMedium;
+    }
+
+    updateNodeUI = (vert: Vertex) => {
+        let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
+        nodeUI.color = parseColor(this.colorForVertexState(vert));
+        nodeUI.size = this.sizeForVertexState(vert);
     }
 
     start = () => {
@@ -309,9 +347,9 @@ export class VisualizerStore {
 
         graphics.node((node) => {
             if (!node.data) {
-                return Viva.Graph.View.webglSquare(10, this.colorForVertexState(node.data));
+                return Viva.Graph.View.webglSquare(vertexSizeSmall, this.colorForVertexState(node.data));
             }
-            return Viva.Graph.View.webglSquare(vertexSize, this.colorForVertexState(node.data));
+            return Viva.Graph.View.webglSquare(vertexSizeMedium, this.colorForVertexState(node.data));
         })
         graphics.link(() => Viva.Graph.View.webglLine(colorLink));
         let ele = document.getElementById('visualizer');
@@ -323,7 +361,7 @@ export class VisualizerStore {
 
         events.mouseEnter((node) => {
             this.clearSelected();
-            this.updateSelected(node.data);
+            this.updateSelected(this.vertices.get(node.id));
         }).mouseLeave((node) => {
             this.clearSelected();
         }).dblClick((node) => {
@@ -349,14 +387,14 @@ export class VisualizerStore {
     updateSelected = (vert: Vertex, viaClick?: boolean) => {
         if (!vert) return;
 
+        vert.is_selected = true;
+
         this.selected = vert;
         this.selected_via_click = !!viaClick;
 
         // mutate links
         let node = this.graph.getNode(vert.id.substring(0,idLength));
-        let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
-        nodeUI.color = parseColor(colorSelected);
-        nodeUI.size = vertexSize * 1.5;
+        this.updateNodeUI(vert);
 
         const seenForward = [];
         const seenBackwards = [];
@@ -411,6 +449,8 @@ export class VisualizerStore {
             return;
         }
 
+        this.selected.is_selected = false;
+
         // clear link highlight
         let node = this.graph.getNode(this.selected.id.substring(0,idLength));
         if (!node) {
@@ -419,9 +459,7 @@ export class VisualizerStore {
             return;
         }
 
-        let nodeUI = this.graphics.getNodeUI(this.selected.id.substring(0,idLength));
-        nodeUI.color = this.colorForVertexState(this.selected);
-        nodeUI.size = vertexSize;
+        this.updateNodeUI(this.selected);
 
         const seenForward = [];
         const seenBackwards = [];
