@@ -3,7 +3,7 @@ import {KeyboardEvent} from 'react';
 import Container from "react-bootstrap/Container";
 import {inject, observer} from "mobx-react";
 import {Link} from 'react-router-dom';
-import VisualizerStore from "app/stores/VisualizerStore";
+import * as VisuStore from "app/stores/VisualizerStore";
 import NodeStore from "app/stores/NodeStore";
 import Badge from "react-bootstrap/Badge";
 import FormControl from "react-bootstrap/FormControl";
@@ -16,7 +16,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import {toInputUppercase} from "app/misc/Utils";
 
 interface Props {
-    visualizerStore?: VisualizerStore;
+    visualizerStore?: VisuStore.VisualizerStore;
     nodeStore?: NodeStore;
 }
 
@@ -80,28 +80,34 @@ export class Visualizer extends React.Component<Props, any> {
                 <Row className={"mb-1"}>
                     <Col xs={{span: 5}}>
                         <p>
-                            <Badge pill style={{background: "#04c8fc", color: "white"}}>
+                            <Badge pill style={{background: VisuStore.colorSolid, color: "white"}}>
                                 Solid
                             </Badge>
                             {' '}
-                            <Badge pill style={{background: "#727272", color: "white"}}>
+                            <Badge pill style={{background: VisuStore.colorUnsolid, color: "white"}}>
                                 Unsolid
                             </Badge>
                             {' '}
-                            <Badge pill style={{background: "#5ce000", color: "white"}}>
+                            <Badge pill style={{background: VisuStore.colorConfirmed, color: "white"}}>
                                 Confirmed
                             </Badge>
                             {' '}
-                            <Badge pill style={{background: "#ff2a2a", color: "white"}}>
+                            <Badge pill style={{background: VisuStore.colorMilestone, color: "white"}}>
                                 Milestone
                             </Badge>
                             {' '}
-                            <Badge pill style={{background: "#cb4b16", color: "white"}}>
+                            /*
+                            <Badge pill style={{background: VisuStore.colorTip, color: "white"}}>
                                 Tip
                             </Badge>
                             {' '}
-                            <Badge pill style={{background: "#b58900", color: "white"}}>
+                            */
+                            <Badge pill style={{background: VisuStore.colorUnknown, color: "white"}}>
                                 Unknown
+                            </Badge>
+                            {' '}
+                            <Badge pill style={{background: VisuStore.colorHighlighted, color: "white"}}>
+                                Highlighted
                             </Badge>
                             <br/>
                             Transactions: {vertices.size}, TPS: {last_tps_metric.new}, Tips: {tips_count}<br/>
