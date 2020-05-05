@@ -44,7 +44,6 @@ func GetHornetBadgerInstance() *badger.DB {
 	once.Do(func() {
 
 		opts := badger.DefaultOptions(directory)
-		opts.Logger = nil
 
 		opts = opts.WithLevelOneSize(badgerOpts.LevelOneSize).
 			WithLevelSizeMultiplier(badgerOpts.LevelSizeMultiplier).
@@ -73,7 +72,8 @@ func GetHornetBadgerInstance() *badger.DB {
 			WithValueThreshold(badgerOpts.ValueThreshold).
 			WithTruncate(badgerOpts.WithTruncate).
 			WithLogRotatesToFlush(badgerOpts.LogRotatesToFlush).
-			WithEventLogging(badgerOpts.EventLogging)
+			WithEventLogging(badgerOpts.EventLogging).
+			WithLogger(badgerOpts.Logger)
 
 		if runtime.GOOS == "windows" {
 			opts = opts.WithTruncate(true)

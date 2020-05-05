@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
 	"github.com/shirou/gopsutil/mem"
 
@@ -632,4 +633,5 @@ type BadgerOpts struct {
 	WithTruncate            bool                    `mapstructure:"withTruncate"`
 	LogRotatesToFlush       int32                   `mapstructure:"logRotatesToFlush"`
 	EventLogging            bool                    `mapstructure:"eventLogging"`
+	Logger                  badger.Logger
 }
