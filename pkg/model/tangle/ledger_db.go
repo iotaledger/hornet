@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/typeutils"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/compressed"
@@ -97,14 +96,14 @@ func diffFromBytes(bytes []byte) int64 {
 
 func entryForSnapshotMilestoneIndex(index milestone.Index) database.Entry {
 	return database.Entry{
-		Key:   typeutils.StringToBytes(snapshotMilestoneIndexKey),
+		Key:   []byte(snapshotMilestoneIndexKey),
 		Value: bytesFromMilestoneIndex(index),
 	}
 }
 
 func entryForLedgerMilestoneIndex(index milestone.Index) database.Entry {
 	return database.Entry{
-		Key:   typeutils.StringToBytes(ledgerMilestoneIndexKey),
+		Key:   []byte(ledgerMilestoneIndexKey),
 		Value: bytesFromMilestoneIndex(index),
 	}
 }
@@ -114,7 +113,7 @@ func readLedgerMilestoneIndexFromDatabase() error {
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	entry, err := ledgerDatabase.Get(typeutils.StringToBytes(ledgerMilestoneIndexKey))
+	entry, err := ledgerDatabase.Get([]byte(ledgerMilestoneIndexKey))
 	if err != nil {
 		if err == database.ErrKeyNotFound {
 			return nil
@@ -349,7 +348,7 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	if err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot balances")
 	}
-	deletions = append(deletions, typeutils.StringToBytes(snapshotMilestoneIndexKey))
+	deletions = append(deletions, []byte(snapshotMilestoneIndexKey))
 
 	// Now delete all entries
 	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
@@ -383,7 +382,7 @@ func GetAllSnapshotBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trin
 
 	balances := make(map[trinary.Hash]uint64)
 
-	entry, err := ledgerDatabase.Get(typeutils.StringToBytes(snapshotMilestoneIndexKey))
+	entry, err := ledgerDatabase.Get([]byte(snapshotMilestoneIndexKey))
 	if err != nil {
 		return nil, 0, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot milestone index")
 	}

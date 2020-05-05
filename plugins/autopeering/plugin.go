@@ -37,8 +37,8 @@ var PLUGIN = node.NewPlugin(name, node.Enabled, configure, run)
 func configure(*node.Plugin) {
 	services.GossipServiceKey()
 	log = logger.NewLogger(name)
-	configureEvents()
 	configureAP()
+	configureEvents()
 }
 
 func run(*node.Plugin) {
@@ -47,15 +47,15 @@ func run(*node.Plugin) {
 
 func configureEvents() {
 
-	discover.Events.PeerDiscovered.Attach(events.NewClosure(func(ev *discover.DiscoveredEvent) {
+	Discovery.Events().PeerDiscovered.Attach(events.NewClosure(func(ev *discover.DiscoveredEvent) {
 		log.Infof("discovered: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 	}))
 
-	discover.Events.PeerDeleted.Attach(events.NewClosure(func(ev *discover.DeletedEvent) {
+	Discovery.Events().PeerDeleted.Attach(events.NewClosure(func(ev *discover.DeletedEvent) {
 		log.Infof("removed offline: %s / %s", ev.Peer.Address(), ev.Peer.ID())
 	}))
 
-	selection.Events.SaltUpdated.Attach(events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
+	Selection.Events().SaltUpdated.Attach(events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
 		log.Infof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
 	}))
 
@@ -75,7 +75,7 @@ func configureEvents() {
 		Selection.RemoveNeighbor(p.Autopeering.ID())
 	}))
 
-	selection.Events.OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
+	Selection.Events().OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
@@ -87,7 +87,7 @@ func configureEvents() {
 		}
 	}))
 
-	selection.Events.IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
+	Selection.Events().IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
@@ -100,7 +100,7 @@ func configureEvents() {
 		peering.Manager().Whitelist([]string{originAddr.Addr}, originAddr.Port, ev.Peer)
 	}))
 
-	selection.Events.Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
+	Selection.Events().Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
 		log.Infof("[dropped event] trying to remove connection to %s", ev.DroppedID)
 
 		var found *peer.Peer

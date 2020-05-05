@@ -7,7 +7,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/iotaledger/hive.go/typeutils"
 )
 
 var (
@@ -123,31 +122,28 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	start := time.Now()
 	var txCounter int64
 	tangle.ForEachTransactionHashBytes(func(txHashBytes []byte) {
-		txHashBytesCopy := make([]byte, 49)
-		copy(txHashBytesCopy, txHashBytes)
-
 		txCounter++
 
 		if (txCounter % 50000) == 0 {
 			log.Infof("analyzed %d transactions", txCounter)
 		}
 
-		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytesCopy)
+		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytes)
 
 		// delete transaction if no metadata
 		if storedTxMeta == nil {
-			txsToDelete[typeutils.BytesToString(txHashBytesCopy)] = struct{}{}
+			txsToDelete[string(txHashBytes)] = struct{}{}
 			return
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			txsToDelete[typeutils.BytesToString(txHashBytesCopy)] = struct{}{}
+			txsToDelete[string(txHashBytes)] = struct{}{}
 			return
 		}
 
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			txsToDelete[typeutils.BytesToString(txHashBytesCopy)] = struct{}{}
+			txsToDelete[string(txHashBytes)] = struct{}{}
 			return
 		}
 	})
@@ -158,7 +154,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	nullHashBytes := make([]byte, 49)
 	for txHashToDelete := range txsToDelete {
 
-		txHashBytesToDelete := typeutils.StringToBytes(txHashToDelete)
+		txHashBytesToDelete := []byte(txHashToDelete)
 		if bytes.Equal(txHashBytesToDelete, nullHashBytes) {
 			// do not delete genesis transaction
 			continue
