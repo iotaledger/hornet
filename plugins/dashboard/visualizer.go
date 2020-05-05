@@ -13,6 +13,10 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
+const (
+	VisualizerIdLength = 5
+)
+
 var (
 	visualizerWorkerCount     = 1
 	visualizerWorkerQueueSize = 500
@@ -22,6 +26,7 @@ var (
 // vertex defines a vertex in a DAG.
 type vertex struct {
 	ID          string `json:"id"`
+	Tag         string `json:"tag"`
 	TrunkID     string `json:"trunk_id"`
 	BranchID    string `json:"branch_id"`
 	IsSolid     bool   `json:"is_solid"`
@@ -63,8 +68,9 @@ func runVisualizer() {
 					Type: MsgTypeVertex,
 					Data: &vertex{
 						ID:          tx.GetHash(),
-						TrunkID:     tx.GetTrunk(),
-						BranchID:    tx.GetBranch(),
+						Tag:         tx.Tx.Tag,
+						TrunkID:     tx.GetTrunk()[:VisualizerIdLength],
+						BranchID:    tx.GetBranch()[:VisualizerIdLength],
 						IsSolid:     metadata.IsSolid(),
 						IsConfirmed: metadata.IsConfirmed(),
 						IsMilestone: false,
@@ -84,7 +90,7 @@ func runVisualizer() {
 				&msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: tx.GetHash(),
+						ID: tx.GetHash()[:VisualizerIdLength],
 					},
 				}, true)
 		})
@@ -96,11 +102,11 @@ func runVisualizer() {
 				return
 			}
 
-			visualizerWorkerPool.TrySubmit(
+			visualizerWorkerPool.Submit(
 				&msg{
 					Type: MsgTypeConfirmedInfo,
 					Data: &metainfo{
-						ID: tx.GetHash(),
+						ID: tx.GetHash()[:VisualizerIdLength],
 					},
 				}, true)
 		})
@@ -117,7 +123,7 @@ func runVisualizer() {
 					&msg{
 						Type: MsgTypeMilestoneInfo,
 						Data: &metainfo{
-							ID: txHash,
+							ID: txHash[:VisualizerIdLength],
 						},
 					}, true)
 			}
@@ -134,7 +140,7 @@ func runVisualizer() {
 				&msg{
 					Type: MsgTypeTipInfo,
 					Data: &tipinfo{
-						ID:    txHash,
+						ID:    txHash[:VisualizerIdLength],
 						IsTip: true,
 					},
 				}, true)
@@ -149,7 +155,7 @@ func runVisualizer() {
 				&msg{
 					Type: MsgTypeTipInfo,
 					Data: &tipinfo{
-						ID:    txHash,
+						ID:    txHash[:VisualizerIdLength],
 						IsTip: false,
 					},
 				}, true)
