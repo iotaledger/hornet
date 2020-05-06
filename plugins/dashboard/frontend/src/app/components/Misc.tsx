@@ -236,7 +236,7 @@ export class Misc extends React.Component<Props, any> {
                                             Size: {((this.props.nodeStore.last_dbsize_metric.keys + this.props.nodeStore.last_dbsize_metric.values) / 1024 / 1024).toFixed(2)} MB
                                             <If condition={this.props.nodeStore.lastDatabaseCleanupDuration > 0}>
                                                 <br/>
-                                                {"Last GC: "} {this.props.nodeStore.lastDatabaseCleanupEnd} {". Took: "}{this.props.nodeStore.lastDatabaseCleanupDuration.toFixed(2)}{" seconds."}
+                                                {"Last GC: "} {this.props.nodeStore.lastDatabaseCleanupEnd} {". Took: "}{this.props.nodeStore.lastDatabaseCleanupDuration}{" seconds."}
                                                 <br/>
                                             </If>
                                         </small>
