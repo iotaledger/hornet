@@ -1,8 +1,9 @@
 package database
 
 import (
+	"strconv"
 	"time"
-	
+
 	"github.com/dgraph-io/badger/v2"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -45,7 +46,7 @@ func configure(plugin *node.Plugin) {
 				Start: start,
 			}
 			Events.DatabaseCleanup.Trigger(cleanup)
-			err := database.CleanupHornetBadgerInstance()
+			discardRatio, err := database.CleanupHornetBadgerInstance()
 			end := time.Now()
 			cleanup = &DatabaseCleanup{
 				Start: start,
@@ -56,10 +57,10 @@ func configure(plugin *node.Plugin) {
 				if err != badger.ErrNoRewrite {
 					log.Errorf("Badger garbage collection finished with error: %s. Took: %s", err.Error(), time.Since(start).String())
 				} else {
-					log.Infof("Badger garbage collection finished with nothing to clean up. Took: %s", end.Sub(start).String())
+					log.Infof("Badger garbage collection finished with nothing to clean up (discardRatio: %s). Took: %s", strconv.FormatFloat(discardRatio, 'f', -1, 64), end.Sub(start).String())
 				}
 			} else {
-				log.Infof("Badger garbage collection finished. Took: %s", end.Sub(start).String())
+				log.Infof("Badger garbage collection finished (discardRatio: %s). Took: %s", strconv.FormatFloat(discardRatio, 'f', -1, 64), end.Sub(start).String())
 			}
 
 		}, 1*time.Minute, shutdownSignal)

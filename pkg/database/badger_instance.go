@@ -92,6 +92,6 @@ func GetHornetBadgerInstance() *badger.DB {
 	return instance
 }
 
-func CleanupHornetBadgerInstance() error {
-	return GetHornetBadgerInstance().RunValueLogGC(0.7)
+func CleanupHornetBadgerInstance() (float64, error) {
+	return badgerOpts.ValueLogGCDiscardRatio, GetHornetBadgerInstance().RunValueLogGC(badgerOpts.ValueLogGCDiscardRatio)
 }
