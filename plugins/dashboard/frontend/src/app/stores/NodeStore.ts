@@ -290,6 +290,17 @@ const chartSeriesOpts = {
     categoryPercentage: 0.95,
 };
 
+class DbSizeMetric {
+    keys: number;
+    values: number;
+    ts: number;
+}
+
+class DbCleanupEvent {
+    start: number;
+    end: number;
+}
+
 function series(name: string, color: string, bgColor: string) {
     return {
         label: name, data: [],
@@ -319,6 +330,9 @@ export class NodeStore {
     @observable neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
     @observable last_confirmed_ms_metric: ConfirmedMilestoneMetric = new ConfirmedMilestoneMetric();
     @observable collected_confirmed_ms_metrics: Array<ConfirmedMilestoneMetric> = [];
+    @observable last_dbsize_metric: DbSizeMetric = new DbSizeMetric();
+    @observable collected_dbsize_metrics: Array<DbSizeMetric> = [];
+    @observable last_dbcleanup_event: DbCleanupEvent = new DbCleanupEvent();
     @observable collecting: boolean = true;
 
     constructor() {
@@ -331,6 +345,8 @@ export class NodeStore {
         registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
         registerHandler(WSMsgType.PeerMetric, this.updateNeighborMetrics);
         registerHandler(WSMsgType.ConfirmedMsMetrics, this.updateConfirmedMilestoneMetrics);
+        registerHandler(WSMsgType.DBSizeMetric, this.updateDatabaseSizeMetrics);
+        registerHandler(WSMsgType.DBCleanup, this.updateDatabaseCleanupStatus);
         this.updateCollecting(true);
     }
 
@@ -340,6 +356,8 @@ export class NodeStore {
         unregisterHandler(WSMsgType.TipSelMetric);
         unregisterHandler(WSMsgType.PeerMetric);
         unregisterHandler(WSMsgType.ConfirmedMsMetrics);
+        unregisterHandler(WSMsgType.DBSizeMetric);
+        unregisterHandler(WSMsgType.DBCleanup);
         this.updateCollecting(false);
     }
 
@@ -361,6 +379,9 @@ export class NodeStore {
         this.neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
         this.last_confirmed_ms_metric = new ConfirmedMilestoneMetric();
         this.collected_confirmed_ms_metrics = [];
+        this.last_dbsize_metric = new DbSizeMetric();
+        this.collected_dbsize_metrics = [];
+        this.last_dbcleanup_event = new DbCleanupEvent();
     }
 
     connect() {
@@ -406,6 +427,27 @@ export class NodeStore {
     get solidifierSolidReachedPercentage(): number {
         if (!this.status.lmi) return 0;
         return Math.floor((1 - (this.status.current_requested_ms / this.status.lmi)) * 100);
+    }
+
+    @computed
+    get isRunningDatabaseCleanup(): boolean {
+        return (this.last_dbcleanup_event.start != 0 && this.last_dbcleanup_event.end == 0)
+    }
+
+    @computed
+    get lastDatabaseCleanupEnd(): string {
+        if (this.last_dbcleanup_event.end != 0) {
+            return dateformat(new Date(this.last_dbcleanup_event.end * 1000), "HH:MM:ss")
+        }
+        return ""
+    }
+
+    @computed
+    get lastDatabaseCleanupDuration(): number {
+        if (this.last_dbcleanup_event.start != 0 && this.last_dbcleanup_event.end != 0) {
+            return this.last_dbcleanup_event.end - this.last_dbcleanup_event.start;
+        }
+        return 0
     }
 
     @action
@@ -497,6 +539,24 @@ export class NodeStore {
                 }
             }
         }
+    }
+
+    @action
+    updateDatabaseSizeMetrics = (dbMetrics: Array<DbSizeMetric>) => {
+        if (dbMetrics !== null) {
+            if (dbMetrics.length > 0) {
+                this.last_dbsize_metric = dbMetrics[dbMetrics.length - 1];
+                this.collected_dbsize_metrics = this.collected_dbsize_metrics.concat(dbMetrics);
+                if (this.collected_dbsize_metrics.length > 600) {
+                    this.collected_dbsize_metrics = this.collected_dbsize_metrics.slice(-600);
+                }
+            }
+        }
+    }
+
+    @action
+    updateDatabaseCleanupStatus = (dbCleanup: DbCleanupEvent) => {
+        this.last_dbcleanup_event = dbCleanup;
     }
 
     @computed
@@ -777,6 +837,33 @@ export class NodeStore {
     @computed
     get neighborsSeries() {
         return {};
+    }
+
+    @computed
+    get dbSizeSeries() {
+        let keys = Object.assign({}, chartSeriesOpts,
+            series("Keys", 'rgba(159, 53, 230,1)', 'rgba(159, 53, 230,0.4)')
+        );
+        let values = Object.assign({}, chartSeriesOpts,
+            series("Values", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
+        );
+        let total = Object.assign({}, chartSeriesOpts,
+            series("Total", 'rgba(53, 180, 219,1)', 'rgba(53, 180, 219,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_dbsize_metrics.length; i++) {
+            let metric: DbSizeMetric = this.collected_dbsize_metrics[i];
+            labels.push(dateformat(new Date(metric.ts * 1000), "HH:MM:ss"));
+            keys.data.push((metric.keys / 1024 / 1024).toFixed(2));
+            values.data.push((metric.values / 1024 / 1024).toFixed(2));
+            total.data.push(((metric.keys + metric.values) / 1024 / 1024).toFixed(2));
+        }
+
+        return {
+            labels: labels,
+            datasets: [keys, values, total]
+        };
     }
 
     @computed

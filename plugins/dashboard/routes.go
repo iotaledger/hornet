@@ -138,6 +138,8 @@ func websocketRoute(c echo.Context) error {
 
 		client.Send(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		client.Send(&msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
+		client.Send(&msg{MsgTypeDatabaseSizeMetric, cachedDbSizeMetrics})
+		client.Send(&msg{MsgTypeDatabaseCleanupEvent, lastDbCleanup})
 		start := tangle.GetLatestMilestoneIndex()
 		for i := start - 10; i <= start; i++ {
 			if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1

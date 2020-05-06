@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 
@@ -38,6 +37,10 @@ func Get(dbPrefix byte, optionalBadger ...*badger.DB) (Database, error) {
 func Settings(dir string, options *profile.BadgerOpts) {
 	directory = dir
 	badgerOpts = options
+}
+
+func GetDatabaseSize() (keys int64, values int64) {
+	return GetHornetBadgerInstance().Size()
 }
 
 func GetHornetBadgerInstance() *badger.DB {
@@ -89,14 +92,6 @@ func GetHornetBadgerInstance() *badger.DB {
 	return instance
 }
 
-func CleanupHornetBadgerInstance() {
-
-	db := GetHornetBadgerInstance()
-
-	fmt.Println("Run badger garbage collection")
-
-	var err error
-	for err == nil {
-		err = db.RunValueLogGC(0.7)
-	}
+func CleanupHornetBadgerInstance() error {
+	return GetHornetBadgerInstance().RunValueLogGC(0.7)
 }

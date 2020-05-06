@@ -1,9 +1,12 @@
 package database
 
 import (
+	"time"
+	
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/database"
@@ -29,6 +32,33 @@ func configure(plugin *node.Plugin) {
 	if !tangle.IsCorrectDatabaseVersion() {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 	}
+
+	// create a db cleanup worker
+	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
+		timeutil.Ticker(func() {
+
+			log.Info("Run badger garbage collection")
+			start := time.Now()
+			cleanup := &DatabaseCleanup{
+				Start: start,
+			}
+			Events.DatabaseCleanup.Trigger(cleanup)
+			err := database.CleanupHornetBadgerInstance()
+			time.Sleep(20 * time.Second)
+			end := time.Now()
+			cleanup = &DatabaseCleanup{
+				Start: start,
+				End:   end,
+			}
+			Events.DatabaseCleanup.Trigger(cleanup)
+			if err != nil {
+				log.Errorf("Badger garbage collection finished with error: %s. Took: %s", err.Error(), time.Since(start).String())
+			} else {
+				log.Infof("Badger garbage collection finished. Took: %s", end.Sub(start).String())
+			}
+
+		}, 1*time.Minute, shutdownSignal)
+	}, shutdown.PriorityBadgerGarbageCollection)
 
 	daemon.BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal

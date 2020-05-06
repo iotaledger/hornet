@@ -26,6 +26,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
+	databaseplugin "github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/peering"
@@ -78,6 +79,10 @@ func configure(plugin *node.Plugin) {
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangleplugin.ConfirmedMilestoneMetric:
 			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
+		case []*dbSize:
+			hub.BroadcastMsg(&msg{MsgTypeDatabaseSizeMetric, x})
+		case *databaseplugin.DatabaseCleanup:
+			hub.BroadcastMsg(&msg{MsgTypeDatabaseCleanupEvent, x})
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
@@ -151,6 +156,7 @@ func run(_ *node.Plugin) {
 		tangleplugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
 		tangleplugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
 		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(notifyConfirmedMsMetrics)
+
 		wsSendWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
@@ -161,6 +167,8 @@ func run(_ *node.Plugin) {
 	runVisualizer()
 	// run the tipselection feed
 	runTipSelMetricWorker()
+	// run the database size collector
+	runDatabaseSizeCollector()
 }
 
 // tx +1
@@ -200,6 +208,10 @@ const (
 	MsgTypeMilestoneInfo
 	// MsgTypeTipInfo is the type of the TipInfo message for the visualizer.
 	MsgTypeTipInfo
+	// MsgTypeDatabaseSizeMetric is the type of the database Size message for the metrics.
+	MsgTypeDatabaseSizeMetric
+	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
+	MsgTypeDatabaseCleanupEvent
 )
 
 type msg struct {
