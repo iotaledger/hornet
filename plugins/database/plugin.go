@@ -2,6 +2,8 @@ package database
 
 import (
 	"time"
+	
+	"github.com/dgraph-io/badger/v2"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -51,7 +53,11 @@ func configure(plugin *node.Plugin) {
 			}
 			Events.DatabaseCleanup.Trigger(cleanup)
 			if err != nil {
-				log.Errorf("Badger garbage collection finished with error: %s. Took: %s", err.Error(), time.Since(start).String())
+				if err != badger.ErrNoRewrite {
+					log.Errorf("Badger garbage collection finished with error: %s. Took: %s", err.Error(), time.Since(start).String())
+				} else {
+					log.Infof("Badger garbage collection finished with nothing to clean up. Took: %s", end.Sub(start).String())
+				}
 			} else {
 				log.Infof("Badger garbage collection finished. Took: %s", end.Sub(start).String())
 			}
