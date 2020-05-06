@@ -2,7 +2,7 @@ package database
 
 import (
 	"time"
-	
+
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
@@ -44,7 +44,6 @@ func configure(plugin *node.Plugin) {
 			}
 			Events.DatabaseCleanup.Trigger(cleanup)
 			err := database.CleanupHornetBadgerInstance()
-			time.Sleep(20 * time.Second)
 			end := time.Now()
 			cleanup = &DatabaseCleanup{
 				Start: start,
