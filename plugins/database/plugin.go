@@ -56,12 +56,13 @@ func configure(plugin *node.Plugin) {
 			if err != nil {
 				if err != badger.ErrNoRewrite {
 					log.Errorf("Badger garbage collection finished with error: %s. Took: %s", err.Error(), time.Since(start).String())
-				} else {
-					log.Infof("Badger garbage collection finished with nothing to clean up (discardRatio: %s). Took: %s", strconv.FormatFloat(discardRatio, 'f', -1, 64), end.Sub(start).String())
+					return
 				}
-			} else {
-				log.Infof("Badger garbage collection finished (discardRatio: %s). Took: %s", strconv.FormatFloat(discardRatio, 'f', -1, 64), end.Sub(start).String())
+				log.Infof("Badger garbage collection finished with nothing to clean up (discardRatio: %s). Took: %s", strconv.FormatFloat(discardRatio, 'f', -1, 64), end.Sub(start).String())
+				return
 			}
+			
+			log.Infof("Badger garbage collection finished (discardRatio: %s). Took: %s", strconv.FormatFloat(discardRatio, 'f', -1, 64), end.Sub(start).String())
 
 		}, 1*time.Minute, shutdownSignal)
 	}, shutdown.PriorityBadgerGarbageCollection)
