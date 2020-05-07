@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 const (
@@ -23,11 +24,11 @@ var (
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
 func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 
-	txsToRemoveMap := make(map[string]struct{})
+	txsBytesToCheckMap := make(map[string]struct{})
 
 	// Check if tx is still unconfirmed
 	for _, txHashBytes := range tangle.GetUnconfirmedTxHashBytes(targetIndex, true) {
-		if _, exists := txsToRemoveMap[string(txHashBytes)]; exists {
+		if _, exists := txsBytesToCheckMap[string(txHashBytes)]; exists {
 			continue
 		}
 
@@ -43,10 +44,10 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 			continue
 		}
 
-		txsToRemoveMap[string(txHashBytes)] = struct{}{}
+		txsBytesToCheckMap[string(txHashBytes)] = struct{}{}
 	}
 
-	txCount := pruneTransactions(txsToRemoveMap)
+	txCount := pruneTransactions(txsBytesToCheckMap)
 	tangle.DeleteUnconfirmedTxsFromBadger(targetIndex)
 
 	return txCount
@@ -200,12 +201,12 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		txsToRemoveMap := make(map[string]struct{})
+		txsBytesToCheckMap := make(map[string]struct{})
 		for _, approvee := range approvees {
-			txsToRemoveMap[string(trinary.MustTrytesToBytes(approvee)[:49])] = struct{}{}
+			txsBytesToCheckMap[string(trinary.MustTrytesToBytes(approvee)[:49])] = struct{}{}
 		}
 
-		txCount += pruneTransactions(txsToRemoveMap)
+		txCount += pruneTransactions(txsBytesToCheckMap)
 
 		pruneMilestone(milestoneIndex)
 
