@@ -201,7 +201,7 @@ var Profile8GB = &Profile{
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
 		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.7,
+		ValueLogGCDiscardRatio:  0.1,
 	},
 }
 
@@ -325,7 +325,7 @@ var Profile4GB = &Profile{
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
 		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.7,
+		ValueLogGCDiscardRatio:  0.1,
 	},
 }
 
@@ -449,7 +449,7 @@ var Profile2GB = &Profile{
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
 		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.7,
+		ValueLogGCDiscardRatio:  0.1,
 	},
 }
 
@@ -573,7 +573,7 @@ var Profile1GB = &Profile{
 		WithTruncate:            false,
 		LogRotatesToFlush:       2,
 		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.7,
+		ValueLogGCDiscardRatio:  0.1,
 	},
 }
 

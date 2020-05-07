@@ -24,6 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -57,6 +58,10 @@ var (
 
 	pruningEnabled bool
 	pruningDelay   milestone.Index
+
+	statusLock     syncutils.RWMutex
+	isSnapshotting bool
+	isPruning      bool
 )
 
 func configure(plugin *node.Plugin) {
@@ -78,6 +83,8 @@ func configure(plugin *node.Plugin) {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
 		pruningDelay = pruningDelayMin
 	}
+
+	gossip.AddRequestBackpressureSignal(isSnapshottingOrPruning)
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
@@ -135,6 +142,12 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}
+}
+
+func isSnapshottingOrPruning() bool {
+	statusLock.RLock()
+	defer statusLock.RUnlock()
+	return isSnapshotting || isPruning
 }
 
 func run(_ *node.Plugin) {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/plugins/database"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -109,6 +110,12 @@ func pruneTransactions(txsBytesToCheckMap map[string]struct{}) int {
 	return len(txsBytesToDeleteMap)
 }
 
+func setIsPruning(value bool) {
+	statusLock.Lock()
+	isPruning = value
+	statusLock.Unlock()
+}
+
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
@@ -135,6 +142,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		// we prune in "AdditionalPruningThreshold" steps to recalculate the solidEntryPoints
 		return ErrNotEnoughHistory
 	}
+
+	setIsPruning(true)
+	defer setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
 	newSolidEntryPoints, err := getSolidEntryPoints(targetIndex, abortSignal)
@@ -212,6 +222,8 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}
+
+	database.RunFullGarbageCollection()
 
 	return nil
 }
