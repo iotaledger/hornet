@@ -126,5 +126,5 @@ func RunFullGarbageCollection(discardRatio ...float64) {
 }
 
 func run(_ *node.Plugin) {
-	RunFullGarbageCollection(0.01)
+	// do nothing
 }

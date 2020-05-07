@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -102,6 +103,9 @@ func run(plugin *node.Plugin) {
 		}
 		log.Info("database revalidation successful")
 	}
+
+	// run a full database garbage collection at startup
+	database.RunFullGarbageCollection(0.01)
 
 	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), updateSyncedAtStartup)
 
