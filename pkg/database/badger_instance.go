@@ -39,10 +39,12 @@ func Settings(dir string, options *profile.BadgerOpts) {
 	badgerOpts = options
 }
 
+// GetDatabaseSize returns the size of the database keys and values.
 func GetDatabaseSize() (keys int64, values int64) {
 	return GetHornetBadgerInstance().Size()
 }
 
+// GetHornetBadgerInstance returns the badger DB instance.
 func GetHornetBadgerInstance() *badger.DB {
 	once.Do(func() {
 
@@ -92,6 +94,11 @@ func GetHornetBadgerInstance() *badger.DB {
 	return instance
 }
 
-func CleanupHornetBadgerInstance() (float64, error) {
-	return badgerOpts.ValueLogGCDiscardRatio, GetHornetBadgerInstance().RunValueLogGC(badgerOpts.ValueLogGCDiscardRatio)
+// CleanupHornetBadgerInstance runs the badger garbage collector.
+func CleanupHornetBadgerInstance(discardRatio ...float64) error {
+	valueLogDiscardRatio := badgerOpts.ValueLogGCDiscardRatio
+	if len(discardRatio) > 0 {
+		valueLogDiscardRatio = discardRatio[0]
+	}
+	return GetHornetBadgerInstance().RunValueLogGC(valueLogDiscardRatio)
 }
