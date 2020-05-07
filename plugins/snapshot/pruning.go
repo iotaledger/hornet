@@ -109,6 +109,12 @@ func pruneTransactions(txsBytesToCheckMap map[string]struct{}) int {
 	return len(txsBytesToDeleteMap)
 }
 
+func setIsPruning(value bool) {
+	statusLock.Lock()
+	isPruning = value
+	statusLock.Unlock()
+}
+
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
@@ -135,6 +141,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		// we prune in "AdditionalPruningThreshold" steps to recalculate the solidEntryPoints
 		return ErrNotEnoughHistory
 	}
+
+	setIsPruning(true)
+	defer setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
 	newSolidEntryPoints, err := getSolidEntryPoints(targetIndex, abortSignal)

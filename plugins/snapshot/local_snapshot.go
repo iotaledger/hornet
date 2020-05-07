@@ -381,6 +381,12 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	return sha256Hash, nil
 }
 
+func setIsSnapshotting(value bool) {
+	statusLock.Lock()
+	isSnapshotting = value
+	statusLock.Unlock()
+}
+
 func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 
 	log.Infof("creating local snapshot for targetIndex %d", targetIndex)
@@ -395,6 +401,9 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	if err := checkSnapshotLimits(targetIndex, snapshotInfo, writeToDatabase); err != nil {
 		return err
 	}
+
+	setIsSnapshotting(true)
+	defer setIsSnapshotting(false)
 
 	cachedTargetMs := tangle.GetMilestoneOrNil(targetIndex) // bundle +1
 	if cachedTargetMs == nil {
