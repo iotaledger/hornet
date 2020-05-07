@@ -65,7 +65,7 @@ func configureBundleTransactionsStorage() {
 	opts := profile.LoadProfile().Caches.BundleTransactions
 
 	bundleTransactionsStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixBundleTransactions},
 		bundleTransactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

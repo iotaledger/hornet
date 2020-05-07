@@ -115,7 +115,7 @@ func configureTransactionStorage() {
 	opts := profile.LoadProfile().Caches.Transactions
 
 	txStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixTransactions},
 		transactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
@@ -128,7 +128,7 @@ func configureTransactionStorage() {
 	)
 
 	metadataStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixTransactionMetadata},
 		metadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

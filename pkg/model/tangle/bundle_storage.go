@@ -40,7 +40,7 @@ func configureBundleStorage() {
 	opts := profile.LoadProfile().Caches.Bundles
 
 	bundleStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixBundles},
 		bundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

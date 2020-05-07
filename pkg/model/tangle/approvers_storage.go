@@ -49,7 +49,7 @@ func configureApproversStorage() {
 	opts := profile.LoadProfile().Caches.Approvers
 
 	approversStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixApprovers},
 		approversFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

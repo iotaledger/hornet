@@ -4,6 +4,8 @@ go 1.14
 
 replace github.com/dgraph-io/badger/v2 v2.0.1 => github.com/muXxer/badger/v2 v2.0.3-hotfix
 
+replace github.com/iotaledger/hive.go => D:/Projects/hive.go
+
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/dgraph-io/badger/v2 v2.0.1
@@ -33,6 +35,7 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.5.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
+	go.etcd.io/bbolt v1.3.4
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f

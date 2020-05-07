@@ -64,7 +64,7 @@ func configureAddressesStorage() {
 	opts := profile.LoadProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixAddresses},
 		addressFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

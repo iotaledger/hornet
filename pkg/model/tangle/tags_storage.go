@@ -50,7 +50,7 @@ func configureTagsStorage() {
 	opts := profile.LoadProfile().Caches.Tags
 
 	tagsStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixTags},
 		tagsFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),

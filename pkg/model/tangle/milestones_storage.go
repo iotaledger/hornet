@@ -41,7 +41,7 @@ func configureMilestoneStorage() {
 	opts := profile.LoadProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
+		database.BoltStorage(),
 		[]byte{DBPrefixMilestones},
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
