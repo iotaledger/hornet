@@ -8,6 +8,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/plugins/database"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -221,6 +222,8 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}
+
+	database.RunFullGarbageCollection()
 
 	return nil
 }
