@@ -65,32 +65,20 @@ func configureUnconfirmedTxStorage() {
 	)
 }
 
-// unconfirmedTx +-0
-func GetUnconfirmedTxHashes(msIndex milestone.Index, forceRelease bool, maxFind ...int) []trinary.Hash {
-	var unconfirmedTxHashes []trinary.Hash
+// GetUnconfirmedTxHashBytes returns all hashes of unconfirmed transactions for that milestone.
+func GetUnconfirmedTxHashBytes(msIndex milestone.Index, forceRelease bool) [][]byte {
+
+	var unconfirmedTxHashBytes [][]byte
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
-	i := 0
-	unconfirmedTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		i++
-		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release(true) // unconfirmedTx -1
-			return false
-		}
-
-		if !cachedObject.Exists() {
-			cachedObject.Release(true) // unconfirmedTx -1
-			return true
-		}
-
-		unconfirmedTxHashes = append(unconfirmedTxHashes, (&CachedUnconfirmedTx{CachedObject: cachedObject}).GetUnconfirmedTx().GetTransactionHash())
-		cachedObject.Release(forceRelease) // unconfirmedTx -1
+	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
+		unconfirmedTxHashBytes = append(unconfirmedTxHashBytes, key[4:])
 		return true
-	}, key)
+	}, true, key)
 
-	return unconfirmedTxHashes
+	return unconfirmedTxHashBytes
 }
 
 // unconfirmedTx +1
@@ -110,19 +98,7 @@ func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnc
 	return &CachedUnconfirmedTx{CachedObject: cachedObj}
 }
 
-// unconfirmedTx +-0
-func DeleteUnconfirmedTxs(msIndex milestone.Index) {
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, uint32(msIndex))
-
-	unconfirmedTxStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		unconfirmedTxStorage.Delete(key)
-		cachedObject.Release(true)
-		return true
-	}, key)
-}
-
-// DeleteUnconfirmedTxsFromBadger deletes unconfirmed transactions without accessing the cache.
+// DeleteUnconfirmedTxsFromBadger deletes unconfirmed transaction entries without accessing the cache.
 func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
 
 	msIndexBytes := make([]byte, 4)

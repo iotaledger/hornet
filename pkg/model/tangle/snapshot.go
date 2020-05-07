@@ -30,6 +30,7 @@ type SnapshotInfo struct {
 	CoordinatorAddress trinary.Hash
 	Hash               trinary.Hash
 	SnapshotIndex      milestone.Index
+	EntryPointIndex    milestone.Index
 	PruningIndex       milestone.Index
 	Timestamp          int64
 	Metadata           bitmask.BitMask
@@ -42,27 +43,35 @@ func loadSnapshotInfo() {
 	}
 	snapshot = info
 	if info != nil {
-		println(fmt.Sprintf("SnapshotInfo: CooAddr: %v, PruningIndex: %d, SnapshotIndex: %d (%v) Timestamp: %v, SpentAddressesEnabled: %v", info.CoordinatorAddress, info.PruningIndex, info.SnapshotIndex, info.Hash, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
+		println(fmt.Sprintf(`SnapshotInfo:
+	CooAddr: %v
+	SnapshotIndex: %d (%v)
+	EntryPointIndex: %d
+	PruningIndex: %d
+	Timestamp: %v
+	SpentAddressesEnabled: %v`, info.CoordinatorAddress, info.SnapshotIndex, info.Hash, info.EntryPointIndex, info.PruningIndex, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
 	}
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 115 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 115", len(bytes))
+	if len(bytes) != 119 {
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 119", len(bytes))
 	}
 
 	cooAddr := trinary.MustBytesToTrytes(bytes[:49], 81)
 	hash := trinary.MustBytesToTrytes(bytes[49:98], 81)
 	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[98:102]))
-	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[102:106]))
-	timestamp := int64(binary.LittleEndian.Uint64(bytes[106:114]))
-	metadata := bitmask.BitMask(bytes[114])
+	entryPointIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[102:106]))
+	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[106:110]))
+	timestamp := int64(binary.LittleEndian.Uint64(bytes[110:118]))
+	metadata := bitmask.BitMask(bytes[118])
 
 	return &SnapshotInfo{
 		CoordinatorAddress: cooAddr,
 		Hash:               hash,
 		SnapshotIndex:      snapshotIndex,
+		EntryPointIndex:    entryPointIndex,
 		PruningIndex:       pruningIndex,
 		Timestamp:          timestamp,
 		Metadata:           metadata,
@@ -88,6 +97,10 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	binary.LittleEndian.PutUint32(snapshotIndexBytes, uint32(i.SnapshotIndex))
 	bytes = append(bytes, snapshotIndexBytes...)
 
+	entryPointIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(entryPointIndexBytes, uint32(i.EntryPointIndex))
+	bytes = append(bytes, entryPointIndexBytes...)
+
 	pruningIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(pruningIndexBytes, uint32(i.PruningIndex))
 	bytes = append(bytes, pruningIndexBytes...)
@@ -101,13 +114,21 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary.Hash, snapshotIndex milestone.Index, pruningIndex milestone.Index, timestamp int64, spentAddressesEnabled bool) {
-	println(fmt.Sprintf("Loaded solid milestone from snapshot %d (%v), coo address: %v,  pruning index: %d, Timestamp: %v, SpentAddressesEnabled: %v", snapshotIndex, milestoneHash, coordinatorAddress, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
+func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64, spentAddressesEnabled bool) {
+
+	println(fmt.Sprintf(`SnapshotInfo:
+	CooAddr: %v
+	SnapshotIndex: %d (%v)
+	EntryPointIndex: %d
+	PruningIndex: %d
+	Timestamp: %v
+	SpentAddressesEnabled: %v`, coordinatorAddress, snapshotIndex, milestoneHash, entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
 
 	sn := &SnapshotInfo{
 		CoordinatorAddress: coordinatorAddress,
 		Hash:               milestoneHash,
 		SnapshotIndex:      snapshotIndex,
+		EntryPointIndex:    entryPointIndex,
 		PruningIndex:       pruningIndex,
 		Timestamp:          timestamp,
 		Metadata:           bitmask.BitMask(0),
