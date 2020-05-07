@@ -66,7 +66,7 @@ func configureUnconfirmedTxStorage() {
 }
 
 // GetUnconfirmedTxHashBytes returns all hashes of unconfirmed transactions for that milestone.
-func GetUnconfirmedTxHashBytes(msIndex milestone.Index, forceRelease bool, maxFind ...int) [][]byte {
+func GetUnconfirmedTxHashBytes(msIndex milestone.Index, forceRelease bool) [][]byte {
 
 	var unconfirmedTxHashBytes [][]byte
 
