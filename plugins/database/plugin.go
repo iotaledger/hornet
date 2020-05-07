@@ -57,46 +57,17 @@ func configure(plugin *node.Plugin) {
 	}, shutdown.PriorityCloseDatabase)
 }
 
-// runGarbageCollectionWithoutLocking does the database garbage collection and a go garbage collector run.
-func runGarbageCollectionWithoutLocking(discardRatio ...float64) (time.Duration, error) {
-	start := time.Now()
+// runFullGarbageCollectionWithoutLocking does several database garbage collection runs until there was nothing to clean up.
+func runFullGarbageCollectionWithoutLocking(discardRatio ...float64) (int, error) {
+	cleanups := 0
 
-	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-	})
-
-	err := database.CleanupHornetBadgerInstance(discardRatio...)
-	end := time.Now()
-
-	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-		End:   end,
-	})
-
-	// trigger the go garbage collector to release the used memory
-	runtime.GC()
-
-	return end.Sub(start), err
-}
-
-// RunGarbageCollection runs a single database garbage collection run.
-func RunGarbageCollection() {
-	garbageCollectionLock.Lock()
-	defer garbageCollectionLock.Unlock()
-
-	log.Info("running database garbage collection.")
-
-	duration, err := runGarbageCollectionWithoutLocking()
-	if err != nil {
-		if err != badger.ErrNoRewrite {
-			log.Warnf("database garbage collection failed with error: %s. took: %v", err.Error(), duration.Truncate(time.Millisecond))
-			return
+	var err error
+	for err == nil {
+		if err = database.CleanupHornetBadgerInstance(discardRatio...); err == nil {
+			cleanups++
 		}
-		log.Infof("database garbage collection finished. nothing to clean up. took: %v", duration.Truncate(time.Millisecond))
-		return
 	}
-
-	log.Infof("database garbage collection finished. took %v", duration.Truncate(time.Millisecond))
+	return cleanups, err
 }
 
 // RunFullGarbageCollection does several database garbage collection runs until there was nothing to clean up.
@@ -106,23 +77,29 @@ func RunFullGarbageCollection(discardRatio ...float64) {
 
 	log.Info("running full database garbage collection. This can take a while...")
 
-	ts := time.Now()
-	cleanups := 0
+	start := time.Now()
 
-	var err error
-	for err == nil {
-		_, err = runGarbageCollectionWithoutLocking(discardRatio...)
-		if err != nil {
-			if err != badger.ErrNoRewrite {
-				log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), time.Since(ts).Truncate(time.Millisecond))
-				return
-			}
-			continue
+	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
+		Start: start,
+	})
+
+	cleanups, err := runFullGarbageCollectionWithoutLocking(discardRatio...)
+
+	end := time.Now()
+
+	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
+		Start: start,
+		End:   end,
+	})
+
+	if err != nil {
+		if err != badger.ErrNoRewrite {
+			log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), end.Sub(start).Truncate(time.Millisecond))
+			return
 		}
-		cleanups++
 	}
 
-	log.Infof("full database garbage collection finished. cleaned up %d files. took %v", cleanups, time.Since(ts).Truncate(time.Millisecond))
+	log.Infof("full database garbage collection finished. cleaned up %d files. took %v", cleanups, end.Sub(start).Truncate(time.Millisecond))
 }
 
 func run(_ *node.Plugin) {

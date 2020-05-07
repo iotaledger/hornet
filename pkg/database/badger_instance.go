@@ -96,6 +96,9 @@ func GetHornetBadgerInstance() *badger.DB {
 
 // CleanupHornetBadgerInstance runs the badger garbage collector.
 func CleanupHornetBadgerInstance(discardRatio ...float64) error {
+	// trigger the go garbage collector to release the used memory
+	defer runtime.GC()
+
 	valueLogDiscardRatio := badgerOpts.ValueLogGCDiscardRatio
 	if len(discardRatio) > 0 {
 		valueLogDiscardRatio = discardRatio[0]
