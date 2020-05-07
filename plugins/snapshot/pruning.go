@@ -121,11 +121,6 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		return ErrNotEnoughHistory
 	}
 
-	if snapshotInfo.PruningIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1 {
-		// Not enough history
-		return ErrNotEnoughHistory
-	}
-
 	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
 	if targetIndex > targetIndexMax {
 		targetIndex = targetIndexMax
