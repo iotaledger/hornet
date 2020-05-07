@@ -89,7 +89,7 @@ func configure(plugin *node.Plugin) {
 
 	configureTangleProcessor(plugin)
 
-	gossip.RequestBackpressureSignal = IsReceiveTxWorkerPoolBusy
+	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
 }
 
 func run(plugin *node.Plugin) {
