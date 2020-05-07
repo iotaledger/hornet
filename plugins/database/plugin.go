@@ -61,14 +61,14 @@ func configure(plugin *node.Plugin) {
 func runGarbageCollectionWithoutLocking(discardRatio ...float64) (time.Duration, error) {
 	start := time.Now()
 
-	Events.DatabaseCleanup.Trigger(DatabaseCleanup{
+	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
 		Start: start,
 	})
 
 	err := database.CleanupHornetBadgerInstance(discardRatio...)
 	end := time.Now()
 
-	Events.DatabaseCleanup.Trigger(DatabaseCleanup{
+	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
 		Start: start,
 		End:   end,
 	})
