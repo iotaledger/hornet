@@ -111,7 +111,7 @@
       "withTruncate": false,
       "logRotatesToFlush": 2,
       "eventLogging": false,
-      "valueLogGCDiscardRatio": 0.7
+      "valueLogGCDiscardRatio": 0.1
     }
   },
   "debug": {
@@ -226,7 +226,7 @@
       "withTruncate": false,
       "logRotatesToFlush": 2,
       "eventLogging": false,
-      "valueLogGCDiscardRatio": 0.7
+      "valueLogGCDiscardRatio": 0.1
     }
   }
 }
