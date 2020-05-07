@@ -674,7 +674,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81], msHash[:81], milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
+	tangle.SetSnapshotMilestone(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81], msHash[:81], milestone.Index(msIndex), milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
 	tangle.SolidEntryPointsAdd(msHash[:81], milestone.Index(msIndex))
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone.Index(msIndex))
 
