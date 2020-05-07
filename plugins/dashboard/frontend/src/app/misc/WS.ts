@@ -11,6 +11,8 @@ export enum WSMsgType {
     ConfirmedInfo,
     MilestoneInfo,
     TipInfo,
+    DBSizeMetric,
+    DBCleanup
 }
 
 export interface WSMessage {

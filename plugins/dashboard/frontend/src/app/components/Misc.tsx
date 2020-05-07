@@ -7,6 +7,8 @@ import {inject, observer} from "mobx-react";
 import Card from "react-bootstrap/Card";
 import {Line} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
+import {If} from "tsx-control-statements/components";
+import Badge from "react-bootstrap/Badge";
 
 interface Props {
     nodeStore?: NodeStore;
@@ -113,6 +115,47 @@ const cacheLineChartOpts = Object.assign({}, {
     }
 }, defaultChartOptions);
 
+const dbSizeLineChartOpts = Object.assign({}, {
+    scales: {
+        xAxes: [{
+            ticks: {
+                autoSkip: true,
+                maxTicksLimit: 8,
+                fontSize: 8,
+                minRotation: 0,
+                maxRotation: 0,
+            },
+            showXLabels: 10,
+            gridLines: {
+                display: false
+            }
+        }],
+        yAxes: [{
+            gridLines: {
+                display: false
+            },
+            ticks: {
+                fontSize: 10,
+                maxTicksLimit: 4,
+                suggestedMin: 0,
+                beginAtZero: true,
+                suggestedMax: 100,
+                callback: function (value, index, values) {
+                    return `${value} MB`;
+                }
+            },
+        }],
+    },
+    tooltips: {
+        callbacks: {
+            label: function (tooltipItem, data) {
+                let label = data.datasets[tooltipItem.datasetIndex].label;
+                return `${label}: ${tooltipItem.value} MB`;
+            }
+        }
+    }
+}, defaultChartOptions);
+
 @inject("nodeStore")
 @observer
 export class Misc extends React.Component<Props, any> {
@@ -178,6 +221,32 @@ export class Misc extends React.Component<Props, any> {
                                 <Card.Title>Requests</Card.Title>
                                 <Line height={60} data={this.props.nodeStore.stingReqs}
                                       options={reqLineChartOptions}/>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+                <Row className={"mb-3"}>
+                    <Col>
+                        <Card>
+                            <Card.Body>
+                                <Card.Title>Database</Card.Title>
+                                <If condition={!!this.props.nodeStore.last_dbsize_metric.values}>
+                                    <Container className={"d-flex justify-content-between align-items-center"}>
+                                        <small>
+                                            Size: {((this.props.nodeStore.last_dbsize_metric.keys + this.props.nodeStore.last_dbsize_metric.values) / 1024 / 1024).toFixed(2)} MB
+                                            <If condition={this.props.nodeStore.lastDatabaseCleanupDuration > 0}>
+                                                <br/>
+                                                {"Last GC: "} {this.props.nodeStore.lastDatabaseCleanupEnd} {". Took: "}{this.props.nodeStore.lastDatabaseCleanupDuration}{" seconds."}
+                                                <br/>
+                                            </If>
+                                        </small>
+                                        <If condition={this.props.nodeStore.isRunningDatabaseCleanup}>
+                                            <Badge variant="danger">GC running</Badge>
+                                        </If>
+                                    </Container>
+                                </If>
+                                <Line height={60} data={this.props.nodeStore.dbSizeSeries}
+                                      options={dbSizeLineChartOpts}/>
                             </Card.Body>
                         </Card>
                     </Col>

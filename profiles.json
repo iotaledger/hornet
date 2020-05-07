@@ -110,7 +110,8 @@
       "valueThreshold": 32,
       "withTruncate": false,
       "logRotatesToFlush": 2,
-      "eventLogging": false
+      "eventLogging": false,
+      "valueLogGCDiscardRatio": 0.7
     }
   },
   "debug": {
@@ -224,7 +225,8 @@
       "valueThreshold": 32,
       "withTruncate": false,
       "logRotatesToFlush": 2,
-      "eventLogging": false
+      "eventLogging": false,
+      "valueLogGCDiscardRatio": 0.7
     }
   }
 }

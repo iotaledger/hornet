@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -112,11 +111,6 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
-
-	// create a db cleanup worker
-	daemon.BackgroundWorker("Badger garbage collection", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(database.CleanupHornetBadgerInstance, 5*time.Minute, shutdownSignal)
-	}, shutdown.PriorityBadgerGarbageCollection)
 }
 
 // SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup
