@@ -1,10 +1,11 @@
 package database
 
 import (
-	"strconv"
+	"runtime"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
+	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -25,6 +26,15 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
+
+	viper.BindEnv("GOMAXPROCS")
+	goMaxProcsEnv := viper.GetInt("GOMAXPROCS")
+	if goMaxProcsEnv == 0 {
+		// badger documentation recommends setting a high number for GOMAXPROCS.
+		// this allows Go to observe the full IOPS throughput provided by modern SSDs.
+		// Dgraph uses 128.
+		runtime.GOMAXPROCS(128)
+	}
 
 	badgerOpts := profile.LoadProfile().Badger
 	if config.NodeConfig.GetBool(config.CfgDatabaseDebugLog) {
