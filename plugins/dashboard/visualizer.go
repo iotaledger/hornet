@@ -50,7 +50,7 @@ type tipinfo struct {
 
 func configureVisualizer() {
 	visualizerWorkerPool = workerpool.New(func(task workerpool.Task) {
-		hub.BroadcastMsg(task.Param(0))
+		hub.BroadcastMsg(task.Param(0), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(visualizerWorkerCount), workerpool.QueueSize(visualizerWorkerQueueSize))
 }

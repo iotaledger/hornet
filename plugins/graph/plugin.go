@@ -41,6 +41,8 @@ var (
 
 	wasSyncBefore = false
 
+	webSocketWriteTimeout = time.Duration(3) * time.Second
+
 	router   *http.ServeMux
 	server   *http.Server
 	upgrader *websocket.Upgrader
@@ -82,13 +84,12 @@ func configure(plugin *node.Plugin) {
 	server = &http.Server{Addr: bindAddr, Handler: router}
 
 	upgrader = &websocket.Upgrader{
-		ReadBufferSize:    1024,
-		WriteBufferSize:   1024,
+		HandshakeTimeout:  webSocketWriteTimeout,
+		CheckOrigin:       func(r *http.Request) bool { return true }, // allow any origin for websocket connections
 		EnableCompression: true,
 	}
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	hub = websockethub.NewHub(log, upgrader, BroadcastQueueSize)
+	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1

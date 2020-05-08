@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	TxBufferSize       = 1800
-	MsBufferSize       = 20
-	BroadcastQueueSize = 20000
+	txBufferSize          = 1800
+	msBufferSize          = 20
+	broadcastQueueSize    = 20000
+	clientSendChannelSize = 1000
 )
 
 var (
@@ -58,9 +59,9 @@ type wsMessage struct {
 }
 
 func initRingBuffers() {
-	txRingBuffer = ring.New(TxBufferSize)
-	snRingBuffer = ring.New(TxBufferSize)
-	msRingBuffer = ring.New(MsBufferSize)
+	txRingBuffer = ring.New(txBufferSize)
+	snRingBuffer = ring.New(txBufferSize)
+	msRingBuffer = ring.New(msBufferSize)
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
