@@ -21,11 +21,12 @@ var (
 	requestQueueEnqueueSignal      = make(chan struct{}, 2)
 	enqueuePendingRequestsInterval = 1500 * time.Millisecond
 	discardRequestsOlderThan       = 10 * time.Second
-
-	RequestBackpressureSignal = func() bool {
-		return false
-	}
+	requestBackpressureSignals     [](func() bool)
 )
+
+func AddRequestBackpressureSignal(reqFunc func() bool) {
+	requestBackpressureSignals = append(requestBackpressureSignals, reqFunc)
+}
 
 func runRequestWorkers() {
 	daemon.BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
@@ -52,9 +53,13 @@ func runRequestWorkers() {
 			case <-shutdownSignal:
 				return
 			case <-requestQueueEnqueueSignal:
-				if RequestBackpressureSignal() {
-					continue
+				for _, reqBackpressureSignal := range requestBackpressureSignals {
+					if reqBackpressureSignal() {
+						// skip enqueueing of the pending requests if a backpressure signal is set to true to reduce pressure
+						continue
+					}
 				}
+
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					manager.ForAllConnected(func(p *peer.Peer) bool {
