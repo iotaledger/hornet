@@ -49,8 +49,7 @@ func configureApproversStorage() {
 	opts := profile.LoadProfile().Caches.Approvers
 
 	approversStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixApprovers},
+		database.StorageWithPrefix(DBPrefixApprovers),
 		approversFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

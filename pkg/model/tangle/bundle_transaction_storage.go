@@ -65,8 +65,7 @@ func configureBundleTransactionsStorage() {
 	opts := profile.LoadProfile().Caches.BundleTransactions
 
 	bundleTransactionsStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixBundleTransactions},
+		database.StorageWithPrefix(DBPrefixBundleTransactions),
 		bundleTransactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

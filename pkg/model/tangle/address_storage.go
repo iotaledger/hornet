@@ -64,8 +64,7 @@ func configureAddressesStorage() {
 	opts := profile.LoadProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixAddresses},
+		database.StorageWithPrefix(DBPrefixAddresses),
 		addressFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

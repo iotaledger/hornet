@@ -115,8 +115,7 @@ func configureTransactionStorage() {
 	opts := profile.LoadProfile().Caches.Transactions
 
 	txStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixTransactions},
+		database.StorageWithPrefix(DBPrefixTransactions),
 		transactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -128,8 +127,7 @@ func configureTransactionStorage() {
 	)
 
 	metadataStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixTransactionMetadata},
+		database.StorageWithPrefix(DBPrefixTransactionMetadata),
 		metadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

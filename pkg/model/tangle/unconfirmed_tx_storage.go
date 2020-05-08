@@ -50,8 +50,7 @@ func configureUnconfirmedTxStorage() {
 	opts := profile.LoadProfile().Caches.UnconfirmedTx
 
 	unconfirmedTxStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixUnconfirmedTransactions},
+		database.StorageWithPrefix(DBPrefixUnconfirmedTransactions),
 		unconfirmedTxFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

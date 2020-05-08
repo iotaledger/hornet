@@ -24,6 +24,8 @@ var (
 	log    *logger.Logger
 
 	garbageCollectionLock syncutils.Mutex
+
+	useBolt = true
 )
 
 func configure(plugin *node.Plugin) {
@@ -42,7 +44,7 @@ func configure(plugin *node.Plugin) {
 	if config.NodeConfig.GetBool(config.CfgDatabaseDebugLog) {
 		badgerOpts.Logger = NewBadgerLogger()
 	}
-	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &badgerOpts)
+	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath), &badgerOpts, useBolt)
 
 	if !tangle.IsCorrectDatabaseVersion() {
 		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
@@ -52,7 +54,7 @@ func configure(plugin *node.Plugin) {
 		<-shutdownSignal
 		tangle.MarkDatabaseHealthy()
 		log.Info("Syncing database to disk...")
-		database.GetHornetBadgerInstance().Close()
+		database.Close()
 		log.Info("Syncing database to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 }
@@ -63,7 +65,7 @@ func runFullGarbageCollectionWithoutLocking(discardRatio ...float64) (int, error
 
 	var err error
 	for err == nil {
-		if err = database.CleanupHornetBadgerInstance(discardRatio...); err == nil {
+		if err = database.Cleanup(discardRatio...); err == nil {
 			cleanups++
 		}
 	}

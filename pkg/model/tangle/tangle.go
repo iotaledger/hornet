@@ -5,8 +5,8 @@ import (
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
-func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts) {
-	database.Settings(directory, badgerOpts)
+func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts, useBolt bool) {
+	database.Settings(directory, badgerOpts, useBolt)
 	configureHealthDatabase()
 	configureTransactionStorage()
 	configureBundleTransactionsStorage()

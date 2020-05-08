@@ -75,10 +75,7 @@ func configureLocal() *peer.Local {
 		seed = append(seed, bytes)
 	}
 
-	db, err := database.Get(tangle.DBPrefixAutopeering, database.GetHornetBadgerInstance())
-	if err != nil {
-		log.Fatalf("Unable to create autopeering database: %s", err)
-	}
+	db := database.DatabaseWithPrefix(tangle.DBPrefixAutopeering)
 
 	peerDB, err := peer.NewDB(db)
 	if err != nil {

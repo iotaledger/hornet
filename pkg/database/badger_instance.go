@@ -1,52 +1,21 @@
 package database
 
 import (
+	"github.com/iotaledger/hive.go/database/badgerdb"
 	"runtime"
 	"sync"
 
 	"github.com/dgraph-io/badger/v2"
-
-	"github.com/iotaledger/hive.go/database"
-
-	"github.com/gohornet/hornet/pkg/profile"
 )
 
 var (
-	instance   *badger.DB
-	once       sync.Once
-	directory  = "mainnetdb"
-	badgerOpts *profile.BadgerOpts
-
-	ErrKeyNotFound = database.ErrKeyNotFound
+	badgerInstance *badger.DB
+	badgerOnce     sync.Once
 )
 
-type (
-	Database     = database.Database
-	KeyPrefix    = database.KeyPrefix
-	Key          = database.Key
-	Value        = database.Value
-	KeyOnlyEntry = database.KeyOnlyEntry
-	Entry        = database.Entry
-)
-
-func Get(dbPrefix byte, optionalBadger ...*badger.DB) (Database, error) {
-	return database.Get(dbPrefix, optionalBadger...)
-}
-
-// Settings sets DB dir and the badger options
-func Settings(dir string, options *profile.BadgerOpts) {
-	directory = dir
-	badgerOpts = options
-}
-
-// GetDatabaseSize returns the size of the database keys and values.
-func GetDatabaseSize() (keys int64, values int64) {
-	return GetHornetBadgerInstance().Size()
-}
-
-// GetHornetBadgerInstance returns the badger DB instance.
-func GetHornetBadgerInstance() *badger.DB {
-	once.Do(func() {
+// getBadgerInstance returns the badger DB instance.
+func getBadgerInstance() *badger.DB {
+	badgerOnce.Do(func() {
 
 		opts := badger.DefaultOptions(directory)
 
@@ -84,24 +53,22 @@ func GetHornetBadgerInstance() *badger.DB {
 			opts = opts.WithTruncate(true)
 		}
 
-		db, err := database.CreateDB(directory, opts)
+		db, err := badgerdb.CreateDB(directory, opts)
 		if err != nil {
 			// errors should cause a panic to avoid singleton deadlocks
 			panic(err)
 		}
-		instance = db
+		badgerInstance = db
 	})
-	return instance
+	return badgerInstance
 }
 
-// CleanupHornetBadgerInstance runs the badger garbage collector.
-func CleanupHornetBadgerInstance(discardRatio ...float64) error {
-	// trigger the go garbage collector to release the used memory
-	defer runtime.GC()
+// cleanupBadgerInstance runs the badger garbage collector.
+func cleanupBadgerInstance(discardRatio ...float64) error {
 
 	valueLogDiscardRatio := badgerOpts.ValueLogGCDiscardRatio
 	if len(discardRatio) > 0 {
 		valueLogDiscardRatio = discardRatio[0]
 	}
-	return GetHornetBadgerInstance().RunValueLogGC(valueLogDiscardRatio)
+	return getBadgerInstance().RunValueLogGC(valueLogDiscardRatio)
 }

@@ -47,11 +47,7 @@ func WriteUnlockLedger() {
 }
 
 func configureLedgerDatabase() {
-	if db, err := database.Get(DBPrefixLedgerState, database.GetHornetBadgerInstance()); err != nil {
-		panic(err)
-	} else {
-		ledgerDatabase = db
-	}
+	ledgerDatabase = database.DatabaseWithPrefix(DBPrefixLedgerState)
 
 	if err := readLedgerMilestoneIndexFromDatabase(); err != nil {
 		panic(err)
@@ -157,8 +153,8 @@ func DeleteLedgerDiffForMilestone(index milestone.Index) error {
 
 	var deletions []database.Key
 
-	err := ledgerDatabase.StreamForEachPrefixKeyOnly(databaseKeyPrefixForLedgerDiff(index), func(entry database.KeyOnlyEntry) error {
-		deletions = append(deletions, append(databaseKeyPrefixForLedgerDiff(index), entry.Key...))
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(databaseKeyPrefixForLedgerDiff(index), func(key database.Key) error {
+		deletions = append(deletions, append(databaseKeyPrefixForLedgerDiff(index), key...))
 		return nil
 	})
 
@@ -341,8 +337,8 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 
 	// Delete all old entries
 	var deletions []database.Key
-	err := ledgerDatabase.StreamForEachPrefixKeyOnly(snapshotBalancePrefix, func(entry database.KeyOnlyEntry) error {
-		deletions = append(deletions, append(snapshotBalancePrefix, entry.Key...))
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(snapshotBalancePrefix, func(key database.Key) error {
+		deletions = append(deletions, append(snapshotBalancePrefix, key...))
 		return nil
 	})
 	if err != nil {
@@ -432,8 +428,8 @@ func DeleteLedgerBalancesInDatabase() error {
 
 	var deletions []database.Key
 
-	err := ledgerDatabase.StreamForEachPrefixKeyOnly(ledgerBalancePrefix, func(entry database.KeyOnlyEntry) error {
-		deletions = append(deletions, append(ledgerBalancePrefix, entry.Key...))
+	err := ledgerDatabase.StreamForEachPrefixKeyOnly(ledgerBalancePrefix, func(key database.Key) error {
+		deletions = append(deletions, append(ledgerBalancePrefix, key...))
 		return nil
 	})
 

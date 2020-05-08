@@ -49,7 +49,6 @@ func New(requestQueue rqueue.Queue, opts *Options) *Processor {
 	wuCacheOpts := opts.WorkUnitCacheOpts
 	proc.workUnits = objectstorage.New(
 		nil,
-		nil,
 		workUnitFactory,
 		objectstorage.CacheTime(time.Duration(wuCacheOpts.CacheTimeMs)),
 		objectstorage.PersistenceEnabled(false),

@@ -50,8 +50,7 @@ func configureTagsStorage() {
 	opts := profile.LoadProfile().Caches.Tags
 
 	tagsStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixTags},
+		database.StorageWithPrefix(DBPrefixTags),
 		tagsFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

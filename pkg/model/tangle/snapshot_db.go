@@ -13,11 +13,7 @@ import (
 var snapshotDatabase database.Database
 
 func configureSnapshotDatabase() {
-	if db, err := database.Get(DBPrefixSnapshot, database.GetHornetBadgerInstance()); err != nil {
-		panic(err)
-	} else {
-		snapshotDatabase = db
-	}
+	snapshotDatabase = database.DatabaseWithPrefix(DBPrefixSnapshot)
 }
 
 func storeSnapshotInfoInDatabase(snapshot *SnapshotInfo) error {

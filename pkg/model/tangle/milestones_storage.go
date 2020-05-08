@@ -41,8 +41,7 @@ func configureMilestoneStorage() {
 	opts := profile.LoadProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
-		database.BoltStorage(),
-		[]byte{DBPrefixMilestones},
+		database.StorageWithPrefix(DBPrefixMilestones),
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
