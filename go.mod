@@ -4,7 +4,7 @@ go 1.14
 
 replace github.com/dgraph-io/badger/v2 v2.0.1 => github.com/muXxer/badger/v2 v2.0.3-hotfix
 
-replace github.com/iotaledger/hive.go => D:/Projects/hive.go
+replace github.com/iotaledger/hive.go => ./hive.go
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
