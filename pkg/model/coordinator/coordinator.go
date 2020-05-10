@@ -330,3 +330,8 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 func (coo *Coordinator) GetInterval() time.Duration {
 	return time.Second * time.Duration(coo.milestoneIntervalSec) / time.Duration(coo.checkpointTransactions+1)
 }
+
+// State returns the current state of the coordinator.
+func (coo *Coordinator) State() *State {
+	return coo.state
+}
