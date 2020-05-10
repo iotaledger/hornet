@@ -151,19 +151,7 @@ func DeleteLedgerDiffForMilestone(index milestone.Index) error {
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	var deletions []database.Key
-
-	err := ledgerDatabase.StreamForEachPrefixKeyOnly(databaseKeyPrefixForLedgerDiff(index), func(key database.Key) error {
-		deletions = append(deletions, append(databaseKeyPrefixForLedgerDiff(index), key...))
-		return nil
-	})
-
-	if err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
-	}
-
-	// Now batch delete all entries
-	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
+	if err := ledgerDatabase.DeletePrefix(databaseKeyPrefixForLedgerDiff(index)); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
 	}
 
@@ -336,19 +324,14 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	defer WriteUnlockLedger()
 
 	// Delete all old entries
-	var deletions []database.Key
-	err := ledgerDatabase.StreamForEachPrefixKeyOnly(snapshotBalancePrefix, func(key database.Key) error {
-		deletions = append(deletions, append(snapshotBalancePrefix, key...))
-		return nil
-	})
-	if err != nil {
+	if err := ledgerDatabase.DeletePrefix(snapshotBalancePrefix); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot balances")
 	}
-	deletions = append(deletions, []byte(snapshotMilestoneIndexKey))
 
-	// Now delete all entries
-	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot balances")
+	// Delete index
+	if err := ledgerDatabase.Delete([]byte(snapshotMilestoneIndexKey)); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot index")
+
 	}
 
 	// Add all new entries
@@ -426,19 +409,8 @@ func DeleteLedgerBalancesInDatabase() error {
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	var deletions []database.Key
-
-	err := ledgerDatabase.StreamForEachPrefixKeyOnly(ledgerBalancePrefix, func(key database.Key) error {
-		deletions = append(deletions, append(ledgerBalancePrefix, key...))
-		return nil
-	})
-
-	if err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger balances")
-	}
-
-	// Now batch delete all entries
-	if err := ledgerDatabase.Apply([]database.Entry{}, deletions); err != nil {
+	// Delete ledger all balances
+	if err := ledgerDatabase.DeletePrefix(ledgerBalancePrefix); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger balances")
 	}
 
