@@ -4,7 +4,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -95,7 +94,7 @@ func RunFullGarbageCollection(discardRatio ...float64) {
 	})
 
 	if err != nil {
-		if err != badger.ErrNoRewrite {
+		if err != database.ErrNothingToCleanup {
 			log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), end.Sub(start).Truncate(time.Millisecond))
 			return
 		}

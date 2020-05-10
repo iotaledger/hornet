@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"runtime"
 
 	"github.com/iotaledger/hive.go/database"
@@ -17,8 +18,9 @@ var (
 	directory = "mainnetdb"
 	useBolt   bool
 
-	badgerOpts     *profile.BadgerOpts
-	ErrKeyNotFound = badgerdb.ErrKeyNotFound
+	badgerOpts          *profile.BadgerOpts
+	ErrKeyNotFound      = badgerdb.ErrKeyNotFound
+	ErrNothingToCleanup = errors.New("Nothing to clean up")
 )
 
 type (
@@ -72,7 +74,7 @@ func Cleanup(discardRatio ...float64) error {
 	defer runtime.GC()
 
 	if useBolt {
-		return nil
+		return errors.New("Not available ")
 	}
 	return cleanupBadgerInstance(discardRatio...)
 }

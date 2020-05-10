@@ -70,5 +70,9 @@ func cleanupBadgerInstance(discardRatio ...float64) error {
 	if len(discardRatio) > 0 {
 		valueLogDiscardRatio = discardRatio[0]
 	}
-	return getBadgerInstance().RunValueLogGC(valueLogDiscardRatio)
+	err := getBadgerInstance().RunValueLogGC(valueLogDiscardRatio)
+	if err == badger.ErrNoRewrite {
+		return ErrNothingToCleanup
+	}
+	return err
 }
