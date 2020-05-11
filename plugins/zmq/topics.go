@@ -9,6 +9,7 @@ import (
 )
 
 // Topic names
+
 const (
 	topicLMI          = "lmi"
 	topicLMSI         = "lmsi"
