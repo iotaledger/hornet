@@ -16,12 +16,14 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
+
+	"go.uber.org/atomic"
 )
 
 var (
 	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
-	txCount          = 0
+	txCount          = atomic.NewInt32(0)
 )
 
 func doSpam(shutdownSignal <-chan struct{}) {
@@ -46,10 +48,10 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	durationGTTA := time.Since(timeStart)
 	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
-	txCount++
+	txCountValue := int(txCount.Inc())
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
 
-	b, err := createBundle(address, message, tagSubstring, txCount, infoMsg)
+	b, err := createBundle(address, message, tagSubstring, txCountValue, infoMsg)
 	if err != nil {
 		return
 	}
@@ -71,7 +73,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-	log.Infof("Sent Spam Transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCount, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
+	log.Infof("Sent Spam Transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCountValue, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
 }
 
 // transactionHash makes a transaction hash from the given transaction.
