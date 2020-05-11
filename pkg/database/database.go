@@ -19,7 +19,7 @@ var (
 	useBolt   bool
 
 	badgerOpts          *profile.BadgerOpts
-	ErrKeyNotFound      = badgerdb.ErrKeyNotFound
+	ErrKeyNotFound      = database.ErrKeyNotFound
 	ErrNothingToCleanup = errors.New("Nothing to clean up")
 )
 
@@ -53,10 +53,6 @@ func Settings(dir string, options *profile.BadgerOpts, useBoltDB bool) {
 	directory = dir
 	badgerOpts = options
 	useBolt = useBoltDB
-
-	if useBolt {
-		ErrKeyNotFound = boltdb.ErrKeyNotFound
-	}
 }
 
 // GetDatabaseSize returns the size of the database keys and values.
@@ -74,7 +70,7 @@ func Cleanup(discardRatio ...float64) error {
 	defer runtime.GC()
 
 	if useBolt {
-		return errors.New("Not available ")
+		return ErrNothingToCleanup
 	}
 	return cleanupBadgerInstance(discardRatio...)
 }
