@@ -165,14 +165,15 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 	return publisher.Send(topicSN, messages)
 }
 
+// Publish transaction trytes of an tx that has recently confirmed
 func publishConfTxTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
         trytes, err := transaction.TransactionToTrytes(iotaTx)
         if err != nil {
                 return err
         }
         messages := []string{
-                trytes,
-                iotaTx.Hash,
+                trytes,                                // Transaction Trytes
+                iotaTx.Hash,                           // Transaction hash
                 strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
         }
 
