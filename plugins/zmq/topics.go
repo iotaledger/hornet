@@ -17,7 +17,7 @@ const (
 	topicLM           = "lm"
 	topicLSM          = "lsm"
 	topicSN           = "sn"
-        topicSNTrytes     = "sn_trytes"
+	topicSNTrytes     = "sn_trytes"
 	topicTxTrytes     = "trytes"
 	topicTX           = "tx"
 	topicSpentAddress = "spent_address"
