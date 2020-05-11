@@ -42,7 +42,11 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, 
 		if err != nil {
 			log.Error(err.Error())
 		}
-
+                
+		err = publishConfTxTrytes(tx.Tx, msIndex)
+                if err != nil {
+                        log.Error(err.Error())
+                }
 		addresses := GetAddressTopics()
 		for _, addr := range addresses {
 			if strings.EqualFold(tx.Tx.Address, addr) {
@@ -161,6 +165,19 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 	return publisher.Send(topicSN, messages)
 }
 
+func publishConfTxTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+        trytes, err := transaction.TransactionToTrytes(iotaTx)
+        if err != nil {
+                return err
+        }
+        messages := []string{
+                trytes,
+                iotaTx.Hash,
+                strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
+        }
+
+        return publisher.Send(topicSNTrytes, messages)
+}
 // Publish transaction trytes of an tx that has recently been added to the ledger
 func publishTxTrytes(iotaTx *transaction.Transaction) error {
 

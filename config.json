@@ -106,7 +106,7 @@
     "alias": "",
     "showAliasInGetNodeInfo": false,
     "disablePlugins": [],
-    "enablePlugins": []
+    "enablePlugins": ["zmq"]
   },
   "logger": {
     "level": "info",
@@ -150,7 +150,7 @@
     "config": "mqtt_config.json"
   },
   "zmq": {
-    "bindAddress": "localhost:5556"
+    "bindAddress": "0.0.0.0:5556"
   },
   "profiling": {
     "bindAddress": "localhost:6060"
