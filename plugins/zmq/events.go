@@ -42,7 +42,6 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, 
 		if err != nil {
 			log.Error(err.Error())
 		}
-                
 		err = publishConfTxTrytes(tx.Tx, msIndex)
                 if err != nil {
                         log.Error(err.Error())
