@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	TxBufferSize       = 50000
-	BroadcastQueueSize = 20000
+	txBufferSize          = 50000
+	broadcastQueueSize    = 20000
+	clientSendChannelSize = 1000
 )
 
 var (
@@ -51,6 +52,8 @@ var (
 	reattachmentWorkerPool      *workerpool.WorkerPool
 
 	wasSyncBefore = false
+
+	webSocketWriteTimeout = time.Duration(3) * time.Second
 
 	server            *http.Server
 	apiServer         *http.Server
@@ -104,13 +107,12 @@ func configure(plugin *node.Plugin) {
 	}
 
 	upgrader = &websocket.Upgrader{
-		ReadBufferSize:    1024,
-		WriteBufferSize:   1024,
+		HandshakeTimeout:  webSocketWriteTimeout,
+		CheckOrigin:       func(r *http.Request) bool { return true }, // allow any origin for websocket connections
 		EnableCompression: true,
 	}
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	hub = websockethub.NewHub(log, upgrader, BroadcastQueueSize)
+	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
 
 	api.GET("/api/v1/getRecentTransactions", handleAPI)
 
