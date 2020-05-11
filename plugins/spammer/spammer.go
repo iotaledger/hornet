@@ -3,8 +3,9 @@ package spammer
 import (
 	"fmt"
 	"time"
+	"sync"
 	"strings"
-	"runtime"
+	"errors"
 	"strconv"
 	"io/ioutil"
 	"math/rand"
@@ -21,8 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/tipselection"
-        "github.com/gohornet/hornet/plugins/peering"
-
+    "github.com/gohornet/hornet/plugins/peering"
 
 	"go.uber.org/atomic"
 )
@@ -31,53 +31,83 @@ var (
 	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = atomic.NewInt32(0)
+
+	//
+	CPUUsageTimePerSample = 1 * time.Second
+	once sync.Once
+	mu sync.Mutex
+
+	noProcStatError  = errors.New("Can't read /proc/stat")
+	atoiError        = errors.New("Can't convert from string to int")
+
+	cpuUsageResult float64 	// current result
+	cpuUsageError error 	// nil || current error
+
+	cpu_last_sum uint64		// previous iteration
+	cpu_last []uint64		// previous iteration
 )
 
-var lastCpuUser int64
-var lastCpuUserTime time.Time
+func cpuUsageBackground() {
+    go func() {
+		for {
+			procStat, err := ioutil.ReadFile("/proc/stat")
+			if err != nil { // i.e. don't throttle on Windows
+				mu.Lock()
+				defer mu.Unlock()
+				cpuUsageError = noProcStatError
+				return
+			}
 
-func loadPerCPU() float64 {
-	procStat, err := ioutil.ReadFile("/proc/stat")
-	if err != nil { // i.e. don't throttle on Windows
-		log.Infof("Error in reading /proc/stat, err: %s", err)
-		return 0.0
-	}
+			procStatString := string(procStat)
+			procStatLines := strings.Split(procStatString, "\n")
+			procStatSlice := strings.Split(procStatLines[0], " ")[2:] // ["7955046" "91" "189009" "6170128" "21650" "79349" "34869" "0" "0" "0"]
 
-	procStatString := string(procStat)
-	// log.Infof("procStatString %s", procStatString)
-	procStatSplit := strings.Split(procStatString, " ") // ["cpu" "" "204075769" "445" . Why the extra "" ?
-	// log.Infof("procStatSplit %q", procStatSplit)
-	// log.Infof("procStatSplit[2] %s", procStatSplit[2])
-	newCpuUser, err := strconv.Atoi(procStatSplit[2]) // TODO: sum all numbers
-	if err != nil {
-		log.Infof("Error in Atoi, err: %s", err)
-		return 0.0
-	}
+			cpu_sum := uint64(0)
+			cpu_now := make([]uint64, len(procStatSlice))
+			for i, v := range(procStatSlice) {
+				n, err := strconv.ParseUint(v, 10, 64)
+				if err != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					cpuUsageError = atoiError
+					return
+				}
+				cpu_sum += n
+				cpu_now[i] = n
+			}
 
-	cpuUser := int64(newCpuUser) - lastCpuUser
-	lastCpuUser = int64(newCpuUser)
+			if len(cpu_last) != 0 { // not on first iteration
+				cpu_delta := cpu_sum - cpu_last_sum
+				cpu_idle := cpu_now[3] - cpu_last[3]
+				cpu_used := cpu_delta - cpu_idle
+				
+				mu.Lock()
+				cpuUsageResult = float64(cpu_used) / float64(cpu_delta)
+				mu.Unlock()
 
-	now := time.Now()
-	duration :=  float64(now.Sub(lastCpuUserTime))
-	lastCpuUserTime = now
+				// fmt.Println(cpu_now, cpu_delta, cpu_idle, cpu_used, cpuUsageResult)
+			}
 
-	if lastCpuUser == 0 { // initialize
-	        log.Infof("init lastCpuUser and lastCpuUserTime")
-		return 0.0
-	}
+			cpu_last_sum = cpu_sum
+			cpu_last = cpu_now
 
-	accuracy := 10000 // TODO: remove this hardcording
-	load := float64(cpuUser) * float64(accuracy * 1000) / float64(runtime.NumCPU()) / float64(duration)
+			time.Sleep(CPUUsageTimePerSample)
+		} // next for...
+	}()
+}
 
-	log.Infof("cpuUser=%d, duration=%f, load %f", cpuUser, duration, load)
-	return load
+func CPUUsage() (float64, error) { // see: https://www.idnt.net/en-GB/kb/941772
+	once.Do(cpuUsageBackground)
+
+	mu.Lock()
+	defer mu.Unlock()
+	return cpuUsageResult, cpuUsageError // XXX mu.Lock() around this?
 }
 
 func randomSleep() { // prefend gettings into a cpu eating loop
-	minDuration := 1 * time.Second
-	maxDuration := 5 * time.Second
+	minDuration := time.Second / 4
+	maxDuration := time.Second / 2
 	duration := minDuration + time.Duration(rand.Intn(int(maxDuration - minDuration)))
-	// duration := 1 * time.Second
 	// log.Infof("randomSleep duration %d", duration)
 	time.Sleep(duration)
 }
@@ -110,14 +140,16 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
         }
 
-	load := loadPerCPU()
-	loadThreshold := 0.5
-	if load >= loadThreshold {
-		log.Infof("Skip doSpam because loadPerCpU >= loadThreshold (%f >= %f)", load, loadThreshold)
-		randomSleep()
-		return
-	}
-	// log.Infof("doSpam load = %f", load)
+	cpuUsage, err := CPUUsage()
+	if (err == nil) {
+		log.Infof("cpuUsage %.2f\n", cpuUsage)
+		cpuUsageThreshold := 0.90 // TODO: move this to the config file
+		if cpuUsage >= cpuUsageThreshold {
+			log.Infof("Skip doSpam because cpuUsage >= cpuUsageThreshold (%.2f >= %.2f)", cpuUsage, cpuUsageThreshold)
+			randomSleep()
+			return
+		}
+	} // else cpu usage detection not supported (Windows?)
 
 	timeStart := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
