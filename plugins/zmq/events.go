@@ -179,6 +179,7 @@ func publishConfTxTrytes(iotaTx *transaction.Transaction, msIndex milestone.Inde
 
         return publisher.Send(topicSNTrytes, messages)
 }
+
 // Publish transaction trytes of an tx that has recently been added to the ledger
 func publishTxTrytes(iotaTx *transaction.Transaction) error {
 
