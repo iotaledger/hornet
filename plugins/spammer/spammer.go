@@ -33,7 +33,7 @@ var (
 	txCount          = atomic.NewInt32(0)
 
 	//
-	CPUUsageTimePerSample = 1 * time.Second
+	CPUUsageTimePerSample = time.Second / 4
 	once sync.Once
 	mu sync.Mutex
 
@@ -105,11 +105,7 @@ func CPUUsage() (float64, error) { // see: https://www.idnt.net/en-GB/kb/941772
 }
 
 func randomSleep() { // prefend gettings into a cpu eating loop
-	minDuration := time.Second / 4
-	maxDuration := time.Second / 2
-	duration := minDuration + time.Duration(rand.Intn(int(maxDuration - minDuration)))
-	// log.Infof("randomSleep duration %d", duration)
-	time.Sleep(duration)
+	time.Sleep(CPUUsageTimePerSample + time.Duration(rand.Intn(int(4 * CPUUsageTimePerSample))))
 }
 
 func doSpam(shutdownSignal <-chan struct{}) {
@@ -142,10 +138,10 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	cpuUsage, err := CPUUsage()
 	if (err == nil) {
-		log.Infof("cpuUsage %.2f\n", cpuUsage)
+		// log.Infof("cpuUsage %.2f\n", cpuUsage)
 		cpuUsageThreshold := 0.90 // TODO: move this to the config file
-		if cpuUsage >= cpuUsageThreshold {
-			log.Infof("Skip doSpam because cpuUsage >= cpuUsageThreshold (%.2f >= %.2f)", cpuUsage, cpuUsageThreshold)
+		if cpuUsage > cpuUsageThreshold {
+			log.Infof("Skip doSpam because cpuUsage > cpuUsageThreshold (%.2f >= %.2f)", cpuUsage, cpuUsageThreshold)
 			randomSleep()
 			return
 		}
