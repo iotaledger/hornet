@@ -67,7 +67,7 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
 	// get the siblings in the current Merkle tree
 	leafSiblings, err := merkleTree.AuditPath(uint32(index))
@@ -76,6 +76,15 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	}
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
+	// append trinary encoded merkle tree root hash to the head's signature message fragment data
+	if whiteFlagMerkleRootTreeHash != nil {
+		// TODO: replace with 6-trits per byte encoding
+		trinaryEncodedWFMerkleTreeRootHash, err := trinary.BytesToTrytes(whiteFlagMerkleRootTreeHash)
+		if err != nil {
+			return nil, err
+		}
+		siblingsTrytes += trinaryEncodedWFMerkleTreeRootHash
+	}
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.KeyFragmentLength/consts.TrinaryRadix)
 
 	tag := tagForIndex(index)

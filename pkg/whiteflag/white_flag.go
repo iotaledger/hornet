@@ -1,4 +1,4 @@
-package consensus
+package whiteflag
 
 import (
 	"container/list"
@@ -22,46 +22,86 @@ var (
 	ErrMissingBundle = errors.New("missing bundle")
 )
 
-// WhiteFlagConfirmation represents a confirmation done via milestone under the "white-flag" rules.
-type WhiteFlagConfirmation struct {
+// Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
+type Confirmation struct {
 	// The tails of bundles which mutate the ledger in the order in which they were applied.
 	Tails []trinary.Hash
 	// Contains the updated state of the addresses which were mutated by the given confirmation.
 	NewAddressState map[trinary.Hash]int64
+	// The merkle tree root hash of all tails.
+	MerkleTreeHash []byte
 }
 
-// WhiteFlagConfirm computes the ledger changes in accordance to the white-flag rules for the given milestone bundle.
+// ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the given milestone bundle.
 // Via a post-order depth-first search the approved bundles of the given milestone are traversed and
 // in their corresponding order applied/mutated against the previous ledger state, respectively previous applied mutations.
 // Bundles within the approving cone must obey to strict schematics and be valid. Bundles causing conflicts are
 // ignored but do not create an error.
-func WhiteFlagConfirm(cachedMsBundle *tangle.CachedBundle) (*WhiteFlagConfirmation, error) {
+func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, error) {
 	defer cachedMsBundle.Release()
 	msBundle := cachedMsBundle.GetBundle()
 
 	stack := list.New()
 	visited := map[trinary.Hash]struct{}{}
-	cachedMsHeadTx := msBundle.GetHead()
-	msHeadTxHash := cachedMsHeadTx.GetTransaction().GetHash()
-	cachedMsHeadTx.Release()
-	stack.PushFront(msHeadTxHash)
+	cachedMsTailTx := msBundle.GetTail()
+	msTailTxHash := cachedMsTailTx.GetTransaction().GetHash()
+	cachedMsTailTx.Release()
+	stack.PushFront(msTailTxHash)
 
 	milestoneIndex := msBundle.GetMilestoneIndex()
-	wfConfirmation := &WhiteFlagConfirmation{
+	wfConfirmation := &Confirmation{
 		Tails:           make([]trinary.Hash, 0),
 		NewAddressState: make(map[trinary.Hash]int64),
 	}
 
 	for stack.Len() > 0 {
-		if err := examine(stack, wfConfirmation, visited, milestoneIndex); err != nil {
+		if err := ProcessStack(stack, wfConfirmation, visited, milestoneIndex); err != nil {
 			return nil, err
 		}
 	}
 
+	// compute merkle tree root hash
+	wfConfirmation.MerkleTreeHash = DefaultHasher.TreeHash(wfConfirmation.Tails)
 	return wfConfirmation, nil
 }
 
-func examine(stack *list.List, wfConf *WhiteFlagConfirmation, visited map[trinary.Hash]struct{}, milestoneIndex milestone.Index) error {
+// ComputeMerkleTreeRootHash computes the merkle tree root hash consisting out of the tail transaction hashes
+// of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
+func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) ([]byte, error) {
+	stack := list.New()
+	stack.PushFront(trunkHash)
+	visited := make(map[trinary.Hash]struct{})
+	wfConfirmation := &Confirmation{
+		Tails:           make([]trinary.Hash, 0),
+		NewAddressState: make(map[trinary.Hash]int64),
+	}
+	for stack.Len() > 0 {
+		if err := ProcessStack(stack, wfConfirmation, visited, newMilestoneIndex); err != nil {
+			return nil, err
+		}
+		// since we first feed the stack the trunk,
+		// we need to make sure that we also examine the branch path.
+		// however, we only need to do it if the branch wasn't visited yet.
+		// the referenced branch transaction could for example already be visited
+		// if it is directly/indirectly approved by the trunk.
+		_, branchVisited := visited[branchHash]
+		if stack.Len() == 0 && !branchVisited {
+			stack.PushFront(branchHash)
+		}
+	}
+
+	return DefaultHasher.TreeHash(wfConfirmation.Tails), nil
+}
+
+// ProcessStack retrieves the first element from the given stack, loads its bundle and then the trunk and
+// branch transaction of the bundle head. If trunk and branch are both SEPs, already visited or already confirmed,
+// then the mutations from the transaction retrieved from the stack are accumulated to the given Confirmation struct's mutations.
+// This function must be called repeatedly to compute the mutations a white-flag confirmation would create.
+// If the popped transaction was used to mutate the Confirmation struct, it will also be appended to Confirmation.Tails
+// and it will be removed from the stack. If the head trunk doesn't meet any of the mentioned criteria, it is pushed onto the
+// stack to be the next transaction to be examined on the subsequent ProcessStack() call (same with the branch
+// but only if the trunk wasn't pushed onto the stack).
+func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Hash]struct{}, milestoneIndex milestone.Index) error {
 	// load candidate tail tx
 	ele := stack.Front()
 	currentTxHash := ele.Value.(trinary.Hash)
@@ -76,7 +116,7 @@ func examine(stack *list.List, wfConf *WhiteFlagConfirmation, visited map[trinar
 		return fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, currentTx.GetHash())
 	}
 
-	// load up bundle to retrieve trunk and branch of head tx
+	// load up bundle to retrieve trunk and branch of the head tx
 	cachedBundle := tangle.GetCachedBundleOrNil(currentTx.GetHash())
 	if cachedBundle == nil {
 		return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", ErrMissingBundle, currentTx.Tx.Bundle, currentTx.GetHash())
@@ -179,7 +219,8 @@ func examine(stack *list.List, wfConf *WhiteFlagConfirmation, visited map[trinar
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.
-		if !conflicting {
+		// we skip zero value bundles.
+		if !conflicting && len(patchedState) > 0 {
 			// mark the given tail to be part of milestone ledger changing tail inclusion set
 			wfConf.Tails = append(wfConf.Tails, currentTx.GetHash())
 			for addr, balance := range patchedState {

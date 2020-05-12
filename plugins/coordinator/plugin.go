@@ -79,6 +79,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions),
+		config.NodeConfig.GetBool(config.CfgCoordinatorWhiteFlag),
 		powFunc,
 		tipselection.SelectTips,
 		sendBundle,
