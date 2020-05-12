@@ -49,7 +49,8 @@ var (
 )
 
 const (
-	BroadcastQueueSize    = 1000
+	broadcastQueueSize    = 20000
+	clientSendChannelSize = 1000
 	wsSendWorkerCount     = 1
 	wsSendWorkerQueueSize = 250
 )
@@ -59,15 +60,11 @@ func configure(plugin *node.Plugin) {
 
 	upgrader = &websocket.Upgrader{
 		HandshakeTimeout:  webSocketWriteTimeout,
+		CheckOrigin:       func(r *http.Request) bool { return true }, // allow any origin for websocket connections
 		EnableCompression: true,
 	}
 
-	// allow any origin for websocket connections
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
-
-	hub = websockethub.NewHub(log, upgrader, BroadcastQueueSize)
+	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
 
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {

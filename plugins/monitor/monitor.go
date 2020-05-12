@@ -64,7 +64,7 @@ type (
 )
 
 func initRingBuffer() {
-	txRingBuffer = ring.New(TxBufferSize)
+	txRingBuffer = ring.New(txBufferSize)
 	txPointerMap = make(map[string]*wsTransaction)
 }
 
