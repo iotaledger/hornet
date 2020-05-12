@@ -25,7 +25,7 @@ var (
 	message            string
 	tagSubstring       string
 	depth              uint
-	maxCPUUsage		   float64
+	maxCPUUsage        float64
 	rateLimit          float64
 	mwm                int
 	spammerWorkerCount int
@@ -50,7 +50,7 @@ func configure(plugin *node.Plugin) {
 		spammerWorkerCount = 1
 	}
 
-	if (maxCPUUsage > 0.0) {
+	if maxCPUUsage > 0.0 {
 		_, err := CPUUsage()
 		if err != nil {
 			maxCPUUsage = 0.0

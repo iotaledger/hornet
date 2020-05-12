@@ -9,7 +9,7 @@ const (
 	CfgSpammerTag = "spammer.tag"
 	// the depth to use for tip-selection
 	CfgSpammerDepth = "spammer.depth"
-	// idle workers remains idle for a while when cpu usage gets over this limit (0 = disable)
+	// workers remains idle for a while when cpu usage gets over this limit (0 = disable)
 	CfgSpammerMaxCPUUsage = "spammer.maxCPUUsage"
 	// the rate limit for the spammer (0 = no limit)
 	CfgSpammerTPSRateLimit = "spammer.tpsRateLimit"
