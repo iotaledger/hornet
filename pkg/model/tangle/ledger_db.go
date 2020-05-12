@@ -164,14 +164,16 @@ func GetLedgerDiffForMilestoneWithoutLocking(index milestone.Index, abortSignal 
 
 	diff := make(map[trinary.Hash]int64)
 
-	err := ledgerDatabase.StreamForEachPrefix(databaseKeyPrefixForLedgerDiff(index), func(entry database.Entry) error {
+	keyPrefix := databaseKeyPrefixForLedgerDiff(index)
+	err := ledgerDatabase.StreamForEachPrefix(keyPrefix, func(entry database.Entry) error {
 		select {
 		case <-abortSignal:
 			return ErrOperationAborted
 		default:
 		}
-
-		address := trinary.MustBytesToTrytes(entry.Key, 81)
+		// Remove prefix from key
+		addressBytes := entry.Key[len(keyPrefix):]
+		address := trinary.MustBytesToTrytes(addressBytes, 81)
 		diff[address] = diffFromBytes(entry.Value)
 		return nil
 	})
@@ -374,8 +376,9 @@ func GetAllSnapshotBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trin
 			return ErrOperationAborted
 		default:
 		}
-
-		address := trinary.MustBytesToTrytes(entry.Key, 81)
+		// Remove prefix from key
+		addressBytes := entry.Key[len(snapshotBalancePrefix):]
+		address := trinary.MustBytesToTrytes(addressBytes, 81)
 		balances[address] = balanceFromBytes(entry.Value)
 		return nil
 	})
@@ -461,7 +464,9 @@ func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[trina
 		default:
 		}
 
-		address := trinary.MustBytesToTrytes(entry.Key, 81)
+		// Remove prefix from key
+		addressBytes := entry.Key[len(ledgerBalancePrefix):]
+		address := trinary.MustBytesToTrytes(addressBytes, 81)
 		balances[address] = balanceFromBytes(entry.Value)
 		return nil
 	})
