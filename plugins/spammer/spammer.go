@@ -15,8 +15,8 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/tipselection"
-    "github.com/gohornet/hornet/plugins/peering"
 
 	"go.uber.org/atomic"
 )
@@ -53,11 +53,11 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		// log.Infof("worker idle because: peering.Manager().ConnectedPeerCount() == 0")
 		randomSleep()
 		return
-    }
+	}
 
 	if maxCPUUsage > 0.0 {
 		cpuUsage, err := CPUUsage()
-		if (err == nil) {
+		if err == nil {
 			// log.Infof("cpuUsage %.2f\n", cpuUsage)
 			if cpuUsage > maxCPUUsage {
 				// log.Infof("worker idle with cpuUsage %.2f > %.2f", cpuUsage, maxCPUUsage)

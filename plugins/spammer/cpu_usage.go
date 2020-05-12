@@ -1,14 +1,14 @@
 package spammer
 
 import (
-	"time"
-	"sync"
-	"runtime"
-	"strings"
 	"errors"
-	"strconv"
 	"io/ioutil"
 	"math/rand"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 var (
@@ -17,13 +17,13 @@ var (
 	activeWorkerCount = 0
 
 	once sync.Once
-	mu sync.Mutex
+	mu   sync.Mutex
 
-	cpu_last_sum uint64		// previous iteration
-	cpu_last []uint64		// previous iteration
+	cpu_last_sum uint64   // previous iteration
+	cpu_last     []uint64 // previous iteration
 
-	cpuUsageResult float64 	// current result
-	cpuUsageError error 	// nil || current error
+	cpuUsageResult float64 // current result
+	cpuUsageError  error   // nil || current error
 )
 
 func cpuUsageUpdater() {
@@ -34,7 +34,7 @@ func cpuUsageUpdater() {
 		return
 	}
 
-    go func() {
+	go func() {
 		for {
 			procStat, err := ioutil.ReadFile("/proc/stat")
 			if err != nil { // i.e. don't throttle on Windows
@@ -50,7 +50,7 @@ func cpuUsageUpdater() {
 
 			cpu_sum := uint64(0)
 			cpu_now := make([]uint64, len(procStatSlice))
-			for i, v := range(procStatSlice) {
+			for i, v := range procStatSlice {
 				n, err := strconv.ParseUint(v, 10, 64)
 				if err != nil {
 					mu.Lock()
@@ -58,15 +58,15 @@ func cpuUsageUpdater() {
 					cpuUsageError = errors.New("Can't convert from string to int")
 					return
 				}
-    			cpu_sum += n
+				cpu_sum += n
 				cpu_now[i] = n
 			}
 
 			if len(cpu_last) != 0 { // not on first iteration
-    			cpu_delta := cpu_sum - cpu_last_sum
-     			cpu_idle := cpu_now[3] - cpu_last[3]
-    			cpu_used := cpu_delta - cpu_idle
-				
+				cpu_delta := cpu_sum - cpu_last_sum
+				cpu_idle := cpu_now[3] - cpu_last[3]
+				cpu_used := cpu_delta - cpu_idle
+
 				mu.Lock()
 				cpuUsageResult = float64(cpu_used) / float64(cpu_delta)
 				mu.Unlock()
