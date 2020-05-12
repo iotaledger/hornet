@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"sync"
+	"runtime"
 	"strings"
 	"errors"
 	"strconv"
@@ -31,30 +32,35 @@ var (
 	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = atomic.NewInt32(0)
+	activeWorkerCount = 0
 
-	//
+	// cpu usage...
 	CPUUsageTimePerSample = time.Second / 4
 	once sync.Once
 	mu sync.Mutex
 
-	noProcStatError  = errors.New("Can't read /proc/stat")
-	atoiError        = errors.New("Can't convert from string to int")
+	cpu_last_sum uint64		// previous iteration
+	cpu_last []uint64		// previous iteration
 
 	cpuUsageResult float64 	// current result
 	cpuUsageError error 	// nil || current error
-
-	cpu_last_sum uint64		// previous iteration
-	cpu_last []uint64		// previous iteration
 )
 
-func cpuUsageBackground() {
+func cpuUsageUpdater() {
+	if runtime.GOOS == "windows" {
+		mu.Lock()
+		defer mu.Unlock()
+		cpuUsageError = errors.New("spammer.maxCPUUsage on Windows is not supported")
+		return
+	}
+
     go func() {
 		for {
 			procStat, err := ioutil.ReadFile("/proc/stat")
 			if err != nil { // i.e. don't throttle on Windows
 				mu.Lock()
 				defer mu.Unlock()
-				cpuUsageError = noProcStatError
+				cpuUsageError = errors.New("Can't read /proc/stat")
 				return
 			}
 
@@ -69,17 +75,17 @@ func cpuUsageBackground() {
 				if err != nil {
 					mu.Lock()
 					defer mu.Unlock()
-					cpuUsageError = atoiError
+					cpuUsageError = errors.New("Can't convert from string to int")
 					return
 				}
-				cpu_sum += n
+    			cpu_sum += n
 				cpu_now[i] = n
 			}
 
 			if len(cpu_last) != 0 { // not on first iteration
-				cpu_delta := cpu_sum - cpu_last_sum
-				cpu_idle := cpu_now[3] - cpu_last[3]
-				cpu_used := cpu_delta - cpu_idle
+    			cpu_delta := cpu_sum - cpu_last_sum
+     			cpu_idle := cpu_now[3] - cpu_last[3]
+    			cpu_used := cpu_delta - cpu_idle
 				
 				mu.Lock()
 				cpuUsageResult = float64(cpu_used) / float64(cpu_delta)
@@ -96,8 +102,19 @@ func cpuUsageBackground() {
 	}()
 }
 
+func CPUUsageAdjust(nWorkerChange int) { // preemptive adjust cpu usage so we don't idle/run all workers at once
+	mu.Lock()
+	activeWorkerCount += nWorkerChange
+	// cpuUsageResultOld := cpuUsageResult
+	cpuUsageResult += float64(nWorkerChange) / float64(runtime.NumCPU()) // assume one core usage per worker
+	// log.Infof("CPUUsageAdjust active workers with %d to %d. cpu %.2f -> %.2f",
+	// 	nWorkerChange, activeWorkerCount,
+	// 	cpuUsageResultOld, cpuUsageResult)
+	mu.Unlock()
+}
+
 func CPUUsage() (float64, error) { // see: https://www.idnt.net/en-GB/kb/941772
-	once.Do(cpuUsageBackground)
+	once.Do(cpuUsageUpdater)
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -105,7 +122,8 @@ func CPUUsage() (float64, error) { // see: https://www.idnt.net/en-GB/kb/941772
 }
 
 func randomSleep() { // prefend gettings into a cpu eating loop
-	time.Sleep(CPUUsageTimePerSample + time.Duration(rand.Intn(int(4 * CPUUsageTimePerSample))))
+	time.Sleep(time.Duration(rand.Intn(int(2 * CPUUsageTimePerSample))))
+	// time.Sleep(CPUUsageTimePerSample + time.Duration(rand.Intn(int(4 * CPUUsageTimePerSample))))
 }
 
 func doSpam(shutdownSignal <-chan struct{}) {
@@ -119,38 +137,44 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	if !tangle.IsNodeSyncedWithThreshold() {
-		// log.Infof("Skip doSpam because: !tangle.IsNodeSyncedWithThreshold()")
+		// log.Infof("worker idle because: !tangle.IsNodeSyncedWithThreshold()")
 		randomSleep()
 		return
 	}
 
 	if !tangle.IsNodeSynced() {
-		// log.Infof("Skip doSpam because: !tangle.IsNodeSynced()")
+		// log.Infof("worker idle because: !tangle.IsNodeSynced()")
 		randomSleep()
 		return
 	}
 
 	if peering.Manager().ConnectedPeerCount() == 0 {
-		// log.Infof("Skip doSpam because: peering.Manager().ConnectedPeerCount() == 0")
+		// log.Infof("worker idle because: peering.Manager().ConnectedPeerCount() == 0")
 		randomSleep()
 		return
-        }
+    }
 
-	cpuUsage, err := CPUUsage()
-	if (err == nil) {
-		// log.Infof("cpuUsage %.2f\n", cpuUsage)
-		cpuUsageThreshold := 0.90 // TODO: move this to the config file
-		if cpuUsage > cpuUsageThreshold {
-			log.Infof("Skip doSpam because cpuUsage > cpuUsageThreshold (%.2f >= %.2f)", cpuUsage, cpuUsageThreshold)
-			randomSleep()
-			return
+	if maxCPUUsage > 0.0 {
+		cpuUsage, err := CPUUsage()
+		if (err == nil) {
+			// log.Infof("cpuUsage %.2f\n", cpuUsage)
+			if cpuUsage > maxCPUUsage {
+				// log.Infof("worker idle with cpuUsage %.2f > %.2f", cpuUsage, maxCPUUsage)
+				randomSleep()
+				return
+			}
+		} else { // else cpu usage detection not supported (Windows?)
+			log.Infof("Error in CPUUsage. %s", err)
 		}
-	} // else cpu usage detection not supported (Windows?)
+	}
+
+	CPUUsageAdjust(+1)
+	defer CPUUsageAdjust(-1)
 
 	timeStart := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
 	if err != nil {
-		log.Infof("Skip doSpam because SelectTips err: %s", err)
+		log.Infof("worker idle because SelectTips err: %s", err)
 		randomSleep()
 		return
 	}
@@ -162,14 +186,14 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	b, err := createBundle(address, message, tagSubstring, txCountValue, infoMsg)
 	if err != nil {
-		log.Infof("Skip doSpam because createBundle err: %s", err)
+		log.Infof("worker idle because createBundle err: %s", err)
 		randomSleep()
 		return
 	}
 
 	err = doPow(b, tips[0], tips[1], mwm)
 	if err != nil {
-		log.Infof("Skip doSpam because doPow err: %s", err)
+		log.Infof("worker idle because doPow err: %s", err)
 		randomSleep()
 		return
 	}
@@ -180,7 +204,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	for _, tx := range b {
 		txTrits, _ := transaction.TransactionToTrits(&tx)
 		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
-			log.Infof("Skip doSpam because CompressAndEmit err: %s", err)
+			log.Infof("worker idle because CompressAndEmit err: %s", err)
 			randomSleep()
 			return
 		}
@@ -188,7 +212,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-	log.Infof("Sent Spam Transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCountValue, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
+	log.Infof("sent transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCountValue, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
 }
 
 // transactionHash makes a transaction hash from the given transaction.
