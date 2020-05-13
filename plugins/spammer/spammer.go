@@ -38,29 +38,20 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	if !tangle.IsNodeSyncedWithThreshold() {
-		// log.Infof("worker idle because: !tangle.IsNodeSyncedWithThreshold()")
-		randomSleep()
-		return
-	}
-
-	if !tangle.IsNodeSynced() {
-		// log.Infof("worker idle because: !tangle.IsNodeSynced()")
 		randomSleep()
 		return
 	}
 
 	if peering.Manager().ConnectedPeerCount() == 0 {
-		// log.Infof("worker idle because: peering.Manager().ConnectedPeerCount() == 0")
 		randomSleep()
 		return
 	}
 
-	if maxCPUUsage > 0.0 {
+	if cpuMaxUsage > 0.0 {
 		cpuUsage, err := CPUUsage()
 		if err == nil {
-			// log.Infof("cpuUsage %.2f\n", cpuUsage)
-			if cpuUsage > maxCPUUsage {
-				// log.Infof("worker idle with cpuUsage %.2f > %.2f", cpuUsage, maxCPUUsage)
+			if cpuUsage > cpuMaxUsage {
+				// log.Infof("worker idle with cpuUsage %.2f > %.2f", cpuUsage, cpuMaxUsage)
 				randomSleep()
 				return
 			}
@@ -75,7 +66,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	timeStart := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
 	if err != nil {
-		log.Infof("worker idle because SelectTips err: %s", err)
 		randomSleep()
 		return
 	}
@@ -87,14 +77,12 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	b, err := createBundle(address, message, tagSubstring, txCountValue, infoMsg)
 	if err != nil {
-		log.Infof("worker idle because createBundle err: %s", err)
 		randomSleep()
 		return
 	}
 
 	err = doPow(b, tips[0], tips[1], mwm)
 	if err != nil {
-		log.Infof("worker idle because doPow err: %s", err)
 		randomSleep()
 		return
 	}
@@ -105,7 +93,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	for _, tx := range b {
 		txTrits, _ := transaction.TransactionToTrits(&tx)
 		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
-			log.Infof("worker idle because CompressAndEmit err: %s", err)
 			randomSleep()
 			return
 		}

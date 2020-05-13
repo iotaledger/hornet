@@ -25,7 +25,7 @@ var (
 	message            string
 	tagSubstring       string
 	depth              uint
-	maxCPUUsage        float64
+	cpuMaxUsage        float64
 	rateLimit          float64
 	mwm                int
 	spammerWorkerCount int
@@ -38,7 +38,7 @@ func configure(plugin *node.Plugin) {
 	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
 	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
 	depth = config.NodeConfig.GetUint(config.CfgSpammerDepth)
-	maxCPUUsage = config.NodeConfig.GetFloat64(config.CfgSpammerMaxCPUUsage)
+	cpuMaxUsage = config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
 	rateLimit = config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
 	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
@@ -50,20 +50,16 @@ func configure(plugin *node.Plugin) {
 		spammerWorkerCount = 1
 	}
 
-	if maxCPUUsage > 0.0 {
-		_, err := CPUUsage()
-		if err != nil {
-			maxCPUUsage = 0.0
-			log.Infof("Ignoring maxCPUUsage config setting. %s", err)
-		} else {
-			rateLimit = 0.0
-			spammerWorkerCount = runtime.NumCPU() - 1 // note: having more workers in this case actually seems to make the cpu usage more stable. Keeping the amount 'sane' for now though
-			// log.Infof("maxCPUUsage=%.2f rateLimit=%.2f spammerWorkerCount=%d", maxCPUUsage, rateLimit, spammerWorkerCount)
+	if cpuMaxUsage > 0.0 {
+		if runtime.GOOS == "windows" {
+			log.Panic("spammer.cpuMaxUsage not supported on Windows")
 		}
+		rateLimit = 0.0 // disable rateLimit because we want to spam as much as possible with cpu usage constrains
+		spammerWorkerCount = runtime.NumCPU() - 1
 	}
 
 	if rateLimit != 0 {
-		rateLimitChannelSize := int64(rateLimit) * 2 // XXX this case looks wrong and I doubt this code works as intended
+		rateLimitChannelSize := int64(rateLimit) * 2
 		if rateLimitChannelSize < 2 {
 			rateLimitChannelSize = 2
 		}
