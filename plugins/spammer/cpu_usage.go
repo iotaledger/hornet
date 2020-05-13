@@ -2,14 +2,13 @@ package spammer
 
 import (
 	"errors"
-	"io/ioutil"
 	"math/rand"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
+
+	"github.com/shirou/gopsutil/cpu"
 )
 
 var (
@@ -18,9 +17,6 @@ var (
 
 	once              syncutils.Once
 	cpuUsageErrorLock syncutils.Mutex
-
-	cpuLastSum uint64   // previous iteration
-	cpuLast    []uint64 // previous iteration
 
 	// result and error get updated frequently based on CPUUsageTimePerSample
 	cpuUsageResult float64
@@ -31,51 +27,18 @@ var (
 func cpuUsageUpdater() {
 	go func() {
 		for {
-			// based on: https://www.idnt.net/en-GB/kb/941772
-
-			procStat, err := ioutil.ReadFile("/proc/stat")
-			if err != nil { // i.e. don't throttle on Windows
+			cpuUsagePSutil, err := cpu.Percent(CPUUsageTimePerSample, false) // percpu=false
+			if err != nil {
 				cpuUsageErrorLock.Lock()
 				defer cpuUsageErrorLock.Unlock()
-				cpuUsageError = errors.New("Can't read /proc/stat")
+				cpuUsageError = errors.New("CPU percentage unknown")
 				return
 			}
 
-			procStatString := string(procStat)
-			procStatLines := strings.Split(procStatString, "\n")
-			procStatSlice := strings.Split(procStatLines[0], " ")[2:] // ["7955046" "91" "189009" "6170128" "21650" "79349" "34869" "0" "0" "0"]
-
-			cpuSum := uint64(0)
-			cpuNow := make([]uint64, len(procStatSlice))
-			for i, v := range procStatSlice {
-				n, err := strconv.ParseUint(v, 10, 64)
-				if err != nil {
-					cpuUsageErrorLock.Lock()
-					defer cpuUsageErrorLock.Unlock()
-					cpuUsageError = errors.New("Can't convert from string to int")
-					return
-				}
-				cpuSum += n
-				cpuNow[i] = n
-			}
-
-			if len(cpuLast) != 0 { // not on first iteration
-				cpuDelta := cpuSum - cpuLastSum
-				cpuIdle := cpuNow[3] - cpuLast[3]
-				cpuUsed := cpuDelta - cpuIdle
-
-				cpuUsageErrorLock.Lock()
-				cpuUsageResult = float64(cpuUsed) / float64(cpuDelta)
-				cpuUsageErrorLock.Unlock()
-
-				// fmt.Println(cpuNow, cpuDelta, cpuIdle, cpuUsed, cpuUsageResult)
-			}
-
-			cpuLastSum = cpuSum
-			cpuLast = cpuNow
-
-			time.Sleep(CPUUsageTimePerSample)
-		} // next for...
+			cpuUsageErrorLock.Lock()
+			cpuUsageResult = cpuUsagePSutil[0] / 100.0
+			cpuUsageErrorLock.Unlock()
+		}
 	}()
 }
 
