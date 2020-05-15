@@ -291,8 +291,9 @@ const chartSeriesOpts = {
 };
 
 class DbSizeMetric {
-    keys: number;
-    values: number;
+    tangle: number;
+    snapshot: number;
+    spent: number;
     ts: number;
 }
 
@@ -841,28 +842,32 @@ export class NodeStore {
 
     @computed
     get dbSizeSeries() {
-        let keys = Object.assign({}, chartSeriesOpts,
-            series("Keys", 'rgba(159, 53, 230,1)', 'rgba(159, 53, 230,0.4)')
+        let tangle = Object.assign({}, chartSeriesOpts,
+            series("Tangle", 'rgba(53, 180, 219,1)', 'rgba(53, 180, 219,0.4)')
         );
-        let values = Object.assign({}, chartSeriesOpts,
-            series("Values", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
+        let snapshot = Object.assign({}, chartSeriesOpts,
+            series("Snapshot", 'rgba(53, 109, 230,1)', 'rgba(53, 109, 230,0.4)')
+        );
+        let spent = Object.assign({}, chartSeriesOpts,
+            series("Spent Addresses", 'rgba(159, 53, 230,1)', 'rgba(159, 53, 230,0.4)')
         );
         let total = Object.assign({}, chartSeriesOpts,
-            series("Total", 'rgba(53, 180, 219,1)', 'rgba(53, 180, 219,0.4)')
+            series("Total", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
         );
 
         let labels = [];
         for (let i = 0; i < this.collected_dbsize_metrics.length; i++) {
             let metric: DbSizeMetric = this.collected_dbsize_metrics[i];
             labels.push(dateformat(new Date(metric.ts * 1000), "HH:MM:ss"));
-            keys.data.push((metric.keys / 1024 / 1024).toFixed(2));
-            values.data.push((metric.values / 1024 / 1024).toFixed(2));
-            total.data.push(((metric.keys + metric.values) / 1024 / 1024).toFixed(2));
+            tangle.data.push((metric.tangle / 1024 / 1024).toFixed(2));
+            snapshot.data.push((metric.snapshot / 1024 / 1024).toFixed(2));
+            spent.data.push((metric.spent / 1024 / 1024).toFixed(2));
+            total.data.push(((metric.tangle + metric.snapshot + metric.spent) / 1024 / 1024).toFixed(2));
         }
 
         return {
             labels: labels,
-            datasets: [keys, values, total]
+            datasets: [tangle, snapshot, spent, total]
         };
     }
 

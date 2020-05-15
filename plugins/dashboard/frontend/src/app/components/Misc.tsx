@@ -243,10 +243,10 @@ export class Misc extends React.Component<Props, any> {
                         <Card>
                             <Card.Body>
                                 <Card.Title>Database</Card.Title>
-                                <If condition={!!this.props.nodeStore.last_dbsize_metric.values}>
+                                <If condition={!!this.props.nodeStore.last_dbsize_metric.tangle}>
                                     <Container className={"d-flex justify-content-between align-items-center"}>
                                         <small>
-                                            Size: {((this.props.nodeStore.last_dbsize_metric.keys + this.props.nodeStore.last_dbsize_metric.values) / 1024 / 1024).toFixed(2)} MB
+                                            Size: {((this.props.nodeStore.last_dbsize_metric.tangle + this.props.nodeStore.last_dbsize_metric.snapshot + this.props.nodeStore.last_dbsize_metric.spent) / 1024 / 1024).toFixed(2)} MB
                                             <If condition={this.props.nodeStore.lastDatabaseCleanupDuration > 0}>
                                                 <br/>
                                                 {"Last GC: "} {this.props.nodeStore.lastDatabaseCleanupEnd} {". Took: "}{this.props.nodeStore.lastDatabaseCleanupDuration}{" seconds."}

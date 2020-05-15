@@ -2,13 +2,22 @@ package tangle
 
 import (
 	"errors"
+	"os"
+	"path"
 
 	"go.etcd.io/bbolt"
 
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 )
 
+const (
+	TangleDbFilename         = "tangle.db"
+	SnapshotDbFilename       = "snapshot.db"
+	SpentAddressesDbFilename = "spent.db"
+)
+
 var (
+	dbDir      string
 	tangleDb   *bbolt.DB
 	snapshotDb *bbolt.DB
 	spentDb    *bbolt.DB
@@ -26,7 +35,8 @@ func boltDB(directory string, filename string) *bbolt.DB {
 
 func ConfigureDatabases(directory string) {
 
-	tangleDb = boltDB(directory, "tangle.db")
+	dbDir = directory
+	tangleDb = boltDB(directory, TangleDbFilename)
 
 	tangleStore := bolt.New(tangleDb)
 	configureHealthStore(tangleStore)
@@ -40,11 +50,11 @@ func ConfigureDatabases(directory string) {
 	configureUnconfirmedTxStorage(tangleStore)
 	configureLedgerStore(tangleStore)
 
-	snapshotDb = boltDB(directory, "snapshot.db")
+	snapshotDb = boltDB(directory, SnapshotDbFilename)
 	snapshotStore := bolt.New(snapshotDb)
 	configureSnapshotStore(snapshotStore)
 
-	spentDb = boltDB(directory, "spent.db")
+	spentDb = boltDB(directory, SpentAddressesDbFilename)
 	spentStore := bolt.New(spentDb)
 	configureSpentAddressesStorage(spentStore)
 }
@@ -81,6 +91,18 @@ func CleanupDatabases() error {
 
 // GetDatabaseSizes returns the size of the database keys and values.
 func GetDatabaseSizes() (tangle int64, snapshot int64, spent int64) {
-	//TODO: check filesystem for size
-	return 0, 0, 0
+
+	if tangleDbFile, err := os.Stat(path.Join(dbDir, TangleDbFilename)); err == nil {
+		tangle = tangleDbFile.Size()
+	}
+
+	if snapshotDbFile, err := os.Stat(path.Join(dbDir, SnapshotDbFilename)); err == nil {
+		snapshot = snapshotDbFile.Size()
+	}
+
+	if spentDbFile, err := os.Stat(path.Join(dbDir, SpentAddressesDbFilename)); err == nil {
+		spent = spentDbFile.Size()
+	}
+
+	return
 }
