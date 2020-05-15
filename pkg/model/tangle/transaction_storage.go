@@ -7,10 +7,10 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 var (
@@ -115,7 +115,7 @@ func configureTransactionStorage() {
 	opts := profile.LoadProfile().Caches.Transactions
 
 	txStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixTransactions),
+		store.StoreWithPrefix(StorePrefixTransactions),
 		transactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -127,7 +127,7 @@ func configureTransactionStorage() {
 	)
 
 	metadataStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixTransactionMetadata),
+		store.StoreWithPrefix(StorePrefixTransactionMetadata),
 		metadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

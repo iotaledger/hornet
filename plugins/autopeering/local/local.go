@@ -13,8 +13,8 @@ import (
 
 	"github.com/gohornet/hornet/pkg/autopeering/services"
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 var (
@@ -75,9 +75,7 @@ func configureLocal() *peer.Local {
 		seed = append(seed, bytes)
 	}
 
-	db := database.DatabaseWithPrefix(tangle.DBPrefixAutopeering)
-
-	peerDB, err := peer.NewDB(db)
+	peerDB, err := peer.NewDB(store.StoreWithPrefix(tangle.StorePrefixAutopeering))
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
 	}

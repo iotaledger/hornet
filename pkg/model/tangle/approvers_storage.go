@@ -7,9 +7,9 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 var approversStorage *objectstorage.ObjectStorage
@@ -49,7 +49,7 @@ func configureApproversStorage() {
 	opts := profile.LoadProfile().Caches.Approvers
 
 	approversStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixApprovers),
+		store.StoreWithPrefix(StorePrefixApprovers),
 		approversFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

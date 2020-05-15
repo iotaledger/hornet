@@ -47,7 +47,7 @@ func loadSolidEntryPoints() {
 	defer WriteUnlockSolidEntryPoints()
 
 	if solidEntryPoints == nil {
-		points, err := readSolidEntryPointsFromDatabase()
+		points, err := readSolidEntryPoints()
 		if points != nil && err == nil {
 			solidEntryPoints = points
 		} else {
@@ -90,7 +90,7 @@ func ResetSolidEntryPoints() {
 // WriteLockSolidEntryPoints must be held while entering this function
 func StoreSolidEntryPoints() {
 	if solidEntryPoints != nil {
-		storeSolidEntryPointsInDatabase(solidEntryPoints)
+		storeSolidEntryPoints(solidEntryPoints)
 	} else {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}

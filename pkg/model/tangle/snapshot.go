@@ -37,7 +37,7 @@ type SnapshotInfo struct {
 }
 
 func loadSnapshotInfo() {
-	info, err := readSnapshotInfoFromDatabase()
+	info, err := readSnapshotInfo()
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +142,7 @@ func SetSnapshotInfo(sn *SnapshotInfo) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	err := storeSnapshotInfoInDatabase(sn)
+	err := storeSnapshotInfo(sn)
 	if err != nil {
 		panic(err)
 	}

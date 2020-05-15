@@ -81,37 +81,6 @@
           "maxConsumerHoldTimeSec": 100
         }
       }
-    },
-    "badger": {
-      "levelOneSize": 67108864,
-      "levelSizeMultiplier": 10,
-      "tableLoadingMode": 0,
-      "valueLogLoadingMode": 0,
-      "maxLevels": 5,
-      "maxTableSize": 16777216,
-      "numCompactors": 1,
-      "numLevelZeroTables": 1,
-      "numLevelZeroTablesStall": 2,
-      "numMemtables": 1,
-      "bloomFalsePositive": 0.01,
-      "blockSize": 4096,
-      "syncWrites": false,
-      "numVersionsToKeep": 1,
-      "compactLevel0OnClose": false,
-      "keepL0InMemory": false,
-      "verifyValueChecksum": false,
-      "maxCacheSize": 0,
-      "maxBfCacheSize": 15000,
-      "loadBloomsOnOpen": false,
-      "ZSTDCompressionLevel": 1,
-      "CompressionType": 0,
-      "valueLogFileSize": 67108863,
-      "valueLogMaxEntries": 2097151,
-      "valueThreshold": 32,
-      "withTruncate": false,
-      "logRotatesToFlush": 2,
-      "eventLogging": false,
-      "valueLogGCDiscardRatio": 0.1
     }
   },
   "debug": {
@@ -196,37 +165,6 @@
           "maxConsumerHoldTimeSec": 100
         }
       }
-    },
-    "badger": {
-      "levelOneSize": 67108864,
-      "levelSizeMultiplier": 10,
-      "tableLoadingMode": 0,
-      "valueLogLoadingMode": 0,
-      "maxLevels": 5,
-      "maxTableSize": 16777216,
-      "numCompactors": 1,
-      "numLevelZeroTables": 1,
-      "numLevelZeroTablesStall": 2,
-      "numMemtables": 1,
-      "bloomFalsePositive": 0.01,
-      "blockSize": 4096,
-      "syncWrites": false,
-      "numVersionsToKeep": 1,
-      "compactLevel0OnClose": false,
-      "keepL0InMemory": false,
-      "verifyValueChecksum": false,
-      "maxCacheSize": 0,
-      "maxBfCacheSize": 15000,
-      "loadBloomsOnOpen": false,
-      "ZSTDCompressionLevel": 1,
-      "CompressionType": 0,
-      "valueLogFileSize": 67108863,
-      "valueLogMaxEntries": 2097151,
-      "valueThreshold": 32,
-      "withTruncate": false,
-      "logRotatesToFlush": 2,
-      "eventLogging": false,
-      "valueLogGCDiscardRatio": 0.1
     }
   }
 }

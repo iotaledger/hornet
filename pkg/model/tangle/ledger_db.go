@@ -7,11 +7,12 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 const (
@@ -20,8 +21,8 @@ const (
 )
 
 var (
-	ledgerDatabase                database.Database
-	ledgerDatabaseTransactionLock sync.RWMutex
+	ledgerStore                kvstore.KVStore
+	ledgerStoreTransactionLock sync.RWMutex
 
 	ledgerMilestoneIndex milestone.Index
 
@@ -31,23 +32,23 @@ var (
 )
 
 func ReadLockLedger() {
-	ledgerDatabaseTransactionLock.RLock()
+	ledgerStoreTransactionLock.RLock()
 }
 
 func ReadUnlockLedger() {
-	ledgerDatabaseTransactionLock.RUnlock()
+	ledgerStoreTransactionLock.RUnlock()
 }
 
 func WriteLockLedger() {
-	ledgerDatabaseTransactionLock.Lock()
+	ledgerStoreTransactionLock.Lock()
 }
 
 func WriteUnlockLedger() {
-	ledgerDatabaseTransactionLock.Unlock()
+	ledgerStoreTransactionLock.Unlock()
 }
 
-func configureLedgerDatabase() {
-	ledgerDatabase = database.DatabaseWithPrefix(DBPrefixLedgerState)
+func configureLedgerStore() {
+	ledgerStore = store.StoreWithPrefix(StorePrefixLedgerState)
 
 	if err := readLedgerMilestoneIndexFromDatabase(); err != nil {
 		panic(err)
@@ -90,33 +91,19 @@ func diffFromBytes(bytes []byte) int64 {
 	return int64(balanceFromBytes(bytes))
 }
 
-func entryForSnapshotMilestoneIndex(index milestone.Index) database.Entry {
-	return database.Entry{
-		Key:   []byte(snapshotMilestoneIndexKey),
-		Value: bytesFromMilestoneIndex(index),
-	}
-}
-
-func entryForLedgerMilestoneIndex(index milestone.Index) database.Entry {
-	return database.Entry{
-		Key:   []byte(ledgerMilestoneIndexKey),
-		Value: bytesFromMilestoneIndex(index),
-	}
-}
-
 func readLedgerMilestoneIndexFromDatabase() error {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	entry, err := ledgerDatabase.Get([]byte(ledgerMilestoneIndexKey))
+	value, err := ledgerStore.Get([]byte(ledgerMilestoneIndexKey))
 	if err != nil {
-		if err == database.ErrKeyNotFound {
+		if err == kvstore.ErrKeyNotFound {
 			return nil
 		}
 		return errors.Wrap(NewDatabaseError(err), "failed to load ledger milestone index")
 	}
-	ledgerMilestoneIndex = milestoneIndexFromBytes(entry.Value)
+	ledgerMilestoneIndex = milestoneIndexFromBytes(value)
 
 	// set the solid milestone index based on the ledger milestone
 	SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
@@ -126,16 +113,16 @@ func readLedgerMilestoneIndexFromDatabase() error {
 
 func GetBalanceForAddressWithoutLocking(address trinary.Hash) (uint64, milestone.Index, error) {
 
-	entry, err := ledgerDatabase.Get(databaseKeyForLedgerAddressBalance(address))
+	value, err := ledgerStore.Get(databaseKeyForLedgerAddressBalance(address))
 	if err != nil {
-		if err == database.ErrKeyNotFound {
+		if err == kvstore.ErrKeyNotFound {
 			return 0, ledgerMilestoneIndex, nil
 		} else {
 			return 0, ledgerMilestoneIndex, errors.Wrap(NewDatabaseError(err), "failed to retrieve balance")
 		}
 	}
 
-	return balanceFromBytes(entry.Value), ledgerMilestoneIndex, err
+	return balanceFromBytes(value), ledgerMilestoneIndex, err
 }
 
 func GetBalanceForAddress(address trinary.Hash) (uint64, milestone.Index, error) {
@@ -151,7 +138,7 @@ func DeleteLedgerDiffForMilestone(index milestone.Index) error {
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	if err := ledgerDatabase.DeletePrefix(databaseKeyPrefixForLedgerDiff(index)); err != nil {
+	if err := ledgerStore.DeletePrefix(databaseKeyPrefixForLedgerDiff(index)); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger diff")
 	}
 
@@ -165,17 +152,18 @@ func GetLedgerDiffForMilestoneWithoutLocking(index milestone.Index, abortSignal 
 	diff := make(map[trinary.Hash]int64)
 
 	keyPrefix := databaseKeyPrefixForLedgerDiff(index)
-	err := ledgerDatabase.StreamForEachPrefix(keyPrefix, func(entry database.Entry) error {
+
+	err := ledgerStore.Iterate([]kvstore.KeyPrefix{keyPrefix}, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
 		case <-abortSignal:
-			return ErrOperationAborted
+			return false
 		default:
 		}
 		// Remove prefix from key
-		addressBytes := entry.Key[len(keyPrefix):]
+		addressBytes := key[len(keyPrefix):]
 		address := trinary.MustBytesToTrytes(addressBytes, 81)
-		diff[address] = diffFromBytes(entry.Value)
-		return nil
+		diff[address] = diffFromBytes(value)
+		return true
 	})
 
 	if err != nil {
@@ -266,9 +254,7 @@ func GetLedgerStateForMilestone(targetIndex milestone.Index, abortSignal <-chan 
 // WriteLockLedger must be held while entering this function.
 func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone.Index) error {
 
-	var diffEntries []database.Entry
-	var balanceChanges []database.Entry
-	var emptyAddresses []database.Key
+	batch := ledgerStore.Batched()
 
 	var diffSum int64
 
@@ -284,19 +270,15 @@ func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone.
 		if newBalance < 0 {
 			panic(fmt.Sprintf("Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", index, address, balance, change))
 		} else if newBalance > 0 {
-			balanceChanges = append(balanceChanges, database.Entry{
-				Key:   databaseKeyForLedgerAddressBalance(address),
-				Value: bytesFromBalance(uint64(newBalance)),
-			})
+			// Save balance
+			batch.Set(databaseKeyForLedgerAddressBalance(address), bytesFromBalance(uint64(newBalance)))
 		} else {
 			// Balance is zero, so we can remove this address from the ledger
-			emptyAddresses = append(emptyAddresses, databaseKeyForLedgerAddressBalance(address))
+			batch.Delete(databaseKeyForLedgerAddressBalance(address))
 		}
 
-		diffEntries = append(diffEntries, database.Entry{
-			Key:   databaseKeyForLedgerDiffAndAddress(index, address),
-			Value: bytesFromDiff(change),
-		})
+		//Save diff
+		batch.Set(databaseKeyForLedgerDiffAndAddress(index, address), bytesFromDiff(change))
 
 		diffSum += change
 	}
@@ -305,13 +287,10 @@ func ApplyLedgerDiffWithoutLocking(diff map[trinary.Hash]int64, index milestone.
 		panic(fmt.Sprintf("Ledger diff for milestone %d does not sum up to zero", index))
 	}
 
-	entries := balanceChanges
-	entries = append(entries, diffEntries...)
-	entries = append(entries, entryForLedgerMilestoneIndex(index))
-	deletions := emptyAddresses
+	batch.Set([]byte(ledgerMilestoneIndexKey), bytesFromMilestoneIndex(index))
 
 	// Now batch insert/delete all entries
-	if err := ledgerDatabase.Apply(entries, deletions); err != nil {
+	if err := batch.Commit(); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store ledger diff")
 	}
 
@@ -326,31 +305,28 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	defer WriteUnlockLedger()
 
 	// Delete all old entries
-	if err := ledgerDatabase.DeletePrefix(snapshotBalancePrefix); err != nil {
+	if err := ledgerStore.DeletePrefix(snapshotBalancePrefix); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot balances")
 	}
 
 	// Delete index
-	if err := ledgerDatabase.Delete([]byte(snapshotMilestoneIndexKey)); err != nil {
+	if err := ledgerStore.Delete([]byte(snapshotMilestoneIndexKey)); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete old snapshot index")
-
 	}
 
-	// Add all new entries
-	var entries []database.Entry
+	batch := ledgerStore.Batched()
+
 	for address, balance := range balances {
 		key := databaseKeyForSnapshotAddressBalance(address)
 		if balance != 0 {
-			entries = append(entries, database.Entry{
-				Key:   key,
-				Value: bytesFromBalance(balance),
-			})
+			batch.Set(key, bytesFromBalance(balance))
 		}
 	}
-	entries = append(entries, entryForSnapshotMilestoneIndex(index))
+
+	batch.Set([]byte(snapshotMilestoneIndexKey), bytesFromMilestoneIndex(index))
 
 	// Now batch insert all entries
-	if err := ledgerDatabase.Apply(entries, []database.Key{}); err != nil {
+	if err := batch.Commit(); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot ledger state")
 	}
 
@@ -363,25 +339,26 @@ func GetAllSnapshotBalancesWithoutLocking(abortSignal <-chan struct{}) (map[trin
 
 	balances := make(map[trinary.Hash]uint64)
 
-	entry, err := ledgerDatabase.Get([]byte(snapshotMilestoneIndexKey))
+	value, err := ledgerStore.Get([]byte(snapshotMilestoneIndexKey))
 	if err != nil {
 		return nil, 0, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot milestone index")
 	}
 
-	snapshotMilestoneIndex := milestoneIndexFromBytes(entry.Value)
+	snapshotMilestoneIndex := milestoneIndexFromBytes(value)
 
-	err = ledgerDatabase.StreamForEachPrefix(snapshotBalancePrefix, func(entry database.Entry) error {
+	err = ledgerStore.Iterate([]kvstore.KeyPrefix{snapshotBalancePrefix}, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
 		case <-abortSignal:
-			return ErrOperationAborted
+			return false
 		default:
 		}
 		// Remove prefix from key
-		addressBytes := entry.Key[len(snapshotBalancePrefix):]
+		addressBytes := key[len(snapshotBalancePrefix):]
 		address := trinary.MustBytesToTrytes(addressBytes, 81)
-		balances[address] = balanceFromBytes(entry.Value)
-		return nil
+		balances[address] = balanceFromBytes(value)
+		return true
 	})
+
 	if err != nil {
 		return nil, 0, err
 	}
@@ -413,7 +390,7 @@ func DeleteLedgerBalancesInDatabase() error {
 	defer WriteUnlockLedger()
 
 	// Delete ledger all balances
-	if err := ledgerDatabase.DeletePrefix(ledgerBalancePrefix); err != nil {
+	if err := ledgerStore.DeletePrefix(ledgerBalancePrefix); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger balances")
 	}
 
@@ -425,25 +402,20 @@ func StoreLedgerBalancesInDatabase(balances map[trinary.Hash]uint64, index miles
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	var entries []database.Entry
-	var deletions []database.Key
+	batch := ledgerStore.Batched()
 
 	for address, balance := range balances {
 		key := databaseKeyForLedgerAddressBalance(address)
 		if balance == 0 {
-			deletions = append(deletions, key)
+			batch.Delete(key)
 		} else {
-			entries = append(entries, database.Entry{
-				Key:   key,
-				Value: bytesFromBalance(balance),
-			})
+			batch.Set(key, bytesFromBalance(balance))
 		}
 	}
 
-	entries = append(entries, entryForLedgerMilestoneIndex(index))
+	batch.Set([]byte(ledgerMilestoneIndexKey), bytesFromMilestoneIndex(index))
 
-	// Now batch insert/delete all entries
-	if err := ledgerDatabase.Apply(entries, deletions); err != nil {
+	if err := batch.Commit(); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store ledger state")
 	}
 
@@ -457,20 +429,19 @@ func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[trina
 
 	balances := make(map[trinary.Hash]uint64)
 
-	err := ledgerDatabase.StreamForEachPrefix(ledgerBalancePrefix, func(entry database.Entry) error {
+	err := ledgerStore.Iterate([]kvstore.KeyPrefix{ledgerBalancePrefix}, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
 		case <-abortSignal:
-			return ErrOperationAborted
+			return false
 		default:
 		}
 
 		// Remove prefix from key
-		addressBytes := entry.Key[len(ledgerBalancePrefix):]
+		addressBytes := key[len(ledgerBalancePrefix):]
 		address := trinary.MustBytesToTrytes(addressBytes, 81)
-		balances[address] = balanceFromBytes(entry.Value)
-		return nil
+		balances[address] = balanceFromBytes(value)
+		return true
 	})
-
 	if err != nil {
 		return nil, ledgerMilestoneIndex, err
 	}

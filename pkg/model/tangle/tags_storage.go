@@ -7,9 +7,9 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 var tagsStorage *objectstorage.ObjectStorage
@@ -50,7 +50,7 @@ func configureTagsStorage() {
 	opts := profile.LoadProfile().Caches.Tags
 
 	tagsStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixTags),
+		store.StoreWithPrefix(StorePrefixTags),
 		tagsFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

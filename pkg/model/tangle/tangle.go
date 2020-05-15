@@ -1,13 +1,12 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
-func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts, useBolt bool) {
-	database.Settings(directory, badgerOpts, useBolt)
-	configureHealthDatabase()
+func ConfigureDatabases(directory string) {
+	store.Settings(directory)
+	configureHealthStore()
 	configureTransactionStorage()
 	configureBundleTransactionsStorage()
 	configureBundleStorage()
@@ -16,8 +15,8 @@ func ConfigureDatabases(directory string, badgerOpts *profile.BadgerOpts, useBol
 	configureAddressesStorage()
 	configureMilestoneStorage()
 	configureUnconfirmedTxStorage()
-	configureLedgerDatabase()
-	configureSnapshotDatabase()
+	configureLedgerStore()
+	configureSnapshotStore()
 	configureSpentAddressesStorage()
 }
 

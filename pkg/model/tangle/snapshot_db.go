@@ -5,53 +5,49 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/database"
+	"github.com/iotaledger/hive.go/kvstore"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
-var snapshotDatabase database.Database
+var snapshotStore kvstore.KVStore
 
-func configureSnapshotDatabase() {
-	snapshotDatabase = database.DatabaseWithPrefix(DBPrefixSnapshot)
+func configureSnapshotStore() {
+	snapshotStore = store.StoreWithPrefix(StorePrefixSnapshot)
 }
 
-func storeSnapshotInfoInDatabase(snapshot *SnapshotInfo) error {
+func storeSnapshotInfo(snapshot *SnapshotInfo) error {
 
-	if err := snapshotDatabase.Set(database.Entry{
-		Key:   []byte("snapshotInfo"),
-		Value: snapshot.GetBytes(),
-	}); err != nil {
+	if err := snapshotStore.Set([]byte("snapshotInfo"), snapshot.GetBytes()); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot info")
 	}
 
 	return nil
 }
 
-func readSnapshotInfoFromDatabase() (*SnapshotInfo, error) {
-	entry, err := snapshotDatabase.Get([]byte("snapshotInfo"))
+func readSnapshotInfo() (*SnapshotInfo, error) {
+	value, err := snapshotStore.Get([]byte("snapshotInfo"))
 	if err != nil {
-		if err == database.ErrKeyNotFound {
+		if err == kvstore.ErrKeyNotFound {
 			return nil, nil
 		} else {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
 		}
 	}
 
-	info, err := SnapshotInfoFromBytes(entry.Value)
+	info, err := SnapshotInfoFromBytes(value)
 	if err != nil {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to convert snapshot info")
 	}
 	return info, nil
 }
 
-func storeSolidEntryPointsInDatabase(points *hornet.SolidEntryPoints) error {
+func storeSolidEntryPoints(points *hornet.SolidEntryPoints) error {
 	if points.IsModified() {
 
-		if err := snapshotDatabase.Set(database.Entry{
-			Key:   []byte("solidEntryPoints"),
-			Value: points.GetBytes(),
-		}); err != nil {
+		if err := snapshotStore.Set([]byte("solidEntryPoints"), points.GetBytes()); err != nil {
 			return errors.Wrap(NewDatabaseError(err), "failed to store solid entry points")
 		}
 
@@ -61,17 +57,17 @@ func storeSolidEntryPointsInDatabase(points *hornet.SolidEntryPoints) error {
 	return nil
 }
 
-func readSolidEntryPointsFromDatabase() (*hornet.SolidEntryPoints, error) {
-	entry, err := snapshotDatabase.Get([]byte("solidEntryPoints"))
+func readSolidEntryPoints() (*hornet.SolidEntryPoints, error) {
+	value, err := snapshotStore.Get([]byte("solidEntryPoints"))
 	if err != nil {
-		if err == database.ErrKeyNotFound {
+		if err == kvstore.ErrKeyNotFound {
 			return nil, nil
 		} else {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve solid entry points")
 		}
 	}
 
-	points, err := hornet.SolidEntryPointsFromBytes(entry.Value)
+	points, err := hornet.SolidEntryPointsFromBytes(value)
 	if err != nil {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to convert solid entry points")
 	}

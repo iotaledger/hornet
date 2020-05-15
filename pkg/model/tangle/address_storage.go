@@ -7,9 +7,9 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 var addressesStorage *objectstorage.ObjectStorage
@@ -64,7 +64,7 @@ func configureAddressesStorage() {
 	opts := profile.LoadProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixAddresses),
+		store.StoreWithPrefix(StorePrefixAddresses),
 		addressFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

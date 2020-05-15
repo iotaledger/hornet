@@ -8,8 +8,8 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 const (
@@ -65,7 +65,7 @@ func configureBundleTransactionsStorage() {
 	opts := profile.LoadProfile().Caches.BundleTransactions
 
 	bundleTransactionsStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixBundleTransactions),
+		store.StoreWithPrefix(StorePrefixBundleTransactions),
 		bundleTransactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

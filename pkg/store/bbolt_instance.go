@@ -1,7 +1,7 @@
-package database
+package store
 
 import (
-	"github.com/iotaledger/hive.go/database/boltdb"
+	boltdb2 "github.com/iotaledger/hive.go/kvstore/bolt"
 	"sync"
 
 	"go.etcd.io/bbolt"
@@ -14,7 +14,7 @@ var (
 
 func getBoltInstance() *bbolt.DB {
 	boltOnce.Do(func() {
-		db, err := boltdb.CreateDB(directory, "hornet.db")
+		db, err := boltdb2.CreateDB(directory, "hornet.db")
 		if err != nil {
 			panic(err)
 		}

@@ -8,10 +8,10 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 var unconfirmedTxStorage *objectstorage.ObjectStorage
@@ -50,7 +50,7 @@ func configureUnconfirmedTxStorage() {
 	opts := profile.LoadProfile().Caches.UnconfirmedTx
 
 	unconfirmedTxStorage = objectstorage.New(
-		database.StorageWithPrefix(DBPrefixUnconfirmedTransactions),
+		store.StoreWithPrefix(StorePrefixUnconfirmedTransactions),
 		unconfirmedTxFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

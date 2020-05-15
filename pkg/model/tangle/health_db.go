@@ -3,7 +3,9 @@ package tangle
 import (
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/database"
+	"github.com/iotaledger/hive.go/kvstore"
+
+	"github.com/gohornet/hornet/pkg/store"
 )
 
 const (
@@ -11,34 +13,31 @@ const (
 )
 
 var (
-	healthDatabase database.Database
+	healthStore kvstore.KVStore
 )
 
-func configureHealthDatabase() {
-	healthDatabase = database.DatabaseWithPrefix(DBPrefixHealth)
+func configureHealthStore() {
+	healthStore = store.StoreWithPrefix(StorePrefixHealth)
 	setDatabaseVersion()
 }
 
 func MarkDatabaseCorrupted() {
 
-	if err := healthDatabase.Set(
-		database.Entry{
-			Key: []byte("dbCorrupted"),
-		}); err != nil {
+	if err := healthStore.Set([]byte("dbCorrupted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
 }
 
 func MarkDatabaseHealthy() {
 
-	if err := healthDatabase.Delete([]byte("dbCorrupted")); err != nil {
+	if err := healthStore.Delete([]byte("dbCorrupted")); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
 }
 
 func IsDatabaseCorrupted() bool {
 
-	contains, err := healthDatabase.Contains([]byte("dbCorrupted"))
+	contains, err := healthStore.Has([]byte("dbCorrupted"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
 	}
@@ -46,14 +45,10 @@ func IsDatabaseCorrupted() bool {
 }
 
 func setDatabaseVersion() {
-	_, err := healthDatabase.Get([]byte("dbVersion"))
-	if err == database.ErrKeyNotFound {
+	_, err := healthStore.Get([]byte("dbVersion"))
+	if err == kvstore.ErrKeyNotFound {
 		// Only create the entry, if it doesn't exist already (fresh database)
-		if err := healthDatabase.Set(
-			database.Entry{
-				Key:   []byte("dbVersion"),
-				Value: []byte{DbVersion},
-			}); err != nil {
+		if err := healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))
 		}
 	}
@@ -61,13 +56,13 @@ func setDatabaseVersion() {
 
 func IsCorrectDatabaseVersion() bool {
 
-	entry, err := healthDatabase.Get([]byte("dbVersion"))
+	value, err := healthStore.Get([]byte("dbVersion"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database version"))
 	}
 
-	if len(entry.Value) > 0 {
-		return entry.Value[0] == DbVersion
+	if len(value) > 0 {
+		return value[0] == DbVersion
 	}
 
 	return false
