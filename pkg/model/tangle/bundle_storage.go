@@ -216,11 +216,11 @@ func FlushBundleStorage() {
 
 // GetBundles returns all existing bundle instances for that bundle hash
 // bundle +1
-func GetBundles(bundleHash trinary.Hash, forceRelease bool) CachedBundles {
+func GetBundles(bundleHash trinary.Hash, forceRelease bool, maxFind ...int) CachedBundles {
 
 	var cachedBndls CachedBundles
 
-	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash, forceRelease) {
+	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash, forceRelease, maxFind...) {
 		cachedBndl := GetCachedBundleOrNil(txTailHash) // bundle +1
 		if cachedBndl == nil {
 			continue
