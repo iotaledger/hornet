@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -9,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/store"
 	"github.com/gohornet/hornet/plugins/database"
 )
 
@@ -19,31 +19,35 @@ var (
 )
 
 type dbSize struct {
-	Keys   int64
-	Values int64
-	Time   time.Time
+	Tangle   int64
+	Snapshot int64
+	Spent    int64
+	Time     time.Time
 }
 
-func (c *dbSize) MarshalJSON() ([]byte, error) {
-	cleanup := struct {
-		Keys   int64 `json:"keys"`
-		Values int64 `json:"values"`
-		Time   int64 `json:"ts"`
+func (s *dbSize) MarshalJSON() ([]byte, error) {
+	size := struct {
+		Tangle   int64 `json:"tangle"`
+		Snapshot int64 `json:"snapshot"`
+		Spent    int64 `json:"spent"`
+		Time     int64 `json:"ts"`
 	}{
-		Keys:   c.Keys,
-		Values: c.Values,
-		Time:   c.Time.Unix(),
+		Tangle:   s.Tangle,
+		Snapshot: s.Snapshot,
+		Spent:    s.Spent,
+		Time:     s.Time.Unix(),
 	}
 
-	return json.Marshal(cleanup)
+	return json.Marshal(size)
 }
 
 func currentDatabaseSize() *dbSize {
-	keys, values := store.GetSize()
+	tangle, snapshot, spent := tangle.GetDatabaseSizes()
 	newValue := &dbSize{
-		Keys:   keys,
-		Values: values,
-		Time:   time.Now(),
+		Tangle:   tangle,
+		Snapshot: snapshot,
+		Spent:    spent,
+		Time:     time.Now(),
 	}
 	cachedDbSizeMetrics = append(cachedDbSizeMetrics, newValue)
 	if len(cachedDbSizeMetrics) > 600 {

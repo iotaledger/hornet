@@ -105,7 +105,7 @@ func run(plugin *node.Plugin) {
 	}
 
 	// run a full database garbage collection at startup
-	database.RunFullGarbageCollection(0.01)
+	database.RunGarbageCollection()
 
 	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), updateSyncedAtStartup)
 

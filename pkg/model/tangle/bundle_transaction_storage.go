@@ -6,10 +6,10 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 const (
@@ -60,12 +60,12 @@ func GetBundleTransactionsStorageSize() int {
 	return bundleTransactionsStorage.GetSize()
 }
 
-func configureBundleTransactionsStorage() {
+func configureBundleTransactionsStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.BundleTransactions
 
 	bundleTransactionsStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixBundleTransactions),
+		store.WithRealm([]byte{StorePrefixBundleTransactions}),
 		bundleTransactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

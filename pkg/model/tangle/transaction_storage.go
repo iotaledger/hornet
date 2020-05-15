@@ -5,12 +5,12 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var (
@@ -110,12 +110,12 @@ func GetTransactionStorageSize() int {
 	return txStorage.GetSize()
 }
 
-func configureTransactionStorage() {
+func configureTransactionStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Transactions
 
 	txStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixTransactions),
+		store.WithRealm([]byte{StorePrefixTransactions}),
 		transactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -127,7 +127,7 @@ func configureTransactionStorage() {
 	)
 
 	metadataStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixTransactionMetadata),
+		store.WithRealm([]byte{StorePrefixTransactionMetadata}),
 		metadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

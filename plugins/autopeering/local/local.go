@@ -3,6 +3,7 @@ package local
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"net"
 	"strconv"
 	"sync"
@@ -14,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/autopeering/services"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var (
@@ -75,7 +75,12 @@ func configureLocal() *peer.Local {
 		seed = append(seed, bytes)
 	}
 
-	peerDB, err := peer.NewDB(store.StoreWithPrefix(tangle.StorePrefixAutopeering))
+	boltDb, err := bolt.CreateDB(config.NodeConfig.GetString(config.CfgDatabasePath), "peer.db")
+	if err != nil {
+		log.Fatalf("Unable to create autopeering database: %s", err)
+	}
+	
+	peerDB, err := peer.NewDB(bolt.New(boltDb).WithRealm([]byte{tangle.StorePrefixAutopeering}))
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
 	}

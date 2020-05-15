@@ -9,10 +9,13 @@ const (
 	StorePrefixAddresses               byte = 5
 	StorePrefixMilestones              byte = 6
 	StorePrefixLedgerState             byte = 7
-	StorePrefixApprovers               byte = 8
-	StorePrefixTags                    byte = 9
-	StorePrefixSnapshot                byte = 10
-	StorePrefixUnconfirmedTransactions byte = 11
-	StorePrefixSpentAddresses          byte = 12
-	StorePrefixAutopeering             byte = 13
+	StorePrefixLedgerBalance           byte = 8
+	StorePrefixLedgerDiff              byte = 9
+	StorePrefixApprovers               byte = 10
+	StorePrefixTags                    byte = 11
+	StorePrefixSnapshot                byte = 12
+	StorePrefixSnapshotLedger          byte = 13
+	StorePrefixUnconfirmedTransactions byte = 14
+	StorePrefixSpentAddresses          byte = 15
+	StorePrefixAutopeering             byte = 16
 )

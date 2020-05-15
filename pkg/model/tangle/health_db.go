@@ -4,8 +4,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
-
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 const (
@@ -16,8 +14,8 @@ var (
 	healthStore kvstore.KVStore
 )
 
-func configureHealthStore() {
-	healthStore = store.StoreWithPrefix(StorePrefixHealth)
+func configureHealthStore(store kvstore.KVStore) {
+	healthStore = store.WithRealm([]byte{StorePrefixHealth})
 	setDatabaseVersion()
 }
 

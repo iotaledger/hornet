@@ -6,14 +6,15 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var (
@@ -35,12 +36,12 @@ func GetBundleStorageSize() int {
 	return bundleStorage.GetSize()
 }
 
-func configureBundleStorage() {
+func configureBundleStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Bundles
 
 	bundleStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixBundles),
+		store.WithRealm([]byte{StorePrefixBundles}),
 		bundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

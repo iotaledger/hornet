@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"time"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var (
@@ -36,12 +37,12 @@ func GetMilestoneStorageSize() int {
 	return milestoneStorage.GetSize()
 }
 
-func configureMilestoneStorage() {
+func configureMilestoneStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixMilestones),
+		store.WithRealm([]byte{StorePrefixMilestones}),
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

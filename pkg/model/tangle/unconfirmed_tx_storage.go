@@ -6,12 +6,12 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var unconfirmedTxStorage *objectstorage.ObjectStorage
@@ -45,12 +45,12 @@ func GetUnconfirmedTxStorageSize() int {
 	return unconfirmedTxStorage.GetSize()
 }
 
-func configureUnconfirmedTxStorage() {
+func configureUnconfirmedTxStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.UnconfirmedTx
 
 	unconfirmedTxStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixUnconfirmedTransactions),
+		store.WithRealm([]byte{StorePrefixUnconfirmedTransactions}),
 		unconfirmedTxFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

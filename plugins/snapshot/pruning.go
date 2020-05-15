@@ -223,7 +223,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}
 
-	database.RunFullGarbageCollection()
+	database.RunGarbageCollection()
 
 	return nil
 }

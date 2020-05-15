@@ -5,11 +5,11 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var tagsStorage *objectstorage.ObjectStorage
@@ -45,12 +45,12 @@ func GetTagsStorageSize() int {
 	return tagsStorage.GetSize()
 }
 
-func configureTagsStorage() {
+func configureTagsStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Tags
 
 	tagsStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixTags),
+		store.WithRealm([]byte{StorePrefixTags}),
 		tagsFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

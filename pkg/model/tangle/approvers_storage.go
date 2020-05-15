@@ -5,11 +5,11 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var approversStorage *objectstorage.ObjectStorage
@@ -44,12 +44,12 @@ func GetApproversStorageSize() int {
 	return approversStorage.GetSize()
 }
 
-func configureApproversStorage() {
+func configureApproversStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Approvers
 
 	approversStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixApprovers),
+		store.WithRealm([]byte{StorePrefixApprovers}),
 		approversFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

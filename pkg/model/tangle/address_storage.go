@@ -5,11 +5,11 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/store"
 )
 
 var addressesStorage *objectstorage.ObjectStorage
@@ -59,12 +59,12 @@ func GetAddressesStorageSize() int {
 	return addressesStorage.GetSize()
 }
 
-func configureAddressesStorage() {
+func configureAddressesStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
-		store.StoreWithPrefix(StorePrefixAddresses),
+		store.WithRealm([]byte{StorePrefixAddresses}),
 		addressFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
