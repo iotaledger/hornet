@@ -137,15 +137,15 @@ func DeleteAddress(address trinary.Hash, txHash trinary.Hash) {
 	addressesStorage.Delete(databaseKeyPrefixForAddressTransaction(address, txHash, true))
 }
 
-// DeleteAddressFromBadger deletes the address from the persistence layer without accessing the cache.
-func DeleteAddressFromBadger(address trinary.Hash, txHashBytes []byte) {
+// DeleteAddressFromStore deletes the address from the persistence layer without accessing the cache.
+func DeleteAddressFromStore(address trinary.Hash, txHashBytes []byte) {
 
 	prefix := databaseKeyPrefixForAddress(address)
-	addressesStorage.DeleteEntryFromBadger(append(prefix, txHashBytes...))
+	addressesStorage.DeleteEntryFromStore(append(prefix, txHashBytes...))
 
 	var isValueByte byte = hornet.AddressTxIsValue
 	valuePrefix := append(prefix, isValueByte)
-	addressesStorage.DeleteEntryFromBadger(append(valuePrefix, txHashBytes...))
+	addressesStorage.DeleteEntryFromStore(append(valuePrefix, txHashBytes...))
 }
 
 func ShutdownAddressStorage() {

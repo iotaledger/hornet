@@ -111,8 +111,8 @@ func ContainsMilestone(milestoneIndex milestone.Index) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-// SearchLatestMilestoneIndexInBadger searches the latest milestone without accessing the cache layer.
-func SearchLatestMilestoneIndexInBadger() milestone.Index {
+// SearchLatestMilestoneIndexInStore searches the latest milestone without accessing the cache layer.
+func SearchLatestMilestoneIndexInStore() milestone.Index {
 	var latestMilestoneIndex milestone.Index
 
 	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -178,8 +178,8 @@ func DeleteMilestone(milestoneIndex milestone.Index) {
 	milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-func DeleteMilestoneFromBadger(milestoneIndex milestone.Index) {
-	milestoneStorage.DeleteEntryFromBadger(databaseKeyForMilestoneIndex(milestoneIndex))
+func DeleteMilestoneFromStore(milestoneIndex milestone.Index) {
+	milestoneStorage.DeleteEntryFromStore(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
 func ShutdownMilestoneStorage() {

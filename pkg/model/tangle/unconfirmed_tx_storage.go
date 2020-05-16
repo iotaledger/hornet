@@ -97,8 +97,8 @@ func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnc
 	return &CachedUnconfirmedTx{CachedObject: cachedObj}
 }
 
-// DeleteUnconfirmedTxsFromBadger deletes unconfirmed transaction entries without accessing the cache.
-func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
+// DeleteUnconfirmedTxsFromStore deletes unconfirmed transaction entries without accessing the cache.
+func DeleteUnconfirmedTxsFromStore(msIndex milestone.Index) {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
@@ -109,7 +109,7 @@ func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
 		return true
 	}, true, msIndexBytes)
 
-	unconfirmedTxStorage.DeleteEntriesFromBadger(txHashes)
+	unconfirmedTxStorage.DeleteEntriesFromStore(txHashes)
 }
 
 func ShutdownUnconfirmedTxsStorage() {

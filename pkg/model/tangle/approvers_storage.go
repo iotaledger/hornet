@@ -116,9 +116,9 @@ func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 
-// DeleteApproverFromBadger deletes the approver from the persistence layer without accessing the cache.
-func DeleteApproverFromBadger(transactionHash trinary.Hash, approverHashBytes []byte) {
-	approversStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
+// DeleteApproverFromStore deletes the approver from the persistence layer without accessing the cache.
+func DeleteApproverFromStore(transactionHash trinary.Hash, approverHashBytes []byte) {
+	approversStorage.DeleteEntryFromStore(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
 }
 
 // approvers +-0
@@ -133,8 +133,8 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 	}, txHash)
 }
 
-// DeleteApproversFromBadger deletes the approvers from the persistence layer without accessing the cache.
-func DeleteApproversFromBadger(txHashBytes []byte) {
+// DeleteApproversFromStore deletes the approvers from the persistence layer without accessing the cache.
+func DeleteApproversFromStore(txHashBytes []byte) {
 
 	var approversToDelete [][]byte
 	approversStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -142,7 +142,7 @@ func DeleteApproversFromBadger(txHashBytes []byte) {
 		return true
 	}, true, txHashBytes)
 
-	approversStorage.DeleteEntriesFromBadger(approversToDelete)
+	approversStorage.DeleteEntriesFromStore(approversToDelete)
 }
 
 func ShutdownApproversStorage() {
