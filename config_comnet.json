@@ -117,6 +117,7 @@
     "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
+    "cpuMaxUsage": 0.5,
     "tpsRateLimit": 0.1,
     "workers": 1
   },

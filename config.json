@@ -121,8 +121,9 @@
     "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
-    "tpsRateLimit": 0.1,
-    "workers": 1
+    "cpuMaxUsage": 0.5,
+    "tpsRateLimit": 0.0,
+    "workers": 0
   },
   "graph": {
     "webRootPath": "IOTAtangle/webroot",
