@@ -88,7 +88,8 @@
       "runAsEntryNode": false,
       "entryNodes": [
         "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641",
-        "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@autopeering.comnet.tanglebay.org:14636"
+        "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@entrynode.comnet.tanglebay.org:14636",
+        "1bU0uI+apA7YRna530e3SYfTDtUsobrLObt58pe5c5E=@enter.comnet.hornet.zone:14627"
       ],
       "seed": ""
     }
