@@ -28,7 +28,7 @@ interface Props {
 export class Dashboard extends React.Component<Props, any> {
     render() {
         return (
-            <Container>
+            <Container fluid>
                 <h3>
                     <Choose>
                         <When
@@ -36,8 +36,8 @@ export class Dashboard extends React.Component<Props, any> {
                         <Otherwise>Dashboard</Otherwise>
                     </Choose>
                 </h3>
-                <Row className={"mb-3"}>
-                    <Col>
+                <Row>
+                    <Col md={6} xs={12} className={"mb-3"}>
                         <Card>
                             <Card.Body>
                                 <Card.Title>Status</Card.Title>
@@ -62,15 +62,11 @@ export class Dashboard extends React.Component<Props, any> {
                             </Card.Body>
                         </Card>
                     </Col>
+                    <Col md={6} xs={12} className={"mb-3"}><TPSChart/></Col>
                 </Row>
-                <Row className={"mb-3"}>
-                    <Col><TPSChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><ConfirmedMilestoneChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><MemChart/></Col>
+                <Row>
+                    <Col md={6} xs={12} className={"mb-3"}><ConfirmedMilestoneChart/></Col>
+                    <Col md={6} xs={12} className={"mb-3"}><MemChart/></Col>
                 </Row>
             </Container>
         );

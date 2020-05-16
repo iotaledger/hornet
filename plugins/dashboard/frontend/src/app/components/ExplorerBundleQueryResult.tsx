@@ -47,7 +47,7 @@ export class ExplorerBundleQueryResult extends React.Component<Props, any> {
             });
         }
         return (
-            <Container>
+            <Container fluid>
                 <h3>Bundle {bundles !== null && <span>({bundles.length})</span>}</h3>
                 <p>
                     {hash} {' '}

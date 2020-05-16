@@ -75,7 +75,7 @@ export class Visualizer extends React.Component<Props, any> {
         }
 
         return (
-            <Container>
+            <Container fluid>
                 <h3>Visualizer</h3>
                 <Row className={"mb-1"}>
                     <Col xs={{span: 5}}>

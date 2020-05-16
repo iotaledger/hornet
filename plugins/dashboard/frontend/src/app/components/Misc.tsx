@@ -161,7 +161,7 @@ const dbSizeLineChartOpts = Object.assign({}, {
 export class Misc extends React.Component<Props, any> {
     render() {
         return (
-            <Container>
+            <Container fluid>
                 <h3>Misc</h3>
                 <Row className={"mb-3"}>
                     <Col>

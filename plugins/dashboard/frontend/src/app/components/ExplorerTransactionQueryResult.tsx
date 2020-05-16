@@ -84,7 +84,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
             }
         }
         return (
-            <Container>
+            <Container fluid>
                 <If condition={query_err !== null}>
                     <Alert variant={"warning"}>
                         Requested transaction unknown on this node!
@@ -227,7 +227,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                 tx.next !== ''
                                                 &&
                                                 <Link className={style.prevNextButton} to={`/explorer/tx/${tx.next}`}>
-                                                    {' '} >
+                                                    {' '} 
                                                 </Link>
                                             }
                                             {

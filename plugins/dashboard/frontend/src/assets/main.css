@@ -17,3 +17,8 @@
     height: 100%;
     width: 100%;
 }
+
+.hornetNavbar {
+    position: relative;
+    padding: .5rem 1rem;
+}
