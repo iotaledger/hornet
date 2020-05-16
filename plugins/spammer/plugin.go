@@ -43,19 +43,25 @@ func configure(plugin *node.Plugin) {
 	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
 
-	if spammerWorkerCount >= runtime.NumCPU() {
+	if spammerWorkerCount >= runtime.NumCPU() || spammerWorkerCount == 0 {
 		spammerWorkerCount = runtime.NumCPU() - 1
 	}
 	if spammerWorkerCount < 1 {
 		spammerWorkerCount = 1
 	}
 
+	if cpuMaxUsage > 0.0 && runtime.GOOS == "windows" {
+		log.Warn("spammer.cpuMaxUsage not supported on Windows. will be deactivated")
+		cpuMaxUsage = 0.0
+	}
+
+	if cpuMaxUsage > 0.0 && runtime.NumCPU() == 1 {
+		log.Warn("spammer.cpuMaxUsage not supported on single core machines. will be deactivated")
+		cpuMaxUsage = 0.0
+	}
+
 	if cpuMaxUsage > 0.0 {
-		if runtime.GOOS == "windows" {
-			log.Panic("spammer.cpuMaxUsage not supported on Windows")
-		}
-		rateLimit = 0.0 // disable rateLimit because we want to spam as much as possible with cpu usage constrains
-		spammerWorkerCount = runtime.NumCPU() - 1
+		cpuUsageUpdater()
 	}
 
 	if rateLimit != 0 {

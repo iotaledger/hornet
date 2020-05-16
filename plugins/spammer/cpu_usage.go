@@ -6,65 +6,77 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/shirou/gopsutil/cpu"
+
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
-	// CPUUsageTimePerSample for setting the polling frequency
-	CPUUsageTimePerSample = time.Second / 4
+	cpuUsageSampleTime = 200 * time.Millisecond
+	cpuUsageSleepTime  = int(200 * time.Millisecond)
 
-	once              syncutils.Once
-	cpuUsageErrorLock syncutils.Mutex
-
-	// result and error get updated frequently based on CPUUsageTimePerSample
+	cpuUsageLock   syncutils.RWMutex
 	cpuUsageResult float64
 	cpuUsageError  error
+
+	ErrCPUPercentageUnknown = errors.New("CPU percentage unknown")
 )
 
-// cpuUsageUpdater starts a goroutine that computes cpu usage each CPUUsageTimePerSample
+// cpuUsageUpdater starts a goroutine that computes cpu usage each cpuUsageSampleTime.
 func cpuUsageUpdater() {
 	go func() {
 		for {
-			cpuUsagePSutil, err := cpu.Percent(CPUUsageTimePerSample, false) // percpu=false
+			cpuUsagePSutil, err := cpu.Percent(cpuUsageSampleTime, false)
+			cpuUsageLock.Lock()
 			if err != nil {
-				cpuUsageErrorLock.Lock()
-				defer cpuUsageErrorLock.Unlock()
-				cpuUsageError = errors.New("CPU percentage unknown")
+				cpuUsageError = ErrCPUPercentageUnknown
+				cpuUsageLock.Unlock()
 				return
 			}
-
-			cpuUsageErrorLock.Lock()
+			cpuUsageError = nil
 			cpuUsageResult = cpuUsagePSutil[0] / 100.0
-			cpuUsageErrorLock.Unlock()
+			cpuUsageLock.Unlock()
 		}
 	}()
 }
 
-// CPUUsageAdjust guesstimates new cpu usage after start/stop of a worker so we don't idle/run all workers at once
-func CPUUsageAdjust(nWorkerChange int) {
-	cpuUsageErrorLock.Lock()
-	defer cpuUsageErrorLock.Unlock()
-
-	cpuUsageResult += float64(nWorkerChange) / float64(runtime.NumCPU()) // assume one core usage per worker
-}
-
-// CPUUsage starts background polling once and returns latest cpu usage and error
-func CPUUsage() (float64, error) {
-	once.Do(cpuUsageUpdater)
-
-	cpuUsageErrorLock.Lock()
-	defer cpuUsageErrorLock.Unlock()
+// cpuUsage returns latest cpu usage
+func cpuUsage() (float64, error) {
+	cpuUsageLock.RLock()
+	defer cpuUsageLock.RUnlock()
 
 	return cpuUsageResult, cpuUsageError
 }
 
-// randomSleep prefends workers from becoming active very often (and eating a lot of cpu cycles) when we don't use the rateLimit ticker
-func randomSleep() {
-	if rateLimit != 0 {
-		return
+// cpuUsageGuessWithAdditionalWorker returns guessed cpu usage with another core running at 100% load
+func cpuUsageGuessWithAdditionalWorker() (float64, error) {
+	cpuUsage, err := cpuUsage()
+	if err != nil {
+		return 0.0, err
 	}
-	time.Sleep(time.Duration(rand.Intn(int(2 * CPUUsageTimePerSample))))
-	// time.Sleep(CPUUsageTimePerSample + time.Duration(rand.Intn(int(4 * CPUUsageTimePerSample))))
+
+	return cpuUsage + (1.0 / float64(runtime.NumCPU())), nil
+}
+
+// waitForLowerCPUUsage waits until the cpu usage drops below cpuMaxUsage.
+func waitForLowerCPUUsage() error {
+	if cpuMaxUsage == 0.0 {
+		return nil
+	}
+
+	for {
+		cpuUsage, err := cpuUsageGuessWithAdditionalWorker()
+		if err != nil {
+			return err
+		}
+
+		if cpuUsage < cpuMaxUsage {
+			break
+		}
+
+		// sleep a random time between cpuUsageSleepTime and 2*cpuUsageSleepTime
+		time.Sleep(time.Duration(cpuUsageSleepTime + rand.Intn(cpuUsageSleepTime)))
+	}
+
+	return nil
 }

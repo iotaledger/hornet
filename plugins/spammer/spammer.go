@@ -37,36 +37,22 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 	}
 
+	if err := waitForLowerCPUUsage(); err != nil {
+		log.Warn(err.Error())
+		return
+	}
+
 	if !tangle.IsNodeSyncedWithThreshold() {
-		randomSleep()
 		return
 	}
 
 	if peering.Manager().ConnectedPeerCount() == 0 {
-		randomSleep()
 		return
 	}
-
-	if cpuMaxUsage > 0.0 {
-		cpuUsage, err := CPUUsage()
-		if err == nil {
-			if cpuUsage > cpuMaxUsage {
-				// log.Infof("worker idle with cpuUsage %.2f > %.2f", cpuUsage, cpuMaxUsage)
-				randomSleep()
-				return
-			}
-		} else { // else cpu usage detection not supported (Windows?)
-			log.Infof("Error in CPUUsage. %s", err)
-		}
-	}
-
-	CPUUsageAdjust(+1)
-	defer CPUUsageAdjust(-1)
 
 	timeStart := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
 	if err != nil {
-		randomSleep()
 		return
 	}
 	durationGTTA := time.Since(timeStart)
@@ -77,13 +63,11 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	b, err := createBundle(address, message, tagSubstring, txCountValue, infoMsg)
 	if err != nil {
-		randomSleep()
 		return
 	}
 
 	err = doPow(b, tips[0], tips[1], mwm)
 	if err != nil {
-		randomSleep()
 		return
 	}
 
@@ -93,7 +77,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	for _, tx := range b {
 		txTrits, _ := transaction.TransactionToTrits(&tx)
 		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
-			randomSleep()
 			return
 		}
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
