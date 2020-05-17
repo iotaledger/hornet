@@ -5,7 +5,7 @@ import {inject, observer} from "mobx-react";
 import {Bar} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
 import {If} from 'tsx-control-statements/components';
-
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -141,12 +141,18 @@ export default class ConfirmedMilestoneChart extends React.Component<Props, any>
                             Confirmation: {(this.props.nodeStore.last_confirmed_ms_metric.conf_rate).toFixed(2)}%
                         </small>
                     </If>
-                    <Bar height={30} data={this.props.nodeStore.confirmedMilestonesSeries}
-                         options={lineChartOptions}/>
-                    <Bar height={30} data={this.props.nodeStore.confirmedMilestonesConfirmationSeries}
-                         options={percentLineChartOpts}/>
-                    <Bar height={30} data={this.props.nodeStore.confirmedMilestonesTimeSeries}
-                         options={timeChartOptions}/>
+                    <div className={style.hornetChart}>
+                        <Bar data={this.props.nodeStore.confirmedMilestonesSeries}
+                            options={lineChartOptions}/>
+                    </div>
+                    <div className={style.hornetChart}>
+                        <Bar data={this.props.nodeStore.confirmedMilestonesConfirmationSeries}
+                            options={percentLineChartOpts}/>
+                    </div>
+                    <div className={style.hornetChart}>
+                        <Bar data={this.props.nodeStore.confirmedMilestonesTimeSeries}
+                            options={timeChartOptions}/>
+                    </div>
                 </Card.Body>
             </Card>
         );

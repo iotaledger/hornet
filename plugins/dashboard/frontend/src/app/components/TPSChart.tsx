@@ -4,7 +4,7 @@ import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
 import {Line} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
-
+import * as style from '../../assets/main.css';
 interface Props {
     nodeStore?: NodeStore;
 }
@@ -52,7 +52,7 @@ const lineChartOptions = Object.assign({
 export default class TPSChart extends React.Component<Props, any> {
     render() {
         return (
-            <Card>
+            <Card className={style.horentCardEqual}>
                 <Card.Body>
                     <Card.Title>Transactions Per Second</Card.Title>
                     <small>
@@ -60,8 +60,9 @@ export default class TPSChart extends React.Component<Props, any> {
                         New: {this.props.nodeStore.last_tps_metric.new}.
                         Outgoing: {this.props.nodeStore.last_tps_metric.outgoing}.
                     </small>
-
-                    <Line height={50} data={this.props.nodeStore.tpsSeries} options={lineChartOptions}/>
+                    <div className={style.hornetChart}>
+                        <Line data={this.props.nodeStore.tpsSeries} options={lineChartOptions}/>
+                    </div>
                 </Card.Body>
             </Card>
         );

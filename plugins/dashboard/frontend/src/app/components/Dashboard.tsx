@@ -18,6 +18,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Card from "react-bootstrap/Card";
 import MemChart from "app/components/MemChart";
 import {Choose, Otherwise, When} from 'tsx-control-statements/components';
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -36,9 +37,9 @@ export class Dashboard extends React.Component<Props, any> {
                         <Otherwise>Dashboard</Otherwise>
                     </Choose>
                 </h3>
-                <Row>
-                    <Col md={6} xs={12} className={"mb-3"}>
-                        <Card>
+                <Row className={`mb-3 ${style.hornetRowGutter}`}>
+                    <Col md={6} xs={12}>
+                        <Card className={`${style.horentCardEqual}`}>
                             <Card.Body>
                                 <Card.Title>Status</Card.Title>
                                 <Row>
@@ -62,11 +63,19 @@ export class Dashboard extends React.Component<Props, any> {
                             </Card.Body>
                         </Card>
                     </Col>
-                    <Col md={6} xs={12} className={"mb-3"}><TPSChart/></Col>
+                    <Col md={6} xs={12} className='mt-3 mt-md-0'>
+                        <TPSChart/>
+                    </Col>
                 </Row>
-                <Row>
-                    <Col md={6} xs={12} className={"mb-3"}><ConfirmedMilestoneChart/></Col>
-                    <Col md={6} xs={12} className={"mb-3"}><MemChart/></Col>
+                <Row className={"mb-3"}>
+                    <Col>
+                        <ConfirmedMilestoneChart/>
+                    </Col>
+                </Row>
+                <Row className={"mb-3"}>
+                    <Col>
+                        <MemChart/>
+                    </Col>
                 </Row>
             </Container>
         );
