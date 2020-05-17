@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/tipselection"
 
 	"go.uber.org/atomic"
@@ -36,7 +37,16 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 	}
 
+	if err := waitForLowerCPUUsage(); err != nil {
+		log.Warn(err.Error())
+		return
+	}
+
 	if !tangle.IsNodeSyncedWithThreshold() {
+		return
+	}
+
+	if peering.Manager().ConnectedPeerCount() == 0 {
 		return
 	}
 
