@@ -25,6 +25,7 @@ var (
 	message            string
 	tagSubstring       string
 	depth              uint
+	cpuMaxUsage        float64
 	rateLimit          float64
 	mwm                int
 	spammerWorkerCount int
@@ -37,15 +38,30 @@ func configure(plugin *node.Plugin) {
 	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
 	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
 	depth = config.NodeConfig.GetUint(config.CfgSpammerDepth)
+	cpuMaxUsage = config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
 	rateLimit = config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
 	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
 
-	if spammerWorkerCount >= runtime.NumCPU() {
+	if spammerWorkerCount >= runtime.NumCPU() || spammerWorkerCount == 0 {
 		spammerWorkerCount = runtime.NumCPU() - 1
 	}
 	if spammerWorkerCount < 1 {
 		spammerWorkerCount = 1
+	}
+
+	if cpuMaxUsage > 0.0 && runtime.GOOS == "windows" {
+		log.Warn("spammer.cpuMaxUsage not supported on Windows. will be deactivated")
+		cpuMaxUsage = 0.0
+	}
+
+	if cpuMaxUsage > 0.0 && runtime.NumCPU() == 1 {
+		log.Warn("spammer.cpuMaxUsage not supported on single core machines. will be deactivated")
+		cpuMaxUsage = 0.0
+	}
+
+	if cpuMaxUsage > 0.0 {
+		cpuUsageUpdater()
 	}
 
 	if rateLimit != 0 {

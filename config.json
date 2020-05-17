@@ -93,7 +93,7 @@
       "entryNodes": [
         "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
         "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
-        "npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@autopeering.tanglebay.org:14626"
+        "npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@entrynode.tanglebay.org:14626"
       ],
       "seed": ""
     }
@@ -121,8 +121,9 @@
     "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
-    "tpsRateLimit": 0.1,
-    "workers": 1
+    "cpuMaxUsage": 0.5,
+    "tpsRateLimit": 0.0,
+    "workers": 0
   },
   "graph": {
     "webRootPath": "IOTAtangle/webroot",
