@@ -3,7 +3,7 @@ package database
 import (
 	"runtime"
 	"time"
-	
+
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/daemon"
