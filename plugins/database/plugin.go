@@ -1,6 +1,8 @@
 package database
 
 import (
+	"github.com/spf13/viper"
+	"runtime"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -22,6 +24,15 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
+
+	viper.BindEnv("GOMAXPROCS")
+	goMaxProcsEnv := viper.GetInt("GOMAXPROCS")
+	if goMaxProcsEnv == 0 {
+		// badger documentation recommends setting a high number for GOMAXPROCS.
+		// this allows Go to observe the full IOPS throughput provided by modern SSDs.
+		// Dgraph uses 128.
+		runtime.GOMAXPROCS(128)
+	}
 
 	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath))
 
