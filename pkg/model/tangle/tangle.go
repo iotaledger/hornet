@@ -82,7 +82,7 @@ func CloseDatabases() error {
 	return nil
 }
 
-func DatabaseSupportCleanup() bool {
+func DatabaseSupportsCleanup() bool {
 	// Bolt does not support cleaning up anything
 	return false
 }
@@ -92,7 +92,7 @@ func CleanupDatabases() error {
 	return ErrNothingToCleanUp
 }
 
-// GetDatabaseSizes returns the size of the database keys and values.
+// GetDatabaseSizes returns the size of the different databases.
 func GetDatabaseSizes() (tangle int64, snapshot int64, spent int64) {
 
 	if tangleDbFile, err := os.Stat(path.Join(dbDir, TangleDbFilename)); err == nil {

@@ -305,7 +305,7 @@ func DeleteLedgerBalancesInDatabase() error {
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	// Delete ledger all balances
+	// Delete all ledger balances
 	if err := ledgerBalanceStore.Clear(); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger balances")
 	}

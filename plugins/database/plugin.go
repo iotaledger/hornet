@@ -50,7 +50,7 @@ func configure(plugin *node.Plugin) {
 }
 
 func RunGarbageCollection() {
-	if tangle.DatabaseSupportCleanup() {
+	if tangle.DatabaseSupportsCleanup() {
 
 		garbageCollectionLock.Lock()
 		defer garbageCollectionLock.Unlock()
