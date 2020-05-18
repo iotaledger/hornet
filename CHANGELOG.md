@@ -11,11 +11,21 @@ _Update note:_ Please remove your database and restart HORNET.
 ### Added
 
     - Coordinator plugin
-    - Responsive dashboard design
-    - Visualizer (Dashboard, ported from GoShimmer)
-    - `pruneDatabase` API call
-    - Coordinator config options
-    - Spam txs graph (Dashboard)
+    - Dashboard:
+      - Responsive design
+      - Visualizer (ported from GoShimmer)
+      - Spam transactions graph
+      - Show IOTA units
+      - Value-tx only filter
+    - API:
+      - `pruneDatabase` call
+      - `getLedgerState` call
+      - `getFundsOnSpentAddresses` call
+    - Flag to overwrite coo address at startup
+
+### Removed
+
+    - `getSnapshot` API call
 
 ### Changed
 
@@ -27,6 +37,11 @@ _Update note:_ Please remove your database and restart HORNET.
     - Dashboard graph colors
     - Graph explorer link is now configurable
     - Improved spammer plugin
+    - Local snapshot doesn't write to database if triggered externally
+    - API:
+      - Handle `minWeightMagnitude` as an optional parameter
+      - Renamed `createSnapshot` to `createSnapshotFile`
+      - Improved error handling in `createSnapshotFile`
 
 ### Fixed
 
@@ -34,6 +49,86 @@ _Update note:_ Please remove your database and restart HORNET.
     - Websocket messages
     - ZMQ `address` topic
 
+### Config file changes
+
+Added option:
+
+`config.json`
+
+```diff
++"coordinator": {
++  "address": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
++  "securityLevel": 2,
++  "merkleTreeDepth": 23,
++  "mwm": 14,
++  "stateFilePath": "coordinator.state",
++  "merkleTreeFilePath": "coordinator.tree",
++  "intervalSeconds": 60,
++  "checkpointTransactions": 5
++},
+"spammer": {
++  "cpuMaxUsage": 0.5,
+},
+"graph": {
++  "explorerTxLink": "http://localhost:8081/explorer/tx/",
++  "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
+},
+```
+
+`config_comnet.json`
+
+```diff
++"coordinator": {
++  "address": "ZNCCPOTBCDZXCBQYBWUYYFO9PLRHNAROWOS9KGMYWNVIXWGYGUSJBZUTUQBNQRADHPUEONZZTYGVMSRZD",
++  "securityLevel": 2,
++  "merkleTreeDepth": 23,
++  "mwm": 10,
++  "stateFilePath": "coordinator.state",
++  "merkleTreeFilePath": "coordinator.tree",
++  "intervalSeconds": 60,
++  "checkpointTransactions": 5
++},
+"spammer": {
++  "cpuMaxUsage": 0.5,
+},
+"graph": {
++  "explorerTxLink": "http://localhost:8081/explorer/tx/",
++  "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
+},
+```
+
+Removed option:
+
+`config.json` + `config_comnet.json`
+
+```diff
+-"milestones": {
+-  "coordinator": "ZNCCPOTBCDZXCBQYBWUYYFO9PLRHNAROWOS9KGMYWNVIXWGYGUSJBZUTUQBNQRADHPUEONZZTYGVMSRZD",
+-  "coordinatorSecurityLevel": 2,
+-  "numberOfKeysInAMilestone": 23
+-}
+-"compass": {
+-  "loadLSMIAsLMI": false
+-},
+-"protocol": {
+-  "mwm": 14
+-},
+```
+
+`config.json` + `config_comnet.json`
+
+```diff
+"spammer": {
+-  "tpsRateLimit": 0.1,
++  "tpsRateLimit": 0.0,
+-  "workers": 1
++  "workers": 0
+}
+"monitor": {
+-  "initialTransactionsCount": 15000,
++  "initialTransactions": 15000,
+}
+```
 
 ## [0.4.0-rc8] - 06.04.2020
 
