@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -35,13 +36,12 @@ func GetBundleStorageSize() int {
 	return bundleStorage.GetSize()
 }
 
-func configureBundleStorage() {
+func configureBundleStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Bundles
 
 	bundleStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixBundles},
+		store.WithRealm([]byte{StorePrefixBundles}),
 		bundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -200,9 +200,9 @@ func DeleteBundle(tailTxHash trinary.Hash) {
 	bundleStorage.Delete(databaseKeyForBundle(tailTxHash))
 }
 
-// DeleteBundleFromBadger deletes the bundle from the persistence layer without accessing the cache.
-func DeleteBundleFromBadger(tailTxHashBytes []byte) {
-	bundleStorage.DeleteEntryFromBadger(tailTxHashBytes)
+// DeleteBundleFromStore deletes the bundle from the persistence layer without accessing the cache.
+func DeleteBundleFromStore(tailTxHashBytes []byte) {
+	bundleStorage.DeleteEntryFromStore(tailTxHashBytes)
 }
 
 func ShutdownBundleStorage() {
@@ -217,11 +217,11 @@ func FlushBundleStorage() {
 
 // GetBundles returns all existing bundle instances for that bundle hash
 // bundle +1
-func GetBundles(bundleHash trinary.Hash, forceRelease bool) CachedBundles {
+func GetBundles(bundleHash trinary.Hash, forceRelease bool, maxFind ...int) CachedBundles {
 
 	var cachedBndls CachedBundles
 
-	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash, forceRelease) {
+	for _, txTailHash := range GetBundleTailTransactionHashes(bundleHash, forceRelease, maxFind...) {
 		cachedBndl := GetCachedBundleOrNil(txTailHash) // bundle +1
 		if cachedBndl == nil {
 			continue

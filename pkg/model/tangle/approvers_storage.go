@@ -5,9 +5,9 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -44,13 +44,12 @@ func GetApproversStorageSize() int {
 	return approversStorage.GetSize()
 }
 
-func configureApproversStorage() {
+func configureApproversStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Approvers
 
 	approversStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixApprovers},
+		store.WithRealm([]byte{StorePrefixApprovers}),
 		approversFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -117,9 +116,9 @@ func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 
-// DeleteApproverFromBadger deletes the approver from the persistence layer without accessing the cache.
-func DeleteApproverFromBadger(transactionHash trinary.Hash, approverHashBytes []byte) {
-	approversStorage.DeleteEntryFromBadger(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
+// DeleteApproverFromStore deletes the approver from the persistence layer without accessing the cache.
+func DeleteApproverFromStore(transactionHash trinary.Hash, approverHashBytes []byte) {
+	approversStorage.DeleteEntryFromStore(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
 }
 
 // approvers +-0
@@ -134,8 +133,8 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 	}, txHash)
 }
 
-// DeleteApproversFromBadger deletes the approvers from the persistence layer without accessing the cache.
-func DeleteApproversFromBadger(txHashBytes []byte) {
+// DeleteApproversFromStore deletes the approvers from the persistence layer without accessing the cache.
+func DeleteApproversFromStore(txHashBytes []byte) {
 
 	var approversToDelete [][]byte
 	approversStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -143,7 +142,7 @@ func DeleteApproversFromBadger(txHashBytes []byte) {
 		return true
 	}, true, txHashBytes)
 
-	approversStorage.DeleteEntriesFromBadger(approversToDelete)
+	approversStorage.DeleteEntriesFromStore(approversToDelete)
 }
 
 func ShutdownApproversStorage() {

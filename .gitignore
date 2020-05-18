@@ -44,3 +44,4 @@ hornet.log
 layer*.csv
 coordinator.state
 coordinator.tree
+hive.go/

@@ -20,6 +20,8 @@ import (
 const (
 	MaxTransactionsForAddressResults = 100
 	MaxApproversResults              = 100
+	MaxTagResults                    = 100
+	MaxBundleResults                 = 100
 )
 
 type ExplorerTx struct {
@@ -318,7 +320,7 @@ func findTag(tag Trytes) (*ExplorerTag, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid: %s", tag)
 	}
 
-	txHashes := tangle.GetTagHashes(tag, true, 100)
+	txHashes := tangle.GetTagHashes(tag, true, MaxTagResults)
 	if len(txHashes) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "tag %s unknown", tag)
 	}
@@ -348,7 +350,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedBndls := tangle.GetBundles(hash, true) // bundle +1
+	cachedBndls := tangle.GetBundles(hash, true, MaxBundleResults) // bundle +1
 	if len(cachedBndls) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "bundle %s unknown", hash)
 	}

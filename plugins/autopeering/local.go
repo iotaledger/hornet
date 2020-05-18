@@ -1,28 +1,30 @@
-package local
+package autopeering
 
 import (
-	"crypto/ed25519"
 	"encoding/base64"
 	"net"
 	"strconv"
-	"sync"
+
+	"go.etcd.io/bbolt"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
+	"github.com/iotaledger/hive.go/crypto/ed25519"
+	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/autopeering/services"
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-var (
-	instance *peer.Local
-	once     sync.Once
-)
+type Local struct {
+	PeerLocal *peer.Local
+	boltDb    *bbolt.DB
+	peerDb    *peer.DB
+}
 
-func configureLocal() *peer.Local {
+func NewLocal() *Local {
 	log := logger.NewLogger("Local")
 
 	var peeringIP net.IP
@@ -75,12 +77,12 @@ func configureLocal() *peer.Local {
 		seed = append(seed, bytes)
 	}
 
-	db, err := database.Get(tangle.DBPrefixAutopeering, database.GetHornetBadgerInstance())
+	boltDb, err := bolt.CreateDB(config.NodeConfig.GetString(config.CfgDatabasePath), "peer.db")
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
 	}
 
-	peerDB, err := peer.NewDB(db)
+	peerDB, err := peer.NewDB(bolt.New(boltDb).WithRealm([]byte{tangle.StorePrefixAutopeering}))
 	if err != nil {
 		log.Fatalf("Unable to create autopeering database: %s", err)
 	}
@@ -92,10 +94,14 @@ func configureLocal() *peer.Local {
 
 	log.Infof("Initialized local: peer://%s@%s", base64.StdEncoding.EncodeToString(local.PublicKey().Bytes()), local.Address())
 
-	return local
+	return &Local{
+		PeerLocal: local,
+		boltDb:    boltDb,
+		peerDb:    peerDB,
+	}
 }
 
-func GetInstance() *peer.Local {
-	once.Do(func() { instance = configureLocal() })
-	return instance
+func (l *Local) Close() error {
+	l.peerDb.Close()
+	return l.boltDb.Close()
 }

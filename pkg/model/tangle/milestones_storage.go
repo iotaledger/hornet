@@ -4,10 +4,11 @@ import (
 	"encoding/binary"
 	"time"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -36,13 +37,12 @@ func GetMilestoneStorageSize() int {
 	return milestoneStorage.GetSize()
 }
 
-func configureMilestoneStorage() {
+func configureMilestoneStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Milestones
 
 	milestoneStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixMilestones},
+		store.WithRealm([]byte{StorePrefixMilestones}),
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -111,8 +111,8 @@ func ContainsMilestone(milestoneIndex milestone.Index) bool {
 	return milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-// SearchLatestMilestoneIndexInBadger searches the latest milestone without accessing the cache layer.
-func SearchLatestMilestoneIndexInBadger() milestone.Index {
+// SearchLatestMilestoneIndexInStore searches the latest milestone without accessing the cache layer.
+func SearchLatestMilestoneIndexInStore() milestone.Index {
 	var latestMilestoneIndex milestone.Index
 
 	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -178,8 +178,8 @@ func DeleteMilestone(milestoneIndex milestone.Index) {
 	milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-func DeleteMilestoneFromBadger(milestoneIndex milestone.Index) {
-	milestoneStorage.DeleteEntryFromBadger(databaseKeyForMilestoneIndex(milestoneIndex))
+func DeleteMilestoneFromStore(milestoneIndex milestone.Index) {
+	milestoneStorage.DeleteEntryFromStore(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
 func ShutdownMilestoneStorage() {

@@ -16,12 +16,10 @@ import (
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 	"github.com/iotaledger/hive.go/identity"
 	"github.com/iotaledger/hive.go/iputils"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
 
 	"github.com/gohornet/hornet/pkg/autopeering/services"
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/autopeering/local"
 )
 
 const (
@@ -38,11 +36,9 @@ var (
 	ID string
 
 	ErrParsingEntryNode = errors.New("can't parse entry node")
-
-	log *logger.Logger
 )
 
-func configureAP() {
+func configureAP(local *Local) {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
 		log.Errorf("Invalid entry nodes; ignoring: %v", err)
@@ -53,10 +49,10 @@ func configureAP() {
 	gossipServiceKeyHash.Write([]byte(services.GossipServiceKey()))
 	networkID := gossipServiceKeyHash.Sum32()
 
-	Discovery = discover.New(local.GetInstance(), protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
+	Discovery = discover.New(local.PeerLocal, protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
 
 	// enable peer selection only when gossip is enabled
-	Selection = selection.New(local.GetInstance(), Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
+	Selection = selection.New(local.PeerLocal, Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
 }
 
 // isValidPeer checks whether a peer is a valid peer.
@@ -75,10 +71,10 @@ func isValidPeer(p *peer.Peer) bool {
 	return true
 }
 
-func start(shutdownSignal <-chan struct{}) {
+func start(local *Local, shutdownSignal <-chan struct{}) {
 	defer log.Info("Stopping Autopeering ... done")
 
-	lPeer := local.GetInstance()
+	lPeer := local.PeerLocal
 	peering := lPeer.Services().Get(service.PeeringKey)
 
 	// resolve the bind address
@@ -113,9 +109,13 @@ func start(shutdownSignal <-chan struct{}) {
 	}
 
 	ID = lPeer.ID().String()
-	log.Infof("%s started: ID=%s Address=%s/%s PublicKey=%s", name, lPeer.ID(), localAddr.String(), localAddr.Network(), base64.StdEncoding.EncodeToString(lPeer.PublicKey().Bytes()))
+	log.Infof("started: ID=%s Address=%s/%s PublicKey=%s", lPeer.ID(), localAddr.String(), localAddr.Network(), base64.StdEncoding.EncodeToString(lPeer.PublicKey().Bytes()))
 
 	<-shutdownSignal
+	err = local.Close()
+	if err != nil {
+		log.Errorf("Error closing peer database: %v", err.Error())
+	}
 	log.Info("Stopping Autopeering ...")
 }
 

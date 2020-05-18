@@ -30,19 +30,25 @@ func init() {
 	})
 }
 
-const name = "Autopeering" // name of the plugin
+var (
+	PLUGIN = node.NewPlugin("Autopeering", node.Enabled, configure, run)
 
-var PLUGIN = node.NewPlugin(name, node.Enabled, configure, run)
+	log   *logger.Logger
+	local *Local
+)
 
-func configure(*node.Plugin) {
+func configure(p *node.Plugin) {
 	services.GossipServiceKey()
-	log = logger.NewLogger(name)
-	configureAP()
+	log = logger.NewLogger(p.Name)
+	local = NewLocal()
+	configureAP(local)
 	configureEvents()
 }
 
-func run(*node.Plugin) {
-	daemon.BackgroundWorker(name, start, shutdown.PriorityAutopeering)
+func run(p *node.Plugin) {
+	daemon.BackgroundWorker(p.Name, func(shutdownSignal <-chan struct{}) {
+		start(local, shutdownSignal)
+	}, shutdown.PriorityAutopeering)
 }
 
 func configureEvents() {

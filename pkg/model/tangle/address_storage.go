@@ -5,9 +5,9 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -59,13 +59,12 @@ func GetAddressesStorageSize() int {
 	return addressesStorage.GetSize()
 }
 
-func configureAddressesStorage() {
+func configureAddressesStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Addresses
 
 	addressesStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixAddresses},
+		store.WithRealm([]byte{StorePrefixAddresses}),
 		addressFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -138,15 +137,15 @@ func DeleteAddress(address trinary.Hash, txHash trinary.Hash) {
 	addressesStorage.Delete(databaseKeyPrefixForAddressTransaction(address, txHash, true))
 }
 
-// DeleteAddressFromBadger deletes the address from the persistence layer without accessing the cache.
-func DeleteAddressFromBadger(address trinary.Hash, txHashBytes []byte) {
+// DeleteAddressFromStore deletes the address from the persistence layer without accessing the cache.
+func DeleteAddressFromStore(address trinary.Hash, txHashBytes []byte) {
 
 	prefix := databaseKeyPrefixForAddress(address)
-	addressesStorage.DeleteEntryFromBadger(append(prefix, txHashBytes...))
+	addressesStorage.DeleteEntryFromStore(append(prefix, txHashBytes...))
 
 	var isValueByte byte = hornet.AddressTxIsValue
 	valuePrefix := append(prefix, isValueByte)
-	addressesStorage.DeleteEntryFromBadger(append(valuePrefix, txHashBytes...))
+	addressesStorage.DeleteEntryFromStore(append(valuePrefix, txHashBytes...))
 }
 
 func ShutdownAddressStorage() {

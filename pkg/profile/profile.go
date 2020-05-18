@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dgraph-io/badger/v2"
-	"github.com/dgraph-io/badger/v2/options"
 	"github.com/shirou/gopsutil/mem"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -172,37 +170,6 @@ var Profile8GB = &Profile{
 			},
 		},
 	},
-	Badger: BadgerOpts{
-		LevelOneSize:            268435456,
-		LevelSizeMultiplier:     10,
-		TableLoadingMode:        options.MemoryMap,
-		ValueLogLoadingMode:     options.FileIO,
-		MaxLevels:               7,
-		MaxTableSize:            67108864,
-		NumCompactors:           1,
-		NumLevelZeroTables:      1,
-		NumLevelZeroTablesStall: 2,
-		NumMemtables:            1,
-		BloomFalsePositive:      0.01,
-		BlockSize:               4 * 1024,
-		SyncWrites:              false,
-		NumVersionsToKeep:       1,
-		CompactLevel0OnClose:    false,
-		KeepL0InMemory:          false,
-		VerifyValueChecksum:     false,
-		MaxCacheSize:            0,
-		MaxBfCacheSize:          50000,
-		LoadBloomsOnOpen:        false,
-		ZSTDCompressionLevel:    1,
-		CompressionType:         options.None,
-		ValueLogFileSize:        1073741823,
-		ValueLogMaxEntries:      33554431,
-		ValueThreshold:          32,
-		WithTruncate:            false,
-		LogRotatesToFlush:       2,
-		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.1,
-	},
 }
 
 var Profile4GB = &Profile{
@@ -295,37 +262,6 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-	},
-	Badger: BadgerOpts{
-		LevelOneSize:            268435456,
-		LevelSizeMultiplier:     10,
-		TableLoadingMode:        options.FileIO,
-		ValueLogLoadingMode:     options.FileIO,
-		MaxLevels:               7,
-		MaxTableSize:            67108864,
-		NumCompactors:           1,
-		NumLevelZeroTables:      1,
-		NumLevelZeroTablesStall: 2,
-		NumMemtables:            1,
-		BloomFalsePositive:      0.01,
-		BlockSize:               4 * 1024,
-		SyncWrites:              false,
-		NumVersionsToKeep:       1,
-		CompactLevel0OnClose:    false,
-		KeepL0InMemory:          false,
-		VerifyValueChecksum:     false,
-		MaxCacheSize:            0,
-		MaxBfCacheSize:          25000,
-		LoadBloomsOnOpen:        false,
-		ZSTDCompressionLevel:    1,
-		CompressionType:         options.None,
-		ValueLogFileSize:        1073741823,
-		ValueLogMaxEntries:      33554431,
-		ValueThreshold:          32,
-		WithTruncate:            false,
-		LogRotatesToFlush:       2,
-		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.1,
 	},
 }
 
@@ -420,37 +356,6 @@ var Profile2GB = &Profile{
 			},
 		},
 	},
-	Badger: BadgerOpts{
-		LevelOneSize:            268435456,
-		LevelSizeMultiplier:     10,
-		TableLoadingMode:        options.FileIO,
-		ValueLogLoadingMode:     options.FileIO,
-		MaxLevels:               7,
-		MaxTableSize:            67108864,
-		NumCompactors:           1,
-		NumLevelZeroTables:      1,
-		NumLevelZeroTablesStall: 2,
-		NumMemtables:            1,
-		BloomFalsePositive:      0.01,
-		BlockSize:               4 * 1024,
-		SyncWrites:              false,
-		NumVersionsToKeep:       1,
-		CompactLevel0OnClose:    false,
-		KeepL0InMemory:          false,
-		VerifyValueChecksum:     false,
-		MaxCacheSize:            0,
-		MaxBfCacheSize:          10000,
-		LoadBloomsOnOpen:        false,
-		ZSTDCompressionLevel:    1,
-		CompressionType:         options.None,
-		ValueLogFileSize:        1073741823,
-		ValueLogMaxEntries:      33554431,
-		ValueThreshold:          32,
-		WithTruncate:            false,
-		LogRotatesToFlush:       2,
-		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.1,
-	},
 }
 
 var Profile1GB = &Profile{
@@ -544,43 +449,11 @@ var Profile1GB = &Profile{
 			},
 		},
 	},
-	Badger: BadgerOpts{
-		LevelOneSize:            67108864,
-		LevelSizeMultiplier:     10,
-		TableLoadingMode:        options.FileIO,
-		ValueLogLoadingMode:     options.FileIO,
-		MaxLevels:               5,
-		MaxTableSize:            16777216,
-		NumCompactors:           1,
-		NumLevelZeroTables:      1,
-		NumLevelZeroTablesStall: 2,
-		NumMemtables:            1,
-		BloomFalsePositive:      0.01,
-		BlockSize:               4 * 1024,
-		SyncWrites:              false,
-		NumVersionsToKeep:       1,
-		CompactLevel0OnClose:    false,
-		KeepL0InMemory:          false,
-		VerifyValueChecksum:     false,
-		MaxCacheSize:            0,
-		MaxBfCacheSize:          5000,
-		LoadBloomsOnOpen:        false,
-		ZSTDCompressionLevel:    1,
-		CompressionType:         options.None,
-		ValueLogFileSize:        67108863,
-		ValueLogMaxEntries:      2097151,
-		ValueThreshold:          32,
-		WithTruncate:            false,
-		LogRotatesToFlush:       2,
-		EventLogging:            false,
-		ValueLogGCDiscardRatio:  0.1,
-	},
 }
 
 type Profile struct {
-	Name   string     `mapstructure:"name"`
-	Caches Caches     `mapstructure:"caches"`
-	Badger BadgerOpts `mapstructure:"badger"`
+	Name   string `mapstructure:"name"`
+	Caches Caches `mapstructure:"caches"`
 }
 
 type Caches struct {
@@ -606,37 +479,4 @@ type LeakDetectionOpts struct {
 	Enabled                bool   `mapstructure:"enabled"`
 	MaxConsumersPerObject  int    `mapstructure:"maxConsumersPerObject"`
 	MaxConsumerHoldTimeSec uint64 `mapstructure:"maxConsumerHoldTimeSec"`
-}
-
-type BadgerOpts struct {
-	LevelOneSize            int64                   `mapstructure:"levelOneSize"`
-	LevelSizeMultiplier     int                     `mapstructure:"levelSizeMultiplier"`
-	TableLoadingMode        options.FileLoadingMode `mapstructure:"tableLoadingMode"`
-	ValueLogLoadingMode     options.FileLoadingMode `mapstructure:"valueLogLoadingMode"`
-	MaxLevels               int                     `mapstructure:"maxLevels"`
-	MaxTableSize            int64                   `mapstructure:"maxTableSize"`
-	NumCompactors           int                     `mapstructure:"numCompactors"`
-	NumLevelZeroTables      int                     `mapstructure:"numLevelZeroTables"`
-	NumLevelZeroTablesStall int                     `mapstructure:"numLevelZeroTablesStall"`
-	NumMemtables            int                     `mapstructure:"numMemtables"`
-	BloomFalsePositive      float64                 `mapstructure:"bloomFalsePositive"`
-	BlockSize               int                     `mapstructure:"blockSize"`
-	SyncWrites              bool                    `mapstructure:"syncWrites"`
-	NumVersionsToKeep       int                     `mapstructure:"numVersionsToKeep"`
-	CompactLevel0OnClose    bool                    `mapstructure:"compactLevel0OnClose"`
-	KeepL0InMemory          bool                    `mapstructure:"keepL0InMemory"`
-	VerifyValueChecksum     bool                    `mapstructure:"verifyValueChecksum"`
-	MaxCacheSize            int64                   `mapstructure:"maxCacheSize"`
-	LoadBloomsOnOpen        bool                    `mapstructure:"loadBloomsOnOpen"`
-	MaxBfCacheSize          int64                   `mapstructure:"maxBfCacheSize"`
-	ZSTDCompressionLevel    int                     `mapstructure:"ZSTDCompressionLevel"`
-	CompressionType         options.CompressionType `mapstructure:"CompressionType"`
-	ValueLogFileSize        int64                   `mapstructure:"valueLogFileSize"`
-	ValueLogMaxEntries      uint32                  `mapstructure:"valueLogMaxEntries"`
-	ValueThreshold          int                     `mapstructure:"valueThreshold"`
-	WithTruncate            bool                    `mapstructure:"withTruncate"`
-	LogRotatesToFlush       int32                   `mapstructure:"logRotatesToFlush"`
-	EventLogging            bool                    `mapstructure:"eventLogging"`
-	ValueLogGCDiscardRatio  float64                 `mapstructure:"valueLogGCDiscardRatio"`
-	Logger                  badger.Logger
 }

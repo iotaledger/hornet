@@ -6,9 +6,9 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -45,13 +45,12 @@ func GetUnconfirmedTxStorageSize() int {
 	return unconfirmedTxStorage.GetSize()
 }
 
-func configureUnconfirmedTxStorage() {
+func configureUnconfirmedTxStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.UnconfirmedTx
 
 	unconfirmedTxStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixUnconfirmedTransactions},
+		store.WithRealm([]byte{StorePrefixUnconfirmedTransactions}),
 		unconfirmedTxFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -98,8 +97,8 @@ func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnc
 	return &CachedUnconfirmedTx{CachedObject: cachedObj}
 }
 
-// DeleteUnconfirmedTxsFromBadger deletes unconfirmed transaction entries without accessing the cache.
-func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
+// DeleteUnconfirmedTxsFromStore deletes unconfirmed transaction entries without accessing the cache.
+func DeleteUnconfirmedTxsFromStore(msIndex milestone.Index) {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
@@ -110,7 +109,7 @@ func DeleteUnconfirmedTxsFromBadger(msIndex milestone.Index) {
 		return true
 	}, true, msIndexBytes)
 
-	unconfirmedTxStorage.DeleteEntriesFromBadger(txHashes)
+	unconfirmedTxStorage.DeleteEntriesFromStore(txHashes)
 }
 
 func ShutdownUnconfirmedTxsStorage() {

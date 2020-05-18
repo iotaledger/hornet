@@ -113,7 +113,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 	_, err := os.Stat(coo.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
 
-	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInBadger()
+	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
 
 	if bootstrap {
 		if stateFileExists {

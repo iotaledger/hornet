@@ -30,6 +30,12 @@ type TransactionMetadata struct {
 
 	// The index of the milestone which confirmed this tx
 	confirmationIndex milestone.Index
+
+	// youngestRootSnapshotIndex is the highest confirmed index of the past cone of this transaction
+	youngestRootSnapshotIndex milestone.Index
+
+	// oldestRootSnapshotIndex is the lowest confirmed index of the past cone of this transaction
+	oldestRootSnapshotIndex milestone.Index
 }
 
 func (m *TransactionMetadata) GetSolidificationTimestamp() int32 {
@@ -98,6 +104,8 @@ func (m *TransactionMetadata) Reset() {
 	m.metadata = bitmask.BitMask(0)
 	m.solidificationTimestamp = 0
 	m.confirmationIndex = 0
+	m.youngestRootSnapshotIndex = 0
+	m.oldestRootSnapshotIndex = 0
 	m.SetModified(true)
 }
 
@@ -126,12 +134,16 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 		1 byte  metadata bitmask
 		4 bytes uint32 solidificationTimestamp
 		4 bytes uint32 confirmationIndex
+		4 bytes uint32 youngestRootSnapshotIndex
+		4 bytes uint32 oldestRootSnapshotIndex
 	*/
 
-	value := make([]byte, 9)
+	value := make([]byte, 17)
 	value[0] = byte(m.metadata)
 	binary.LittleEndian.PutUint32(value[1:], uint32(m.solidificationTimestamp))
 	binary.LittleEndian.PutUint32(value[5:], uint32(m.confirmationIndex))
+	binary.LittleEndian.PutUint32(value[9:], uint32(m.youngestRootSnapshotIndex))
+	binary.LittleEndian.PutUint32(value[13:], uint32(m.oldestRootSnapshotIndex))
 
 	return value
 }
@@ -144,11 +156,15 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumed
 		1 byte  metadata bitmask
 		4 bytes uint32 solidificationTimestamp
 		4 bytes uint32 confirmationIndex
+		4 bytes uint32 youngestRootSnapshotIndex
+		4 bytes uint32 oldestRootSnapshotIndex
 	*/
 
 	m.metadata = bitmask.BitMask(data[0])
 	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
 	m.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
+	m.youngestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[9:13]))
+	m.oldestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[13:17]))
 
-	return 10, nil
+	return 17, nil
 }

@@ -1,18 +1,21 @@
 package tangle
 
 const (
-	DBPrefixHealth                  byte = 0
-	DBPrefixTransactions            byte = 1
-	DBPrefixTransactionMetadata     byte = 2
-	DBPrefixBundleTransactions      byte = 3
-	DBPrefixBundles                 byte = 4
-	DBPrefixAddresses               byte = 5
-	DBPrefixMilestones              byte = 6
-	DBPrefixLedgerState             byte = 7
-	DBPrefixApprovers               byte = 8
-	DBPrefixTags                    byte = 9
-	DBPrefixSnapshot                byte = 10
-	DBPrefixUnconfirmedTransactions byte = 11
-	DBPrefixSpentAddresses          byte = 12
-	DBPrefixAutopeering             byte = 13
+	StorePrefixHealth                  byte = 0
+	StorePrefixTransactions            byte = 1
+	StorePrefixTransactionMetadata     byte = 2
+	StorePrefixBundleTransactions      byte = 3
+	StorePrefixBundles                 byte = 4
+	StorePrefixAddresses               byte = 5
+	StorePrefixMilestones              byte = 6
+	StorePrefixLedgerState             byte = 7
+	StorePrefixLedgerBalance           byte = 8
+	StorePrefixLedgerDiff              byte = 9
+	StorePrefixApprovers               byte = 10
+	StorePrefixTags                    byte = 11
+	StorePrefixSnapshot                byte = 12
+	StorePrefixSnapshotLedger          byte = 13
+	StorePrefixUnconfirmedTransactions byte = 14
+	StorePrefixSpentAddresses          byte = 15
+	StorePrefixAutopeering             byte = 16
 )

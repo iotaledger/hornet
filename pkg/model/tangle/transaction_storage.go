@@ -5,9 +5,9 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -110,13 +110,12 @@ func GetTransactionStorageSize() int {
 	return txStorage.GetSize()
 }
 
-func configureTransactionStorage() {
+func configureTransactionStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.Transactions
 
 	txStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixTransactions},
+		store.WithRealm([]byte{StorePrefixTransactions}),
 		transactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -128,8 +127,7 @@ func configureTransactionStorage() {
 	)
 
 	metadataStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixTransactionMetadata},
+		store.WithRealm([]byte{StorePrefixTransactionMetadata}),
 		metadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -166,7 +164,7 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 
 // GetStoredTransactionOrNil returns a transaction object without accessing the cache layer.
 func GetStoredTransactionOrNil(txHashBytes []byte) *hornet.Transaction {
-	storedTx := txStorage.LoadObjectFromBadger(txHashBytes)
+	storedTx := txStorage.LoadObjectFromStore(txHashBytes)
 	if storedTx == nil {
 		return nil
 	}
@@ -175,7 +173,7 @@ func GetStoredTransactionOrNil(txHashBytes []byte) *hornet.Transaction {
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
 func GetStoredMetadataOrNil(txHashBytes []byte) *hornet.TransactionMetadata {
-	storedMeta := metadataStorage.LoadObjectFromBadger(txHashBytes)
+	storedMeta := metadataStorage.LoadObjectFromStore(txHashBytes)
 	if storedMeta == nil {
 		return nil
 	}
@@ -254,10 +252,10 @@ func DeleteTransaction(transactionHash trinary.Hash) {
 	metadataStorage.Delete(txHash)
 }
 
-// DeleteTransactionFromBadger deletes the transaction and metadata from the persistence layer without accessing the cache.
-func DeleteTransactionFromBadger(txHashBytes []byte) {
-	txStorage.DeleteEntryFromBadger(txHashBytes)
-	metadataStorage.DeleteEntryFromBadger(txHashBytes)
+// DeleteTransactionFromStore deletes the transaction and metadata from the persistence layer without accessing the cache.
+func DeleteTransactionFromStore(txHashBytes []byte) {
+	txStorage.DeleteEntryFromStore(txHashBytes)
+	metadataStorage.DeleteEntryFromStore(txHashBytes)
 }
 
 func ShutdownTransactionStorage() {

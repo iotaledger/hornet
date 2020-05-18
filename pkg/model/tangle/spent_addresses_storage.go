@@ -8,9 +8,9 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -56,13 +56,12 @@ func GetSpentAddressesStorageSize() int {
 	return spentAddressesStorage.GetSize()
 }
 
-func configureSpentAddressesStorage() {
+func configureSpentAddressesStorage(store kvstore.KVStore) {
 
 	opts := profile.LoadProfile().Caches.SpentAddresses
 
 	spentAddressesStorage = objectstorage.New(
-		database.GetHornetBadgerInstance(),
-		[]byte{DBPrefixSpentAddresses},
+		store.WithRealm([]byte{StorePrefixSpentAddresses}),
 		spentAddressFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

@@ -54,7 +54,7 @@ func revalidateDatabase() error {
 		return ErrSnapshotInfoMissing
 	}
 
-	latestMilestoneIndex := tangle.SearchLatestMilestoneIndexInBadger()
+	latestMilestoneIndex := tangle.SearchLatestMilestoneIndexInStore()
 
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
@@ -105,11 +105,11 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 	}, true)
 
 	for msIndex := range milestonesToDelete {
-		tangle.DeleteUnconfirmedTxsFromBadger(msIndex)
+		tangle.DeleteUnconfirmedTxsFromStore(msIndex)
 		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 			panic(err)
 		}
-		tangle.DeleteMilestoneFromBadger(msIndex)
+		tangle.DeleteMilestoneFromStore(msIndex)
 	}
 }
 
@@ -176,18 +176,18 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		// No need to safely remove the transactions from the bundle,
 		// since reattachment txs confirmed by another milestone wouldn't be
 		// pruned anyway if they are confirmed before snapshot index.
-		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashBytesToDelete, true)
-		tangle.DeleteBundleTransactionFromBadger(storedTx.Tx.Bundle, txHashBytesToDelete, false)
-		tangle.DeleteBundleFromBadger(txHashBytesToDelete)
+		tangle.DeleteBundleTransactionFromStore(storedTx.Tx.Bundle, txHashBytesToDelete, true)
+		tangle.DeleteBundleTransactionFromStore(storedTx.Tx.Bundle, txHashBytesToDelete, false)
+		tangle.DeleteBundleFromStore(txHashBytesToDelete)
 
 		// Delete the reference in the approvees
-		tangle.DeleteApproverFromBadger(storedTx.GetTrunk(), txHashBytesToDelete)
-		tangle.DeleteApproverFromBadger(storedTx.GetBranch(), txHashBytesToDelete)
+		tangle.DeleteApproverFromStore(storedTx.GetTrunk(), txHashBytesToDelete)
+		tangle.DeleteApproverFromStore(storedTx.GetBranch(), txHashBytesToDelete)
 
-		tangle.DeleteTagFromBadger(storedTx.Tx.Tag, txHashBytesToDelete)
-		tangle.DeleteAddressFromBadger(storedTx.Tx.Address, txHashBytesToDelete)
-		tangle.DeleteApproversFromBadger(txHashBytesToDelete)
-		tangle.DeleteTransactionFromBadger(txHashBytesToDelete)
+		tangle.DeleteTagFromStore(storedTx.Tx.Tag, txHashBytesToDelete)
+		tangle.DeleteAddressFromStore(storedTx.Tx.Address, txHashBytesToDelete)
+		tangle.DeleteApproversFromStore(txHashBytesToDelete)
+		tangle.DeleteTransactionFromStore(txHashBytesToDelete)
 	}
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))
