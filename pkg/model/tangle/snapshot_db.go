@@ -111,8 +111,7 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	for address, balance := range balances {
 		key := trinary.MustTrytesToBytes(address)[:49]
 		if balance != 0 {
-			err := batch.Set(key, bytesFromBalance(balance))
-			if err != nil {
+			if err := batch.Set(key, bytesFromBalance(balance)); err != nil {
 				return errors.Wrap(NewDatabaseError(err), "failed to set the balance")
 			}
 		}
