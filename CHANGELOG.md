@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc9] - 19.05.2020
+
+**Breaking change:**<br>
+Database implementation changed (moved from Badger to Bolt)<br><br>
+_Update note:_ Please remove your database and restart HORNET.
+
+### Added
+
+    - Coordinator plugin
+    - Responsive dashboard design
+    - Visualizer (Dashboard, ported from GoShimmer)
+    - `pruneDatabase` API call
+    - Coordinator config options
+    - Spam txs graph (Dashboard)
+
+### Changed
+
+    - Moved from Badger to Bolt (reduced RAM usage)
+    - Milestone logic
+    - Pruning logic
+    - Database pressure reduced
+    - Renamed `ZeroMQ` plugin to `ZMQ`
+    - Dashboard graph colors
+    - Graph explorer link is now configurable
+    - Improved spammer plugin
+
+### Fixed
+
+    - Database revalidation
+    - Websocket messages
+    - ZMQ `address` topic
+
+
 ## [0.4.0-rc8] - 06.04.2020
 
 ### Fixed
