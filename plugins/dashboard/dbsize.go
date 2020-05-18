@@ -2,13 +2,13 @@ package dashboard
 
 import (
 	"encoding/json"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/database"
 )

@@ -1,9 +1,10 @@
 package database
 
 import (
-	"github.com/spf13/viper"
 	"runtime"
 	"time"
+	
+	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
