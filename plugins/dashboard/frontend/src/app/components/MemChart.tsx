@@ -5,12 +5,13 @@ import {inject, observer} from "mobx-react";
 import {Line} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
 import * as prettysize from 'prettysize';
-
+import * as style from '../../assets/main.css';
 interface Props {
     nodeStore?: NodeStore;
 }
 
 const lineChartOptions = Object.assign({
+    responsive: true,
     scales: {
         xAxes: [{
             ticks: {
@@ -66,9 +67,9 @@ export default class MemChart extends React.Component<Props, any> {
                         [Obj: {mem.heap_objects}, In-Use: {prettysize(mem.heap_inuse)},
                         Retained: {prettysize(mem.heap_idle - mem.heap_released)}]
                     </small>
-                    <Line height={50}
-                          data={this.props.nodeStore.memSeries} options={lineChartOptions}
-                    />
+                    <div className={style.hornetChart}>
+                        <Line data={this.props.nodeStore.memSeries} options={lineChartOptions} />
+                    </div>
                 </Card.Body>
             </Card>
         );

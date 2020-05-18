@@ -23,7 +23,7 @@ export class Explorer420 extends React.Component<Props, any> {
 
     render() {
         return (
-            <Container>
+            <Container fluid>
                 <h3>Tangle Explorer 420</h3>
                 <p>
                     HTTP error 420 did not yield any 🌳

@@ -82,7 +82,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, State> {
             }
         }
         return (
-            <Container>
+            <Container fluid>
                 <h3>Address</h3>
                 <p>
                     {hash} {' '}

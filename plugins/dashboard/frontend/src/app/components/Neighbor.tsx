@@ -11,6 +11,7 @@ import Table from "react-bootstrap/Table";
 import {defaultChartOptions} from "app/misc/Chart";
 import {Line} from "react-chartjs-2";
 import {Choose, If, Otherwise, When} from 'tsx-control-statements/components';
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -216,7 +217,9 @@ export class Neighbor extends React.Component<Props, any> {
                                         {' / '}
                                         {prettysize(neighborMetrics.currentNetIO && neighborMetrics.currentNetIO.rx)}
                                     </Badge>
-                                    <Line height={30} data={neighborMetrics.netIOSeries} options={lineChartOptions}/>
+                                    <div className={style.hornetChart}>
+                                        <Line data={neighborMetrics.netIOSeries} options={lineChartOptions}/>
+                                    </div>
                                 </Col>
                             </Row>
                         </Card.Body>

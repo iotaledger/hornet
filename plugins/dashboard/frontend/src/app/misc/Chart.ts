@@ -12,5 +12,6 @@ export var defaultChartOptions = {
     hover: {
         animationDuration: 0
     },
-    responsiveAnimationDuration: 0
+    responsiveAnimationDuration: 0,
+    maintainAspectRatio: false
 };

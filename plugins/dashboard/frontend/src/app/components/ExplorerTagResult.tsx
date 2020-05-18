@@ -55,7 +55,7 @@ export class ExplorerTagQueryResult extends React.Component<Props, any> {
             }
         }
         return (
-            <Container>
+            <Container fluid>
                 <h3>Tag {tag !== null && <span>({tag.txs.length} Transactions)</span>}</h3>
                 {
                     tag !== null ?

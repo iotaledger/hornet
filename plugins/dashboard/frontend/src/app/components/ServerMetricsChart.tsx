@@ -4,6 +4,7 @@ import {Line} from "react-chartjs-2";
 import {inject, observer} from "mobx-react";
 import NodeStore from "app/stores/NodeStore";
 import {defaultChartOptions} from "app/misc/Chart";
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -29,7 +30,9 @@ export default class ServerMetricsChart extends React.Component<Props, any> {
             <Card>
                 <Card.Body>
                     <Card.Title>Server Metrics</Card.Title>
-                    <Line height={60} data={this.props.nodeStore.reqQSizeSeries} options={lineChartOptions}/>
+                    <div className={style.hornetChart}>
+                        <Line data={this.props.nodeStore.reqQSizeSeries} options={lineChartOptions}/>
+                    </div>
                 </Card.Body>
             </Card>
         );

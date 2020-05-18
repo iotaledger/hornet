@@ -17,7 +17,7 @@ export class Neighbors extends React.Component<Props, any> {
             neighborsEle.push(<Neighbor key={k} identity={k}/>);
         });
         return (
-            <Container>
+            <Container fluid>
                 <h3>Neighbors {neighborsEle.length > 0 && <span>({neighborsEle.length})</span>}</h3>
                 <p>
                     Currently connected and disconnected neighbors known to the node.

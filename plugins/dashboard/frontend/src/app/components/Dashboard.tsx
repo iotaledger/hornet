@@ -18,6 +18,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Card from "react-bootstrap/Card";
 import MemChart from "app/components/MemChart";
 import {Choose, Otherwise, When} from 'tsx-control-statements/components';
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -28,7 +29,7 @@ interface Props {
 export class Dashboard extends React.Component<Props, any> {
     render() {
         return (
-            <Container>
+            <Container fluid>
                 <h3>
                     <Choose>
                         <When
@@ -36,9 +37,9 @@ export class Dashboard extends React.Component<Props, any> {
                         <Otherwise>Dashboard</Otherwise>
                     </Choose>
                 </h3>
-                <Row className={"mb-3"}>
-                    <Col>
-                        <Card>
+                <Row className={`mb-3 ${style.hornetRowGutter}`}>
+                    <Col md={6} xs={12}>
+                        <Card className={`${style.horentCardEqual}`}>
                             <Card.Body>
                                 <Card.Title>Status</Card.Title>
                                 <Row>
@@ -62,15 +63,19 @@ export class Dashboard extends React.Component<Props, any> {
                             </Card.Body>
                         </Card>
                     </Col>
+                    <Col md={6} xs={12} className='mt-3 mt-md-0'>
+                        <TPSChart/>
+                    </Col>
                 </Row>
                 <Row className={"mb-3"}>
-                    <Col><TPSChart/></Col>
+                    <Col>
+                        <ConfirmedMilestoneChart/>
+                    </Col>
                 </Row>
                 <Row className={"mb-3"}>
-                    <Col><ConfirmedMilestoneChart/></Col>
-                </Row>
-                <Row className={"mb-3"}>
-                    <Col><MemChart/></Col>
+                    <Col>
+                        <MemChart/>
+                    </Col>
                 </Row>
             </Container>
         );

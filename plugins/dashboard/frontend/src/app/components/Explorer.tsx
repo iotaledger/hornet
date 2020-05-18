@@ -16,7 +16,7 @@ interface Props {
 export class Explorer extends React.Component<Props, any> {
     render() {
         return (
-            <Container>
+            <Container fluid>
                 <h3>Tangle Explorer</h3>
                 <Row className={"mb-3"}>
                     <Col>

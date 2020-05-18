@@ -17,3 +17,26 @@
     height: 100%;
     width: 100%;
 }
+
+.hornetNavbar {
+    position: relative;
+    padding: .5rem 1rem;
+}
+
+.horentCardEqual {
+    height:100%;
+}
+
+.hornetRowGutter {
+    margin-left: -8px;
+    margin-right: -8px;
+}
+
+.hornetRowGutter > [class*='col-'] {
+    padding-right: 8px;
+    padding-left: 8px;
+}
+
+.hornetChart {
+    height: 120px;
+}

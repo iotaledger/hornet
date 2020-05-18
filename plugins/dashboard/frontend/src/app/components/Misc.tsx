@@ -9,6 +9,7 @@ import {Line} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
 import {If} from "tsx-control-statements/components";
 import Badge from "react-bootstrap/Badge";
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -161,17 +162,21 @@ const dbSizeLineChartOpts = Object.assign({}, {
 export class Misc extends React.Component<Props, any> {
     render() {
         return (
-            <Container>
+            <Container fluid>
                 <h3>Misc</h3>
                 <Row className={"mb-3"}>
                     <Col>
                         <Card>
                             <Card.Body>
                                 <Card.Title>Tip-Selection Performance</Card.Title>
-                                <Line height={50} data={this.props.nodeStore.tipSelSeries}
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.tipSelSeries}
                                       options={lineChartOptions}/>
-                                <Line height={30} data={this.props.nodeStore.tipSelCacheSeries}
+                                </div>
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.tipSelCacheSeries}
                                       options={cacheLineChartOpts}/>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
@@ -181,8 +186,10 @@ export class Misc extends React.Component<Props, any> {
                         <Card>
                             <Card.Body>
                                 <Card.Title>Request Queue</Card.Title>
-                                <Line height={60} data={this.props.nodeStore.reqQSizeSeries}
-                                      options={lineChartOptions}/>
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.reqQSizeSeries}
+                                        options={lineChartOptions}/>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
@@ -192,8 +199,10 @@ export class Misc extends React.Component<Props, any> {
                         <Card>
                             <Card.Body>
                                 <Card.Title>Server Metrics</Card.Title>
-                                <Line height={60} data={this.props.nodeStore.serverMetricsSeries}
-                                      options={lineChartOptions}/>
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.serverMetricsSeries}
+                                        options={lineChartOptions}/>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
@@ -208,8 +217,10 @@ export class Misc extends React.Component<Props, any> {
                                     Note that the sizes are sampled only every second, so you won't necessarily
                                     see the cache hitting its capacity.
                                 </small>
-                                <Line height={60} data={this.props.nodeStore.cacheMetricsSeries}
-                                      options={reqLineChartOptions}/>
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.cacheMetricsSeries}
+                                        options={reqLineChartOptions}/>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
@@ -219,8 +230,10 @@ export class Misc extends React.Component<Props, any> {
                         <Card>
                             <Card.Body>
                                 <Card.Title>Requests</Card.Title>
-                                <Line height={60} data={this.props.nodeStore.stingReqs}
-                                      options={reqLineChartOptions}/>
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.stingReqs}
+                                        options={reqLineChartOptions}/>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
@@ -245,8 +258,10 @@ export class Misc extends React.Component<Props, any> {
                                         </If>
                                     </Container>
                                 </If>
-                                <Line height={60} data={this.props.nodeStore.dbSizeSeries}
-                                      options={dbSizeLineChartOpts}/>
+                                <div className={style.hornetChart}>
+                                    <Line data={this.props.nodeStore.dbSizeSeries}
+                                        options={dbSizeLineChartOpts}/>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
