@@ -143,7 +143,7 @@ func GetLedgerDiffForMilestoneWithoutLocking(index milestone.Index, abortSignal 
 
 	keyPrefix := databaseKeyForMilestoneIndex(index)
 
-	err := ledgerDiffStore.Iterate([]kvstore.KeyPrefix{keyPrefix}, func(key kvstore.Key, value kvstore.Value) bool {
+	err := ledgerDiffStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
 		case <-abortSignal:
 			return false
@@ -340,7 +340,7 @@ func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[trina
 
 	balances := make(map[trinary.Hash]uint64)
 
-	err := ledgerBalanceStore.Iterate([]kvstore.KeyPrefix{}, func(key kvstore.Key, value kvstore.Value) bool {
+	err := ledgerBalanceStore.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
 		case <-abortSignal:
 			return false

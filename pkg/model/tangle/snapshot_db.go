@@ -3,7 +3,7 @@ package tangle
 import (
 	"encoding/binary"
 	"fmt"
-	
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
@@ -111,7 +111,10 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	for address, balance := range balances {
 		key := trinary.MustTrytesToBytes(address)[:49]
 		if balance != 0 {
-			batch.Set(key, bytesFromBalance(balance))
+			err := batch.Set(key, bytesFromBalance(balance))
+			if err != nil {
+				return errors.Wrap(NewDatabaseError(err), "failed to set the balance")
+			}
 		}
 	}
 
@@ -139,7 +142,7 @@ func GetAllSnapshotBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint6
 
 	snapshotMilestoneIndex := milestoneIndexFromBytes(value)
 
-	err = snapshotLedgerStore.Iterate([]kvstore.KeyPrefix{}, func(key kvstore.Key, value kvstore.Value) bool {
+	err = snapshotLedgerStore.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
 		case <-abortSignal:
 			return false
