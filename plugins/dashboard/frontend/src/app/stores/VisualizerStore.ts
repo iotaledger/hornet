@@ -20,6 +20,11 @@ export class MetaInfo {
     id: string;
 }
 
+export class ConfirmationInfo {
+    id: string;
+    excluded_ids: string[];
+}
+
 export class TipInfo {
     id: string;
     is_tip: boolean;
@@ -169,17 +174,36 @@ export class VisualizerStore {
     };
 
     @action
-    addConfirmedInfo = (confInfo: MetaInfo) => {
+    addConfirmedInfo = (confInfo: ConfirmationInfo) => {
         if (!this.collect) return;
-        let vert = this.vertices.get(confInfo.id);
-        if (!vert) {
-            return;
-        }
-        if (!vert.is_confirmed) {
-            this.confirmed_count++;
-        }
-        vert.is_confirmed = true;
-        this.updateNodeUI(vert);
+
+        let node = this.graph.getNode(confInfo.id);
+        if (!node) return;
+
+        // walk the past cone
+        const seenBackwards = [];
+        dfsIterator(
+            this.graph,
+            node,
+            node => {
+                let approvee = this.vertices.get(node.id);
+                if (!approvee) return true;
+
+                if (!approvee.is_confirmed) {
+                    // check if transaction is excluded
+                    if (confInfo.excluded_ids.indexOf(approvee.id.substring(0,idLength)) > -1) return false;
+
+                    this.confirmed_count++;
+                    approvee.is_confirmed = true;
+                    this.updateNodeUI(approvee);
+                    return false
+                }
+                return true;
+            },
+            false,
+            link => {},
+            seenBackwards
+        );
     };
 
     @action
@@ -325,6 +349,7 @@ export class VisualizerStore {
 
     updateNodeUI = (vert: Vertex) => {
         let nodeUI = this.graphics.getNodeUI(vert.id.substring(0,idLength));
+        if (!nodeUI) return;
         nodeUI.color = parseColor(this.colorForVertexState(vert));
         nodeUI.size = this.sizeForVertexState(vert);
     }
@@ -398,7 +423,8 @@ export class VisualizerStore {
 
         const seenForward = [];
         const seenBackwards = [];
-        dfsIterator(this.graph,
+        dfsIterator(
+            this.graph,
             node,
             node => {
                 this.selected_approvers_count++;
@@ -412,9 +438,14 @@ export class VisualizerStore {
             },
             seenForward
         );
-        dfsIterator(this.graph, node, node => {
+        dfsIterator(
+            this.graph,
+            node,
+            node => {
                 this.selected_approvees_count++;
-            }, false, link => {
+            },
+            false,
+            link => {
                 const linkUI = this.graphics.getLinkUI(link.id);
                 if (linkUI) {
                     linkUI.color = parseColor(colorLinkApprovees);
@@ -463,8 +494,11 @@ export class VisualizerStore {
 
         const seenForward = [];
         const seenBackwards = [];
-        dfsIterator(this.graph, node, node => {
-            }, true,
+        dfsIterator(
+            this.graph,
+            node,
+            node => {},
+            true,
             link => {
                 const linkUI = this.graphics.getLinkUI(link.id);
                 if (linkUI) {
@@ -473,8 +507,11 @@ export class VisualizerStore {
             },
             seenBackwards
         );
-        dfsIterator(this.graph, node, node => {
-            }, false,
+        dfsIterator(
+            this.graph,
+            node,
+            node => {},
+            false,
             link => {
                 const linkUI = this.graphics.getLinkUI(link.id);
                 if (linkUI) {
@@ -492,6 +529,12 @@ export class VisualizerStore {
 export default VisualizerStore;
 
 // copied over and refactored from https://github.com/glumb/IOTAtangle
+// graph is the viva graph that contains the nodes.
+// node is the starting node for the walk.
+// cb is called on every node. If true, the links of the node are skipped.
+// if up is true, the future cone is walked, otherwise past cone.
+// cbLinks is called on every link.
+// seenNodes is the array of walked nodes.
 function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) {
     seenNodes.push(node);
     let pointer = 0;
@@ -499,7 +542,7 @@ function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) 
     while (seenNodes.length > pointer) {
         const node = seenNodes[pointer++];
 
-        if (cb(node)) return true;
+        if (cb(node)) continue;
 
         for (const link of node.links) {
             if (cbLinks) cbLinks(link);

@@ -40,6 +40,12 @@ type metainfo struct {
 	ID string `json:"id"`
 }
 
+// confirmationinfo signals confirmation of a milestone tail tx with a list of exluded txs in the past cone.
+type confirmationinfo struct {
+	ID          string   `json:"id"`
+	ExcludedIDs []string `json:"excluded_ids"`
+}
+
 /*
 // tipinfo holds information about whether a given transaction is a tip or not.
 type tipinfo struct {
@@ -96,22 +102,6 @@ func runVisualizer() {
 		})
 	})
 
-	notifyConfirmedInfo := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
-
-			visualizerWorkerPool.Submit(
-				&msg{
-					Type: MsgTypeConfirmedInfo,
-					Data: &metainfo{
-						ID: tx.GetHash()[:VisualizerIdLength],
-					},
-				}, true)
-		})
-	})
-
 	notifyMilestoneInfo := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		cachedBndl.ConsumeBundle(func(bndl *tanglePackage.Bundle) { // bundle -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
@@ -127,6 +117,23 @@ func runVisualizer() {
 						},
 					}, true)
 			}
+		})
+	})
+
+	notifyConfirmedInfo := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
+		cachedBndl.ConsumeBundle(func(bndl *tanglePackage.Bundle) { // bundle -1
+			if !tanglemodel.IsNodeSyncedWithThreshold() {
+				return
+			}
+
+			visualizerWorkerPool.Submit(
+				&msg{
+					Type: MsgTypeConfirmedInfo,
+					Data: &confirmationinfo{
+						ID:          bndl.GetTailHash()[:VisualizerIdLength],
+						ExcludedIDs: make([]string, 0),
+					},
+				}, true)
 		})
 	})
 
@@ -167,10 +174,10 @@ func runVisualizer() {
 		defer tangle.Events.ReceivedNewTransaction.Detach(notifyNewVertex)
 		tangle.Events.TransactionSolid.Attach(notifySolidInfo)
 		defer tangle.Events.TransactionSolid.Detach(notifySolidInfo)
-		tangle.Events.TransactionConfirmed.Attach(notifyConfirmedInfo)
-		defer tangle.Events.TransactionConfirmed.Detach(notifyConfirmedInfo)
 		tangle.Events.ReceivedNewMilestone.Attach(notifyMilestoneInfo)
 		defer tangle.Events.ReceivedNewMilestone.Detach(notifyMilestoneInfo)
+		tangle.Events.SolidMilestoneChanged.Attach(notifyConfirmedInfo)
+		defer tangle.Events.SolidMilestoneChanged.Detach(notifyConfirmedInfo)
 		/*
 			tangle.Events.TipAdded.Attach(notifyTipAdded)
 			defer tangle.Events.TipAdded.Detach(notifyTipAdded)
