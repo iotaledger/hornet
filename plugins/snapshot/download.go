@@ -6,15 +6,18 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/iotaledger/hive.go/daemon"
 )
 
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
-	Expected uint64
-	Total    uint64
+	Expected         uint64
+	Total            uint64
+	LastProgressTime time.Time
 }
 
 func (wc *WriteCounter) Write(p []byte) (int, error) {
@@ -29,7 +32,12 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-func (wc WriteCounter) PrintProgress() {
+func (wc *WriteCounter) PrintProgress() {
+	if time.Since(wc.LastProgressTime) < 1*time.Second {
+		return
+	}
+	wc.LastProgressTime = time.Now()
+
 	// Clear the line by using a character return to go back to the start and remove
 	// the remaining characters by filling it with spaces
 	fmt.Printf("\r%s", strings.Repeat(" ", 60))
