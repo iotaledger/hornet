@@ -105,8 +105,8 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                 <span>Transaction</span>
                         }
                     </h3>
-                    <p>
-                        {hash} {' '}
+                    <p className={`text-break`}>
+                        <span className={style.monospace}> {hash} {' '} </span>
                         {
                             tx &&
                             <React.Fragment>
@@ -192,11 +192,11 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                         <ListGroup.Item>Value: <IOTAValue>{tx.value}</IOTAValue></ListGroup.Item>
                                         <ListGroup.Item>
                                             Tag: {' '}
-                                            <Link to={`/explorer/tag/${tx.tag}`}>
+                                            <Link to={`/explorer/tag/${tx.tag}`} className={style.monospace}>
                                                 {tx.tag}
                                             </Link>
                                         </ListGroup.Item>
-                                        <ListGroup.Item>Obsolete Tag: {tx.obsolete_tag}</ListGroup.Item>
+                                        <ListGroup.Item className={style.monospace}>Obsolete Tag: {tx.obsolete_tag}</ListGroup.Item>
                                     </ListGroup>
                                 </Col>
                                 <Col>
@@ -247,7 +247,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                     <ListGroup>
                                         <ListGroup.Item className="text-break">
                                             Trunk: {' '}
-                                            <Link to={`/explorer/tx/${tx.trunk}`}>
+                                            <Link to={`/explorer/tx/${tx.trunk}`} className={style.monospace}>
                                                 {tx.trunk}
                                             </Link>
                                         </ListGroup.Item>
@@ -257,7 +257,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                     <ListGroup>
                                         <ListGroup.Item className="text-break">
                                             Branch: {' '}
-                                            <Link to={`/explorer/tx/${tx.branch}`}>
+                                            <Link to={`/explorer/tx/${tx.branch}`} className={style.monospace}>
                                                 {tx.branch}
                                             </Link>
                                         </ListGroup.Item>
@@ -267,19 +267,19 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                             <Row className={"mb-3"}>
                                 <Col>
                                     <ListGroup>
-                                        <ListGroup.Item>
+                                        <ListGroup.Item className="text-break">
                                             Address: {' '}
-                                            <Link to={`/explorer/addr/${tx.address}`}>
+                                            <Link to={`/explorer/addr/${tx.address}`} className={style.monospace}>
                                                 {tx.address}
                                             </Link>
                                         </ListGroup.Item>
-                                        <ListGroup.Item>
+                                        <ListGroup.Item className="text-break">
                                             Bundle: {' '}
-                                            <Link to={`/explorer/bundle/${tx.bundle}`}>
+                                            <Link to={`/explorer/bundle/${tx.bundle}`} className={style.monospace}>
                                                 {tx.bundle}
                                             </Link>
                                         </ListGroup.Item>
-                                        <ListGroup.Item>
+                                        <ListGroup.Item className={style.monospace}>
                                             Nonce: {tx.nonce}
                                         </ListGroup.Item>
                                         <ListGroup.Item className="text-break">
@@ -302,7 +302,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                         </Nav>
                                                     </Col>
                                                     <Col sm={9}>
-                                                        <Tab.Content>
+                                                        <Tab.Content className={style.monospace}>
                                                             <Tab.Pane eventKey="trytes">
                                                                 <small>
                                                                     {tx.signature_message_fragment}
@@ -327,7 +327,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                         <ListGroup.Item className="text-break">
                                             Approvers: {' '}
                                             <If condition={approversEle.length > 0}>
-                                                <ListGroup variant="flush">
+                                                <ListGroup variant="flush" className={style.monospace}>
                                                     {approversEle}
                                                 </ListGroup>
                                             </If>

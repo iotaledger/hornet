@@ -7,6 +7,7 @@ import Card from "react-bootstrap/Card";
 import ExplorerStore from "app/stores/ExplorerStore";
 import Table from "react-bootstrap/Table";
 import FormCheck from "react-bootstrap/FormCheck";
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -35,7 +36,7 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
                                             <td>Hash</td>
                                         </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className={style.monospace}>
                                         {mssLiveFeed}
                                         </tbody>
                                     </Table>
@@ -60,7 +61,7 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
                                             <td>Value</td>
                                         </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className={style.monospace}>
                                         {txsLiveFeed}
                                         </tbody>
                                     </Table>

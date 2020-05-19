@@ -10,6 +10,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
 import Alert from "react-bootstrap/Alert";
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -48,14 +49,14 @@ export class ExplorerTagQueryResult extends React.Component<Props, any> {
                     <ListGroup.Item key={tx.hash}>
                         <small>
                             {dateformat(new Date(tx.timestamp * 1000), "dd.mm.yyyy HH:MM:ss")} {' '}
-                            <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
+                            <Link className={style.monospace} to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         </small>
                     </ListGroup.Item>
                 );
             }
         }
         return (
-            <Container fluid>
+            <Container fluid className={`text-break`}>
                 <h3>Tag {tag !== null && <span>({tag.txs.length} Transactions)</span>}</h3>
                 {
                     tag !== null ?

@@ -7,6 +7,7 @@ import Card from "react-bootstrap/Card";
 import {Link} from 'react-router-dom';
 import * as dateformat from 'dateformat';
 import {IOTAValue} from "app/components/IOTAValue";
+import * as style from '../../assets/main.css';
 
 interface Props {
     bundle?: Array<Transaction>;
@@ -60,9 +61,9 @@ class TransactionCard extends React.Component<any, any> {
             <Card className={"mb-3"}>
                 <Card.Body>
                     <small>
-                        Address: <Link to={`/explorer/addr/${tx.address}`}>{tx.address}</Link>
+                        Address: <Link className={style.monospace} to={`/explorer/addr/${tx.address}`}>{tx.address}</Link>
                         <br/>
-                        Transaction: <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
+                        Transaction: <Link className={style.monospace} to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         <br/>
                         Value: <IOTAValue showSign={true}>{tx.value}</IOTAValue>
                     </small>

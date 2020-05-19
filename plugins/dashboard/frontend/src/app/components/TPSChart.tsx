@@ -52,7 +52,7 @@ const lineChartOptions = Object.assign({
 export default class TPSChart extends React.Component<Props, any> {
     render() {
         return (
-            <Card className={style.horentCardEqual}>
+            <Card className={style.hornetCardEqual}>
                 <Card.Body>
                     <Card.Title>Transactions Per Second</Card.Title>
                     <small>
