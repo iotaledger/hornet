@@ -26,7 +26,7 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
                         <Card.Body>
                             <Card.Title>Live Feed</Card.Title>
                             <Row className={"mb-3"}>
-                                <Col xs={5}>
+                                <Col md={6} xs={12}>
                                     <h6>Milestones</h6>
                                     <Table responsive>
                                         <thead>
@@ -40,7 +40,7 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
                                         </tbody>
                                     </Table>
                                 </Col>
-                                <Col xs={7}>
+                                <Col md={6} xs={12} className='mt-3 mt-md-0'>
                                     <h6>
                                         <div className="d-flex justify-content-between align-items-center">
                                             Transactions
@@ -53,7 +53,7 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
                                             />
                                         </div>
                                     </h6>
-                                    <Table>
+                                    <Table responsive>
                                         <thead>
                                         <tr>
                                             <td>Hash</td>

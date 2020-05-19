@@ -141,15 +141,15 @@ export default class ConfirmedMilestoneChart extends React.Component<Props, any>
                             Confirmation: {(this.props.nodeStore.last_confirmed_ms_metric.conf_rate).toFixed(2)}%
                         </small>
                     </If>
-                    <div className={style.hornetChart}>
+                    <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesSeries}
                             options={lineChartOptions}/>
                     </div>
-                    <div className={style.hornetChart}>
+                    <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesConfirmationSeries}
                             options={percentLineChartOpts}/>
                     </div>
-                    <div className={style.hornetChart}>
+                    <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesTimeSeries}
                             options={timeChartOptions}/>
                     </div>

@@ -64,12 +64,12 @@ export class Dashboard extends React.Component<Props, any> {
                         </Card>
                     </Col>
                     <Col md={6} xs={12} className='mt-3 mt-md-0'>
-                        <TPSChart/>
+                        <ConfirmedMilestoneChart/>
                     </Col>
                 </Row>
                 <Row className={"mb-3"}>
                     <Col>
-                        <ConfirmedMilestoneChart/>
+                        <TPSChart/>
                     </Col>
                 </Row>
                 <Row className={"mb-3"}>

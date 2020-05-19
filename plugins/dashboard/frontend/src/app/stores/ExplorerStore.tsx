@@ -373,7 +373,7 @@ export class ExplorerStore {
                 <tr key={tx.hash}>
                     <td>
                         <Link to={`/explorer/tx/${tx.hash}`}>
-                            {tx.hash.substr(0, 35)}
+                            {tx.hash.substr(0, 25)}...
                         </Link>
                     </td>
                     <td>
