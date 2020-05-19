@@ -41,5 +41,9 @@ body {
 }
 
 .hornetChart {
+  height: 200px;
+}
+
+.hornetChartSmall {
   height: 120px;
 }
