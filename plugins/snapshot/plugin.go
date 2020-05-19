@@ -36,6 +36,7 @@ var (
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
+	ErrSnapshotDownloadWasAborted      = errors.New("snapshot download was aborted")
 	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
 	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
