@@ -10,6 +10,8 @@ import {ExplorerBundle} from "app/components/ExplorerBundle";
 import {If} from 'tsx-control-statements/components';
 import Alert from "react-bootstrap/Alert";
 
+import * as style from '../../assets/main.css';
+
 interface Props {
     nodeStore?: NodeStore;
     explorerStore?: ExplorerStore;
@@ -47,9 +49,9 @@ export class ExplorerBundleQueryResult extends React.Component<Props, any> {
             });
         }
         return (
-            <Container fluid>
+            <Container fluid className={`text-break`}>
                 <h3>Bundle {bundles !== null && <span>({bundles.length})</span>}</h3>
-                <p>
+                <p className={style.monospace}>
                     {hash} {' '}
                 </p>
                 <Row className={"mb-3"}>

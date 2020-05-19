@@ -1,4 +1,4 @@
-body {
+.monospace {
   font-family: 'Lucida Console', Monaco, monospace;
 }
 
@@ -26,7 +26,7 @@ body {
   padding: 0.5rem 1rem;
 }
 
-.horentCardEqual {
+.hornetCardEqual {
   height: 100%;
 }
 

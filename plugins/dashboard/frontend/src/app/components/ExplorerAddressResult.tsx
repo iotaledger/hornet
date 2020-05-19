@@ -13,6 +13,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge, {BadgeProps} from "react-bootstrap/Badge";
 import {IOTAValue} from "app/components/IOTAValue";
 import FormCheck from "react-bootstrap/FormCheck";
+import * as style from '../../assets/main.css';
 
 interface Props {
     nodeStore?: NodeStore;
@@ -74,7 +75,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, State> {
                                     className="d-flex justify-content-between align-items-center">
                         <small>
                             {dateformat(new Date(tx.timestamp * 1000), "dd.mm.yyyy HH:MM:ss")} {' '}
-                            <Link to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
+                            <Link className={style.monospace} to={`/explorer/tx/${tx.hash}`}>{tx.hash}</Link>
                         </small>
                         <Badge variant={badgeVariant}><IOTAValue>{tx.value}</IOTAValue></Badge>
                     </ListGroup.Item>
@@ -82,10 +83,10 @@ export class ExplorerAddressQueryResult extends React.Component<Props, State> {
             }
         }
         return (
-            <Container fluid>
+            <Container fluid className={`text-break`}>
                 <h3>Address</h3>
                 <p>
-                    {hash} {' '}
+                    <span className={style.monospace}> {hash} {' '} </span>
                     {
                         addr &&
                         <React.Fragment>

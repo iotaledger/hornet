@@ -39,7 +39,7 @@ export class Dashboard extends React.Component<Props, any> {
                 </h3>
                 <Row className={`mb-3 ${style.hornetRowGutter}`}>
                     <Col md={6} xs={12}>
-                        <Card className={`${style.horentCardEqual}`}>
+                        <Card className={`${style.hornetCardEqual}`}>
                             <Card.Body>
                                 <Card.Title>Status</Card.Title>
                                 <Row>
