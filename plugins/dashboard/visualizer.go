@@ -82,7 +82,7 @@ func runVisualizer() {
 						IsMilestone: false,
 						IsTip:       false,
 					},
-				}, true)
+				}, false)
 		})
 	})
 
@@ -98,7 +98,7 @@ func runVisualizer() {
 					Data: &metainfo{
 						ID: tx.GetHash()[:VisualizerIdLength],
 					},
-				}, true)
+				}, false)
 		})
 	})
 
@@ -115,7 +115,7 @@ func runVisualizer() {
 						Data: &metainfo{
 							ID: txHash[:VisualizerIdLength],
 						},
-					}, true)
+					}, false)
 			}
 		})
 	})
@@ -126,14 +126,14 @@ func runVisualizer() {
 				return
 			}
 
-			visualizerWorkerPool.Submit(
+			visualizerWorkerPool.TrySubmit(
 				&msg{
 					Type: MsgTypeConfirmedInfo,
 					Data: &confirmationinfo{
 						ID:          bndl.GetTailHash()[:VisualizerIdLength],
 						ExcludedIDs: make([]string, 0),
 					},
-				}, true)
+				}, false)
 		})
 	})
 
