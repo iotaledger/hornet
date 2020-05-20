@@ -49,7 +49,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 	}
 
 	txCount := pruneTransactions(txsBytesToCheckMap)
-	tangle.DeleteUnconfirmedTxsFromStore(targetIndex)
+	tangle.DeleteUnconfirmedTxs(targetIndex)
 
 	return txCount
 }
@@ -62,7 +62,7 @@ func pruneMilestone(milestoneIndex milestone.Index) {
 		log.Error(err)
 	}
 
-	tangle.DeleteMilestoneFromStore(milestoneIndex)
+	tangle.DeleteMilestone(milestoneIndex)
 }
 
 // pruneTransactions prunes the approvers, bundles, bundle txs, addresses, tags and transaction metadata from the database
@@ -97,14 +97,16 @@ func pruneTransactions(txsBytesToCheckMap map[string]struct{}) int {
 			continue
 		}
 
-		// Delete the reference in the approvees
-		tangle.DeleteApproverFromStore(storedTx.GetTrunk(), txHashBytesToDelete)
-		tangle.DeleteApproverFromStore(storedTx.GetBranch(), txHashBytesToDelete)
+		txHash := trinary.MustBytesToTrytes(txHashBytesToDelete, 81)
 
-		tangle.DeleteTagFromStore(storedTx.Tx.Tag, txHashBytesToDelete)
-		tangle.DeleteAddressFromStore(storedTx.Tx.Address, txHashBytesToDelete)
-		tangle.DeleteApproversFromStore(txHashBytesToDelete)
-		tangle.DeleteTransactionFromStore(txHashBytesToDelete)
+		// Delete the reference in the approvees
+		tangle.DeleteApprover(storedTx.GetTrunk(), txHash)
+		tangle.DeleteApprover(storedTx.GetBranch(), txHash)
+
+		tangle.DeleteTag(storedTx.Tx.Tag, txHash)
+		tangle.DeleteAddress(storedTx.Tx.Address, txHash)
+		tangle.DeleteApprovers(txHash)
+		tangle.DeleteTransaction(txHash)
 	}
 
 	return len(txsBytesToDeleteMap)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -105,11 +106,11 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 	}, true)
 
 	for msIndex := range milestonesToDelete {
-		tangle.DeleteUnconfirmedTxsFromStore(msIndex)
+		tangle.DeleteUnconfirmedTxs(msIndex)
 		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 			panic(err)
 		}
-		tangle.DeleteMilestoneFromStore(msIndex)
+		tangle.DeleteMilestone(msIndex)
 	}
 }
 
@@ -173,21 +174,23 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 
 		deletionCounter++
 
+		txHash := trinary.MustBytesToTrytes(txHashBytesToDelete, 81)
+
 		// No need to safely remove the transactions from the bundle,
 		// since reattachment txs confirmed by another milestone wouldn't be
 		// pruned anyway if they are confirmed before snapshot index.
-		tangle.DeleteBundleTransactionFromStore(storedTx.Tx.Bundle, txHashBytesToDelete, true)
-		tangle.DeleteBundleTransactionFromStore(storedTx.Tx.Bundle, txHashBytesToDelete, false)
-		tangle.DeleteBundleFromStore(txHashBytesToDelete)
+		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHash, true)
+		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHash, false)
+		tangle.DeleteBundle(txHash)
 
 		// Delete the reference in the approvees
-		tangle.DeleteApproverFromStore(storedTx.GetTrunk(), txHashBytesToDelete)
-		tangle.DeleteApproverFromStore(storedTx.GetBranch(), txHashBytesToDelete)
+		tangle.DeleteApprover(storedTx.GetTrunk(), txHash)
+		tangle.DeleteApprover(storedTx.GetBranch(), txHash)
 
-		tangle.DeleteTagFromStore(storedTx.Tx.Tag, txHashBytesToDelete)
-		tangle.DeleteAddressFromStore(storedTx.Tx.Address, txHashBytesToDelete)
-		tangle.DeleteApproversFromStore(txHashBytesToDelete)
-		tangle.DeleteTransactionFromStore(txHashBytesToDelete)
+		tangle.DeleteTag(storedTx.Tx.Tag, txHash)
+		tangle.DeleteAddress(storedTx.Tx.Address, txHash)
+		tangle.DeleteApprovers(txHash)
+		tangle.DeleteTransaction(txHash)
 	}
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))

@@ -252,12 +252,6 @@ func DeleteTransaction(transactionHash trinary.Hash) {
 	metadataStorage.Delete(txHash)
 }
 
-// DeleteTransactionFromStore deletes the transaction and metadata from the persistence layer without accessing the cache.
-func DeleteTransactionFromStore(txHashBytes []byte) {
-	txStorage.DeleteEntryFromStore(txHashBytes)
-	metadataStorage.DeleteEntryFromStore(txHashBytes)
-}
-
 func ShutdownTransactionStorage() {
 	txStorage.Shutdown()
 	metadataStorage.Shutdown()

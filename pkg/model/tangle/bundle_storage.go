@@ -200,11 +200,6 @@ func DeleteBundle(tailTxHash trinary.Hash) {
 	bundleStorage.Delete(databaseKeyForBundle(tailTxHash))
 }
 
-// DeleteBundleFromStore deletes the bundle from the persistence layer without accessing the cache.
-func DeleteBundleFromStore(tailTxHashBytes []byte) {
-	bundleStorage.DeleteEntryFromStore(tailTxHashBytes)
-}
-
 func ShutdownBundleStorage() {
 	bundleStorage.Shutdown()
 }

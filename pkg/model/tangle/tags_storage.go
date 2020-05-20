@@ -111,11 +111,6 @@ func DeleteTag(txTag trinary.Trytes, txHash trinary.Hash) {
 	tagsStorage.Delete(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], trinary.MustTrytesToBytes(txHash)[:49]...))
 }
 
-// DeleteTagFromStore deletes the tag from the persistence layer without accessing the cache.
-func DeleteTagFromStore(txTag trinary.Trytes, txHashBytes []byte) {
-	tagsStorage.DeleteEntryFromStore(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], txHashBytes...))
-}
-
 // tag +-0
 func DeleteTags(txTag trinary.Trytes) {
 
