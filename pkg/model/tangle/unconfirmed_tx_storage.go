@@ -75,7 +75,7 @@ func GetUnconfirmedTxHashBytes(msIndex milestone.Index, forceRelease bool) [][]b
 	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
 		unconfirmedTxHashBytes = append(unconfirmedTxHashBytes, key[4:])
 		return true
-	}, true, key)
+	}, false, key)
 
 	return unconfirmedTxHashBytes
 }
@@ -106,7 +106,7 @@ func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
 		unconfirmedTxStorage.Delete(key)
 		return true
-	}, true, msIndexBytes)
+	}, false, msIndexBytes)
 }
 
 func ShutdownUnconfirmedTxsStorage() {

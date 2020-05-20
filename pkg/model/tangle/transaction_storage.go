@@ -236,13 +236,13 @@ func ForEachTransaction(consumer TransactionConsumer) {
 	})
 }
 
-// ForEachTransactionHashBytes loops over all transaction hashes (binary representation) in the database.
+// ForEachTransactionHashBytes loops over all transaction hashes (binary representation).
 // Transaction that only exist in the cache are ignored.
 func ForEachTransactionHashBytes(consumer TransactionHashBytesConsumer) {
 	txStorage.ForEachKeyOnly(func(txHashBytes []byte) bool {
 		consumer(txHashBytes)
 		return true
-	}, true)
+	}, false)
 }
 
 // tx +-0
