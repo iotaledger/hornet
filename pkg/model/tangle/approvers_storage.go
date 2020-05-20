@@ -116,11 +116,6 @@ func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 
-// DeleteApproverFromStore deletes the approver from the persistence layer without accessing the cache.
-func DeleteApproverFromStore(transactionHash trinary.Hash, approverHashBytes []byte) {
-	approversStorage.DeleteEntryFromStore(append(trinary.MustTrytesToBytes(transactionHash)[:49], approverHashBytes...))
-}
-
 // approvers +-0
 func DeleteApprovers(transactionHash trinary.Hash) {
 
@@ -131,18 +126,6 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 		cachedObject.Release(true)
 		return true
 	}, txHash)
-}
-
-// DeleteApproversFromStore deletes the approvers from the persistence layer without accessing the cache.
-func DeleteApproversFromStore(txHashBytes []byte) {
-
-	var approversToDelete [][]byte
-	approversStorage.ForEachKeyOnly(func(key []byte) bool {
-		approversToDelete = append(approversToDelete, key)
-		return true
-	}, true, txHashBytes)
-
-	approversStorage.DeleteEntriesFromStore(approversToDelete)
 }
 
 func ShutdownApproversStorage() {

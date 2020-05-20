@@ -178,10 +178,6 @@ func DeleteMilestone(milestoneIndex milestone.Index) {
 	milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-func DeleteMilestoneFromStore(milestoneIndex milestone.Index) {
-	milestoneStorage.DeleteEntryFromStore(databaseKeyForMilestoneIndex(milestoneIndex))
-}
-
 func ShutdownMilestoneStorage() {
 	milestoneStorage.Shutdown()
 }

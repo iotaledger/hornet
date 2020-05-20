@@ -236,13 +236,13 @@ func ForEachTransaction(consumer TransactionConsumer) {
 	})
 }
 
-// ForEachTransactionHashBytes loops over all transaction hashes (binary representation) in the database.
+// ForEachTransactionHashBytes loops over all transaction hashes (binary representation).
 // Transaction that only exist in the cache are ignored.
 func ForEachTransactionHashBytes(consumer TransactionHashBytesConsumer) {
 	txStorage.ForEachKeyOnly(func(txHashBytes []byte) bool {
 		consumer(txHashBytes)
 		return true
-	}, true)
+	}, false)
 }
 
 // tx +-0
@@ -250,12 +250,6 @@ func DeleteTransaction(transactionHash trinary.Hash) {
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
 	txStorage.Delete(txHash)
 	metadataStorage.Delete(txHash)
-}
-
-// DeleteTransactionFromStore deletes the transaction and metadata from the persistence layer without accessing the cache.
-func DeleteTransactionFromStore(txHashBytes []byte) {
-	txStorage.DeleteEntryFromStore(txHashBytes)
-	metadataStorage.DeleteEntryFromStore(txHashBytes)
 }
 
 func ShutdownTransactionStorage() {

@@ -75,7 +75,7 @@ func GetUnconfirmedTxHashBytes(msIndex milestone.Index, forceRelease bool) [][]b
 	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
 		unconfirmedTxHashBytes = append(unconfirmedTxHashBytes, key[4:])
 		return true
-	}, true, key)
+	}, false, key)
 
 	return unconfirmedTxHashBytes
 }
@@ -97,19 +97,16 @@ func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnc
 	return &CachedUnconfirmedTx{CachedObject: cachedObj}
 }
 
-// DeleteUnconfirmedTxsFromStore deletes unconfirmed transaction entries without accessing the cache.
-func DeleteUnconfirmedTxsFromStore(msIndex milestone.Index) {
+// DeleteUnconfirmedTxs deletes unconfirmed transaction entries.
+func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
 
-	var txHashes [][]byte
 	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
-		txHashes = append(txHashes, key)
+		unconfirmedTxStorage.Delete(key)
 		return true
-	}, true, msIndexBytes)
-
-	unconfirmedTxStorage.DeleteEntriesFromStore(txHashes)
+	}, false, msIndexBytes)
 }
 
 func ShutdownUnconfirmedTxsStorage() {
