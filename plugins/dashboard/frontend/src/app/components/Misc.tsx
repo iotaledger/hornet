@@ -83,8 +83,6 @@ const cacheLineChartOpts = Object.assign({}, {
                 autoSkip: true,
                 maxTicksLimit: 8,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             showXLabels: 10,
             gridLines: {
@@ -169,11 +167,11 @@ export class Misc extends React.Component<Props, any> {
                                 <Card.Title>Tip-Selection Performance</Card.Title>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.tipSelSeries}
-                                      options={lineChartOptions}/>
+                                          options={lineChartOptions}/>
                                 </div>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.tipSelCacheSeries}
-                                      options={cacheLineChartOpts}/>
+                                          options={cacheLineChartOpts}/>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -186,7 +184,7 @@ export class Misc extends React.Component<Props, any> {
                                 <Card.Title>Request Queue</Card.Title>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.reqQSizeSeries}
-                                        options={lineChartOptions}/>
+                                          options={lineChartOptions}/>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -199,7 +197,7 @@ export class Misc extends React.Component<Props, any> {
                                 <Card.Title>Server Metrics</Card.Title>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.serverMetricsSeries}
-                                        options={lineChartOptions}/>
+                                          options={lineChartOptions}/>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -217,7 +215,7 @@ export class Misc extends React.Component<Props, any> {
                                 </small>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.cacheMetricsSeries}
-                                        options={reqLineChartOptions}/>
+                                          options={reqLineChartOptions}/>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -230,7 +228,7 @@ export class Misc extends React.Component<Props, any> {
                                 <Card.Title>Requests</Card.Title>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.stingReqs}
-                                        options={reqLineChartOptions}/>
+                                          options={reqLineChartOptions}/>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -258,7 +256,7 @@ export class Misc extends React.Component<Props, any> {
                                 </If>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.dbSizeSeries}
-                                        options={dbSizeLineChartOpts}/>
+                                          options={dbSizeLineChartOpts}/>
                                 </div>
                             </Card.Body>
                         </Card>

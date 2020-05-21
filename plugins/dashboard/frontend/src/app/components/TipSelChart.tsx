@@ -18,8 +18,6 @@ const lineChartOptions = Object.assign({
                 autoSkip: true,
                 maxTicksLimit: 8,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             showXLabels: 10,
             gridLines: {
@@ -46,8 +44,6 @@ const cacheLineChartOpts = Object.assign({}, {
                 autoSkip: true,
                 maxTicksLimit: 8,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             showXLabels: 10,
             gridLines: {

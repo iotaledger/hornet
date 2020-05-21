@@ -18,8 +18,6 @@ const lineChartOptions = Object.assign({
                 autoSkip: true,
                 maxTicksLimit: 30,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             gridLines: {
                 display: false
@@ -56,8 +54,6 @@ const percentLineChartOpts = Object.assign({}, {
                 autoSkip: true,
                 maxTicksLimit: 30,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             gridLines: {
                 display: false
@@ -96,8 +92,6 @@ const timeChartOptions = Object.assign({
                 autoSkip: true,
                 maxTicksLimit: 30,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             gridLines: {
                 display: false
@@ -143,15 +137,15 @@ export default class ConfirmedMilestoneChart extends React.Component<Props, any>
                     </If>
                     <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesSeries}
-                            options={lineChartOptions}/>
+                             options={lineChartOptions}/>
                     </div>
                     <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesConfirmationSeries}
-                            options={percentLineChartOpts}/>
+                             options={percentLineChartOpts}/>
                     </div>
                     <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesTimeSeries}
-                            options={timeChartOptions}/>
+                             options={timeChartOptions}/>
                     </div>
                 </Card.Body>
             </Card>
