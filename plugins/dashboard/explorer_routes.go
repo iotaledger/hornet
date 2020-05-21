@@ -149,7 +149,6 @@ type ExplorerTag struct {
 type ExplorerAddress struct {
 	Balance      uint64        `json:"balance"`
 	Txs          []*ExplorerTx `json:"txs"`
-	Count        int           `json:"count"`
 	Spent        bool          `json:"spent"`
 	SpentEnabled bool          `json:"spent_enabled"`
 }
@@ -383,7 +382,7 @@ func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	txHashes, count := tangle.GetTransactionHashesForAddress(hash, valueOnly, true, MaxTransactionsForAddressResults)
+	txHashes := tangle.GetTransactionHashesForAddress(hash, valueOnly, true, MaxTransactionsForAddressResults)
 
 	txs := make([]*ExplorerTx, 0, len(txHashes))
 	if len(txHashes) != 0 {
@@ -407,5 +406,5 @@ func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 		return nil, err
 	}
 
-	return &ExplorerAddress{Balance: balance, Txs: txs, Count: count, Spent: tangle.WasAddressSpentFrom(hash), SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled()}, nil
+	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash), SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled()}, nil
 }

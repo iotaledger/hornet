@@ -79,7 +79,7 @@ func configureAddressesStorage(store kvstore.KVStore) {
 }
 
 // address +-0
-func GetTransactionHashesForAddress(address trinary.Hash, valueOnly bool, forceRelease bool, maxFind ...int) (hashes []trinary.Hash, count int) {
+func GetTransactionHashesForAddress(address trinary.Hash, valueOnly bool, forceRelease bool, maxFind ...int) []trinary.Hash {
 
 	searchPrefix := databaseKeyPrefixForAddress(address)
 	if valueOnly {
@@ -91,17 +91,14 @@ func GetTransactionHashesForAddress(address trinary.Hash, valueOnly bool, forceR
 
 	i := 0
 	addressesStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			cachedObject.Release(true) // address -1
+			return false
+		}
 
 		if !cachedObject.Exists() {
 			cachedObject.Release(true) // address -1
-			return true
-		}
-
-		i++
-
-		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release(true) // address -1
-			// Keep iterating to count all transactions
 			return true
 		}
 
@@ -110,7 +107,7 @@ func GetTransactionHashesForAddress(address trinary.Hash, valueOnly bool, forceR
 		return true
 	}, searchPrefix)
 
-	return transactionHashes, i
+	return transactionHashes
 }
 
 // address +1
