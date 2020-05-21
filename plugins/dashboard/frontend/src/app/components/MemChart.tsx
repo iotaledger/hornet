@@ -6,6 +6,7 @@ import {Line} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
 import * as prettysize from 'prettysize';
 import * as style from '../../assets/main.css';
+
 interface Props {
     nodeStore?: NodeStore;
 }
@@ -18,8 +19,6 @@ const lineChartOptions = Object.assign({
                 autoSkip: true,
                 maxTicksLimit: 8,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             showXLabels: 10,
             gridLines: {
@@ -59,7 +58,7 @@ export default class MemChart extends React.Component<Props, any> {
                 <Card.Body>
                     <Card.Title>
                         Memory Usage{' '}
-                        {prettysize(mem.heap_inuse + (mem.heap_idle - mem.heap_released) + mem.m_span_inuse + mem.m_cache_inuse+mem.stack_sys)}
+                        {prettysize(mem.heap_inuse + (mem.heap_idle - mem.heap_released) + mem.m_span_inuse + mem.m_cache_inuse + mem.stack_sys)}
                     </Card.Title>
                     <small>
                         GC Cycles: {mem.num_gc} (Last Cycle: {mem.last_pause_gc / 1000000}ms) - {' '}
@@ -68,7 +67,7 @@ export default class MemChart extends React.Component<Props, any> {
                         Retained: {prettysize(mem.heap_idle - mem.heap_released)}]
                     </small>
                     <div className={style.hornetChart}>
-                        <Line data={this.props.nodeStore.memSeries} options={lineChartOptions} />
+                        <Line data={this.props.nodeStore.memSeries} options={lineChartOptions}/>
                     </div>
                 </Card.Body>
             </Card>

@@ -5,6 +5,7 @@ import {inject, observer} from "mobx-react";
 import {Line} from "react-chartjs-2";
 import {defaultChartOptions} from "app/misc/Chart";
 import * as style from '../../assets/main.css';
+
 interface Props {
     nodeStore?: NodeStore;
 }
@@ -16,8 +17,6 @@ const lineChartOptions = Object.assign({
                 autoSkip: true,
                 maxTicksLimit: 8,
                 fontSize: 8,
-                minRotation: 0,
-                maxRotation: 0,
             },
             gridLines: {
                 display: false

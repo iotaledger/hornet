@@ -41,7 +41,6 @@ export class Transaction {
 class AddressResult {
     balance: number;
     txs: Array<Transaction>;
-    count: number;
     spent: boolean;
     spent_enabled: boolean;
 }

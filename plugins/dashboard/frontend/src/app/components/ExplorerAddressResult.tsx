@@ -121,7 +121,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, State> {
                                 Balance: <IOTAValue>{addr.balance}</IOTAValue>
                             </p>
                             {
-                                addr.txs !== null && addr.count > addr.txs.length &&
+                                addr.txs !== null && addr.txs.length === 100 &&
                                 <Alert variant={"warning"}>
                                     Max. {addr.txs.length} transactions are shown.
                                 </Alert>
@@ -137,7 +137,7 @@ export class ExplorerAddressQueryResult extends React.Component<Props, State> {
                                                 <Badge
                                                     pill
                                                     variant={"secondary"}
-                                                    className={"align-middle"}>{addr.count}</Badge>
+                                                    className={"align-middle"}>{addr.txs.length}</Badge>
                                             </div>
                                             <FormCheck id={"check-value-only"}
                                                        label={"Only show value Tx"}

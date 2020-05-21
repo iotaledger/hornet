@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc10] - 21.05.2020
+
+### Added
+
+    - Show download speed
+
+### Changed
+
+    - Only print download progress every second
+    - Use NoSync option to speed up boltdb
+    - Confirm txs in visualizer by walking the past cone of milestone tail
+
+### Fixed
+
+    - Pruning of unconfirmed tx not verifying the milestoneIndex
+    - Responsive Dashboard design
+    - Do not block on visualizer websocket messages
+    - Speed up revalidation and pruning
+    - Abort snapshot download on daemon shutdown
+    - Limit the search for transactions of a given address
+    - Search for bundles was not possible in the dashboard
+
 ## [0.4.0-rc9] - 19.05.2020
 
 **Breaking change:**<br>
