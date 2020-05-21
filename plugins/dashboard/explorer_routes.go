@@ -269,7 +269,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		go func() {
 			defer wg.Done()
 			addr, err := findAddress(search, false)
-			if err == nil {
+			if err == nil && len(addr.Txs) > 0 {
 				result.Address = addr
 			}
 		}()
