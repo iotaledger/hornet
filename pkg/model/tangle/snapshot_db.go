@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// snapshotStore and snapshotLedgerStore are seperated to easily "clear" all the ledger data.
 	snapshotStore       kvstore.KVStore
 	snapshotLedgerStore kvstore.KVStore
 
@@ -134,7 +135,7 @@ func GetAllSnapshotBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint6
 
 	balances := make(map[trinary.Hash]uint64)
 
-	value, err := snapshotLedgerStore.Get([]byte(snapshotMilestoneIndexKey))
+	value, err := snapshotStore.Get([]byte(snapshotMilestoneIndexKey))
 	if err != nil {
 		return nil, 0, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot milestone index")
 	}
