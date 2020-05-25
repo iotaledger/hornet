@@ -38,10 +38,11 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 
 		if cachedTx.GetMetadata().IsConfirmed() {
 			// transaction was already confirmed
-			cachedTx.Release() // tx -1
+			cachedTx.Release(true) // tx -1
 			continue
 		}
 
+		// do not force release, since it is loaded again
 		cachedTx.Release() // tx -1
 		txsToCheckMap[txHash] = struct{}{}
 	}

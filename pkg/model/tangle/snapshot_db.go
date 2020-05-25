@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	// snapshotStore and snapshotLedgerStore are seperated to easily "clear" all the ledger data.
+	// snapshotStore and snapshotLedgerStore are separated to easily "clear" all the ledger data.
 	snapshotStore       kvstore.KVStore
 	snapshotLedgerStore kvstore.KVStore
 
