@@ -27,8 +27,7 @@ var (
 
 func boltDB(directory string, filename string) *bbolt.DB {
 	opts := &bbolt.Options{
-		FreelistType: bbolt.FreelistMapType,
-		NoSync:       true,
+		NoSync: true,
 	}
 	db, err := bolt.CreateDB(directory, filename, opts)
 	if err != nil {
