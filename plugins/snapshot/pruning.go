@@ -1,9 +1,9 @@
 package snapshot
 
 import (
-	"bytes"
 	"time"
 
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -18,37 +18,29 @@ const (
 	AdditionalPruningThreshold = 50
 )
 
-var (
-	NullHashBytes = make([]byte, 49)
-)
-
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
 func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 
-	txsBytesToCheckMap := make(map[string]struct{})
+	txsToCheckMap := make(map[string]struct{})
 
 	// Check if tx is still unconfirmed
 	for _, txHashBytes := range tangle.GetUnconfirmedTxHashBytes(targetIndex, true) {
-		if _, exists := txsBytesToCheckMap[string(txHashBytes)]; exists {
+		txHash := trinary.MustBytesToTrytes(txHashBytes, 81)
+		if _, exists := txsToCheckMap[txHash]; exists {
 			continue
 		}
-
-		storedTx := tangle.GetStoredTransactionOrNil(txHashBytes)
-		if storedTx == nil {
-			// Tx was already pruned
+		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+		// we don't need to check for cachedTx.Exists()
+		if cachedTx == nil || cachedTx.GetMetadata().IsConfirmed() {
+			// transaction was already deleted, marked for deletion
+			// or it is an actual confirmed transaction
 			continue
 		}
-
-		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytes)
-		if storedTxMeta.IsConfirmed() {
-			// Tx was confirmed => skip
-			continue
-		}
-
-		txsBytesToCheckMap[string(txHashBytes)] = struct{}{}
+		cachedTx.Release() // tx -1
+		txsToCheckMap[txHash] = struct{}{}
 	}
 
-	txCount := pruneTransactions(txsBytesToCheckMap)
+	txCount := pruneTransactions(txsToCheckMap)
 	tangle.DeleteUnconfirmedTxs(targetIndex)
 
 	return txCount
@@ -66,50 +58,51 @@ func pruneMilestone(milestoneIndex milestone.Index) {
 }
 
 // pruneTransactions prunes the approvers, bundles, bundle txs, addresses, tags and transaction metadata from the database
-func pruneTransactions(txsBytesToCheckMap map[string]struct{}) int {
+func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
-	txsBytesToDeleteMap := make(map[string]struct{})
+	txsToDeleteMap := make(map[string]struct{})
 
-	for txHashToCheck := range txsBytesToCheckMap {
-		txHashBytesToCheck := []byte(txHashToCheck)
+	for txHashToCheck := range txsToCheckMap {
 
-		storedTx := tangle.GetStoredTransactionOrNil(txHashBytesToCheck) // tx +1
-		if storedTx == nil {
-			log.Warnf("pruneTransactions: Transaction not found: %v", trinary.MustBytesToTrytes(txHashBytesToCheck, 81))
+		cachedTx := tangle.GetCachedTransactionOrNil(txHashToCheck) // tx +1
+		if cachedTx == nil {
+			log.Warnf("pruneTransactions: Transaction not found: %s", txHashToCheck)
 			continue
 		}
 
-		for txToRemove := range tangle.RemoveTransactionFromBundle(storedTx.Tx) {
-			txsBytesToDeleteMap[string(trinary.MustTrytesToBytes(txToRemove)[:49])] = struct{}{}
+		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTx.GetTransaction().Tx) {
+			txsToDeleteMap[txToRemove] = struct{}{}
 		}
+		// since it gets loaded below again it doesn't make sense to force release here
+		cachedTx.Release() // tx -1
 	}
 
-	for txHashToDelete := range txsBytesToDeleteMap {
+	for txHashToDelete := range txsToDeleteMap {
 
-		txHashBytesToDelete := []byte(txHashToDelete)
-		if bytes.Equal(txHashBytesToDelete, NullHashBytes) {
+		if txHashToDelete == consts.NullHashTrytes {
 			// do not delete genesis transaction
 			continue
 		}
 
-		storedTx := tangle.GetStoredTransactionOrNil(txHashBytesToDelete)
-		if storedTx == nil {
+		cachedTx := tangle.GetCachedTransactionOrNil(txHashToDelete) // tx +1
+		if cachedTx == nil {
 			continue
 		}
 
-		txHash := trinary.MustBytesToTrytes(txHashBytesToDelete, 81)
+		tx := cachedTx.GetTransaction()
+		cachedTx.Release() // tx -1
 
 		// Delete the reference in the approvees
-		tangle.DeleteApprover(storedTx.GetTrunk(), txHash)
-		tangle.DeleteApprover(storedTx.GetBranch(), txHash)
+		tangle.DeleteApprover(tx.GetTrunk(), txHashToDelete)
+		tangle.DeleteApprover(tx.GetBranch(), txHashToDelete)
 
-		tangle.DeleteTag(storedTx.Tx.Tag, txHash)
-		tangle.DeleteAddress(storedTx.Tx.Address, txHash)
-		tangle.DeleteApprovers(txHash)
-		tangle.DeleteTransaction(txHash)
+		tangle.DeleteTag(tx.Tx.Tag, txHashToDelete)
+		tangle.DeleteAddress(tx.Tx.Address, txHashToDelete)
+		tangle.DeleteApprovers(txHashToDelete)
+		tangle.DeleteTransaction(txHashToDelete)
 	}
 
-	return len(txsBytesToDeleteMap)
+	return len(txsToDeleteMap)
 }
 
 func setIsPruning(value bool) {
@@ -208,12 +201,12 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		txsBytesToCheckMap := make(map[string]struct{})
+		txsToCheckMap := make(map[string]struct{})
 		for _, approvee := range approvees {
-			txsBytesToCheckMap[string(trinary.MustTrytesToBytes(approvee)[:49])] = struct{}{}
+			txsToCheckMap[approvee] = struct{}{}
 		}
 
-		txCount += pruneTransactions(txsBytesToCheckMap)
+		txCount += pruneTransactions(txsToCheckMap)
 
 		pruneMilestone(milestoneIndex)
 
