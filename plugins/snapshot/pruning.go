@@ -29,13 +29,20 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 		if _, exists := txsToCheckMap[txHash]; exists {
 			continue
 		}
+
 		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
-		// we don't need to check for cachedTx.Exists()
-		if cachedTx == nil || cachedTx.GetMetadata().IsConfirmed() {
-			// transaction was already deleted, marked for deletion
-			// or it is an actual confirmed transaction
+		if cachedTx == nil {
+			// transaction was already deleted or marked for deletion
 			continue
 		}
+
+		if cachedTx.GetMetadata().IsConfirmed() {
+			// transaction was already confirmed
+			cachedTx.Release(true) // tx -1
+			continue
+		}
+
+		// do not force release, since it is loaded again
 		cachedTx.Release() // tx -1
 		txsToCheckMap[txHash] = struct{}{}
 	}
@@ -90,7 +97,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 		}
 
 		tx := cachedTx.GetTransaction()
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 
 		// Delete the reference in the approvees
 		tangle.DeleteApprover(tx.GetTrunk(), txHashToDelete)
