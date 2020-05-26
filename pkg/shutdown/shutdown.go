@@ -23,4 +23,5 @@ const (
 	PriorityAutopeering
 	PriorityCoordinator
 	PriorityUpdateCheck
+	PriorityPrometheus
 )

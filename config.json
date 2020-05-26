@@ -154,5 +154,8 @@
   },
   "profiling": {
     "bindAddress": "localhost:6060"
+  },
+  "prometheus": {
+    "bindAddress": "localhost:9311"
   }
 }
