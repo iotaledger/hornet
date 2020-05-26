@@ -65,7 +65,7 @@ func configure(plugin *node.Plugin) {
 	githubTag = &latest.GithubTag{
 		Owner:             "gohornet",
 		Repository:        "hornet",
-		FixVersionStrFunc: latest.DeleteFrontV(),
+		FixVersionStrFunc: fixVersion,
 	}
 
 	fmt.Printf(`
@@ -89,9 +89,17 @@ func configure(plugin *node.Plugin) {
 	log.Info("Loading plugins ...")
 }
 
+func fixVersion(version string) string {
+	ver := strings.Replace(version, "v", "", 1)
+	if !strings.Contains(ver, "-rc.") {
+		ver = strings.Replace(ver, "-rc", "-rc.", 1)
+	}
+	return ver
+}
+
 func checkLatestVersion() {
 
-	res, err := latest.Check(githubTag, AppVersion)
+	res, err := latest.Check(githubTag, fixVersion(AppVersion))
 	if err != nil {
 		log.Warnf("Update check failed: %s", err.Error())
 		return
