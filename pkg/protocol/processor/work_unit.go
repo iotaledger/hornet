@@ -118,6 +118,10 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 	wu.requestsLock.Lock()
 	defer wu.requestsLock.Unlock()
 
+	if len(wu.requests) == 0 {
+		return
+	}
+
 	for _, peerRequest := range wu.requests {
 		// this request might simply just represent that we received the underlying
 		// WorkUnit's transaction from the given peer
@@ -182,11 +186,13 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 		} else {
 			ownRequestHash = request.HashBytesEncoded
 		}
-
 		transactionAndRequestMsg, _ := legacy.NewTransactionAndRequestMessage(cachedTxToSend.GetTransaction().RawBytes, ownRequestHash)
 		cachedTxToSend.Release(true) // tx -1
 		peerRequest.p.EnqueueForSending(transactionAndRequestMsg)
 	}
+
+	// We processed all the replies, so forget the requests
+	wu.requests = []*Request{}
 }
 
 // punishes, respectively increases the invalid transaction metric of all peers
