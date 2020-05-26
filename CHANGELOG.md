@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc11] - 26.05.2020
+
+### Fixed
+
+    - Pruning leading the node to crash due to a nil pointer dereference
+    - Panic in revalidation
+    - Fast DB size increase with enabled pruning
+    - Legacy gossip
+    - Incorrect update notification
+
 ## [0.4.0-rc10] - 21.05.2020
 
 ### Added
