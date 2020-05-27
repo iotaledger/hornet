@@ -17,9 +17,9 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
-// PLUGIN Prometheus exporter
+// PLUGIN Prometheus
 var (
-	PLUGIN = node.NewPlugin("Prometheus Exporter", node.Disabled, configure, run)
+	PLUGIN = node.NewPlugin("Prometheus", node.Disabled, configure, run)
 	log    *logger.Logger
 
 	server   *http.Server
