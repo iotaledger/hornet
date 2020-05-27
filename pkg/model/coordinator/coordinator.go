@@ -287,5 +287,5 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 
 // GetInterval returns the interval milestones or checkpoints should be issued.
 func (coo *Coordinator) GetInterval() time.Duration {
-	return time.Second * time.Duration(coo.milestoneIntervalSec) / time.Duration(coo.checkpointTransactions)
+	return time.Second * time.Duration(coo.milestoneIntervalSec) / time.Duration(coo.checkpointTransactions+1)
 }
