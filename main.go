@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -19,10 +18,12 @@ import (
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/profiling"
+	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/gohornet/hornet/plugins/webapi"
 	"github.com/gohornet/hornet/plugins/zmq"
 )
@@ -58,6 +59,7 @@ func main() {
 			monitor.PLUGIN,
 			spammer.PLUGIN,
 			coordinator.PLUGIN,
+			prometheus.PLUGIN,
 		}...)
 	}
 
