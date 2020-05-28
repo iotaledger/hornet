@@ -151,6 +151,9 @@
     "bindAddress": "localhost:6060"
   },
   "prometheus": {
-    "bindAddress": "localhost:9311"
+    "bindAddress": "localhost:9311",
+    "goMetrics": false,
+    "processMetrics": false,
+    "promhttpMetrics": false
   }
 }
