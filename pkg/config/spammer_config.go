@@ -13,6 +13,10 @@ const (
 	CfgSpammerCPUMaxUsage = "spammer.cpuMaxUsage"
 	// the rate limit for the spammer (0 = no limit)
 	CfgSpammerTPSRateLimit = "spammer.tpsRateLimit"
+	// the size of the spam bundles
+	CfgSpammerBundleSize = "spammer.bundleSize"
+	// should be spammed with value bundles
+	CfgSpammerValueSpam = "spammer.valueSpam"
 	// the amount of parallel running spammers
 	CfgSpammerWorkers = "spammer.workers"
 )

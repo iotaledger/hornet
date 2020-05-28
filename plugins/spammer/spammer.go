@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/tipselection"
@@ -25,6 +26,8 @@ var (
 	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = atomic.NewInt32(0)
+	seed             = utils.RandomTrytesInsecure(81)
+	addrIndex        = atomic.NewInt32(0)
 )
 
 func doSpam(shutdownSignal <-chan struct{}) {
@@ -60,10 +63,10 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	durationGTTA := time.Since(timeStart)
 	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
-	txCountValue := int(txCount.Inc())
+	txCountValue := int(txCount.Add(int32(bundleSize)))
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
 
-	b, err := createBundle(address, message, tagSubstring, txCountValue, infoMsg)
+	b, err := createBundle(txAddress, message, tagSubstring, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
 		return
 	}

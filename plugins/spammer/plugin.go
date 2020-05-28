@@ -15,33 +15,46 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 var (
 	PLUGIN = node.NewPlugin("Spammer", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	address            string
+	txAddress          string
 	message            string
 	tagSubstring       string
 	depth              uint
 	cpuMaxUsage        float64
 	rateLimit          float64
 	mwm                int
+	bundleSize         int
+	valueSpam          bool
 	spammerWorkerCount int
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	address = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
+	txAddress = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
 	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
 	depth = config.NodeConfig.GetUint(config.CfgSpammerDepth)
 	cpuMaxUsage = config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
 	rateLimit = config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
 	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
+	bundleSize = config.NodeConfig.GetInt(config.CfgSpammerBundleSize)
+	valueSpam = config.NodeConfig.GetBool(config.CfgSpammerValueSpam)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
+	if bundleSize < 1 {
+		bundleSize = 1
+	}
+
+	if valueSpam && bundleSize < 2 {
+		// minimum size for a value tx with SecurityLevelLow
+		bundleSize = 2
+	}
 
 	if spammerWorkerCount >= runtime.NumCPU() || spammerWorkerCount == 0 {
 		spammerWorkerCount = runtime.NumCPU() - 1
