@@ -37,8 +37,10 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 	}
 
-	if err := waitForLowerCPUUsage(); err != nil {
-		log.Warn(err.Error())
+	if err := waitForLowerCPUUsage(shutdownSignal); err != nil {
+		if err != tangle.ErrOperationAborted {
+			log.Warn(err.Error())
+		}
 		return
 	}
 
