@@ -1,5 +1,7 @@
 import * as React from 'react';
 import Card from "react-bootstrap/Card";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
 import {Bar} from "react-chartjs-2";
@@ -130,10 +132,21 @@ export default class ConfirmedMilestoneChart extends React.Component<Props, any>
                 <Card.Body>
                     <Card.Title>Confirmed Milestones</Card.Title>
                     <If condition={!!this.props.nodeStore.last_confirmed_ms_metric.ctps}>
-                        <small>
-                            CTPS: {(this.props.nodeStore.last_confirmed_ms_metric.ctps).toFixed(2)}.
-                            Confirmation: {(this.props.nodeStore.last_confirmed_ms_metric.conf_rate).toFixed(2)}%
-                        </small>
+                        <Row>
+                            <Col>
+                                <small>
+                                    CTPS: {(this.props.nodeStore.last_confirmed_ms_metric.ctps).toFixed(2)}.
+                                    Confirmation: {(this.props.nodeStore.last_confirmed_ms_metric.conf_rate).toFixed(2)}%
+                                </small>
+                            </Col>
+                            <Col>
+                                <small>
+                                    Avg. TPS: {(this.props.nodeStore.confirmedMilestonesSeries.datasets[0].data.reduce((a, b) => a + b) / this.props.nodeStore.confirmedMilestonesSeries.datasets[0].data.length).toFixed(2)}.
+                                    Avg. CTPS: {(this.props.nodeStore.confirmedMilestonesSeries.datasets[1].data.reduce((a, b) => a + b) / this.props.nodeStore.confirmedMilestonesSeries.datasets[1].data.length).toFixed(2)}.
+                                    Avg. Confirmation: {((this.props.nodeStore.confirmedMilestonesSeries.datasets[1].data.reduce((a, b) => a + b) / this.props.nodeStore.confirmedMilestonesSeries.datasets[1].data.length)/(this.props.nodeStore.confirmedMilestonesSeries.datasets[0].data.reduce((a, b) => a + b) / this.props.nodeStore.confirmedMilestonesSeries.datasets[0].data.length)*100).toFixed(2)}%
+                                </small>
+                            </Col>
+                        </Row>
                     </If>
                     <div className={style.hornetChartSmall}>
                         <Bar data={this.props.nodeStore.confirmedMilestonesSeries}
