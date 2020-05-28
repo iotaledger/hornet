@@ -18,7 +18,7 @@ import (
 
 var (
 	txRingBuffer *ring.Ring
-	txPointerMap map[string]*wsTransaction
+	txPointerMap map[trinary.Hash]*wsTransaction
 
 	txRingBufferLock = syncutils.Mutex{}
 )
@@ -65,7 +65,7 @@ type (
 
 func initRingBuffer() {
 	txRingBuffer = ring.New(txBufferSize)
-	txPointerMap = make(map[string]*wsTransaction)
+	txPointerMap = make(map[trinary.Hash]*wsTransaction)
 }
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
@@ -116,7 +116,7 @@ func onConfirmedTx(cachedTx *tangle.CachedTransaction, _ milestone.Index, confTi
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 		if tx.Tx.CurrentIndex == 0 {
 			// Tail Tx => Check if this is a value Tx
-			cachedBndl := tangle.GetCachedBundleOrNil(tx.Tx.Hash) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOrNil(tx.GetTxHash()) // bundle +1
 			if cachedBndl != nil {
 				if !cachedBndl.GetBundle().IsValueSpam() {
 					ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
@@ -156,7 +156,7 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 
 	txRingBufferLock.Lock()
 	for _, cachedTx := range cachedTxs {
-		if wsTx, exists := txPointerMap[cachedTx.GetTransaction().GetHash()]; exists {
+		if wsTx, exists := txPointerMap[cachedTx.GetTransaction().Tx.Hash]; exists {
 			wsTx.Confirmed = true
 			wsTx.Milestone = "t"
 			wsTx.ConfTime = confTime
@@ -166,7 +166,7 @@ func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 
 	for _, cachedTx := range cachedTxs {
 		update := wsNewMile{
-			Hash:      cachedTx.GetTransaction().GetHash(),
+			Hash:      cachedTx.GetTransaction().Tx.Hash,
 			Milestone: "t",
 			ConfTime:  confTime,
 		}

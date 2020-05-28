@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -89,14 +90,16 @@ func configure(plugin *node.Plugin) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
+		coordinatorAddress := hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81])[:49])
+
 		// Check coordinator address in database
-		if snapshotInfo.CoordinatorAddress != config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81] {
+		if !bytes.Equal(snapshotInfo.CoordinatorAddress, coordinatorAddress) {
 			if !*overwriteCooAddress {
 				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
 			}
 
 			// Overwrite old coordinator address
-			snapshotInfo.CoordinatorAddress = config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]
+			snapshotInfo.CoordinatorAddress = coordinatorAddress
 			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 
@@ -229,7 +232,7 @@ func installGenesisTransaction() {
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
 	genesis.Hash = consts.NullHashTrytes
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(genesisTxTrits))
-	genesisTx := hornet.NewTransaction(genesis, txBytesTruncated)
+	genesisTx := hornet.NewTransactionFromTx(genesis, txBytesTruncated)
 
 	// ensure the bundle is also existent for the genesis tx
 	cachedTx, _ := tangle.AddTransactionToStorage(genesisTx, 0, false, false, true)

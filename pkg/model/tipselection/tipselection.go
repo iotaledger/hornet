@@ -3,11 +3,12 @@ package tipselection
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/iota.go/trinary"
 )
 
 // TipSelectionFunc is a function which performs a tipselection and returns two tips.
-type TipSelectionFunc = func(depth uint, reference *trinary.Hash) ([]trinary.Hash, *TipSelStats, error)
+type TipSelectionFunc = func(depth uint, reference *hornet.Hash) (hornet.Hashes, *TipSelStats, error)
 
 // TipSelStats holds the stats for a tipselection run.
 type TipSelStats struct {

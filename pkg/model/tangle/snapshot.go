@@ -9,8 +9,8 @@ import (
 
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -27,8 +27,8 @@ var (
 )
 
 type SnapshotInfo struct {
-	CoordinatorAddress trinary.Hash
-	Hash               trinary.Hash
+	CoordinatorAddress hornet.Hash
+	Hash               hornet.Hash
 	SnapshotIndex      milestone.Index
 	EntryPointIndex    milestone.Index
 	PruningIndex       milestone.Index
@@ -49,7 +49,7 @@ func loadSnapshotInfo() {
 	EntryPointIndex: %d
 	PruningIndex: %d
 	Timestamp: %v
-	SpentAddressesEnabled: %v`, info.CoordinatorAddress, info.SnapshotIndex, info.Hash, info.EntryPointIndex, info.PruningIndex, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
+	SpentAddressesEnabled: %v`, info.CoordinatorAddress.Trytes(), info.SnapshotIndex, info.Hash.Trytes(), info.EntryPointIndex, info.PruningIndex, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
 	}
 }
 
@@ -59,8 +59,8 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 119", len(bytes))
 	}
 
-	cooAddr := trinary.MustBytesToTrytes(bytes[:49], 81)
-	hash := trinary.MustBytesToTrytes(bytes[49:98], 81)
+	cooAddr := hornet.Hash(bytes[:49])
+	hash := hornet.Hash(bytes[49:98])
 	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[98:102]))
 	entryPointIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[102:106]))
 	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[106:110]))
@@ -89,9 +89,10 @@ func (i *SnapshotInfo) SetSpentAddressesEnabled(enabled bool) {
 }
 
 func (i *SnapshotInfo) GetBytes() []byte {
-	bytes := trinary.MustTrytesToBytes(i.CoordinatorAddress)[:49]
+	var bytes []byte
 
-	bytes = append(bytes, trinary.MustTrytesToBytes(i.Hash)[:49]...)
+	bytes = append(bytes, i.CoordinatorAddress[:49]...)
+	bytes = append(bytes, i.Hash[:49]...)
 
 	snapshotIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(snapshotIndexBytes, uint32(i.SnapshotIndex))
@@ -114,7 +115,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64, spentAddressesEnabled bool) {
+func SetSnapshotMilestone(coordinatorAddress hornet.Hash, milestoneHash hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64, spentAddressesEnabled bool) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	CooAddr: %v
@@ -122,7 +123,7 @@ func SetSnapshotMilestone(coordinatorAddress trinary.Hash, milestoneHash trinary
 	EntryPointIndex: %d
 	PruningIndex: %d
 	Timestamp: %v
-	SpentAddressesEnabled: %v`, coordinatorAddress, snapshotIndex, milestoneHash, entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
+	SpentAddressesEnabled: %v`, coordinatorAddress.Trytes(), snapshotIndex, milestoneHash.Trytes(), entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
 
 	sn := &SnapshotInfo{
 		CoordinatorAddress: coordinatorAddress,

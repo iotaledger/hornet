@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -33,11 +31,8 @@ func (c *CachedUnconfirmedTx) GetUnconfirmedTx() *hornet.UnconfirmedTx {
 }
 
 func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	unconfirmedTx := &hornet.UnconfirmedTx{
-		LatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(key[:4])),
-		TxHash:               make([]byte, 49),
-	}
-	copy(unconfirmedTx.TxHash, key[4:])
+
+	unconfirmedTx := hornet.NewUnconfirmedTx(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:53])
 	return unconfirmedTx, 53, nil
 }
 
@@ -64,29 +59,26 @@ func configureUnconfirmedTxStorage(store kvstore.KVStore) {
 	)
 }
 
-// GetUnconfirmedTxHashBytes returns all hashes of unconfirmed transactions for that milestone.
-func GetUnconfirmedTxHashBytes(msIndex milestone.Index, forceRelease bool) [][]byte {
+// GetUnconfirmedTxHashes returns all hashes of unconfirmed transactions for that milestone.
+func GetUnconfirmedTxHashes(msIndex milestone.Index, forceRelease bool) hornet.Hashes {
 
-	var unconfirmedTxHashBytes [][]byte
+	var unconfirmedTxHashes hornet.Hashes
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
 	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
-		unconfirmedTxHashBytes = append(unconfirmedTxHashBytes, key[4:])
+		unconfirmedTxHashes = append(unconfirmedTxHashes, hornet.Hash(key[4:53]))
 		return true
 	}, false, key)
 
-	return unconfirmedTxHashBytes
+	return unconfirmedTxHashes
 }
 
 // unconfirmedTx +1
-func StoreUnconfirmedTx(msIndex milestone.Index, txHash trinary.Hash) *CachedUnconfirmedTx {
+func StoreUnconfirmedTx(msIndex milestone.Index, txHash hornet.Hash) *CachedUnconfirmedTx {
 
-	unconfirmedTx := &hornet.UnconfirmedTx{
-		LatestMilestoneIndex: msIndex,
-		TxHash:               trinary.MustTrytesToBytes(txHash)[:49],
-	}
+	unconfirmedTx := hornet.NewUnconfirmedTx(msIndex, txHash)
 
 	cachedObj := unconfirmedTxStorage.ComputeIfAbsent(unconfirmedTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // unconfirmedTx +1
 		unconfirmedTx.Persist()

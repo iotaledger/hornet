@@ -20,7 +20,7 @@ type TransactionMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	TxHash []byte
+	txHash Hash
 
 	// Metadata
 	metadata bitmask.BitMask
@@ -36,6 +36,16 @@ type TransactionMetadata struct {
 
 	// oldestRootSnapshotIndex is the lowest confirmed index of the past cone of this transaction
 	oldestRootSnapshotIndex milestone.Index
+}
+
+func NewTransactionMetadata(txHash Hash) *TransactionMetadata {
+	return &TransactionMetadata{
+		txHash: txHash,
+	}
+}
+
+func (m *TransactionMetadata) GetTxHash() Hash {
+	return m.txHash
 }
 
 func (m *TransactionMetadata) GetSolidificationTimestamp() int32 {
@@ -123,7 +133,7 @@ func (m *TransactionMetadata) Update(_ objectstorage.StorableObject) {
 }
 
 func (m *TransactionMetadata) ObjectStorageKey() []byte {
-	return m.TxHash
+	return m.txHash
 }
 
 func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {

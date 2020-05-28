@@ -5,9 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
@@ -43,7 +45,12 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		return
 	}
 
-	c.JSON(http.StatusOK, GetLedgerDiffReturn{Diff: diff, MilestoneIndex: query.MilestoneIndex})
+	diffTrytes := make(map[trinary.Trytes]int64)
+	for address, balance := range diff {
+		diffTrytes[hornet.Hash(address).Trytes()] = balance
+	}
+
+	c.JSON(http.StatusOK, GetLedgerDiffReturn{Diff: diffTrytes, MilestoneIndex: query.MilestoneIndex})
 }
 
 func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -71,11 +78,15 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	result := GetLedgerDiffExtReturn{}
+	ledgerChangesTrytes := make(map[trinary.Trytes]int64)
+	for address, balance := range ledgerChanges {
+		ledgerChangesTrytes[hornet.Hash(address).Trytes()] = balance
+	}
 
+	result := GetLedgerDiffExtReturn{}
 	result.ConfirmedTxWithValue = confirmedTxWithValue
 	result.ConfirmedBundlesWithValue = confirmedBundlesWithValue
-	result.Diff = ledgerChanges
+	result.Diff = ledgerChangesTrytes
 	result.MilestoneIndex = query.MilestoneIndex
 
 	c.JSON(http.StatusOK, result)
@@ -92,7 +103,7 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 	txsToTraverse := make(map[string]struct{})
 	totalLedgerChanges = make(map[string]int64)
 
-	txsToTraverse[cachedReqMs.GetBundle().GetTailHash()] = struct{}{}
+	txsToTraverse[string(cachedReqMs.GetBundle().GetTailHash())] = struct{}{}
 
 	cachedReqMs.Release(true) // bundle -1
 
@@ -108,14 +119,14 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				continue
 			}
 
-			if tangle.SolidEntryPointsContain(txHash) {
+			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
 				// Ignore solid entry points (snapshot milestone included)
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 			if cachedTx == nil {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", txHash)
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
 
 			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
@@ -127,30 +138,30 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				}
 			} else {
 				cachedTx.Release(true) // tx -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", txHash)
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", hornet.Hash(txHash).Trytes())
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
+			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
 
 			if !cachedTx.GetTransaction().IsTail() {
 				cachedTx.Release(true) // tx -1
 				continue
 			}
 
-			txBundle := cachedTx.GetTransaction().Tx.Bundle
-
-			cachedBndl := tangle.GetCachedBundleOrNil(txHash) // bundle +1
+			cachedBndl := tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
 			if cachedBndl == nil {
+				txBundle := cachedTx.GetTransaction().Tx.Bundle
 				cachedTx.Release(true) // tx -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", txHash, txBundle)
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle)
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
+				txBundle := cachedTx.GetTransaction().Tx.Bundle
 				cachedTx.Release(true)   // tx -1
 				cachedBndl.Release(true) // bundle -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", txHash, txBundle)
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", hornet.Hash(txHash).Trytes(), txBundle)
 			}
 
 			if !cachedBndl.GetBundle().IsValueSpam() {
@@ -163,9 +174,9 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 					// hornetTx is being retained during the loop, so safe to use the pointer here
 					hornetTx := cachedTx.GetTransaction()
 					if hornetTx.Tx.Value != 0 {
-						confirmedTxWithValue = append(confirmedTxWithValue, &TxHashWithValue{TxHash: hornetTx.GetHash(), TailTxHash: cachedBndl.GetBundle().GetTailHash(), BundleHash: hornetTx.Tx.Bundle, Address: hornetTx.Tx.Address, Value: hornetTx.Tx.Value})
+						confirmedTxWithValue = append(confirmedTxWithValue, &TxHashWithValue{TxHash: hornetTx.Tx.Hash, TailTxHash: cachedBndl.GetBundle().GetTailHash().Trytes(), BundleHash: hornetTx.Tx.Bundle, Address: hornetTx.Tx.Address, Value: hornetTx.Tx.Value})
 					}
-					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: hornetTx.GetHash(), Address: hornetTx.Tx.Address, Index: hornetTx.Tx.CurrentIndex, Value: hornetTx.Tx.Value})
+					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: hornetTx.Tx.Hash, Address: hornetTx.Tx.Address, Index: hornetTx.Tx.CurrentIndex, Value: hornetTx.Tx.Value})
 				}
 				cachedTxs.Release(true) // tx -1
 				for address, change := range ledgerChanges {
@@ -173,7 +184,7 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				}
 
 				cachedBundleHeadTx := cachedBndl.GetBundle().GetHead() // tx +1
-				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTx.GetTransaction().Tx.Bundle, TailTxHash: cachedBndl.GetBundle().GetTailHash(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
+				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTx.GetTransaction().Tx.Bundle, TailTxHash: cachedBndl.GetBundle().GetTailHash().Trytes(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
 				cachedBundleHeadTx.Release(true) // tx -1
 			}
 			cachedTx.Release(true)   // tx -1
@@ -208,5 +219,10 @@ func getLedgerState(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 		return
 	}
 
-	c.JSON(http.StatusOK, GetLedgerStateReturn{Balances: balances, MilestoneIndex: index})
+	balancesTrytes := make(map[trinary.Trytes]uint64)
+	for address, balance := range balances {
+		balancesTrytes[hornet.Hash(address).Trytes()] = balance
+	}
+
+	c.JSON(http.StatusOK, GetLedgerStateReturn{Balances: balancesTrytes, MilestoneIndex: index})
 }

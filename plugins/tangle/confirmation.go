@@ -3,10 +3,9 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/gohornet/hornet/pkg/metrics"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
@@ -17,10 +16,10 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 
 	ts := time.Now()
 
-	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
-	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
+	cachedTxs := make(map[string]*tangle.CachedTransaction)
+	cachedTxs[string(cachedMsTailTx.GetTransaction().GetTxHash())] = cachedMsTailTx
 
-	cachedBndls := make(map[trinary.Hash]*tangle.CachedBundle)
+	cachedBndls := make(map[string]*tangle.CachedBundle)
 
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
@@ -39,7 +38,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 	txsToConfirm := make(map[string]struct{})
 	txsToTraverse := make(map[string]struct{})
 	totalLedgerChanges := make(map[string]int64)
-	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
+	txsToTraverse[string(cachedMsTailTx.GetTransaction().GetTxHash())] = struct{}{}
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -53,16 +52,16 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 				continue
 			}
 
-			if tangle.SolidEntryPointsContain(txHash) {
+			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
 				// Ignore solid entry points (snapshot milestone included)
 				continue
 			}
 
 			cachedTx, exists := cachedTxs[txHash]
 			if !exists {
-				cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
+				cachedTx = tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 				if cachedTx == nil {
-					log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
+					log.Panicf("confirmMilestone: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 				}
 				cachedTxs[txHash] = cachedTx
 			}
@@ -70,7 +69,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at > milestoneIndex {
-					log.Panicf("transaction %s was already confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
+					log.Panicf("transaction %s was already confirmed by a newer milestone %d", hornet.Hash(txHash).Trytes(), at)
 				}
 
 				// Tx is already confirmed by another milestone => ignore
@@ -83,8 +82,8 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
+			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
 
 			if !cachedTx.GetTransaction().IsTail() {
 				continue
@@ -94,15 +93,15 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 
 			cachedBndl, exists := cachedBndls[txHash]
 			if !exists {
-				cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
+				cachedBndl = tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
 				if cachedBndl == nil {
-					log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, txBundle)
+					log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle)
 				}
 				cachedBndls[txHash] = cachedBndl
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", txHash, txBundle)
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", hornet.Hash(txHash).Trytes(), txBundle)
 			}
 
 			if !cachedBndl.GetBundle().IsValueSpam() {
@@ -131,9 +130,9 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 
 		cachedTx, exists := cachedTxs[txHash]
 		if !exists {
-			cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			cachedTx = tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 			if cachedTx == nil {
-				log.Panicf("confirmMilestone: Transaction not found: %v", txHash)
+				log.Panicf("confirmMilestone: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
 			cachedTxs[txHash] = cachedTx
 		}
@@ -142,23 +141,23 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 		// we are only iterating over tail txs
 		cachedBndl, exists := cachedBndls[txHash]
 		if !exists {
-			cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
+			cachedBndl = tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
 			if cachedBndl == nil {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash, cachedTx.GetTransaction().Tx.Bundle)
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), cachedTx.GetTransaction().Tx.Bundle)
 			}
 			cachedBndls[txHash] = cachedBndl
 		}
 
-		bndlTxHashes := cachedBndl.GetBundle().GetTransactionHashes()
+		bndlTxHashes := cachedBndl.GetBundle().GetTxHashes()
 		for _, bndlTxHash := range bndlTxHashes {
 
-			cachedBndlTx, exists := cachedTxs[bndlTxHash]
+			cachedBndlTx, exists := cachedTxs[string(bndlTxHash)]
 			if !exists {
 				cachedBndlTx = tangle.GetCachedTransactionOrNil(bndlTxHash) // tx +1
 				if cachedTx == nil {
-					log.Panicf("confirmMilestone: Transaction not found: %v", bndlTxHash)
+					log.Panicf("confirmMilestone: Transaction not found: %v", bndlTxHash.Trytes())
 				}
-				cachedTxs[bndlTxHash] = cachedBndlTx
+				cachedTxs[string(bndlTxHash)] = cachedBndlTx
 			}
 
 			cachedBndlTx.GetMetadata().SetConfirmed(true, milestoneIndex)

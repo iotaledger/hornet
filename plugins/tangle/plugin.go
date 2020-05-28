@@ -11,8 +11,11 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/iota.go/address"
+	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -53,8 +56,12 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseCorrupted()
 	})
 
+	if err := address.ValidAddress(config.NodeConfig.GetString(config.CfgCoordinatorAddress)); err != nil {
+		log.Fatal(err.Error())
+	}
+
 	tangle.ConfigureMilestones(
-		config.NodeConfig.GetString(config.CfgCoordinatorAddress),
+		hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:49]),
 		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
 	)

@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/tipselection"
@@ -58,7 +59,7 @@ type Coordinator struct {
 	state               *State
 	merkleTree          *MerkleTree
 	lastCheckpointCount int
-	lastCheckpointHash  *trinary.Hash
+	lastCheckpointHash  *hornet.Hash
 	bootstrapped        bool
 
 	// events of the coordinator
@@ -129,7 +130,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			return fmt.Errorf("previous milestone does not match latest milestone in database: %d != %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
-		latestMilestoneHash := consts.NullHashTrytes
+		latestMilestoneHash := hornet.NullHashBytes
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
 			cachedBndl := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
@@ -145,7 +146,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		state.LatestMilestoneHash = latestMilestoneHash
 		state.LatestMilestoneIndex = startIndex
 		state.LatestMilestoneTime = 0
-		state.LatestMilestoneTransactions = []trinary.Hash{consts.NullHashTrytes}
+		state.LatestMilestoneTransactions = hornet.Hashes{hornet.NullHashBytes}
 
 		coo.state = state
 		coo.lastCheckpointHash = &(coo.state.LatestMilestoneHash)
@@ -187,7 +188,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 		return err
 	}
 
-	b, err := createCheckpoint(tips[0], tips[1], coo.minWeightMagnitude, coo.powFunc)
+	b, err := createCheckpoint(tips[0].Trytes(), tips[1].Trytes(), coo.minWeightMagnitude, coo.powFunc)
 	if err != nil {
 		return err
 	}
@@ -197,9 +198,10 @@ func (coo *Coordinator) issueCheckpoint() error {
 	}
 
 	coo.lastCheckpointCount++
-	coo.lastCheckpointHash = &(b[0].Hash)
+	lastCheckpointHash := hornet.Hash(trinary.MustTrytesToBytes(b[0].Hash)[:49])
+	coo.lastCheckpointHash = &lastCheckpointHash
 
-	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, *coo.lastCheckpointHash)
+	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, b[0].Hash)
 
 	return nil
 }
@@ -216,9 +218,9 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHas
 		return err
 	}
 
-	txHashes := []trinary.Hash{}
+	txHashes := hornet.Hashes{}
 	for _, tx := range b {
-		txHashes = append(txHashes, tx.Hash)
+		txHashes = append(txHashes, hornet.Hash(trinary.MustTrytesToBytes(tx.Hash)[:49]))
 	}
 
 	tailTx := b[0]
@@ -227,9 +229,10 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHas
 	coo.lastCheckpointCount = 0
 
 	// always reference the last milestone directly to speed up syncing (or indirectly via checkpoints)
-	coo.lastCheckpointHash = &(tailTx.Hash)
+	latestMilestoneHash := hornet.Hash(trinary.MustTrytesToBytes(tailTx.Hash)[:49])
+	coo.lastCheckpointHash = &latestMilestoneHash
 
-	coo.state.LatestMilestoneHash = tailTx.Hash
+	coo.state.LatestMilestoneHash = latestMilestoneHash
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = int64(tailTx.Timestamp)
 	coo.state.LatestMilestoneTransactions = txHashes
@@ -277,7 +280,7 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 		return err, nil
 	}
 
-	if err := coo.createAndSendMilestone(tips[0], tips[1], coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(tips[0].Trytes(), tips[1].Trytes(), coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, err
 	}

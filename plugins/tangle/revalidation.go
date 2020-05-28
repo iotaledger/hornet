@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 var (
@@ -103,7 +103,7 @@ func cleanMilestones(info *tangle.SnapshotInfo) {
 		if msIndex > info.SnapshotIndex {
 			milestonesToDelete[msIndex] = struct{}{}
 		}
-	}, true)
+	})
 
 	for msIndex := range milestonesToDelete {
 		tangle.DeleteUnconfirmedTxs(msIndex)
@@ -122,29 +122,29 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 
 	start := time.Now()
 	var txCounter int64
-	tangle.ForEachTransactionHashBytes(func(txHashBytes []byte) {
+	tangle.ForEachTransactionHash(func(txHash hornet.Hash) {
 		txCounter++
 
 		if (txCounter % 50000) == 0 {
 			log.Infof("analyzed %d transactions", txCounter)
 		}
 
-		storedTxMeta := tangle.GetStoredMetadataOrNil(txHashBytes)
+		storedTxMeta := tangle.GetStoredMetadataOrNil(txHash)
 
 		// delete transaction if no metadata
 		if storedTxMeta == nil {
-			txsToDelete[string(txHashBytes)] = struct{}{}
+			txsToDelete[string(txHash)] = struct{}{}
 			return
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			txsToDelete[string(txHashBytes)] = struct{}{}
+			txsToDelete[string(txHash)] = struct{}{}
 			return
 		}
 
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			txsToDelete[string(txHashBytes)] = struct{}{}
+			txsToDelete[string(txHash)] = struct{}{}
 			return
 		}
 	})
@@ -152,11 +152,9 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	var deletionCounter float64
 	total := float64(len(txsToDelete))
 	lastPercentage := 0
-	nullHashBytes := make([]byte, 49)
 	for txHashToDelete := range txsToDelete {
 
-		txHashBytesToDelete := []byte(txHashToDelete)
-		if bytes.Equal(txHashBytesToDelete, nullHashBytes) {
+		if bytes.Equal(hornet.Hash(txHashToDelete), hornet.NullHashBytes) {
 			// do not delete genesis transaction
 			continue
 		}
@@ -167,30 +165,28 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 			log.Infof("reverting (this might take a while)...%d/%d (%d%%)", int(deletionCounter), len(txsToDelete), percentage)
 		}
 
-		storedTx := tangle.GetStoredTransactionOrNil(txHashBytesToDelete)
+		storedTx := tangle.GetStoredTransactionOrNil(hornet.Hash(txHashToDelete))
 		if storedTx == nil {
 			continue
 		}
 
 		deletionCounter++
 
-		txHash := trinary.MustBytesToTrytes(txHashBytesToDelete, 81)
-
 		// No need to safely remove the transactions from the bundle,
 		// since reattachment txs confirmed by another milestone wouldn't be
 		// pruned anyway if they are confirmed before snapshot index.
-		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHash, true)
-		tangle.DeleteBundleTransaction(storedTx.Tx.Bundle, txHash, false)
-		tangle.DeleteBundle(txHash)
+		tangle.DeleteBundleTransaction(storedTx.GetBundleHash(), storedTx.GetTxHash(), true)
+		tangle.DeleteBundleTransaction(storedTx.GetBundleHash(), storedTx.GetTxHash(), false)
+		tangle.DeleteBundle(storedTx.GetTxHash())
 
 		// Delete the reference in the approvees
-		tangle.DeleteApprover(storedTx.GetTrunk(), txHash)
-		tangle.DeleteApprover(storedTx.GetBranch(), txHash)
+		tangle.DeleteApprover(storedTx.GetTrunkHash(), storedTx.GetTxHash())
+		tangle.DeleteApprover(storedTx.GetBranchHash(), storedTx.GetTxHash())
 
-		tangle.DeleteTag(storedTx.Tx.Tag, txHash)
-		tangle.DeleteAddress(storedTx.Tx.Address, txHash)
-		tangle.DeleteApprovers(txHash)
-		tangle.DeleteTransaction(txHash)
+		tangle.DeleteTag(storedTx.GetTag(), storedTx.GetTxHash())
+		tangle.DeleteAddress(storedTx.GetAddress(), storedTx.GetTxHash())
+		tangle.DeleteApprovers(storedTx.GetTxHash())
+		tangle.DeleteTransaction(storedTx.GetTxHash())
 	}
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))

@@ -7,6 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -70,7 +71,7 @@ func runGossipSolidifier() {
 func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 
 	txsToCheck := make(map[string]*tangle.CachedTransaction)
-	txsToCheck[cachedTx.GetTransaction().GetHash()] = cachedTx
+	txsToCheck[string(cachedTx.GetTransaction().GetTxHash())] = cachedTx
 
 	// Loop as long as new transactions are added in every loop cycle
 	for len(txsToCheck) != 0 {
@@ -85,19 +86,19 @@ func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 					continue
 				}
 
-				for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
+				for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), true) {
 					cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
 					if cachedApproverTx == nil {
 						continue
 					}
 
-					if _, found := txsToCheck[approverHash]; found {
+					if _, found := txsToCheck[string(approverHash)]; found {
 						// Do no force release here, otherwise cacheTime for new Tx could be ignored
 						cachedApproverTx.Release() // tx -1
 						continue
 					}
 
-					txsToCheck[approverHash] = cachedApproverTx
+					txsToCheck[string(approverHash)] = cachedApproverTx
 				}
 			}
 			// Do no force release here, otherwise cacheTime for new Tx could be ignored

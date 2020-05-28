@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/gohornet/hornet/pkg/consts"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/tlv"
 )
@@ -42,7 +43,7 @@ var (
 )
 
 // NewTransactionAndRequestMessage creates a new transaction and request message.
-func NewTransactionAndRequestMessage(truncatedTxData []byte, requestedHash []byte) ([]byte, error) {
+func NewTransactionAndRequestMessage(truncatedTxData []byte, requestedHash hornet.Hash) ([]byte, error) {
 
 	msgBytesLength := uint16(len(truncatedTxData) + RequestedTransactionHashMsgBytesLength)
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+msgBytesLength))

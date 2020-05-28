@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"time"
@@ -8,8 +9,6 @@ import (
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
-
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -21,14 +20,14 @@ var (
 	bundleStorage *objectstorage.ObjectStorage
 )
 
-func databaseKeyForBundle(tailTxHash trinary.Hash) []byte {
-	return trinary.MustTrytesToBytes(tailTxHash)[:49]
+func databaseKeyForBundle(tailTxHash hornet.Hash) []byte {
+	return tailTxHash
 }
 
 func bundleFactory(key []byte) (objectstorage.StorableObject, int, error) {
 	return &Bundle{
-		tailTx: trinary.MustBytesToTrytes(key[:49], 81),
-		txs:    make(map[trinary.Hash]struct{}),
+		tailTx: key[:49],
+		txs:    make(map[string]struct{}),
 	}, 49, nil
 }
 
@@ -84,17 +83,17 @@ func (bundle *Bundle) ObjectStorageValue() (data []byte) {
 	binary.LittleEndian.PutUint64(value[1:], bundle.lastIndex)
 	binary.LittleEndian.PutUint64(value[9:], uint64(txCount))
 	binary.LittleEndian.PutUint64(value[17:], uint64(ledgerChangesCount))
-	copy(value[25:74], trinary.MustTrytesToBytes(bundle.hash))
-	copy(value[74:123], trinary.MustTrytesToBytes(bundle.headTx))
+	copy(value[25:74], bundle.hash)
+	copy(value[74:123], bundle.headTx)
 
 	offset := 123
 	for txHash := range bundle.txs {
-		copy(value[offset:offset+49], trinary.MustTrytesToBytes(txHash))
+		copy(value[offset:offset+49], hornet.Hash(txHash))
 		offset += 49
 	}
 
 	for addr, change := range bundle.ledgerChanges {
-		copy(value[offset:offset+49], trinary.MustTrytesToBytes(addr))
+		copy(value[offset:offset+49], hornet.Hash(addr))
 		offset += 49
 		binary.LittleEndian.PutUint64(value[offset:], uint64(change))
 		offset += 8
@@ -120,25 +119,25 @@ func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (consumedBytes in
 	bundle.lastIndex = binary.LittleEndian.Uint64(data[1:9])
 	txCount := int(binary.LittleEndian.Uint64(data[9:17]))
 	ledgerChangesCount := int(binary.LittleEndian.Uint64(data[17:25]))
-	bundle.hash = trinary.MustBytesToTrytes(data[25:74], 81)
-	bundle.headTx = trinary.MustBytesToTrytes(data[74:123], 81)
+	bundle.hash = data[25:74]
+	bundle.headTx = data[74:123]
 
 	offset := 123
 	for i := 0; i < txCount; i++ {
-		bundle.txs[trinary.MustBytesToTrytes(data[offset:offset+49], 81)] = struct{}{}
+		bundle.txs[string(data[offset:offset+49])] = struct{}{}
 		offset += 49
 	}
 
 	if ledgerChangesCount > 0 {
-		bundle.ledgerChanges = make(map[trinary.Trytes]int64, ledgerChangesCount)
+		bundle.ledgerChanges = make(map[string]int64, ledgerChangesCount)
 	}
 
 	for i := 0; i < ledgerChangesCount; i++ {
-		address := trinary.MustBytesToTrytes(data[offset:offset+49], 81)
+		address := data[offset : offset+49]
 		offset += 49
 		balance := int64(binary.LittleEndian.Uint64(data[offset : offset+8]))
 		offset += 8
-		bundle.ledgerChanges[address] = balance
+		bundle.ledgerChanges[string(address)] = balance
 	}
 
 	return offset, nil
@@ -181,7 +180,7 @@ func (c *CachedBundle) GetBundle() *Bundle {
 }
 
 // bundle +1
-func GetCachedBundleOrNil(tailTxHash trinary.Hash) *CachedBundle {
+func GetCachedBundleOrNil(tailTxHash hornet.Hash) *CachedBundle {
 	cachedBundle := bundleStorage.Load(databaseKeyForBundle(tailTxHash)) // bundle +1
 	if !cachedBundle.Exists() {
 		cachedBundle.Release(true) // bundle -1
@@ -191,12 +190,12 @@ func GetCachedBundleOrNil(tailTxHash trinary.Hash) *CachedBundle {
 }
 
 // bundle +-0
-func ContainsBundle(tailTxHash trinary.Hash) bool {
+func ContainsBundle(tailTxHash hornet.Hash) bool {
 	return bundleStorage.Contains(databaseKeyForBundle(tailTxHash))
 }
 
 // bundle +-0
-func DeleteBundle(tailTxHash trinary.Hash) {
+func DeleteBundle(tailTxHash hornet.Hash) {
 	bundleStorage.Delete(databaseKeyForBundle(tailTxHash))
 }
 
@@ -212,7 +211,7 @@ func FlushBundleStorage() {
 
 // GetBundles returns all existing bundle instances for that bundle hash
 // bundle +1
-func GetBundles(bundleHash trinary.Hash, forceRelease bool, maxFind ...int) CachedBundles {
+func GetBundles(bundleHash hornet.Hash, forceRelease bool, maxFind ...int) CachedBundles {
 
 	var cachedBndls CachedBundles
 
@@ -238,7 +237,7 @@ func GetBundles(bundleHash trinary.Hash, forceRelease bool, maxFind ...int) Cach
 // which attach to the same underlying bundle transaction. For example it is possible to reattach
 // a bundle's tail transaction directly "on top" of the origin one.
 // bundle +1
-func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) CachedBundles {
+func GetBundlesOfTransactionOrNil(txHash hornet.Hash, forceRelease bool) CachedBundles {
 
 	var cachedBndls CachedBundles
 
@@ -256,7 +255,7 @@ func GetBundlesOfTransactionOrNil(txHash trinary.Hash, forceRelease bool) Cached
 		return append(cachedBndls, cachedBndl)
 	}
 
-	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, txHash, forceRelease)
+	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().GetBundleHash(), txHash, forceRelease)
 	for _, tailTxHash := range tailTxHashes {
 		cachedBndl := GetCachedBundleOrNil(tailTxHash) // bundle +1
 		if cachedBndl == nil {
@@ -283,22 +282,22 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, latestMilestoneIndex 
 	}
 
 	// Store the tx in the bundleTransactionsStorage
-	StoreBundleTransaction(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsTail()).Release(forceRelease)
+	StoreBundleTransaction(cachedTx.GetTransaction().GetBundleHash(), cachedTx.GetTransaction().GetTxHash(), cachedTx.GetTransaction().IsTail()).Release(forceRelease)
 
-	StoreApprover(cachedTx.GetTransaction().GetTrunk(), cachedTx.GetTransaction().GetHash()).Release(forceRelease)
-	if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
-		StoreApprover(cachedTx.GetTransaction().GetBranch(), cachedTx.GetTransaction().GetHash()).Release(forceRelease)
+	StoreApprover(cachedTx.GetTransaction().GetTrunkHash(), cachedTx.GetTransaction().GetTxHash()).Release(forceRelease)
+	if !bytes.Equal(cachedTx.GetTransaction().GetTrunkHash(), cachedTx.GetTransaction().GetBranchHash()) {
+		StoreApprover(cachedTx.GetTransaction().GetBranchHash(), cachedTx.GetTransaction().GetTxHash()).Release(forceRelease)
 	}
 
 	// Force release Tag, Address, UnconfirmedTx since its not needed for solidification/confirmation
-	StoreTag(cachedTx.GetTransaction().Tx.Tag, cachedTx.GetTransaction().GetHash()).Release(true)
+	StoreTag(cachedTx.GetTransaction().GetTag(), cachedTx.GetTransaction().GetTxHash()).Release(true)
 
-	StoreAddress(cachedTx.GetTransaction().Tx.Address, cachedTx.GetTransaction().GetHash(), cachedTx.GetTransaction().IsValue()).Release(true)
+	StoreAddress(cachedTx.GetTransaction().GetAddress(), cachedTx.GetTransaction().GetTxHash(), cachedTx.GetTransaction().IsValue()).Release(true)
 
 	// Store only non-requested transactions, since all requested transactions are confirmed by a milestone anyway
 	// This is only used to delete unconfirmed transactions from the database at pruning
 	if !requested {
-		StoreUnconfirmedTx(latestMilestoneIndex, cachedTx.GetTransaction().GetHash()).Release(true)
+		StoreUnconfirmedTx(latestMilestoneIndex, cachedTx.GetTransaction().GetTxHash()).Release(true)
 	}
 
 	// If the transaction is part of a milestone, the bundle must be created here
@@ -315,14 +314,14 @@ func AddTransactionToStorage(hornetTx *hornet.Transaction, latestMilestoneIndex 
 func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 	defer cachedTx.Release() // tx -1
 
-	if ContainsBundle(cachedTx.GetTransaction().GetHash()) {
+	if ContainsBundle(cachedTx.GetTransaction().GetTxHash()) {
 		// Bundle already exists
 		return
 	}
 
 	if !isSolidTail && !cachedTx.GetTransaction().IsTail() {
 		// If Tx is not a tail, search all tailTx that reference this tx and try to create the bundles
-		tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetHash(), false)
+		tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().GetBundleHash(), cachedTx.GetTransaction().GetTxHash(), false)
 		for _, tailTxHash := range tailTxHashes {
 			cachedTailTx := GetCachedTransactionOrNil(tailTxHash) // tx +1
 			if cachedTailTx == nil {
@@ -337,18 +336,18 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 
 	// create a new bundle instance
 	bndl := &Bundle{
-		tailTx:    cachedTx.GetTransaction().GetHash(),
+		tailTx:    cachedTx.GetTransaction().GetTxHash(),
 		metadata:  bitmask.BitMask(0),
 		lastIndex: cachedTx.GetTransaction().Tx.LastIndex,
-		hash:      cachedTx.GetTransaction().Tx.Bundle,
-		txs:       make(map[trinary.Hash]struct{}),
+		hash:      cachedTx.GetTransaction().GetBundleHash(),
+		txs:       make(map[string]struct{}),
 	}
 
-	bndl.txs[cachedTx.GetTransaction().GetHash()] = struct{}{}
+	bndl.txs[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
 
 	// check whether it is a bundle with only one transaction
 	if cachedTx.GetTransaction().Tx.CurrentIndex == cachedTx.GetTransaction().Tx.LastIndex {
-		bndl.headTx = cachedTx.GetTransaction().GetHash()
+		bndl.headTx = cachedTx.GetTransaction().GetTxHash()
 	} else {
 		// lets try to complete the bundle by assigning txs into this bundle
 		if !constructBundle(bndl, cachedTx.Retain()) { // tx pass +1
@@ -417,24 +416,24 @@ func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
 	cachedCurrentTx := cachedStartTx
 
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-	for cachedCurrentTx.GetTransaction().GetHash() != cachedCurrentTx.GetTransaction().GetTrunk() && !bndl.isComplete() && !cachedCurrentTx.GetTransaction().IsHead() {
+	for !bytes.Equal(cachedCurrentTx.GetTransaction().GetTxHash(), cachedCurrentTx.GetTransaction().GetTrunkHash()) && !bndl.isComplete() && !cachedCurrentTx.GetTransaction().IsHead() {
 
 		// check whether the trunk transaction is known to the transaction storage.
-		if !ContainsTransaction(cachedCurrentTx.GetTransaction().GetTrunk()) {
+		if !ContainsTransaction(cachedCurrentTx.GetTransaction().GetTrunkHash()) {
 			cachedCurrentTx.Release() // tx -1
 			return false
 		}
 
-		trunkTx := loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bndl.hash) // tx +1
+		trunkTx := loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunkHash(), bndl.hash) // tx +1
 
 		// check whether trunk is in bundle instance already
-		if _, trunkAlreadyInBundle := bndl.txs[cachedCurrentTx.GetTransaction().GetTrunk()]; trunkAlreadyInBundle {
+		if _, trunkAlreadyInBundle := bndl.txs[string(cachedCurrentTx.GetTransaction().GetTrunkHash())]; trunkAlreadyInBundle {
 			cachedCurrentTx.Release() // tx -1
 			cachedCurrentTx = trunkTx
 			continue
 		}
 
-		if trunkTx.GetTransaction().Tx.Bundle != cachedStartTx.GetTransaction().Tx.Bundle {
+		if !bytes.Equal(trunkTx.GetTransaction().GetBundleHash(), cachedStartTx.GetTransaction().GetBundleHash()) {
 			trunkTx.Release() // tx -1
 
 			// Tx has invalid structure, but is "complete"
@@ -443,11 +442,11 @@ func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
 
 		// assign as head if last tx
 		if trunkTx.GetTransaction().IsHead() {
-			bndl.headTx = trunkTx.GetTransaction().GetHash()
+			bndl.headTx = trunkTx.GetTransaction().GetTxHash()
 		}
 
 		// assign trunk tx to this bundle
-		bndl.txs[trunkTx.GetTransaction().GetHash()] = struct{}{}
+		bndl.txs[string(trunkTx.GetTransaction().GetTxHash())] = struct{}{}
 
 		// modify and advance to perhaps complete the bundle
 		bndl.SetModified(true)

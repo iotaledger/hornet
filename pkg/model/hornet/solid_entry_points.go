@@ -5,16 +5,14 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 type SolidEntryPoints struct {
-	entryPointsMap   map[trinary.Hash]milestone.Index
-	entryPointsSlice []trinary.Hash
+	entryPointsMap   map[string]milestone.Index
+	entryPointsSlice Hashes
 
 	// Status
 	statusMutex syncutils.RWMutex
@@ -23,32 +21,32 @@ type SolidEntryPoints struct {
 
 func NewSolidEntryPoints() *SolidEntryPoints {
 	return &SolidEntryPoints{
-		entryPointsMap: make(map[trinary.Hash]milestone.Index),
+		entryPointsMap: make(map[string]milestone.Index),
 	}
 }
 
-func (s *SolidEntryPoints) Hashes() []trinary.Hash {
-	solidEntryPointCopy := make([]trinary.Hash, len(s.entryPointsSlice))
+func (s *SolidEntryPoints) Hashes() Hashes {
+	solidEntryPointCopy := make(Hashes, len(s.entryPointsSlice))
 	copy(solidEntryPointCopy, s.entryPointsSlice)
 	return solidEntryPointCopy
 }
 
-func (s *SolidEntryPoints) Contains(transactionHash trinary.Hash) bool {
-	_, exists := s.entryPointsMap[transactionHash]
+func (s *SolidEntryPoints) Contains(txHash Hash) bool {
+	_, exists := s.entryPointsMap[string(txHash)]
 	return exists
 }
 
-func (s *SolidEntryPoints) Add(transactionHash trinary.Hash, milestoneIndex milestone.Index) {
-	if _, exists := s.entryPointsMap[transactionHash]; !exists {
-		s.entryPointsMap[transactionHash] = milestoneIndex
-		s.entryPointsSlice = append(s.entryPointsSlice, transactionHash)
+func (s *SolidEntryPoints) Add(txHash Hash, milestoneIndex milestone.Index) {
+	if _, exists := s.entryPointsMap[string(txHash)]; !exists {
+		s.entryPointsMap[string(txHash)] = milestoneIndex
+		s.entryPointsSlice = append(s.entryPointsSlice, txHash)
 		s.SetModified(true)
 	}
 }
 
 func (s *SolidEntryPoints) Clear() {
-	s.entryPointsMap = make(map[trinary.Hash]milestone.Index)
-	s.entryPointsSlice = make([]trinary.Hash, 0)
+	s.entryPointsMap = make(map[string]milestone.Index)
+	s.entryPointsSlice = make(Hashes, 0)
 	s.SetModified(true)
 }
 
@@ -69,28 +67,26 @@ func (s *SolidEntryPoints) SetModified(modified bool) {
 func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints, error) {
 	s := NewSolidEntryPoints()
 
-	hashBuf := make([]byte, 49)
 	bytesReader := bytes.NewReader(solidEntryPointsBytes)
 
 	var err error
 
 	solidEntryPointsCount := len(solidEntryPointsBytes) / (49 + 4)
 	for i := 0; i < solidEntryPointsCount; i++ {
-		var val uint32
+		hashBuf := make([]byte, 49)
+		var msIndex uint32
 
 		err = binary.Read(bytesReader, binary.BigEndian, hashBuf)
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
 
-		err = binary.Read(bytesReader, binary.BigEndian, &val)
+		err = binary.Read(bytesReader, binary.BigEndian, &msIndex)
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
 
-		hash := trinary.MustBytesToTrytes(hashBuf, 81)
-
-		s.Add(hash[:81], milestone.Index(val))
+		s.Add(Hash(hashBuf), milestone.Index(msIndex))
 	}
 
 	return s, nil
@@ -101,12 +97,7 @@ func (s *SolidEntryPoints) GetBytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(49+4)))
 
 	for hash, msIndex := range s.entryPointsMap {
-		hashBytes, err := trinary.TrytesToBytes(hash)
-		if err != nil {
-			return nil
-		}
-
-		err = binary.Write(buf, binary.BigEndian, hashBytes[:49])
+		err := binary.Write(buf, binary.BigEndian, []byte(hash)[:49])
 		if err != nil {
 			return nil
 		}

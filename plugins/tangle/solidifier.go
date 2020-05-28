@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"time"
@@ -8,9 +9,9 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -81,9 +82,9 @@ func checkSolidity(cachedTx *tangle.CachedTransaction) (solid bool, newlySolid b
 
 	isSolid := true
 
-	approveeHashes := []trinary.Hash{cachedTx.GetTransaction().GetTrunk()}
-	if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
-		approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranch())
+	approveeHashes := hornet.Hashes{cachedTx.GetTransaction().GetTrunkHash()}
+	if !bytes.Equal(cachedTx.GetTransaction().GetTrunkHash(), cachedTx.GetTransaction().GetBranchHash()) {
+		approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranchHash())
 	}
 
 	for _, approveeHash := range approveeHashes {
@@ -120,8 +121,8 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 	ts := time.Now()
 
-	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
-	cachedTxs[cachedMsTailTx.GetTransaction().GetHash()] = cachedMsTailTx
+	cachedTxs := make(map[string]*tangle.CachedTransaction)
+	cachedTxs[string(cachedMsTailTx.GetTransaction().GetTxHash())] = cachedMsTailTx
 
 	defer func() {
 		// Release all txs at the end
@@ -131,12 +132,12 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		}
 	}()
 
-	txsToTraverse := make(map[trinary.Hash]struct{})
-	txsToTraverse[cachedMsTailTx.GetTransaction().GetHash()] = struct{}{}
+	txsToTraverse := make(map[string]struct{})
+	txsToTraverse[string(cachedMsTailTx.GetTransaction().GetTxHash())] = struct{}{}
 
-	txsChecked := make(map[trinary.Hash]struct{})
-	txsToSolidify := make(map[trinary.Hash]struct{})
-	txsToRequest := make(map[trinary.Hash]struct{})
+	txsChecked := make(map[string]struct{})
+	txsToSolidify := make(map[string]struct{})
+	txsToRequest := make(map[string]struct{})
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -159,16 +160,16 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 			cachedTx, exists := cachedTxs[txHash]
 			if !exists {
-				cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
+				cachedTx = tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 				if cachedTx == nil {
-					log.Panicf("solidQueueCheck: Tx not found: %v", txHash)
+					log.Panicf("solidQueueCheck: Tx not found: %v", hornet.Hash(txHash).Trytes())
 				}
 				cachedTxs[txHash] = cachedTx
 			}
 
-			approveeHashes := []trinary.Hash{cachedTx.GetTransaction().GetTrunk()}
-			if cachedTx.GetTransaction().GetTrunk() != cachedTx.GetTransaction().GetBranch() {
-				approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranch())
+			approveeHashes := []hornet.Hash{cachedTx.GetTransaction().GetTrunkHash()}
+			if !bytes.Equal(cachedTx.GetTransaction().GetTrunkHash(), cachedTx.GetTransaction().GetBranchHash()) {
+				approveeHashes = append(approveeHashes, cachedTx.GetTransaction().GetBranchHash())
 			}
 
 			for _, approveeHash := range approveeHashes {
@@ -177,34 +178,34 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 					continue
 				}
 
-				if _, checked := txsChecked[approveeHash]; checked {
+				if _, checked := txsChecked[string(approveeHash)]; checked {
 					// Approvee Tx was already checked
 					continue
 				}
 
-				cachedApproveeTx, exists := cachedTxs[approveeHash]
+				cachedApproveeTx, exists := cachedTxs[string(approveeHash)]
 				if !exists {
 					cachedApproveeTx = tangle.GetCachedTransactionOrNil(approveeHash) // tx +1
 					if cachedApproveeTx == nil {
 						// Tx does not exist => request missing tx
-						txsToRequest[approveeHash] = struct{}{}
+						txsToRequest[string(approveeHash)] = struct{}{}
 
 						// Mark the tx as checked
-						txsChecked[approveeHash] = struct{}{}
+						txsChecked[string(approveeHash)] = struct{}{}
 						continue
 					}
-					cachedTxs[approveeHash] = cachedApproveeTx
+					cachedTxs[string(approveeHash)] = cachedApproveeTx
 				}
 
 				// Mark the tx as checked
 				approveeSolid := cachedApproveeTx.GetMetadata().IsSolid()
 
 				// Mark the tx as checked
-				txsChecked[approveeHash] = struct{}{}
+				txsChecked[string(approveeHash)] = struct{}{}
 
 				if !approveeSolid {
 					// Traverse this approvee
-					txsToTraverse[approveeHash] = struct{}{}
+					txsToTraverse[string(approveeHash)] = struct{}{}
 				}
 			}
 		}
@@ -212,9 +213,9 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 	tc := time.Now()
 
 	if len(txsToRequest) > 0 {
-		var txHashes []string
+		var txHashes hornet.Hashes
 		for txHash := range txsToRequest {
-			txHashes = append(txHashes, txHash)
+			txHashes = append(txHashes, hornet.Hash(txHash))
 		}
 		gossip.RequestMultiple(txHashes, milestoneIndex, true)
 		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d), collect: %v", len(txHashes), tc.Sub(ts).Truncate(time.Millisecond))
@@ -227,7 +228,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 	for txHash := range txsToSolidify {
 		cachedTx, exists := cachedTxs[txHash]
 		if !exists {
-			log.Panicf("solidQueueCheck: Tx not found: %v", txHash)
+			log.Panicf("solidQueueCheck: Tx not found: %v", hornet.Hash(txHash).Trytes())
 		}
 
 		markTransactionAsSolid(cachedTx.Retain())
@@ -238,7 +239,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 		// All solidified txs are newly solidified => propagate all
 		for txHash := range txsToSolidify {
-			for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
+			for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), true) {
 				cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
 				if cachedApproverTx == nil {
 					continue

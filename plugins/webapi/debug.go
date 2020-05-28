@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
@@ -34,7 +36,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	for i := 0; i < len(queued); i++ {
 		req := queued[i]
 		debugReqs[offset+i] = &DebugRequest{
-			Hash:             req.Hash,
+			Hash:             req.Hash.Trytes(),
 			Type:             "queued",
 			TxExists:         tangle.ContainsTransaction(req.Hash),
 			MilestoneIndex:   req.MilestoneIndex,
@@ -45,7 +47,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	for i := 0; i < len(pending); i++ {
 		req := pending[i]
 		debugReqs[offset+i] = &DebugRequest{
-			Hash:             req.Hash,
+			Hash:             req.Hash.Trytes(),
 			Type:             "pending",
 			TxExists:         tangle.ContainsTransaction(req.Hash),
 			MilestoneIndex:   req.MilestoneIndex,
@@ -56,7 +58,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	for i := 0; i < len(processing); i++ {
 		req := processing[i]
 		debugReqs[offset+i] = &DebugRequest{
-			Hash:             req.Hash,
+			Hash:             req.Hash.Trytes(),
 			Type:             "processing",
 			TxExists:         tangle.ContainsTransaction(req.Hash),
 			MilestoneIndex:   req.MilestoneIndex,
@@ -66,7 +68,7 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	c.JSON(http.StatusOK, GetRequestsReturn{Requests: debugReqs})
 }
 
-func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([]*ApproverStruct, error) {
+func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]*ApproverStruct, error) {
 
 	tanglePath := make([]*ApproverStruct, 0)
 
@@ -74,21 +76,21 @@ func createConfirmedApproverResult(confirmedTxHash trinary.Hash, path []bool) ([
 	for len(path) > 0 {
 		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 		if cachedTx == nil {
-			return nil, fmt.Errorf("createConfirmedApproverResult: Transaction not found: %v", txHash)
+			return nil, fmt.Errorf("createConfirmedApproverResult: Transaction not found: %v", txHash.Trytes())
 		}
 
 		isTrunk := path[len(path)-1]
 		path = path[:len(path)-1]
 
-		var nextTxHash trinary.Hash
+		var nextTxHash hornet.Hash
 		if isTrunk {
-			nextTxHash = cachedTx.GetTransaction().GetTrunk()
+			nextTxHash = cachedTx.GetTransaction().GetTrunkHash()
 		} else {
-			nextTxHash = cachedTx.GetTransaction().GetBranch()
+			nextTxHash = cachedTx.GetTransaction().GetBranchHash()
 		}
 		cachedTx.Release(true)
 
-		tanglePath = append(tanglePath, &ApproverStruct{TxHash: nextTxHash, ReferencedByTrunk: isTrunk})
+		tanglePath = append(tanglePath, &ApproverStruct{TxHash: nextTxHash.Trytes(), ReferencedByTrunk: isTrunk})
 		txHash = nextTxHash
 	}
 
@@ -112,8 +114,8 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	txsToTraverse := make(map[trinary.Hash][]bool)
-	txsToTraverse[query.TxHash] = make([]bool, 0)
+	txsToTraverse := make(map[string][]bool)
+	txsToTraverse[string(hornet.Hash(trinary.MustTrytesToBytes(query.TxHash)[:49]))] = make([]bool, 0)
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -126,10 +128,10 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				return
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 			if cachedTx == nil {
 				delete(txsToTraverse, txHash)
-				log.Warnf("searchConfirmedApprover: Transaction not found: %v", txHash)
+				log.Warnf("searchConfirmedApprover: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 				continue
 			}
 
@@ -144,7 +146,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if query.SearchMilestone {
 					if isTailTx {
 						// Check if the bundle is a milestone, otherwise go on
-						cachedBndl := tangle.GetCachedBundleOrNil(txHash)
+						cachedBndl := tangle.GetCachedBundleOrNil(hornet.Hash(txHash))
 						if cachedBndl != nil {
 							if cachedBndl.GetBundle().IsMilestone() {
 								resultFound = true
@@ -157,14 +159,14 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				}
 
 				if resultFound {
-					approversResult, err := createConfirmedApproverResult(txHash, txsToTraverse[txHash])
+					approversResult, err := createConfirmedApproverResult(hornet.Hash(txHash), txsToTraverse[txHash])
 					if err != nil {
 						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 						c.JSON(http.StatusInternalServerError, e)
 						return
 					}
 
-					result.ConfirmedTxHash = txHash
+					result.ConfirmedTxHash = hornet.Hash(txHash).Trytes()
 					result.ConfirmedByMilestoneIndex = at
 					result.TanglePath = approversResult
 					result.TanglePathLength = len(approversResult)
@@ -174,16 +176,16 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				}
 			}
 
-			approverHashes := tangle.GetApproverHashes(txHash, true)
+			approverHashes := tangle.GetApproverHashes(hornet.Hash(txHash), true)
 			for _, approverHash := range approverHashes {
 
 				approverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
 				if approverTx == nil {
-					log.Warnf("searchConfirmedApprover: Approver not found: %v", approverHash)
+					log.Warnf("searchConfirmedApprover: Approver not found: %v", approverHash.Trytes())
 					continue
 				}
 
-				txsToTraverse[approverHash] = append(txsToTraverse[txHash], approverTx.GetTransaction().GetTrunk() == txHash)
+				txsToTraverse[string(approverHash)] = append(txsToTraverse[txHash], bytes.Equal(approverTx.GetTransaction().GetTrunkHash(), hornet.Hash(txHash)))
 				approverTx.Release(true) // tx -1
 			}
 
@@ -212,7 +214,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedStartTx := tangle.GetCachedTransactionOrNil(query.TxHash) // tx +1
+	cachedStartTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(query.TxHash)[:49])) // tx +1
 	if cachedStartTx == nil {
 		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
 		c.JSON(http.StatusBadRequest, e)
@@ -221,21 +223,21 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	_, startTxConfirmedAt := cachedStartTx.GetMetadata().GetConfirmed()
 	defer cachedStartTx.Release(true)
 
-	if !tangle.SolidEntryPointsContain(cachedStartTx.GetTransaction().GetHash()) {
+	if !tangle.SolidEntryPointsContain(cachedStartTx.GetTransaction().GetTxHash()) {
 
-		dag.TraverseApprovees(cachedStartTx.GetTransaction().GetHash(),
+		dag.TraverseApprovees(cachedStartTx.GetTransaction().GetTxHash(),
 			// predicate
 			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
 				defer cachedTx.Release(true) // tx -1
 
-				if tangle.SolidEntryPointsContain(cachedTx.GetTransaction().GetHash()) {
-					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetHash(), ConfirmedByMilestoneIndex: 0})
+				if tangle.SolidEntryPointsContain(cachedTx.GetTransaction().GetTxHash()) {
+					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: 0})
 					return false
 				}
 
 				if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
 					if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
-						result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetHash(), ConfirmedByMilestoneIndex: at})
+						result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: at})
 						return false
 					}
 				}
@@ -249,17 +251,17 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 				result.TanglePath = append(result.TanglePath,
 					&TransactionWithApprovers{
-						TxHash:            cachedTx.GetTransaction().GetHash(),
-						TrunkTransaction:  cachedTx.GetTransaction().GetTrunk(),
-						BranchTransaction: cachedTx.GetTransaction().GetBranch(),
+						TxHash:            cachedTx.GetTransaction().GetTxHash().Trytes(),
+						TrunkTransaction:  cachedTx.GetTransaction().GetTrunkHash().Trytes(),
+						BranchTransaction: cachedTx.GetTransaction().GetBranchHash().Trytes(),
 					},
 				)
 			},
 			// called on missing approvees
-			func(approveeHash trinary.Hash) {}, true)
+			func(approveeHash hornet.Hash) {}, true)
 
 	} else {
-		result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedStartTx.GetTransaction().GetHash(), ConfirmedByMilestoneIndex: 0})
+		result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedStartTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: 0})
 	}
 
 	result.TanglePathLength = len(result.TanglePath)
@@ -295,8 +297,8 @@ func getFundsOnSpentAddresses(i interface{}, c *gin.Context, _ <-chan struct{}) 
 	}
 
 	for address := range balances {
-		if tangle.WasAddressSpentFrom(address) {
-			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: address, Balance: balances[address]})
+		if tangle.WasAddressSpentFrom(hornet.Hash(address)) {
+			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: hornet.Hash(address).Trytes(), Balance: balances[address]})
 		}
 	}
 

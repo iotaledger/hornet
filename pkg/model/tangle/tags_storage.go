@@ -3,8 +3,6 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -32,12 +30,7 @@ func (c *CachedTag) GetTag() *hornet.Tag {
 }
 
 func tagsFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	tag := &hornet.Tag{
-		Tag:    make([]byte, 17),
-		TxHash: make([]byte, 49),
-	}
-	copy(tag.Tag, key[:17])
-	copy(tag.TxHash, key[17:])
+	tag := hornet.NewTag(key[:17], key[17:66])
 	return tag, 66, nil
 }
 
@@ -65,37 +58,27 @@ func configureTagsStorage(store kvstore.KVStore) {
 }
 
 // tag +-0
-func GetTagHashes(txTag trinary.Trytes, forceRelease bool, maxFind ...int) []trinary.Hash {
-	var tagHashes []trinary.Hash
+func GetTagHashes(txTag hornet.Hash, forceRelease bool, maxFind ...int) hornet.Hashes {
+	var tagHashes hornet.Hashes
 
 	i := 0
-	tagsStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+	tagsStorage.ForEachKeyOnly(func(key []byte) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release(true) // tag -1
 			return false
 		}
 
-		if !cachedObject.Exists() {
-			cachedObject.Release(true) // tag -1
-			return true
-		}
-
-		tagHashes = append(tagHashes, (&CachedTag{CachedObject: cachedObject}).GetTag().GetTransactionHash())
-		cachedObject.Release(forceRelease) // tag -1
+		tagHashes = append(tagHashes, hornet.Hash(key[17:66]))
 		return true
-	}, trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17])
+	}, false, txTag)
 
 	return tagHashes
 }
 
 // tag +1
-func StoreTag(txTag trinary.Trytes, txHash trinary.Hash) *CachedTag {
+func StoreTag(txTag hornet.Hash, txHash hornet.Hash) *CachedTag {
 
-	tag := &hornet.Tag{
-		Tag:    trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17],
-		TxHash: trinary.MustTrytesToBytes(txHash)[:49],
-	}
+	tag := hornet.NewTag(txTag[:17], txHash[:49])
 
 	cachedObj := tagsStorage.ComputeIfAbsent(tag.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // tag +1
 		tag.Persist()
@@ -107,8 +90,8 @@ func StoreTag(txTag trinary.Trytes, txHash trinary.Hash) *CachedTag {
 }
 
 // tag +-0
-func DeleteTag(txTag trinary.Trytes, txHash trinary.Hash) {
-	tagsStorage.Delete(append(trinary.MustTrytesToBytes(trinary.MustPad(txTag, 27))[:17], trinary.MustTrytesToBytes(txHash)[:49]...))
+func DeleteTag(txTag hornet.Hash, txHash hornet.Hash) {
+	tagsStorage.Delete(append(txTag[:17], txHash[:49]...))
 }
 
 func ShutdownTagsStorage() {

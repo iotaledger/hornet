@@ -5,8 +5,6 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -55,11 +53,10 @@ type WorkUnit struct {
 	processingLock syncutils.Mutex
 
 	// data
-	dataLock            syncutils.RWMutex
-	receivedTxBytes     []byte
-	receivedTxHashBytes []byte
-	receivedTxHash      trinary.Hash
-	tx                  *hornet.Transaction
+	dataLock        syncutils.RWMutex
+	receivedTxBytes []byte
+	receivedTxHash  hornet.Hash
+	tx              *hornet.Transaction
 
 	// status
 	stateLock syncutils.RWMutex
@@ -104,12 +101,12 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 // adds a Request for the given peer to this WorkUnit.
 // requestedTxHashBytes can be nil to flag that this request just reflects a receive from the given
 // peer and has no associated request.
-func (wu *WorkUnit) addRequest(p *peer.Peer, requestedTxHashBytes []byte) {
+func (wu *WorkUnit) addRequest(p *peer.Peer, requestedTxHash hornet.Hash) {
 	wu.requestsLock.Lock()
 	defer wu.requestsLock.Unlock()
 	wu.requests = append(wu.requests, &Request{
-		p:                    p,
-		requestedTxHashBytes: requestedTxHashBytes,
+		p:               p,
+		requestedTxHash: requestedTxHash,
 	})
 }
 
@@ -131,7 +128,7 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 
 		// if requested transaction hash is equal to the hash of the received transaction
 		// it means that the given peer is synchronized
-		isPeerSynced := bytes.Equal(wu.receivedTxHashBytes, peerRequest.requestedTxHashBytes)
+		isPeerSynced := bytes.Equal(wu.receivedTxHash, peerRequest.requestedTxHash)
 		request := requestQueue.Next()
 
 		// if the peer is synced  and we have no request ourselves,
@@ -144,14 +141,13 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 
 		// load requested transaction
 		if !isPeerSynced {
-			requestedTxHash, err := trinary.BytesToTrytes(peerRequest.requestedTxHashBytes, 81)
-			if err != nil {
+			if len(peerRequest.requestedTxHash) != 49 {
 				peerRequest.p.Metrics.InvalidRequests.Inc()
 				metrics.SharedServerMetrics.InvalidRequests.Inc()
 				continue
 			}
 
-			cachedTxToSend = tangle.GetCachedTransactionOrNil(requestedTxHash) // tx +1
+			cachedTxToSend = tangle.GetCachedTransactionOrNil(hornet.Hash(peerRequest.requestedTxHash)) // tx +1
 		}
 
 		if cachedTxToSend == nil {
@@ -165,7 +161,7 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 			// legacy messages, we send as our answer to the requested transaction
 			// the genesis transaction, to still reply with an own needed transaction request.
 
-			cachedGenesisTx := tangle.GetCachedTransactionOrNil(consts.NullHashTrytes) // tx +1
+			cachedGenesisTx := tangle.GetCachedTransactionOrNil(hornet.NullHashBytes) // tx +1
 			if cachedGenesisTx == nil {
 				panic("genesis transaction not installed")
 			}
@@ -177,14 +173,9 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 		// send in order to signal that we are synchronized.
 		var ownRequestHash []byte
 		if request == nil {
-			var err error
-			ownRequestHash, err = trinary.TrytesToBytes(cachedTxToSend.GetTransaction().GetHash())
-			if err != nil {
-				cachedTxToSend.Release(true) // tx -1
-				continue
-			}
+			ownRequestHash = cachedTxToSend.GetTransaction().GetTxHash()
 		} else {
-			ownRequestHash = request.HashBytesEncoded
+			ownRequestHash = request.Hash
 		}
 		transactionAndRequestMsg, _ := legacy.NewTransactionAndRequestMessage(cachedTxToSend.GetTransaction().RawBytes, ownRequestHash)
 		cachedTxToSend.Release(true) // tx -1
@@ -224,8 +215,8 @@ func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 		exclude[req.p.ID] = struct{}{}
 	}
 	return &bqueue.Broadcast{
-		ByteEncodedTxData:          wu.receivedTxBytes,
-		ByteEncodedRequestedTxHash: wu.receivedTxHashBytes,
-		ExcludePeers:               exclude,
+		TxData:          wu.receivedTxBytes,
+		RequestedTxHash: wu.receivedTxHash,
+		ExcludePeers:    exclude,
 	}
 }

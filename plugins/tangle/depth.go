@@ -4,23 +4,23 @@ import (
 	"math"
 	"sync"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 // keeps track of whether a tx is below the max depth for the given milestone
 type belowDepthMemoizationCache struct {
 	mu               sync.RWMutex
 	milestone        milestone.Index
-	memoizationCache map[trinary.Hash]bool
+	memoizationCache map[string]bool
 	hits             uint64
 	misses           uint64
 }
 
-func (bdmc *belowDepthMemoizationCache) IsBelowMaxDepth(hash trinary.Hash) *bool {
+func (bdmc *belowDepthMemoizationCache) IsBelowMaxDepth(hash hornet.Hash) *bool {
 	bdmc.mu.RLock()
-	is, has := bdmc.memoizationCache[hash]
+	is, has := bdmc.memoizationCache[string(hash)]
 	if !has {
 		bdmc.misses++
 		bdmc.mu.RUnlock()
@@ -34,15 +34,15 @@ func (bdmc *belowDepthMemoizationCache) IsBelowMaxDepth(hash trinary.Hash) *bool
 func (bdmc *belowDepthMemoizationCache) ResetIfNewerMilestone(currentIndex milestone.Index) {
 	bdmc.mu.Lock()
 	if currentIndex > bdmc.milestone {
-		bdmc.memoizationCache = make(map[trinary.Hash]bool)
+		bdmc.memoizationCache = make(map[string]bool)
 		bdmc.milestone = currentIndex
 	}
 	bdmc.mu.Unlock()
 }
 
-func (bdmc *belowDepthMemoizationCache) Set(hash trinary.Hash, belowMaxDepth bool) {
+func (bdmc *belowDepthMemoizationCache) Set(hash hornet.Hash, belowMaxDepth bool) {
 	bdmc.mu.Lock()
-	bdmc.memoizationCache[hash] = belowMaxDepth
+	bdmc.memoizationCache[string(hash)] = belowMaxDepth
 	bdmc.mu.Unlock()
 }
 
@@ -54,7 +54,7 @@ func (bdmc *belowDepthMemoizationCache) CacheHitRatio() float64 {
 }
 
 // BelowDepthMemoizationCache caches hashes below a max depth
-var BelowDepthMemoizationCache = belowDepthMemoizationCache{memoizationCache: make(map[trinary.Hash]bool)}
+var BelowDepthMemoizationCache = belowDepthMemoizationCache{memoizationCache: make(map[string]bool)}
 
 // IsBelowMaxDepth checks whether the given transaction is below the max depth by first checking whether it is confirmed
 // within the range of allowed milestones. if not, it is checked whether any referenced (directly/indirectly) tx
@@ -70,13 +70,13 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 	}
 
 	// no need to evaluate whether the tx is above/below the max depth if already checked
-	if is := BelowDepthMemoizationCache.IsBelowMaxDepth(cachedTailTx.GetTransaction().GetHash()); is != nil {
+	if is := BelowDepthMemoizationCache.IsBelowMaxDepth(cachedTailTx.GetTransaction().GetTxHash()); is != nil {
 		return *is
 	}
 
 	// if the transaction is unconfirmed
 	txsToTraverse := make(map[string]struct{})
-	txsToTraverse[cachedTailTx.GetTransaction().GetHash()] = struct{}{}
+	txsToTraverse[string(cachedTailTx.GetTransaction().GetTxHash())] = struct{}{}
 	analyzedTxs := make(map[string]struct{})
 
 	for len(txsToTraverse) != 0 {
@@ -86,7 +86,7 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 			// if we analyzed the limit we flag the tx automatically as below the max depth
 			// TODO: check whether a fast tangle would hit this limit naturally
 			if len(analyzedTxs) == belowMaxDepthTransactionLimit {
-				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
+				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetTxHash(), true)
 				return true
 			}
 
@@ -96,32 +96,32 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 			}
 			analyzedTxs[txHash] = struct{}{}
 
-			if tangle.SolidEntryPointsContain(txHash) {
+			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
 				continue
 			}
 
 			// we don't need to analyze further down if we already memoized this particular tx's max depth validity
-			if is := BelowDepthMemoizationCache.IsBelowMaxDepth(txHash); is != nil {
+			if is := BelowDepthMemoizationCache.IsBelowMaxDepth(hornet.Hash(txHash)); is != nil {
 				if *is {
-					BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
+					BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetTxHash(), true)
 					return true
 				}
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 
 			// we should have the transaction because the to be checked tail tx is solid
 			// and we passed the point where we checked whether the tx is a solid entry point
 			if cachedTx == nil {
-				log.Panicf("missing transaction %s for below max depth check", txHash)
+				log.Panicf("missing transaction %s for below max depth check", hornet.Hash(txHash).Trytes())
 			}
 
 			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 
 			// we are below max depth on this transaction if it is confirmed by a milestone below our threshold
 			if confirmed && int(at) < lowerAllowedSnapshotIndex {
-				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetHash(), true)
+				BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetTxHash(), true)
 				cachedTx.Release(forceRelease) // tx -1
 				return true
 			}
@@ -133,8 +133,8 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 			}
 
 			//
-			txsToTraverse[cachedTx.GetTransaction().GetTrunk()] = struct{}{}
-			txsToTraverse[cachedTx.GetTransaction().GetBranch()] = struct{}{}
+			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
+			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
 			cachedTx.Release(forceRelease) // tx -1
 		}
 	}
@@ -142,7 +142,7 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowerAllowedSnapsho
 	// memorize that all traversed txs are not below the max depth
 	// (this also includes the start tail transaction)
 	for analyzedTxHash := range analyzedTxs {
-		BelowDepthMemoizationCache.Set(analyzedTxHash, false)
+		BelowDepthMemoizationCache.Set(hornet.Hash(analyzedTxHash), false)
 	}
 	return false
 }

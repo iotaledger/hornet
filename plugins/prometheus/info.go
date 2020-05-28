@@ -84,7 +84,7 @@ func collectInfo() {
 	if cachedLatestMs != nil {
 		cachedMsTailTx := cachedLatestMs.GetBundle().GetTail()
 		infoMilestone.Reset()
-		infoMilestone.WithLabelValues(cachedMsTailTx.GetTransaction().GetHash(), strconv.Itoa(int(lmi))).Set(1)
+		infoMilestone.WithLabelValues(cachedMsTailTx.GetTransaction().Tx.Hash, strconv.Itoa(int(lmi))).Set(1)
 		cachedMsTailTx.Release()
 		cachedLatestMs.Release()
 	}
@@ -100,7 +100,7 @@ func collectInfo() {
 	if cachedSolidMs != nil {
 		cachedMsTailTx := cachedSolidMs.GetBundle().GetTail()
 		infoSolidMilestone.Reset()
-		infoSolidMilestone.WithLabelValues(cachedMsTailTx.GetTransaction().GetHash(), strconv.Itoa(int(smi))).Set(1)
+		infoSolidMilestone.WithLabelValues(cachedMsTailTx.GetTransaction().Tx.Hash, strconv.Itoa(int(smi))).Set(1)
 		cachedMsTailTx.Release()
 		cachedSolidMs.Release()
 	}

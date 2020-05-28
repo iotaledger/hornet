@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/legacy"
@@ -8,7 +9,7 @@ import (
 )
 
 // SendTransactionAndRequest sends a transaction and request message to the given peer.
-func SendTransactionAndRequest(p *peer.Peer, txData []byte, reqTxHash []byte) {
+func SendTransactionAndRequest(p *peer.Peer, txData []byte, reqTxHash hornet.Hash) {
 	if !p.Protocol.Supports(legacy.FeatureSet) {
 		return
 	}
@@ -36,7 +37,7 @@ func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendTransactionRequest sends a transaction request message to the given peer.
-func SendTransactionRequest(p *peer.Peer, requestedHash []byte) {
+func SendTransactionRequest(p *peer.Peer, requestedHash hornet.Hash) {
 	if !p.Protocol.Supports(sting.FeatureSet) {
 		return
 	}

@@ -8,7 +8,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
@@ -47,7 +49,7 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, tx := range query.Transactions {
 		// get tx data
-		cachedTx := tangle.GetCachedTransactionOrNil(tx) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(tx[:81])[:49])) // tx +1
 
 		if cachedTx == nil {
 			// if tx is unknown, return false

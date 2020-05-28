@@ -73,10 +73,10 @@ func runVisualizer() {
 				&msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:          tx.GetHash(),
+						ID:          tx.Tx.Hash,
 						Tag:         tx.Tx.Tag,
-						TrunkID:     tx.GetTrunk()[:VisualizerIdLength],
-						BranchID:    tx.GetBranch()[:VisualizerIdLength],
+						TrunkID:     tx.Tx.TrunkTransaction[:VisualizerIdLength],
+						BranchID:    tx.Tx.BranchTransaction[:VisualizerIdLength],
 						IsSolid:     metadata.IsSolid(),
 						IsConfirmed: metadata.IsConfirmed(),
 						IsMilestone: false,
@@ -96,7 +96,7 @@ func runVisualizer() {
 				&msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: tx.GetHash()[:VisualizerIdLength],
+						ID: tx.Tx.Hash[:VisualizerIdLength],
 					},
 				}, false)
 		})
@@ -108,12 +108,12 @@ func runVisualizer() {
 				return
 			}
 
-			for _, txHash := range bndl.GetTransactionHashes() {
+			for _, txHash := range bndl.GetTxHashes() {
 				visualizerWorkerPool.TrySubmit(
 					&msg{
 						Type: MsgTypeMilestoneInfo,
 						Data: &metainfo{
-							ID: txHash[:VisualizerIdLength],
+							ID: txHash.Trytes()[:VisualizerIdLength],
 						},
 					}, false)
 			}
@@ -130,7 +130,7 @@ func runVisualizer() {
 				&msg{
 					Type: MsgTypeConfirmedInfo,
 					Data: &confirmationinfo{
-						ID:          bndl.GetTailHash()[:VisualizerIdLength],
+						ID:          bndl.GetTailHash().Trytes()[:VisualizerIdLength],
 						ExcludedIDs: make([]string, 0),
 					},
 				}, false)

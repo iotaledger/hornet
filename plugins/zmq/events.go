@@ -60,7 +60,7 @@ func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash())
+	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash().Trytes())
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -130,7 +130,7 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 func publishLM(bndl *tangle.Bundle) error {
 	messages := []string{
 		strconv.FormatUint(uint64(bndl.GetMilestoneIndex()), 10),
-		bndl.GetMilestoneHash(),
+		bndl.GetMilestoneHash().Trytes(),
 	}
 
 	return publisher.Send(topicLM, messages)
@@ -140,7 +140,7 @@ func publishLM(bndl *tangle.Bundle) error {
 func publishLSM(bndl *tangle.Bundle) error {
 	messages := []string{
 		strconv.FormatUint(uint64(bndl.GetMilestoneIndex()), 10),
-		bndl.GetMilestoneHash(),
+		bndl.GetMilestoneHash().Trytes(),
 	}
 
 	return publisher.Send(topicLSM, messages)

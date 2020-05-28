@@ -2,21 +2,27 @@ package hornet
 
 import (
 	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/iota.go/trinary"
 )
 
 type Tag struct {
 	objectstorage.StorableObjectFlags
-	Tag    []byte
-	TxHash []byte
+	tag    Hash
+	txHash Hash
 }
 
-func (t *Tag) GetTag() trinary.Hash {
-	return trinary.MustBytesToTrytes(t.Tag, 27)
+func NewTag(tag Hash, txHash Hash) *Tag {
+	return &Tag{
+		tag:    tag,
+		txHash: txHash,
+	}
 }
 
-func (t *Tag) GetTransactionHash() trinary.Hash {
-	return trinary.MustBytesToTrytes(t.TxHash, 81)
+func (t *Tag) GetTag() Hash {
+	return t.tag
+}
+
+func (t *Tag) GetTxHash() Hash {
+	return t.txHash
 }
 
 // ObjectStorage interface
@@ -26,7 +32,7 @@ func (t *Tag) Update(_ objectstorage.StorableObject) {
 }
 
 func (t *Tag) ObjectStorageKey() []byte {
-	return append(t.Tag, t.TxHash...)
+	return append(t.tag, t.txHash...)
 }
 
 func (t *Tag) ObjectStorageValue() (_ []byte) {

@@ -167,7 +167,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 // This function does not run within the Processor's worker pool.
 func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransaction(tx, txBytesTruncated)
+	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {
 		return ErrInvalidTimestamp
@@ -175,8 +175,8 @@ func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trin
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
 	proc.Events.BroadcastTransaction.Trigger(&bqueue.Broadcast{
-		ByteEncodedTxData:          txBytesTruncated,
-		ByteEncodedRequestedTxHash: trinary.MustTrytesToBytes(tx.Hash),
+		TxData:          txBytesTruncated,
+		RequestedTxHash: hornetTx.GetTxHash(),
 	})
 	return nil
 }
@@ -227,12 +227,11 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 
 // processes the given transaction request by parsing it and then replying to the peer with it.
 func (proc *Processor) processTransactionRequest(p *peer.Peer, data []byte) {
-	requestedHash, err := trinary.BytesToTrytes(data, 81)
-	if err != nil {
+	if len(data) != 49 {
 		return
 	}
 
-	cachedTx := tangle.GetCachedTransactionOrNil(requestedHash) // tx +1
+	cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(data)) // tx +1
 	if cachedTx == nil {
 		// can't reply if we don't have the requested transaction
 		return
@@ -287,7 +286,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		wu.processingLock.Unlock()
 
 		// emit an event to say that a transaction was fully processed
-		if request := proc.requestQueue.Received(wu.tx.Tx.Hash); request != nil {
+		if request := proc.requestQueue.Received(wu.tx.GetTxHash()); request != nil {
 			proc.Events.TransactionProcessed.Trigger(wu.tx, request, p)
 		}
 
@@ -312,16 +311,16 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		return
 	}
 
-	// mark the transaction as received
-	request := proc.requestQueue.Received(tx.Hash)
-
 	// build Hornet representation of the transaction
-	hornetTx := hornet.NewTransaction(tx, wu.receivedTxBytes)
+	hornetTx := hornet.NewTransactionFromTx(tx, wu.receivedTxBytes)
+
+	// mark the transaction as received
+	request := proc.requestQueue.Received(hornetTx.GetTxHash())
+
 	timestampValid, broadcast := proc.ValidateTimestamp(hornetTx)
 
 	wu.dataLock.Lock()
-	wu.receivedTxHash = tx.Hash
-	wu.receivedTxHashBytes = trinary.MustTrytesToBytes(tx.Hash)[:49]
+	wu.receivedTxHash = hornetTx.GetTxHash()
 	wu.tx = hornetTx
 	wu.dataLock.Unlock()
 
@@ -336,7 +335,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	}
 
 	// check the existence of the transaction before broadcasting it
-	containsTx := tangle.ContainsTransaction(hornetTx.GetHash())
+	containsTx := tangle.ContainsTransaction(hornetTx.GetTxHash())
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, request, p)
 
@@ -366,5 +365,5 @@ func (proc *Processor) ValidateTimestamp(hornetTx *hornet.Transaction) (valid, b
 	}
 
 	// ignore invalid timestamps for solid entry points
-	return tangle.SolidEntryPointsContain(hornetTx.GetHash()), false
+	return tangle.SolidEntryPointsContain(hornetTx.GetTxHash()), false
 }
