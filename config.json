@@ -42,7 +42,8 @@
     }
   },
   "db": {
-    "path": "mainnetdb"
+    "path": "mainnetdb",
+    "debug": false
   },
   "snapshots": {
     "loadType": "local",
@@ -159,7 +160,7 @@
   },
   "prometheus": {
     "bindAddress": "localhost:9311",
-    "goMetrics":  false,
+    "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
   }

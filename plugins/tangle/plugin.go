@@ -95,7 +95,7 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	if tangle.IsDatabaseCorrupted() {
+	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.GetBool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {
