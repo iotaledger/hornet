@@ -103,10 +103,16 @@ func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
 
+	var keysToDelete [][]byte
+
 	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
-		unconfirmedTxStorage.Delete(key)
+		keysToDelete = append(keysToDelete, key)
 		return true
 	}, false, msIndexBytes)
+
+	for _, key := range keysToDelete {
+		unconfirmedTxStorage.Delete(key)
+	}
 }
 
 func ShutdownUnconfirmedTxsStorage() {

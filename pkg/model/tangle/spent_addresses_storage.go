@@ -122,9 +122,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (i
 	var addressesWritten int32
 
 	wasAborted := false
-	spentAddressesStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		cachedObject.Release(true) // spentAddress -1
-
+	spentAddressesStorage.ForEachKeyOnly(func(key []byte) bool {
 		select {
 		case <-abortSignal:
 			wasAborted = true
@@ -134,7 +132,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (i
 
 		addressesWritten++
 		return binary.Write(buf, binary.LittleEndian, key) == nil
-	})
+	}, false)
 
 	if wasAborted {
 		return 0, ErrOperationAborted
