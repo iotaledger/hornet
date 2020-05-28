@@ -48,10 +48,12 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	if !tangle.IsNodeSyncedWithThreshold() {
+		time.Sleep(time.Second)
 		return
 	}
 
 	if peering.Manager().ConnectedPeerCount() == 0 {
+		time.Sleep(time.Second)
 		return
 	}
 
