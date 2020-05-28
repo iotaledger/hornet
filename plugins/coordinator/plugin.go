@@ -106,7 +106,8 @@ func run(plugin *node.Plugin) {
 }
 
 func sendBundle(b coordinator.Bundle) error {
-	for _, tx := range b {
+	for _, t := range b {
+		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(tx)
 		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
 			return err
