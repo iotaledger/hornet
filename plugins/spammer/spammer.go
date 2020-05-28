@@ -73,7 +73,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
-	err = doPow(b, tips[0], tips[1], mwm)
+	err = doPow(b, tips[0], tips[1], mwm, shutdownSignal)
 	if err != nil {
 		return
 	}
@@ -101,7 +101,7 @@ func transactionHash(t *transaction.Transaction) trinary.Hash {
 	return trinary.MustTritsToTrytes(hashTrits)
 }
 
-func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) error {
+func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, shutdownSignal <-chan struct{}) error {
 	var prev trinary.Hash
 
 	for i := len(b) - 1; i >= 0; i-- {
@@ -122,6 +122,12 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) er
 		trytes, err := transaction.TransactionToTrytes(&b[i])
 		if err != nil {
 			return err
+		}
+
+		select {
+		case <-shutdownSignal:
+			return tangle.ErrOperationAborted
+		default:
 		}
 
 		nonce, err := powFunc(trytes, mwm, 1)
