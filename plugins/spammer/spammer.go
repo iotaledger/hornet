@@ -40,13 +40,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 	}
 
-	if err := waitForLowerCPUUsage(shutdownSignal); err != nil {
-		if err != tangle.ErrOperationAborted {
-			log.Warn(err.Error())
-		}
-		return
-	}
-
 	if !tangle.IsNodeSyncedWithThreshold() {
 		time.Sleep(time.Second)
 		return
@@ -54,6 +47,13 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	if peering.Manager().ConnectedPeerCount() == 0 {
 		time.Sleep(time.Second)
+		return
+	}
+
+	if err := waitForLowerCPUUsage(shutdownSignal); err != nil {
+		if err != tangle.ErrOperationAborted {
+			log.Warn(err.Error())
+		}
 		return
 	}
 
