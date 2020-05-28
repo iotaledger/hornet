@@ -107,7 +107,12 @@ func run(plugin *node.Plugin) {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), updateSyncedAtStartup)
+	// set latest known milestone from database
+	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
+	if latestMilestoneFromDatabase < tangle.GetSolidMilestoneIndex() {
+		latestMilestoneFromDatabase = tangle.GetSolidMilestoneIndex()
+	}
+	tangle.SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
 
 	runTangleProcessor(plugin)
 
