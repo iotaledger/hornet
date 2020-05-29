@@ -30,6 +30,12 @@ const (
 	CfgNetAutopeeringSeed = "network.autopeering.seed"
 	// whether the node should act as an autopeering entry node
 	CfgNetAutopeeringRunAsEntryNode = "network.autopeering.runAsEntryNode"
+	// the number of inbound autopeers
+	CfgNetAutopeeringInboundPeers = "network.autopeering.inboundPeers"
+	// the number of outbound autopeers
+	CfgNetAutopeeringOutboundPeers = "network.autopeering.outboundPeers"
+	// lifetime (in minutes) of the private and public local salt
+	CfgNetAutopeeringSaltLifetime = "network.autopeering.saltLifetime"
 )
 
 func init() {
@@ -52,4 +58,7 @@ func init() {
 	NodeConfig.SetDefault(CfgNetAutopeeringBindAddr, "0.0.0.0:14626")
 	NodeConfig.SetDefault(CfgNetAutopeeringSeed, nil)
 	NodeConfig.SetDefault(CfgNetAutopeeringRunAsEntryNode, false)
+	NodeConfig.SetDefault(CfgNetAutopeeringInboundPeers, 2)
+	NodeConfig.SetDefault(CfgNetAutopeeringOutboundPeers, 2)
+	NodeConfig.SetDefault(CfgNetAutopeeringSaltLifetime, 30)
 }
