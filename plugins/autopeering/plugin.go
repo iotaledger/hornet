@@ -14,17 +14,17 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/autopeering/services"
+	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {
-	// 2 inbound/outbound
 	selection.SetParameters(selection.Parameters{
-		InboundNeighborSize:        2,
-		OutboundNeighborSize:       2,
-		SaltLifetime:               30 * time.Minute,
+		InboundNeighborSize:        config.NodeConfig.GetInt(config.CfgNetAutopeeringInboundPeers),
+		OutboundNeighborSize:       config.NodeConfig.GetInt(config.CfgNetAutopeeringOutboundPeers),
+		SaltLifetime:               time.Duration(config.NodeConfig.GetInt(config.CfgNetAutopeeringSaltLifetime)) * time.Minute,
 		OutboundUpdateInterval:     30 * time.Second,
 		FullOutboundUpdateInterval: 30 * time.Second,
 	})
