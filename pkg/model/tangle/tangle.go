@@ -68,11 +68,24 @@ func LoadInitialValuesFromDatabase() {
 }
 
 func CloseDatabases() error {
+
+	if err := tangleDb.Sync(); err != nil {
+		return err
+	}
+
 	if err := tangleDb.Close(); err != nil {
 		return err
 	}
 
+	if err := snapshotDb.Sync(); err != nil {
+		return err
+	}
+
 	if err := snapshotDb.Close(); err != nil {
+		return err
+	}
+
+	if err := spentDb.Sync(); err != nil {
 		return err
 	}
 
