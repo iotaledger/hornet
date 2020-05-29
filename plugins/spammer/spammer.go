@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/tipselection"
@@ -25,6 +26,8 @@ var (
 	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = atomic.NewInt32(0)
+	seed             = utils.RandomTrytesInsecure(81)
+	addrIndex        = atomic.NewInt32(0)
 )
 
 func doSpam(shutdownSignal <-chan struct{}) {
@@ -37,17 +40,26 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 	}
 
-	if err := waitForLowerCPUUsage(); err != nil {
-		log.Warn(err.Error())
-		return
-	}
-
 	if !tangle.IsNodeSyncedWithThreshold() {
+		time.Sleep(time.Second)
 		return
 	}
 
 	if peering.Manager().ConnectedPeerCount() == 0 {
+		time.Sleep(time.Second)
 		return
+	}
+
+	if err := waitForLowerCPUUsage(shutdownSignal); err != nil {
+		if err != tangle.ErrOperationAborted {
+			log.Warn(err.Error())
+		}
+		return
+	}
+
+	if spammerStartTime.IsZero() {
+		// Set the start time for the metrics
+		spammerStartTime = time.Now()
 	}
 
 	timeStart := time.Now()
@@ -56,25 +68,24 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 	durationGTTA := time.Since(timeStart)
-	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
-	txCountValue := int(txCount.Inc())
+	txCountValue := int(txCount.Add(int32(bundleSize)))
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
 
-	b, err := createBundle(address, message, tagSubstring, txCountValue, infoMsg)
+	b, err := createBundle(txAddress, message, tagSubstring, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
 		return
 	}
 
-	err = doPow(b, tips[0], tips[1], mwm)
+	err = doPow(b, tips[0], tips[1], mwm, shutdownSignal)
 	if err != nil {
 		return
 	}
 
 	durationPOW := time.Since(timeStart.Add(durationGTTA))
-	durPOW := durationPOW.Truncate(time.Millisecond)
 
-	for _, tx := range b {
+	for _, t := range b {
+		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(&tx)
 		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
 			return
@@ -82,8 +93,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
 
-	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-	log.Infof("Sent Spam Transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCountValue, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
+	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
 }
 
 // transactionHash makes a transaction hash from the given transaction.
@@ -93,7 +103,7 @@ func transactionHash(t *transaction.Transaction) trinary.Hash {
 	return trinary.MustTritsToTrytes(hashTrits)
 }
 
-func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) error {
+func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, shutdownSignal <-chan struct{}) error {
 	var prev trinary.Hash
 
 	for i := len(b) - 1; i >= 0; i-- {
@@ -114,6 +124,12 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) er
 		trytes, err := transaction.TransactionToTrytes(&b[i])
 		if err != nil {
 			return err
+		}
+
+		select {
+		case <-shutdownSignal:
+			return tangle.ErrOperationAborted
+		default:
 		}
 
 		nonce, err := powFunc(trytes, mwm, 1)

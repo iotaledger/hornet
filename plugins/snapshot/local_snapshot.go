@@ -464,14 +464,10 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 			return errors.Wrap(ErrCritical, err.Error())
 		}
 
-		tangle.SetSnapshotInfo(&tangle.SnapshotInfo{
-			CoordinatorAddress: snapshotInfo.CoordinatorAddress,
-			Hash:               cachedTargetMs.GetBundle().GetMilestoneHash(),
-			SnapshotIndex:      targetIndex,
-			PruningIndex:       snapshotInfo.PruningIndex,
-			Timestamp:          cachedTargetMsTail.GetTransaction().GetTimestamp(),
-			Metadata:           snapshotInfo.Metadata,
-		})
+		snapshotInfo.Hash = cachedTargetMs.GetBundle().GetMilestoneHash()
+		snapshotInfo.SnapshotIndex = targetIndex
+		snapshotInfo.Timestamp = cachedTargetMsTail.GetTransaction().GetTimestamp()
+		tangle.SetSnapshotInfo(snapshotInfo)
 
 		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}

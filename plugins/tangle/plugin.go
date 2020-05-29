@@ -95,7 +95,7 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	if tangle.IsDatabaseCorrupted() {
+	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.GetBool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {
@@ -107,7 +107,12 @@ func run(plugin *node.Plugin) {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	tangle.SetLatestMilestoneIndex(tangle.GetSolidMilestoneIndex(), updateSyncedAtStartup)
+	// set latest known milestone from database
+	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
+	if latestMilestoneFromDatabase < tangle.GetSolidMilestoneIndex() {
+		latestMilestoneFromDatabase = tangle.GetSolidMilestoneIndex()
+	}
+	tangle.SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
 
 	runTangleProcessor(plugin)
 

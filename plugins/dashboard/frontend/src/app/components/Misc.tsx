@@ -177,6 +177,34 @@ export class Misc extends React.Component<Props, any> {
                         </Card>
                     </Col>
                 </Row>
+                <If condition={this.props.nodeStore.spamMetricsSeries.labels.length > 0}>
+                    <Row className={"mb-3"}>
+                        <Col>
+                            <Card>
+                                <Card.Body>
+                                    <Card.Title>Spammer Metrics</Card.Title>
+                                    <small>
+                                        GTTA: {this.props.nodeStore.last_spam_metric.gtta.toFixed(3)}s,
+                                        PoW: {this.props.nodeStore.last_spam_metric.pow.toFixed(3)}s,
+                                        Total: {(this.props.nodeStore.last_spam_metric.gtta + this.props.nodeStore.last_spam_metric.pow).toFixed(3)}s
+                                    </small>
+                                    <div className={style.hornetChart}>
+                                        <Line data={this.props.nodeStore.spamMetricsSeries}
+                                            options={lineChartOptions}/>
+                                    </div>
+                                    <small>
+                                        New TX: {this.props.nodeStore.last_avg_spam_metric.new.toFixed(3)},
+                                        Avg. TPS: {this.props.nodeStore.last_avg_spam_metric.avg.toFixed(3)}
+                                    </small>
+                                    <div className={style.hornetChart}>
+                                        <Line data={this.props.nodeStore.avgSpamMetricsSeries}
+                                            options={lineChartOptions}/>
+                                    </div>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
+                </If>
                 <Row className={"mb-3"}>
                     <Col>
                         <Card>

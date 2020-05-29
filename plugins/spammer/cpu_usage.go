@@ -8,7 +8,10 @@ import (
 
 	"github.com/shirou/gopsutil/cpu"
 
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
+
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 var (
@@ -26,6 +29,10 @@ var (
 func cpuUsageUpdater() {
 	go func() {
 		for {
+			if daemon.IsStopped() {
+				return
+			}
+
 			cpuUsagePSutil, err := cpu.Percent(cpuUsageSampleTime, false)
 			cpuUsageLock.Lock()
 			if err != nil {
@@ -59,7 +66,7 @@ func cpuUsageGuessWithAdditionalWorker() (float64, error) {
 }
 
 // waitForLowerCPUUsage waits until the cpu usage drops below cpuMaxUsage.
-func waitForLowerCPUUsage() error {
+func waitForLowerCPUUsage(shutdownSignal <-chan struct{}) error {
 	if cpuMaxUsage == 0.0 {
 		return nil
 	}
@@ -72,6 +79,12 @@ func waitForLowerCPUUsage() error {
 
 		if cpuUsage < cpuMaxUsage {
 			break
+		}
+
+		select {
+		case <-shutdownSignal:
+			return tangle.ErrOperationAborted
+		default:
 		}
 
 		// sleep a random time between cpuUsageSleepTime and 2*cpuUsageSleepTime

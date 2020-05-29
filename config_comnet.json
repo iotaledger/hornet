@@ -43,7 +43,7 @@
   },
   "db": {
     "path": "comnetdb",
-    "debugLog": false
+    "debug": false
   },
   "snapshots": {
     "loadType": "local",
@@ -117,8 +117,10 @@
     "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
-    "cpuMaxUsage": 0.5,
+    "cpuMaxUsage": 0.8,
     "tpsRateLimit": 0.0,
+    "bundleSize": 1,
+    "valueSpam": false,
     "workers": 0
   },
   "graph": {
@@ -128,7 +130,9 @@
       "uri": ""
     },
     "bindAddress": "localhost:8083",
-    "networkName": "meets HORNET"
+    "networkName": "meets HORNET comnet",
+    "explorerTxLink": "http://localhost:8081/explorer/tx/",
+    "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
   },
   "monitor": {
     "tangleMonitorPath": "tanglemonitor/frontend",

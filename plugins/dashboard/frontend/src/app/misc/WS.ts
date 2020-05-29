@@ -12,7 +12,9 @@ export enum WSMsgType {
     MilestoneInfo,
     TipInfo,
     DBSizeMetric,
-    DBCleanup
+    DBCleanup,
+    SpamMetrics,
+    AvgSpamMetrics
 }
 
 export interface WSMessage {

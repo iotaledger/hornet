@@ -227,7 +227,7 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                 tx.next !== ''
                                                 &&
                                                 <Link className={style.prevNextButton} to={`/explorer/tx/${tx.next}`}>
-                                                    {' '} 
+                                                    {'> '}
                                                 </Link>
                                             }
                                             {
