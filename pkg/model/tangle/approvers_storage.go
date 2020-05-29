@@ -121,11 +121,16 @@ func DeleteApprovers(transactionHash trinary.Hash) {
 
 	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
 
-	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
-		approversStorage.Delete(key)
-		cachedObject.Release(true)
+	var keysToDelete [][]byte
+
+	approversStorage.ForEachKeyOnly(func(key []byte) bool {
+		keysToDelete = append(keysToDelete, key)
 		return true
-	}, txHash)
+	}, false, txHash)
+
+	for _, key := range keysToDelete {
+		approversStorage.Delete(key)
+	}
 }
 
 func ShutdownApproversStorage() {
