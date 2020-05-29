@@ -302,6 +302,18 @@ class DbCleanupEvent {
     end: number;
 }
 
+class SpamMetric {
+    gtta: number;
+    pow: number;
+    ts: string;
+}
+
+class AvgSpamMetric {
+    new: number;
+    avg: number;
+    ts: string;
+}
+
 function series(name: string, color: string, bgColor: string) {
     return {
         label: name, data: [],
@@ -328,12 +340,16 @@ export class NodeStore {
     @observable collected_server_metrics: Array<ServerMetrics> = [];
     @observable collected_mem_metrics: Array<MemoryMetrics> = [];
     @observable collected_cache_metrics: Array<CacheMetrics> = [];
+    @observable collected_spam_metrics: Array<SpamMetric> = [];
+    @observable collected_avg_spam_metrics: Array<AvgSpamMetric> = [];
     @observable neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
     @observable last_confirmed_ms_metric: ConfirmedMilestoneMetric = new ConfirmedMilestoneMetric();
     @observable collected_confirmed_ms_metrics: Array<ConfirmedMilestoneMetric> = [];
     @observable last_dbsize_metric: DbSizeMetric = new DbSizeMetric();
     @observable collected_dbsize_metrics: Array<DbSizeMetric> = [];
     @observable last_dbcleanup_event: DbCleanupEvent = new DbCleanupEvent();
+    @observable last_spam_metric: SpamMetric = new SpamMetric();
+    @observable last_avg_spam_metric: AvgSpamMetric = new AvgSpamMetric();
     @observable collecting: boolean = true;
 
     constructor() {
@@ -348,6 +364,8 @@ export class NodeStore {
         registerHandler(WSMsgType.ConfirmedMsMetrics, this.updateConfirmedMilestoneMetrics);
         registerHandler(WSMsgType.DBSizeMetric, this.updateDatabaseSizeMetrics);
         registerHandler(WSMsgType.DBCleanup, this.updateDatabaseCleanupStatus);
+        registerHandler(WSMsgType.SpamMetrics, this.updateSpamMetrics);
+        registerHandler(WSMsgType.AvgSpamMetrics, this.updateAvgSpamMetrics);
         this.updateCollecting(true);
     }
 
@@ -359,6 +377,8 @@ export class NodeStore {
         unregisterHandler(WSMsgType.ConfirmedMsMetrics);
         unregisterHandler(WSMsgType.DBSizeMetric);
         unregisterHandler(WSMsgType.DBCleanup);
+        unregisterHandler(WSMsgType.SpamMetrics);
+        unregisterHandler(WSMsgType.AvgSpamMetrics);
         this.updateCollecting(false);
     }
 
@@ -377,12 +397,16 @@ export class NodeStore {
         this.collected_server_metrics = [];
         this.collected_mem_metrics = [];
         this.collected_cache_metrics = [];
+        this.collected_spam_metrics = [];
+        this.collected_avg_spam_metrics = [];
         this.neighbor_metrics = new ObservableMap<string, NeighborMetrics>();
         this.last_confirmed_ms_metric = new ConfirmedMilestoneMetric();
         this.collected_confirmed_ms_metrics = [];
         this.last_dbsize_metric = new DbSizeMetric();
         this.collected_dbsize_metrics = [];
         this.last_dbcleanup_event = new DbCleanupEvent();
+        this.last_spam_metric = new SpamMetric();
+        this.last_avg_spam_metric = new AvgSpamMetric();
     }
 
     connect() {
@@ -560,6 +584,26 @@ export class NodeStore {
         this.last_dbcleanup_event = dbCleanup;
     }
 
+    @action
+    updateSpamMetrics = (spamMetric: SpamMetric) => {
+        spamMetric.ts = dateformat(Date.now(), "HH:MM:ss");
+        this.last_spam_metric = spamMetric;
+        if (this.collected_spam_metrics.length > 500) {
+            this.collected_spam_metrics = this.collected_spam_metrics.slice(-500);
+        }
+        this.collected_spam_metrics.push(spamMetric);
+    };
+
+    @action
+    updateAvgSpamMetrics = (avgSpamMetric: AvgSpamMetric) => {
+        avgSpamMetric.ts = dateformat(Date.now(), "HH:MM:ss");
+        this.last_avg_spam_metric = avgSpamMetric;
+        if (this.collected_avg_spam_metrics.length > 100) {
+            this.collected_avg_spam_metrics = this.collected_avg_spam_metrics.slice(-100);
+        }
+        this.collected_avg_spam_metrics.push(avgSpamMetric);
+    };
+
     @computed
     get tipSelSeries() {
         let stepsTaken = Object.assign({}, chartSeriesOpts,
@@ -611,6 +655,57 @@ export class NodeStore {
         return {
             labels: labels,
             datasets: [belowMaxDepthCacheHit],
+        };
+    }
+
+
+    @computed
+    get spamMetricsSeries() {
+        let durationGTTA = Object.assign({}, chartSeriesOpts,
+            series("GTTA", 'rgba(14, 230, 183, 1)', 'rgba(14, 230, 183,0.4)')
+        );
+        let durationPoW = Object.assign({}, chartSeriesOpts,
+            series("PoW", 'rgba(14, 230, 100,1)', 'rgba(14, 230, 100,0.4)')
+        );
+        let durationTotal = Object.assign({}, chartSeriesOpts,
+            series("Total", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_spam_metrics.length; i++) {
+            let metric = this.collected_spam_metrics[i];
+            labels.push(metric.ts);
+            durationGTTA.data.push(metric.gtta);
+            durationPoW.data.push(metric.pow);
+            durationTotal.data.push(metric.gtta+metric.pow);
+        }
+
+        return {
+            labels: labels,
+            datasets: [durationGTTA, durationPoW, durationTotal],
+        };
+    }
+
+    @computed
+    get avgSpamMetricsSeries() {
+        let newSpam = Object.assign({}, chartSeriesOpts,
+            series("New TX", 'rgba(230, 14, 147,1)', 'rgba(230, 14, 147,0.4)')
+        );
+        let avgSpam = Object.assign({}, chartSeriesOpts,
+            series("Avg. TPS", 'rgba(230, 165, 14,1)', 'rgba(230, 165, 14,0.4)')
+        );
+
+        let labels = [];
+        for (let i = 0; i < this.collected_avg_spam_metrics.length; i++) {
+            let metric = this.collected_avg_spam_metrics[i];
+            labels.push(metric.ts);
+            newSpam.data.push(metric.new);
+            avgSpam.data.push(metric.avg);
+        }
+
+        return {
+            labels: labels,
+            datasets: [newSpam, avgSpam],
         };
     }
 

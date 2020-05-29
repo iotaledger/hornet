@@ -57,13 +57,17 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
+	if spammerStartTime.IsZero() {
+		// Set the start time for the metrics
+		spammerStartTime = time.Now()
+	}
+
 	timeStart := time.Now()
 	tips, _, err := tipselection.SelectTips(depth, nil)
 	if err != nil {
 		return
 	}
 	durationGTTA := time.Since(timeStart)
-	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
 	txCountValue := int(txCount.Add(int32(bundleSize)))
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
@@ -79,7 +83,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	durationPOW := time.Since(timeStart.Add(durationGTTA))
-	durPOW := durationPOW.Truncate(time.Millisecond)
 
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
@@ -90,8 +93,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
 
-	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-	log.Infof("Sent Spam Transaction: #%d, TxHash: %v, GTTA: %v, PoW: %v, Total: %v", txCountValue, b[0].Hash, durGTTA.Truncate(time.Millisecond), durPOW.Truncate(time.Millisecond), durTotal.Truncate(time.Millisecond))
+	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
 }
 
 // transactionHash makes a transaction hash from the given transaction.

@@ -14,6 +14,7 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -32,6 +33,9 @@ var (
 	bundleSize         int
 	valueSpam          bool
 	spammerWorkerCount int
+	spammerAvgHeap     *utils.TimeHeap
+	spammerStartTime   time.Time
+	lastSentSpamTxsCnt uint32
 )
 
 func configure(plugin *node.Plugin) {
@@ -47,6 +51,8 @@ func configure(plugin *node.Plugin) {
 	bundleSize = config.NodeConfig.GetInt(config.CfgSpammerBundleSize)
 	valueSpam = config.NodeConfig.GetBool(config.CfgSpammerValueSpam)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
+	spammerAvgHeap = utils.NewTimeHeap()
+
 	if bundleSize < 1 {
 		bundleSize = 1
 	}
@@ -103,6 +109,11 @@ func configure(plugin *node.Plugin) {
 
 func run(_ *node.Plugin) {
 
+	// create a background worker that "measures" the spammer averages values every second
+	daemon.BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
+		timeutil.Ticker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
+	}, shutdown.PrioritySpammer)
+
 	spammerCnt := atomic.NewInt32(0)
 
 	for i := 0; i < spammerWorkerCount; i++ {
@@ -122,4 +133,30 @@ func run(_ *node.Plugin) {
 			}
 		}, shutdown.PrioritySpammer)
 	}
+}
+
+// measures the spammer metrics
+func measureSpammerMetrics() {
+	if spammerStartTime.IsZero() {
+		// Spammer not started yet
+		return
+	}
+
+	sentSpamTxsCnt := metrics.SharedServerMetrics.SentSpamTransactions.Load()
+	new := utils.GetUint32Diff(sentSpamTxsCnt, lastSentSpamTxsCnt)
+	lastSentSpamTxsCnt = sentSpamTxsCnt
+
+	spammerAvgHeap.Add(uint64(new))
+
+	timeDiff := time.Since(spammerStartTime)
+	if timeDiff > 60*time.Second {
+		// Only filter over one minute maximum
+		timeDiff = 60 * time.Second
+	}
+
+	// trigger events for outside listeners
+	Events.AvgSpamMetricsUpdated.Trigger(&AvgSpamMetrics{
+		New:              new,
+		AveragePerSecond: spammerAvgHeap.GetAveragePerSecond(timeDiff),
+	})
 }

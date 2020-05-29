@@ -87,6 +87,7 @@ func configure(plugin *node.Plugin) {
 	configureLiveFeed()
 	configureVisualizer()
 	configureTipSelMetric()
+	configureSpammerMetric()
 }
 
 func run(_ *node.Plugin) {
@@ -166,6 +167,8 @@ func run(_ *node.Plugin) {
 	runTipSelMetricWorker()
 	// run the database size collector
 	runDatabaseSizeCollector()
+	// run the spammer feed
+	runSpammerMetricWorker()
 }
 
 // tx +1
@@ -209,6 +212,10 @@ const (
 	MsgTypeDatabaseSizeMetric
 	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
 	MsgTypeDatabaseCleanupEvent
+	// MsgTypeSpamMetrics is the type of the SpamMetric message.
+	MsgTypeSpamMetrics
+	// MsgTypeAvgSpamMetrics is the type of the AvgSpamMetric message.
+	MsgTypeAvgSpamMetrics
 )
 
 type msg struct {
