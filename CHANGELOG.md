@@ -2,6 +2,64 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc12] - 29.05.2020
+
+### Added
+
+    - Prometheus exporter plugin
+    - fsync calls at CloseDatabases
+    - Dashboard:
+      - Average metrics to confirmed milestones
+      - Spam metrics
+    - Value spam to spammer plugin
+
+### Changed
+
+    - Comnet coordinator address
+    - Set latest known milestone at startup
+    - Abort ongoing PoW in spammer on shutdown
+
+### Fixed
+
+    - Coordinator plugin milestone interval
+    - Possible deadlock in pruning
+    - Spammer:
+      - Shutdown lock
+      - High cpu usage if no limits given
+      - High cpu usage if not synced but cpu below cpuMaxUsage
+    - Pointer bug in coordinator and spammer
+    - Wrong snapshot info EntryPointIndex
+
+### Config file changes
+
+Added options:
+
+`config.json` and `config_comnet.json`
+
+```diff
+ "spammer": {
++   "bundleSize": 1,
++   "valueSpam": false
+ }
++"prometheus": {
++   "bindAddress": "localhost:9311",
++   "goMetrics": false,
++   "processMetrics": false,
++   "promhttpMetrics": false
+  }
+```
+
+Changed options:
+
+`config_comnet.json`
+
+```diff
+ "coordinator": {
+-  "address": "ZNCCPOTBCDZXCBQYBWUYYFO9PLRHNAROWOS9KGMYWNVIXWGYGUSJBZUTUQBNQRADHPUEONZZTYGVMSRZD",
++  "address": "BODHQPXSMDNHBWVZHVATBAHQGZSKWQLXYZNOXMKNUCOZCPTWHHNFBBHFOEGPTWGGUVDJPZAYZIMXIIGVD",
+ }
+```
+
 ## [0.4.0-rc11] - 26.05.2020
 
 ### Fixed
