@@ -3,6 +3,9 @@ set -e
 
 case "$1" in
 configure)
+
+	chown -R hornet:hornet /var/lib/hornet
+
 	if type systemctl >/dev/null 2>/dev/null; then
 		systemctl daemon-reload
 

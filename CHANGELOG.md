@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-rc13] - 01.06.2020
+
+### Changed
+
+    - Removed unnecessary trinary <--> binary conversions (speed improvement)
+
+### Fixed
+
+    - File ownership (APT install)
+
 ## [0.4.0-rc12] - 29.05.2020
 
 ### Added

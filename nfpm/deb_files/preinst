@@ -9,7 +9,6 @@ install)
         useradd --no-create-home --system hornet >/dev/null
     fi
     mkdir -p /var/lib/hornet
-    chown -R hornet:hornet /var/lib/hornet
     ;;
 
 upgrade)
