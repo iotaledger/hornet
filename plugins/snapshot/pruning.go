@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/database"
@@ -24,9 +24,8 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 	txsToCheckMap := make(map[string]struct{})
 
 	// Check if tx is still unconfirmed
-	for _, txHashBytes := range tangle.GetUnconfirmedTxHashBytes(targetIndex, true) {
-		txHash := trinary.MustBytesToTrytes(txHashBytes, 81)
-		if _, exists := txsToCheckMap[txHash]; exists {
+	for _, txHash := range tangle.GetUnconfirmedTxHashes(targetIndex, true) {
+		if _, exists := txsToCheckMap[string(txHash)]; exists {
 			continue
 		}
 
@@ -44,7 +43,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 
 		// do not force release, since it is loaded again
 		cachedTx.Release() // tx -1
-		txsToCheckMap[txHash] = struct{}{}
+		txsToCheckMap[string(txHash)] = struct{}{}
 	}
 
 	txCount := pruneTransactions(txsToCheckMap)
@@ -71,13 +70,13 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	for txHashToCheck := range txsToCheckMap {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(txHashToCheck) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToCheck)) // tx +1
 		if cachedTx == nil {
 			log.Warnf("pruneTransactions: Transaction not found: %s", txHashToCheck)
 			continue
 		}
 
-		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTx.GetTransaction().Tx) {
+		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTx.GetTransaction()) {
 			txsToDeleteMap[txToRemove] = struct{}{}
 		}
 		// since it gets loaded below again it doesn't make sense to force release here
@@ -91,7 +90,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 			continue
 		}
 
-		cachedTx := tangle.GetCachedTransactionOrNil(txHashToDelete) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToDelete)) // tx +1
 		if cachedTx == nil {
 			continue
 		}
@@ -100,13 +99,13 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 		cachedTx.Release(true) // tx -1
 
 		// Delete the reference in the approvees
-		tangle.DeleteApprover(tx.GetTrunk(), txHashToDelete)
-		tangle.DeleteApprover(tx.GetBranch(), txHashToDelete)
+		tangle.DeleteApprover(tx.GetTrunkHash(), cachedTx.GetTransaction().GetTxHash())
+		tangle.DeleteApprover(tx.GetBranchHash(), cachedTx.GetTransaction().GetTxHash())
 
-		tangle.DeleteTag(tx.Tx.Tag, txHashToDelete)
-		tangle.DeleteAddress(tx.Tx.Address, txHashToDelete)
-		tangle.DeleteApprovers(txHashToDelete)
-		tangle.DeleteTransaction(txHashToDelete)
+		tangle.DeleteTag(cachedTx.GetTransaction().GetTag(), cachedTx.GetTransaction().GetTxHash())
+		tangle.DeleteAddress(cachedTx.GetTransaction().GetAddress(), cachedTx.GetTransaction().GetTxHash())
+		tangle.DeleteApprovers(cachedTx.GetTransaction().GetTxHash())
+		tangle.DeleteTransaction(cachedTx.GetTransaction().GetTxHash())
 	}
 
 	return len(txsToDeleteMap)
@@ -157,7 +156,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 	for solidEntryPoint, index := range newSolidEntryPoints {
-		tangle.SolidEntryPointsAdd(solidEntryPoint, index)
+		tangle.SolidEntryPointsAdd(hornet.Hash(solidEntryPoint), index)
 	}
 	tangle.StoreSolidEntryPoints()
 	tangle.WriteUnlockSolidEntryPoints()
@@ -210,7 +209,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		txsToCheckMap := make(map[string]struct{})
 		for _, approvee := range approvees {
-			txsToCheckMap[approvee] = struct{}{}
+			txsToCheckMap[string(approvee)] = struct{}{}
 		}
 
 		txCount += pruneTransactions(txsToCheckMap)

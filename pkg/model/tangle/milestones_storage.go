@@ -7,8 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/iotaledger/iota.go/trinary"
-
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -59,7 +58,7 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	Index milestone.Index
-	Hash  trinary.Hash
+	Hash  hornet.Hash
 }
 
 // ObjectStorage interface
@@ -76,14 +75,12 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
 		49 byte transaction hash
 	*/
-	value := trinary.MustTrytesToBytes(ms.Hash)[:49]
-
-	return value
+	return ms.Hash
 }
 
 func (ms *Milestone) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
 
-	ms.Hash = trinary.MustBytesToTrytes(data, 81)
+	ms.Hash = hornet.Hash(data[:49])
 	return 49, nil
 }
 
@@ -141,11 +138,11 @@ func ForEachMilestone(consumer MilestoneConsumer) {
 }
 
 // ForEachMilestoneIndex loops though all milestones in the persistence layer.
-func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
+func ForEachMilestoneIndex(consumer MilestoneIndexConsumer) {
 	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		consumer(milestoneIndexFromDatabaseKey(key))
 		return true
-	}, skipCache)
+	}, false)
 }
 
 // milestone +1

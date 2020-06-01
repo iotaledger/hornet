@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -55,11 +56,11 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	// compute the range in which we allow approvers to reference transactions in
 	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
 
-	diff := map[trinary.Hash]int64{}
-	approved := map[trinary.Hash]struct{}{}
+	diff := map[string]int64{}
+	approved := map[string]struct{}{}
 	solidEntryPoints := tangle.GetSolidEntryPointsHashes()
 	for _, selectEntryPoint := range solidEntryPoints {
-		approved[selectEntryPoint] = struct{}{}
+		approved[string(selectEntryPoint)] = struct{}{}
 	}
 
 	// it is safe to cache the below max depth flag of transactions as long as the same milestone is solid.
@@ -67,7 +68,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, t := range query.Tails {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(t) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(t)[:49])) // tx +1
 
 		// Check if TX is known
 		if cachedTx == nil {
@@ -92,8 +93,8 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetHash()) // bundle +1
-		cachedTx.Release(true)                                                         // tx -1
+		cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash()) // bundle +1
+		cachedTx.Release(true)                                                           // tx -1
 
 		if cachedBndl == nil {
 			info := fmt.Sprint("tails are not consistent (bundle not found): ", t)
@@ -109,7 +110,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// skip validating the tx if we already approved it
-		if _, alreadyApproved := approved[cachedBndl.GetBundle().GetTailHash()]; alreadyApproved {
+		if _, alreadyApproved := approved[string(cachedBndl.GetBundle().GetTailHash())]; alreadyApproved {
 			cachedBndl.Release(true) // bundle -1
 			continue
 		}

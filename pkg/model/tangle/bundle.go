@@ -1,16 +1,19 @@
 package tangle
 
 import (
+	"bytes"
 	"log"
+	"sync"
 
 	iotagobundle "github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 func BundleCaller(handler interface{}, params ...interface{}) {
@@ -32,39 +35,41 @@ type Bundle struct {
 	syncutils.RWMutex
 
 	// Key
-	tailTx trinary.Hash
+	tailTx hornet.Hash
 
 	// Value
 	metadata      bitmask.BitMask
 	lastIndex     uint64
-	hash          trinary.Hash
-	headTx        trinary.Hash
-	txs           map[trinary.Hash]struct{}
-	ledgerChanges map[trinary.Trytes]int64
+	hash          hornet.Hash
+	headTx        hornet.Hash
+	txs           map[string]struct{}
+	ledgerChanges map[string]int64
+
+	milestoneIndexOnce sync.Once
+	milestoneIndex     milestone.Index
 }
 
-func (bundle *Bundle) GetHash() trinary.Hash {
+func (bundle *Bundle) GetBundleHash() hornet.Hash {
 	return bundle.hash
 }
 
-func (bundle *Bundle) GetTrunk(forceRelease bool) trinary.Hash {
-	cachedHeadTx := bundle.getHead()         // tx +1
+func (bundle *Bundle) GetTrunk(forceRelease bool) hornet.Hash {
+	cachedHeadTx := bundle.GetHead()         // tx +1
 	defer cachedHeadTx.Release(forceRelease) // tx -1
-	return cachedHeadTx.GetTransaction().GetTrunk()
+	return cachedHeadTx.GetTransaction().GetTrunkHash()
 }
 
-func (bundle *Bundle) GetBranch(forceRelease bool) trinary.Hash {
-	cachedHeadTx := bundle.getHead()         // tx +1
+func (bundle *Bundle) GetBranch(forceRelease bool) hornet.Hash {
+	cachedHeadTx := bundle.GetHead()         // tx +1
 	defer cachedHeadTx.Release(forceRelease) // tx -1
-	return cachedHeadTx.GetTransaction().GetBranch()
+	return cachedHeadTx.GetTransaction().GetBranchHash()
 }
 
-func (bundle *Bundle) GetLedgerChanges() map[trinary.Trytes]int64 {
+func (bundle *Bundle) GetLedgerChanges() map[string]int64 {
 	return bundle.ledgerChanges
 }
 
-func (bundle *Bundle) getHead() *CachedTransaction {
-
+func (bundle *Bundle) GetHead() *CachedTransaction {
 	if len(bundle.headTx) == 0 {
 		panic("head hash can never be empty")
 	}
@@ -72,11 +77,7 @@ func (bundle *Bundle) getHead() *CachedTransaction {
 	return loadBundleTxIfExistsOrPanic(bundle.headTx, bundle.hash) // tx +1
 }
 
-func (bundle *Bundle) GetHead() *CachedTransaction {
-	return bundle.getHead()
-}
-
-func (bundle *Bundle) GetTailHash() trinary.Hash {
+func (bundle *Bundle) GetTailHash() hornet.Hash {
 	if len(bundle.tailTx) == 0 {
 		panic("tail hash can never be empty")
 	}
@@ -92,11 +93,11 @@ func (bundle *Bundle) GetTail() *CachedTransaction {
 	return loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
 }
 
-func (bundle *Bundle) GetTransactionHashes() []trinary.Hash {
+func (bundle *Bundle) GetTxHashes() hornet.Hashes {
 
-	var values []trinary.Hash
+	var values hornet.Hashes
 	for txHash := range bundle.txs {
-		values = append(values, txHash)
+		values = append(values, hornet.Hash(txHash))
 	}
 
 	return values
@@ -106,7 +107,7 @@ func (bundle *Bundle) GetTransactions() CachedTransactions {
 
 	var cachedTxs CachedTransactions
 	for txHash := range bundle.txs {
-		tx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) // tx +1
+		tx := loadBundleTxIfExistsOrPanic(hornet.Hash(txHash), bundle.hash) // tx +1
 		cachedTxs = append(cachedTxs, tx)
 	}
 
@@ -203,24 +204,15 @@ func (bundle *Bundle) GetMetadata() byte {
 	return byte(bundle.metadata)
 }
 
-func (bundle *Bundle) ResetSolidAndConfirmed() {
-	bundle.Lock()
-	defer bundle.Unlock()
-
-	// Metadata
-	bundle.setSolid(false)
-	bundle.setConfirmed(false)
-}
-
 func (bundle *Bundle) ApplySpentAddresses() {
 	if !bundle.IsValueSpam() {
 		spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
 		for addr, change := range bundle.GetLedgerChanges() {
 			if change < 0 {
-				if spentAddressesEnabled && MarkAddressAsSpent(addr) {
+				if spentAddressesEnabled && MarkAddressAsSpent(hornet.Hash(addr)) {
 					metrics.SharedServerMetrics.SeenSpentAddresses.Inc()
 				}
-				Events.AddressSpent.Trigger(addr)
+				Events.AddressSpent.Trigger(hornet.Hash(addr).Trytes())
 			}
 		}
 	}
@@ -252,9 +244,13 @@ func (bundle *Bundle) validate() bool {
 	defer cachedCurrentTailTx.Release(true) // tx -1
 
 	cachedCurrentTx := cachedCurrentTailTx
+	headTx := *cachedCurrentTx.GetTransaction()
 	for i := 1; i < lastIndex+1; i++ {
-		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunk(), bundle.hash) // tx +1
+		cachedCurrentTx = loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunkHash(), bundle.hash) // tx +1
 		iotaGoBundle[i] = *cachedCurrentTx.GetTransaction().Tx
+		if i == lastIndex {
+			headTx = *cachedCurrentTx.GetTransaction()
+		}
 		cachedCurrentTx.Release(true) // tx -1
 	}
 
@@ -265,7 +261,6 @@ func (bundle *Bundle) validate() bool {
 		return false
 	}
 
-	headTx := iotaGoBundle[len(iotaGoBundle)-1]
 	validStrictSemantics := true
 
 	// enforce that non head transactions within the bundle approve as their branch transaction
@@ -274,7 +269,7 @@ func (bundle *Bundle) validate() bool {
 	if !bundle.IsMilestone() {
 		if len(iotaGoBundle) > 1 {
 			for i := 0; i < len(iotaGoBundle)-1; i++ {
-				if iotaGoBundle[i].BranchTransaction != headTx.TrunkTransaction {
+				if iotaGoBundle[i].BranchTransaction != headTx.Tx.TrunkTransaction {
 					validStrictSemantics = false
 				}
 			}
@@ -285,9 +280,9 @@ func (bundle *Bundle) validate() bool {
 	// this is fine within the validation code, since the bundle is only complete when it is solid.
 	// however, as a special rule, milestone bundles might not be solid
 	if !bundle.IsMilestone() && validStrictSemantics {
-		approveeHashes := []trinary.Hash{headTx.TrunkTransaction}
-		if headTx.TrunkTransaction != headTx.BranchTransaction {
-			approveeHashes = append(approveeHashes, headTx.BranchTransaction)
+		approveeHashes := hornet.Hashes{headTx.GetTrunkHash()}
+		if !bytes.Equal(headTx.GetTrunkHash(), headTx.GetBranchHash()) {
+			approveeHashes = append(approveeHashes, headTx.GetBranchHash())
 		}
 
 		for _, approveeHash := range approveeHashes {
@@ -296,7 +291,7 @@ func (bundle *Bundle) validate() bool {
 			}
 			cachedApproveeTx := GetCachedTransactionOrNil(approveeHash) // tx +1
 			if cachedApproveeTx == nil {
-				log.Panicf("Tx with hash %v not found", approveeHash)
+				log.Panicf("Tx with hash %v not found", approveeHash.Trytes())
 			}
 
 			if !cachedApproveeTx.GetTransaction().IsTail() {
@@ -316,11 +311,11 @@ func (bundle *Bundle) validate() bool {
 // Calculates the ledger changes of the bundle
 func (bundle *Bundle) calcLedgerChanges() {
 
-	changes := map[trinary.Trytes]int64{}
+	changes := map[string]int64{}
 	for txHash := range bundle.txs {
-		cachedTx := loadBundleTxIfExistsOrPanic(txHash, bundle.hash) // tx +1
+		cachedTx := loadBundleTxIfExistsOrPanic(hornet.Hash(txHash), bundle.hash) // tx +1
 		if value := cachedTx.GetTransaction().Tx.Value; value != 0 {
-			changes[cachedTx.GetTransaction().Tx.Address] += value
+			changes[string(cachedTx.GetTransaction().GetAddress())] += value
 		}
 		cachedTx.Release(true) // tx -1
 	}
@@ -339,10 +334,10 @@ func (bundle *Bundle) calcLedgerChanges() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func loadBundleTxIfExistsOrPanic(txHash trinary.Hash, bundleHash trinary.Hash) *CachedTransaction {
+func loadBundleTxIfExistsOrPanic(txHash hornet.Hash, bundleHash hornet.Hash) *CachedTransaction {
 	cachedTx := GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
-		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash, txHash)
+		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash.Trytes(), txHash.Trytes())
 	}
 	return cachedTx
 }

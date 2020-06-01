@@ -11,8 +11,9 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
-	. "github.com/iotaledger/iota.go/trinary"
+	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
@@ -25,22 +26,22 @@ const (
 )
 
 type ExplorerTx struct {
-	Hash                          Hash   `json:"hash"`
-	SignatureMessageFragment      Trytes `json:"signature_message_fragment"`
-	Address                       Hash   `json:"address"`
-	Value                         int64  `json:"value"`
-	ObsoleteTag                   Trytes `json:"obsolete_tag"`
-	Timestamp                     uint64 `json:"timestamp"`
-	CurrentIndex                  uint64 `json:"current_index"`
-	LastIndex                     uint64 `json:"last_index"`
-	Bundle                        Hash   `json:"bundle"`
-	Trunk                         Hash   `json:"trunk"`
-	Branch                        Hash   `json:"branch"`
-	Tag                           Trytes `json:"tag"`
-	Nonce                         Trytes `json:"nonce"`
-	AttachmentTimestamp           int64  `json:"attachment_timestamp"`
-	AttachmentTimestampLowerBound int64  `json:"attachment_timestamp_lower_bound"`
-	AttachmentTimestampUpperBound int64  `json:"attachment_timestamp_upper_bound"`
+	Hash                          trinary.Hash   `json:"hash"`
+	SignatureMessageFragment      trinary.Trytes `json:"signature_message_fragment"`
+	Address                       trinary.Hash   `json:"address"`
+	Value                         int64          `json:"value"`
+	ObsoleteTag                   trinary.Trytes `json:"obsolete_tag"`
+	Timestamp                     uint64         `json:"timestamp"`
+	CurrentIndex                  uint64         `json:"current_index"`
+	LastIndex                     uint64         `json:"last_index"`
+	Bundle                        trinary.Hash   `json:"bundle"`
+	Trunk                         trinary.Hash   `json:"trunk"`
+	Branch                        trinary.Hash   `json:"branch"`
+	Tag                           trinary.Trytes `json:"tag"`
+	Nonce                         trinary.Trytes `json:"nonce"`
+	AttachmentTimestamp           int64          `json:"attachment_timestamp"`
+	AttachmentTimestampLowerBound int64          `json:"attachment_timestamp_lower_bound"`
+	AttachmentTimestampUpperBound int64          `json:"attachment_timestamp_upper_bound"`
 	Confirmed                     struct {
 		State     bool            `json:"state"`
 		Milestone milestone.Index `json:"milestone_index"`
@@ -48,21 +49,21 @@ type ExplorerTx struct {
 	Approvers      []string        `json:"approvers"`
 	Solid          bool            `json:"solid"`
 	MWM            int             `json:"mwm"`
-	Previous       Hash            `json:"previous"`
-	Next           Hash            `json:"next"`
+	Previous       trinary.Hash    `json:"previous"`
+	Next           trinary.Hash    `json:"next"`
 	BundleComplete bool            `json:"bundle_complete"`
 	IsMilestone    bool            `json:"is_milestone"`
 	MilestoneIndex milestone.Index `json:"milestone_index"`
 }
 
-func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
+func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 
 	defer cachedTx.Release(true) // tx -1
 
 	originTx := cachedTx.GetTransaction().Tx
 	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
 	t := &ExplorerTx{
-		Hash:                          hash,
+		Hash:                          originTx.Hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
 		Address:                       originTx.Address,
 		ObsoleteTag:                   originTx.ObsoleteTag,
@@ -86,10 +87,10 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	}
 
 	// Approvers
-	t.Approvers = tangle.GetApproverHashes(originTx.Hash, true, MaxApproversResults)
+	t.Approvers = tangle.GetApproverHashes(cachedTx.GetTransaction().GetTxHash(), true, MaxApproversResults).Trytes()
 
 	// compute mwm
-	trits, err := TrytesToTrits(hash)
+	trits, err := trinary.BytesToTrits(cachedTx.GetTransaction().GetTxHash())
 	if err != nil {
 		return nil, err
 	}
@@ -106,9 +107,9 @@ func createExplorerTx(hash Hash, cachedTx *tangle.CachedTransaction) (*ExplorerT
 	// get previous/next hash
 	var cachedBndl *tangle.CachedBundle
 	if cachedTx.GetTransaction().IsTail() {
-		cachedBndl = tangle.GetCachedBundleOrNil(hash) // bundle +1
+		cachedBndl = tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash()) // bundle +1
 	} else {
-		cachedBndls := tangle.GetBundlesOfTransactionOrNil(hash, true) // bundle +1
+		cachedBndls := tangle.GetBundlesOfTransactionOrNil(cachedTx.GetTransaction().GetTxHash(), true) // bundle +1
 		if cachedBndls != nil {
 			cachedBndl = cachedBndls[0]
 
@@ -236,12 +237,12 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		}
 
 		// check for valid trytes
-		if err := ValidTrytes(search); err != nil {
+		if err := trinary.ValidTrytes(search); err != nil {
 			return c.JSON(http.StatusOK, result)
 		}
 
 		// tag query
-		if len(search) <= 27 {
+		if len(search) == 27 {
 			txs, err := findTag(search)
 			if err == nil && len(txs.Txs) > 0 {
 				result.Tag = txs
@@ -294,32 +295,36 @@ func findMilestone(index milestone.Index) (*ExplorerTx, error) {
 	}
 	defer cachedMs.Release(true) // bundle -1
 
-	cachedTailTx := cachedMs.GetBundle().GetTail()                                          // tx +1
-	defer cachedTailTx.Release(true)                                                        // tx -1
-	return createExplorerTx(cachedTailTx.GetTransaction().GetHash(), cachedTailTx.Retain()) // tx pass +1
+	cachedTailTx := cachedMs.GetBundle().GetTail() // tx +1
+	defer cachedTailTx.Release(true)               // tx -1
+	return createExplorerTx(cachedTailTx.Retain()) // tx pass +1
 }
 
-func findTransaction(hash Hash) (*ExplorerTx, error) {
+func findTransaction(hash trinary.Hash) (*ExplorerTx, error) {
 	if !guards.IsTrytesOfExactLength(hash, consts.HashTrytesSize) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedTx := tangle.GetCachedTransactionOrNil(hash) // tx +1
+	cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(hash)[:49])) // tx +1
 	if cachedTx == nil {
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
-	t, err := createExplorerTx(hash, cachedTx.Retain()) // tx pass +1
-	cachedTx.Release(true)                              // tx -1
+	t, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
+	cachedTx.Release(true)                        // tx -1
 	return t, err
 }
 
-func findTag(tag Trytes) (*ExplorerTag, error) {
-	if err := ValidTrytes(tag); err != nil && len(tag) > 27 {
+func findTag(tag trinary.Trytes) (*ExplorerTag, error) {
+	if err := trinary.ValidTrytes(tag); err != nil {
 		return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid: %s", tag)
 	}
 
-	txHashes := tangle.GetTagHashes(tag, true, MaxTagResults)
+	if len(tag) != 27 {
+		return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid length: %s", tag)
+	}
+
+	txHashes := tangle.GetTagHashes(hornet.Hash(trinary.MustTrytesToBytes(tag)[:17]), true, MaxTagResults)
 	if len(txHashes) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "tag %s unknown", tag)
 	}
@@ -330,10 +335,10 @@ func findTag(tag Trytes) (*ExplorerTag, error) {
 			txHash := txHashes[i]
 			cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 			if cachedTx == nil {
-				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to tag %s", txHash, tag)
+				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to tag %s", txHash.Trytes(), tag)
 			}
-			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
-			cachedTx.Release(true)                                                                 // tx -1
+			expTx, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
+			cachedTx.Release(true)                            // tx -1
 			if err != nil {
 				return nil, err
 			}
@@ -344,12 +349,12 @@ func findTag(tag Trytes) (*ExplorerTag, error) {
 	return &ExplorerTag{Txs: txs}, nil
 }
 
-func findBundles(hash Hash) ([][]*ExplorerTx, error) {
+func findBundles(hash trinary.Hash) ([][]*ExplorerTx, error) {
 	if !guards.IsTrytesOfExactLength(hash, consts.HashTrytesSize) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedBndls := tangle.GetBundles(hash, true, MaxBundleResults) // bundle +1
+	cachedBndls := tangle.GetBundles(hornet.Hash(trinary.MustTrytesToBytes(hash)[:49]), true, MaxBundleResults) // bundle +1
 	if len(cachedBndls) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "bundle %s unknown", hash)
 	}
@@ -360,7 +365,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 		sl := []*ExplorerTx{}
 		cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
 		for _, cachedTx := range cachedTxs {
-			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
+			expTx, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
 			if err != nil {
 				cachedTxs.Release(true) // tx -1
 				return nil, err
@@ -374,7 +379,7 @@ func findBundles(hash Hash) ([][]*ExplorerTx, error) {
 	return expBndls, nil
 }
 
-func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
+func findAddress(hash trinary.Hash, valueOnly bool) (*ExplorerAddress, error) {
 	if len(hash) > 81 {
 		hash = hash[:81]
 	}
@@ -382,7 +387,9 @@ func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	txHashes := tangle.GetTransactionHashesForAddress(hash, valueOnly, true, MaxTransactionsForAddressResults)
+	addr := hornet.Hash(trinary.MustTrytesToBytes(hash)[:49])
+
+	txHashes := tangle.GetTransactionHashesForAddress(addr, valueOnly, true, MaxTransactionsForAddressResults)
 
 	txs := make([]*ExplorerTx, 0, len(txHashes))
 	if len(txHashes) != 0 {
@@ -392,8 +399,8 @@ func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 			if cachedTx == nil {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
-			expTx, err := createExplorerTx(cachedTx.GetTransaction().GetHash(), cachedTx.Retain()) // tx pass +1
-			cachedTx.Release(true)                                                                 // tx -1
+			expTx, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
+			cachedTx.Release(true)                            // tx -1
 			if err != nil {
 				return nil, err
 			}
@@ -401,10 +408,15 @@ func findAddress(hash Hash, valueOnly bool) (*ExplorerAddress, error) {
 		}
 	}
 
-	balance, _, err := tangle.GetBalanceForAddress(hash)
+	balance, _, err := tangle.GetBalanceForAddress(addr)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ExplorerAddress{Balance: balance, Txs: txs, Spent: tangle.WasAddressSpentFrom(hash), SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled()}, nil
+	return &ExplorerAddress{
+		Balance:      balance,
+		Txs:          txs,
+		Spent:        tangle.WasAddressSpentFrom(addr),
+		SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled(),
+	}, nil
 }

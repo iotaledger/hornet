@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/kvstore"
 
@@ -40,11 +39,10 @@ func storeSnapshotInfo(snapshot *SnapshotInfo) error {
 func readSnapshotInfo() (*SnapshotInfo, error) {
 	value, err := snapshotStore.Get([]byte("snapshotInfo"))
 	if err != nil {
-		if err == kvstore.ErrKeyNotFound {
-			return nil, nil
-		} else {
+		if err != kvstore.ErrKeyNotFound {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
 		}
+		return nil, nil
 	}
 
 	info, err := SnapshotInfoFromBytes(value)
@@ -70,11 +68,10 @@ func storeSolidEntryPoints(points *hornet.SolidEntryPoints) error {
 func readSolidEntryPoints() (*hornet.SolidEntryPoints, error) {
 	value, err := snapshotStore.Get([]byte("solidEntryPoints"))
 	if err != nil {
-		if err == kvstore.ErrKeyNotFound {
-			return nil, nil
-		} else {
+		if err != kvstore.ErrKeyNotFound {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve solid entry points")
 		}
+		return nil, nil
 	}
 
 	points, err := hornet.SolidEntryPointsFromBytes(value)
@@ -95,7 +92,7 @@ func milestoneIndexFromBytes(bytes []byte) milestone.Index {
 }
 
 // StoreSnapshotBalancesInDatabase deletes all old entries and stores the ledger state of the snapshot index
-func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index milestone.Index) error {
+func StoreSnapshotBalancesInDatabase(balances map[string]uint64, index milestone.Index) error {
 
 	// Delete all old entries
 	if err := snapshotLedgerStore.Clear(); err != nil {
@@ -110,9 +107,8 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 	batch := snapshotLedgerStore.Batched()
 
 	for address, balance := range balances {
-		key := trinary.MustTrytesToBytes(address)[:49]
 		if balance != 0 {
-			if err := batch.Set(key, bytesFromBalance(balance)); err != nil {
+			if err := batch.Set(hornet.Hash(address), bytesFromBalance(balance)); err != nil {
 				return errors.Wrap(NewDatabaseError(err), "failed to set the balance")
 			}
 		}
@@ -131,9 +127,9 @@ func StoreSnapshotBalancesInDatabase(balances map[trinary.Hash]uint64, index mil
 }
 
 // GetAllSnapshotBalances returns all balances for the snapshot milestone.
-func GetAllSnapshotBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint64, milestone.Index, error) {
+func GetAllSnapshotBalances(abortSignal <-chan struct{}) (map[string]uint64, milestone.Index, error) {
 
-	balances := make(map[trinary.Hash]uint64)
+	balances := make(map[string]uint64)
 
 	value, err := snapshotStore.Get([]byte(snapshotMilestoneIndexKey))
 	if err != nil {
@@ -148,9 +144,8 @@ func GetAllSnapshotBalances(abortSignal <-chan struct{}) (map[trinary.Hash]uint6
 			return false
 		default:
 		}
-		// Remove prefix from key
-		address := trinary.MustBytesToTrytes(key, 81)
-		balances[address] = balanceFromBytes(value)
+
+		balances[string(key[:49])] = balanceFromBytes(value)
 		return true
 	})
 

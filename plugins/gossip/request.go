@@ -1,12 +1,12 @@
 package gossip
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -71,7 +71,7 @@ func runRequestWorkers() {
 							return false
 						}
 
-						helpers.SendTransactionRequest(p, r.HashBytesEncoded)
+						helpers.SendTransactionRequest(p, r.Hash)
 						return true
 					})
 				}
@@ -98,7 +98,7 @@ func enqueueAndSignal(r *rqueue.Request) bool {
 
 // Request enqueues a request to the request queue for the given transaction if it isn't a solid entry point
 // and is not contained in the database already.
-func Request(hash trinary.Hash, msIndex milestone.Index, preventDiscard ...bool) bool {
+func Request(hash hornet.Hash, msIndex milestone.Index, preventDiscard ...bool) bool {
 	if tangle.SolidEntryPointsContain(hash) {
 		return false
 	}
@@ -108,9 +108,8 @@ func Request(hash trinary.Hash, msIndex milestone.Index, preventDiscard ...bool)
 	}
 
 	r := &rqueue.Request{
-		Hash:             hash,
-		HashBytesEncoded: trinary.MustTrytesToBytes(hash),
-		MilestoneIndex:   msIndex,
+		Hash:           hash,
+		MilestoneIndex: msIndex,
 	}
 	if len(preventDiscard) > 0 {
 		r.PreventDiscard = preventDiscard[0]
@@ -119,7 +118,7 @@ func Request(hash trinary.Hash, msIndex milestone.Index, preventDiscard ...bool)
 }
 
 // RequestMultiple works like Request but takes multiple transaction hashes.
-func RequestMultiple(hashes trinary.Hashes, msIndex milestone.Index, preventDiscard ...bool) {
+func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDiscard ...bool) {
 	for _, hash := range hashes {
 		Request(hash, msIndex, preventDiscard...)
 	}
@@ -129,15 +128,15 @@ func RequestMultiple(hashes trinary.Hashes, msIndex milestone.Index, preventDisc
 // given transaction is not a solid entry point and neither its approvees are and also not in the database.
 func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, preventDiscard ...bool) {
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
-		txHash := tx.GetHash()
+		txHash := tx.GetTxHash()
 
 		if tangle.SolidEntryPointsContain(txHash) {
 			return
 		}
 
-		Request(tx.GetTrunk(), msIndex, preventDiscard...)
-		if tx.GetTrunk() != tx.GetBranch() {
-			Request(tx.GetBranch(), msIndex, preventDiscard...)
+		Request(tx.GetTrunkHash(), msIndex, preventDiscard...)
+		if !bytes.Equal(tx.GetTrunkHash(), tx.GetBranchHash()) {
+			Request(tx.GetBranchHash(), msIndex, preventDiscard...)
 		}
 	})
 }
@@ -153,9 +152,9 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 	msIndex := cachedMsBndl.GetBundle().GetMilestoneIndex()
 
 	tx := cachedHeadTx.GetTransaction()
-	enqueued := Request(tx.GetTrunk(), msIndex, true)
-	if tx.GetTrunk() != tx.GetBranch() {
-		enqueuedTwo := Request(tx.GetBranch(), msIndex, true)
+	enqueued := Request(tx.GetTrunkHash(), msIndex, true)
+	if !bytes.Equal(tx.GetTrunkHash(), tx.GetBranchHash()) {
+		enqueuedTwo := Request(tx.GetBranchHash(), msIndex, true)
 		if !enqueued && enqueuedTwo {
 			enqueued = true
 		}
@@ -169,7 +168,7 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 // of the yielded function share the same 'already traversed' set to circumvent requesting
 // the same approvees multiple times.
 func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms milestone.Index) {
-	traversed := map[trinary.Hash]struct{}{}
+	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
 		cachedMsBundle := tangle.GetMilestoneOrNil(ms) // bundle +1
 		if cachedMsBundle == nil {
@@ -183,16 +182,16 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 			// predicate
 			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
 				defer cachedTx.Release(true) // tx -1
-				_, previouslyTraversed := traversed[cachedTx.GetTransaction().GetHash()]
+				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
 				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed
 			},
 			// consumer
 			func(cachedTx *tangle.CachedTransaction) { // tx +1
 				defer cachedTx.Release(true) // tx -1
-				traversed[cachedTx.GetTransaction().GetHash()] = struct{}{}
+				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
 			},
 			// called on missing approvees
-			func(approveeHash trinary.Hash) {
+			func(approveeHash hornet.Hash) {
 				Request(approveeHash, ms, preventDiscard...)
 			}, true)
 	}

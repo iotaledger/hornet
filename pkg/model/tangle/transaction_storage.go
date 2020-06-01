@@ -3,8 +3,6 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -91,19 +89,13 @@ func (c *CachedTransaction) Release(force ...bool) {
 }
 
 func transactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	tx := &hornet.Transaction{
-		TxHash: make([]byte, len(key)),
-	}
-	copy(tx.TxHash, key)
-	return tx, len(key), nil
+	tx := hornet.NewTransaction(key[:49])
+	return tx, 49, nil
 }
 
 func metadataFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	tx := &hornet.TransactionMetadata{
-		TxHash: make([]byte, len(key)),
-	}
-	copy(tx.TxHash, key)
-	return tx, len(key), nil
+	tx := hornet.NewTransactionMetadata(key[:49])
+	return tx, 49, nil
 }
 
 func GetTransactionStorageSize() int {
@@ -140,9 +132,7 @@ func configureTransactionStorage(store kvstore.KVStore) {
 }
 
 // tx +1
-func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction {
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
-
+func GetCachedTransactionOrNil(txHash hornet.Hash) *CachedTransaction {
 	cachedTx := txStorage.Load(txHash) // tx +1
 	if !cachedTx.Exists() {
 		cachedTx.Release(true) // tx -1
@@ -163,8 +153,8 @@ func GetCachedTransactionOrNil(transactionHash trinary.Hash) *CachedTransaction 
 }
 
 // GetStoredTransactionOrNil returns a transaction object without accessing the cache layer.
-func GetStoredTransactionOrNil(txHashBytes []byte) *hornet.Transaction {
-	storedTx := txStorage.LoadObjectFromStore(txHashBytes)
+func GetStoredTransactionOrNil(txHash hornet.Hash) *hornet.Transaction {
+	storedTx := txStorage.LoadObjectFromStore(txHash)
 	if storedTx == nil {
 		return nil
 	}
@@ -172,8 +162,8 @@ func GetStoredTransactionOrNil(txHashBytes []byte) *hornet.Transaction {
 }
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func GetStoredMetadataOrNil(txHashBytes []byte) *hornet.TransactionMetadata {
-	storedMeta := metadataStorage.LoadObjectFromStore(txHashBytes)
+func GetStoredMetadataOrNil(txHash hornet.Hash) *hornet.TransactionMetadata {
+	storedMeta := metadataStorage.LoadObjectFromStore(txHash)
 	if storedMeta == nil {
 		return nil
 	}
@@ -181,18 +171,16 @@ func GetStoredMetadataOrNil(txHashBytes []byte) *hornet.TransactionMetadata {
 }
 
 // tx +-0
-func ContainsTransaction(transactionHash trinary.Hash) bool {
-	return txStorage.Contains(trinary.MustTrytesToBytes(transactionHash)[:49])
+func ContainsTransaction(txHash hornet.Hash) bool {
+	return txStorage.Contains(txHash)
 }
 
 // tx +1
 func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *CachedTransaction, newlyAdded bool) {
 
-	txHash := trinary.MustTrytesToBytes(transaction.GetHash())[:49]
-
 	// Store metadata first, because existence is checked via tx
 	newlyAddedMetadata := false
-	metadata, _, _ := metadataFactory(txHash)
+	metadata, _, _ := metadataFactory(transaction.GetTxHash())
 	cachedMeta := metadataStorage.ComputeIfAbsent(metadata.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
 		newlyAddedMetadata = true
 		metadata.Persist()
@@ -218,7 +206,7 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 
 type TransactionConsumer func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject)
 
-type TransactionHashBytesConsumer func(txHash []byte)
+type TransactionHashBytesConsumer func(txHash hornet.Hash)
 
 func ForEachTransaction(consumer TransactionConsumer) {
 	txStorage.ForEach(func(txHash []byte, cachedTx objectstorage.CachedObject) bool {
@@ -236,18 +224,16 @@ func ForEachTransaction(consumer TransactionConsumer) {
 	})
 }
 
-// ForEachTransactionHashBytes loops over all transaction hashes (binary representation).
-// Transaction that only exist in the cache are ignored.
-func ForEachTransactionHashBytes(consumer TransactionHashBytesConsumer) {
-	txStorage.ForEachKeyOnly(func(txHashBytes []byte) bool {
-		consumer(txHashBytes)
+// ForEachTransactionHash loops over all transaction hashes.
+func ForEachTransactionHash(consumer TransactionHashBytesConsumer) {
+	txStorage.ForEachKeyOnly(func(txHash []byte) bool {
+		consumer(txHash)
 		return true
 	}, false)
 }
 
 // tx +-0
-func DeleteTransaction(transactionHash trinary.Hash) {
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+func DeleteTransaction(txHash hornet.Hash) {
 	txStorage.Delete(txHash)
 	metadataStorage.Delete(txHash)
 }

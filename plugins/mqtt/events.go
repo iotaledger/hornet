@@ -50,7 +50,7 @@ func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash())
+	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash().Trytes())
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -117,16 +117,16 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 // Publish latest milestone
 func publishLM(bndl *tangle.Bundle) error {
 	return mqttBroker.Send(topicLM, fmt.Sprintf(`{"index":%d,"hash":"%v","timestamp":"%s"}`,
-		bndl.GetMilestoneIndex(), // Milestone transaction index
-		bndl.GetMilestoneHash(),  // Milestone transaction hash
+		bndl.GetMilestoneIndex(),         // Milestone transaction index
+		bndl.GetMilestoneHash().Trytes(), // Milestone transaction hash
 		time.Now().UTC().Format(time.RFC3339)))
 }
 
 // Publish latest solid subtangle milestone
 func publishLSM(bndl *tangle.Bundle) error {
 	return mqttBroker.Send(topicLSM, fmt.Sprintf(`{"index":%d,"hash":"%v","timestamp":"%s"}`,
-		bndl.GetMilestoneIndex(), // Solid milestone transaction index
-		bndl.GetMilestoneHash(),  // Solid milestone transaction hash
+		bndl.GetMilestoneIndex(),         // Solid milestone transaction index
+		bndl.GetMilestoneHash().Trytes(), // Solid milestone transaction hash
 		time.Now().UTC().Format(time.RFC3339)))
 }
 

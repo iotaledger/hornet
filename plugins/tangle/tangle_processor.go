@@ -146,7 +146,7 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 
 	if request != nil {
 		// mark the received request as processed
-		gossip.RequestQueue().Processed(incomingTx.GetHash())
+		gossip.RequestQueue().Processed(incomingTx.GetTxHash())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when

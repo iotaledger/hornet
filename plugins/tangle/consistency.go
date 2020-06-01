@@ -5,7 +5,6 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/math"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -21,10 +20,10 @@ var (
 // CheckConsistencyOfConeAndMutateDiff checks whether cone referenced by the given tail transaction is consistent with the current diff.
 // this function mutates the approved, respectively walked transaction hashes and the diff with the cone diff,
 // in case the tail transaction is consistent with the latest ledger state.
-func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[trinary.Hash]struct{}, diff map[trinary.Hash]int64, forceRelease bool) bool {
+func CheckConsistencyOfConeAndMutateDiff(tailTxHash hornet.Hash, approved map[string]struct{}, diff map[string]int64, forceRelease bool) bool {
 
 	// make a copy of approved, respectively visited transactions
-	visited := make(map[trinary.Hash]struct{}, len(approved))
+	visited := make(map[string]struct{}, len(approved))
 	for k := range approved {
 		visited[k] = struct{}{}
 	}
@@ -61,7 +60,7 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 
 	// compute a patched state of the ledger where we would have applied the cone diff to it
 	for addr, change := range coneDiff {
-		currentLedgerBalance, _, err := tangle.GetBalanceForAddressWithoutLocking(addr)
+		currentLedgerBalance, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.Hash(addr))
 		if err != nil {
 			log.Panic(err)
 		}
@@ -99,10 +98,10 @@ func CheckConsistencyOfConeAndMutateDiff(tailTxHash trinary.Hash, approved map[t
 
 // computes the diff of the cone by collecting all mutations of transactions directly/indirectly referenced by the given tail.
 // only the non yet visited transactions are collected
-func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash, latestSolidMilestoneIndex milestone.Index, forceRelease bool) (map[trinary.Trytes]int64, error) {
+func computeConeDiff(visited map[string]struct{}, tailTxHash hornet.Hash, latestSolidMilestoneIndex milestone.Index, forceRelease bool) (map[string]int64, error) {
 
-	cachedTxs := make(map[trinary.Hash]*tangle.CachedTransaction)
-	cachedBndls := make(map[trinary.Hash]*tangle.CachedBundle)
+	cachedTxs := make(map[string]*tangle.CachedTransaction)
+	cachedBndls := make(map[string]*tangle.CachedBundle)
 
 	defer func() {
 		// Release all bundles at the end
@@ -116,9 +115,9 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 		}
 	}()
 
-	coneDiff := map[trinary.Trytes]int64{}
+	coneDiff := map[string]int64{}
 	txsToTraverse := make(map[string]struct{})
-	txsToTraverse[tailTxHash] = struct{}{}
+	txsToTraverse[string(tailTxHash)] = struct{}{}
 
 	for len(txsToTraverse) != 0 {
 		for txHash := range txsToTraverse {
@@ -131,15 +130,15 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			visited[txHash] = struct{}{}
 
 			// check whether we previously checked that this referenced tx references an invalid bundle
-			if ContainsInvalidBundleReference(txHash) {
+			if ContainsInvalidBundleReference(hornet.Hash(txHash)) {
 				return nil, ErrRefBundleNotValid
 			}
 
 			cachedTx, exists := cachedTxs[txHash]
 			if !exists {
-				cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
+				cachedTx = tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 				if cachedTx == nil {
-					log.Panicf("Tx with hash %v not found", txHash)
+					log.Panicf("Tx with hash %v not found", hornet.Hash(txHash).Trytes())
 				}
 				cachedTxs[txHash] = cachedTx
 			}
@@ -148,7 +147,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at > latestSolidMilestoneIndex {
-					log.Panicf("transaction %s was confirmed by a newer milestone %d", cachedTx.GetTransaction().GetHash(), at)
+					log.Panicf("transaction %s was confirmed by a newer milestone %d", hornet.Hash(txHash).Trytes(), at)
 				}
 				// only take transactions into account that have not been confirmed by the referenced or older milestones
 				continue
@@ -156,7 +155,7 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 
 			cachedBndl, exists := cachedBndls[txHash]
 			if !exists {
-				cachedBndl = tangle.GetCachedBundleOrNil(txHash) // bundle +1
+				cachedBndl = tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
 				if cachedBndl == nil {
 					return nil, ErrRefBundleNotComplete
 				}
@@ -187,8 +186,8 @@ func computeConeDiff(visited map[trinary.Hash]struct{}, tailTxHash trinary.Hash,
 			// at this point the bundle is valid and therefore the trunk/branch of
 			// the head tx are tail transactions
 			cachedBndl.GetBundle().GetHead().ConsumeTransaction(func(headTx *hornet.Transaction, _ *hornet.TransactionMetadata) {
-				txsToTraverse[headTx.GetTrunk()] = struct{}{}
-				txsToTraverse[headTx.GetBranch()] = struct{}{}
+				txsToTraverse[string(headTx.GetTrunkHash())] = struct{}{}
+				txsToTraverse[string(headTx.GetBranchHash())] = struct{}{}
 			})
 		}
 	}

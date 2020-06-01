@@ -77,7 +77,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
-	err = doPow(b, tips[0], tips[1], mwm, shutdownSignal)
+	err = doPow(b, tips[0].Trytes(), tips[1].Trytes(), mwm, shutdownSignal)
 	if err != nil {
 		return
 	}

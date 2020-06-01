@@ -1,34 +1,45 @@
 package rqueue_test
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRequestQueue(t *testing.T) {
 	q := rqueue.New()
 
+	var (
+		hashA = hornet.Hash(trinary.MustTrytesToBytes("A"))
+		hashB = hornet.Hash(trinary.MustTrytesToBytes("B"))
+		hashZ = hornet.Hash(trinary.MustTrytesToBytes("Z"))
+		hashC = hornet.Hash(trinary.MustTrytesToBytes("C"))
+		hashD = hornet.Hash(trinary.MustTrytesToBytes("D"))
+	)
+
 	requests := []*rqueue.Request{
 		{
-			Hash:           "A",
+			Hash:           hashA,
 			MilestoneIndex: 10,
 		},
 		{
-			Hash:           "B",
+			Hash:           hashB,
 			MilestoneIndex: 7,
 		},
 		{
-			Hash:           "Z",
+			Hash:           hashZ,
 			MilestoneIndex: 7,
 		},
 		{
-			Hash:           "C",
+			Hash:           hashC,
 			MilestoneIndex: 5,
 		},
 		{
-			Hash:           "D",
+			Hash:           hashD,
 			MilestoneIndex: 2,
 		},
 	}
@@ -53,7 +64,7 @@ func TestRequestQueue(t *testing.T) {
 		// since we have two request under the same milestone/priority
 		// we need to make a special case
 		if i == 1 || i == 2 {
-			assert.Contains(t, []string{"B", "Z"}, r.Hash)
+			assert.Contains(t, hornet.Hashes{hashB, hashZ}, r.Hash)
 		} else {
 			assert.Equal(t, r, requests[i])
 		}
@@ -109,7 +120,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, queuedReq.Hash == requests[len(requests)-1].Hash)
+		assert.False(t, bytes.Equal(queuedReq.Hash, requests[len(requests)-1].Hash))
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))

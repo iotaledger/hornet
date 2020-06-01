@@ -7,8 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/iotaledger/iota.go/trinary"
-
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -18,11 +17,11 @@ type State struct {
 	encoding.BinaryUnmarshaler
 
 	LatestMilestoneIndex milestone.Index
-	LatestMilestoneHash  trinary.Hash
+	LatestMilestoneHash  hornet.Hash
 	LatestMilestoneTime  int64
 
 	// LatestMilestoneTransactions are the transaction hashes of the latest milestone
-	LatestMilestoneTransactions []trinary.Hash
+	LatestMilestoneTransactions hornet.Hashes
 }
 
 // MarshalBinary returns the binary representation of the coordinator state.
@@ -38,12 +37,12 @@ func (cs *State) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, 4+49+8+(49*len(cs.LatestMilestoneTransactions)))
 
 	binary.LittleEndian.PutUint32(data[0:4], uint32(cs.LatestMilestoneIndex))
-	copy(data[4:53], trinary.MustTrytesToBytes(cs.LatestMilestoneHash))
+	copy(data[4:53], cs.LatestMilestoneHash)
 	binary.LittleEndian.PutUint64(data[53:61], uint64(cs.LatestMilestoneTime))
 
 	offset := 61
 	for _, txHash := range cs.LatestMilestoneTransactions {
-		copy(data[offset:offset+49], trinary.MustTrytesToBytes(txHash))
+		copy(data[offset:offset+49], txHash)
 		offset += 49
 	}
 
@@ -65,15 +64,15 @@ func (cs *State) UnmarshalBinary(data []byte) error {
 	}
 
 	cs.LatestMilestoneIndex = milestone.Index(binary.LittleEndian.Uint32(data[0:4]))
-	cs.LatestMilestoneHash = trinary.MustBytesToTrytes(data[4:53], 81)
+	cs.LatestMilestoneHash = hornet.Hash(data[4:53])
 	cs.LatestMilestoneTime = int64(binary.LittleEndian.Uint64(data[53:61]))
-	cs.LatestMilestoneTransactions = make([]trinary.Hash, 0)
+	cs.LatestMilestoneTransactions = make(hornet.Hashes, 0)
 
 	latestMilestoneTransactionsCount := (len(data) - 61) / 49
 
 	offset := 61
 	for i := 0; i < latestMilestoneTransactionsCount; i++ {
-		cs.LatestMilestoneTransactions = append(cs.LatestMilestoneTransactions, trinary.MustBytesToTrytes(data[offset:offset+49], 81))
+		cs.LatestMilestoneTransactions = append(cs.LatestMilestoneTransactions, hornet.Hash(data[offset:offset+49]))
 		offset += 49
 	}
 

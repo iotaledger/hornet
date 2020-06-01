@@ -3,8 +3,6 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -31,12 +29,7 @@ func (c *CachedApprover) GetApprover() *hornet.Approver {
 }
 
 func approversFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	approver := &hornet.Approver{
-		TxHash:       make([]byte, 49),
-		ApproverHash: make([]byte, 49),
-	}
-	copy(approver.TxHash, key[:49])
-	copy(approver.ApproverHash, key[49:])
+	approver := hornet.NewApprover(key[:49], key[49:98])
 	return approver, 98, nil
 }
 
@@ -64,37 +57,27 @@ func configureApproversStorage(store kvstore.KVStore) {
 }
 
 // approvers +-0
-func GetApproverHashes(transactionHash trinary.Hash, forceRelease bool, maxFind ...int) []trinary.Hash {
-	var approverHashes []trinary.Hash
+func GetApproverHashes(txHash hornet.Hash, forceRelease bool, maxFind ...int) hornet.Hashes {
+	var approverHashes hornet.Hashes
 
 	i := 0
-	approversStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+	approversStorage.ForEachKeyOnly(func(key []byte) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			cachedObject.Release(true) // approvers -1
 			return false
 		}
 
-		if !cachedObject.Exists() {
-			cachedObject.Release(true) // approvers -1
-			return true
-		}
-
-		approverHashes = append(approverHashes, (&CachedApprover{CachedObject: cachedObject}).GetApprover().GetApproverHash())
-		cachedObject.Release(forceRelease) // approvers -1
+		approverHashes = append(approverHashes, key[49:98])
 		return true
-	}, trinary.MustTrytesToBytes(transactionHash)[:49])
+	}, false, txHash)
 
 	return approverHashes
 }
 
 // approvers +1
-func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *CachedApprover {
+func StoreApprover(txHash hornet.Hash, approverHash hornet.Hash) *CachedApprover {
 
-	approver := &hornet.Approver{
-		TxHash:       trinary.MustTrytesToBytes(transactionHash)[:49],
-		ApproverHash: trinary.MustTrytesToBytes(approverHash)[:49],
-	}
+	approver := hornet.NewApprover(txHash, approverHash)
 
 	cachedObj := approversStorage.ComputeIfAbsent(approver.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // approvers +1
 		approver.Persist()
@@ -106,20 +89,15 @@ func StoreApprover(transactionHash trinary.Hash, approverHash trinary.Hash) *Cac
 }
 
 // approvers +-0
-func DeleteApprover(transactionHash trinary.Hash, approverHash trinary.Hash) {
+func DeleteApprover(txHash hornet.Hash, approverHash hornet.Hash) {
 
-	approver := &hornet.Approver{
-		TxHash:       trinary.MustTrytesToBytes(transactionHash)[:49],
-		ApproverHash: trinary.MustTrytesToBytes(approverHash)[:49],
-	}
+	approver := hornet.NewApprover(txHash, approverHash)
 
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 
 // approvers +-0
-func DeleteApprovers(transactionHash trinary.Hash) {
-
-	txHash := trinary.MustTrytesToBytes(transactionHash)[:49]
+func DeleteApprovers(txHash hornet.Hash) {
 
 	var keysToDelete [][]byte
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/gohornet/hornet/pkg/consts"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/tlv"
@@ -106,7 +107,7 @@ func NewTransactionMessage(txData []byte) ([]byte, error) {
 }
 
 // NewTransactionRequestMessage creates a transaction request message.
-func NewTransactionRequestMessage(requestedHash []byte) ([]byte, error) {
+func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+RequestedTransactionHashMsgBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, RequestedTransactionHashMsgBytesLength); err != nil {
 		return nil, err

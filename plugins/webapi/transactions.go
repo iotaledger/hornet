@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
@@ -94,7 +95,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(bdl, true, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(hornet.Hash(trinary.MustTrytesToBytes(bdl)[:49]), true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	// Searching for transactions that contains the given address
@@ -109,10 +110,10 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			addr = addr[:81]
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(addr, query.ValueOnly, true, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(hornet.Hash(trinary.MustTrytesToBytes(addr)[:49]), query.ValueOnly, true, maxResults-len(txHashes)).Trytes()...)
 	}
 
-	// Searching for all approovers of the given transactions
+	// Searching for all approvers of the given transactions
 	for _, approveeHash := range query.Approvees {
 		if !guards.IsTransactionHash(approveeHash) {
 			e.Error = fmt.Sprintf("Aprovee hash invalid: %s", approveeHash)
@@ -120,7 +121,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetApproverHashes(approveeHash, true, maxResults-len(txHashes))...)
+		txHashes = append(txHashes, tangle.GetApproverHashes(hornet.Hash(trinary.MustTrytesToBytes(approveeHash)[:49]), true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	// Searching for transactions that contain the given tag
@@ -131,7 +132,13 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetTagHashes(tag, true, maxResults-len(txHashes))...)
+		if len(tag) != 27 {
+			e.Error = fmt.Sprintf("Tag invalid length: %s", tag)
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+
+		txHashes = append(txHashes, tangle.GetTagHashes(hornet.Hash(trinary.MustTrytesToBytes(tag)[:17]), true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})
