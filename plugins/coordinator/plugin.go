@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -106,12 +107,23 @@ func run(plugin *node.Plugin) {
 }
 
 func sendBundle(b coordinator.Bundle) error {
+	var emittedTxs []*hornet.Transaction
+
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(tx)
-		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
+
+		hornetTx, err := gossip.Processor().CompressAndEmit(tx, txTrits)
+		if err != nil {
 			return err
 		}
+		emittedTxs = append(emittedTxs, hornetTx)
 	}
+
+	// wait until all txs of the bundle are processed in the storage layer
+	for _, tx := range emittedTxs {
+		tx.WaitForProcessed()
+	}
+
 	return nil
 }

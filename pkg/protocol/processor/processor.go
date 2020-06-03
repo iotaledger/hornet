@@ -127,19 +127,19 @@ func (proc *Processor) Process(p *peer.Peer, msgType message.Type, data []byte) 
 // ValidateTransactionTrytesAndEmit validates the given transaction trytes which were not received via gossip but
 // through some other mechanism. This function does not run within the Processor's worker pool.
 // Emits a TransactionProcessed and BroadcastTransaction event if the transaction was processed.
-func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes) error {
+func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes) (*hornet.Transaction, error) {
 	if !guards.IsTransactionTrytes(txTrytes) {
-		return consts.ErrInvalidTransactionTrytes
+		return nil, consts.ErrInvalidTransactionTrytes
 	}
 
 	txTrits, err := trinary.TrytesToTrits(txTrytes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tx, err := transaction.ParseTransaction(txTrits, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hashTrits := batchhasher.CURLP81.Hash(txTrits)
@@ -148,16 +148,16 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 	if tx.Value != 0 {
 		// last trit must be zero because of KERL
 		if txTrits[consts.AddressTrinaryOffset+consts.AddressTrinarySize-1] != 0 {
-			return consts.ErrInvalidAddress
+			return nil, consts.ErrInvalidAddress
 		}
 
 		if math.AbsInt64(tx.Value) > consts.TotalSupply {
-			return consts.ErrInsufficientBalance
+			return nil, consts.ErrInsufficientBalance
 		}
 	}
 
 	if !transaction.HasValidNonce(tx, config.NodeConfig.GetUint64(config.CfgCoordinatorMWM)) {
-		return consts.ErrInvalidTransactionHash
+		return nil, consts.ErrInvalidTransactionHash
 	}
 
 	return proc.CompressAndEmit(tx, txTrits)
@@ -165,12 +165,12 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 
 // CompressAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
-func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
+func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) (*hornet.Transaction, error) {
 	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {
-		return ErrInvalidTimestamp
+		return nil, ErrInvalidTimestamp
 	}
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
@@ -178,7 +178,7 @@ func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trin
 		TxData:          txBytesTruncated,
 		RequestedTxHash: hornetTx.GetTxHash(),
 	})
-	return nil
+	return hornetTx, nil
 }
 
 // WorkUnitSize returns the size of WorkUnits currently cached.

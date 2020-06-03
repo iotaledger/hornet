@@ -116,6 +116,9 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
 
+	// mark the transaction as processed in the storage layer
+	incomingTx.MarkProcessed()
+
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewTransactions.Inc()
 

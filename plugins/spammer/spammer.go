@@ -87,7 +87,9 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(&tx)
-		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
+
+		_, err := gossip.Processor().CompressAndEmit(&tx, txTrits)
+		if err != nil {
 			return
 		}
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()

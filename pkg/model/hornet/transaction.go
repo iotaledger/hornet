@@ -1,6 +1,8 @@
 package hornet
 
 import (
+	"sync"
+
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -35,6 +37,12 @@ type Transaction struct {
 
 	// TxTimestamp or, if available, AttachmentTimestamp
 	timestamp int64
+
+	// txProcessed is done when the tx was processed in processIncomingTx
+	txProcessed sync.WaitGroup
+
+	// txProcessedOnce is used to mark the tx as processed only once, since it can be processed multiple times in processIncomingTx
+	txProcessedOnce syncutils.Once
 }
 
 func NewTransaction(txHash Hash) *Transaction {
@@ -49,6 +57,7 @@ func NewTransactionFromTx(transaction *transaction.Transaction, transactionBytes
 		RawBytes:  transactionBytes,
 		timestamp: getTimestampFromTx(transaction),
 	}
+	tx.txProcessed.Add(1)
 	tx.SetModified(true)
 	return tx
 }
@@ -122,6 +131,18 @@ func (tx *Transaction) IsHead() bool {
 
 func (tx *Transaction) IsValue() bool {
 	return tx.Tx.Value != 0
+}
+
+// MarkProcessed marks the tx as processed in the storage layer.
+func (tx *Transaction) MarkProcessed() {
+	tx.txProcessedOnce.Do(func() {
+		tx.txProcessed.Done()
+	})
+}
+
+// WaitForProcessed waits until the tx was processed in the storage layer.
+func (tx *Transaction) WaitForProcessed() {
+	tx.txProcessed.Wait()
 }
 
 // ObjectStorage interface
