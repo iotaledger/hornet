@@ -49,8 +49,7 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	for _, trytes := range query.Trytes {
-		_, err := gossip.Processor().ValidateTransactionTrytesAndEmit(trytes)
-		if err != nil {
+		if _, err := gossip.Processor().ValidateTransactionTrytesAndEmit(trytes); err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusBadRequest, e)
 			return
