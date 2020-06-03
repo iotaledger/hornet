@@ -1,6 +1,8 @@
 package compressed
 
 import (
+	"fmt"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/transaction"
@@ -41,27 +43,31 @@ func TruncateTx(txBytes []byte) []byte {
 }
 
 // Expands a truncated bytes encoded transaction payload.
-func expandTx(data []byte) []byte {
+func expandTx(data []byte) ([]byte, error) {
+	if len(data) < NonSigTxPartBytesLength {
+		return nil, fmt.Errorf("insufficient tx payload length. minimum: %d, actual: %d", NonSigTxPartBytesLength, len(data))
+	}
+
 	txDataBytes := make([]byte, TransactionSize)
 
 	// we need to expand the tx data (signature message fragment) as
 	// it could have been truncated for transmission
-	//numOfBytesOfSigMsgFragToExpand := ProtocolTransactionGossipMsg.MaxBytesLength - uint16(len(data))
-	//sigMsgFragPadding := make([]byte, numOfBytesOfSigMsgFragToExpand)
 	sigMsgFragBytesToCopy := len(data) - NonSigTxPartBytesLength
 
 	// build up transaction payload. empty signature message fragment equals padding with 1312x 0 bytes
 	copy(txDataBytes, data[:sigMsgFragBytesToCopy])
-	//copy(txDataBytes[sigMsgFragBytesToCopy:], sigMsgFragPadding)
 	copy(txDataBytes[SigDataMaxBytesLength:], data[sigMsgFragBytesToCopy:])
 
-	return txDataBytes
+	return txDataBytes, nil
 }
 
 func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Hash) (*transaction.Transaction, error) {
 
 	// expand received tx data
-	txDataBytes := expandTx(transactionData)
+	txDataBytes, err := expandTx(transactionData)
+	if err != nil {
+		return nil, err
+	}
 
 	// convert bytes to trits
 	txDataTrits, err := trinary.BytesToTrits(txDataBytes, consts.TransactionTrinarySize)
