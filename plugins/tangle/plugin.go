@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -106,6 +107,10 @@ func run(plugin *node.Plugin) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {
+			if err == tangle.ErrOperationAborted {
+				log.Info("database revalidation aborted")
+				os.Exit(0)
+			}
 			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
 		}
 		log.Info("database revalidation successful")

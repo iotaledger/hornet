@@ -124,24 +124,22 @@ func SearchLatestMilestoneIndexInStore() milestone.Index {
 	return latestMilestoneIndex
 }
 
-type MilestoneConsumer func(cachedMs objectstorage.CachedObject)
+type MilestoneConsumer func(cachedMs objectstorage.CachedObject) bool
 
 // MilestoneIndexConsumer consumes the given index during looping though all milestones in the persistence layer.
-type MilestoneIndexConsumer func(index milestone.Index)
+type MilestoneIndexConsumer func(index milestone.Index) bool
 
 func ForEachMilestone(consumer MilestoneConsumer) {
 	milestoneStorage.ForEach(func(key []byte, cachedMs objectstorage.CachedObject) bool {
 		defer cachedMs.Release(true) // tx -1
-		consumer(cachedMs.Retain())
-		return true
+		return consumer(cachedMs.Retain())
 	})
 }
 
 // ForEachMilestoneIndex loops though all milestones in the persistence layer.
 func ForEachMilestoneIndex(consumer MilestoneIndexConsumer) {
 	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
-		consumer(milestoneIndexFromDatabaseKey(key))
-		return true
+		return consumer(milestoneIndexFromDatabaseKey(key))
 	}, false)
 }
 

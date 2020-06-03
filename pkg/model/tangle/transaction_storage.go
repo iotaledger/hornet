@@ -206,7 +206,7 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 
 type TransactionConsumer func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject)
 
-type TransactionHashBytesConsumer func(txHash hornet.Hash)
+type TransactionHashBytesConsumer func(txHash hornet.Hash) bool
 
 func ForEachTransaction(consumer TransactionConsumer) {
 	txStorage.ForEach(func(txHash []byte, cachedTx objectstorage.CachedObject) bool {
@@ -227,8 +227,7 @@ func ForEachTransaction(consumer TransactionConsumer) {
 // ForEachTransactionHash loops over all transaction hashes.
 func ForEachTransactionHash(consumer TransactionHashBytesConsumer) {
 	txStorage.ForEachKeyOnly(func(txHash []byte) bool {
-		consumer(txHash)
-		return true
+		return consumer(txHash)
 	}, false)
 }
 

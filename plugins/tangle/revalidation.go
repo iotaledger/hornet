@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -64,10 +66,14 @@ func revalidateDatabase() error {
 	log.Infof("reverting database state back to local snapshot %d...", snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
-	cleanMilestones(snapshotInfo)
+	if err := cleanMilestones(snapshotInfo); err != nil {
+		return err
+	}
 
 	// clean up transactions which are above the local snapshot
-	cleanupTransactions(snapshotInfo)
+	if err := cleanupTransactions(snapshotInfo); err != nil {
+		return err
+	}
 
 	// Get the ledger state of the last snapshot
 	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
@@ -96,36 +102,46 @@ func revalidateDatabase() error {
 }
 
 // deletes milestones above the given snapshot's milestone index.
-func cleanMilestones(info *tangle.SnapshotInfo) {
+func cleanMilestones(info *tangle.SnapshotInfo) error {
 	milestonesToDelete := map[milestone.Index]struct{}{}
 
-	tangle.ForEachMilestoneIndex(func(msIndex milestone.Index) {
+	tangle.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
 		if msIndex > info.SnapshotIndex {
 			milestonesToDelete[msIndex] = struct{}{}
 		}
+		return true
 	})
 
 	for msIndex := range milestonesToDelete {
+		if daemon.IsStopped() {
+			return tangle.ErrOperationAborted
+		}
+
 		tangle.DeleteUnconfirmedTxs(msIndex)
 		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 			panic(err)
 		}
 		tangle.DeleteMilestone(msIndex)
 	}
+
+	return nil
 }
 
 // deletes all transactions (and their bundle, first seen tx, etc.) which are not confirmed,
 // not solid, their confirmation milestone is newer/ of which their solidification time is younger
 // than the last local snapshot's milestone.
-func cleanupTransactions(info *tangle.SnapshotInfo) {
+func cleanupTransactions(info *tangle.SnapshotInfo) error {
 	txsToDelete := map[string]struct{}{}
 
 	start := time.Now()
 	var txCounter int64
-	tangle.ForEachTransactionHash(func(txHash hornet.Hash) {
+	tangle.ForEachTransactionHash(func(txHash hornet.Hash) bool {
 		txCounter++
 
 		if (txCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
 			log.Infof("analyzed %d transactions", txCounter)
 		}
 
@@ -134,25 +150,33 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 		// delete transaction if no metadata
 		if storedTxMeta == nil {
 			txsToDelete[string(txHash)] = struct{}{}
-			return
+			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
 			txsToDelete[string(txHash)] = struct{}{}
-			return
+			return true
 		}
 
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
 			txsToDelete[string(txHash)] = struct{}{}
-			return
 		}
+
+		return true
 	})
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
 
 	var deletionCounter float64
 	total := float64(len(txsToDelete))
 	lastPercentage := 0
 	for txHashToDelete := range txsToDelete {
+		if daemon.IsStopped() {
+			return tangle.ErrOperationAborted
+		}
 
 		if bytes.Equal(hornet.Hash(txHashToDelete), hornet.NullHashBytes) {
 			// do not delete genesis transaction
@@ -190,4 +214,6 @@ func cleanupTransactions(info *tangle.SnapshotInfo) {
 	}
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))
+
+	return nil
 }
