@@ -301,6 +301,8 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	// this blocks until the transaction was also hashed
 	tx, err := compressed.TransactionFromCompressedBytes(wu.receivedTxBytes)
 	if err != nil {
+		wu.UpdateState(Invalid)
+		wu.punish()
 		return
 	}
 
