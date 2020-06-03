@@ -49,7 +49,7 @@
     "loadType": "local",
     "local": {
       "depth": 50,
-      "intervalSynced": 50,
+      "intervalSynced": 200,
       "intervalUnsynced": 1000,
       "path": "export_comnet.bin",
       "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
@@ -61,7 +61,7 @@
     },
     "pruning": {
       "enabled": true,
-      "delay": 40000
+      "delay": 1000
     }
   },
   "spentAddresses": {

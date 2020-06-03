@@ -65,7 +65,7 @@
     },
     "pruning": {
       "enabled": true,
-      "delay": 40000
+      "delay": 15000
     }
   },
   "spentAddresses": {
