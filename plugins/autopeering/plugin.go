@@ -103,6 +103,15 @@ func configureEvents() {
 
 		// whitelist the peer
 		originAddr, _ := iputils.ParseOriginAddress(gossipAddr)
+
+		// check if the peer is already statically peered
+		if peering.Manager().IsStaticallyPeered([]string{originAddr.Addr}, originAddr.Port) {
+			log.Infof("peer is already statically peered. removing autopeered peer %s", originAddr.String())
+			if err := peering.Manager().Remove(gossipAddr); err != nil {
+				log.Errorf("couldn't remove autopeered peer %s: %s", originAddr.String(), err)
+			}
+			return
+		}
 		peering.Manager().Whitelist([]string{originAddr.Addr}, originAddr.Port, ev.Peer)
 	}))
 
