@@ -88,6 +88,17 @@ func configureEvents() {
 		gossipService := ev.Peer.Services().Get(services.GossipServiceKey())
 		gossipAddr := net.JoinHostPort(ev.Peer.IP().String(), strconv.Itoa(gossipService.Port()))
 		log.Infof("[outgoing peering] adding autopeering peer %s / %s", gossipAddr, ev.Peer.ID())
+
+		originAddr, _ := iputils.ParseOriginAddress(gossipAddr)
+
+		// check if the peer is already statically peered
+		if peering.Manager().IsStaticallyPeered([]string{originAddr.Addr}, originAddr.Port) {
+			log.Infof("peer is statically peered already %s", originAddr.String())
+			log.Infof("removing: %s / %s", gossipAddr, ev.Peer.ID())
+			Selection.RemoveNeighbor(ev.Peer.ID())
+			return
+		}
+
 		if err := peering.Manager().Add(gossipAddr, false, "", ev.Peer); err != nil {
 			log.Warnf("couldn't add autopeering peer %s", err)
 		}
@@ -103,6 +114,14 @@ func configureEvents() {
 
 		// whitelist the peer
 		originAddr, _ := iputils.ParseOriginAddress(gossipAddr)
+
+		// check if the peer is already statically peered
+		if peering.Manager().IsStaticallyPeered([]string{originAddr.Addr}, originAddr.Port) {
+			log.Infof("peer is statically peered already %s", originAddr.String())
+			log.Infof("removing: %s / %s", gossipAddr, ev.Peer.ID())
+			Selection.RemoveNeighbor(ev.Peer.ID())
+			return
+		}
 		peering.Manager().Whitelist([]string{originAddr.Addr}, originAddr.Port, ev.Peer)
 	}))
 

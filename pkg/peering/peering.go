@@ -149,6 +149,41 @@ type Events struct {
 	Error *events.Event
 }
 
+// IsStaticallyPeered tells if the peer is already statically peered.
+// all possible IDs for the given IP addresses/port combination are checked.
+func (m *Manager) IsStaticallyPeered(ips []string, port uint16) bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	for _, peerIP := range ips {
+		peerID := peer.NewID(peerIP, port)
+
+		// check all connected peers
+		for _, p := range m.connected {
+			for connectedIP := range p.Addresses.IPs {
+				connectedID := peer.NewID(connectedIP.String(), p.InitAddress.Port)
+
+				if connectedID == peerID {
+					return true
+				}
+			}
+		}
+
+		// check all peers in the reconnect pool
+		for _, reconnectInfo := range m.reconnect {
+			for reconnectInfoIP := range reconnectInfo.CachedIPs.IPs {
+				reconnectID := peer.NewID(reconnectInfoIP.String(), reconnectInfo.OriginAddr.Port)
+
+				if reconnectID == peerID {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
 // Blacklisted tells whether the given IP address is blacklisted.
 func (m *Manager) Blacklisted(ip string) bool {
 	m.blacklistMu.Lock()
