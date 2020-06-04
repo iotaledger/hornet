@@ -65,7 +65,7 @@
     },
     "pruning": {
       "enabled": true,
-      "delay": 40000
+      "delay": 15000
     }
   },
   "spentAddresses": {
@@ -93,7 +93,7 @@
       "entryNodes": [
         "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
         "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
-        "npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@entrynode.tanglebay.org:14626"
+        "EsY+zvaselQYA33AVNzrYIGLplboIh4r8oO+vLKQAVM=@entrynode.tanglebay.org:14626"
       ],
       "seed": ""
     }
