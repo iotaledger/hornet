@@ -473,7 +473,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
-	log.Infof("created local snapshot for target index %d (%x), took %v", targetIndex, hash, time.Since(ts))
+	log.Infof("created local snapshot for target index %d (sha256: %x), took %v", targetIndex, hash, time.Since(ts))
 
 	return nil
 }
