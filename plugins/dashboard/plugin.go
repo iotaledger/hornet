@@ -238,6 +238,7 @@ type nodestatus struct {
 	LMI                    milestone.Index `json:"lmi"`
 	SnapshotIndex          milestone.Index `json:"snapshot_index"`
 	PruningIndex           milestone.Index `json:"pruning_index"`
+	IsHealthy              bool            `json:"is_healthy"`
 	Version                string          `json:"version"`
 	LatestVersion          string          `json:"latest_version"`
 	Uptime                 int64           `json:"uptime"`
@@ -359,6 +360,7 @@ func currentNodeStatus() *nodestatus {
 	if !node.IsSkipped(autopeering.PLUGIN) {
 		status.AutopeeringID = autopeering.ID
 	}
+	status.IsHealthy = tangleplugin.IsNodeHealthy()
 	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()

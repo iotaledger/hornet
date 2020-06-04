@@ -173,13 +173,13 @@ func collectPeers() {
 	for _, peer := range peering.Manager().PeerInfos() {
 		address, port, _ := net.SplitHostPort(peer.Address)
 		labels := prometheus.Labels{
-			"address": address,
-			"port": port,
-			"domain": peer.Domain,
-			"alias": peer.Alias,
-			"type": peer.ConnectionType,
+			"address":        address,
+			"port":           port,
+			"domain":         peer.Domain,
+			"alias":          peer.Alias,
+			"type":           peer.ConnectionType,
 			"autopeering_id": peer.AutopeeringID,
-		};
+		}
 
 		peersAllTransactions.With(labels).Set(float64(peer.NumberOfAllTransactions))
 		peersNewTransactions.With(labels).Set(float64(peer.NumberOfNewTransactions))

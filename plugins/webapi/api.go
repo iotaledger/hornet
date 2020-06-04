@@ -5,20 +5,16 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
 	healthzRoute = "healthz"
-
-	maxAllowedMilestoneAge = time.Minute * 5
 )
 
 var (
@@ -93,40 +89,11 @@ func restAPIRoute() {
 	// node mode
 	// GET /healthz
 	api.GET(healthzRoute, func(c *gin.Context) {
-		if !isNodeHealthy() {
+		if !tangle.IsNodeHealthy() {
 			c.Status(http.StatusServiceUnavailable)
 			return
 		}
 
 		c.Status(http.StatusOK)
 	})
-}
-
-func isNodeHealthy() bool {
-	// Synced
-	if !tangle.IsNodeSyncedWithThreshold() {
-		return false
-	}
-
-	// Has connected neighbors
-	if peering.Manager().ConnectedPeerCount() == 0 {
-		return false
-	}
-
-	// Latest milestone timestamp
-	var milestoneTimestamp int64
-	lmi := tangle.GetLatestMilestoneIndex()
-	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
-	if cachedLatestMs == nil {
-		return false
-	}
-
-	cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
-	milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
-	cachedMsTailTx.Release(true) // tx -1
-	cachedLatestMs.Release(true) // bundle -1
-
-	// Check whether the milestone is older than 5 minutes
-	timeMs := time.Unix(milestoneTimestamp, 0)
-	return time.Since(timeMs) < maxAllowedMilestoneAge
 }
