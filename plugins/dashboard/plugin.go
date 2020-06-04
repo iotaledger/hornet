@@ -24,7 +24,6 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	databaseplugin "github.com/gohornet/hornet/plugins/database"
@@ -361,7 +360,7 @@ func currentNodeStatus() *nodestatus {
 	if !node.IsSkipped(autopeering.PLUGIN) {
 		status.AutopeeringID = autopeering.ID
 	}
-	status.IsHealthy = utils.IsNodeHealthy()
+	status.IsHealthy = tangleplugin.IsNodeHealthy()
 	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 	status.LSMI = tangle.GetSolidMilestoneIndex()
 	status.LMI = tangle.GetLatestMilestoneIndex()

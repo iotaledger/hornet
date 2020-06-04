@@ -10,10 +10,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-const healthzRoute = "healthz"
+const (
+	healthzRoute = "healthz"
+)
 
 var (
 	// ErrNodeNotSync is returned when the node was not synced.
@@ -87,7 +89,7 @@ func restAPIRoute() {
 	// node mode
 	// GET /healthz
 	api.GET(healthzRoute, func(c *gin.Context) {
-		if !utils.IsNodeHealthy() {
+		if !tangle.IsNodeHealthy() {
 			c.Status(http.StatusServiceUnavailable)
 			return
 		}

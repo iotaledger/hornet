@@ -1,4 +1,4 @@
-package utils
+package tangle
 
 import (
 	"time"
@@ -7,9 +7,11 @@ import (
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
-const maxAllowedMilestoneAge = time.Minute * 5
+const (
+	maxAllowedMilestoneAge = time.Minute * 5
+)
 
-// IsNodeHealthy returns whether the node is synced, has active neighbors and its latest milestone is not too old
+// IsNodeHealthy returns whether the node is synced, has active neighbors and its latest milestone is not too old.
 func IsNodeHealthy() bool {
 	// Synced
 	if !tangle.IsNodeSyncedWithThreshold() {
