@@ -335,7 +335,6 @@ type GetLedgerStateReturn struct {
 type CreateSnapshotFile struct {
 	Command     string          `mapstructure:"command"`
 	TargetIndex milestone.Index `mapstructure:"targetIndex"`
-	FilePath    string          `mapstructure:"filePath"`
 }
 
 // CreateSnapshotFileReturn struct
