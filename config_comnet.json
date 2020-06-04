@@ -96,7 +96,7 @@
   },
   "tipsel": {
     "belowMaxDepthTransactionLimit": 100000,
-    "maxDepth": 3
+    "maxDepth": 5
   },
   "node": {
     "alias": "",
