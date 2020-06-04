@@ -34,6 +34,7 @@ class Status {
     lmi: number;
     snapshot_index: number;
     pruning_index: number;
+    is_healthy: boolean;
     version: string;
     latest_version: string;
     uptime: number;
@@ -432,9 +433,13 @@ export class NodeStore {
 
     @computed
     get isNodeSync(): boolean {
-        if (this.status.lmi == 0) return false;
-        return this.status.lsmi == this.status.lmi;
+        return this.status.is_healthy;
     };
+
+    @computed
+    get msDelta(): number {
+        return this.status.lmi - this.status.lsmi;
+    }
 
     @computed
     get isLatestVersion(): boolean {
