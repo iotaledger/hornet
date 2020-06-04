@@ -4,7 +4,6 @@ services:
     build:
       context: .
       # For aarch64/arm64 use Dockerfile.arm64
-      # or Dockerfile.armhf for arm32/armhf
       dockerfile: docker/Dockerfile
     image: hornet:latest
     # Best performance via host network:
