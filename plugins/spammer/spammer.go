@@ -12,26 +12,54 @@ import (
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
-	"github.com/gohornet/hornet/packages/compressed"
-	"github.com/gohornet/hornet/packages/model/hornet"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/tipselection"
+
+	"go.uber.org/atomic"
 )
 
 var (
-	_, powFunc       = pow.GetFastestProofOfWorkImpl()
+	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
-	txCount          = 0
+	txCount          = atomic.NewInt32(0)
+	seed             = utils.RandomTrytesInsecure(81)
+	addrIndex        = atomic.NewInt32(0)
 )
 
 func doSpam(shutdownSignal <-chan struct{}) {
 
-	if int64(rateLimit) != 0 {
+	if rateLimit != 0 {
 		select {
 		case <-shutdownSignal:
 			return
 		case <-rateLimitChannel:
 		}
+	}
+
+	if !tangle.IsNodeSyncedWithThreshold() {
+		time.Sleep(time.Second)
+		return
+	}
+
+	if peering.Manager().ConnectedPeerCount() == 0 {
+		time.Sleep(time.Second)
+		return
+	}
+
+	if err := waitForLowerCPUUsage(shutdownSignal); err != nil {
+		if err != tangle.ErrOperationAborted {
+			log.Warn(err.Error())
+		}
+		return
+	}
+
+	if spammerStartTime.IsZero() {
+		// Set the start time for the metrics
+		spammerStartTime = time.Now()
 	}
 
 	timeStart := time.Now()
@@ -40,33 +68,32 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 	durationGTTA := time.Since(timeStart)
-	durGTTA := durationGTTA.Truncate(time.Millisecond)
 
-	txCount++
+	txCountValue := int(txCount.Add(int32(bundleSize)))
 	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
 
-	b, err := createBundle(address, message, tagSubstring, txCount, infoMsg)
+	b, err := createBundle(txAddress, message, tagSubstring, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
 		return
 	}
 
-	err = doPow(b, tips[0], tips[1], mwm)
+	err = doPow(b, tips[0].Trytes(), tips[1].Trytes(), mwm, shutdownSignal)
 	if err != nil {
 		return
 	}
 
 	durationPOW := time.Since(timeStart.Add(durationGTTA))
-	durPOW := durationPOW.Truncate(time.Millisecond)
 
-	for _, tx := range b {
-		err = broadcastTransaction(&tx)
-		if err != nil {
+	for _, t := range b {
+		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
+		txTrits, _ := transaction.TransactionToTrits(&tx)
+		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
 			return
 		}
+		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
 
-	durTotal := time.Since(timeStart).Truncate(time.Millisecond)
-	log.Infof("Sent Spam Transaction # %v GTTA: %v POW: %v Total: %v", txCount, durGTTA, durPOW, durTotal)
+	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
 }
 
 // transactionHash makes a transaction hash from the given transaction.
@@ -76,7 +103,7 @@ func transactionHash(t *transaction.Transaction) trinary.Hash {
 	return trinary.MustTritsToTrytes(hashTrits)
 }
 
-func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) error {
+func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, shutdownSignal <-chan struct{}) error {
 	var prev trinary.Hash
 
 	for i := len(b) - 1; i >= 0; i-- {
@@ -99,7 +126,13 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) er
 			return err
 		}
 
-		nonce, err := powFunc(trytes, mwm)
+		select {
+		case <-shutdownSignal:
+			return tangle.ErrOperationAborted
+		default:
+		}
+
+		nonce, err := powFunc(trytes, mwm, 1)
 		if err != nil {
 			return err
 		}
@@ -110,25 +143,5 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int) er
 		b[i].Hash = transactionHash(&b[i])
 		prev = b[i].Hash
 	}
-	return nil
-}
-
-func broadcastTransaction(tx *transaction.Transaction) error {
-
-	if !transaction.HasValidNonce(tx, uint64(mwm)) {
-		return consts.ErrInvalidTransactionHash
-	}
-
-	txTrits, err := transaction.TransactionToTrits(tx)
-	if err != nil {
-		return err
-	}
-
-	txBytesTruncated := compressed.TruncateTx(trinary.TritsToBytes(txTrits))
-	hornetTx := hornet.NewTransactionFromAPI(tx, txBytesTruncated)
-
-	gossip.Events.ReceivedTransaction.Trigger(hornetTx)
-	gossip.BroadcastTransaction(make(map[string]struct{}), txBytesTruncated, trinary.MustTrytesToBytes(hornetTx.GetHash())[:49])
-
 	return nil
 }

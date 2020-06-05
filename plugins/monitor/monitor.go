@@ -2,33 +2,25 @@ package monitor
 
 import (
 	"container/ring"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	socketio "github.com/googollee/go-socket.io"
-
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
-)
-
-const (
-	TX_BUFFER_SIZE = 50000
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 var (
 	txRingBuffer *ring.Ring
-	txPointerMap map[string]*wsTransaction
+	txPointerMap map[trinary.Hash]*wsTransaction
 
 	txRingBufferLock = syncutils.Mutex{}
-	broadcastLock    = syncutils.Mutex{}
 )
 
 type (
@@ -65,133 +57,106 @@ type (
 		Milestone string `json:"milestone"`
 		ConfTime  int64  `json:"ctime"`
 	}
+	wsMessage struct {
+		Type string      `json:"type"`
+		Data interface{} `json:"data"`
+	}
 )
 
 func initRingBuffer() {
-	txRingBuffer = ring.New(TX_BUFFER_SIZE)
-	txPointerMap = make(map[string]*wsTransaction)
+	txRingBuffer = ring.New(txBufferSize)
+	txPointerMap = make(map[trinary.Hash]*wsTransaction)
 }
 
-func onConnectHandler(s socketio.Conn) error {
-	infoMsg := "Monitor client connection established"
-	if s != nil {
-		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
-	}
-	log.Info(infoMsg)
-	socketioServer.JoinRoom("broadcast", s)
-	return nil
-}
+func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-func onErrorHandler(s socketio.Conn, e error) {
-	errorMsg := "Monitor meet error"
-	if e != nil {
-		errorMsg = fmt.Sprintf("%s: %s", errorMsg, e.Error())
-	}
-	log.Error(errorMsg)
-}
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
+		wsTx := &wsTransaction{
+			Hash:       tx.Tx.Hash,
+			Address:    tx.Tx.Address,
+			Value:      tx.Tx.Value,
+			Tag:        tx.Tx.Tag,
+			Bundle:     tx.Tx.Bundle,
+			ReceivedAt: time.Now().Unix() * 1000,
+			ConfTime:   1111111111111,
+			Milestone:  "f",
+			//TrunkTransaction:  tx.Tx.TrunkTransaction,
+			//BranchTransaction: tx.Tx.BranchTransaction,
+		}
 
-func onDisconnectHandler(s socketio.Conn, msg string) {
-	infoMsg := "Monitor client connection closed"
-	if s != nil {
-		infoMsg = fmt.Sprintf("%s (ID: %v)", infoMsg, s.ID())
-	}
-	log.Info(fmt.Sprintf("%s: %s", infoMsg, msg))
-	socketioServer.LeaveAllRooms(s)
-}
+		txRingBufferLock.Lock()
 
-func onNewTx(tx *hornet.Transaction) {
+		if _, exists := txPointerMap[tx.Tx.Hash]; exists {
+			// Tx already exists => ignore
+			txRingBufferLock.Unlock()
+			return
+		}
 
-	txHash := tx.GetHash()
+		// Delete old element from map
+		if txRingBuffer.Value != nil {
+			oldTx := txRingBuffer.Value.(*wsTransaction)
+			delete(txPointerMap, oldTx.Hash)
+		}
 
-	wsTx := &wsTransaction{
-		Hash:       txHash,
-		Address:    tx.Tx.Address,
-		Value:      tx.Tx.Value,
-		Tag:        tx.Tx.Tag,
-		Bundle:     tx.Tx.Bundle,
-		ReceivedAt: time.Now().Unix() * 1000,
-		ConfTime:   1111111111111,
-		Milestone:  "f",
-		//TrunkTransaction:  tx.Tx.TrunkTransaction,
-		//BranchTransaction: tx.Tx.BranchTransaction,
-	}
+		// Set new element in ringbuffer
+		txRingBuffer.Value = wsTx
+		txRingBuffer = txRingBuffer.Next()
 
-	txRingBufferLock.Lock()
+		// Add new element to map
+		txPointerMap[wsTx.Hash] = wsTx
 
-	if _, exists := txPointerMap[txHash]; exists {
-		// Tx already exists => ignore
 		txRingBufferLock.Unlock()
-		return
-	}
 
-	// Delete old element from map
-	if txRingBuffer.Value != nil {
-		oldTx := txRingBuffer.Value.(*wsTransaction)
-		delete(txPointerMap, oldTx.Hash)
-	}
-
-	// Set new element in ringbuffer
-	txRingBuffer.Value = wsTx
-	txRingBuffer = txRingBuffer.Next()
-
-	// Add new element to map
-	txPointerMap[wsTx.Hash] = wsTx
-
-	txRingBufferLock.Unlock()
-
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "newTX", wsTx)
-	broadcastLock.Unlock()
+		hub.BroadcastMsg(&wsMessage{Type: "newTX", Data: wsTx})
+	})
 }
 
-func onConfirmedTx(tx *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+func onConfirmedTx(cachedTx *tangle.CachedTransaction, _ milestone.Index, confTime int64) {
 
-	txHash := tx.GetHash()
-
-	if tx.Tx.CurrentIndex == 0 {
-		// Tail Tx => Check if there are other bundles (Reattachments)
-		bundleBucket, _ := tangle.GetBundleBucket(tx.Tx.Bundle)
-		bundles := bundleBucket.Bundles()
-		if bundleBucket != nil && (len(bundles) > 1) {
-			ledgerChanges, _ := bundles[0].GetLedgerChanges()
-			isValue := len(ledgerChanges) > 0
-			if isValue {
-				// Mark all different Txs in all bundles as reattachment
-				for _, bundle := range bundleBucket.Bundles() {
-					for _, txHash := range bundle.GetTransactionHashes() {
-						reattachmentWorkerPool.TrySubmit(txHash)
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
+		if tx.Tx.CurrentIndex == 0 {
+			// Tail Tx => Check if this is a value Tx
+			cachedBndl := tangle.GetCachedBundleOrNil(tx.GetTxHash()) // bundle +1
+			if cachedBndl != nil {
+				if !cachedBndl.GetBundle().IsValueSpam() {
+					ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
+					if len(ledgerChanges) > 0 {
+						// Mark all different Txs in all bundles as reattachment
+						reattachmentWorkerPool.TrySubmit(tx.Tx.Bundle)
 					}
 				}
+				cachedBndl.Release(true) // bundle -1
 			}
 		}
-	}
 
-	txRingBufferLock.Lock()
-	if wsTx, exists := txPointerMap[txHash]; exists {
-		wsTx.Confirmed = true
-		wsTx.ConfTime = confTime * 1000
-	}
-	txRingBufferLock.Unlock()
+		txRingBufferLock.Lock()
+		if wsTx, exists := txPointerMap[tx.Tx.Hash]; exists {
+			wsTx.Confirmed = true
+			wsTx.ConfTime = confTime * 1000
+		}
+		txRingBufferLock.Unlock()
 
-	update := wsUpdate{
-		Hash:     txHash,
-		ConfTime: confTime * 1000,
-	}
+		update := wsUpdate{
+			Hash:     tx.Tx.Hash,
+			ConfTime: confTime * 1000,
+		}
 
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "update", update)
-	broadcastLock.Unlock()
+		hub.BroadcastMsg(&wsMessage{Type: "update", Data: update})
+	})
 }
 
-func onNewMilestone(bundle *tangle.Bundle) {
+func onNewMilestone(cachedBndl *tangle.CachedBundle) {
 
-	tailTx := bundle.GetTail()
+	cachedTailTx := cachedBndl.GetBundle().GetTail() // tx +1
+	confTime := cachedTailTx.GetTransaction().GetTimestamp() * 1000
+	cachedTailTx.Release(true) // tx -1
 
-	confTime := tailTx.GetTimestamp() * 1000
+	cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
+	cachedBndl.Release(true)                              // bundle -1
 
 	txRingBufferLock.Lock()
-	for _, tx := range bundle.GetTransactions() {
-		if wsTx, exists := txPointerMap[tx.GetHash()]; exists {
+	for _, cachedTx := range cachedTxs {
+		if wsTx, exists := txPointerMap[cachedTx.GetTransaction().Tx.Hash]; exists {
 			wsTx.Confirmed = true
 			wsTx.Milestone = "t"
 			wsTx.ConfTime = confTime
@@ -199,17 +164,16 @@ func onNewMilestone(bundle *tangle.Bundle) {
 	}
 	txRingBufferLock.Unlock()
 
-	broadcastLock.Lock()
-	for _, tx := range bundle.GetTransactions() {
+	for _, cachedTx := range cachedTxs {
 		update := wsNewMile{
-			Hash:      tx.GetHash(),
+			Hash:      cachedTx.GetTransaction().Tx.Hash,
 			Milestone: "t",
 			ConfTime:  confTime,
 		}
-
-		socketioServer.BroadcastToRoom("broadcast", "updateMilestone", update)
+		hub.BroadcastMsg(&wsMessage{Type: "updateMilestone", Data: update})
 	}
-	broadcastLock.Unlock()
+
+	cachedTxs.Release(true) // tx -1
 }
 
 func onReattachment(txHash trinary.Hash) {
@@ -224,9 +188,7 @@ func onReattachment(txHash trinary.Hash) {
 		Hash: txHash,
 	}
 
-	broadcastLock.Lock()
-	socketioServer.BroadcastToRoom("broadcast", "updateReattach", update)
-	broadcastLock.Unlock()
+	hub.BroadcastMsg(&wsMessage{Type: "updateReattach", Data: update})
 }
 
 func setupResponse(c *gin.Context) {

@@ -1,7 +1,8 @@
 package metrics
 
 import (
-	"github.com/gohornet/hornet/plugins/gossip/server"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 var (
@@ -12,14 +13,14 @@ var (
 
 // measures the TPS values
 func measureTPS() {
-	incomingTxCnt := server.SharedServerMetrics.GetAllTransactionsCount()
-	incomingNewTxCnt := server.SharedServerMetrics.GetNewTransactionsCount()
-	outgoingTxCnt := server.SharedServerMetrics.GetSentTransactionsCount()
+	incomingTxCnt := metrics.SharedServerMetrics.Transactions.Load()
+	incomingNewTxCnt := metrics.SharedServerMetrics.NewTransactions.Load()
+	outgoingTxCnt := metrics.SharedServerMetrics.SentTransactions.Load()
 
 	tpsMetrics := &TPSMetrics{
-		Incoming: incomingTxCnt - lastIncomingTxCnt,
-		New:      incomingNewTxCnt - lastIncomingNewTxCnt,
-		Outgoing: outgoingTxCnt - lastOutgoingTxCnt,
+		Incoming: utils.GetUint32Diff(incomingTxCnt, lastIncomingTxCnt),
+		New:      utils.GetUint32Diff(incomingNewTxCnt, lastIncomingNewTxCnt),
+		Outgoing: utils.GetUint32Diff(outgoingTxCnt, lastOutgoingTxCnt),
 	}
 
 	// store the new counters
@@ -29,7 +30,4 @@ func measureTPS() {
 
 	// trigger events for outside listeners
 	Events.TPSMetricsUpdated.Trigger(tpsMetrics)
-
-	// DEBUG
-	//gossip.DebugPrintQueueStats()
 }

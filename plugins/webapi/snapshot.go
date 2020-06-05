@@ -1,66 +1,39 @@
 package webapi
 
 import (
+	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/plugins/snapshot"
 )
 
 func init() {
-	addEndpoint("getSnapshot", getSnapshot, implementedAPIcalls)
-	addEndpoint("createSnapshot", createSnapshot, implementedAPIcalls)
+	addEndpoint("createSnapshotFile", createSnapshotFile, implementedAPIcalls)
 }
 
-func getSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	sn := &GetSnapshot{}
+func createSnapshotFile(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 	e := ErrorReturn{}
+	query := &CreateSnapshotFile{}
 
-	err := mapstructure.Decode(i, sn)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	snr := &GetSnapshotReturn{}
+	snapshotFilePath := filepath.Join(filepath.Dir(config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)), fmt.Sprintf("export_%d.bin", query.TargetIndex))
 
-	balances, index, err := tangle.GetAllBalances(abortSignal)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	snr.Balances = balances
-	snr.MilestoneIndex = uint64(index)
-
-	c.JSON(http.StatusOK, snr)
-}
-
-func createSnapshot(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	sn := &CreateSnapshot{}
-	e := ErrorReturn{}
-
-	err := mapstructure.Decode(i, sn)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	snr := &CreateSnapshotReturn{}
-
-	err = snapshot.CreateLocalSnapshot(milestone_index.MilestoneIndex(sn.TargetIndex), sn.FilePath, abortSignal)
-	if err != nil {
+	if err := snapshot.CreateLocalSnapshot(milestone.Index(query.TargetIndex), snapshotFilePath, false, abortSignal); err != nil {
 		e.Error = err.Error()
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	c.JSON(http.StatusOK, snr)
+	c.JSON(http.StatusOK, CreateSnapshotFileReturn{})
 }

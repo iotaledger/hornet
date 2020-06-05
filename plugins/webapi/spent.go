@@ -8,39 +8,47 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
+	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("wereAddressesSpentFrom", wereAddressesSpentFrom, implementedAPIcalls)
 }
 
-func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	sp := &WereAddressesSpentFrom{}
+func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
+	query := &WereAddressesSpentFrom{}
 
-	err := mapstructure.Decode(i, sp)
-	if err != nil {
-		e.Error = "Internal error"
+	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
+		e.Error = "wereAddressesSpentFrom not available in this node"
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
 	if !tangle.IsNodeSynced() {
-		e.Error = "Node not synced"
+		e.Error = ErrNodeNotSync.Error()
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	if len(sp.Addresses) == 0 {
+	if len(query.Addresses) == 0 {
 		e.Error = "No addresses provided"
 		c.JSON(http.StatusBadRequest, e)
+		return
 	}
 
-	spr := &WereAddressesSpentFromReturn{}
+	result := WereAddressesSpentFromReturn{}
 
-	for _, addr := range sp.Addresses {
+	for _, addr := range query.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
 			e.Error = fmt.Sprintf("Provided address invalid: %s", addr)
 			c.JSON(http.StatusBadRequest, e)
@@ -48,8 +56,8 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, abortSignal <-chan st
 		}
 
 		// State
-		spr.States = append(spr.States, tangle.WasAddressSpentFrom(addr[:81]))
+		result.States = append(result.States, tangle.WasAddressSpentFrom(hornet.Hash(trinary.MustTrytesToBytes(addr[:81])[:49])))
 	}
 
-	c.JSON(http.StatusOK, spr)
+	c.JSON(http.StatusOK, result)
 }

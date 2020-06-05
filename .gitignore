@@ -16,13 +16,15 @@
 
 # Database directory
 mainnetdb/
+comnetdb/
 
 # OSX related files
 .DS_Store
 /hornet
 
 # snapshot files
-*export.gz.bin
+*export.bin
+*export_comnet.bin
 
 # template files
 *node_modules
@@ -31,3 +33,15 @@ plugins/monitor/tanglemonitor
 
 # dist packages
 dist/
+
+# Snapshot directory (for docker running in main path)
+snapshot/
+
+# log files
+hornet.log
+
+# coordinator files
+layer*.csv
+coordinator.state
+coordinator.tree
+hive.go/

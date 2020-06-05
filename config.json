@@ -1,72 +1,13 @@
 {
   "useProfile": "auto",
-  "profiles": {
-    "custom": {
-      "caches": {
-        "requestQueue": {
-          "size": 100000
-        },
-        "approvers": {
-          "size": 100000,
-          "evictionSize": 1000
-        },
-        "bundles": {
-          "size": 20000,
-          "evictionSize": 1000
-        },
-        "milestones": {
-          "size": 1000,
-          "evictionSize": 100
-        },
-        "spentAddresses": {
-          "size": 5000,
-          "evictionSize": 1000
-        },
-        "transactions": {
-          "size": 50000,
-          "evictionSize": 1000
-        },
-        "incomingTransactionFilter": {
-          "size": 5000
-        },
-        "refsInvalidBundle": {
-          "size": 10000
-        }
-      },
-      "badger": {
-        "levelOneSize": 268435456,
-        "levelSizeMultiplier": 10,
-        "tableLoadingMode": 2,
-        "valueLogLoadingMode": 2,
-        "maxLevels": 7,
-        "maxTableSize": 67108864,
-        "numCompactors": 2,
-        "numLevelZeroTables": 5,
-        "numLevelZeroTablesStall": 10,
-        "numMemtables": 5,
-        "bloomFalsePositive": 0.01,
-        "blockSize": 4096,
-        "syncWrites": false,
-        "numVersionsToKeep": 1,
-        "compactLevel0OnClose": false,
-        "keepL0InMemory": false,
-        "verifyValueChecksum": false,
-        "maxCacheSize": 50000000,
-        "ZSTDCompressionLevel": 10,
-        "valueLogFileSize": 1073741823,
-        "valueLogMaxEntries": 1000000,
-        "valueThreshold": 32,
-        "withTruncate": false,
-        "logRotatesToFlush": 2,
-        "eventLogging": false
-      }
-    }
-  },
-  "api": {
-    "auth": {
-      "password": "",
-      "username": ""
+  "httpAPI": {
+    "basicAuth": {
+      "enabled": false,
+      "username": "",
+      "passwordHash": "",
+      "passwordSalt": ""
     },
+    "excludeHealthCheckFromAuth": false,
     "permitRemoteAccess": [
       "getNodeInfo",
       "getBalances",
@@ -80,82 +21,91 @@
       "storeTransactions",
       "getTrytes"
     ],
-    "host": "0.0.0.0",
-    "maxbodylength": 1000000,
-    "maxfindtransactions": 100000,
-    "maxgettrytes": 1000,
-    "maxrequestslist": 1000,
-    "port": 14265,
-    "remoteauth": ""
-  },
-  "compass": {
-    "loadLSMIAsLMI": false
+    "whitelistedAddresses": [],
+    "bindAddress": "0.0.0.0:14265",
+    "limits": {
+      "bodyLengthBytes": 1000000,
+      "findTransactions": 1000,
+      "getTrytes": 1000,
+      "requestsList": 1000
+    }
   },
   "dashboard": {
-    "host": "127.0.0.1",
-    "port": 8081,
+    "bindAddress": "localhost:8081",
+    "theme": "default",
     "dev": false,
-    "basic_auth": {
+    "basicAuth": {
       "enabled": false,
-      "username": "hornet",
-      "password": "hornet"
+      "username": "",
+      "passwordHash": "",
+      "passwordSalt": ""
     }
   },
   "db": {
     "path": "mainnetdb"
   },
-  "graph": {
-    "webrootPath": "IOTAtangle/webroot",
-    "socketiopath": "socket.io-client/dist/socket.io.js",
-    "domain": "",
-    "host": "127.0.0.1",
-    "port": 8083,
-    "networkName": "meets HORNET"
+  "snapshots": {
+    "loadType": "local",
+    "local": {
+      "depth": 50,
+      "intervalSynced": 50,
+      "intervalUnsynced": 1000,
+      "path": "export.bin",
+      "downloadURL": "https://ls.manapotion.io/export.bin"
+    },
+    "global": {
+      "path": "snapshotMainnet.txt",
+      "spentAddressesPaths": [
+        "previousEpochsSpentAddresses1.txt",
+        "previousEpochsSpentAddresses2.txt",
+        "previousEpochsSpentAddresses3.txt"
+      ],
+      "index": 1050000
+    },
+    "pruning": {
+      "enabled": true,
+      "delay": 15000
+    }
   },
-  "pruning": {
-    "enabled": true,
-    "delay": 40000
+  "spentAddresses": {
+    "enabled": true
   },
-  "localsnapshots": {
-    "enabled": true,
-    "depth": 50,
-    "intervalsynced": 50,
-    "intervalunsynced": 1000,
-    "path": "latest-export.gz.bin"
-  },
-  "globalsnapshot": {
-    "load": false,
-    "path": "snapshotMainnet.txt",
-    "spentaddressespaths": ["previousEpochsSpentAddresses1.txt", "previousEpochsSpentAddresses2.txt", "previousEpochsSpentAddresses3.txt"],
-    "index": 1050000
-  },
-  "privatetangle": {
-    "ledgerstatepath": "balances.txt"
-  },
-  "milestones": {
-    "coordinator": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
-    "coordinatorsecuritylevel": 2,
-    "numberofkeysinamilestone": 23
-  },
-  "monitor": {
-    "tanglemonitorpath": "tanglemonitor/frontend",
-    "domain": "",
-    "host": "127.0.0.1",
-    "port": 4434,
-    "apiPort": 4433
-  },
-  "mqtt": {
-    "config": "mqtt_config.json"
+  "coordinator": {
+    "address": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
+    "securityLevel": 2,
+    "merkleTreeDepth": 23,
+    "mwm": 14,
+    "stateFilePath": "coordinator.state",
+    "merkleTreeFilePath": "coordinator.tree",
+    "intervalSeconds": 60,
+    "checkpointTransactions": 5
   },
   "network": {
-    "address": "0.0.0.0",
     "preferIPv6": false,
-    "port": 15600,
-    "reconnectattemptintervalseconds": 60
+    "gossip": {
+      "bindAddress": "0.0.0.0:15600",
+      "reconnectAttemptIntervalSeconds": 60
+    },
+    "autopeering": {
+      "bindAddress": "0.0.0.0:14626",
+      "runAsEntryNode": false,
+      "entryNodes": [
+        "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
+        "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
+        "EsY+zvaselQYA33AVNzrYIGLplboIh4r8oO+vLKQAVM=@entrynode.tanglebay.org:14626"
+      ],
+      "seed": ""
+    }
+  },
+  "tipsel": {
+    "belowMaxDepthTransactionLimit": 20000,
+    "maxDepth": 5
   },
   "node": {
-    "disableplugins": [],
-    "enableplugins": []
+    "alias": "",
+    "showAliasInGetNodeInfo": false,
+    "disablePlugins": [],
+    "enablePlugins": []
   },
   "logger": {
     "level": "info",
@@ -165,23 +115,52 @@
       "stdout"
     ]
   },
-  "protocol": {
-    "mwm": 14
-  },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
-    "depth": 3,
+    "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
-    "tpsratelimit": 0.1,
-    "workers": 1
+    "cpuMaxUsage": 0.8,
+    "tpsRateLimit": 0.0,
+    "bundleSize": 1,
+    "valueSpam": false,
+    "workers": 0
   },
-  "tipsel": {
-    "belowmaxdepthtransactionlimit": 20000,
-    "maxdepth": 15
+  "graph": {
+    "webRootPath": "IOTAtangle/webroot",
+    "domain": "",
+    "webSocket": {
+      "uri": ""
+    },
+    "bindAddress": "localhost:8083",
+    "networkName": "meets HORNET",
+    "explorerTxLink": "http://localhost:8081/explorer/tx/",
+    "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
+  },
+  "monitor": {
+    "tangleMonitorPath": "tanglemonitor/frontend",
+    "domain": "",
+    "initialTransactions": 15000,
+    "remoteApiPort": 4433,
+    "webBindAddress": "localhost:4434",
+    "apiBindAddress": "localhost:4433",
+    "webSocket": {
+      "uri": ""
+    }
+  },
+  "mqtt": {
+    "config": "mqtt_config.json"
   },
   "zmq": {
-    "host": "127.0.0.1",
-    "port": 5556
+    "bindAddress": "localhost:5556"
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  },
+  "prometheus": {
+    "bindAddress": "localhost:9311",
+    "goMetrics": false,
+    "processMetrics": false,
+    "promhttpMetrics": false
   }
 }

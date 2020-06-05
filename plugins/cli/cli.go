@@ -12,7 +12,7 @@ import (
 
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/pkg/config"
 )
 
 var enabledPlugins []string
@@ -33,17 +33,18 @@ func getList(a []string) string {
 }
 
 func ParseConfig() {
-	ignoreSettingsAtPrint := []string{}
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "api.auth.password")
-	ignoreSettingsAtPrint = append(ignoreSettingsAtPrint, "dashboard.basic_auth.password")
-	if err := parameter.FetchConfig(true, ignoreSettingsAtPrint); err != nil {
+	if err := config.FetchConfig(); err != nil {
 		panic(err)
 	}
 	parseParameters()
 
-	if err := logger.InitGlobalLogger(parameter.NodeConfig); err != nil {
+	if err := logger.InitGlobalLogger(config.NodeConfig); err != nil {
 		panic(err)
 	}
+}
+
+func PrintConfig() {
+	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 }
 
 // PrintVersion prints out the HORNET version
@@ -69,6 +70,6 @@ func printUsage() {
 	)
 	flag.PrintDefaults()
 
-	fmt.Fprintf(os.Stderr, "\nThe following plugins are enabled: %s\n", getList(parameter.NodeConfig.GetStringSlice("node.enableplugins")))
-	fmt.Fprintf(os.Stderr, "\nThe following plugins are disabled: %s\n", getList(parameter.NodeConfig.GetStringSlice("node.disableplugins")))
+	fmt.Fprintf(os.Stderr, "\nThe following plugins are enabled: %s\n", getList(config.NodeConfig.GetStringSlice(node.CFG_ENABLE_PLUGINS)))
+	fmt.Fprintf(os.Stderr, "\nThe following plugins are disabled: %s\n", getList(config.NodeConfig.GetStringSlice(node.CFG_DISABLE_PLUGINS)))
 }

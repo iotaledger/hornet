@@ -2,20 +2,24 @@ package webapi
 
 import (
 	"context"
-	"fmt"
+	"encoding/base64"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/pkg/basicauth"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/packages/parameter"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 // PLUGIN WebAPI
@@ -25,19 +29,19 @@ var (
 
 	server               *http.Server
 	permitedEndpoints    = make(map[string]string)
+	whitelistedNetworks  []net.IPNet
 	implementedAPIcalls  = make(map[string]apiEndpoint)
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
-	auth                 string
 	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("WebAPI")
+	log = logger.NewLogger(plugin.Name)
 
-	maxDepth = parameter.NodeConfig.GetInt("tipsel.maxDepth")
+	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
 
 	// Release mode
 	gin.SetMode(gin.ReleaseMode)
@@ -65,8 +69,8 @@ func configure(plugin *node.Plugin) {
 	// GZIP
 	api.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	// Load allowed remote access to specific api commands
-	pae := parameter.NodeConfig.GetStringSlice("api.permitRemoteAccess")
+	// Load allowed remote access to specific HTTP API commands
+	pae := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermitRemoteAccess)
 	if len(pae) > 0 {
 		for _, endpoint := range pae {
 			ep := strings.ToLower(endpoint)
@@ -74,21 +78,86 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	// Check for features
-	if _, ok := permitedEndpoints["attachtotangle"]; ok {
-		features = append(features, "RemotePOW")
+	// load whitelisted addresses
+	whitelist := append([]string{"127.0.0.1", "::1"}, config.NodeConfig.GetStringSlice(config.CfgWebAPIWhitelistedAddresses)...)
+	for _, entry := range whitelist {
+		_, ipnet, err := cnet.ParseCIDROrIP(entry)
+		if err != nil {
+			log.Warnf("Invalid whitelist address: %s", entry)
+			continue
+		}
+		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
 
-	// Set basic auth if enabled
-	auth = parameter.NodeConfig.GetString("api.remoteauth")
-
-	if len(auth) > 0 {
-		authSlice := strings.Split(auth, ":")
-		api.Use(gin.BasicAuth(gin.Accounts{authSlice[0]: authSlice[1]}))
+	// Handle route without auth
+	exclHealthCheckFromAuth := config.NodeConfig.GetBool(config.CfgWebAPIExcludeHealthCheckFromAuth)
+	if exclHealthCheckFromAuth {
+		// REST API route (health check)
+		restAPIRoute()
 	}
 
-	// WebAPI route
-	webAPIRoute()
+	// set basic auth if enabled
+	// TODO: replace gin with echo so we don't have to write this middleware ourselves
+	if config.NodeConfig.GetBool(config.CfgWebAPIBasicAuthEnabled) {
+		const basicAuthPrefix = "Basic "
+		expectedUsername := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthUsername)
+		expectedPasswordHash := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordHash)
+		passwordSalt := config.NodeConfig.GetString(config.CfgWebAPIBasicAuthPasswordSalt)
+
+		if len(expectedUsername) == 0 {
+			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", config.CfgWebAPIBasicAuthUsername)
+		}
+
+		if len(expectedPasswordHash) != 64 {
+			log.Fatalf("'%s' must be 64 (sha256 hash) in length if web API basic auth is enabled", config.CfgWebAPIBasicAuthPasswordHash)
+		}
+
+		unauthorizedReq := func(c *gin.Context) {
+			c.Header("WWW-Authenticate", "Authorization Required")
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
+		api.Use(func(c *gin.Context) {
+			authVal := c.Request.Header.Get("Authorization")
+			if len(authVal) <= len(basicAuthPrefix) {
+				unauthorizedReq(c)
+				return
+			}
+
+			base64EncodedUserPW := strings.TrimPrefix(authVal, basicAuthPrefix)
+			userAndPWBytes, err := base64.StdEncoding.DecodeString(base64EncodedUserPW)
+			if err != nil {
+				unauthorizedReq(c)
+				return
+			}
+
+			reqUsernameAndPW := string(userAndPWBytes)
+			colonIndex := strings.Index(reqUsernameAndPW, ":")
+			if colonIndex == -1 || colonIndex+1 >= len(reqUsernameAndPW) {
+				unauthorizedReq(c)
+				return
+			}
+
+			// username and password are split by a colon
+			reqUsername := reqUsernameAndPW[:colonIndex]
+			reqPasword := reqUsernameAndPW[colonIndex+1:]
+
+			if reqUsername != expectedUsername || !basicauth.VerifyPassword(reqPasword, passwordSalt, expectedPasswordHash) {
+				unauthorizedReq(c)
+			}
+		})
+	}
+
+	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		// WebAPI route
+		webAPIRoute()
+	}
+
+	// Handle route with auth
+	if !exclHealthCheckFromAuth {
+		// REST API route (health check)
+		restAPIRoute()
+	}
 
 	// return error, if route is not there
 	api.NoRoute(func(c *gin.Context) {
@@ -96,23 +165,30 @@ func configure(plugin *node.Plugin) {
 	})
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 	log.Info("Starting WebAPI server ...")
+
+	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		// Check for features
+		if _, ok := permitedEndpoints["attachtotangle"]; ok {
+			features = append(features, "RemotePOW")
+		}
+
+		if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
+			features = append(features, "WereAddressesSpentFrom")
+		}
+	}
 
 	daemon.BackgroundWorker("WebAPI server", func(shutdownSignal <-chan struct{}) {
 		serverShutdownSignal = shutdownSignal
 
 		log.Info("Starting WebAPI server ... done")
 
-		serveAddress := fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("api.host"), parameter.NodeConfig.GetInt("api.port"))
-
-		server = &http.Server{
-			Addr:    serveAddress,
-			Handler: api,
-		}
+		bindAddr := config.NodeConfig.GetString(config.CfgWebAPIBindAddress)
+		server = &http.Server{Addr: bindAddr, Handler: api}
 
 		go func() {
-			log.Infof("You can now access the API using: http://%s", serveAddress)
+			log.Infof("You can now access the API using: http://%s", bindAddr)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Error("Stopping WebAPI server due to an error ... done")
 			}
@@ -130,5 +206,5 @@ func run(plugin *node.Plugin) {
 			cancel()
 		}
 		log.Info("Stopping WebAPI server ... done")
-	}, shutdown.ShutdownPriorityAPI)
+	}, shutdown.PriorityAPI)
 }

@@ -7,10 +7,10 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 const (
@@ -26,21 +26,31 @@ var (
 func configureGossipSolidifier() {
 	gossipSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		// Check solidity of gossip txs if the node is synced
-		if tangle.IsNodeSynced() {
-			checkSolidityAndPropagate(task.Param(0).(*hornet.Transaction))
+		cachedTx := task.Param(0).(*tangle.CachedTransaction)
+		if tangle.IsNodeSyncedWithThreshold() {
+			checkSolidityAndPropagate(cachedTx) // tx pass +1
+		} else {
+			// Force release allowed if the node is not synced
+			cachedTx.Release(true) // tx -1
 		}
 
 		task.Return(nil)
-	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize))
-
+	}, workerpool.WorkerCount(gossipSolidifierWorkerCount), workerpool.QueueSize(gossipSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 }
 
 func runGossipSolidifier() {
 	log.Info("Starting Solidifier ...")
 
-	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
-		if tangle.IsNodeSynced() {
-			gossipSolidifierWorkerPool.Submit(transaction)
+	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		if tangle.IsNodeSyncedWithThreshold() {
+			_, added := gossipSolidifierWorkerPool.Submit(cachedTx) // tx pass +1
+			if !added {
+				// Force release possible here, since processIncomingTx still holds a reference
+				cachedTx.Release(true) // tx -1
+			}
+		} else {
+			// Force release possible here, since processIncomingTx still holds a reference
+			cachedTx.Release(true) // tx -1
 		}
 	})
 
@@ -54,35 +64,45 @@ func runGossipSolidifier() {
 		gossipSolidifierWorkerPool.StopAndWait()
 
 		log.Info("Stopping Solidifier ... done")
-	}, shutdown.ShutdownPrioritySolidifierGossip)
+	}, shutdown.PrioritySolidifierGossip)
 }
 
 // Checks and updates the solid flag of a transaction and its approvers (future cone).
-func checkSolidityAndPropagate(transaction *hornet.Transaction) {
+func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
 
-	txsToCheck := make(map[string]*hornet.Transaction)
-	txsToCheck[transaction.GetHash()] = transaction
+	txsToCheck := make(map[string]*tangle.CachedTransaction)
+	txsToCheck[string(cachedTx.GetTransaction().GetTxHash())] = cachedTx
 
 	// Loop as long as new transactions are added in every loop cycle
 	for len(txsToCheck) != 0 {
-		for txHash, tx := range txsToCheck {
+		for txHash, cachedTxToCheck := range txsToCheck {
 			delete(txsToCheck, txHash)
 
-			solid, _ := checkSolidity(tx, true)
-			if solid {
-				if int32(time.Now().Unix())-tx.GetSolidificationTimestamp() > solidifierThresholdInSeconds {
-					// Skip older transactions
+			_, newlySolid := checkSolidity(cachedTxToCheck.Retain())
+			if newlySolid {
+				if int32(time.Now().Unix())-cachedTxToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
+					// Skip older transactions and force release them
+					cachedTxToCheck.Release(true) // tx -1
 					continue
 				}
 
-				transactionApprovers, _ := tangle.GetApprovers(txHash)
-				for _, approverHash := range transactionApprovers.GetHashes() {
-					approver, _ := tangle.GetTransaction(approverHash)
-					if approver != nil {
-						txsToCheck[approverHash] = approver
+				for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), true) {
+					cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
+					if cachedApproverTx == nil {
+						continue
 					}
+
+					if _, found := txsToCheck[string(approverHash)]; found {
+						// Do no force release here, otherwise cacheTime for new Tx could be ignored
+						cachedApproverTx.Release() // tx -1
+						continue
+					}
+
+					txsToCheck[string(approverHash)] = cachedApproverTx
 				}
 			}
+			// Do no force release here, otherwise cacheTime for new Tx could be ignored
+			cachedTxToCheck.Release() // tx -1
 		}
 	}
 }

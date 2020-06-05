@@ -1,0 +1,170 @@
+{
+  "custom": {
+    "caches": {
+      "addresses": {
+        "cacheTimeMs": 100,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "approvers": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "tags": {
+        "cacheTimeMs": 100,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "bundles": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "bundletransactions": {
+        "cacheTimeMs": 500,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "milestones": {
+        "cacheTimeMs": 500,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "transactions": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "unconfirmedTx": {
+        "cacheTimeMs": 100,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "incomingTransactionFilter": {
+        "cacheTimeMs": 2000,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "refsInvalidBundle": {
+        "cacheTimeMs": 180000,
+        "leakDetection": {
+          "enabled": false,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      }
+    }
+  },
+  "debug": {
+    "caches": {
+      "addresses": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "approvers": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "tags": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "bundles": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "bundletransactions": {
+        "cacheTimeMs": 500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "milestones": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "transactions": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "unconfirmedTx": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "incomingTransactionFilter": {
+        "cacheTimeMs": 1500,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      },
+      "refsInvalidBundle": {
+        "cacheTimeMs": 180000,
+        "leakDetection": {
+          "enabled": true,
+          "maxConsumersPerObject": 50,
+          "maxConsumerHoldTimeSec": 30
+        }
+      }
+    }
+  }
+}

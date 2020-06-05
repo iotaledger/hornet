@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"runtime"
 
-	"go.uber.org/atomic"
-
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/gossip/server"
-	"github.com/gohornet/hornet/plugins/metrics"
+	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 )
 
 var (
@@ -28,67 +28,68 @@ var (
 	lastIncomingTPS uint32
 	lastNewTPS      uint32
 	lastOutgoingTPS uint32
-
-	markedSpentAddrs atomic.Uint64
-	bundlesValidated atomic.Uint64
 )
 
-func configureTangleProcessor(plugin *node.Plugin) {
+func configureTangleProcessor(_ *node.Plugin) {
 
 	configureGossipSolidifier()
-	configurePersisters()
 
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(plugin, task.Param(0).(*hornet.Transaction))
+		processIncomingTx(task.Param(0).(*hornet.Transaction), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
-	checkForMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		checkBundleForMilestone(task.Param(0).(*tangle.Bundle))
+	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+		processValidMilestone(task.Param(0).(*tangle.CachedBundle)) // bundle pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(checkForMilestoneWorkerCount), workerpool.QueueSize(checkForMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
+	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		solidifyMilestone(task.Param(0).(milestone_index.MilestoneIndex))
+		if daemon.IsStopped() {
+			return
+		}
+		solidifyMilestone(task.Param(0).(milestone.Index), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 
-	metrics.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metrics.TPSMetrics) {
+	metricsplugin.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
 		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	}))
+
+	tangle.Events.ReceivedValidMilestone.Attach(events.NewClosure(onReceivedValidMilestone))
+	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
 }
 
-func runTangleProcessor(plugin *node.Plugin) {
+func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
 	runGossipSolidifier()
-	runPersisters()
 
-	notifyReceivedTx := events.NewClosure(func(transaction *hornet.Transaction) {
-		receiveTxWorkerPool.Submit(transaction)
+	submitReceivedTxForProcessing := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
+		receiveTxWorkerPool.Submit(transaction, request, p)
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
-		gossip.Events.ReceivedTransaction.Attach(notifyReceivedTx)
+		gossip.Processor().Events.TransactionProcessed.Attach(submitReceivedTxForProcessing)
 		receiveTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
-		gossip.Events.ReceivedTransaction.Detach(notifyReceivedTx)
+		gossip.Processor().Events.TransactionProcessed.Detach(submitReceivedTxForProcessing)
 		receiveTxWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
-	}, shutdown.ShutdownPriorityReceiveTxWorker)
+	}, shutdown.PriorityReceiveTxWorker)
 
-	daemon.BackgroundWorker("TangleProcessor[CheckForMilestone]", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting TangleProcessor[CheckForMilestone] ... done")
-		checkForMilestoneWorkerPool.Start()
+	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
+		processValidMilestoneWorkerPool.Start()
 		<-shutdownSignal
-		log.Info("Stopping TangleProcessor[CheckForMilestone] ...")
-		checkForMilestoneWorkerPool.StopAndWait()
-		log.Info("Stopping TangleProcessor[CheckForMilestone] ... done")
-	}, shutdown.ShutdownPriorityMilestoneChecker)
+		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
+		processValidMilestoneWorkerPool.StopAndWait()
+		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
+	}, shutdown.PriorityMilestoneProcessor)
 
 	daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
@@ -97,106 +98,100 @@ func runTangleProcessor(plugin *node.Plugin) {
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		milestoneSolidifierWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
-	}, shutdown.ShutdownPriorityMilestoneSolidifier)
+	}, shutdown.PriorityMilestoneSolidifier)
 }
 
-func processIncomingTx(plugin *node.Plugin, transaction *hornet.Transaction) {
+func IsReceiveTxWorkerPoolBusy() bool {
+	return receiveTxWorkerPool.GetPendingQueueSize() > (receiveTxQueueSize / 2)
+}
 
-	txHash := transaction.GetHash()
-	known, _ := tangle.ContainsTransaction(txHash)
+func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 
-	if !known {
-		server.SharedServerMetrics.IncrNewTransactionsCount()
-		// ToDo: Bundle should be added before storing the tx in cache, so that the solidifier can't solidify
-		//		 txs, which bundles don't exist yet. But if we create the bundle, the tx has to exist in the cache as well.
-		//		 Maybe only one worker?
-		tangle.StoreTransactionInCache(transaction)
-		addressPersisterSubmit(transaction.Tx.Address, transaction.GetHash())
-		bundlesAddedTo := addTransactionToBundleBucket(transaction)
-		latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
+
+	// The tx will be added to the storage inside this function, so the transaction object automatically updates
+	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // tx +1
+
+	// Release shouldn't be forced, to cache the latest transactions
+	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
+
+	if !alreadyAdded {
+		metrics.SharedServerMetrics.NewTransactions.Inc()
+
+		if p != nil {
+			p.Metrics.NewTransactions.Inc()
+		}
+
+		// since we only add the approvees if there was a source request, we only
+		// request them for transactions which should be part of milestone cones
+		if request != nil {
+			// add this newly received transaction's approvees to the request queue
+			gossip.RequestApprovees(cachedTx.Retain(), request.MilestoneIndex, true)
+		}
+
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = solidMilestoneIndex
 		}
-		Events.ReceivedNewTransaction.Trigger(transaction, latestMilestoneIndex, solidMilestoneIndex)
+		Events.ReceivedNewTransaction.Trigger(cachedTx, latestMilestoneIndex, solidMilestoneIndex)
 
-		approvers, err := tangle.GetApprovers(transaction.GetTrunk())
-		if err != nil {
-			log.Panic(err)
-		}
-		approvers.Add(transaction.GetHash())
-		approvers, err = tangle.GetApprovers(transaction.GetBranch())
-		if err != nil {
-			log.Panic(err)
-		}
-		approvers.Add(transaction.GetHash())
-
-		for _, bundle := range bundlesAddedTo {
-			// this iteration might be true concurrently between different processIncomingTx()
-			// for the same bundle instance and bucket
-			if bundle.IsComplete() {
-
-				// validate the bundle
-				if bundle.IsValid() {
-					// in a value spam bundle, the address' mutation to the ledger is zero,
-					// thereby it is sufficient to simply check for negative balance mutations
-					// while iterating over the ledger changes for this bundle
-					ledgerChanges, isZeroValueBundle := bundle.GetLedgerChanges()
-					if !isZeroValueBundle {
-						for addr, change := range ledgerChanges {
-							if change < 0 {
-								tangle.MarkAddressAsSpent(addr)
-								markedSpentAddrs.Inc()
-							}
-						}
-					} else {
-						// Milestone bundles itself do not mutate the ledger
-						// => Check bundle for a milestone
-						checkForMilestoneWorkerPool.Submit(bundle)
-					}
-				}
-				bundlesValidated.Inc()
-			}
-		}
 	} else {
-		Events.ReceivedKnownTransaction.Trigger(transaction)
+		metrics.SharedServerMetrics.KnownTransactions.Inc()
+		if p != nil {
+			p.Metrics.KnownTransactions.Inc()
+		}
+		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
 
-	if transaction.IsRequested() {
-		// Add new requests to the requestQueue (needed for sync)
-		gossip.RequestApprovees(transaction)
+	if request != nil {
+		// mark the received request as processed
+		gossip.RequestQueue().Processed(incomingTx.GetTxHash())
 	}
 
-	queueEmpty := gossip.RequestQueue.MarkProcessed(txHash)
-	if queueEmpty {
-		milestoneSolidifierWorkerPool.TrySubmit(milestone_index.MilestoneIndex(0))
+	// we check whether the request is nil, so we only trigger the solidifier when
+	// we actually handled a transaction stemming from a request (as otherwise the solidifier
+	// is triggered too often through transactions received from normal gossip)
+	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
+		// we trigger the milestone solidifier in order to solidify milestones
+		// which should be solid given that the request queue is empty
+		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 	}
 }
 
+func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
+	_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+	if !added {
+		// Release shouldn't be forced, to cache the latest milestones
+		cachedBndl.Release() // bundle -1
+	}
+}
+
+func onReceivedInvalidMilestone(err error) {
+	log.Info(err)
+}
+
 func printStatus() {
-	requestedMilestone, requestCount := gossip.RequestQueue.CurrentMilestoneIndexAndSize()
+	var currentLowestMilestoneIndexInReqQ milestone.Index
+	if peekedRequest := gossip.RequestQueue().Peek(); peekedRequest != nil {
+		currentLowestMilestoneIndexInReqQ = peekedRequest.MilestoneIndex
+	}
+
+	queued, pending, processing := gossip.RequestQueue().Size()
+	avgLatency := gossip.RequestQueue().AvgLatency()
 
 	println(
 		fmt.Sprintf(
-			"reqQ: %05d, "+
+			"req(qu/pe/proc/lat): %05d/%05d/%05d/%04dms, "+
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"addrsMarked: %d, "+
-				"bndlsValidated: %d, "+
-				"txReqs(Tx/Rx): %d/%d, "+
-				"newTxs: %d, "+
-				"TPS: %d (in) / %d (new) / %d (out)",
-			requestCount,
-			requestedMilestone,
+				"TPS (in/new/out): %05d/%05d/%05d",
+			queued, pending, processing, avgLatency,
+			currentLowestMilestoneIndexInReqQ,
 			receiveTxWorkerPool.GetPendingQueueSize(),
 			tangle.GetSolidMilestoneIndex(),
 			tangle.GetLatestMilestoneIndex(),
-			markedSpentAddrs.Load(),
-			bundlesValidated.Load(),
-			server.SharedServerMetrics.GetSentTransactionRequestCount(),
-			server.SharedServerMetrics.GetReceivedTransactionRequestCount(),
-			server.SharedServerMetrics.GetNewTransactionsCount(),
 			lastIncomingTPS,
 			lastNewTPS,
 			lastOutgoingTPS))

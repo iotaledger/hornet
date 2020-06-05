@@ -23,30 +23,12 @@ builds:
       - linux
     goarch:
       - amd64
-  # Linux ARM(v7) statically linked
-  - id: hornet-linux-arm
-    binary: hornet
-    env:
-      - CGO_ENABLED=1
-      - CC=/etc/musl/armv7l-linux-musleabihf-cross/bin/armv7l-linux-musleabihf-gcc-9.2.1
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
-      - -w -extldflags "-static"
-    flags:
-      - -tags=pow_c
-    main: main.go
-    goos:
-      - linux
-    goarch:
-      - arm
-    goarm:
-      - 7
   # Linux ARM64 statically linked
   - id: hornet-linux-arm64
     binary: hornet
     env:
       - CGO_ENABLED=1
-      - CC=/etc/musl/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc-9.2.1
+      - CC=aarch64-linux-musl-gcc
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
@@ -73,6 +55,18 @@ builds:
       - windows
     goarch:
       - amd64
+  # macOS AMD64
+  - id: hornet-macOS-amd64
+    binary: hornet
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+    main: main.go
+    goos:
+      - darwin
+    goarch:
+      - amd64
 
 # Docker
 dockers:
@@ -84,7 +78,8 @@ dockers:
       - "gohornet/hornet:{{ .Tag }}"
     binaries:
       - hornet
-    dockerfile: Dockerfile.goreleaser
+    dockerfile: docker/Dockerfile.goreleaser
+    skip_push: auto
 
 # Archives
 archives:
@@ -96,40 +91,42 @@ archives:
     name_template: "{{.ProjectName}}-{{.Version}}_{{.Os}}_{{.Arch}}"
     replacements:
       amd64: x86_64
-      386: 32bit
-      arm: ARM
       arm64: ARM64
       darwin: macOS
       linux: Linux
       windows: Windows
-      openbsd: OpenBSD
-      netbsd: NetBSD
-      freebsd: FreeBSD
-      dragonfly: DragonFlyBSD
     files:
       - README.md
       - LICENSE
       - config.json
-      - neighbors.json
+      - config_comnet.json
+      - peering.json
+      - profiles.json
+      - mqtt_config.json
 
 # DEB and RPM packages
 nfpms:
   - id: nfpm
     package_name: hornet
     file_name_template: '{{ tolower .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Arch }}'
-    vendor: HORNET
-    maintainer: HORNET
-    description: HORNET is a lightweight alternative to IOTA's fullnode software “IRI”.
+    vendor: GoReleaser
+    license: Apache 2.0
+    maintainer: GoHORNET
+    homepage: https://github.com/gohornet/hornet
+    description: HORNET is a powerful IOTA fullnode software.
     formats:
       - deb
       - rpm
     bindir: /usr/bin
     files:
       "nfpm/shared_files/hornet.service": "/lib/systemd/system/hornet.service"
-      "nfpm/shared_files/download_snapshot.sh": "/usr/bin/hornet_download_snapshot.sh"
     config_files:
-      "config.json": "/etc/hornet/config.json"
-      "neighbors.json": "/etc/hornet/neighbors.json"
+      "config.json": "/var/lib/hornet/config.json"
+      "config_comnet.json": "/var/lib/hornet/config_comnet.json"
+      "mqtt_config.json": "/var/lib/hornet/mqtt_config.json"
+      "peering.json": "/var/lib/hornet/peering.json"
+      "profiles.json": "/var/lib/hornet/profiles.json"
+      "nfpm/shared_files/hornet.env": "/etc/default/hornet"
     dependencies:
       - systemd
       - wget
@@ -137,14 +134,13 @@ nfpms:
     scripts:
       preremove: "nfpm/deb_files/prerm"
       postremove: "nfpm/deb_files/postrm"
+      preinstall: "nfpm/deb_files/preinst"
       postinstall: "nfpm/deb_files/postinst"
-    replacements:
-      arm: armhf
     overrides:
       rpm:
         replacements:
           amd64: x86_64
-        name_template: "{{ tolower .ProjectName }}-{{ .Version }}-{{ .Arch }}"
+        file_name_template: "{{ tolower .ProjectName }}-{{ .Version }}-{{ .Arch }}"
         scripts:
           preinstall: "nfpm/rpm_files/preinst"
           postinstall: "nfpm/rpm_files/postinst"

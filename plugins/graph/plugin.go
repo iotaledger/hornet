@@ -1,34 +1,25 @@
 package graph
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 	"time"
 
 	"golang.org/x/net/context"
 
-	engineio "github.com/googollee/go-engine.io"
-	"github.com/googollee/go-engine.io/transport"
-	"github.com/googollee/go-engine.io/transport/polling"
-	"github.com/googollee/go-engine.io/transport/websocket"
-	socketio "github.com/googollee/go-socket.io"
-
+	"github.com/gorilla/websocket"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/packages/model/hornet"
-	"github.com/gohornet/hornet/packages/model/milestone_index"
-	tanglePackage "github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
-	"github.com/gohornet/hornet/packages/shutdown"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	tanglePackage "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/tangle"
-)
-
-const (
-	isSyncThreshold = 1
 )
 
 var (
@@ -50,107 +41,111 @@ var (
 
 	wasSyncBefore = false
 
-	server         *http.Server
-	router         *http.ServeMux
-	socketioServer *socketio.Server
+	webSocketWriteTimeout = time.Duration(3) * time.Second
+
+	router   *http.ServeMux
+	server   *http.Server
+	upgrader *websocket.Upgrader
+	hub      *websockethub.Hub
 )
 
-func downloadSocketIOHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, parameter.NodeConfig.GetString("graph.socketioPath"))
+// PageData struct for html template
+type PageData struct {
+	URI                string
+	ExplorerTxLink     string
+	ExplorerBundleLink string
 }
 
-func configureSocketIOServer() error {
-	var err error
-
-	socketioServer, err = socketio.NewServer(&engineio.Options{
-		PingTimeout:  time.Second * 20,
-		PingInterval: time.Second * 5,
-		Transports: []transport.Transport{
-			polling.Default,
-			websocket.Default,
-		},
-	})
-	if err != nil {
-		return err
+func wrapHandler(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" {
+			data := PageData{
+				URI:                config.NodeConfig.GetString(config.CfgGraphWebSocketURI),
+				ExplorerTxLink:     config.NodeConfig.GetString(config.CfgGraphExplorerTxLink),
+				ExplorerBundleLink: config.NodeConfig.GetString(config.CfgGraphExplorerBundleLink),
+			}
+			tmpl, _ := template.New("graph").Parse(index)
+			tmpl.Execute(w, data)
+			return
+		}
+		h.ServeHTTP(w, r)
 	}
-
-	socketioServer.OnConnect("/", onConnectHandler)
-	socketioServer.OnError("/", onErrorHandler)
-	socketioServer.OnDisconnect("/", onDisconnectHandler)
-
-	return nil
 }
 
 func configure(plugin *node.Plugin) {
-	log = logger.NewLogger("Graph")
+	log = logger.NewLogger(plugin.Name)
+
 	initRingBuffers()
 
 	router = http.NewServeMux()
 
-	// socket.io and web server
-	server = &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", parameter.NodeConfig.GetString("graph.host"), parameter.NodeConfig.GetInt("graph.port")),
-		Handler: router,
+	// websocket and web server
+	bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
+	server = &http.Server{Addr: bindAddr, Handler: router}
+
+	upgrader = &websocket.Upgrader{
+		HandshakeTimeout:  webSocketWriteTimeout,
+		CheckOrigin:       func(r *http.Request) bool { return true }, // allow any origin for websocket connections
+		EnableCompression: true,
 	}
 
-	fs := http.FileServer(http.Dir(parameter.NodeConfig.GetString("graph.webrootPath")))
-
-	err := configureSocketIOServer()
-	if err != nil {
-		log.Panicf("Graph: %v", err.Error())
-	}
-
-	router.Handle("/", fs)
-	router.HandleFunc("/socket.io/socket.io.js", downloadSocketIOHandler)
-	router.Handle("/socket.io/", socketioServer)
+	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*hornet.Transaction))
+		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize))
+	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*hornet.Transaction), task.Param(1).(milestone_index.MilestoneIndex), task.Param(2).(int64))
+		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone.Index), task.Param(2).(int64)) // tx pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize))
+	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewMilestone(task.Param(0).(*tanglePackage.Bundle))
+		onNewMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize))
-
+	}, workerpool.WorkerCount(newMilestoneWorkerCount), workerpool.QueueSize(newMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *node.Plugin) {
 
-	notifyNewTx := events.NewClosure(func(transaction *hornet.Transaction, firstSeenLatestMilestoneIndex milestone_index.MilestoneIndex, latestSolidMilestoneIndex milestone_index.MilestoneIndex) {
+	notifyNewTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
-			if !tanglePackage.IsNodeSynced() || (firstSeenLatestMilestoneIndex <= tanglePackage.GetLatestSeenMilestoneIndexFromSnapshot()) {
-				// Not sync
+			if !tanglePackage.IsNodeSyncedWithThreshold() {
+				cachedTx.Release(true) // tx -1
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		if (firstSeenLatestMilestoneIndex - latestSolidMilestoneIndex) <= isSyncThreshold {
-			newTxWorkerPool.TrySubmit(transaction)
+		if _, added := newTxWorkerPool.TrySubmit(cachedTx); added { // tx pass +1
+			return // Avoid tx -1 (done inside workerpool task)
 		}
+		cachedTx.Release(true) // tx -1
 	})
 
-	notifyConfirmedTx := events.NewClosure(func(transaction *hornet.Transaction, msIndex milestone_index.MilestoneIndex, confTime int64) {
+	notifyConfirmedTx := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
 		if !wasSyncBefore {
+			cachedTx.Release(true) // tx -1
 			return
 		}
 
-		confirmedTxWorkerPool.TrySubmit(transaction, msIndex, confTime)
+		if _, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime); added { // tx pass +1
+			return // Avoid tx -1 (done inside workerpool task)
+		}
+		cachedTx.Release(true) // tx -1
 	})
 
-	notifyNewMilestone := events.NewClosure(func(bundle *tanglePackage.Bundle) {
+	notifyNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if !wasSyncBefore {
+			cachedBndl.Release(true) // tx -1
 			return
 		}
 
-		newMilestoneWorkerPool.TrySubmit(bundle)
+		if _, added := newMilestoneWorkerPool.TrySubmit(cachedBndl); added { // bundle pass +1
+			return // Avoid bundle -1 (done inside workerpool task)
+		}
+		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("Graph[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
@@ -161,7 +156,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping Graph[NewTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Graph[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Graph[ConfirmedTxWorker] ... done")
@@ -171,7 +166,7 @@ func run(plugin *node.Plugin) {
 		tangle.Events.TransactionConfirmed.Detach(notifyConfirmedTx)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping Graph[ConfirmedTxWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Graph[NewMilestoneWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Graph[NewMilestoneWorker] ... done")
@@ -181,28 +176,69 @@ func run(plugin *node.Plugin) {
 		tangle.Events.ReceivedNewMilestone.Detach(notifyNewMilestone)
 		newMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping Graph[NewMilestoneWorker] ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("Graph Webserver", func(shutdownSignal <-chan struct{}) {
-		go socketioServer.Serve()
 
 		go func() {
-			if err := server.ListenAndServe(); err != nil {
+			if err := server.ListenAndServe(); (err != nil) && (err != http.ErrServerClosed) {
 				log.Error(err.Error())
 			}
 		}()
 
-		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s:%d", parameter.NodeConfig.GetString("graph.host"), parameter.NodeConfig.GetInt("graph.port"))
+		go hub.Run(shutdownSignal)
+
+		router.HandleFunc("/", wrapHandler(http.FileServer(http.Dir(config.NodeConfig.GetString(config.CfgGraphWebRootPath)))))
+		router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			hub.ServeWebsocket(w, r, func(client *websockethub.Client) {
+				log.Info("WebSocket client connection established")
+
+				config := &wsConfig{NetworkName: config.NodeConfig.GetString(config.CfgGraphNetworkName)}
+
+				var initTxs []*wsTransaction
+				txRingBufferLock.Lock()
+				txRingBuffer.Do(func(tx interface{}) {
+					if tx != nil {
+						initTxs = append(initTxs, tx.(*wsTransaction))
+					}
+				})
+				txRingBufferLock.Unlock()
+
+				var initSns []*wsTransactionSn
+				snRingBufferLock.Lock()
+				snRingBuffer.Do(func(sn interface{}) {
+					if sn != nil {
+						initSns = append(initSns, sn.(*wsTransactionSn))
+					}
+				})
+				snRingBufferLock.Unlock()
+
+				var initMs []string
+				msRingBufferLock.Lock()
+				msRingBuffer.Do(func(ms interface{}) {
+					if ms != nil {
+						initMs = append(initMs, ms.(string))
+					}
+				})
+				msRingBufferLock.Unlock()
+
+				client.Send(&wsMessage{Type: "config", Data: config})
+				client.Send(&wsMessage{Type: "inittx", Data: initTxs})
+				client.Send(&wsMessage{Type: "initsn", Data: initSns})
+				client.Send(&wsMessage{Type: "initms", Data: initMs})
+			})
+		})
+
+		bindAddr := config.NodeConfig.GetString(config.CfgGraphBindAddress)
+		log.Infof("You can now access IOTA Tangle Visualiser using: http://%s", bindAddr)
 
 		<-shutdownSignal
 		log.Info("Stopping Graph ...")
-
-		socketioServer.Close()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
 		defer cancel()
 
 		_ = server.Shutdown(ctx)
 		log.Info("Stopping Graph ... done")
-	}, shutdown.ShutdownPriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers)
 }

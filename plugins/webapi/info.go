@@ -2,15 +2,17 @@ package webapi
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/iotaledger/iota.go/consts"
+
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {
@@ -18,91 +20,89 @@ func init() {
 	addEndpoint("getNodeAPIConfiguration", getNodeAPIConfiguration, implementedAPIcalls)
 }
 
-func getNodeInfo(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	e := ErrorReturn{}
+func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Basic info data
-	info := GetNodeInfoReturn{
+	result := GetNodeInfoReturn{
 		AppName:    cli.AppName,
 		AppVersion: cli.AppVersion,
 	}
 
-	// Number of neighbors
-	info.Neighbors = uint(gossip.GetNeighborsCount())
+	// Node Alias
+	if config.NodeConfig.GetBool(config.CfgNodeShowAliasInGetNodeInfo) {
+		result.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
+	}
+
+	// Number of peers
+	result.Neighbors = uint(peering.Manager().PeerCount())
 
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()
-	info.LatestMilestoneIndex = uint32(lmi)
+	result.LatestMilestoneIndex = lmi
+	result.LatestMilestone = consts.NullHashTrytes
 
 	// Latest milestone hash
-	lsmBndl, err := tangle.GetMilestone(lmi)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	if lsmBndl != nil && lsmBndl.GetTail() != nil {
-		info.LatestMilestone = lsmBndl.GetTail().GetHash()
-	} else {
-		info.LatestMilestone = strings.Repeat("9", 81)
+	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
+	if cachedLatestMs != nil {
+		result.LatestMilestone = cachedLatestMs.GetBundle().GetMilestoneHash().Trytes()
+		cachedLatestMs.Release(true) // bundle -1
 	}
 
 	// Solid milestone index
 	smi := tangle.GetSolidMilestoneIndex()
-	info.LatestSolidSubtangleMilestoneIndex = uint32(smi)
-	info.IsSynced = tangle.IsNodeSynced()
+	result.LatestSolidSubtangleMilestoneIndex = smi
+	result.LatestSolidSubtangleMilestone = consts.NullHashTrytes
+	result.IsSynced = tangle.IsNodeSyncedWithThreshold()
 
 	// Solid milestone hash
-	smBndl, err := tangle.GetMilestone(smi)
-	if err != nil {
-		e.Error = "Internal error"
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	if smBndl != nil && smBndl.GetTail() != nil {
-		info.LatestSolidSubtangleMilestone = smBndl.GetTail().GetHash()
-	} else {
-		info.LatestSolidSubtangleMilestone = strings.Repeat("9", 81)
+	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1
+	if cachedSolidMs != nil {
+		result.LatestSolidSubtangleMilestone = cachedSolidMs.GetBundle().GetMilestoneHash().Trytes()
+		cachedSolidMs.Release(true) // bundle -1
 	}
 
 	// Milestone start index
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		info.MilestoneStartIndex = uint32(snapshotInfo.PruningIndex)
-		info.LastSnapshottedMilestoneIndex = uint32(snapshotInfo.PruningIndex)
+		result.MilestoneStartIndex = snapshotInfo.PruningIndex
+		result.LastSnapshottedMilestoneIndex = snapshotInfo.PruningIndex
 	}
 
 	// System time
-	info.Time = time.Now().Unix() * 1000
+	result.Time = time.Now().Unix() * 1000
 
 	// Features
-	info.Features = features
+	// Workaround until https://github.com/golang/go/issues/27589 is fixed
+	if len(features) != 0 {
+		result.Features = features
+	} else {
+		result.Features = []string{}
+	}
 
 	// TX to request
-	_, info.TransactionsToRequest = gossip.RequestQueue.CurrentMilestoneIndexAndSize()
+	queued, pending, _ := gossip.RequestQueue().Size()
+	result.TransactionsToRequest = queued + pending
 
 	// Coo addr
-	info.CoordinatorAddress = parameter.NodeConfig.GetString("milestones.coordinator")
+	result.CoordinatorAddress = config.NodeConfig.GetString(config.CfgCoordinatorAddress)
 
 	// Return node info
-	c.JSON(http.StatusOK, info)
+	c.JSON(http.StatusOK, result)
 }
 
-func getNodeAPIConfiguration(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
+func getNodeAPIConfiguration(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
-	config := GetNodeAPIConfigurationReturn{
-		MaxFindTransactions: parameter.NodeConfig.GetInt("api.maxFindTransactions"),
-		MaxRequestsList:     parameter.NodeConfig.GetInt("api.maxRequestsList"),
-		MaxGetTrytes:        parameter.NodeConfig.GetInt("api.maxGetTrytes"),
-		MaxBodyLength:       parameter.NodeConfig.GetInt("api.maxBodyLength"),
+	result := GetNodeAPIConfigurationReturn{
+		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions),
+		MaxRequestsList:     config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxRequestsList),
+		MaxGetTrytes:        config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes),
+		MaxBodyLength:       config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxBodyLengthBytes),
 	}
 
 	// Milestone start index
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		config.MilestoneStartIndex = uint32(snapshotInfo.PruningIndex)
+		result.MilestoneStartIndex = snapshotInfo.PruningIndex
 	}
 
-	c.JSON(http.StatusOK, config)
+	c.JSON(http.StatusOK, result)
 }

@@ -12,7 +12,7 @@
 
 Prerequisites:
 
-1. Setup [Go 1.13+](https://golang.org/doc/install)
+1. Setup [Go 1.14+](https://golang.org/doc/install)
 2. Fork `HORNET`
 3. Test your setup by building `HORNET`:
    `go build`

@@ -8,34 +8,27 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/guards"
+	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("getInclusionStates", getInclusionStates, implementedAPIcalls)
 }
 
-func getInclusionStates(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	gis := &GetInclusionStates{}
+func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
+	query := &GetInclusionStates{}
 
-	err := mapstructure.Decode(i, gis)
-	if err != nil {
-		e.Error = "Internal error"
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	if !tangle.IsNodeSynced() {
-		e.Error = "Node not synced"
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
-	inclusionStates := []bool{}
-
-	for _, tx := range gis.Transactions {
+	for _, tx := range query.Transactions {
 		if !guards.IsTransactionHash(tx) {
 			e.Error = fmt.Sprintf("Invalid reference hash supplied: %s", tx)
 			c.JSON(http.StatusBadRequest, e)
@@ -43,23 +36,30 @@ func getInclusionStates(i interface{}, c *gin.Context, abortSignal <-chan struct
 		}
 	}
 
-	for _, tx := range gis.Transactions {
-		// get tx data
-		t, err := tangle.GetTransaction(tx)
-		if err != nil {
-			e.Error = "Internal error"
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
+	tangle.ReadLockLedger()
+	defer tangle.ReadUnlockLedger()
 
-		if t != nil {
-			// check if tx is set as confirmed
-			confirmed, _ := t.GetConfirmed()
-			inclusionStates = append(inclusionStates, confirmed)
-		} else {
+	if !tangle.IsNodeSynced() {
+		e.Error = ErrNodeNotSync.Error()
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	inclusionStates := []bool{}
+
+	for _, tx := range query.Transactions {
+		// get tx data
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(tx[:81])[:49])) // tx +1
+
+		if cachedTx == nil {
 			// if tx is unknown, return false
 			inclusionStates = append(inclusionStates, false)
+			continue
 		}
+		// check if tx is set as confirmed
+		confirmed := cachedTx.GetMetadata().IsConfirmed()
+		cachedTx.Release(true) // tx -1
+		inclusionStates = append(inclusionStates, confirmed)
 	}
 
 	c.JSON(http.StatusOK, GetInclusionStatesReturn{States: inclusionStates})

@@ -5,8 +5,7 @@ import (
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
 	"github.com/fhmq/hmq/broker"
-
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/pkg/config"
 )
 
 // Simple mqtt publisher abstraction
@@ -17,8 +16,8 @@ type Broker struct {
 
 // Create a new publisher.
 func NewBroker() (*Broker, error) {
-
-	c, err := broker.ConfigureConfig([]string{fmt.Sprintf("--config=%s", parameter.NodeConfig.GetString("mqtt.config"))})
+	mqttConfigFile := config.NodeConfig.GetString(config.CfgMQTTConfig)
+	c, err := broker.ConfigureConfig([]string{fmt.Sprintf("--config=%s", mqttConfigFile)})
 	if err != nil {
 		log.Fatal("configure broker config error: ", err)
 	}

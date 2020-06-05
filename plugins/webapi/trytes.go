@@ -11,29 +11,30 @@ import (
 
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
+	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/packages/model/tangle"
-	"github.com/gohornet/hornet/packages/parameter"
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
 	addEndpoint("getTrytes", getTrytes, implementedAPIcalls)
 }
 
-func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-
-	maxGetTrytes := parameter.NodeConfig.GetInt("api.maxGetTrytes")
-
-	gt := &GetTrytes{}
+func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
-	err := mapstructure.Decode(i, gt)
-	if err != nil {
-		e.Error = "Internal error"
+	query := &GetTrytes{}
+
+	maxGetTrytes := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes)
+
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 
-	if len(gt.Hashes) > maxGetTrytes {
+	if len(query.Hashes) > maxGetTrytes {
 		e.Error = "Too many hashes. Max. allowed: " + strconv.Itoa(maxGetTrytes)
 		c.JSON(http.StatusBadRequest, e)
 		return
@@ -41,7 +42,7 @@ func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	trytes := []string{}
 
-	for _, hash := range gt.Hashes {
+	for _, hash := range query.Hashes {
 		if !guards.IsTransactionHash(hash) {
 			e.Error = fmt.Sprintf("Invalid hash supplied: %s", hash)
 			c.JSON(http.StatusBadRequest, e)
@@ -49,25 +50,25 @@ func getTrytes(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 		}
 	}
 
-	for _, hash := range gt.Hashes {
-		t, err := tangle.GetTransaction(hash)
+	for _, hash := range query.Hashes {
+
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(hash)[:49])) // tx +1
+
+		if cachedTx == nil {
+			trytes = append(trytes, strings.Repeat("9", 2673))
+			continue
+		}
+
+		tx, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
 		if err != nil {
-			e.Error = "Internal error"
+			e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 			c.JSON(http.StatusInternalServerError, e)
+			cachedTx.Release(true) // tx -1
 			return
 		}
 
-		if t != nil {
-			tx, err := transaction.TransactionToTrytes(t.Tx)
-			if err != nil {
-				e.Error = "Internal error"
-				c.JSON(http.StatusInternalServerError, e)
-				return
-			}
-			trytes = append(trytes, tx)
-		} else {
-			trytes = append(trytes, strings.Repeat("9", 2673))
-		}
+		trytes = append(trytes, tx)
+		cachedTx.Release(true) // tx -1
 	}
 
 	c.JSON(http.StatusOK, GetTrytesReturn{Trytes: trytes})

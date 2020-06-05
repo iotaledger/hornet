@@ -3,11 +3,8 @@ services:
   hornet:
     build:
       context: .
-      dockerfile: Dockerfile
-      # For aarch64/arm64 use ARCH=arm64
-      # or for arm32 use ARCH=armhf
-      args:
-        - ARCH=amd64
+      # For aarch64/arm64 use Dockerfile.arm64
+      dockerfile: docker/Dockerfile
     image: hornet:latest
     # Best performance via host network:
     network_mode: host
@@ -17,8 +14,17 @@ services:
     #  - "15600:15600"
     cap_drop:
       - ALL
+    # Note: for local snapshots to work please
+    # read the DOCKER.md on how to mount a new
+    # path where export.bin should be
+    # placed in.
     volumes:
       - ./config.json:/app/config.json:ro
-      - ./neighbors.json:/app/neighbors.json
-      - ./latest-export.gz.bin:/app/latest-export.gz.bin
+      - ./config_comnet.json:/app/config_comnet.json:ro
+      - ./mqtt_config.json:/app/mqtt_config.json
+      - ./profiles.json:/app/profiles.json
+      - ./export.bin:/app/export.bin
+      - ./export_comnet.bin:/app/export_comnet.bin
+      - ./peering.json:/app/peering.json
       - ./mainnetdb:/app/mainnetdb
+      - ./comnetdb:/app/comnetdb

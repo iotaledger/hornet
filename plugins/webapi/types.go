@@ -1,29 +1,31 @@
 package webapi
 
 import (
-	"github.com/gohornet/hornet/packages/model/queue"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/peering/peer"
 )
 
 //////////////////// addNeighbors /////////////////////////////////
 
 // AddNeighbors legacy struct
 type AddNeighbors struct {
-	Command string   `json:"command"`
-	Uris    []string `json:"uris"`
+	Command string   `mapstructure:"command"`
+	Uris    []string `mapstructure:"uris"`
 }
 
 // AddNeighborsHornet struct
 type AddNeighborsHornet struct {
-	Command   string     `json:"command"`
-	Neighbors []Neighbor `json:"neighbors"`
+	Command   string     `mapstructure:"command"`
+	Neighbors []Neighbor `mapstructure:"neighbors"`
 }
 
 // Neighbor struct
 type Neighbor struct {
-	Identity   string `json:"identity"`
-	Alias      string `json:"alias"`
-	PreferIPv6 bool   `json:"prefer_ipv6"`
+	Identity   string `mapstructure:"identity"`
+	Alias      string `mapstructure:"alias"`
+	PreferIPv6 bool   `mapstructure:"prefer_ipv6"`
 }
 
 // AddNeighborsResponse struct
@@ -32,33 +34,29 @@ type AddNeighborsResponse struct {
 	Duration       int `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
 //////////////////// attachToTangle ///////////////////////////////
 
 // AttachToTangle struct
 type AttachToTangle struct {
-	Command            string   `json:"command"`
-	TrunkTransaction   string   `json:"trunkTransaction"`
-	BranchTransaction  string   `json:"branchTransaction"`
-	MinWeightMagnitude int      `json:"minWeightMagnitude"`
-	Trytes             []string `json:"trytes"`
+	Command            string           `mapstructure:"command"`
+	TrunkTransaction   trinary.Hash     `mapstructure:"trunkTransaction"`
+	BranchTransaction  trinary.Hash     `mapstructure:"branchTransaction"`
+	MinWeightMagnitude int              `mapstructure:"minWeightMagnitude,omitempty"`
+	Trytes             []trinary.Trytes `mapstructure:"trytes"`
 }
 
 // AttachToTangleReturn struct
 type AttachToTangleReturn struct {
-	Trytes   []string `json:"trytes"`
-	Duration int      `json:"duration"`
+	Trytes   []trinary.Trytes `json:"trytes"`
+	Duration int              `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 ////////////////// broadcastTransactions //////////////////////////
 
 // BroadcastTransactions struct
 type BroadcastTransactions struct {
-	Command string   `json:"command"`
-	Trytes  []string `json:"trytes"`
+	Command string           `mapstructure:"command"`
+	Trytes  []trinary.Trytes `mapstructure:"trytes"`
 }
 
 // BradcastTransactionsReturn struct
@@ -66,14 +64,12 @@ type BradcastTransactionsReturn struct {
 	Duration int `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
 /////////////////// checkConsistency //////////////////////////////
 
 // CheckConsistency struct
 type CheckConsistency struct {
-	Command string   `json:"command"`
-	Tails   []string `json:"tails"`
+	Command string         `mapstructure:"command"`
+	Tails   []trinary.Hash `mapstructure:"tails"`
 }
 
 // CheckConsistencyReturn struct
@@ -83,8 +79,6 @@ type CheckConsistencyReturn struct {
 	Duration int    `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
 //////////////////////// error ////////////////////////////////////
 
 // ErrorReturn struct
@@ -92,49 +86,47 @@ type ErrorReturn struct {
 	Error string `json:"error"`
 }
 
-///////////////////////////////////////////////////////////////////
-
 /////////////////// findTransactions //////////////////////////////
 
 // FindTransactions struct
 type FindTransactions struct {
-	Command   string   `json:"command"`
-	Bundles   []string `json:"bundles,omitempty"`
-	Addresses []string `json:"addresses,omitempty"`
+	Command    string         `mapstructure:"command"`
+	Bundles    []trinary.Hash `mapstructure:"bundles"`
+	Addresses  []trinary.Hash `mapstructure:"addresses"`
+	Tags       []trinary.Hash `mapstructure:"tags"`
+	Approvees  []trinary.Hash `mapstructure:"approvees"`
+	MaxResults int            `mapstructure:"maxresults"`
+	ValueOnly  bool           `json:"valueOnly"`
 }
 
 // FindTransactionsReturn struct
 type FindTransactionsReturn struct {
-	Hashes   []string `json:"hashes"`
-	Duration int      `json:"duration"`
+	Hashes   []trinary.Hash `json:"hashes"`
+	Duration int            `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 ///////////////////// getBalances /////////////////////////////////
 
 // GetBalances struct
 type GetBalances struct {
-	Command   string   `json:"command"`
-	Addresses []string `json:"addresses"`
+	Command   string         `mapstructure:"command"`
+	Addresses []trinary.Hash `mapstructure:"addresses"`
 }
 
 // GetBalancesReturn struct
 type GetBalancesReturn struct {
-	Balances       []string `json:"balances"`
-	References     []string `json:"references"`
-	MilestoneIndex uint32   `json:"milestoneIndex"`
-	Duration       int      `json:"duration"`
+	Balances       []trinary.Hash  `json:"balances"`
+	References     []trinary.Hash  `json:"references"`
+	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	Duration       int             `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 /////////////////// getInclusionStates ////////////////////////////
 
 // GetInclusionStates struct
 type GetInclusionStates struct {
-	Command      string   `json:"command"`
-	Transactions []string `json:"transactions"`
+	Command      string         `mapstructure:"command"`
+	Transactions []trinary.Hash `mapstructure:"transactions"`
 }
 
 // GetInclusionStatesReturn struct
@@ -143,111 +135,100 @@ type GetInclusionStatesReturn struct {
 	Duration int    `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
 ////////////////////// getNeighbors ///////////////////////////////
 
 // GetNeighbors struct
 type GetNeighbors struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetNeighborsReturn struct
 type GetNeighborsReturn struct {
-	Neighbors []gossip.NeighborInfo `json:"neighbors"`
-	Duration  int                   `json:"duration"`
+	Neighbors []*peer.Info `json:"neighbors"`
+	Duration  int          `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 /////////////////////// getNodeInfo ///////////////////////////////
 
 // GetNodeInfo struct
 type GetNodeInfo struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetNodeInfoReturn struct
 type GetNodeInfoReturn struct {
-	AppName                            string   `json:"appName"`
-	AppVersion                         string   `json:"appVersion"`
-	LatestMilestone                    string   `json:"latestMilestone"`
-	LatestMilestoneIndex               uint32   `json:"latestMilestoneIndex"`
-	LatestSolidSubtangleMilestone      string   `json:"latestSolidSubtangleMilestone"`
-	LatestSolidSubtangleMilestoneIndex uint32   `json:"latestSolidSubtangleMilestoneIndex"`
-	IsSynced                           bool     `json:"isSynced"`
-	MilestoneStartIndex                uint32   `json:"milestoneStartIndex,omitempty"`
-	LastSnapshottedMilestoneIndex      uint32   `json:"lastSnapshottedMilestoneIndex,omitempty"`
-	Neighbors                          uint     `json:"neighbors"`
-	Time                               int64    `json:"time"`
-	Tips                               uint16   `json:"tips"`
-	TransactionsToRequest              int      `json:"transactionsToRequest"`
-	Features                           []string `json:"features"`
-	CoordinatorAddress                 string   `json:"coordinatorAddress"`
-	Duration                           int      `json:"duration"`
+	AppName                            string          `json:"appName"`
+	AppVersion                         string          `json:"appVersion"`
+	NodeAlias                          string          `json:"nodeAlias,omitempty"`
+	LatestMilestone                    trinary.Hash    `json:"latestMilestone"`
+	LatestMilestoneIndex               milestone.Index `json:"latestMilestoneIndex"`
+	LatestSolidSubtangleMilestone      trinary.Hash    `json:"latestSolidSubtangleMilestone"`
+	LatestSolidSubtangleMilestoneIndex milestone.Index `json:"latestSolidSubtangleMilestoneIndex"`
+	IsSynced                           bool            `json:"isSynced"`
+	MilestoneStartIndex                milestone.Index `json:"milestoneStartIndex"`
+	LastSnapshottedMilestoneIndex      milestone.Index `json:"lastSnapshottedMilestoneIndex"`
+	Neighbors                          uint            `json:"neighbors"`
+	Time                               int64           `json:"time"`
+	Tips                               uint16          `json:"tips"`
+	TransactionsToRequest              int             `json:"transactionsToRequest"`
+	Features                           []string        `json:"features"`
+	CoordinatorAddress                 trinary.Hash    `json:"coordinatorAddress"`
+	Duration                           int             `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
-/////////////////////// getNodeAPIConfiguration ///////////////////////////////
+////////////////// getNodeAPIConfiguration //////////////////////////
 
 // GetNodeAPIConfiguration struct
 type GetNodeAPIConfiguration struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetNodeAPIConfigurationReturn struct
 type GetNodeAPIConfigurationReturn struct {
-	MaxFindTransactions int    `json:"maxFindTransactions"`
-	MaxRequestsList     int    `json:"maxRequestsList"`
-	MaxGetTrytes        int    `json:"maxGetTrytes"`
-	MaxBodyLength       int    `json:"maxBodyLength"`
-	MilestoneStartIndex uint32 `json:"milestoneStartIndex,omitempty"`
-	Duration            int    `json:"duration"`
+	MaxFindTransactions int             `json:"maxFindTransactions"`
+	MaxRequestsList     int             `json:"maxRequestsList"`
+	MaxGetTrytes        int             `json:"maxGetTrytes"`
+	MaxBodyLength       int             `json:"maxBodyLength"`
+	MilestoneStartIndex milestone.Index `json:"milestoneStartIndex"`
+	Duration            int             `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 ///////////////// getTransactionsToApprove ////////////////////////
 
 // GetTransactionsToApprove struct
 type GetTransactionsToApprove struct {
-	Command   string `json:"command"`
-	Depth     uint   `json:"depth"`
-	Reference string `json:"reference,omitempty"`
+	Command   string       `mapstructure:"command"`
+	Depth     uint         `mapstructure:"depth"`
+	Reference trinary.Hash `mapstructure:"reference"`
 }
 
 // GetTransactionsToApproveReturn struct
 type GetTransactionsToApproveReturn struct {
-	TrunkTransaction  string `json:"trunkTransaction"`
-	BranchTransaction string `json:"branchTransaction"`
-	Duration          int    `json:"duration"`
+	TrunkTransaction  trinary.Hash `json:"trunkTransaction"`
+	BranchTransaction trinary.Hash `json:"branchTransaction"`
+	Duration          int          `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 //////////////////////// getTrytes ////////////////////////////////
 
 // GetTrytes struct
 type GetTrytes struct {
-	Command string   `json:"command"`
-	Hashes  []string `json:"hashes"`
+	Command string         `mapstructure:"command"`
+	Hashes  []trinary.Hash `mapstructure:"hashes"`
 }
 
 // GetTrytesReturn struct
 type GetTrytesReturn struct {
-	Trytes   []string `json:"trytes"`
-	Duration int      `json:"duration"`
+	Trytes   []trinary.Trytes `json:"trytes"`
+	Duration int              `json:"duration"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 ///////////////////// removeNeighbors /////////////////////////////
 
 // RemoveNeighbors struct
 type RemoveNeighbors struct {
-	Command string   `json:"removeNeighbors"`
-	Uris    []string `json:"uris"`
+	Command string   `mapstructure:"removeNeighbors"`
+	Uris    []string `mapstructure:"uris"`
 }
 
 // RemoveNeighborsReturn struct
@@ -256,24 +237,20 @@ type RemoveNeighborsReturn struct {
 	Duration         int  `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
 ////////////////////// storeTransactions //////////////////////////
 
 // StoreTransactions struct
 type StoreTransactions struct {
-	Command string   `json:"command"`
-	Trytes  []string `json:"trytes"`
+	Command string           `mapstructure:"command"`
+	Trytes  []trinary.Trytes `mapstructure:"trytes"`
 }
-
-///////////////////////////////////////////////////////////////////
 
 /////////////////// wereAddressesSpentFrom ////////////////////////
 
 // WereAddressesSpentFrom struct
 type WereAddressesSpentFrom struct {
-	Command   string   `json:"wereAddressesSpentFrom"`
-	Addresses []string `json:"addresses"`
+	Command   string         `mapstructure:"wereAddressesSpentFrom"`
+	Addresses []trinary.Hash `mapstructure:"addresses"`
 }
 
 // WereAddressesSpentFromReturn struct
@@ -282,89 +259,100 @@ type WereAddressesSpentFromReturn struct {
 	Duration int    `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
-
-/////////////////// getSnapshot ////////////////////////
-
-// GetSnapshot struct
-type GetSnapshot struct {
-	Command string `json:"command"`
-}
-
-// GetSnapshotReturn struct
-type GetSnapshotReturn struct {
-	Balances       map[string]uint64 `json:"balances"`
-	MilestoneIndex uint64            `json:"milestoneIndex"`
-	Duration       int               `json:"duration"`
-}
-
-///////////////////////////////////////////////////////////////////
-
 /////////////////// getLedgerDiff ////////////////////////
 
 // GetLedgerDiff struct
 type GetLedgerDiff struct {
-	Command        string `json:"command"`
-	MilestoneIndex uint64 `json:"milestoneIndex"`
+	Command        string          `mapstructure:"command"`
+	MilestoneIndex milestone.Index `mapstructure:"milestoneIndex"`
 }
 
 // GetLedgerDiffExt struct
 type GetLedgerDiffExt struct {
-	Command        string `json:"command"`
-	MilestoneIndex uint64 `json:"milestoneIndex"`
+	Command        string          `mapstructure:"command"`
+	MilestoneIndex milestone.Index `mapstructure:"milestoneIndex"`
 }
 
 // GetLedgerDiffReturn struct
 type GetLedgerDiffReturn struct {
-	Diff           map[string]int64 `json:"diff"`
-	MilestoneIndex uint64           `json:"milestoneIndex"`
-	Duration       int              `json:"duration"`
+	Diff           map[trinary.Hash]int64 `json:"diff"`
+	MilestoneIndex milestone.Index        `json:"milestoneIndex"`
+	Duration       int                    `json:"duration"`
 }
 
+// TxHashWithValue struct
 type TxHashWithValue struct {
-	TxHash     string `json:"txHash"`
-	TailTxHash string `json:"tailTxHash"`
-	BundleHash string `json:"bundleHash"`
-	Address    string `json:"address"`
-	Value      int64  `json:"value"`
+	TxHash     trinary.Hash `mapstructure:"txHash"`
+	TailTxHash trinary.Hash `mapstructure:"tailTxHash"`
+	BundleHash trinary.Hash `mapstructure:"bundleHash"`
+	Address    trinary.Hash `mapstructure:"address"`
+	Value      int64        `mapstructure:"value"`
 }
 
+// TxWithValue struct
 type TxWithValue struct {
-	TxHash  string `json:"txHash"`
-	Address string `json:"address"`
-	Index   uint64 `json:"index"`
-	Value   int64  `json:"value"`
+	TxHash  trinary.Hash `mapstructure:"txHash"`
+	Address trinary.Hash `mapstructure:"address"`
+	Index   uint64       `mapstructure:"index"`
+	Value   int64        `mapstructure:"value"`
 }
 
+// BundleWithValue struct
 type BundleWithValue struct {
-	BundleHash string         `json:"bundleHash"`
-	TailTxHash string         `json:"tailTxHash"`
-	LastIndex  uint64         `json:"lastIndex"`
-	Txs        []*TxWithValue `json:"txs"`
+	BundleHash trinary.Hash   `mapstructure:"bundleHash"`
+	TailTxHash trinary.Hash   `mapstructure:"tailTxHash"`
+	LastIndex  uint64         `mapstructure:"lastIndex"`
+	Txs        []*TxWithValue `mapstructure:"txs"`
 }
 
-// GetLedgerDiffReturn struct
+// GetLedgerDiffExtReturn struct
 type GetLedgerDiffExtReturn struct {
-	ConfirmedTxWithValue      []*TxHashWithValue `json:"confirmedTxWithValue"`
-	ConfirmedBundlesWithValue []*BundleWithValue `json:"confirmedBundlesWithValue"`
-	Diff                      map[string]int64   `json:"diff"`
-	MilestoneIndex            uint64             `json:"milestoneIndex"`
-	Duration                  int                `json:"duration"`
+	ConfirmedTxWithValue      []*TxHashWithValue     `json:"confirmedTxWithValue"`
+	ConfirmedBundlesWithValue []*BundleWithValue     `json:"confirmedBundlesWithValue"`
+	Diff                      map[trinary.Hash]int64 `json:"diff"`
+	MilestoneIndex            milestone.Index        `json:"milestoneIndex"`
+	Duration                  int                    `json:"duration"`
 }
 
-///////////////////////////////////////////////////////////////////
+/////////////////// getLedgerState ////////////////////////
 
-/////////////////// createSnapshot ////////////////////////
-
-// CreateSnapshot struct
-type CreateSnapshot struct {
-	Command     string `json:"command"`
-	TargetIndex uint64 `json:"targetIndex"`
-	FilePath    string `json:"filePath"`
+// GetLedgerState struct
+type GetLedgerState struct {
+	Command     string          `mapstructure:"command"`
+	TargetIndex milestone.Index `mapstructure:"targetIndex,omitempty"`
 }
 
-// GetSnapshotReturn struct
-type CreateSnapshotReturn struct {
+// GetLedgerStateReturn struct
+type GetLedgerStateReturn struct {
+	Balances       map[trinary.Hash]uint64 `json:"balances"`
+	MilestoneIndex milestone.Index         `json:"milestoneIndex"`
+	Duration       int                     `json:"duration"`
+}
+
+/////////////////// createSnapshotFile ////////////////////////
+
+// CreateSnapshotFile struct
+type CreateSnapshotFile struct {
+	Command     string          `mapstructure:"command"`
+	TargetIndex milestone.Index `mapstructure:"targetIndex"`
+}
+
+// CreateSnapshotFileReturn struct
+type CreateSnapshotFileReturn struct {
+	Duration int `json:"duration"`
+}
+
+/////////////////// pruneDatabase ////////////////////////
+
+// PruneDatabase struct
+type PruneDatabase struct {
+	Command     string          `mapstructure:"command"`
+	TargetIndex milestone.Index `mapstructure:"targetIndex"`
+	Depth       milestone.Index `mapstructure:"depth"`
+}
+
+// PruneDatabaseReturn struct
+type PruneDatabaseReturn struct {
 	Duration int `json:"duration"`
 }
 
@@ -372,12 +360,88 @@ type CreateSnapshotReturn struct {
 
 // GetRequests struct
 type GetRequests struct {
-	Command string `json:"command"`
+	Command string `mapstructure:"command"`
 }
 
 // GetRequestsReturn struct
 type GetRequestsReturn struct {
-	Requests []*queue.DebugRequest `json:"requests"`
+	Requests []*DebugRequest `json:"requests"`
 }
 
-///////////////////////////////////////////////////////////////////
+type DebugRequest struct {
+	Hash             trinary.Hash    `json:"hash"`
+	Type             string          `json:"type"`
+	TxExists         bool            `json:"txExists"`
+	EnqueueTimestamp int64           `json:"enqueueTime"`
+	MilestoneIndex   milestone.Index `json:"milestoneIndex"`
+}
+
+///////////////// searchConfirmedApprover /////////////////////////
+
+// SearchConfirmedApprover struct
+type SearchConfirmedApprover struct {
+	Command         string       `mapstructure:"command"`
+	TxHash          trinary.Hash `mapstructure:"txHash"`
+	SearchMilestone bool         `mapstructure:"searchMilestone"`
+}
+
+// ApproverStruct struct
+type ApproverStruct struct {
+	TxHash            trinary.Hash `mapstructure:"txHash"`
+	ReferencedByTrunk bool         `mapstructure:"referencedByTrunk"`
+}
+
+// SearchConfirmedApproverReturn struct
+type SearchConfirmedApproverReturn struct {
+	ConfirmedTxHash           trinary.Hash      `json:"confirmedTxHash"`
+	ConfirmedByMilestoneIndex milestone.Index   `json:"confirmedByMilestoneIndex"`
+	TanglePath                []*ApproverStruct `json:"tanglePath"`
+	TanglePathLength          int               `json:"tanglePathLength"`
+}
+
+///////////////// searchEntryPoint /////////////////////////
+
+// SearchEntryPoint struct
+type SearchEntryPoint struct {
+	Command string       `mapstructure:"command"`
+	TxHash  trinary.Hash `mapstructure:"txHash"`
+}
+
+// EntryPoint struct
+type EntryPoint struct {
+	TxHash                    trinary.Hash    `json:"txHash"`
+	ConfirmedByMilestoneIndex milestone.Index `json:"confirmedByMilestoneIndex"`
+}
+
+type TransactionWithApprovers struct {
+	TxHash            trinary.Hash `json:"txHash"`
+	TrunkTransaction  trinary.Hash `json:"trunkTransaction"`
+	BranchTransaction trinary.Hash `json:"branchTransaction"`
+}
+
+// SearchEntryPointReturn struct
+type SearchEntryPointReturn struct {
+	TanglePath       []*TransactionWithApprovers `json:"tanglePath"`
+	EntryPoints      []*EntryPoint               `json:"entryPoints"`
+	TanglePathLength int                         `json:"tanglePathLength"`
+}
+
+///////////////// triggerSolidifier /////////////////////////
+
+// SearchConfirmedApprover struct
+type TriggerSolidifier struct {
+	Command string `mapstructure:"command"`
+}
+
+/////////////////// getFundsOnSpentAddresses //////////////////////////////
+
+// GetFundsOnSpentAddressesReturn struct
+type GetFundsOnSpentAddressesReturn struct {
+	Command   string                `mapstructure:"command"`
+	Addresses []*AddressWithBalance `mapstructure:"addresses"`
+}
+
+type AddressWithBalance struct {
+	Address trinary.Hash `mapstructure:"address"`
+	Balance uint64       `mapstructure:"balance"`
+}
