@@ -9,6 +9,7 @@ install)
         useradd --no-create-home --system hornet >/dev/null
     fi
     mkdir -p /var/lib/hornet
+    echo "WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable the plugin prior to the first start if you do not want this to happen!"
     ;;
 
 upgrade)

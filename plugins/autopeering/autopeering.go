@@ -74,6 +74,8 @@ func isValidPeer(p *peer.Peer) bool {
 func start(local *Local, shutdownSignal <-chan struct{}) {
 	defer log.Info("Stopping Autopeering ... done")
 
+	log.Info("WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!")
+
 	lPeer := local.PeerLocal
 	peering := lPeer.Services().Get(service.PeeringKey)
 
