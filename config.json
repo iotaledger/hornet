@@ -42,8 +42,7 @@
     }
   },
   "db": {
-    "path": "mainnetdb",
-    "debug": false
+    "path": "mainnetdb"
   },
   "snapshots": {
     "loadType": "local",

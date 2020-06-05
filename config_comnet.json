@@ -42,8 +42,7 @@
     }
   },
   "db": {
-    "path": "comnetdb",
-    "debug": false
+    "path": "comnetdb"
   },
   "snapshots": {
     "loadType": "local",
