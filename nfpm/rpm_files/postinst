@@ -5,6 +5,8 @@ if [ $1 -eq 1 ]; then
 ######################################
 HORNET installation finished
 ######################################
+WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable the plugin prior to the first start if you do not want this to happen!
+
 Please edit the config files (/var/lib/hornet/config.json and /var/lib/hornet/peering.json) to fit your needs.
 To start HORNET the first time, please run:
 
