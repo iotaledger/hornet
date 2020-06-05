@@ -2,6 +2,128 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 05.06.2020
+
+### Added
+
+    - Autopeering
+    - Object storage (speed and memory improvement)
+    - Warp synchronization (high speed syncing)
+    - Coordinator plugin
+    - Database re-validation after a crash
+    - Add API IP whitelist
+    - Additional neighbors stats
+    - Dashboard:
+      - `bundle not found` alert
+      - `unknown Tx` alert
+      - GitHub mark linking to github
+      - Dark theme
+      - Explorer JSON view
+      - Explorer text view
+      - `Tag` search
+      - Show approvers in tx explorer
+      - Copy transaction hash
+      - Copy transaction raw trytes
+      - CTPS graph
+      - Tooltip for copy buttons
+      - Responsive design
+      - Visualizer (ported from GoShimmer)
+      - Spam transactions graph
+      - Show IOTA units
+      - Value-tx only filter
+      - Average metrics to confirmed milestones
+      - Spam metrics
+    - API:
+      - `pruneDatabase` call
+      - `getLedgerState` call
+      - `getFundsOnSpentAddresses` call
+      - Health check API route (`/healthz`)
+    - Dockerfiles for arm64
+    - Neighbor alias
+    - Node alias (Dashboard and `getNodeInfo`)
+    - Profiles configuration file
+    - Check for missing snapshot info
+    - Balance check on snapshot import
+    - Toolset (Autopeering seed generator, Password SHA256 sum, Coo plugin tool)
+    - Snapshot file download when no local snapshot is found
+    - Set coordinator address in database
+    - Default comnet settings
+    - New zmq and mqtt topics (`lm` & `lsm`)
+    - Flag to overwrite coo address at startup
+    - Show download speed
+    - Prometheus exporter plugin
+    - Value spam mode (spammer plugin)
+
+### Removed
+
+    - `in-flight` neighbor pool
+    - Socket.io in favor of hive.go websockethub
+    - Auto snapshot download from nfpm service file
+    - Wrong `omitempty` from json tags
+    - `getSnapshot` API call
+    - armhf support
+    - Unnecessary trinary <--> binary conversions (speed improvement)
+
+### Changed
+
+    - Database layout
+    - Ignore example neighbor
+    - Improved RPM and DEB packages
+    - Make config files optional
+    - Refactored configuration options
+    - Reintroduce spent addresses DB
+    - Snapshot format
+    - `tx_trytes` ZMQ and MQTT topic changed to `trytes`
+    - Debian package structure
+    - Do not broadcast known tx
+    - Use new object storage interface
+    - Refactors networking packages and plugins
+    - Send integer values as integers in MQTT topics
+    - Renamed packages to pkg
+    - Improve solidifier
+    - Local snapshots are always enabled now
+    - Simplify node sync check
+    - Do not start HORNET automatically during an initial installation with the DEB package
+    - Milestone logic
+    - Pruning logic
+    - Database pressure reduced
+    - Renamed `ZeroMQ` plugin to `ZMQ`
+    - Graph explorer link is now configurable
+    - Improved spammer plugin
+    - Local snapshot doesn't write to database if triggered externally
+    - API:
+      - Handle `minWeightMagnitude` as an optional parameter
+      - Renamed `createSnapshot` to `createSnapshotFile`
+      - Improved error handling in `createSnapshotFile`
+    - Set latest known milestone at startup
+    - Abort ongoing PoW in spammer on shutdown
+    - Reasonable values for config defaults
+    - Increase tipselect maxDepth to 5 
+
+### Fixed
+
+    - Allow all orders of txs in attachToTangle
+    - API getNodeInfo features is `null`
+    - Graph plugin
+    - Monitor plugin
+    - Missing comma in MQTT TX event
+    - Missing folder in `.deb` package
+    - Updated profiles for better RAM usage
+    - ZMQ panics on greeting
+    - Scheme for jquery url in monitor plugin
+    - HTTP API basic auth
+    - High memory usage
+    - URL scheme in monitor and graph plugin
+    - Local peer string character encoding
+    - snapshot.csv reading
+    - Heartbeats
+    - ZMQ `address` topic
+    - Security fixes
+
+### Config file changes
+
+Please use the new config.json and transfer values from your current config.json over to the new one, as a lot of keys have changed (instead of mutating your current one).
+
 ## [0.4.0-rc13] - 01.06.2020
 
 ### Changed
