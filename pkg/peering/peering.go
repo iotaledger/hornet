@@ -171,6 +171,10 @@ func (m *Manager) IsStaticallyPeered(ips []string, port uint16) bool {
 
 		// check all peers in the reconnect pool
 		for _, reconnectInfo := range m.reconnect {
+			// if the static peer has no DNS records, CachedIPs would be nil
+			if reconnectInfo.CachedIPs == nil {
+				continue
+			}
 			for reconnectInfoIP := range reconnectInfo.CachedIPs.IPs {
 				reconnectID := peer.NewID(reconnectInfoIP.String(), reconnectInfo.OriginAddr.Port)
 
