@@ -122,6 +122,10 @@ module.exports = {
             NODE_ENV: 'development', // use 'development' unless process.env.NODE_ENV is defined
             DEBUG: false
         }),
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^\.\/locale$/,
+          contextRegExp: /moment$/
+        }),
         new WebpackCleanupPlugin(),
         new MiniCssExtractPlugin({
             filename: isProduction ? '[contenthash].css' : '[hash].css',
