@@ -7,17 +7,20 @@ import (
 	"sync"
 
 	"github.com/shirou/gopsutil/mem"
+	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/config"
 )
 
 const (
+	// AutoProfileName is the name of the automatic profile.
 	AutoProfileName = "auto"
-	CfgUseProfile   = "useProfile"
+	// CfgUseProfile is the key to set the profile to use.
+	CfgUseProfile = "useProfile"
 )
 
 func init() {
-	config.NodeConfig.SetDefault(CfgUseProfile, AutoProfileName)
+	flag.StringP(CfgUseProfile, "p", AutoProfileName, "Sets the profile with which the node runs")
 }
 
 var (

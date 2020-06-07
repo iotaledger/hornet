@@ -1,5 +1,9 @@
 package config
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 const (
 	// path to the tanglemonitor web assets
 	CfgMonitorTangleMonitorPath = "monitor.tangleMonitorPath"
@@ -18,11 +22,11 @@ const (
 )
 
 func init() {
-	NodeConfig.SetDefault(CfgMonitorTangleMonitorPath, "tanglemonitor/frontend")
-	NodeConfig.SetDefault(CfgMonitorDomain, "")
-	NodeConfig.SetDefault(CfgMonitorWebSocketURI, "")
-	NodeConfig.SetDefault(CfgMonitorRemoteAPIPort, 4433)
-	NodeConfig.SetDefault(CfgMonitorInitialTransactions, 15000)
-	NodeConfig.SetDefault(CfgMonitorWebBindAddress, "localhost:4434")
-	NodeConfig.SetDefault(CfgMonitorAPIBindAddress, "localhost:4433")
+	flag.String(CfgMonitorTangleMonitorPath, "tanglemonitor/frontend", "path to the tanglemonitor web assets")
+	flag.String(CfgMonitorDomain, "", "the domain from which the tanglemonitor is served from")
+	flag.String(CfgMonitorWebSocketURI, "", "the websocket URI to use (optional)")
+	flag.Int(CfgMonitorRemoteAPIPort, 4433, "the remote API port")
+	flag.Int(CfgMonitorInitialTransactions, 15000, "the initial amount of tx to load")
+	flag.String(CfgMonitorWebBindAddress, "localhost:4434", "the bind address on which the monitor can be access from")
+	flag.String(CfgMonitorAPIBindAddress, "localhost:4433", "the bind address on which the API listens on")
 }

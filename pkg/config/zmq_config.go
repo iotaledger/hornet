@@ -1,5 +1,9 @@
 package config
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 const (
 	// protocol used to connect to the zmq feed [unix, tcp, udp, inproc]
 	CfgZMQBindAddress = "zmq.bindAddress"
@@ -8,6 +12,6 @@ const (
 )
 
 func init() {
-	NodeConfig.SetDefault(CfgZMQProtocol, "tcp")
-	NodeConfig.SetDefault(CfgZMQBindAddress, "localhost:5556")
+	flag.String(CfgZMQProtocol, "tcp", "protocol used to connect to the zmq feed [unix, tcp, udp, inproc]")
+	flag.String(CfgZMQBindAddress, "localhost:5556", "the bind address of the ZMQ feed")
 }

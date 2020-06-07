@@ -1,5 +1,9 @@
 package config
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 const (
 	// the target address of the spam
 	CfgSpammerAddress = "spammer.address"
@@ -22,11 +26,13 @@ const (
 )
 
 func init() {
-	NodeConfig.SetDefault(CfgSpammerAddress, "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999")
-	NodeConfig.SetDefault(CfgSpammerMessage, "Spamming with HORNET tipselect")
-	NodeConfig.SetDefault(CfgSpammerTag, "HORNET99SPAMMER999999999999")
-	NodeConfig.SetDefault(CfgSpammerDepth, 3)
-	NodeConfig.SetDefault(CfgSpammerCPUMaxUsage, 0.50)
-	NodeConfig.SetDefault(CfgSpammerTPSRateLimit, 0.10)
-	NodeConfig.SetDefault(CfgSpammerWorkers, 1)
+	flag.String(CfgSpammerAddress, "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999", "the target address of the spam")
+	flag.String(CfgSpammerMessage, "Spamming with HORNET tipselect", "the message to embed within the spam transactions")
+	flag.String(CfgSpammerTag, "HORNET99SPAMMER999999999999", "the tag of the transaction")
+	flag.Int(CfgSpammerDepth, 3, "the depth to use for tip-selection")
+	flag.Float64(CfgSpammerCPUMaxUsage, 0.50, "workers remains idle for a while when cpu usage gets over this limit (0 = disable)")
+	flag.Float64(CfgSpammerTPSRateLimit, 0.10, "the rate limit for the spammer (0 = no limit)")
+	flag.Int(CfgSpammerBundleSize, 1, "the size of the spam bundles")
+	flag.Bool(CfgSpammerValueSpam, false, "should be spammed with value bundles")
+	flag.Int(CfgSpammerWorkers, 1, "the amount of parallel running spammers")
 }
