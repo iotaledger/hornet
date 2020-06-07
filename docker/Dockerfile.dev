@@ -32,6 +32,7 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags="pow_avx" \
 FROM gcr.io/distroless/static@sha256:23aa732bba4c8618c0d97c26a72a32997363d591807b0d4c31b0bbc8a774bddf
 
 EXPOSE 8081/tcp
+EXPOSE 14265/tcp
 EXPOSE 15600/tcp
 EXPOSE 14626/udp
 
