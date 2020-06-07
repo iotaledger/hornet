@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -51,6 +52,17 @@ var (
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
 // and ending with: .json, .toml, .yaml or .yml (in this sequence).
 func FetchConfig() error {
+
+	// replace dots with underscores in env
+	dotReplacer := strings.NewReplacer(".", "_")
+	NodeConfig.SetEnvKeyReplacer(dotReplacer)
+	PeeringConfig.SetEnvKeyReplacer(dotReplacer)
+	ProfilesConfig.SetEnvKeyReplacer(dotReplacer)
+
+	// ensure that envs are read in too
+	NodeConfig.AutomaticEnv()
+	PeeringConfig.AutomaticEnv()
+	ProfilesConfig.AutomaticEnv()
 
 	// hide all but the most essential flags
 	flag.VisitAll(func(f *flag.Flag) {
