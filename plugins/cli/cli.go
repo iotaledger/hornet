@@ -50,6 +50,7 @@ func PrintConfig() {
 // PrintVersion prints out the HORNET version
 func PrintVersion() {
 	version := flag.BoolP("version", "v", false, "Prints the HORNET version")
+	flag.Parse()
 	if *version {
 		fmt.Println(AppName + " " + AppVersion)
 		os.Exit(0)
