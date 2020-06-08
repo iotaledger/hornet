@@ -178,28 +178,24 @@ func ContainsTransaction(txHash hornet.Hash) bool {
 // tx +1
 func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *CachedTransaction, newlyAdded bool) {
 
-	// Store metadata first, because existence is checked via tx
-	newlyAddedMetadata := false
-	metadata, _, _ := metadataFactory(transaction.GetTxHash())
-	cachedMeta := metadataStorage.ComputeIfAbsent(metadata.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
-		newlyAddedMetadata = true
-		metadata.Persist()
-		metadata.SetModified()
-		return metadata
-	})
+	// Store tx + metadata atomically in the same callback
+	var cachedMeta objectstorage.CachedObject
 
 	cachedTxData := txStorage.ComputeIfAbsent(transaction.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // tx +1
 		newlyAdded = true
 
-		if !newlyAddedMetadata {
-			// Metadata was known, but transaction was missing => Reset corrupted metadata
-			cachedMeta.Get().(*hornet.TransactionMetadata).Reset()
-		}
+		metadata, _, _ := metadataFactory(transaction.GetTxHash())
+		cachedMeta = metadataStorage.Store(metadata) // meta +1
 
 		transaction.Persist()
 		transaction.SetModified()
 		return transaction
 	})
+
+	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
+	if !newlyAdded {
+		cachedMeta = metadataStorage.Load(transaction.GetTxHash()) // meta +1
+	}
 
 	return &CachedTransaction{tx: cachedTxData, metadata: cachedMeta}, newlyAdded
 }
