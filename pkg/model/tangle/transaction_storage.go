@@ -20,6 +20,10 @@ func TransactionCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedTx *CachedTransaction))(params[0].(*CachedTransaction).Retain())
 }
 
+func TransactionHashCaller(handler interface{}, params ...interface{}) {
+	handler.(func(txHash hornet.Hash))(params[0].(hornet.Hash))
+}
+
 func NewTransactionCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedTx *CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
