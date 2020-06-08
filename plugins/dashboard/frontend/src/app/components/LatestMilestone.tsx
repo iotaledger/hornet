@@ -1,7 +1,7 @@
 import * as React from 'react';
 import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
-import {OverlayTrigger, Tooltip, Badge} from "react-bootstrap";
+import {OverlayTrigger, Tooltip} from "react-bootstrap";
 
 
 interface Props {
@@ -29,13 +29,6 @@ export default class LatestMilestone extends React.Component<Props, any> {
                         {this.props.nodeStore.status.lmi}
                     </span>
                 </OverlayTrigger>
-                {' '}
-                {
-                    this.props.nodeStore.isNodeSync ?
-                        <Badge variant="success">Synced</Badge>
-                        :
-                        <Badge variant="warning">Not Synced</Badge>
-                }
             </React.Fragment>
         );
     }
