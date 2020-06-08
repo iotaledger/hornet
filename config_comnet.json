@@ -50,7 +50,7 @@
       "depth": 50,
       "intervalSynced": 200,
       "intervalUnsynced": 1000,
-      "path": "export_comnet.bin",
+      "path": "snapshots/comnet/export.bin",
       "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
     },
     "global": {

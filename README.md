@@ -25,11 +25,6 @@ _Table of contents_
 - [Contributing](#contributing)
 - [Installation](#installation)
 - [Plugins](#plugins)
-  - [TangleMonitor](#tanglemonitor)
-  - [IOTA Tangle Visualiser](#iota-tangle-visualiser)
-  - [MQTT Broker](#mqtt-broker)
-  - [Spammer](#spammer)
-  - [Autopeering](#autopeering)
 - [Docker](#docker)
 <!--te-->
 

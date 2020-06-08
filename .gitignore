@@ -22,6 +22,9 @@ comnetdb/
 .DS_Store
 /hornet
 
+# snapshot dir
+snapshots/
+
 # snapshot files
 *export.bin
 *export_comnet.bin
