@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -122,6 +123,10 @@ func configure(plugin *node.Plugin) {
 		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
 
 			if _, fileErr := os.Stat(path); os.IsNotExist(fileErr) {
+				// create dir if it not exists
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					log.Fatalf("could not create snapshot dir '%s'", path)
+				}
 				if url := config.NodeConfig.GetString(config.CfgLocalSnapshotsDownloadURL); url != "" {
 					log.Infof("Downloading snapshot from %s", url)
 					downloadErr := downloadSnapshotFile(path, url)

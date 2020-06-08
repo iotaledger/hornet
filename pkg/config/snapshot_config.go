@@ -36,7 +36,7 @@ func init() {
 	flag.Int(CfgLocalSnapshotsDepth, 50, "the depth, respectively the starting point, at which a local snapshot of the ledger is generated")
 	flag.Int(CfgLocalSnapshotsIntervalSynced, 50, "interval, in milestone transactions, at which snapshot files are created if the ledger is fully synchronized")
 	flag.Int(CfgLocalSnapshotsIntervalUnsynced, 1000, "interval, in milestone transactions, at which snapshot files are created if the ledger is not fully synchronized")
-	flag.String(CfgLocalSnapshotsPath, "export.bin", "path to the local snapshot file")
+	flag.String(CfgLocalSnapshotsPath, "snapshots/mainnet/export.bin", "path to the local snapshot file")
 	flag.String(CfgLocalSnapshotsDownloadURL, "", "URL to load the local snapshot file from")
 	flag.String(CfgGlobalSnapshotPath, "snapshotMainnet.txt", "path to the global snapshot file containing the ledger state")
 	flag.StringSlice(CfgGlobalSnapshotSpentAddressesPaths, []string{
