@@ -380,11 +380,6 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 
 		if bndl.validate() {
 			bndl.calcLedgerChanges()
-
-			if bndl.IsMilestone() {
-				// Force release to store milestones without caching
-				StoreMilestone(bndl).Release(true) // milestone +-0
-			}
 		}
 
 		metrics.SharedServerMetrics.ValidatedBundles.Inc()
@@ -401,7 +396,13 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		bndl := cachedBndl.GetBundle()
 		bndl.ApplySpentAddresses()
 
-		if bndl.IsMilestone() {
+		if bndl.IsValid() && bndl.IsMilestone() {
+			// Force release to store milestones without caching
+			//
+			// Milestone has to be stored after the bundle itself, otherwise there would be a race condition
+			// between "ContainsMilestone" and "GetMilestoneOrNil"
+			StoreMilestone(bndl).Release(true) // milestone +-0
+
 			Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
 		}
 	}
