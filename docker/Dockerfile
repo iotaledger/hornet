@@ -13,7 +13,8 @@ LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/master/DOC
 
 WORKDIR /app
 
-RUN apk --no-cache add curl jq tini tar\
+RUN apk --no-cache add ca-certificates curl jq tini tar\
+ && update-ca-certificates 2>/dev/null || true\
  && if [ "$TAG" = "latest" ];\
     then\
       HORNET_TAG=$(curl --retry 3 -f -s https://api.github.com/repos/${REPO}/releases/latest | jq -r .tag_name | tr -d 'v');\
