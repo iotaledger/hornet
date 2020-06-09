@@ -11,7 +11,6 @@ require (
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/go-playground/assert/v2 v2.0.1
 	github.com/go-zeromq/zmq4 v0.9.0
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -19,7 +18,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20200608165853-97365812038c
-	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200607095241-fce4dac6e9e3
+	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200609192728-feaa92d57729
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.3.2
