@@ -89,11 +89,11 @@ func New(seed trinary.Hash, securityLvl int, merkleTreeDepth int, minWeightMagni
 	return result
 }
 
-// InitMerkleTree loads the merkle tree file and checks the coordinator address.
+// InitMerkleTree loads the Merkle tree file and checks the coordinator address.
 func (coo *Coordinator) InitMerkleTree(filePath string, cooAddress trinary.Hash) error {
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("merkle tree file not found: %v", filePath)
+		return fmt.Errorf("Merkle tree file not found: %v", filePath)
 	}
 
 	var err error
@@ -103,7 +103,7 @@ func (coo *Coordinator) InitMerkleTree(filePath string, cooAddress trinary.Hash)
 	}
 
 	if cooAddress != coo.merkleTree.Root {
-		return fmt.Errorf("coordinator address does not match merkle tree root: %v != %v", cooAddress, coo.merkleTree.Root)
+		return fmt.Errorf("coordinator address does not match Merkle tree root: %v != %v", cooAddress, coo.merkleTree.Root)
 	}
 
 	return nil

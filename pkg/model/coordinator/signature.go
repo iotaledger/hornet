@@ -101,7 +101,7 @@ func validateSignature(root trinary.Hash, milestoneIndex milestone.Index, securi
 	}
 
 	if merkleAddress != root {
-		return fmt.Errorf("merkle root does not match: %v != %v", merkleAddress, root)
+		return fmt.Errorf("Merkle root does not match: %v != %v", merkleAddress, root)
 	}
 
 	return nil

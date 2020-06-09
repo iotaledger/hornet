@@ -90,7 +90,7 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 // createMilestone creates a signed milestone bundle.
 func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
-	// get the siblings in the current merkle tree
+	// get the siblings in the current Merkle tree
 	leafSiblings := siblings(index, merkleTree)
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
@@ -99,7 +99,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, 
 	tag := tagForIndex(index)
 
 	// a milestone consists of two transactions.
-	// the last transaction (currentIndex == lastIndex) contains the siblings for the merkle tree.
+	// the last transaction (currentIndex == lastIndex) contains the siblings for the Merkle tree.
 	txSiblings := &transaction.Transaction{}
 	txSiblings.SignatureMessageFragment = paddedSiblingsTrytes
 	txSiblings.Address = merkleTree.Root

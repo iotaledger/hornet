@@ -28,8 +28,8 @@ func merkleTreeCreate(args []string) error {
 	depth := config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)
 
 	if _, err := os.Stat(merkleFilePath); !os.IsNotExist(err) {
-		// merkle tree file already exists
-		return fmt.Errorf("merkle tree file already exists. %v", merkleFilePath)
+		// Merkle tree file already exists
+		return fmt.Errorf("Merkle tree file already exists. %v", merkleFilePath)
 	}
 
 	count := 1 << depth
@@ -67,16 +67,16 @@ func merkleTreeCreate(args []string) error {
 		})
 
 	if err != nil {
-		return fmt.Errorf("error creating merkle tree: %v", err)
+		return fmt.Errorf("error creating Merkle tree: %v", err)
 	}
 
 	if err := merkle.StoreMerkleTreeFile(merkleFilePath, mt); err != nil {
-		return fmt.Errorf("error persisting merkle tree: %v", err)
+		return fmt.Errorf("error persisting Merkle tree: %v", err)
 	}
 
-	fmt.Printf("merkle tree root: %v\n", mt.Root)
+	fmt.Printf("Merkle tree root: %v\n", mt.Root)
 
-	fmt.Printf("successfully created merkle tree (took %v).\n", time.Since(ts).Truncate(time.Second))
+	fmt.Printf("successfully created Merkle tree (took %v).\n", time.Since(ts).Truncate(time.Second))
 
 	return nil
 }

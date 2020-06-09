@@ -16,7 +16,7 @@ const (
 	CfgCoordinatorMWM = "coordinator.mwm"
 	// the path to the state file of the coordinator
 	CfgCoordinatorStateFilePath = "coordinator.stateFilePath"
-	// the path to the merkle tree of the coordinator
+	// the path to the Merkle tree of the coordinator
 	CfgCoordinatorMerkleTreeFilePath = "coordinator.merkleTreeFilePath"
 	// the interval milestones are issued
 	CfgCoordinatorIntervalSeconds = "coordinator.intervalSeconds"
@@ -31,7 +31,7 @@ func init() {
 	flag.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash. "+
 		"increasing this number by 1 will result in proof of work that is 3 times as hard.")
 	flag.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
-	flag.String(CfgCoordinatorMerkleTreeFilePath, "coordinator.tree", "the path to the merkle tree of the coordinator")
+	flag.String(CfgCoordinatorMerkleTreeFilePath, "coordinator.tree", "the path to the Merkle tree of the coordinator")
 	flag.Int(CfgCoordinatorIntervalSeconds, 60, "the interval milestones are issued")
 	flag.Int(CfgCoordinatorCheckpointTransactions, 5, "the amount of checkpoints issued between two milestones")
 }
