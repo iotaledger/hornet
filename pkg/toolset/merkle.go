@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
+	"github.com/iotaledger/iota.go/merkle"
+
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 )
 
 func merkleTreeCreate(args []string) error {
@@ -30,11 +32,51 @@ func merkleTreeCreate(args []string) error {
 		return fmt.Errorf("merkle tree file already exists. %v", merkleFilePath)
 	}
 
+	count := 1 << depth
+
 	ts := time.Now()
-	if err = coordinator.CreateMerkleTreeFile(merkleFilePath, seed, secLvl, depth); err != nil {
-		return err
+
+	calculateAddressesStartCallback := func(count uint32) {
+		fmt.Printf("calculating %d addresses...\n", count)
 	}
 
+	calculateAddressesCallback := func(index uint32) {
+		if index%5000 == 0 && index != 0 {
+			ratio := float64(index) / float64(count)
+			total := time.Duration(float64(time.Since(ts)) / ratio)
+			duration := time.Until(ts.Add(total))
+			fmt.Printf("calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, ratio*100.0, duration.Truncate(time.Second))
+		}
+	}
+
+	calculateAddressesFinishedCallback := func(count uint32) {
+		fmt.Printf("calculated %d/%d (100.00%%) addresses (took %v).\n", count, count, time.Since(ts).Truncate(time.Second))
+	}
+
+	calculateLayersCallback := func(index uint32) {
+		fmt.Printf("calculating nodes for layer %d\n", index)
+	}
+
+	mt, err := merkle.CreateMerkleTree(seed, secLvl, depth,
+		merkle.MerkleCreateOptions{
+			CalculateAddressesStartCallback:    calculateAddressesStartCallback,
+			CalculateAddressesCallback:         calculateAddressesCallback,
+			CalculateAddressesFinishedCallback: calculateAddressesFinishedCallback,
+			CalculateLayersCallback:            calculateLayersCallback,
+			Parallelism:                        runtime.NumCPU(),
+		})
+
+	if err != nil {
+		return fmt.Errorf("error creating merkle tree: %v", err)
+	}
+
+	if err := merkle.StoreMerkleTreeFile(merkleFilePath, mt); err != nil {
+		return fmt.Errorf("error persisting merkle tree: %v", err)
+	}
+
+	fmt.Printf("merkle tree root: %v\n", mt.Root)
+
 	fmt.Printf("successfully created merkle tree (took %v).\n", time.Since(ts).Truncate(time.Second))
+
 	return nil
 }

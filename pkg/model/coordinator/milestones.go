@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
+	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -18,7 +19,7 @@ import (
 )
 
 // siblings calculates a list of siblings.
-func siblings(leafIndex milestone.Index, merkleTree *MerkleTree) []trinary.Hash {
+func siblings(leafIndex milestone.Index, merkleTree *merkle.MerkleTree) []trinary.Hash {
 	var siblings []trinary.Hash
 
 	for currentLayerIndex := merkleTree.Depth; currentLayerIndex > 0; currentLayerIndex-- {
@@ -87,7 +88,7 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
 	// get the siblings in the current merkle tree
 	leafSiblings := siblings(index, merkleTree)

@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -57,7 +58,7 @@ type Coordinator struct {
 
 	// internal state
 	state               *State
-	merkleTree          *MerkleTree
+	merkleTree          *merkle.MerkleTree
 	lastCheckpointCount int
 	lastCheckpointHash  *hornet.Hash
 	bootstrapped        bool
@@ -96,7 +97,7 @@ func (coo *Coordinator) InitMerkleTree(filePath string, cooAddress trinary.Hash)
 	}
 
 	var err error
-	coo.merkleTree, err = loadMerkleTreeFile(filePath)
+	coo.merkleTree, err = merkle.LoadMerkleTreeFile(filePath)
 	if err != nil {
 		return err
 	}

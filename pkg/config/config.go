@@ -139,7 +139,7 @@ func LoadHashFromEnvironment(name string) (trinary.Hash, error) {
 		return "", fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	if !guards.IsHash(hash) {
+	if !guards.IsTransactionHash(hash) {
 		return "", fmt.Errorf("environment variable '%s' contains an invalid hash", name)
 	}
 
