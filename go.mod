@@ -11,29 +11,27 @@ require (
 	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/go-playground/assert/v2 v2.0.1
 	github.com/go-zeromq/zmq4 v0.9.0
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200520215850-06bf0dc5c0ef
-	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200505162045-3dfaebe62d8b
+	github.com/iotaledger/hive.go v0.0.0-20200609202535-6fd1cf964c7e
+	github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200609192728-feaa92d57729
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
-	github.com/mitchellh/mapstructure v1.3.0
+	github.com/mitchellh/mapstructure v1.3.2
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/prometheus/client_golang v1.6.0
-	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/shirou/gopsutil v2.20.4+incompatible
+	github.com/shirou/gopsutil v2.20.5+incompatible
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.6.3
-	github.com/stretchr/testify v1.5.1
+	github.com/spf13/viper v1.7.0
+	github.com/stretchr/testify v1.6.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	go.etcd.io/bbolt v1.3.4
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
-	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
+	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 )

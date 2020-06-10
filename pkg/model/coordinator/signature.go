@@ -5,45 +5,13 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/merkle"
+	"github.com/iotaledger/iota.go/mam/v1/merkle"
 	"github.com/iotaledger/iota.go/signing"
-	legacySigning "github.com/iotaledger/iota.go/signing/legacy"
+	"github.com/iotaledger/iota.go/signing/key"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
-
-// Address generates an address deterministically, according to the given seed, milestone index and security level.
-// a modified key derivation function is used to avoid the M-bug.
-func Address(seed trinary.Hash, index milestone.Index, securityLvl int) (trinary.Hash, error) {
-
-	subSeedTrits, err := signing.Subseed(seed, uint64(index), kerl.NewKerl())
-	if err != nil {
-		return "", err
-	}
-
-	keyTrits, err := legacySigning.Key(subSeedTrits, consts.SecurityLevel(securityLvl), kerl.NewKerl())
-	if err != nil {
-		return "", err
-	}
-
-	digestsTrits, err := signing.Digests(keyTrits, kerl.NewKerl())
-	if err != nil {
-		return "", err
-	}
-
-	addressTrits, err := signing.Address(digestsTrits, kerl.NewKerl())
-	if err != nil {
-		return "", err
-	}
-
-	address, err := trinary.TritsToTrytes(addressTrits)
-	if err != nil {
-		return "", err
-	}
-
-	return address, nil
-}
 
 // signature signs the normalized hash of a given hash, according to the given seed, milestone index and security level.
 func signature(seed trinary.Hash, index milestone.Index, securityLvl int, hashToSign trinary.Trytes) (trinary.Trytes, error) {
@@ -53,7 +21,7 @@ func signature(seed trinary.Hash, index milestone.Index, securityLvl int, hashTo
 		return "", err
 	}
 
-	keyTrits, err := legacySigning.Key(subSeedTrits, consts.SecurityLevel(securityLvl), kerl.NewKerl())
+	keyTrits, err := key.Shake(subSeedTrits, consts.SecurityLevel(securityLvl))
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +101,7 @@ func validateSignature(root trinary.Hash, milestoneIndex milestone.Index, securi
 	}
 
 	if merkleAddress != root {
-		return fmt.Errorf("merkle root does not match: %v != %v", merkleAddress, root)
+		return fmt.Errorf("Merkle root does not match: %v != %v", merkleAddress, root)
 	}
 
 	return nil

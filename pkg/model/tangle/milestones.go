@@ -8,7 +8,7 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/merkle"
+	"github.com/iotaledger/iota.go/mam/v1/merkle"
 	"github.com/iotaledger/iota.go/signing"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"

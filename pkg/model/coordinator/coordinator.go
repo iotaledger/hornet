@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -57,7 +58,7 @@ type Coordinator struct {
 
 	// internal state
 	state               *State
-	merkleTree          *MerkleTree
+	merkleTree          *merkle.MerkleTree
 	lastCheckpointCount int
 	lastCheckpointHash  *hornet.Hash
 	bootstrapped        bool
@@ -88,21 +89,21 @@ func New(seed trinary.Hash, securityLvl int, merkleTreeDepth int, minWeightMagni
 	return result
 }
 
-// InitMerkleTree loads the merkle tree file and checks the coordinator address.
+// InitMerkleTree loads the Merkle tree file and checks the coordinator address.
 func (coo *Coordinator) InitMerkleTree(filePath string, cooAddress trinary.Hash) error {
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("merkle tree file not found: %v", filePath)
+		return fmt.Errorf("Merkle tree file not found: %v", filePath)
 	}
 
 	var err error
-	coo.merkleTree, err = loadMerkleTreeFile(filePath)
+	coo.merkleTree, err = merkle.LoadMerkleTreeFile(filePath)
 	if err != nil {
 		return err
 	}
 
 	if cooAddress != coo.merkleTree.Root {
-		return fmt.Errorf("coordinator address does not match merkle tree root: %v != %v", cooAddress, coo.merkleTree.Root)
+		return fmt.Errorf("coordinator address does not match Merkle tree root: %v != %v", cooAddress, coo.merkleTree.Root)
 	}
 
 	return nil
