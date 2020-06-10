@@ -119,7 +119,6 @@ func run(plugin *node.Plugin) {
 		gossip.BroadcastHeartbeat()
 	})
 
-	// create a background worker that prints a status message every second
 	daemon.BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
 		Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
