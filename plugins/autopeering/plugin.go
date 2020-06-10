@@ -20,16 +20,6 @@ import (
 	"github.com/gohornet/hornet/plugins/peering"
 )
 
-func init() {
-	selection.SetParameters(selection.Parameters{
-		InboundNeighborSize:        config.NodeConfig.GetInt(config.CfgNetAutopeeringInboundPeers),
-		OutboundNeighborSize:       config.NodeConfig.GetInt(config.CfgNetAutopeeringOutboundPeers),
-		SaltLifetime:               time.Duration(config.NodeConfig.GetInt(config.CfgNetAutopeeringSaltLifetime)) * time.Minute,
-		OutboundUpdateInterval:     30 * time.Second,
-		FullOutboundUpdateInterval: 30 * time.Second,
-	})
-}
-
 var (
 	PLUGIN = node.NewPlugin("Autopeering", node.Enabled, configure, run)
 
@@ -38,6 +28,13 @@ var (
 )
 
 func configure(p *node.Plugin) {
+	selection.SetParameters(selection.Parameters{
+		InboundNeighborSize:        config.NodeConfig.GetInt(config.CfgNetAutopeeringInboundPeers),
+		OutboundNeighborSize:       config.NodeConfig.GetInt(config.CfgNetAutopeeringOutboundPeers),
+		SaltLifetime:               time.Duration(config.NodeConfig.GetInt(config.CfgNetAutopeeringSaltLifetime)) * time.Minute,
+		OutboundUpdateInterval:     30 * time.Second,
+		FullOutboundUpdateInterval: 30 * time.Second,
+	})
 	services.GossipServiceKey()
 	log = logger.NewLogger(p.Name)
 	local = NewLocal()
