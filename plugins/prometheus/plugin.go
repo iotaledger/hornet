@@ -65,6 +65,8 @@ func writeFileServiceDiscoveryFile() {
 	if err := ioutil.WriteFile(path, j, 0666); err != nil {
 		log.Panic("unable to write file service discovery file:", err)
 	}
+
+	log.Infof("Wrote 'file service discovery' content to %s", path)
 }
 
 func run(plugin *node.Plugin) {
