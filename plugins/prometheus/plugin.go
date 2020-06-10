@@ -2,6 +2,8 @@ package prometheus
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -42,8 +44,35 @@ func addCollect(collect func()) {
 	collects = append(collects, collect)
 }
 
+type fileservicediscovery struct {
+	Targets []string          `json:"targets"`
+	Labels  map[string]string `json:"labels"`
+}
+
+func writeFileServiceDiscoveryFile() {
+	path := config.NodeConfig.GetString(config.CfgPrometheusFileServiceDiscoveryPath)
+	d := []fileservicediscovery{{
+		Targets: []string{config.NodeConfig.GetString(config.CfgPrometheusFileServiceDiscoveryTarget)},
+		Labels:  make(map[string]string),
+	}}
+	j, err := json.MarshalIndent(d, "", "  ")
+	if err != nil {
+		log.Panic("unable to marshal file service discovery JSON:", err)
+		return
+	}
+
+	// this truncates an existing file
+	if err := ioutil.WriteFile(path, j, 0666); err != nil {
+		log.Panic("unable to write file service discovery file:", err)
+	}
+}
+
 func run(plugin *node.Plugin) {
 	log.Info("Starting Prometheus exporter ...")
+
+	if config.NodeConfig.GetBool(config.CfgPrometheusFileServiceDiscoveryEnabled) {
+		writeFileServiceDiscoveryFile()
+	}
 
 	daemon.BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Prometheus exporter ... done")
