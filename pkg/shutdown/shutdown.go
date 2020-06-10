@@ -14,6 +14,7 @@ const (
 	PriorityPeeringTCPServer
 	PriorityPeerReconnecter
 	PriorityHeartbeats
+	PriorityWarpSync
 	PriorityLocalSnapshots
 	PriorityMetricsUpdater
 	PriorityDashboard
