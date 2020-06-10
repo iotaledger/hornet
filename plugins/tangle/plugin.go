@@ -85,17 +85,6 @@ func configure(plugin *node.Plugin) {
 
 	}, shutdown.PriorityFlushToDatabase)
 
-	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		defer cachedBndl.Release() // bundle -1
-		// notify peers about our new solid milestone index
-		gossip.BroadcastHeartbeat()
-	}))
-
-	Events.PruningMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone.Index) {
-		// notify peers about our new pruning milestone index
-		gossip.BroadcastHeartbeat()
-	}))
-
 	configureTangleProcessor(plugin)
 
 	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
@@ -118,6 +107,26 @@ func run(plugin *node.Plugin) {
 
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
+
+	onSolidMilestoneChanged := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		defer cachedBndl.Release() // bundle -1
+		// notify peers about our new solid milestone index
+		gossip.BroadcastHeartbeat()
+	})
+
+	onPruningMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		// notify peers about our new pruning milestone index
+		gossip.BroadcastHeartbeat()
+	})
+
+	// create a background worker that prints a status message every second
+	daemon.BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
+		Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+		Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+		<-shutdownSignal
+		Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+		Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	}, shutdown.PriorityHeartbeats)
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
