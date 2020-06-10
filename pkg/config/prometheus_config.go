@@ -13,7 +13,7 @@ const (
 	CfgPrometheusProcessMetrics = "prometheus.processMetrics"
 	// include promhttp metrics
 	CfgPrometheusPromhttpMetrics = "prometheus.promhttpMetrics"
-	// "whether the plugin should write a Prometheus 'file SD' file"
+	// whether the plugin should write a Prometheus 'file SD' file
 	CfgPrometheusFileServiceDiscoveryEnabled = "prometheus.fileServiceDiscovery.enabled"
 	// the path where to write the 'file SD' file to
 	CfgPrometheusFileServiceDiscoveryPath = "prometheus.fileServiceDiscovery.path"
@@ -27,6 +27,6 @@ func init() {
 	flag.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
 	flag.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
 	flag.Bool(CfgPrometheusFileServiceDiscoveryEnabled, false, "whether the plugin should write a Prometheus 'file SD' file")
-	flag.String(CfgPrometheusFileServiceDiscoveryPath, "./target.json", "the path where to write the 'file SD' file to")
-	flag.String(CfgPrometheusFileServiceDiscoveryTarget, "127.0.0.1:9311", "the target to write into the 'file SD' file")
+	flag.String(CfgPrometheusFileServiceDiscoveryPath, "target.json", "the path where to write the 'file SD' file to")
+	flag.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9311", "the target to write into the 'file SD' file")
 }
