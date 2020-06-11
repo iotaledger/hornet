@@ -53,3 +53,15 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 		metrics.SharedServerMetrics.SentHeartbeats.Inc()
 	}))
 }
+
+// removeMessageEventHandlers removes all the event handlers for sent and received messages.
+func removeMessageEventHandlers(p *peer.Peer) {
+
+	for _, event := range p.Protocol.Events.Received {
+		event.DetachAll()
+	}
+
+	for _, event := range p.Protocol.Events.Sent {
+		event.DetachAll()
+	}
+}
