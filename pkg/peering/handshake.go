@@ -33,6 +33,12 @@ func (m *Manager) setupHandshakeEventHandlers(p *peer.Peer) {
 
 	// propagate handshake completion to the manager
 	p.Protocol.Events.HandshakeCompleted.Attach(events.NewClosure(func() {
+
+		// peering manager is already shutdown
+		if m.shutdown.Load() {
+			return
+		}
+
 		m.Events.PeerConnected.Trigger(p)
 	}))
 }

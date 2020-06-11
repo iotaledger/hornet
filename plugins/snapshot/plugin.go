@@ -96,7 +96,7 @@ func configure(plugin *node.Plugin) {
 		// Check coordinator address in database
 		if !bytes.Equal(snapshotInfo.CoordinatorAddress, coordinatorAddress) {
 			if !*overwriteCooAddress {
-				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
+				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress.Trytes(), config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
 			}
 
 			// Overwrite old coordinator address

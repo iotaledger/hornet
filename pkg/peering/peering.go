@@ -315,32 +315,45 @@ func (m *Manager) SlotsFilled() bool {
 // SetupEventHandlers inits the event handlers for handshaking, the underlying connection and errors.
 func (m *Manager) SetupEventHandlers(p *peer.Peer) {
 
-	// pipe data from the connection into the protocol
-	p.Conn.Events.ReceiveData.Attach(events.NewClosure(p.Protocol.Receive))
+	onProtocolReceive := events.NewClosure(p.Protocol.Receive)
 
-	// propagate errors up
-	p.Conn.Events.Error.Attach(events.NewClosure(func(err error) {
+	onConnectionError := events.NewClosure(func(err error) {
 		if p.Disconnected {
 			return
 		}
 		m.Events.Error.Trigger(err)
-	}))
+	})
 
-	// any error on the protocol level resolves to shutting down the connection
-	p.Protocol.Events.Error.Attach(events.NewClosure(func(err error) {
+	onProtocolError := events.NewClosure(func(err error) {
 		if p.Disconnected {
 			return
 		}
 		if err := p.Conn.Close(); err != nil {
 			m.Events.Error.Trigger(err)
 		}
-	}))
+	})
 
-	p.Conn.Events.Close.Attach(events.NewClosure(func() {
+	onConnectionClose := events.NewClosure(func() {
 		m.Lock()
 		m.moveFromConnectedToReconnectPool(p)
 		m.Unlock()
-	}))
+
+		p.Conn.Events.ReceiveData.Detach(onProtocolReceive)
+		p.Conn.Events.Error.Detach(onConnectionError)
+		p.Protocol.Events.Error.Detach(onProtocolError)
+	})
+
+	// pipe data from the connection into the protocol
+	p.Conn.Events.ReceiveData.Attach(onProtocolReceive)
+
+	// propagate errors up
+	p.Conn.Events.Error.Attach(onConnectionError)
+
+	// any error on the protocol level resolves to shutting down the connection
+	p.Protocol.Events.Error.Attach(onProtocolError)
+
+	// move peer to reconnected pool and detach all events
+	p.Conn.Events.Close.Attach(onConnectionClose)
 
 	m.setupHandshakeEventHandlers(p)
 }
