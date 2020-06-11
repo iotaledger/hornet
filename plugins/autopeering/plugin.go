@@ -25,6 +25,15 @@ var (
 
 	log   *logger.Logger
 	local *Local
+
+	// Closures
+	onDiscoveryPeerDiscovered  *events.Closure
+	onDiscoveryPeerDeleted     *events.Closure
+	onSelectionSaltUpdated     *events.Closure
+	onManagerPeerDisconnected  *events.Closure
+	onSelectionOutgoingPeering *events.Closure
+	onSelectionIncomingPeering *events.Closure
+	onSelectionDropped         *events.Closure
 )
 
 func configure(p *node.Plugin) {
@@ -44,31 +53,27 @@ func configure(p *node.Plugin) {
 
 func run(p *node.Plugin) {
 	daemon.BackgroundWorker(p.Name, func(shutdownSignal <-chan struct{}) {
+		attachEvents()
 		start(local, shutdownSignal)
+		detachEvents()
 	}, shutdown.PriorityAutopeering)
 }
 
 func configureEvents() {
 
-	Discovery.Events().PeerDiscovered.Attach(events.NewClosure(func(ev *discover.DiscoveredEvent) {
+	onDiscoveryPeerDiscovered = events.NewClosure(func(ev *discover.DiscoveredEvent) {
 		log.Infof("discovered: %s / %s", ev.Peer.Address(), ev.Peer.ID())
-	}))
+	})
 
-	Discovery.Events().PeerDeleted.Attach(events.NewClosure(func(ev *discover.DeletedEvent) {
+	onDiscoveryPeerDeleted = events.NewClosure(func(ev *discover.DeletedEvent) {
 		log.Infof("removed offline: %s / %s", ev.Peer.Address(), ev.Peer.ID())
-	}))
+	})
 
-	Selection.Events().SaltUpdated.Attach(events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
+	onSelectionSaltUpdated = events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
 		log.Infof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
-	}))
+	})
 
-	// only handle outgoing/incoming peering requests when the peering plugin is enabled
-	if node.IsSkipped(peering.PLUGIN) {
-		return
-	}
-
-	// notify the selection when a connection is closed or failed.
-	peering.Manager().Events.PeerDisconnected.Attach(events.NewClosure(func(p *peer.Peer) {
+	onManagerPeerDisconnected = events.NewClosure(func(p *peer.Peer) {
 		if p.Autopeering == nil {
 			return
 		}
@@ -76,9 +81,8 @@ func configureEvents() {
 		gossipAddr := net.JoinHostPort(p.Autopeering.IP().String(), strconv.Itoa(gossipService.Port()))
 		log.Infof("removing: %s / %s", gossipAddr, p.Autopeering.ID())
 		Selection.RemoveNeighbor(p.Autopeering.ID())
-	}))
-
-	Selection.Events().OutgoingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
+	})
+	onSelectionOutgoingPeering = events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
@@ -99,9 +103,9 @@ func configureEvents() {
 		if err := peering.Manager().Add(gossipAddr, false, "", ev.Peer); err != nil {
 			log.Warnf("couldn't add autopeering peer %s", err)
 		}
-	}))
+	})
 
-	Selection.Events().IncomingPeering.Attach(events.NewClosure(func(ev *selection.PeeringEvent) {
+	onSelectionIncomingPeering = events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
 		}
@@ -120,9 +124,9 @@ func configureEvents() {
 			return
 		}
 		peering.Manager().Whitelist([]string{originAddr.Addr}, originAddr.Port, ev.Peer)
-	}))
+	})
 
-	Selection.Events().Dropped.Attach(events.NewClosure(func(ev *selection.DroppedEvent) {
+	onSelectionDropped = events.NewClosure(func(ev *selection.DroppedEvent) {
 		log.Infof("[dropped event] trying to remove connection to %s", ev.DroppedID)
 
 		var found *peer.Peer
@@ -146,5 +150,38 @@ func configureEvents() {
 		}
 
 		log.Infof("disconnected autopeered peer %s", found.InitAddress.String())
-	}))
+	})
+}
+
+func attachEvents() {
+	Discovery.Events().PeerDiscovered.Attach(onDiscoveryPeerDiscovered)
+	Discovery.Events().PeerDeleted.Attach(onDiscoveryPeerDeleted)
+	Selection.Events().SaltUpdated.Attach(onSelectionSaltUpdated)
+
+	// only handle outgoing/incoming peering requests when the peering plugin is enabled
+	if node.IsSkipped(peering.PLUGIN) {
+		return
+	}
+
+	// notify the selection when a connection is closed or failed.
+	peering.Manager().Events.PeerDisconnected.Attach(onManagerPeerDisconnected)
+	Selection.Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
+	Selection.Events().IncomingPeering.Attach(onSelectionIncomingPeering)
+	Selection.Events().Dropped.Attach(onSelectionDropped)
+}
+
+func detachEvents() {
+	Discovery.Events().PeerDiscovered.Detach(onDiscoveryPeerDiscovered)
+	Discovery.Events().PeerDeleted.Detach(onDiscoveryPeerDeleted)
+	Selection.Events().SaltUpdated.Detach(onSelectionSaltUpdated)
+
+	// outgoing/incoming peering requests are only handle when the peering plugin is enabled
+	if node.IsSkipped(peering.PLUGIN) {
+		return
+	}
+
+	peering.Manager().Events.PeerDisconnected.Detach(onManagerPeerDisconnected)
+	Selection.Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
+	Selection.Events().IncomingPeering.Detach(onSelectionIncomingPeering)
+	Selection.Events().Dropped.Detach(onSelectionDropped)
 }
