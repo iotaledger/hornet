@@ -78,7 +78,6 @@ func configure(plugin *node.Plugin) {
 
 	// handle broadcasts emitted by the message processor
 	onBroadcastTransaction = events.NewClosure(broadcastQueue.EnqueueForBroadcast)
-	msgProcessor.Events.BroadcastTransaction.Attach(onBroadcastTransaction)
 
 	// register event handlers for messages
 	manager.Events.PeerConnected.Attach(events.NewClosure(func(p *peer.Peer) {
@@ -131,6 +130,7 @@ func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
+		msgProcessor.Events.BroadcastTransaction.Attach(onBroadcastTransaction)
 		msgProcessor.Run(shutdownSignal)
 		msgProcessor.Events.BroadcastTransaction.Detach(onBroadcastTransaction)
 		log.Info("Stopped MessageProcessor")
