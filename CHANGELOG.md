@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1-rc1] - 12.06.2020
+
+### Added
+
+    - Config opts modifiable via CLI and env variables
+    - Snapshots dir
+    - Dockerfile to build a local dev image
+    - Ability to let the Prometheus plugin create a 'file service discovery' file
+
+### Changed
+
+    - Comnet coo address
+    - Make database revalidation abortable
+    - Replace ComputeIfAbsent with Store to reduce IO pressure
+    - Updated mqtt lib
+    - Updated hive.go
+    - Wait until all txs of coo bundles are processed in the storage layer
+    - Use new merkle package from iota.go incl. "Shake" key derivation
+    - Updated rpm package
+    - Detach events
+    - README
+    - Bump to Go 1.14.4
+
+### Fixed
+
+    - Race condition in tryConstructBundle
+    - Remove unused modules (Dashboard)
+    - Missing tryte conversion
+    - Ignored autopeering max peers
+    - Dashboard issues
+    - IsStaticallyPeered check
+    - Missing ca-certificates in Docker files
+
+### Config file changes
+
+`config.json`
+
+```diff
+-      "path": "export.bin",
++      "path": "snapshots/mainnet/export.bin",
+```
+
+`config_comnet.json`
+
+```diff
+-      "path": "export_comnet.bin",
++      "path": "snapshots/comnet/export.bin",
+
+"coordinator": {
+-    "address": "BODHQPXSMDNHBWVZHVATBAHQGZSKWQLXYZNOXMKNUCOZCPTWHHNFBBHFOEGPTWGGUVDJPZAYZIMXIIGVD",
++    "address": "YBWDHGHUEB9KSOPONTLTOSSKITIBE9MXPASCLREDNV9HEABYBPTHRQGWNJWQFSYAYZRDXXIOZHWBC9DWC",
+}
+```
+
 ## [0.4.0] - 05.06.2020
 
 ### Added
@@ -98,7 +152,7 @@ All notable changes to this project will be documented in this file.
     - Set latest known milestone at startup
     - Abort ongoing PoW in spammer on shutdown
     - Reasonable values for config defaults
-    - Increase tipselect maxDepth to 5 
+    - Increase tipselect maxDepth to 5
 
 ### Fixed
 
