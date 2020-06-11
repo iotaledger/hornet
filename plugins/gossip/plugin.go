@@ -25,15 +25,16 @@ import (
 )
 
 var (
-	PLUGIN             = node.NewPlugin("Gossip", node.Enabled, configure, run)
-	log                *logger.Logger
-	manager            *peering.Manager
-	msgProcessor       *processor.Processor
-	msgProcessorOnce   sync.Once
-	requestQueue       rqueue.Queue
-	requestQueueOnce   sync.Once
-	broadcastQueue     bqueue.Queue
-	broadcastQueueOnce sync.Once
+	PLUGIN                 = node.NewPlugin("Gossip", node.Enabled, configure, run)
+	log                    *logger.Logger
+	manager                *peering.Manager
+	msgProcessor           *processor.Processor
+	msgProcessorOnce       sync.Once
+	requestQueue           rqueue.Queue
+	requestQueueOnce       sync.Once
+	broadcastQueue         bqueue.Queue
+	broadcastQueueOnce     sync.Once
+	onBroadcastTransaction *events.Closure
 )
 
 // RequestQueue returns the request queue instance of the gossip plugin.
@@ -76,7 +77,8 @@ func configure(plugin *node.Plugin) {
 	Processor()
 
 	// handle broadcasts emitted by the message processor
-	msgProcessor.Events.BroadcastTransaction.Attach(events.NewClosure(broadcastQueue.EnqueueForBroadcast))
+	onBroadcastTransaction = events.NewClosure(broadcastQueue.EnqueueForBroadcast)
+	msgProcessor.Events.BroadcastTransaction.Attach(onBroadcastTransaction)
 
 	// register event handlers for messages
 	manager.Events.PeerConnected.Attach(events.NewClosure(func(p *peer.Peer) {
@@ -130,6 +132,7 @@ func run(_ *node.Plugin) {
 	daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
 		msgProcessor.Run(shutdownSignal)
+		msgProcessor.Events.BroadcastTransaction.Detach(onBroadcastTransaction)
 		log.Info("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 
