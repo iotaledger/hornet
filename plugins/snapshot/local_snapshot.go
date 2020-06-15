@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -314,6 +315,12 @@ func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.Snaps
 
 func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) ([]byte, error) {
 
+	if _, fileErr := os.Stat(filePath); os.IsNotExist(fileErr) {
+		// create dir if it not exists
+		if err := os.MkdirAll(filepath.Dir(filePath), 0700); err != nil {
+			return nil, err
+		}
+	}
 	exportFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0660)
 	if err != nil {
 		return nil, err
