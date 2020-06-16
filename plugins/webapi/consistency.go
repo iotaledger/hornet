@@ -54,7 +54,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// compute the range in which we allow approvers to reference transactions in
-	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
+	lowestAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
 
 	diff := map[string]int64{}
 	approved := map[string]struct{}{}
@@ -116,7 +116,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Check below max depth
-		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, true) { // tx pass +1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowestAllowedSnapshotIndex, true) { // tx pass +1
 			info := fmt.Sprint("tails are not consistent (below max depth): ", t)
 			c.JSON(http.StatusOK, CheckConsistencyReturn{State: false, Info: info})
 			cachedBndl.Release(true) // bundle -1
