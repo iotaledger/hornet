@@ -36,6 +36,11 @@ func (s *SolidEntryPoints) Contains(txHash Hash) bool {
 	return exists
 }
 
+func (s *SolidEntryPoints) Index(txHash Hash) (bool, milestone.Index) {
+	index, exists := s.entryPointsMap[string(txHash)]
+	return exists, index
+}
+
 func (s *SolidEntryPoints) Add(txHash Hash, milestoneIndex milestone.Index) {
 	if _, exists := s.entryPointsMap[string(txHash)]; !exists {
 		s.entryPointsMap[string(txHash)] = milestoneIndex
