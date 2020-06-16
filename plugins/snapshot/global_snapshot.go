@@ -53,6 +53,11 @@ func loadSpentAddresses(filePathSpent string) (int, error) {
 
 func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, snapshotIndex milestone.Index) error {
 
+	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
+	if latestMilestoneFromDatabase > snapshotIndex {
+		return errors.Wrapf(ErrSnapshotImportFailed, "Milestone in database (%d) newer than snapshot milestone (%d)", latestMilestoneFromDatabase, snapshotIndex)
+	}
+
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 
