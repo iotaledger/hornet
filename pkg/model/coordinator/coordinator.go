@@ -140,6 +140,10 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			}
 			latestMilestoneHash = cachedBndl.GetBundle().GetTailHash()
 			cachedBndl.Release()
+		} else {
+			// If we start with a new network, we have to mark thegenesis tx as a SEP,
+			// otherwise the tipselection for the coordinator won't work.
+			tangle.SolidEntryPointsAdd(hornet.NullHashBytes, 0)
 		}
 
 		// create a new coordinator state to bootstrap the network
