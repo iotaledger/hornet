@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -72,7 +73,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 	coo := coordinator.New(
 		seed,
-		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
+		consts.SecurityLevel(config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel)),
 		config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth),
 		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),

@@ -46,7 +46,7 @@ type Coordinator struct {
 
 	// config options
 	seed                   trinary.Hash
-	securityLvl            int
+	securityLvl            consts.SecurityLevel
 	merkleTreeDepth        int
 	minWeightMagnitude     int
 	stateFilePath          string
@@ -68,7 +68,7 @@ type Coordinator struct {
 }
 
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl int, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipSelectionFunc, sendBundleFunc SendBundleFunc) *Coordinator {
+func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipSelectionFunc, sendBundleFunc SendBundleFunc) *Coordinator {
 	result := &Coordinator{
 		seed:                   seed,
 		securityLvl:            securityLvl,
