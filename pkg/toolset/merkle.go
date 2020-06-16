@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/merkle"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -57,7 +58,7 @@ func merkleTreeCreate(args []string) error {
 		fmt.Printf("calculating nodes for layer %d\n", index)
 	}
 
-	mt, err := merkle.CreateMerkleTree(seed, secLvl, depth,
+	mt, err := merkle.CreateMerkleTree(seed, consts.SecurityLevel(secLvl), depth,
 		merkle.MerkleCreateOptions{
 			CalculateAddressesStartCallback:    calculateAddressesStartCallback,
 			CalculateAddressesCallback:         calculateAddressesCallback,

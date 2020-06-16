@@ -201,11 +201,11 @@ github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/J
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/iotaledger/hive.go v0.0.0-20200609202535-6fd1cf964c7e h1:4/2NK//CnWNBBcJTIdJ3/V3I2697x4JH7Lpj2BSVSTQ=
-github.com/iotaledger/hive.go v0.0.0-20200609202535-6fd1cf964c7e/go.mod h1:zwZhaE4ZeglpTrbmbwdnVPMI5XdRu2RmByi3Qn0ztmU=
+github.com/iotaledger/hive.go v0.0.0-20200615181744-3ab0cddc15cf h1:JW1kB2q+arYv4KgRIvyGUj7Svf20EUQRswDe3+8sYSw=
+github.com/iotaledger/hive.go v0.0.0-20200615181744-3ab0cddc15cf/go.mod h1:zwZhaE4ZeglpTrbmbwdnVPMI5XdRu2RmByi3Qn0ztmU=
 github.com/iotaledger/iota.go v1.0.0-beta.9/go.mod h1:F6WBmYd98mVjAmmPVYhnxg8NNIWCjjH8VWT9qvv3Rc8=
-github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200609192728-feaa92d57729 h1:fA4OWamJEyz+lfWt7EvZubifvZTx0lxZIjlaeh2H9H4=
-github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200609192728-feaa92d57729/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
+github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200616073507-5e8acf6cbb18 h1:dVPiT43LKaXxPAOBwXGRGte+W979hsz5eea5IdND5MA=
+github.com/iotaledger/iota.go v1.0.0-beta.14.0.20200616073507-5e8acf6cbb18/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
 github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03 h1:FUwcHNlEqkqLjLBdCp5PRlCFijNjvcYANOZXzCfXwCM=
 github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03/go.mod h1:MK8+TM0La+2rjBD4jE12Kj1pCCxK7d2LK/UM3ncEo0o=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
