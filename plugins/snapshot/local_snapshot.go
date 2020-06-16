@@ -621,9 +621,6 @@ func LoadSnapshotFromFile(filePath string) error {
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 
-	// Genesis transaction
-	tangle.SolidEntryPointsAdd(hornet.NullHashBytes, 0)
-
 	var msIndex int32
 	var msTimestamp int64
 	var solidEntryPointsCount, seenMilestonesCount, ledgerEntriesCount, spentAddrsCount int32
