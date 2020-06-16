@@ -297,7 +297,7 @@ func ApplyLedgerDiffWithoutLocking(diff map[string]int64, index milestone.Index)
 	return nil
 }
 
-func DeleteLedgerBalancesInDatabase() error {
+func StoreLedgerBalancesInDatabase(balances map[string]uint64, index milestone.Index) error {
 
 	WriteLockLedger()
 	defer WriteUnlockLedger()
@@ -306,14 +306,6 @@ func DeleteLedgerBalancesInDatabase() error {
 	if err := ledgerBalanceStore.Clear(); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to delete ledger balances")
 	}
-
-	return nil
-}
-
-func StoreLedgerBalancesInDatabase(balances map[string]uint64, index milestone.Index) error {
-
-	WriteLockLedger()
-	defer WriteUnlockLedger()
 
 	balanceBatch := ledgerBalanceStore.Batched()
 
