@@ -232,7 +232,7 @@ func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
 }
 
 func installGenesisTransaction() {
-	// ensure genesis transaction exists
+	// ensure genesis transaction exists for legacy gossip
 	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
 	genesis.Hash = consts.NullHashTrytes
