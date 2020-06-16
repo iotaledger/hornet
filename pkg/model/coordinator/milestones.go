@@ -18,27 +18,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-// siblings calculates a list of siblings.
-func siblings(leafIndex milestone.Index, merkleTree *merkle.MerkleTree) []trinary.Hash {
-	var siblings []trinary.Hash
-
-	for currentLayerIndex := merkleTree.Depth; currentLayerIndex > 0; currentLayerIndex-- {
-		layer := merkleTree.Layers[currentLayerIndex]
-
-		if leafIndex%2 == 0 {
-			// even
-			siblings = append(siblings, layer.Hashes[leafIndex+1])
-		} else {
-			// odd
-			siblings = append(siblings, layer.Hashes[leafIndex-1])
-		}
-
-		leafIndex /= 2
-	}
-
-	return siblings
-}
-
 // tagForIndex creates a tag for a specific index.
 func tagForIndex(index milestone.Index) trinary.Trytes {
 	return trinary.IntToTrytes(int64(index), 27)
@@ -91,7 +70,10 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
 	// get the siblings in the current Merkle tree
-	leafSiblings := siblings(index, merkleTree)
+	leafSiblings, err := merkleTree.AuditPath(uint32(index))
+	if err != nil {
+		return nil, err
+	}
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.KeyFragmentLength/consts.TrinaryRadix)
@@ -138,7 +120,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	b = append(b, txSiblings)
 	// Address + Value + ObsoleteTag + Timestamp + CurrentIndex + LastIndex
 	// finalize bundle by adding the bundle hash
-	b, err := finalizeInsecure(b)
+	b, err = finalizeInsecure(b)
 	if err != nil {
 		return nil, err
 	}
@@ -152,13 +134,8 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 		return nil, err
 	}
 
-	path, err := merkleTree.AuditPath(uint32(index))
-	if err != nil {
-		return nil, err
-	}
-
 	// verify milestone signature
-	if valid, err := merkle.ValidateSignatureFragments(merkleTree.Root, uint32(index), path, fragments, txSiblings.Hash); !valid {
+	if valid, err := merkle.ValidateSignatureFragments(merkleTree.Root, uint32(index), leafSiblings, fragments, txSiblings.Hash); !valid {
 		if err != nil {
 			return nil, err
 		}
