@@ -90,15 +90,20 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowestAllowedSnapsh
 				return true
 			}
 
+			if isSolidEntryPoint, solidEntryPointIndex := tangle.SolidEntryPointsIndex(hornet.Hash(txHash)); isSolidEntryPoint {
+				if int(solidEntryPointIndex) < lowestAllowedSnapshotIndex {
+					// tx references a solid entry point that is older than lowestAllowedSnapshotIndex
+					BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetTxHash(), true)
+					return true
+				}
+				continue
+			}
+
 			// don't re-analyze an already analyzed transaction
 			if _, alreadyAnalyzed := analyzedTxs[txHash]; alreadyAnalyzed {
 				continue
 			}
 			analyzedTxs[txHash] = struct{}{}
-
-			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
-				continue
-			}
 
 			// we don't need to analyze further down if we already memoized this particular tx's max depth validity
 			if is := BelowDepthMemoizationCache.IsBelowMaxDepth(hornet.Hash(txHash)); is != nil {
