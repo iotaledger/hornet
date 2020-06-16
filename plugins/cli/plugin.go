@@ -66,6 +66,7 @@ func configure(plugin *node.Plugin) {
 		Owner:             "gohornet",
 		Repository:        "hornet",
 		FixVersionStrFunc: fixVersion,
+		TagFilterFunc:     includeVersionInCheck,
 	}
 
 	fmt.Printf(`
@@ -95,6 +96,19 @@ func fixVersion(version string) string {
 		ver = strings.Replace(ver, "-rc", "-rc.", 1)
 	}
 	return ver
+}
+
+func includeVersionInCheck(version string) bool {
+	isPrerelease := func(ver string) bool {
+		return strings.Contains(ver, "-rc")
+	}
+
+	if isPrerelease(AppVersion) {
+		// When using pre-release versions, check for any updates
+		return true
+	}
+
+	return !isPrerelease(version)
 }
 
 func checkLatestVersion() {
