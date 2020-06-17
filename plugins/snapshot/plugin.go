@@ -35,6 +35,7 @@ var (
 	log    *logger.Logger
 
 	overwriteCooAddress = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
+	forceGlobalSnapshot = pflag.Bool("forceGlobalSnapshot", false, "force loading of a global snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
@@ -104,15 +105,22 @@ func configure(plugin *node.Plugin) {
 			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 
-		// Check the ledger state
-		tangle.GetLedgerStateForLSMI(nil)
-		return
+		if !*forceGlobalSnapshot {
+			// If we don't enforce loading of a global snapshot,
+			// we can check the ledger state of current database and start the node.
+			tangle.GetLedgerStateForLSMI(nil)
+			return
+		}
+	}
+
+	snapshotTypeToLoad := strings.ToLower(config.NodeConfig.GetString(config.CfgSnapshotLoadType))
+
+	if *forceGlobalSnapshot && snapshotTypeToLoad != "global" {
+		log.Fatalf("global snapshot enforced but wrong snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
 	}
 
 	var err = ErrNoSnapshotSpecified
-
-	snapshotTypeToLoad := config.NodeConfig.GetString(config.CfgSnapshotLoadType)
-	switch strings.ToLower(snapshotTypeToLoad) {
+	switch snapshotTypeToLoad {
 	case "global":
 		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
 			err = LoadGlobalSnapshot(path,
@@ -144,7 +152,7 @@ func configure(plugin *node.Plugin) {
 			err = LoadSnapshotFromFile(path)
 		}
 	default:
-		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, snapshotTypeToLoad)
+		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
 	}
 
 	if err != nil {
@@ -232,7 +240,7 @@ func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
 }
 
 func installGenesisTransaction() {
-	// ensure genesis transaction exists
+	// ensure genesis transaction exists for legacy gossip
 	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
 	genesis.Hash = consts.NullHashTrytes

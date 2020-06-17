@@ -201,7 +201,6 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
 
 	solidEntryPoints := make(map[string]milestone.Index)
-	solidEntryPoints[string(hornet.NullHashBytes)] = targetIndex
 
 	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
 	//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
@@ -620,9 +619,6 @@ func LoadSnapshotFromFile(filePath string) error {
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
-
-	// Genesis transaction
-	tangle.SolidEntryPointsAdd(hornet.NullHashBytes, 0)
 
 	var msIndex int32
 	var msTimestamp int64

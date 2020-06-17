@@ -1,9 +1,8 @@
 package snapshot
 
 import (
+	"bytes"
 	"time"
-
-	"github.com/iotaledger/iota.go/consts"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -85,7 +84,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	for txHashToDelete := range txsToDeleteMap {
 
-		if txHashToDelete == consts.NullHashTrytes {
+		if bytes.Equal(hornet.Hash(txHashToDelete), hornet.NullHashBytes) {
 			// do not delete genesis transaction
 			continue
 		}

@@ -85,11 +85,6 @@ func revalidateDatabase() error {
 		return ErrSnapshotIndexWrong
 	}
 
-	// Delete the corrupted ledger state
-	if err = tangle.DeleteLedgerBalancesInDatabase(); err != nil {
-		return err
-	}
-
 	// Store the snapshot balances as the current valid ledger
 	if err = tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
 		return err
