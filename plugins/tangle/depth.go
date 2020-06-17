@@ -90,7 +90,7 @@ func IsBelowMaxDepth(cachedTailTx *tangle.CachedTransaction, lowestAllowedSnapsh
 				return true
 			}
 
-			if isSolidEntryPoint, solidEntryPointIndex := tangle.SolidEntryPointsIndex(hornet.Hash(txHash)); isSolidEntryPoint {
+			if solidEntryPointIndex, isSolidEntryPoint := tangle.SolidEntryPointsIndex(hornet.Hash(txHash)); isSolidEntryPoint {
 				if int(solidEntryPointIndex) < lowestAllowedSnapshotIndex {
 					// tx references a solid entry point that is older than lowestAllowedSnapshotIndex
 					BelowDepthMemoizationCache.Set(cachedTailTx.GetTransaction().GetTxHash(), true)

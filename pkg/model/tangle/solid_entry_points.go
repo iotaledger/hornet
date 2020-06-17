@@ -66,7 +66,7 @@ func SolidEntryPointsContain(txHash hornet.Hash) bool {
 	return solidEntryPoints.Contains(txHash)
 }
 
-func SolidEntryPointsIndex(txHash hornet.Hash) (bool, milestone.Index) {
+func SolidEntryPointsIndex(txHash hornet.Hash) (milestone.Index, bool) {
 	ReadLockSolidEntryPoints()
 	defer ReadUnlockSolidEntryPoints()
 
