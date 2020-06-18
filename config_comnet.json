@@ -111,6 +111,9 @@
       "stdout"
     ]
   },
+  "warpsync": {
+    "advancementRange": 50
+  },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "depth": 1,
