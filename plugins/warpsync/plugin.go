@@ -23,7 +23,7 @@ import (
 var (
 	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure, run)
 	log      *logger.Logger
-	warpSync = warpsync.New(config.NodeConfig.GetInt(config.CfgWarpSyncAdvancementRange))
+	warpSync *warpsync.WarpSync
 
 	onPeerConnected         *events.Closure
 	onSolidMilestoneChanged *events.Closure
@@ -35,6 +35,7 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
+	warpSync = warpsync.New(config.NodeConfig.GetInt(config.CfgWarpSyncAdvancementRange))
 
 	configureEvents()
 }
