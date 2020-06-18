@@ -9,25 +9,47 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/protocol/warpsync"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
 	peeringplugin "github.com/gohornet/hornet/plugins/peering"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 )
 
 var (
-	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure)
+	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure, run)
 	log      *logger.Logger
 	warpSync = warpsync.New(25)
+
+	onPeerConnected         *events.Closure
+	onSolidMilestoneChanged *events.Closure
+	onCheckpointUpdated     *events.Closure
+	onTargetUpdated         *events.Closure
+	onStart                 *events.Closure
+	onDone                  *events.Closure
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	peeringplugin.Manager().Events.PeerConnected.Attach(events.NewClosure(func(p *peer.Peer) {
+	configureEvents()
+}
 
+func run(plugin *node.Plugin) {
+
+	daemon.BackgroundWorker("WarpSync[Events]", func(shutdownSignal <-chan struct{}) {
+		attachEvents()
+		<-shutdownSignal
+		detachEvents()
+	}, shutdown.PriorityWarpSync)
+}
+
+func configureEvents() {
+
+	onPeerConnected = events.NewClosure(func(p *peer.Peer) {
 		if !p.Protocol.Supports(sting.FeatureSet) {
 			return
 		}
@@ -36,15 +58,15 @@ func configure(plugin *node.Plugin) {
 			warpSync.UpdateCurrent(tangle.GetSolidMilestoneIndex())
 			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
-	}))
+	})
 
-	tangleplugin.Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedMsBundle *tangle.CachedBundle) { // bundle +1
+	onSolidMilestoneChanged = events.NewClosure(func(cachedMsBundle *tangle.CachedBundle) { // bundle +1
 		defer cachedMsBundle.Release() // bundle -1
 		index := cachedMsBundle.GetBundle().GetMilestoneIndex()
 		warpSync.UpdateCurrent(index)
-	}))
+	})
 
-	warpSync.Events.CheckpointUpdated.Attach(events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32) {
+	onCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Checkpoint updated to milestone %d", nextCheckpoint)
 		// prevent any requests in the queue above our next checkpoint
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
@@ -52,13 +74,13 @@ func configure(plugin *node.Plugin) {
 		})
 		requestMissingMilestoneApprovees := gossip.MemoizedRequestMissingMilestoneApprovees()
 		gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees, oldCheckpoint)
-	}))
+	})
 
-	warpSync.Events.TargetUpdated.Attach(events.NewClosure(func(newTarget milestone.Index) {
+	onTargetUpdated = events.NewClosure(func(newTarget milestone.Index) {
 		log.Infof("Target updated to milestone %d", newTarget)
-	}))
+	})
 
-	warpSync.Events.Start.Attach(events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
+	onStart = events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Synchronizing to milestone %d", targetMsIndex)
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
@@ -72,10 +94,28 @@ func configure(plugin *node.Plugin) {
 			log.Info("Manually starting solidifier, as some milestones are already in the database")
 			tangleplugin.TriggerSolidifier()
 		}
-	}))
+	})
 
-	warpSync.Events.Done.Attach(events.NewClosure(func(deltaSynced int, took time.Duration) {
+	onDone = events.NewClosure(func(deltaSynced int, took time.Duration) {
 		log.Infof("Synchronized %d milestones in %v", deltaSynced, took)
 		gossip.RequestQueue().Filter(nil)
-	}))
+	})
+}
+
+func attachEvents() {
+	peeringplugin.Manager().Events.PeerConnected.Attach(onPeerConnected)
+	tangleplugin.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
+	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
+	warpSync.Events.Start.Attach(onStart)
+	warpSync.Events.Done.Attach(onDone)
+}
+
+func detachEvents() {
+	peeringplugin.Manager().Events.PeerConnected.Detach(onPeerConnected)
+	tangleplugin.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
+	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
+	warpSync.Events.Start.Detach(onStart)
+	warpSync.Events.Done.Detach(onDone)
 }

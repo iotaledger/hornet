@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
+	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -16,27 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/utils"
 )
-
-// siblings calculates a list of siblings.
-func siblings(leafIndex milestone.Index, merkleTree *MerkleTree) []trinary.Hash {
-	var siblings []trinary.Hash
-
-	for currentLayerIndex := merkleTree.Depth; currentLayerIndex > 0; currentLayerIndex-- {
-		layer := merkleTree.Layers[currentLayerIndex]
-
-		if leafIndex%2 == 0 {
-			// even
-			siblings = append(siblings, layer.Hashes[leafIndex+1])
-		} else {
-			// odd
-			siblings = append(siblings, layer.Hashes[leafIndex-1])
-		}
-
-		leafIndex /= 2
-	}
-
-	return siblings
-}
 
 // tagForIndex creates a tag for a specific index.
 func tagForIndex(index milestone.Index) trinary.Trytes {
@@ -87,10 +67,13 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
-	// get the siblings in the current merkle tree
-	leafSiblings := siblings(index, merkleTree)
+	// get the siblings in the current Merkle tree
+	leafSiblings, err := merkleTree.AuditPath(uint32(index))
+	if err != nil {
+		return nil, err
+	}
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.KeyFragmentLength/consts.TrinaryRadix)
@@ -98,7 +81,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, 
 	tag := tagForIndex(index)
 
 	// a milestone consists of two transactions.
-	// the last transaction (currentIndex == lastIndex) contains the siblings for the merkle tree.
+	// the last transaction (currentIndex == lastIndex) contains the siblings for the Merkle tree.
 	txSiblings := &transaction.Transaction{}
 	txSiblings.SignatureMessageFragment = paddedSiblingsTrytes
 	txSiblings.Address = merkleTree.Root
@@ -116,7 +99,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, 
 	// the other transactions contain a signature that signs the siblings and thereby ensures the integrity.
 	var b Bundle
 
-	for txIndex := 0; txIndex < securityLvl; txIndex++ {
+	for txIndex := 0; txIndex < int(securityLvl); txIndex++ {
 		tx := &transaction.Transaction{}
 		tx.SignatureMessageFragment = consts.NullSignatureMessageFragmentTrytes
 		tx.Address = merkleTree.Root
@@ -137,7 +120,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, 
 	b = append(b, txSiblings)
 	// Address + Value + ObsoleteTag + Timestamp + CurrentIndex + LastIndex
 	// finalize bundle by adding the bundle hash
-	b, err := finalizeInsecure(b)
+	b, err = finalizeInsecure(b)
 	if err != nil {
 		return nil, err
 	}
@@ -146,16 +129,20 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl int, 
 		return nil, err
 	}
 
-	signature, err := signature(seed, index, securityLvl, txSiblings.Hash)
+	fragments, err := merkle.SignatureFragments(seed, uint32(index), securityLvl, txSiblings.Hash)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = validateSignature(merkleTree.Root, index, securityLvl, txSiblings.Hash, signature, siblingsTrytes); err != nil {
-		return nil, err
+	// verify milestone signature
+	if valid, err := merkle.ValidateSignatureFragments(merkleTree.Root, uint32(index), leafSiblings, fragments, txSiblings.Hash); !valid {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("Merkle root does not match")
 	}
 
-	if err = chainTransactionsFillSignatures(b, signature, mwm, powFunc); err != nil {
+	if err = chainTransactionsFillSignatures(b, fragments, mwm, powFunc); err != nil {
 		return nil, err
 	}
 
@@ -236,7 +223,7 @@ func finalizeInsecure(bundle Bundle) (Bundle, error) {
 }
 
 // chainTransactionsFillSignatures fills the signature message fragments with the signature and sets the trunk to chain the txs in a bundle.
-func chainTransactionsFillSignatures(b Bundle, signature trinary.Trytes, mwm int, powFunc pow.ProofOfWorkFunc) error {
+func chainTransactionsFillSignatures(b Bundle, fragments []trinary.Trytes, mwm int, powFunc pow.ProofOfWorkFunc) error {
 	// to chain transactions we start from the LastIndex and move towards index 0.
 	prev := b[len(b)-1].Hash
 
@@ -245,7 +232,7 @@ func chainTransactionsFillSignatures(b Bundle, signature trinary.Trytes, mwm int
 		tx := b[i]
 
 		// copy signature fragment
-		tx.SignatureMessageFragment = signature[tx.CurrentIndex*consts.SignatureMessageFragmentSizeInTrytes : (tx.CurrentIndex+1)*consts.SignatureMessageFragmentSizeInTrytes]
+		tx.SignatureMessageFragment = fragments[tx.CurrentIndex]
 
 		// chain bundle
 		tx.TrunkTransaction = prev

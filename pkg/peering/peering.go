@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	autopeering "github.com/iotaledger/hive.go/autopeering/peer"
@@ -171,6 +172,10 @@ func (m *Manager) IsStaticallyPeered(ips []string, port uint16) bool {
 
 		// check all peers in the reconnect pool
 		for _, reconnectInfo := range m.reconnect {
+			// if the static peer has no DNS records, CachedIPs would be nil
+			if reconnectInfo.CachedIPs == nil {
+				continue
+			}
 			for reconnectInfoIP := range reconnectInfo.CachedIPs.IPs {
 				reconnectID := peer.NewID(reconnectInfoIP.String(), reconnectInfo.OriginAddr.Port)
 
@@ -311,32 +316,45 @@ func (m *Manager) SlotsFilled() bool {
 // SetupEventHandlers inits the event handlers for handshaking, the underlying connection and errors.
 func (m *Manager) SetupEventHandlers(p *peer.Peer) {
 
-	// pipe data from the connection into the protocol
-	p.Conn.Events.ReceiveData.Attach(events.NewClosure(p.Protocol.Receive))
+	onProtocolReceive := events.NewClosure(p.Protocol.Receive)
 
-	// propagate errors up
-	p.Conn.Events.Error.Attach(events.NewClosure(func(err error) {
+	onConnectionError := events.NewClosure(func(err error) {
 		if p.Disconnected {
 			return
 		}
 		m.Events.Error.Trigger(err)
-	}))
+	})
 
-	// any error on the protocol level resolves to shutting down the connection
-	p.Protocol.Events.Error.Attach(events.NewClosure(func(err error) {
+	onProtocolError := events.NewClosure(func(err error) {
 		if p.Disconnected {
 			return
 		}
 		if err := p.Conn.Close(); err != nil {
 			m.Events.Error.Trigger(err)
 		}
-	}))
+	})
 
-	p.Conn.Events.Close.Attach(events.NewClosure(func() {
+	onConnectionClose := events.NewClosure(func() {
 		m.Lock()
 		m.moveFromConnectedToReconnectPool(p)
 		m.Unlock()
-	}))
+
+		p.Conn.Events.ReceiveData.Detach(onProtocolReceive)
+		p.Conn.Events.Error.Detach(onConnectionError)
+		p.Protocol.Events.Error.Detach(onProtocolError)
+	})
+
+	// pipe data from the connection into the protocol
+	p.Conn.Events.ReceiveData.Attach(onProtocolReceive)
+
+	// propagate errors up
+	p.Conn.Events.Error.Attach(onConnectionError)
+
+	// any error on the protocol level resolves to shutting down the connection
+	p.Protocol.Events.Error.Attach(onProtocolError)
+
+	// move peer to reconnected pool and detach all events
+	p.Conn.Events.Close.Attach(onConnectionClose)
 
 	m.setupHandshakeEventHandlers(p)
 }
@@ -456,6 +474,12 @@ func (m *Manager) Listen() error {
 	if err != nil {
 		return fmt.Errorf("%w: '%s' is an invalid bind address", err, m.Opts.BindAddress)
 	}
+
+	// We assume that addr is a literal IPv6 address if it has colons.
+	if strings.Contains(addr, ":") {
+		addr = "[" + addr + "]"
+	}
+
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return fmt.Errorf("%w: '%s' contains an invalid port", err, m.Opts.BindAddress)

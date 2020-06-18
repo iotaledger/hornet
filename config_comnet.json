@@ -50,7 +50,7 @@
       "depth": 50,
       "intervalSynced": 200,
       "intervalUnsynced": 1000,
-      "path": "export_comnet.bin",
+      "path": "snapshots/comnet/export.bin",
       "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
     },
     "global": {
@@ -67,7 +67,7 @@
     "enabled": true
   },
   "coordinator": {
-    "address": "BODHQPXSMDNHBWVZHVATBAHQGZSKWQLXYZNOXMKNUCOZCPTWHHNFBBHFOEGPTWGGUVDJPZAYZIMXIIGVD",
+    "address": "YBWDHGHUEB9KSOPONTLTOSSKITIBE9MXPASCLREDNV9HEABYBPTHRQGWNJWQFSYAYZRDXXIOZHWBC9DWC",
     "securityLevel": 2,
     "merkleTreeDepth": 23,
     "mwm": 10,

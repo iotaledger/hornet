@@ -53,10 +53,16 @@ func loadSpentAddresses(filePathSpent string) (int, error) {
 
 func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, snapshotIndex milestone.Index) error {
 
+	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
+	if latestMilestoneFromDatabase > snapshotIndex {
+		return errors.Wrapf(ErrSnapshotImportFailed, "Milestone in database (%d) newer than snapshot milestone (%d)", latestMilestoneFromDatabase, snapshotIndex)
+	}
+
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 
-	// Genesis transaction
+	// Genesis transaction must be marked as SEP with snapshot index during loading a global snapshot,
+	// because coordinator bootstraps the network by referencing the genesis tx
 	tangle.SolidEntryPointsAdd(hornet.NullHashBytes, snapshotIndex)
 	tangle.StoreSolidEntryPoints()
 	tangle.WriteUnlockSolidEntryPoints()

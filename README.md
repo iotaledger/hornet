@@ -25,11 +25,6 @@ _Table of contents_
 - [Contributing](#contributing)
 - [Installation](#installation)
 - [Plugins](#plugins)
-  - [TangleMonitor](#tanglemonitor)
-  - [IOTA Tangle Visualiser](#iota-tangle-visualiser)
-  - [MQTT Broker](#mqtt-broker)
-  - [Spammer](#spammer)
-  - [Autopeering](#autopeering)
 - [Docker](#docker)
 <!--te-->
 
@@ -69,6 +64,7 @@ If you want to disable autopeering, you can do so by adding it to the `disablePl
 ```
 wget -qO - https://ppa.hornet.zone/pubkey.txt | sudo apt-key add -
 sudo sh -c 'echo "deb http://ppa.hornet.zone stable main" >> /etc/apt/sources.list.d/hornet.list'
+sudo apt update
 sudo apt install hornet
 ```
 
