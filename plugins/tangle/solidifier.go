@@ -287,8 +287,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	- Everytime a request queue gets empty, start the solidifier for the next known non-solid milestone
 	- If tx are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted
-	- If we miss more than WARP_SYNC_THRESHOLD milestones in our requests, request them via warp sync
-
 	*/
 
 	if !force {
@@ -297,6 +295,14 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 				- newMilestoneIndex==0 (triggersignal) and solidifierMilestoneIndex==0 (no ongoing solidification)
 				- newMilestoneIndex==solidMilestoneIndex+1 (next milestone)
 				- newMilestoneIndex!=0 (new milestone received) and solidifierMilestoneIndex!=0 (ongoing solidification) and newMilestoneIndex<solidifierMilestoneIndex (milestone older than ongoing solidification)
+
+			The following events trigger the solidifier in the node:
+				- new valid milestone was processed (newMilestoneIndex=index, force=false)
+				- a milestone was missing in the cone at solidifier run (newMilestoneIndex=0, force=true)
+				- WebAPI call (newMilestoneIndex=0, force=true)
+				- milestones in warp sync range were already in database at warpsync startup (newMilestoneIndex==0, force=true)
+				- another milestone was successfully solidified (newMilestoneIndex=0, force=false)
+				- request queue gets empty and node is not synced (newMilestoneIndex=0, force=true)
 		*/
 
 		solidifierMilestoneIndexLock.RLock()
