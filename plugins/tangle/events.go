@@ -13,6 +13,7 @@ func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{
 var Events = pluginEvents{
 	ReceivedNewTransaction:        events.NewEvent(tangle.NewTransactionCaller),
 	ReceivedKnownTransaction:      events.NewEvent(tangle.TransactionCaller),
+	ProcessedTransaction:          events.NewEvent(tangle.TransactionHashCaller),
 	TransactionSolid:              events.NewEvent(tangle.TransactionCaller),
 	TransactionConfirmed:          events.NewEvent(tangle.TransactionConfirmedCaller),
 	TransactionStored:             events.NewEvent(tangle.TransactionCaller),
@@ -27,6 +28,7 @@ var Events = pluginEvents{
 type pluginEvents struct {
 	ReceivedNewTransaction        *events.Event
 	ReceivedKnownTransaction      *events.Event
+	ProcessedTransaction          *events.Event
 	TransactionSolid              *events.Event
 	TransactionConfirmed          *events.Event
 	TransactionStored             *events.Event

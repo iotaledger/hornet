@@ -51,15 +51,6 @@ func configureTangleProcessor(_ *node.Plugin) {
 		solidifyMilestone(task.Param(0).(milestone.Index), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
-
-	metricsplugin.Events.TPSMetricsUpdated.Attach(events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
-		lastIncomingTPS = tpsMetrics.Incoming
-		lastNewTPS = tpsMetrics.New
-		lastOutgoingTPS = tpsMetrics.Outgoing
-	}))
-
-	tangle.Events.ReceivedValidMilestone.Attach(events.NewClosure(onReceivedValidMilestone))
-	tangle.Events.ReceivedInvalidMilestone.Attach(events.NewClosure(onReceivedInvalidMilestone))
 }
 
 func runTangleProcessor(_ *node.Plugin) {
@@ -70,6 +61,30 @@ func runTangleProcessor(_ *node.Plugin) {
 	submitReceivedTxForProcessing := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 		receiveTxWorkerPool.Submit(transaction, request, p)
 	})
+
+	updateMetrics := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
+		lastIncomingTPS = tpsMetrics.Incoming
+		lastNewTPS = tpsMetrics.New
+		lastOutgoingTPS = tpsMetrics.Outgoing
+	})
+
+	onReceivedValidMilestone := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+		if !added {
+			// Release shouldn't be forced, to cache the latest milestones
+			cachedBndl.Release() // bundle -1
+		}
+	})
+
+	onReceivedInvalidMilestone := events.NewClosure(func(err error) {
+		log.Info(err)
+	})
+
+	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+		metricsplugin.Events.TPSMetricsUpdated.Attach(updateMetrics)
+		<-shutdownSignal
+		metricsplugin.Events.TPSMetricsUpdated.Detach(updateMetrics)
+	}, shutdown.PriorityMetricsUpdater)
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
@@ -85,8 +100,12 @@ func runTangleProcessor(_ *node.Plugin) {
 	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		processValidMilestoneWorkerPool.Start()
+		tangle.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
+		tangle.Events.ReceivedInvalidMilestone.Attach(onReceivedInvalidMilestone)
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
+		tangle.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
+		tangle.Events.ReceivedInvalidMilestone.Detach(onReceivedInvalidMilestone)
 		processValidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
@@ -115,6 +134,8 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
+
+	Events.ProcessedTransaction.Trigger(incomingTx.GetTxHash())
 
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewTransactions.Inc()
@@ -157,18 +178,6 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		// which should be solid given that the request queue is empty
 		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 	}
-}
-
-func onReceivedValidMilestone(cachedBndl *tangle.CachedBundle) {
-	_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
-	if !added {
-		// Release shouldn't be forced, to cache the latest milestones
-		cachedBndl.Release() // bundle -1
-	}
-}
-
-func onReceivedInvalidMilestone(err error) {
-	log.Info(err)
 }
 
 func printStatus() {

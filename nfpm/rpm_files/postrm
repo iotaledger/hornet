@@ -4,8 +4,7 @@ if [ $1 -ge 1 ]; then
     /sbin/service hornet upgrade >/dev/null 2>&1 || echo \
         "Binary upgrade failed, please check hornet's log"
 fi
-rm -rf /var/lib/hornet/export.bin \
-       /var/lib/hornet/export_comnet.bin \
+rm -rf /var/lib/hornet/snapshots/* \
        /etc/default/hornet \
        /var/lib/hornet/mainnetdb/* \
        /var/lib/hornet/comnetdb/*

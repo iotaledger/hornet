@@ -63,7 +63,7 @@ func SelectTips(depth uint, reference *hornet.Hash) (hornet.Hashes, *tipselectio
 	walkStats := &tipselection.TipSelStats{EntryPoint: cachedMs.GetBundle().GetTailHash().Trytes(), Depth: uint64(depth)}
 
 	// compute the range in which we allow approvers to reference transactions in
-	lowerAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
+	lowestAllowedSnapshotIndex := int(math.Max(float64(int(tangle.GetSolidMilestoneIndex())-maxDepth), float64(0)))
 
 	diff := map[string]int64{}
 	approved := map[string]struct{}{}
@@ -111,7 +111,7 @@ func SelectTips(depth uint, reference *hornet.Hash) (hornet.Hashes, *tipselectio
 		}
 		cachedRefBundle = cachedBndl
 
-		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, false) { // tx pass +1
+		if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowestAllowedSnapshotIndex, false) { // tx pass +1
 			cachedBndl.Release(true) // bundle -1
 			return nil, nil, errors.Wrap(ErrReferenceNotValid, "transaction is below max depth")
 		}
@@ -224,7 +224,7 @@ func SelectTips(depth uint, reference *hornet.Hash) (hornet.Hashes, *tipselectio
 					continue
 				}
 
-				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowerAllowedSnapshotIndex, false) { // tx pass +1
+				if tanglePlugin.IsBelowMaxDepth(cachedBndl.GetBundle().GetTail(), lowestAllowedSnapshotIndex, false) { // tx pass +1
 					approverHashes = removeElementWithoutPreservingOrder(approverHashes, candidateIndex)
 					cachedCandidateTx.Release() // tx -1
 					cachedBndl.Release()        // bundle -1

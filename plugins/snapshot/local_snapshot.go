@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -200,7 +201,6 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
 
 	solidEntryPoints := make(map[string]milestone.Index)
-	solidEntryPoints[string(hornet.NullHashBytes)] = targetIndex
 
 	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
 	//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
@@ -314,6 +314,12 @@ func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.Snaps
 
 func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) ([]byte, error) {
 
+	if _, fileErr := os.Stat(filePath); os.IsNotExist(fileErr) {
+		// create dir if it not exists
+		if err := os.MkdirAll(filepath.Dir(filePath), 0700); err != nil {
+			return nil, err
+		}
+	}
 	exportFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0660)
 	if err != nil {
 		return nil, err
@@ -613,9 +619,6 @@ func LoadSnapshotFromFile(filePath string) error {
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
-
-	// Genesis transaction
-	tangle.SolidEntryPointsAdd(hornet.NullHashBytes, 0)
 
 	var msIndex int32
 	var msTimestamp int64

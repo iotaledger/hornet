@@ -1,19 +1,24 @@
 package coordinator
 
 import (
+	"sync"
+
 	"github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -68,7 +73,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 	coo := coordinator.New(
 		seed,
-		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
+		consts.SecurityLevel(config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel)),
 		config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth),
 		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
@@ -106,6 +111,33 @@ func run(plugin *node.Plugin) {
 }
 
 func sendBundle(b coordinator.Bundle) error {
+
+	// collect all tx hashes of the bundle
+	txHashes := make(map[string]struct{})
+	for _, t := range b {
+		txHashes[string(hornet.Hash(trinary.MustTrytesToBytes(t.Hash)[:49]))] = struct{}{}
+	}
+
+	txHashesLock := syncutils.Mutex{}
+
+	// wgBundleProcessed waits until all txs of the bundle were processed in the storage layer
+	wgBundleProcessed := sync.WaitGroup{}
+	wgBundleProcessed.Add(len(txHashes))
+
+	processedTxEvent := events.NewClosure(func(txHash hornet.Hash) {
+		txHashesLock.Lock()
+		defer txHashesLock.Unlock()
+
+		if _, exists := txHashes[string(txHash)]; exists {
+			// tx of bundle was processed
+			wgBundleProcessed.Done()
+			delete(txHashes, string(txHash))
+		}
+	})
+
+	tanglePlugin.Events.ProcessedTransaction.Attach(processedTxEvent)
+	defer tanglePlugin.Events.ProcessedTransaction.Detach(processedTxEvent)
+
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(tx)
@@ -113,5 +145,9 @@ func sendBundle(b coordinator.Bundle) error {
 			return err
 		}
 	}
+
+	// wait until all txs of the bundle are processed in the storage layer
+	wgBundleProcessed.Wait()
+
 	return nil
 }

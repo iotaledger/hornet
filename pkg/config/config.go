@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -31,6 +32,19 @@ var (
 
 	peeringConfigHotReloadAllowed = true
 	peeringConfigHotReloadLock    syncutils.Mutex
+
+	// a list of flags which should be printed via --help
+	nonHiddenFlags = map[string]struct{}{
+		"config":              {},
+		"config-dir":          {},
+		"node.disablePlugins": {},
+		"node.enablePlugins":  {},
+		"overwriteCooAddress": {},
+		"peeringConfig":       {},
+		"profilesConfig":      {},
+		"useProfile":          {},
+		"version":             {},
+	}
 )
 
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
@@ -38,6 +52,24 @@ var (
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
 // and ending with: .json, .toml, .yaml or .yml (in this sequence).
 func FetchConfig() error {
+
+	// replace dots with underscores in env
+	dotReplacer := strings.NewReplacer(".", "_")
+	NodeConfig.SetEnvKeyReplacer(dotReplacer)
+	PeeringConfig.SetEnvKeyReplacer(dotReplacer)
+	ProfilesConfig.SetEnvKeyReplacer(dotReplacer)
+
+	// ensure that envs are read in too
+	NodeConfig.AutomaticEnv()
+	PeeringConfig.AutomaticEnv()
+	ProfilesConfig.AutomaticEnv()
+
+	// hide all but the most essential flags
+	flag.VisitAll(func(f *flag.Flag) {
+		_, notHidden := nonHiddenFlags[f.Name]
+		f.Hidden = !notHidden
+	})
+
 	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
 	if err != nil {
 		return err
@@ -107,7 +139,7 @@ func LoadHashFromEnvironment(name string) (trinary.Hash, error) {
 		return "", fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	if !guards.IsHash(hash) {
+	if !guards.IsTransactionHash(hash) {
 		return "", fmt.Errorf("environment variable '%s' contains an invalid hash", name)
 	}
 

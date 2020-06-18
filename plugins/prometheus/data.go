@@ -23,10 +23,10 @@ func init() {
 
 	registry.MustRegister(dataSizes)
 
-	addCollect(colectData)
+	addCollect(collectData)
 }
 
-func colectData() {
+func collectData() {
 	dataSizes.Reset()
 	dbSize, err := directorySize(config.NodeConfig.GetString(config.CfgDatabasePath))
 	if err == nil {

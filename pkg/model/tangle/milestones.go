@@ -7,10 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/signing"
-	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/syncutils"
@@ -257,81 +254,30 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
 	}
 
+	var fragments []trinary.Trytes
 	for _, signatureTx := range cachedSignatureTxs {
 		if signatureTx.GetTransaction().Tx.BranchTransaction != cachedSiblingsTx.GetTransaction().Tx.TrunkTransaction {
 			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", tailTxHash)
 		}
+		fragments = append(fragments, signatureTx.GetTransaction().Tx.SignatureMessageFragment)
+	}
+
+	var path []trinary.Trytes
+	for i := 0; i < int(coordinatorMerkleTreeDepth); i++ {
+		path = append(path, cachedSiblingsTx.GetTransaction().Tx.SignatureMessageFragment[i*consts.HashTrytesSize:(i+1)*consts.HashTrytesSize])
 	}
 
 	// verify milestone signature
-	valid := validateMilestone(cachedSignatureTxs.Retain(), cachedSiblingsTx.Retain(), milestoneIndex, coordinatorSecurityLevel, coordinatorMerkleTreeDepth, coordinatorAddress) // tx pass +2
-	if !valid {
+	if valid, err := merkle.ValidateSignatureFragments(coordinatorAddress.Trytes(), uint32(milestoneIndex), path, fragments, cachedSiblingsTx.GetTransaction().Tx.Hash); !valid {
+		if err != nil {
+			return false, errors.Wrap(ErrInvalidMilestone, err.Error())
+		}
 		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash)
 	}
 
 	bndl.setMilestone(true)
 
 	return true, nil
-}
-
-// Validates if the milestone has the correct signature.
-func validateMilestone(cachedSignatureTxs CachedTransactions, cachedSiblingsTx *CachedTransaction, milestoneIndex milestone.Index, securityLvl int, coordinatorMerkleTreeDepth uint64, coordinatorAddress hornet.Hash) (valid bool) {
-
-	defer cachedSignatureTxs.Release() // tx -1
-	defer cachedSiblingsTx.Release()   // tx -1
-
-	normalizedBundleHashFragments := make([]trinary.Trits, securityLvl)
-
-	// milestones sign the normalized hash of the sibling transaction.
-	normalizeBundleHash := signing.NormalizedBundleHash(cachedSiblingsTx.GetTransaction().Tx.Hash)
-
-	for i := 0; i < securityLvl; i++ {
-		normalizedBundleHashFragments[i] = normalizeBundleHash[i*consts.KeySegmentsPerFragment : (i+1)*consts.KeySegmentsPerFragment]
-	}
-
-	digests := make(trinary.Trits, len(cachedSignatureTxs)*consts.HashTrinarySize)
-	for i := 0; i < len(cachedSignatureTxs); i++ {
-		signatureMessageFragmentTrits, err := trinary.TrytesToTrits(cachedSignatureTxs[i].GetTransaction().Tx.SignatureMessageFragment)
-		if err != nil {
-			return false
-		}
-
-		digest, err := signing.Digest(normalizedBundleHashFragments[i%consts.MaxSecurityLevel], signatureMessageFragmentTrits, kerl.NewKerl())
-		if err != nil {
-			return false
-		}
-
-		copy(digests[i*consts.HashTrinarySize:], digest)
-	}
-
-	addressTrits, err := signing.Address(digests, kerl.NewKerl())
-	if err != nil {
-		return false
-	}
-
-	siblingsTrits, err := transaction.TransactionToTrits(cachedSiblingsTx.GetTransaction().Tx)
-	if err != nil {
-		return false
-	}
-
-	// validate Merkle path
-	merkleRoot, err := merkle.MerkleRoot(
-		addressTrits,
-		siblingsTrits,
-		coordinatorMerkleTreeDepth,
-		uint64(milestoneIndex),
-		kerl.NewKerl(),
-	)
-	if err != nil {
-		return false
-	}
-
-	merkleAddress, err := trinary.TritsToBytes(merkleRoot)
-	if err != nil {
-		return false
-	}
-
-	return bytes.Equal(merkleAddress[:49], coordinatorAddress)
 }
 
 // Checks if the the tx could be part of a milestone.

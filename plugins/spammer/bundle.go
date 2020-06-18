@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/iota.go/converter"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/signing"
+	"github.com/iotaledger/iota.go/signing/key"
 	"github.com/iotaledger/iota.go/trinary"
 )
 
@@ -155,7 +156,9 @@ func createBundle(txAddress trinary.Hash, msg string, tagSubstring string, bundl
 			return nil, fmt.Errorf("signing.Subseed: %v", err.Error())
 		}
 
-		prvKey, err := signing.Key(subseed, consts.SecurityLevelLow)
+		h := kerl.NewKerl()
+
+		prvKey, err := key.Sponge(subseed, consts.SecurityLevelLow, h)
 		if err != nil {
 			return nil, fmt.Errorf("signing.Key: %v", err.Error())
 		}
