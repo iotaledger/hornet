@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/iotaledger/hive.go/daemon"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -63,8 +63,16 @@ func runRequestWorkers() {
 				return
 			case <-requestQueueEnqueueSignal:
 
+				// abort if no peer is connected or no peer supports sting
+				if !manager.AnySTINGPeerConnected() {
+					continue
+				}
+
+				RequestQueue().Lock()
+
 				// drain request queue
-				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
+				for r := RequestQueue().PeekWithoutLocking(); r != nil; r = RequestQueue().PeekWithoutLocking() {
+					sent := false
 					manager.ForAllConnected(func(p *peer.Peer) bool {
 						if !p.Protocol.Supports(sting.FeatureSet) {
 							return false
@@ -75,9 +83,18 @@ func runRequestWorkers() {
 						}
 
 						helpers.SendTransactionRequest(p, r.Hash)
+						sent = true
+						RequestQueue().NextWithoutLocking()
 						return true
 					})
+
+					// couldn't send a request to any peer, abort
+					if !sent {
+						break
+					}
 				}
+
+				RequestQueue().Unlock()
 			}
 		}
 	}, shutdown.PriorityRequestsProcessor)
