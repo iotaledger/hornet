@@ -120,8 +120,8 @@ func collectInfo() {
 	// Snapshot index and Pruning index
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		infoSnapshotIndex.Set(float64(tangle.GetSnapshotInfo().SnapshotIndex))
-		infoPruningIndex.Set(float64(tangle.GetSnapshotInfo().PruningIndex))
+		infoSnapshotIndex.Set(float64(snapshotInfo.SnapshotIndex))
+		infoPruningIndex.Set(float64(snapshotInfo.PruningIndex))
 	}
 
 	// Tips
