@@ -295,6 +295,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 				- newMilestoneIndex==0 (triggersignal) and solidifierMilestoneIndex==0 (no ongoing solidification)
 				- newMilestoneIndex==solidMilestoneIndex+1 (next milestone)
 				- newMilestoneIndex!=0 (new milestone received) and solidifierMilestoneIndex!=0 (ongoing solidification) and newMilestoneIndex<solidifierMilestoneIndex (milestone older than ongoing solidification)
+				- newMilestoneIndex!=0 (new milestone received) and solidifierMilestoneIndex==0 (no ongoing solidification) and RequestQueue().Empty() (request queue is already empty)
 
 			The following events trigger the solidifier in the node:
 				- new valid milestone was processed (newMilestoneIndex=index, force=false)
@@ -309,7 +310,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		triggerSignal := (newMilestoneIndex == 0) && (solidifierMilestoneIndex == 0)
 		nextMilestoneSignal := newMilestoneIndex == tangle.GetSolidMilestoneIndex()+1
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((solidifierMilestoneIndex != 0) && (newMilestoneIndex < solidifierMilestoneIndex))
-		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected) {
+		newMilestoneReqQueueEmptySignal := (solidifierMilestoneIndex == 0) && (newMilestoneIndex != 0) && gossip.RequestQueue().Empty()
+		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected || newMilestoneReqQueueEmptySignal) {
 			// Do not run solidifier
 			solidifierMilestoneIndexLock.RUnlock()
 			return
