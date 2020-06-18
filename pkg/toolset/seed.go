@@ -2,10 +2,11 @@ package toolset
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"math/big"
+
+	"github.com/mr-tron/base58"
 )
 
 func seedGen(args []string) error {
@@ -26,7 +27,7 @@ func seedGen(args []string) error {
 		b[i] = letterRunes[nBig.Int64()]
 	}
 
-	fmt.Println("Your autopeering seed: ", base64.StdEncoding.EncodeToString([]byte(string(b))))
+	fmt.Println("Your autopeering seed: ", base58.Encode([]byte(string(b))))
 
 	return nil
 }

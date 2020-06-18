@@ -22,6 +22,7 @@ require (
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.3.2
+	github.com/mr-tron/base58 v1.1.3
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/prometheus/client_golang v1.6.0

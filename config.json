@@ -90,9 +90,9 @@
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "entryNodes": [
-        "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
-        "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
-        "EsY+zvaselQYA33AVNzrYIGLplboIh4r8oO+vLKQAVM=@entrynode.tanglebay.org:14626"
+        "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ=@enter.hornet.zone:14626",
+        "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL=@enter.manapotion.io:18626",
+        "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x=@entrynode.tanglebay.org:14626"
       ],
       "seed": ""
     }
