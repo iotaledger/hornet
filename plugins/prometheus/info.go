@@ -16,6 +16,8 @@ var (
 	infoMilestoneIndex        prometheus.Gauge
 	infoSolidMilestone        *prometheus.GaugeVec
 	infoSolidMilestoneIndex   prometheus.Gauge
+	infoSnapshotIndex         prometheus.Gauge
+	infoPruningIndex          prometheus.Gauge
 	infoTips                  prometheus.Gauge
 	infoTransactionsToRequest prometheus.Gauge
 )
@@ -50,6 +52,14 @@ func init() {
 		Name: "iota_info_latest_solid_milestone_index",
 		Help: "Latest solid milestone index.",
 	})
+	infoSnapshotIndex = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_info_snapshot_index",
+		Help: "Snapshot index.",
+	})
+	infoPruningIndex = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_info_pruning_index",
+		Help: "Pruning index.",
+	})
 	infoTips = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_info_tips",
 		Help: "Number of tips.",
@@ -66,6 +76,8 @@ func init() {
 	registry.MustRegister(infoMilestoneIndex)
 	registry.MustRegister(infoSolidMilestone)
 	registry.MustRegister(infoSolidMilestoneIndex)
+	registry.MustRegister(infoSnapshotIndex)
+	registry.MustRegister(infoPruningIndex)
 	registry.MustRegister(infoTips)
 	registry.MustRegister(infoTransactionsToRequest)
 
@@ -103,6 +115,20 @@ func collectInfo() {
 		infoSolidMilestone.WithLabelValues(cachedMsTailTx.GetTransaction().Tx.Hash, strconv.Itoa(int(smi))).Set(1)
 		cachedMsTailTx.Release()
 		cachedSolidMs.Release()
+	}
+
+	snapshotInfo := tangle.GetSnapshotInfo()
+
+	// Snapshot index
+	if snapshotInfo != nil {
+		si := tangle.GetSnapshotInfo().SnapshotIndex
+		infoSnapshotIndex.Set(float64(si))
+	}
+
+	// Pruning index
+	if snapshotInfo != nil {
+		pi := tangle.GetSnapshotInfo().PruningIndex
+		infoPruningIndex.Set(float64(pi))
 	}
 
 	// Tips
