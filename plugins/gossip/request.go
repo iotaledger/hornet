@@ -31,11 +31,20 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 func runRequestWorkers() {
 	daemon.BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
+
+	requestQueueEnqueueLoop:
 		for {
 			select {
 			case <-shutdownSignal:
 				return
 			case <-enqueueTicker.C:
+				for _, reqBackpressureSignal := range requestBackpressureSignals {
+					if reqBackpressureSignal() {
+						// skip enqueueing of the pending requests if a backpressure signal is set to true to reduce pressure
+						continue requestQueueEnqueueLoop
+					}
+				}
+
 				newlyEnqueued := requestQueue.EnqueuePending(discardRequestsOlderThan)
 				if newlyEnqueued > 0 {
 					select {
@@ -53,12 +62,6 @@ func runRequestWorkers() {
 			case <-shutdownSignal:
 				return
 			case <-requestQueueEnqueueSignal:
-				for _, reqBackpressureSignal := range requestBackpressureSignals {
-					if reqBackpressureSignal() {
-						// skip enqueueing of the pending requests if a backpressure signal is set to true to reduce pressure
-						continue
-					}
-				}
 
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
