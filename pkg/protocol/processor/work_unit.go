@@ -129,13 +129,6 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 		// if requested transaction hash is equal to the hash of the received transaction
 		// it means that the given peer is synchronized
 		isPeerSynced := bytes.Equal(wu.receivedTxHash, peerRequest.requestedTxHash)
-		request := requestQueue.Next()
-
-		// if the peer is synced  and we have no request ourselves,
-		// we don't need to reply
-		if isPeerSynced && request == nil {
-			continue
-		}
 
 		var cachedTxToSend *tangle.CachedTransaction
 
@@ -148,6 +141,14 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 			}
 
 			cachedTxToSend = tangle.GetCachedTransactionOrNil(hornet.Hash(peerRequest.requestedTxHash)) // tx +1
+		}
+
+		request := requestQueue.Next()
+
+		// if the peer is synced  and we have no request ourselves,
+		// we don't need to reply
+		if isPeerSynced && request == nil {
+			continue
 		}
 
 		if cachedTxToSend == nil {
@@ -171,7 +172,7 @@ func (wu *WorkUnit) replyToAllRequests(requestQueue rqueue.Queue) {
 
 		// if we have no request ourselves, we use the hash of the transaction which we
 		// send in order to signal that we are synchronized.
-		var ownRequestHash []byte
+		var ownRequestHash hornet.Hash
 		if request == nil {
 			ownRequestHash = cachedTxToSend.GetTransaction().GetTxHash()
 		} else {

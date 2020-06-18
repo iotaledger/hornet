@@ -20,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/handshake"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
 var (
@@ -260,6 +261,22 @@ func (m *Manager) ForAllConnected(f PeerConsumerFunc) {
 			break
 		}
 	}
+}
+
+// AnySTINGPeerConnected returns true if any of the connected, handshaked peers supports the STING protocol.
+func (m *Manager) AnySTINGPeerConnected() bool {
+	stingPeerConnected := false
+
+	m.ForAllConnected(func(p *peer.Peer) bool {
+		if !p.Protocol.Supports(sting.FeatureSet) {
+			return false
+		}
+
+		stingPeerConnected = true
+		return true
+	})
+
+	return stingPeerConnected
 }
 
 // PeerInfos returns snapshots of the currently connected and in the reconnect pool residing peers.
