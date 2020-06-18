@@ -117,18 +117,11 @@ func collectInfo() {
 		cachedSolidMs.Release()
 	}
 
+	// Snapshot index and Pruning index
 	snapshotInfo := tangle.GetSnapshotInfo()
-
-	// Snapshot index
 	if snapshotInfo != nil {
-		si := tangle.GetSnapshotInfo().SnapshotIndex
-		infoSnapshotIndex.Set(float64(si))
-	}
-
-	// Pruning index
-	if snapshotInfo != nil {
-		pi := tangle.GetSnapshotInfo().PruningIndex
-		infoPruningIndex.Set(float64(pi))
+		infoSnapshotIndex.Set(float64(tangle.GetSnapshotInfo().SnapshotIndex))
+		infoPruningIndex.Set(float64(tangle.GetSnapshotInfo().PruningIndex))
 	}
 
 	// Tips
