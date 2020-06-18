@@ -56,9 +56,9 @@ func init() {
 
 	// autopeering
 	flag.StringSlice(CfgNetAutopeeringEntryNodes, []string{
-		"LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
-		"zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
-		"npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@entrynode.tanglebay.org:14626",
+		"46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
+		"EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
+		"2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
 	}, "list of autopeering entry nodes to use")
 	flag.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for global services such as autopeering and gossip")
 	flag.String(CfgNetAutopeeringSeed, "", "private key seed used to derive the node identity; optional Base64 encoded 256-bit string")
