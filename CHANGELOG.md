@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1-rc2] - 18.06.2020
+
+### Added
+
+    - Config setting for warpsync advancement range
+    - Snapshot index and Pruning index to Prometheus
+    - Flag to force load a global snapshot if db exists
+
+### Changed
+
+    - Coo plugin milestone validation
+    - Only check for pre-release updates if a pre-release version is running
+    - Autopeering seed encoding to base58
+
+### Fixed
+
+    - Missing snapshot dir
+    - Node does not sync after restart
+    - Check to prevent pruning of genesis tx
+    - Below max depth for SolidEntryPoints
+    - Gossip bind address for IPv6
+    - Synchronization with IRI nodes
+
+### Config file changes
+
+`config.json`
+
+```diff
++"warpsync": {
++  "advancementRange": 200
++},
+
+"entryNodes": [
+-  "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
+-  "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
+-  "EsY+zvaselQYA33AVNzrYIGLplboIh4r8oO+vLKQAVM=@entrynode.tanglebay.org:14626"
++  "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ=@enter.hornet.zone:14626",
++  "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL=@enter.manapotion.io:18626",
++  "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x=@entrynode.tanglebay.org:14626"
+],
+```
+
+`config_comnet.json`
+
+```diff
++"warpsync": {
++  "advancementRange": 50
++},
+
+"entryNodes": [
+-  "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641",
+-  "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@entrynode.comnet.tanglebay.org:14636",
+-  "1bU0uI+apA7YRna530e3SYfTDtUsobrLObt58pe5c5E=@enter.comnet.hornet.zone:14627"
++  "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u=@enter.comnet.thetangle.org:14641",
++  "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh=@entrynode.comnet.tanglebay.org:14636",
++  "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY=@enter.comnet.hornet.zone:14627"
+],
+```
+
 ## [0.4.1-rc1] - 12.06.2020
 
 ### Added
