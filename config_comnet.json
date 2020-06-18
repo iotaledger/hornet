@@ -86,9 +86,9 @@
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "entryNodes": [
-        "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u=@enter.comnet.thetangle.org:14641",
-        "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh=@entrynode.comnet.tanglebay.org:14636",
-        "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY=@enter.comnet.hornet.zone:14627"
+        "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u@enter.comnet.thetangle.org:14641",
+        "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
+        "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
       ],
       "seed": ""
     }
