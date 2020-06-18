@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	autopeering "github.com/iotaledger/hive.go/autopeering/peer"
@@ -473,6 +474,12 @@ func (m *Manager) Listen() error {
 	if err != nil {
 		return fmt.Errorf("%w: '%s' is an invalid bind address", err, m.Opts.BindAddress)
 	}
+
+	// We assume that addr is a literal IPv6 address if it has colons.
+	if strings.Contains(addr, ":") {
+		addr = "[" + addr + "]"
+	}
+
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return fmt.Errorf("%w: '%s' contains an invalid port", err, m.Opts.BindAddress)
