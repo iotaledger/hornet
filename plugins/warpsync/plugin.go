@@ -3,6 +3,7 @@ package warpsync
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -22,7 +23,7 @@ import (
 var (
 	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure, run)
 	log      *logger.Logger
-	warpSync = warpsync.New(25)
+	warpSync = warpsync.New(config.NodeConfig.GetInt(config.CfgWarpSyncAdvancementRange))
 
 	onPeerConnected         *events.Closure
 	onSolidMilestoneChanged *events.Closure
