@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1-rc3] - 19.06.2020
+
+### Fixed
+
+    - Entry node public keys in config files
+
+### Config file changes
+
+`config.json`
+
+```diff
+"entryNodes": [
+-  "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ=@enter.hornet.zone:14626",
+-  "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL=@enter.manapotion.io:18626",
+-  "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x=@entrynode.tanglebay.org:14626"
++  "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
++  "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
++  "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626"
+],
+```
+
+`config_comnet.json`
+
+```diff
+"entryNodes": [
+-  "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u=@enter.comnet.thetangle.org:14641",
+-  "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh=@entrynode.comnet.tanglebay.org:14636",
+-  "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY=@enter.comnet.hornet.zone:14627"
++  "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u@enter.comnet.thetangle.org:14641",
++  "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
++  "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
+],
+```
+
 ## [0.4.1-rc2] - 18.06.2020
 
 ### Added
