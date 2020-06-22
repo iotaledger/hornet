@@ -295,8 +295,8 @@ type peermetric struct {
 	OriginAddr       string                `json:"origin_addr"`
 	ConnectionOrigin peer.ConnectionOrigin `json:"connection_origin"`
 	ProtocolVersion  byte                  `json:"protocol_version"`
-	BytesRead        int                   `json:"bytes_read"`
-	BytesWritten     int                   `json:"bytes_written"`
+	BytesRead        uint64                `json:"bytes_read"`
+	BytesWritten     uint64                `json:"bytes_written"`
 	Heartbeat        *sting.Heartbeat      `json:"heartbeat"`
 	Info             *peer.Info            `json:"info"`
 	Connected        bool                  `json:"connected"`
@@ -330,8 +330,8 @@ func peerMetrics() []*peermetric {
 			m.Alias = info.Alias
 			m.ConnectionOrigin = info.Peer.ConnectionOrigin
 			m.ProtocolVersion = info.Peer.Protocol.FeatureSet
-			m.BytesRead = info.Peer.Conn.BytesRead
-			m.BytesWritten = info.Peer.Conn.BytesWritten
+			m.BytesRead = info.Peer.Conn.BytesRead()
+			m.BytesWritten = info.Peer.Conn.BytesWritten()
 			m.Heartbeat = info.Peer.LatestHeartbeat
 			m.Connected = info.Connected
 		} else {
