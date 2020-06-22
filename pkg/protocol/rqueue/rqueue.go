@@ -13,16 +13,8 @@ import (
 
 // Queue implements a queue which contains requests for needed data.
 type Queue interface {
-	// Lock acquires the queue mutex.
-	Lock()
-	// Unlock releases the queue mutex.
-	Unlock()
-	// NextWithoutLocking returns the next request to send, pops it from the queue and marks it as pending (without locking the queue).
-	NextWithoutLocking() *Request
 	// Next returns the next request to send, pops it from the queue and marks it as pending.
 	Next() *Request
-	// PeekWithoutLocking returns the next request to send without popping it from the queue (without locking the queue).
-	PeekWithoutLocking() *Request
 	// Peek returns the next request to send without popping it from the queue.
 	Peek() *Request
 	// Enqueue enqueues the given request if it isn't already queued or pending.
@@ -111,18 +103,14 @@ type priorityqueue struct {
 	sync.RWMutex
 }
 
-func (pq *priorityqueue) NextWithoutLocking() *Request {
+func (pq *priorityqueue) Next() (r *Request) {
+	pq.Lock()
+	defer pq.Unlock()
 	// Pop() doesn't gracefully handle empty queues, so we check it ourselves
 	if len(pq.queued) == 0 {
 		return nil
 	}
 	return heap.Pop(pq).(*Request)
-}
-
-func (pq *priorityqueue) Next() (r *Request) {
-	pq.Lock()
-	defer pq.Unlock()
-	return pq.NextWithoutLocking()
 }
 
 func (pq *priorityqueue) Enqueue(r *Request) bool {
@@ -332,15 +320,11 @@ func (pq *priorityqueue) Pop() interface{} {
 	return r
 }
 
-func (pq *priorityqueue) PeekWithoutLocking() *Request {
+func (pq *priorityqueue) Peek() *Request {
+	pq.RWMutex.Lock()
+	defer pq.RWMutex.Unlock()
 	if len(pq.queue) == 0 {
 		return nil
 	}
 	return pq.queue[len(pq.queue)-1]
-}
-
-func (pq *priorityqueue) Peek() *Request {
-	pq.RWMutex.Lock()
-	defer pq.RWMutex.Unlock()
-	return pq.PeekWithoutLocking()
 }
