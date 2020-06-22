@@ -68,11 +68,8 @@ func runRequestWorkers() {
 					continue
 				}
 
-				RequestQueue().Lock()
-
 				// drain request queue
-				for r := RequestQueue().PeekWithoutLocking(); r != nil; r = RequestQueue().PeekWithoutLocking() {
-					sent := false
+				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					manager.ForAllConnected(func(p *peer.Peer) bool {
 						if !p.Protocol.Supports(sting.FeatureSet) {
 							return false
@@ -83,18 +80,9 @@ func runRequestWorkers() {
 						}
 
 						helpers.SendTransactionRequest(p, r.Hash)
-						sent = true
-						RequestQueue().NextWithoutLocking()
 						return true
 					})
-
-					// couldn't send a request to any peer, abort
-					if !sent {
-						break
-					}
 				}
-
-				RequestQueue().Unlock()
 			}
 		}
 	}, shutdown.PriorityRequestsProcessor)
