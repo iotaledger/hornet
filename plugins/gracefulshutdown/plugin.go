@@ -13,7 +13,7 @@ import (
 )
 
 // the maximum amount of time to wait for background processes to terminate. After that the process is killed.
-const waitToKillTimeInSeconds = 120
+const waitToKillTimeInSeconds = 300
 
 var (
 	PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, configure, run)
