@@ -69,11 +69,13 @@ type OnSolidEntryPoint func(txHash hornet.Hash)
 
 // TraverseApprovees starts to traverse the approvees of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
-func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, abortSignal <-chan struct{}) error {
+func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
 	if tangle.SolidEntryPointsContain(startTxHash) {
 		onSolidEntryPoint(startTxHash)
-		return nil
+		if !traverseSolidEntryPoints {
+			return nil
+		}
 	}
 
 	processed := map[string]struct{}{}
@@ -121,7 +123,9 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 			for approveeHash := range approveeHashes {
 				if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
 					onSolidEntryPoint(hornet.Hash(approveeHash))
-					continue
+					if !traverseSolidEntryPoints {
+						continue
+					}
 				}
 
 				if _, checked := processed[approveeHash]; checked {

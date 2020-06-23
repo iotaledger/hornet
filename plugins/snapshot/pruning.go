@@ -216,7 +216,10 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			func(approveeHash hornet.Hash) error { return nil },
 			// called on solid entry points
 			func(txHash hornet.Hash) {},
-			true, nil)
+			true,
+			// the pruning target index is also a solid entry point => traverse it anyways
+			milestoneIndex == targetIndex,
+			nil)
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
@@ -231,7 +234,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
 
-		log.Infof("Pruning milestone (%d) took %v. Pruned %d transactions. ", milestoneIndex, time.Since(ts), txCount)
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCount, len(txsToCheckMap))
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}

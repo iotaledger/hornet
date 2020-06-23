@@ -257,7 +257,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// called on solid entry points
 		func(txHash hornet.Hash) {
 			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Trytes(), ConfirmedByMilestoneIndex: snapshotInfo.EntryPointIndex})
-		}, true, nil)
+		}, true, false, nil)
 
 	result.TanglePathLength = len(result.TanglePath)
 
