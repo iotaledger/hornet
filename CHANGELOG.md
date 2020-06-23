@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1-rc4] - 23.06.2020
+
+### Changed
+
+    - Use tanglebay for comnet snapshots
+    - Updated external libs
+    - Increase shutdown time for big databases
+
+### Fixed
+
+    - Slow sync
+    - Pruning
+
+### Config file changes
+
+`config_comnet.json`
+
+```diff
+ "snapshots": {
+-    "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
++    "downloadURL": "https://ls.tanglebay.org/comnet/export.bin"
+ }
+```
+
 ## [0.4.1-rc3] - 19.06.2020
 
 ### Fixed
