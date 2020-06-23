@@ -45,8 +45,9 @@ func runRequestWorkers() {
 					}
 				}
 
-				newlyEnqueued := requestQueue.EnqueuePending(discardRequestsOlderThan)
-				if newlyEnqueued > 0 {
+				// always fire the signal if something is in the queue, otherwise the sting request is not kicking in
+				queued := requestQueue.EnqueuePending(discardRequestsOlderThan)
+				if queued > 0 {
 					select {
 					case requestQueueEnqueueSignal <- struct{}{}:
 					default:
