@@ -233,8 +233,9 @@ func ForEachTransactionHash(consumer TransactionHashBytesConsumer) {
 
 // tx +-0
 func DeleteTransaction(txHash hornet.Hash) {
-	txStorage.Delete(txHash)
+	// metadata has to be deleted before the tx, otherwise we could run into a data race in the object storage
 	metadataStorage.Delete(txHash)
+	txStorage.Delete(txHash)
 }
 
 func ShutdownTransactionStorage() {

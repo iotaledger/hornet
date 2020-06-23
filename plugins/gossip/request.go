@@ -45,8 +45,9 @@ func runRequestWorkers() {
 					}
 				}
 
-				newlyEnqueued := requestQueue.EnqueuePending(discardRequestsOlderThan)
-				if newlyEnqueued > 0 {
+				// always fire the signal if something is in the queue, otherwise the sting request is not kicking in
+				queued := requestQueue.EnqueuePending(discardRequestsOlderThan)
+				if queued > 0 {
 					select {
 					case requestQueueEnqueueSignal <- struct{}{}:
 					default:
@@ -178,29 +179,34 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms milestone.Index) {
 	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
-		cachedMsBundle := tangle.GetMilestoneOrNil(ms) // bundle +1
-		if cachedMsBundle == nil {
+
+		cachedMs := tangle.GetCachedMilestoneOrNil(ms) // milestone +1
+		if cachedMs == nil {
 			log.Panicf("milestone %d wasn't found", ms)
 		}
 
-		msBundleTailHash := cachedMsBundle.GetBundle().GetTailHash()
-		cachedMsBundle.Release(true) // bundle -1
+		msHash := cachedMs.GetMilestone().Hash
+		cachedMs.Release(true) // bundle -1
 
-		dag.TraverseApprovees(msBundleTailHash,
-			// predicate
-			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
+		dag.TraverseApprovees(msHash,
+			// traversal stops if no more transactions pass the given condition
+			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 				defer cachedTx.Release(true) // tx -1
 				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
-				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed
+				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTx *tangle.CachedTransaction) { // tx +1
+			func(cachedTx *tangle.CachedTransaction) error { // tx +1
 				defer cachedTx.Release(true) // tx -1
 				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+				return nil
 			},
 			// called on missing approvees
-			func(approveeHash hornet.Hash) {
+			func(approveeHash hornet.Hash) error {
 				Request(approveeHash, ms, preventDiscard...)
-			}, true)
+				return nil
+			},
+			// called on solid entry points
+			func(txHash hornet.Hash) {}, true, false, nil)
 	}
 }

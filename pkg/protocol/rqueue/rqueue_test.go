@@ -95,9 +95,9 @@ func TestRequestQueue(t *testing.T) {
 	assert.Zero(t, processing)
 
 	// enqueue pending again
-	newlyEnqueued := q.EnqueuePending(0)
+	queuedCnt := q.EnqueuePending(0)
 	queued, pending, processing = q.Size()
-	assert.Equal(t, queued, newlyEnqueued)
+	assert.Equal(t, queued, queuedCnt)
 	assert.Zero(t, pending)
 	assert.Zero(t, processing)
 	// -1 since we marked one request as received

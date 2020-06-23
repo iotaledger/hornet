@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -125,7 +128,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	if snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1 {
 		// Not enough history
-		return ErrNotEnoughHistory
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d", SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1)
 	}
 
 	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
@@ -138,9 +141,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		return ErrNoPruningNeeded
 	}
 
-	if snapshotInfo.EntryPointIndex+AdditionalPruningThreshold > targetIndex {
+	if snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1 > targetIndex {
 		// we prune in "AdditionalPruningThreshold" steps to recalculate the solidEntryPoints
-		return ErrNotEnoughHistory
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d", snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1)
 	}
 
 	setIsPruning(true)
@@ -189,26 +192,39 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		// Get all approvees of that milestone
-		cachedMsTailTx := tangle.GetCachedTransactionOrNil(cachedMs.GetMilestone().Hash) // tx +1
-		cachedMs.Release(true)                                                           // milestone -1
+		txsToCheckMap := make(map[string]struct{})
 
-		if cachedMsTailTx == nil {
-			// Milestone tail not found, pruning impossible
-			log.Warnf("Pruning milestone (%d) failed! Milestone tail tx not found!", milestoneIndex)
-			continue
-		}
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), true, nil)
-		cachedMsTailTx.Release(true) // tx -1
+		err := dag.TraverseApprovees(cachedMs.GetMilestone().Hash,
+			// traversal stops if no more transactions pass the given condition
+			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
+				defer cachedTx.Release(true) // tx -1
+				if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+					if at < milestoneIndex {
+						// Ignore Tx that were confirmed by older milestones
+						return false, nil
+					}
+				}
+				return true, nil
+			},
+			// consumer
+			func(cachedTx *tangle.CachedTransaction) error { // tx +1
+				defer cachedTx.Release(true) // tx -1
+				txsToCheckMap[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+				return nil
+			},
+			// called on missing approvees
+			func(approveeHash hornet.Hash) error { return nil },
+			// called on solid entry points
+			func(txHash hornet.Hash) {},
+			true,
+			// the pruning target index is also a solid entry point => traverse it anyways
+			milestoneIndex == targetIndex,
+			nil)
 
+		cachedMs.Release(true) // milestone -1
 		if err != nil {
 			log.Warnf("Pruning milestone (%d) failed! Error: %v", milestoneIndex, err)
 			continue
-		}
-
-		txsToCheckMap := make(map[string]struct{})
-		for _, approvee := range approvees {
-			txsToCheckMap[string(approvee)] = struct{}{}
 		}
 
 		txCount += pruneTransactions(txsToCheckMap)
@@ -218,7 +234,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
 
-		log.Infof("Pruning milestone (%d) took %v. Pruned %d transactions. ", milestoneIndex, time.Since(ts), txCount)
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCount, len(txsToCheckMap))
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}

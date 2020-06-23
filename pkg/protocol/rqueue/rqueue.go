@@ -35,7 +35,7 @@ type Queue interface {
 	// EnqueuePending enqueues all pending requests back into the queue.
 	// It also discards requests in the pending set of which their enqueue time is over the given delta threshold.
 	// If discardOlderThan is zero, no requests are discarded.
-	EnqueuePending(discardOlderThan time.Duration) (enqueued int)
+	EnqueuePending(discardOlderThan time.Duration) (queued int)
 	// Size returns the size of currently queued, requested/pending and processing requests.
 	Size() (queued int, pending int, processing int)
 	// Empty tells whether the queue has no queued and pending requests.
@@ -196,7 +196,7 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 	pq.Lock()
 	defer pq.Unlock()
 	if len(pq.queued) != 0 {
-		return 0
+		return len(pq.queued)
 	}
 	enqueued := len(pq.pending)
 	s := time.Now()

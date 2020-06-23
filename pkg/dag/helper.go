@@ -1,8 +1,6 @@
 package dag
 
 import (
-	"bytes"
-
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -58,20 +56,26 @@ func FindAllTails(txHash hornet.Hash, forceRelease bool) (map[string]struct{}, e
 }
 
 // Predicate defines whether a traversal should continue or not.
-type Predicate func(cachedTx *tangle.CachedTransaction) bool
+type Predicate func(cachedTx *tangle.CachedTransaction) (bool, error)
 
 // Consumer consumes the given transaction during traversal.
-type Consumer func(cachedTx *tangle.CachedTransaction)
+type Consumer func(cachedTx *tangle.CachedTransaction) error
 
 // OnMissingApprovee gets called when during traversal an approvee is missing.
-type OnMissingApprovee func(approveeHash hornet.Hash)
+type OnMissingApprovee func(approveeHash hornet.Hash) error
+
+// OnSolidEntryPoint gets called when during traversal the startTx or approvee is a solid entry point.
+type OnSolidEntryPoint func(txHash hornet.Hash)
 
 // TraverseApprovees starts to traverse the approvees of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
-func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, forceRelease bool) {
+func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
 	if tangle.SolidEntryPointsContain(startTxHash) {
-		return
+		onSolidEntryPoint(startTxHash)
+		if !traverseSolidEntryPoints {
+			return nil
+		}
 	}
 
 	processed := map[string]struct{}{}
@@ -80,19 +84,33 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 		for txHash := range txsToTraverse {
 			delete(txsToTraverse, txHash)
 
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
-				continue
+			select {
+			case <-abortSignal:
+				return tangle.ErrOperationAborted
+			default:
 			}
 
-			if !bytes.Equal(hornet.Hash(txHash), startTxHash) && !condition(cachedTx.Retain()) { // tx + 1
+			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
+			if cachedTx == nil {
+				return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", hornet.Hash(txHash).Trytes())
+			}
+
+			// check condition to decide if tx should be consumed and traversed
+			traverse, err := condition(cachedTx.Retain()) // tx + 1
+			if err != nil {
+				cachedTx.Release(forceRelease)
+				return err
+			}
+
+			if !traverse {
 				cachedTx.Release(forceRelease)
 				continue
 			}
 
-			// do not consume the start transaction
-			if !bytes.Equal(hornet.Hash(txHash), startTxHash) {
-				consumer(cachedTx.Retain()) // tx +1
+			// consume the tx
+			if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+				cachedTx.Release(forceRelease)
+				return err
 			}
 
 			approveeHashes := map[string]struct{}{
@@ -104,7 +122,10 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 			for approveeHash := range approveeHashes {
 				if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
-					continue
+					onSolidEntryPoint(hornet.Hash(approveeHash))
+					if !traverseSolidEntryPoints {
+						continue
+					}
 				}
 
 				if _, checked := processed[approveeHash]; checked {
@@ -115,7 +136,9 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 				cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // approvee +1
 				if cachedApproveeTx == nil {
-					onMissingApprovee(hornet.Hash(approveeHash))
+					if err := onMissingApprovee(hornet.Hash(approveeHash)); err != nil {
+						return err
+					}
 					continue
 				}
 
@@ -126,4 +149,6 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 			}
 		}
 	}
+
+	return nil
 }
