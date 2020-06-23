@@ -5,7 +5,8 @@ import (
 )
 
 var (
-	ErrOperationAborted = errors.New("operation was aborted")
+	ErrOperationAborted    = errors.New("operation was aborted")
+	ErrTransactionNotFound = errors.New("transaction not found")
 )
 
 func NewDatabaseError(cause error) *ErrDatabaseError {

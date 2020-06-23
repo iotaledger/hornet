@@ -187,7 +187,7 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 		cachedMsBundle.Release(true) // bundle -1
 
 		dag.TraverseApprovees(msBundleTailHash,
-			// predicate
+			// traversal stops if no more transactions pass the given condition
 			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
 				defer cachedTx.Release(true) // tx -1
 				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
@@ -201,6 +201,8 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 			// called on missing approvees
 			func(approveeHash hornet.Hash) {
 				Request(approveeHash, ms, preventDiscard...)
-			}, true)
+			},
+			// called on solid entry points
+			func(txHash hornet.Hash) {}, true, nil)
 	}
 }

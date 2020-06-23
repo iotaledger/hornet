@@ -223,46 +223,40 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	_, startTxConfirmedAt := cachedStartTx.GetMetadata().GetConfirmed()
 	defer cachedStartTx.Release(true)
 
-	if !tangle.SolidEntryPointsContain(cachedStartTx.GetTransaction().GetTxHash()) {
+	snapshotInfo := tangle.GetSnapshotInfo()
 
-		dag.TraverseApprovees(cachedStartTx.GetTransaction().GetTxHash(),
-			// predicate
-			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
-				defer cachedTx.Release(true) // tx -1
+	dag.TraverseApprovees(cachedStartTx.GetTransaction().GetTxHash(),
+		// traversal stops if no more transactions pass the given condition
+		func(cachedTx *tangle.CachedTransaction) bool { // tx +1
+			defer cachedTx.Release(true) // tx -1
 
-				if tangle.SolidEntryPointsContain(cachedTx.GetTransaction().GetTxHash()) {
-					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: 0})
+			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
+					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: at})
 					return false
 				}
+			}
 
-				if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
-					if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
-						result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: at})
-						return false
-					}
-				}
+			return true
+		},
+		// consumer
+		func(cachedTx *tangle.CachedTransaction) { // tx +1
+			defer cachedTx.Release(true) // tx -1
 
-				return true
-			},
-
-			// consumer
-			func(cachedTx *tangle.CachedTransaction) { // tx +1
-				defer cachedTx.Release(true) // tx -1
-
-				result.TanglePath = append(result.TanglePath,
-					&TransactionWithApprovers{
-						TxHash:            cachedTx.GetTransaction().GetTxHash().Trytes(),
-						TrunkTransaction:  cachedTx.GetTransaction().GetTrunkHash().Trytes(),
-						BranchTransaction: cachedTx.GetTransaction().GetBranchHash().Trytes(),
-					},
-				)
-			},
-			// called on missing approvees
-			func(approveeHash hornet.Hash) {}, true)
-
-	} else {
-		result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedStartTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: 0})
-	}
+			result.TanglePath = append(result.TanglePath,
+				&TransactionWithApprovers{
+					TxHash:            cachedTx.GetTransaction().GetTxHash().Trytes(),
+					TrunkTransaction:  cachedTx.GetTransaction().GetTrunkHash().Trytes(),
+					BranchTransaction: cachedTx.GetTransaction().GetBranchHash().Trytes(),
+				},
+			)
+		},
+		// called on missing approvees
+		func(approveeHash hornet.Hash) {},
+		// called on solid entry points
+		func(txHash hornet.Hash) {
+			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Trytes(), ConfirmedByMilestoneIndex: snapshotInfo.EntryPointIndex})
+		}, true, nil)
 
 	result.TanglePathLength = len(result.TanglePath)
 

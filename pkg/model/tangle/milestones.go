@@ -47,13 +47,13 @@ func ConfigureMilestones(cooAddr hornet.Hash, cooSecLvl int, cooMerkleTreeDepth 
 // bundle +1
 func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
 
-	cachedMilestone := GetCachedMilestoneOrNil(milestoneIndex) // cachedMilestone +1
-	if cachedMilestone == nil {
+	cachedMs := GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+	if cachedMs == nil {
 		return nil
 	}
-	defer cachedMilestone.Release(true) // cachedMilestone -1
+	defer cachedMs.Release(true) // milestone -1
 
-	return GetCachedBundleOrNil(cachedMilestone.GetMilestone().Hash)
+	return GetCachedBundleOrNil(cachedMs.GetMilestone().Hash)
 }
 
 // IsNodeSynced returns whether the node is synced.
