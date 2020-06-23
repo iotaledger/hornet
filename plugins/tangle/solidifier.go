@@ -416,11 +416,11 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetTransaction().GetTimestamp(), 0)
 	cachedMsTailTx.Release()
 
-	oldMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndexToSolidify - 1)	// milestone +1
+	oldMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
 	if oldMilestone == nil {
 		return nil, ErrMilestoneNotFound
 	}
-	defer oldMilestone.Release(true)	// milestone -1
+	defer oldMilestone.Release(true) // milestone -1
 
 	oldMilestoneTailTx := tangle.GetCachedTransactionOrNil(oldMilestone.GetMilestone().Hash)
 	if oldMilestoneTailTx == nil {

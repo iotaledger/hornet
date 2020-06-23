@@ -1,8 +1,6 @@
 package dag
 
 import (
-	"bytes"
-
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -58,13 +56,13 @@ func FindAllTails(txHash hornet.Hash, forceRelease bool) (map[string]struct{}, e
 }
 
 // Predicate defines whether a traversal should continue or not.
-type Predicate func(cachedTx *tangle.CachedTransaction) bool
+type Predicate func(cachedTx *tangle.CachedTransaction) (bool, error)
 
 // Consumer consumes the given transaction during traversal.
-type Consumer func(cachedTx *tangle.CachedTransaction)
+type Consumer func(cachedTx *tangle.CachedTransaction) error
 
 // OnMissingApprovee gets called when during traversal an approvee is missing.
-type OnMissingApprovee func(approveeHash hornet.Hash)
+type OnMissingApprovee func(approveeHash hornet.Hash) error
 
 // OnSolidEntryPoint gets called when during traversal the startTx or approvee is a solid entry point.
 type OnSolidEntryPoint func(txHash hornet.Hash)
@@ -95,14 +93,22 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 				return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", hornet.Hash(txHash).Trytes())
 			}
 
-			if !bytes.Equal(hornet.Hash(txHash), startTxHash) && !condition(cachedTx.Retain()) { // tx + 1
+			// check condition to decide if tx should be consumed and traversed
+			traverse, err := condition(cachedTx.Retain()) // tx + 1
+			if err != nil {
+				cachedTx.Release(forceRelease)
+				return err
+			}
+
+			if !traverse {
 				cachedTx.Release(forceRelease)
 				continue
 			}
 
-			// do not consume the start transaction
-			if !bytes.Equal(hornet.Hash(txHash), startTxHash) {
-				consumer(cachedTx.Retain()) // tx +1
+			// consume the tx
+			if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+				cachedTx.Release(forceRelease)
+				return err
 			}
 
 			approveeHashes := map[string]struct{}{
@@ -126,7 +132,9 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 				cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // approvee +1
 				if cachedApproveeTx == nil {
-					onMissingApprovee(hornet.Hash(approveeHash))
+					if err := onMissingApprovee(hornet.Hash(approveeHash)); err != nil {
+						return err
+					}
 					continue
 				}
 

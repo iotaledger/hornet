@@ -227,20 +227,20 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	dag.TraverseApprovees(cachedStartTx.GetTransaction().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
-		func(cachedTx *tangle.CachedTransaction) bool { // tx +1
+		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
 			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
 				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
 					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: at})
-					return false
+					return false, nil
 				}
 			}
 
-			return true
+			return true, nil
 		},
 		// consumer
-		func(cachedTx *tangle.CachedTransaction) { // tx +1
+		func(cachedTx *tangle.CachedTransaction) error { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
 			result.TanglePath = append(result.TanglePath,
@@ -250,9 +250,10 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 					BranchTransaction: cachedTx.GetTransaction().GetBranchHash().Trytes(),
 				},
 			)
+			return nil
 		},
 		// called on missing approvees
-		func(approveeHash hornet.Hash) {},
+		func(approveeHash hornet.Hash) error { return nil },
 		// called on solid entry points
 		func(txHash hornet.Hash) {
 			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Trytes(), ConfirmedByMilestoneIndex: snapshotInfo.EntryPointIndex})
