@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -126,7 +128,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	if snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1 {
 		// Not enough history
-		return ErrNotEnoughHistory
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d", SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1)
 	}
 
 	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
@@ -139,9 +141,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		return ErrNoPruningNeeded
 	}
 
-	if snapshotInfo.EntryPointIndex+AdditionalPruningThreshold > targetIndex {
+	if snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1 > targetIndex {
 		// we prune in "AdditionalPruningThreshold" steps to recalculate the solidEntryPoints
-		return ErrNotEnoughHistory
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d", snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1)
 	}
 
 	setIsPruning(true)
