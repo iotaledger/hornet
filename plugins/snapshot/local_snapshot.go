@@ -68,7 +68,7 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, m
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, collectForPruning bool, abortSignal <-chan struct{}) (hornet.Hashes, error) {
+func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, abortSignal <-chan struct{}) (hornet.Hashes, error) {
 
 	defer cachedMsTailTx.Release(true) // tx -1
 
@@ -105,12 +105,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangl
 
 			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
 			if cachedTx == nil {
-				if !collectForPruning {
-					return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Trytes())
-				}
-
-				// Go on if the tx is missing (needed for pruning of the database)
-				continue
+				return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
 
 			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
@@ -119,56 +114,39 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangl
 					cachedTx.Release(true) // tx -1
 					continue
 				}
+
+				approvees = append(approvees, hornet.Hash(txHash))
+
+				// Traverse the approvee
+				txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
+				txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
+
+				// Do not force release, since it is loaded again
+				cachedTx.Release() // tx -1
+
 			} else {
 				// Tx is not confirmed
-				if !collectForPruning {
-					if cachedTx.GetTransaction().IsTail() {
-						cachedTx.Release(true) // tx -1
-						return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Trytes())
-					}
-
-					// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
-					// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
-					// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
-					tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), true)
-					if err != nil {
-						cachedTx.Release(true) // tx -1
-						return nil, err
-					}
-
-					for tailTx := range tailTxs {
-						txsToTraverse[tailTx] = struct{}{}
-					}
-
-					// Ignore this transaction in the cone because it is not confirmed
+				if cachedTx.GetTransaction().IsTail() {
 					cachedTx.Release(true) // tx -1
-					continue
+					return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Trytes())
 				}
 
-				// Check if the we can walk further => if not, it should be fine (only used for pruning anyway)
-				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetTrunkHash()) {
-					// Do not force release, since it is loaded again
-					cachedTx.Release() // tx -1
-					approvees = append(approvees, hornet.Hash(txHash))
-					continue
+				// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
+				// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
+				// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
+				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), true)
+				if err != nil {
+					cachedTx.Release(true) // tx -1
+					return nil, err
 				}
 
-				if !tangle.ContainsTransaction(cachedTx.GetTransaction().GetBranchHash()) {
-					// Do not force release, since it is loaded again
-					cachedTx.Release() // tx -1
-					approvees = append(approvees, hornet.Hash(txHash))
-					continue
+				for tailTx := range tailTxs {
+					txsToTraverse[tailTx] = struct{}{}
 				}
+
+				// Ignore this transaction in the cone because it is not confirmed
+				cachedTx.Release(true) // tx -1
 			}
-
-			approvees = append(approvees, hornet.Hash(txHash))
-
-			// Traverse the approvee
-			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
-			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
-
-			// Do not force release, since it is loaded again
-			cachedTx.Release() // tx -1
 		}
 	}
 
@@ -223,7 +201,7 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
 		cachedMs.Release(true)                           // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), false, abortSignal)
+		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), abortSignal)
 
 		// Do not force release, since it is loaded again
 		cachedMsTailTx.Release() // tx -1
