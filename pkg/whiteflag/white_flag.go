@@ -35,6 +35,8 @@ type Confirmation struct {
 	TailsExcludedZeroValue []hornet.Hash
 	// Contains the updated state of the addresses which were mutated by the given confirmation.
 	NewAddressState map[string]int64
+	// Contains the mutations to the state of the addresses for the given confirmation.
+	AddressMutations map[string]int64
 	// The merkle tree root hash of all tails.
 	MerkleTreeHash []byte
 }
@@ -62,6 +64,7 @@ func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, er
 		TailsExcludedConflicting: make([]hornet.Hash, 0),
 		TailsExcludedZeroValue:   make([]hornet.Hash, 0),
 		NewAddressState:          make(map[string]int64),
+		AddressMutations:         make(map[string]int64),
 	}
 
 	for stack.Len() > 0 {
@@ -83,8 +86,9 @@ func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, 
 	stack.PushFront(trunkHash)
 	visited := make(map[string]struct{})
 	wfConfirmation := &Confirmation{
-		TailsIncluded:   make([]hornet.Hash, 0),
-		NewAddressState: make(map[string]int64),
+		TailsIncluded:    make([]hornet.Hash, 0),
+		NewAddressState:  make(map[string]int64),
+		AddressMutations: make(map[string]int64),
 	}
 	for stack.Len() > 0 {
 		if err := ProcessStack(stack, wfConfirmation, visited, newMilestoneIndex); err != nil {
@@ -209,13 +213,14 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 		// we only apply it to the milestone's confirming cone mutations if
 		// the bundle doesn't create any conflict.
 		patchedState := make(map[string]int64)
+		validMutations := make(map[string]int64)
 
 		for addr, change := range mutations {
 
 			// load state from milestone cone mutation or previous milestone
 			balance, has := wfConf.NewAddressState[addr]
 			if !has {
-				balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking([]byte(addr))
+				balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.Hash(addr))
 				if err != nil {
 					return fmt.Errorf("%w: unable to retrieve balance of address %s", err, addr)
 				}
@@ -234,6 +239,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 			}
 
 			patchedState[addr] = newBalance
+			validMutations[addr] = validMutations[addr] + change
 		}
 
 		if conflicting {
@@ -248,6 +254,11 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 		// in the milestone's confirming cone/previous ledger state.
 		for addr, balance := range patchedState {
 			wfConf.NewAddressState[addr] = balance
+		}
+
+		// incorporate the mutations in accordance with the previous mutations
+		for addr, mutation := range validMutations {
+			wfConf.AddressMutations[addr] = mutation
 		}
 
 		return nil
