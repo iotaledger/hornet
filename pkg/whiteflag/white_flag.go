@@ -173,10 +173,12 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	}
 
 	// verify that head and trunk txs are indeed tails
+	//noinspection GoNilness
 	if !trunkVisited && !cachedTrunkTx.GetTransaction().IsTail() {
 		return fmt.Errorf("%w: trunk tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxTrunkHash, bundleHeadTx.GetTxHash().Trytes())
 	}
 
+	//noinspection GoNilness
 	if !branchVisited && !cachedBranchTx.GetTransaction().IsTail() {
 		return fmt.Errorf("%w: branch tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxBranchHash, bundleHeadTx.GetTxHash().Trytes())
 	}
