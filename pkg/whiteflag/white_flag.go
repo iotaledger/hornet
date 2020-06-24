@@ -1,15 +1,18 @@
 package whiteflag
 
 import (
+	"bytes"
 	"container/list"
 	"errors"
 	"fmt"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 var (
@@ -25,13 +28,13 @@ var (
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
 type Confirmation struct {
 	// The tails of bundles which mutate the ledger in the order in which they were applied.
-	TailsIncluded []trinary.Hash
+	TailsIncluded []hornet.Hash
 	// The tails of bundles which were excluded as they were conflicting with the mutations.
-	TailsExcludedConflicting []trinary.Hash
+	TailsExcludedConflicting []hornet.Hash
 	// The tails which were excluded because they were part of a zero or spam value transfer.
-	TailsExcludedZeroValue []trinary.Hash
+	TailsExcludedZeroValue []hornet.Hash
 	// Contains the updated state of the addresses which were mutated by the given confirmation.
-	NewAddressState map[trinary.Hash]int64
+	NewAddressState map[string]int64
 	// The merkle tree root hash of all tails.
 	MerkleTreeHash []byte
 }
@@ -47,18 +50,18 @@ func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, er
 	msBundle := cachedMsBundle.GetBundle()
 
 	stack := list.New()
-	visited := map[trinary.Hash]struct{}{}
+	visited := map[string]struct{}{}
 	cachedMsTailTx := msBundle.GetTail()
-	msTailTxHash := cachedMsTailTx.GetTransaction().GetHash()
+	msTailTxHash := cachedMsTailTx.GetTransaction().GetTxHash()
 	cachedMsTailTx.Release()
 	stack.PushFront(msTailTxHash)
 
 	milestoneIndex := msBundle.GetMilestoneIndex()
 	wfConfirmation := &Confirmation{
-		TailsIncluded:            make([]trinary.Hash, 0),
-		TailsExcludedConflicting: make([]trinary.Hash, 0),
-		TailsExcludedZeroValue:   make([]trinary.Hash, 0),
-		NewAddressState:          make(map[trinary.Hash]int64),
+		TailsIncluded:            make([]hornet.Hash, 0),
+		TailsExcludedConflicting: make([]hornet.Hash, 0),
+		TailsExcludedZeroValue:   make([]hornet.Hash, 0),
+		NewAddressState:          make(map[string]int64),
 	}
 
 	for stack.Len() > 0 {
@@ -78,10 +81,10 @@ func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, er
 func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) ([]byte, error) {
 	stack := list.New()
 	stack.PushFront(trunkHash)
-	visited := make(map[trinary.Hash]struct{})
+	visited := make(map[string]struct{})
 	wfConfirmation := &Confirmation{
-		TailsIncluded:   make([]trinary.Hash, 0),
-		NewAddressState: make(map[trinary.Hash]int64),
+		TailsIncluded:   make([]hornet.Hash, 0),
+		NewAddressState: make(map[string]int64),
 	}
 	for stack.Len() > 0 {
 		if err := ProcessStack(stack, wfConfirmation, visited, newMilestoneIndex); err != nil {
@@ -110,10 +113,10 @@ func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, 
 // stack to be the next transaction to be examined on the subsequent ProcessStack() call (same with the branch
 // but only if the trunk wasn't pushed onto the stack). The ledger state must be write locked while this function
 // is getting called in order to ensure consistency.
-func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Hash]struct{}, milestoneIndex milestone.Index) error {
+func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]struct{}, milestoneIndex milestone.Index) error {
 	// load candidate tail tx
 	ele := stack.Front()
-	currentTxHash := ele.Value.(trinary.Hash)
+	currentTxHash := ele.Value.(hornet.Hash)
 	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash)
 	if cachedTx == nil {
 		return fmt.Errorf("%w: candidate tx %s doesn't exist", ErrMissingTransaction, currentTxHash)
@@ -122,13 +125,13 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 	currentTx := cachedTx.GetTransaction()
 
 	if !currentTx.IsTail() {
-		return fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, currentTx.GetHash())
+		return fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, currentTx.GetTxHash())
 	}
 
 	// load up bundle to retrieve trunk and branch of the head tx
-	cachedBundle := tangle.GetCachedBundleOrNil(currentTx.GetHash())
+	cachedBundle := tangle.GetCachedBundleOrNil(currentTx.GetTxHash())
 	if cachedBundle == nil {
-		return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", ErrMissingBundle, currentTx.Tx.Bundle, currentTx.GetHash())
+		return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", ErrMissingBundle, currentTx.Tx.Bundle, currentTx.GetTxHash().Trytes())
 	}
 	defer cachedBundle.Release()
 
@@ -139,13 +142,13 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 	cachedBundleHeadTx := cachedBundle.GetBundle().GetHead()
 	defer cachedBundleHeadTx.Release()
 	bundleHeadTx := cachedBundleHeadTx.GetTransaction()
-	headTxTrunkHash := bundleHeadTx.GetTrunk()
-	headTxBranchHash := bundleHeadTx.GetBranch()
+	headTxTrunkHash := bundleHeadTx.GetTrunkHash()
+	headTxBranchHash := bundleHeadTx.GetBranchHash()
 
 	var cachedTrunkTx, cachedBranchTx *tangle.CachedTransaction
 	var trunkVisited, trunkConfirmed, branchVisited, branchConfirmed bool
 
-	if _, trunkVisited = visited[headTxTrunkHash]; !trunkVisited {
+	if _, trunkVisited = visited[string(headTxTrunkHash)]; !trunkVisited {
 		if cachedTrunkTx = tangle.GetCachedTransactionOrNil(headTxTrunkHash); cachedTrunkTx == nil {
 			return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash)
 		}
@@ -159,8 +162,8 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 		cachedBranchTx = cachedTrunkTx
 	}
 
-	if headTxTrunkHash != headTxBranchHash {
-		if _, branchVisited = visited[headTxBranchHash]; !branchVisited {
+	if !bytes.Equal(headTxTrunkHash, headTxBranchHash) {
+		if _, branchVisited = visited[string(headTxBranchHash)]; !branchVisited {
 			if cachedBranchTx = tangle.GetCachedTransactionOrNil(headTxBranchHash); cachedBranchTx == nil {
 				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash)
 			}
@@ -171,11 +174,11 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 
 	// verify that head and trunk txs are indeed tails
 	if !trunkVisited && !cachedTrunkTx.GetTransaction().IsTail() {
-		return fmt.Errorf("%w: trunk tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxTrunkHash, bundleHeadTx.GetHash())
+		return fmt.Errorf("%w: trunk tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxTrunkHash, bundleHeadTx.GetTxHash().Trytes())
 	}
 
 	if !branchVisited && !cachedBranchTx.GetTransaction().IsTail() {
-		return fmt.Errorf("%w: branch tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxBranchHash, bundleHeadTx.GetHash())
+		return fmt.Errorf("%w: branch tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxBranchHash, bundleHeadTx.GetTxHash().Trytes())
 	}
 
 	// here we reached a tail of which its past cone was already visited or confirmed,
@@ -187,13 +190,13 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 		// we don't incorporate it as part of the mutations
 		bundle := cachedBundle.GetBundle()
 
-		visited[currentTx.GetHash()] = struct{}{}
+		visited[string(currentTx.GetTxHash())] = struct{}{}
 		stack.Remove(ele)
 
 		// exclude zero or spam value bundles
 		mutations := bundle.GetLedgerChanges()
 		if bundle.IsValueSpam() || len(mutations) == 0 {
-			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, currentTx.GetHash())
+			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, currentTx.GetTxHash())
 			return nil
 		}
 
@@ -203,14 +206,14 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 		// current mutations of the milestone's confirming cone (or previous ledger state).
 		// we only apply it to the milestone's confirming cone mutations if
 		// the bundle doesn't create any conflict.
-		patchedState := make(map[trinary.Hash]int64)
+		patchedState := make(map[string]int64)
 
 		for addr, change := range mutations {
 
 			// load state from milestone cone mutation or previous milestone
 			balance, has := wfConf.NewAddressState[addr]
 			if !has {
-				balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking(addr)
+				balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking([]byte(addr))
 				if err != nil {
 					return fmt.Errorf("%w: unable to retrieve balance of address %s", err, addr)
 				}
@@ -232,12 +235,12 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[trinary.Ha
 		}
 
 		if conflicting {
-			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, currentTx.GetHash())
+			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, currentTx.GetTxHash())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConf.TailsIncluded = append(wfConf.TailsIncluded, currentTx.GetHash())
+		wfConf.TailsIncluded = append(wfConf.TailsIncluded, currentTx.GetTxHash())
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.

@@ -3,8 +3,8 @@ package whiteflag
 import (
 	"crypto"
 	"math/bits"
-
-	"github.com/iotaledger/iota.go/trinary"
+	
+	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 // DefaultHasher is a BLAKE2 based Merkle tree.
@@ -32,7 +32,7 @@ func (t *Hasher) EmptyRoot() []byte {
 }
 
 // TreeHash computes the Merkle tree hash of the provided hashes.
-func (t *Hasher) TreeHash(tailHashes []trinary.Hash) []byte {
+func (t *Hasher) TreeHash(tailHashes []hornet.Hash) []byte {
 	if len(tailHashes) == 0 {
 		return t.EmptyRoot()
 	}
@@ -45,10 +45,10 @@ func (t *Hasher) TreeHash(tailHashes []trinary.Hash) []byte {
 }
 
 // HashLeaf returns the Merkle tree leaf hash of the input hash.
-func (t *Hasher) HashLeaf(hash trinary.Hash) []byte {
+func (t *Hasher) HashLeaf(hash hornet.Hash) []byte {
 	h := t.New()
 	h.Write([]byte{LeafHashPrefix})
-	h.Write(trinary.MustTrytesToBytes(hash))
+	h.Write(hash)
 	return h.Sum(nil)
 }
 
