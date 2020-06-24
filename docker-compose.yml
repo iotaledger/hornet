@@ -18,6 +18,7 @@ services:
     volumes:
       - ./config.json:/app/config.json:ro
       - ./config_comnet.json:/app/config_comnet.json:ro
+      - ./config_devnet.json:/app/config_devnet.json:ro
       - ./mqtt_config.json:/app/mqtt_config.json
       - ./profiles.json:/app/profiles.json
       - ./peering.json:/app/peering.json
