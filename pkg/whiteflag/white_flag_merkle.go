@@ -3,7 +3,7 @@ package whiteflag
 import (
 	"crypto"
 	"math/bits"
-	
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
@@ -21,7 +21,7 @@ type Hasher struct {
 	crypto.Hash
 }
 
-// New creates a new Hashers.LogHasher on the passed in hash function.
+// New creates a new Hasher on the passed in hash function.
 func New(h crypto.Hash) *Hasher {
 	return &Hasher{Hash: h}
 }
