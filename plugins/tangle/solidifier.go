@@ -382,7 +382,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	tangle.WriteLockLedger()
 	defer tangle.WriteUnlockLedger()
-	confirmMilestone(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTail()) // tx pass +1
+	confirmMilestone(milestoneIndexToSolidify, cachedMsToSolidify.Retain()) // bundle pass +1
 
 	tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
 	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
