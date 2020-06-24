@@ -1,0 +1,165 @@
+{
+    "useProfile": "auto",
+    "httpAPI": {
+        "basicAuth": {
+            "enabled": false,
+            "username": "",
+            "passwordHash": "",
+            "passwordSalt": ""
+        },
+        "excludeHealthCheckFromAuth": false,
+        "permitRemoteAccess": [
+            "getNodeInfo",
+            "getBalances",
+            "checkConsistency",
+            "getTransactionsToApprove",
+            "getInclusionStates",
+            "getNodeAPIConfiguration",
+            "wereAddressesSpentFrom",
+            "broadcastTransactions",
+            "findTransactions",
+            "storeTransactions",
+            "getTrytes"
+        ],
+        "whitelistedAddresses": [],
+        "bindAddress": "0.0.0.0:14265",
+        "limits": {
+            "bodyLengthBytes": 1000000,
+            "findTransactions": 1000,
+            "getTrytes": 1000,
+            "requestsList": 1000
+        }
+    },
+    "dashboard": {
+        "bindAddress": "localhost:8081",
+        "theme": "default",
+        "dev": false,
+        "basicAuth": {
+            "enabled": false,
+            "username": "",
+            "passwordHash": "",
+            "passwordSalt": ""
+        }
+    },
+    "db": {
+        "path": "devnetdb"
+    },
+    "snapshots": {
+        "loadType": "local",
+        "local": {
+            "depth": 50,
+            "intervalSynced": 50,
+            "intervalUnsynced": 1000,
+            "path": "snapshots/devnet/export.bin",
+            "downloadURL": "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
+        },
+        "global": {
+            "path": "snapshotDevnet.txt",
+            "spentAddressesPaths": [
+                "previousEpochsSpentAddresses1.txt",
+                "previousEpochsSpentAddresses2.txt",
+                "previousEpochsSpentAddresses3.txt"
+            ],
+            "index": 1050000
+        },
+        "pruning": {
+            "enabled": true,
+            "delay": 15000
+        }
+    },
+    "spentAddresses": {
+        "enabled": true
+    },
+    "coordinator": {
+        "address": "GYISMBVRKSCEXXTUPBWTIHRCZIKIRPDYAHAYKMNTPZSCSDNADDWAEUNHKUERZCTVAYJCNFXGTNUH9OGTW",
+        "securityLevel": 2,
+        "merkleTreeDepth": 22,
+        "mwm": 9,
+        "stateFilePath": "coordinator.state",
+        "merkleTreeFilePath": "coordinator.tree",
+        "intervalSeconds": 60,
+        "checkpointTransactions": 5
+    },
+    "network": {
+        "preferIPv6": false,
+        "gossip": {
+            "bindAddress": "0.0.0.0:15600",
+            "reconnectAttemptIntervalSeconds": 60
+        },
+        "autopeering": {
+            "bindAddress": "0.0.0.0:14626",
+            "runAsEntryNode": false,
+            "entryNodes": [],
+            "seed": ""
+        }
+    },
+    "tipsel": {
+        "belowMaxDepthTransactionLimit": 20000,
+        "maxDepth": 5
+    },
+    "node": {
+        "alias": "",
+        "showAliasInGetNodeInfo": false,
+        "disablePlugins": [],
+        "enablePlugins": []
+    },
+    "logger": {
+        "level": "info",
+        "disableCaller": true,
+        "encoding": "console",
+        "outputPaths": [
+            "stdout"
+        ]
+    },
+    "warpsync": {
+        "advancementRange": 200
+    },
+    "spammer": {
+        "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
+        "depth": 1,
+        "message": "Spamming with HORNET tipselect",
+        "tag": "HORNET99INTEGRATED99SPAMMER",
+        "cpuMaxUsage": 0.8,
+        "tpsRateLimit": 0.0,
+        "bundleSize": 1,
+        "valueSpam": false,
+        "workers": 0
+    },
+    "graph": {
+        "webRootPath": "IOTAtangle/webroot",
+        "domain": "",
+        "webSocket": {
+            "uri": ""
+        },
+        "bindAddress": "localhost:8083",
+        "networkName": "meets HORNET devnet",
+        "explorerTxLink": "http://localhost:8081/explorer/tx/",
+        "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
+    },
+    "monitor": {
+        "tangleMonitorPath": "tanglemonitor/frontend",
+        "domain": "",
+        "initialTransactions": 15000,
+        "remoteApiPort": 4433,
+        "webBindAddress": "localhost:4434",
+        "apiBindAddress": "localhost:4433",
+        "webSocket": {
+            "uri": ""
+        }
+    },
+    "mqtt": {
+        "config": "mqtt_config.json"
+    },
+    "zmq": {
+        "bindAddress": "localhost:5556"
+    },
+    "profiling": {
+        "bindAddress": "localhost:6060"
+    },
+    "prometheus": {
+        "bindAddress": "localhost:9311",
+        "goMetrics": false,
+        "processMetrics": false,
+        "promhttpMetrics": false
+    }
+}

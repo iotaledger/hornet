@@ -23,7 +23,7 @@ RUN apk --no-cache add ca-certificates curl jq tini tar\
     fi\
  && echo "Downloading from https://github.com/${REPO}/releases/download/v${HORNET_TAG}/HORNET-${HORNET_TAG}_${OS}_${ARCH}.tar.gz ..."\
  && curl -f -L --retry 3 "https://github.com/${REPO}/releases/download/v${HORNET_TAG}/HORNET-${HORNET_TAG}_${OS}_${ARCH}.tar.gz" -o /tmp/hornet.tgz\
- && tar --wildcards --strip-components=1 -xf /tmp/hornet.tgz -C /app/ */hornet */config.json */config_comnet.json */peering.json\
+ && tar --wildcards --strip-components=1 -xf /tmp/hornet.tgz -C /app/ */hornet */config.json */config_comnet.json */config_devnet.json */peering.json\
  && if [ "$ARCH" = "x86_64" ];\
     then\
       curl -f -L --retry 3 -o /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub;\
