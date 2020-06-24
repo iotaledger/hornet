@@ -5,10 +5,12 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/iotaledger/iota.go/trinary"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWhiteFlagMerkleTreeHash(t *testing.T) {
