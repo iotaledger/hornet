@@ -5,6 +5,7 @@ import (
 	"math/bits"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	_ "golang.org/x/crypto/blake2b" // required by crypto.BLAKE2b_512
 )
 
 // DefaultHasher is a BLAKE2 based Merkle tree.
