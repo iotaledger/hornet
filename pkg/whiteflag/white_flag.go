@@ -58,7 +58,6 @@ func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, er
 	cachedMsTailTx.Release()
 	stack.PushFront(msTailTxHash)
 
-	milestoneIndex := msBundle.GetMilestoneIndex()
 	wfConfirmation := &Confirmation{
 		TailsIncluded:            make([]hornet.Hash, 0),
 		TailsExcludedConflicting: make([]hornet.Hash, 0),
@@ -68,7 +67,7 @@ func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, er
 	}
 
 	for stack.Len() > 0 {
-		if err := ProcessStack(stack, wfConfirmation, visited, milestoneIndex); err != nil {
+		if err := ProcessStack(stack, wfConfirmation, visited); err != nil {
 			return nil, err
 		}
 	}
@@ -91,7 +90,7 @@ func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, 
 		AddressMutations: make(map[string]int64),
 	}
 	for stack.Len() > 0 {
-		if err := ProcessStack(stack, wfConfirmation, visited, newMilestoneIndex); err != nil {
+		if err := ProcessStack(stack, wfConfirmation, visited); err != nil {
 			return nil, err
 		}
 		// since we first feed the stack the trunk,
@@ -117,7 +116,7 @@ func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, 
 // stack to be the next transaction to be examined on the subsequent ProcessStack() call (same with the branch
 // but only if the trunk wasn't pushed onto the stack). The ledger state must be write locked while this function
 // is getting called in order to ensure consistency.
-func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]struct{}, milestoneIndex milestone.Index) error {
+func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]struct{}) error {
 	// load candidate tail tx
 	ele := stack.Front()
 	currentTxHash := ele.Value.(hornet.Hash)
@@ -157,7 +156,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 			return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash)
 		}
 		defer cachedTrunkTx.Release()
-		trunkConfirmed, _ = cachedTrunkTx.GetMetadata().GetConfirmed()
+		trunkConfirmed = cachedTrunkTx.GetMetadata().IsConfirmed()
 
 		// auto. set branch trunk to branch data,
 		// gets overwritten in case trunk != branch
