@@ -151,39 +151,44 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	var cachedTrunkTx, cachedBranchTx *tangle.CachedTransaction
 	var trunkVisited, trunkConfirmed, branchVisited, branchConfirmed bool
 
-	if _, trunkVisited = visited[string(headTxTrunkHash)]; !trunkVisited {
-		if cachedTrunkTx = tangle.GetCachedTransactionOrNil(headTxTrunkHash); cachedTrunkTx == nil {
-			return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash.Trytes())
-		}
-		defer cachedTrunkTx.Release()
-		trunkConfirmed = cachedTrunkTx.GetMetadata().IsConfirmed()
-
-		// auto. set branch trunk to branch data,
-		// gets overwritten in case trunk != branch
-		branchVisited = trunkVisited
-		branchConfirmed = trunkConfirmed
-		cachedBranchTx = cachedTrunkTx
-	}
-
-	if !bytes.Equal(headTxTrunkHash, headTxBranchHash) {
-		if _, branchVisited = visited[string(headTxBranchHash)]; !branchVisited {
-			if cachedBranchTx = tangle.GetCachedTransactionOrNil(headTxBranchHash); cachedBranchTx == nil {
-				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash.Trytes())
+	if !tangle.SolidEntryPointsContain(headTxTrunkHash) {
+		if _, trunkVisited = visited[string(headTxTrunkHash)]; !trunkVisited {
+			if cachedTrunkTx = tangle.GetCachedTransactionOrNil(headTxTrunkHash); cachedTrunkTx == nil {
+				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash.Trytes())
 			}
-			defer cachedBranchTx.Release()
-			branchConfirmed, _ = cachedBranchTx.GetMetadata().GetConfirmed()
+			defer cachedTrunkTx.Release()
+
+			// verify that head tx is indeed a tail
+			if !cachedTrunkTx.GetTransaction().IsTail() {
+				return fmt.Errorf("%w: trunk tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxTrunkHash, bundleHeadTx.GetTxHash().Trytes())
+			}
+
+			trunkConfirmed = cachedTrunkTx.GetMetadata().IsConfirmed()
+
+			// auto. set branch trunk to branch data,
+			// gets overwritten in case trunk != branch
+			branchVisited = trunkVisited
+			branchConfirmed = trunkConfirmed
+			cachedBranchTx = cachedTrunkTx
 		}
-	}
 
-	// verify that head and trunk txs are indeed tails
-	//noinspection GoNilness
-	if !trunkVisited && !cachedTrunkTx.GetTransaction().IsTail() {
-		return fmt.Errorf("%w: trunk tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxTrunkHash, bundleHeadTx.GetTxHash().Trytes())
 	}
+	if !bytes.Equal(headTxTrunkHash, headTxBranchHash) {
+		if !tangle.SolidEntryPointsContain(headTxBranchHash) {
+			if _, branchVisited = visited[string(headTxBranchHash)]; !branchVisited {
+				if cachedBranchTx = tangle.GetCachedTransactionOrNil(headTxBranchHash); cachedBranchTx == nil {
+					return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash.Trytes())
+				}
+				defer cachedBranchTx.Release()
 
-	//noinspection GoNilness
-	if !branchVisited && !cachedBranchTx.GetTransaction().IsTail() {
-		return fmt.Errorf("%w: branch tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxBranchHash, bundleHeadTx.GetTxHash().Trytes())
+				// verify that trunk tx is indeed a tail
+				if !cachedBranchTx.GetTransaction().IsTail() {
+					return fmt.Errorf("%w: branch tx %s of bundle head tx %s is not a tail", ErrMilestoneApprovedInvalidBundle, headTxBranchHash, bundleHeadTx.GetTxHash().Trytes())
+				}
+
+				branchConfirmed, _ = cachedBranchTx.GetMetadata().GetConfirmed()
+			}
+		}
 	}
 
 	// here we reached a tail of which its past cone was already visited or confirmed,
