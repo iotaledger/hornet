@@ -51,6 +51,7 @@ class TagResult {
 
 class ConfirmedState {
     state: boolean;
+    conflicting: boolean;
     milestone_index: number;
 }
 
