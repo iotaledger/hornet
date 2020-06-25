@@ -122,13 +122,13 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	currentTxHash := ele.Value.(hornet.Hash)
 	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash)
 	if cachedTx == nil {
-		return fmt.Errorf("%w: candidate tx %s doesn't exist", ErrMissingTransaction, currentTxHash)
+		return fmt.Errorf("%w: candidate tx %s doesn't exist", ErrMissingTransaction, currentTxHash.Trytes())
 	}
 	defer cachedTx.Release()
 	currentTx := cachedTx.GetTransaction()
 
 	if !currentTx.IsTail() {
-		return fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, currentTx.GetTxHash())
+		return fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, currentTx.GetTxHash().Trytes())
 	}
 
 	// load up bundle to retrieve trunk and branch of the head tx
@@ -153,7 +153,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 
 	if _, trunkVisited = visited[string(headTxTrunkHash)]; !trunkVisited {
 		if cachedTrunkTx = tangle.GetCachedTransactionOrNil(headTxTrunkHash); cachedTrunkTx == nil {
-			return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash)
+			return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash.Trytes())
 		}
 		defer cachedTrunkTx.Release()
 		trunkConfirmed = cachedTrunkTx.GetMetadata().IsConfirmed()
@@ -168,7 +168,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	if !bytes.Equal(headTxTrunkHash, headTxBranchHash) {
 		if _, branchVisited = visited[string(headTxBranchHash)]; !branchVisited {
 			if cachedBranchTx = tangle.GetCachedTransactionOrNil(headTxBranchHash); cachedBranchTx == nil {
-				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash)
+				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash.Trytes())
 			}
 			defer cachedBranchTx.Release()
 			branchConfirmed, _ = cachedBranchTx.GetMetadata().GetConfirmed()
