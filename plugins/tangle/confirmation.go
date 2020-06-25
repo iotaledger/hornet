@@ -51,9 +51,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 		}
 	}()
 
-	var txsConfirmed int
-	for _, txHash := range confirmation.TailsIncluded {
-
+	loadTx := func(txHash hornet.Hash) *tangle.CachedTransaction {
 		cachedTx, exists := cachedTxs[string(txHash)]
 		if !exists {
 			cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
@@ -62,38 +60,72 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 			}
 			cachedTxs[string(txHash)] = cachedTx
 		}
+		return cachedTx
+	}
 
-		// confirm all txs of the bundle
-		// we are only iterating over tail txs
+	loadBundle := func(txHash hornet.Hash) *tangle.CachedBundle {
 		cachedBundle, exists := cachedBundles[string(txHash)]
 		if !exists {
-			cachedBundle = tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
+			cachedBundle = tangle.GetCachedBundleOrNil(txHash) // bundle +1
 			if cachedBundle == nil {
-				//noinspection GoNilness
+				cachedTx := loadTx(txHash)
 				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash.Trytes(), cachedTx.GetTransaction().Tx.Bundle)
 			}
 			cachedBundles[string(txHash)] = cachedBundle
 		}
+		return cachedBundle
+	}
 
-		//noinspection GoNilness
-		bundleTxHashes := cachedBundle.GetBundle().GetTxHashes()
+	// we are only iterating over tail txs
+	onEachBundleTx := func(txHash hornet.Hash, do func(tx *tangle.CachedTransaction)) {
+		bundleTxHashes := loadBundle(txHash).GetBundle().GetTxHashes()
 		for _, bundleTxHash := range bundleTxHashes {
-
-			cachedBundleTx, exists := cachedTxs[string(bundleTxHash)]
-			if !exists {
-				cachedBundleTx = tangle.GetCachedTransactionOrNil(bundleTxHash) // tx +1
-				if cachedTx == nil {
-					log.Panicf("confirmMilestone: Transaction not found: %v", bundleTxHash.Trytes())
-				}
-				cachedTxs[string(bundleTxHash)] = cachedBundleTx
-			}
-
-			cachedBundleTx.GetMetadata().SetConfirmed(true, milestoneIndex)
-			txsConfirmed++
-			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-			Events.TransactionConfirmed.Trigger(cachedBundleTx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+			cachedBundleTx := loadTx(bundleTxHash)
+			do(cachedBundleTx)
 		}
 	}
 
-	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, tailsIncluded: %v, tailsConflicting: %v, tailsZeroValue: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, len(confirmation.TailsIncluded), len(confirmation.TailsExcludedConflicting), len(confirmation.TailsExcludedZeroValue), tc.Sub(ts), time.Since(ts))
+	var txsConfirmed int
+	var txsConflicting int
+	var txsValue int
+	var txsZeroValue int
+
+	// confirm all txs of the included tails
+	for _, txHash := range confirmation.TailsIncluded {
+		onEachBundleTx(txHash, func(tx *tangle.CachedTransaction) {
+			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			txsConfirmed++
+			txsValue++
+			metrics.SharedServerMetrics.ValueTransactions.Inc()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+		})
+	}
+
+	// confirm all txs of the zero value tails
+	for _, txHash := range confirmation.TailsExcludedZeroValue {
+		onEachBundleTx(txHash, func(tx *tangle.CachedTransaction) {
+			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			txsConfirmed++
+			txsZeroValue++
+			metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+		})
+	}
+
+	// confirm all conflicting txs of the conflicting tails
+	for _, txHash := range confirmation.TailsExcludedConflicting {
+		onEachBundleTx(txHash, func(tx *tangle.CachedTransaction) {
+			tx.GetMetadata().SetConflicting(true)
+			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			txsConflicting++
+			txsConfirmed++
+			metrics.SharedServerMetrics.ConflictingTransactions.Inc()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+		})
+	}
+
+	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, txsValue, txsZeroValue, txsConflicting, len(confirmation.TailsExcludedZeroValue), tc.Sub(ts), time.Since(ts))
 }

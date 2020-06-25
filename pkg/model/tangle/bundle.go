@@ -27,6 +27,7 @@ const (
 	MetadataIsMilestone          = 3
 	MetadataIsValueSpam          = 4
 	MetadataValidStrictSemantics = 5
+	MetadataConflicting          = 6
 )
 
 // Storable Object
@@ -196,6 +197,32 @@ func (bundle *Bundle) setValueSpam(valueSpam bool) {
 
 func (bundle *Bundle) IsValueSpam() bool {
 	return bundle.metadata.HasFlag(MetadataIsValueSpam)
+}
+
+func (bundle *Bundle) setConflicting(conflicting bool) {
+	if conflicting != bundle.metadata.HasFlag(MetadataConflicting) {
+		bundle.metadata = bundle.metadata.ModifyFlag(MetadataConflicting, conflicting)
+	}
+}
+
+func (bundle *Bundle) IsConflicting() bool {
+
+	conflicting := bundle.metadata.HasFlag(MetadataConflicting)
+
+	if conflicting {
+		return true
+	}
+
+	// Check tail tx
+	cachedTailTx := bundle.GetTail() // tx +1
+	defer cachedTailTx.Release(true) // tx -1
+	tailConflicting := cachedTailTx.GetMetadata().IsConflicting()
+
+	if tailConflicting {
+		bundle.setConflicting(true)
+	}
+
+	return tailConflicting
 }
 
 func (bundle *Bundle) GetMetadata() byte {
