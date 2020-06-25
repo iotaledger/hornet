@@ -107,9 +107,11 @@ func run(plugin *node.Plugin) {
 			cachedTx.Release(true) // tx -1
 			return
 		}
-
-		if _, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime); added { // tx pass +1
-			return // Avoid tx -1 (done inside workerpool task)
+		// Avoid notifying for conflicting txs
+		if !cachedTx.GetMetadata().IsConflicting() {
+			if _, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime); added { // tx pass +1
+				return // Avoid tx -1 (done inside workerpool task)
+			}
 		}
 		cachedTx.Release(true) // tx -1
 	})
