@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/t6b1"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -76,15 +77,10 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	}
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
-	// append trinary encoded merkle tree root hash to the head's signature message fragment data
-	if whiteFlagMerkleRootTreeHash != nil {
-		// TODO: replace with 6-trits per byte encoding
-		trinaryEncodedWFMerkleTreeRootHash, err := trinary.BytesToTrytes(whiteFlagMerkleRootTreeHash)
-		if err != nil {
-			return nil, err
-		}
-		siblingsTrytes += trinaryEncodedWFMerkleTreeRootHash
-	}
+
+	// append t6b1 encoded merkle tree root hash to the head's signature message fragment data
+	siblingsTrytes += t6b1.MustBytesToTrytes(whiteFlagMerkleRootTreeHash)
+
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.KeyFragmentLength/consts.TrinaryRadix)
 
 	tag := tagForIndex(index)
