@@ -79,16 +79,12 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 	switch name {
 	case "BLAKE2b-512":
 		hashFunc = crypto.BLAKE2b_512
-		break
 	case "BLAKE2b-384":
 		hashFunc = crypto.BLAKE2b_384
-		break
 	case "BLAKE2b-256":
 		hashFunc = crypto.BLAKE2b_256
-		break
 	case "BLAKE2s-256":
 		hashFunc = crypto.BLAKE2s_256
-		break
 	default:
 		panic(fmt.Sprintf("Unsupported merkle tree hash func '%s'", name))
 	}
