@@ -5,11 +5,7 @@ import (
 	"math/bits"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	_ "golang.org/x/crypto/blake2b" // required by crypto.BLAKE2b_512
 )
-
-// DefaultHasher is a BLAKE2 based Merkle tree.
-var DefaultHasher = New(crypto.BLAKE2b_512)
 
 // Domain separation prefixes
 const (
@@ -23,7 +19,7 @@ type Hasher struct {
 }
 
 // New creates a new Hasher on the passed in hash function.
-func New(h crypto.Hash) *Hasher {
+func NewHasher(h crypto.Hash) *Hasher {
 	return &Hasher{Hash: h}
 }
 

@@ -16,8 +16,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 	defer cachedMsBundle.Release()
 
 	ts := time.Now()
-
-	confirmation, err := whiteflag.ComputeConfirmation(cachedMsBundle.Retain())
+	confirmation, err := whiteflag.ComputeConfirmation(milestoneMerkleTreeHashFunc, cachedMsBundle.Retain())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		log.Panicf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)

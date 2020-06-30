@@ -3,15 +3,14 @@ package whiteflag
 import (
 	"bytes"
 	"container/list"
+	"crypto"
 	"errors"
 	"fmt"
-
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
@@ -47,7 +46,7 @@ type Confirmation struct {
 // Bundles within the approving cone must obey to strict schematics and be valid. Bundles causing conflicts are
 // ignored but do not create an error.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, error) {
+func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.CachedBundle) (*Confirmation, error) {
 	defer cachedMsBundle.Release()
 	msBundle := cachedMsBundle.GetBundle()
 
@@ -73,14 +72,14 @@ func ComputeConfirmation(cachedMsBundle *tangle.CachedBundle) (*Confirmation, er
 	}
 
 	// compute merkle tree root hash
-	wfConfirmation.MerkleTreeHash = DefaultHasher.TreeHash(wfConfirmation.TailsIncluded)
+	wfConfirmation.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConfirmation.TailsIncluded)
 	return wfConfirmation, nil
 }
 
 // ComputeMerkleTreeRootHash computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) ([]byte, error) {
+func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash trinary.Hash, branchHash trinary.Hash) ([]byte, error) {
 	stack := list.New()
 	stack.PushFront(trunkHash)
 	visited := make(map[string]struct{})
@@ -104,7 +103,7 @@ func ComputeMerkleTreeRootHash(trunkHash trinary.Hash, branchHash trinary.Hash, 
 		}
 	}
 
-	return DefaultHasher.TreeHash(wfConfirmation.TailsIncluded), nil
+	return NewHasher(merkleTreeHashFunc).TreeHash(wfConfirmation.TailsIncluded), nil
 }
 
 // ProcessStack retrieves the first element from the given stack, loads its bundle and then the trunk and

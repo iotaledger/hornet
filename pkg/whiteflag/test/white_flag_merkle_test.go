@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"crypto"
 	"encoding/hex"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestWhiteFlagMerkleTreeHash(t *testing.T) {
 	tailHashes = append(tailHashes, trinary.MustTrytesToBytes("Q9GHMAITEZCWKFIESJARYQYMF9XWFPQTTFRXULLHQDWEZLYBSFYHSLPXEHBORDDFYZRFYFGDCM9VJKEFR"))
 	tailHashes = append(tailHashes, trinary.MustTrytesToBytes("GMNECTSPSLSPPEITCHBXSN9KZD9OZPVPOET9TVQJDZMFGN9SGPRPMUQARNXUVKMWAFAKLKWBZLWZCTPCP"))
 
-	hash := whiteflag.DefaultHasher.TreeHash(tailHashes)
+	hash := whiteflag.NewHasher(crypto.BLAKE2b_512).TreeHash(tailHashes)
 
 	expectedHash, err := hex.DecodeString("d07161bdb535afb7dbb3f5b2fb198ecf715cbd9dfca133d2b48d67b1e11173c6f92bed2f4dca92c36e8d1ef279a0c19ca9e40a113e9f5526090342988f86e53a")
 	require.NoError(t, err)
