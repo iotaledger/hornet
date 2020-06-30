@@ -1,0 +1,48 @@
+# golang 1.14.4-buster
+FROM golang@sha256:ebe7f5d1a2a6b884bc1a45b8c1ff7e26b7b95938a3e8847ea96fc6761fdc2b77 AS build
+
+# Ensure ca-certficates are up to date
+RUN update-ca-certificates
+
+# Set the current Working Directory inside the container
+RUN mkdir /app
+WORKDIR /app
+
+# Use Go Modules
+COPY go.mod .
+COPY go.sum .
+
+ENV GO111MODULE=on
+RUN go mod download
+RUN go mod verify
+
+# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
+COPY . .
+
+# Build the binary
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags="pow_avx" \
+      -ldflags='-w -s -extldflags "-static"' -a \
+       -o /go/bin/hornet
+
+############################
+# Image
+############################
+# using static nonroot image
+# user:group is nonroot:nonroot, uid:gid = 65532:65532
+FROM gcr.io/distroless/static@sha256:23aa732bba4c8618c0d97c26a72a32997363d591807b0d4c31b0bbc8a774bddf
+
+EXPOSE 8081/tcp
+EXPOSE 14265/tcp
+EXPOSE 15600/tcp
+EXPOSE 14626/udp
+
+# Copy assets into distroless image
+COPY --from=build /go/bin/hornet /app/hornet
+COPY ./config.json /app/config.json
+COPY ./config_comnet.json /app/config_comnet.json
+COPY ./config_devnet.json /app/config_devnet.json
+COPY ./peering.json /app/peering.json
+COPY ./profiles.json /app/profiles.json
+COPY ./mqtt_config.json /app/mqtt_config.json
+
+ENTRYPOINT ["/app/hornet"]

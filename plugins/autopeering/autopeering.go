@@ -1,12 +1,13 @@
 package autopeering
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash/fnv"
 	"net"
 	"strings"
+
+	"github.com/mr-tron/base58/base58"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
@@ -74,7 +75,7 @@ func isValidPeer(p *peer.Peer) bool {
 func start(local *Local, shutdownSignal <-chan struct{}) {
 	defer log.Info("Stopping Autopeering ... done")
 
-	log.Info("WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!")
+	log.Info("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
 	lPeer := local.PeerLocal
 	peering := lPeer.Services().Get(service.PeeringKey)
@@ -111,7 +112,7 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	}
 
 	ID = lPeer.ID().String()
-	log.Infof("started: ID=%s Address=%s/%s PublicKey=%s", lPeer.ID(), localAddr.String(), localAddr.Network(), base64.StdEncoding.EncodeToString(lPeer.PublicKey().Bytes()))
+	log.Infof("started: ID=%s Address=%s/%s PublicKey=%s", lPeer.ID(), localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
 
 	<-shutdownSignal
 	err = local.Close()
@@ -132,7 +133,7 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 			return nil, fmt.Errorf("%w: entry node parts must be 2, is %d", ErrParsingEntryNode, len(parts))
 		}
 
-		pubKey, err := base64.StdEncoding.DecodeString(parts[0])
+		pubKey, err := base58.Decode(parts[0])
 		if err != nil {
 			return nil, fmt.Errorf("%w: invalid public key: %s", ErrParsingEntryNode, err)
 		}

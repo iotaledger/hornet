@@ -21,7 +21,7 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion          = "0.4.0"
+	AppVersion          = "0.4.1"
 	LatestGithubVersion = AppVersion
 
 	// AppName app code name
@@ -40,8 +40,8 @@ func onAddPlugin(name string, status int) {
 }
 
 func init() {
-	for name, status := range node.GetPlugins() {
-		onAddPlugin(name, status)
+	for name, plugin := range node.GetPlugins() {
+		onAddPlugin(name, plugin.Status)
 	}
 
 	node.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
@@ -66,6 +66,7 @@ func configure(plugin *node.Plugin) {
 		Owner:             "gohornet",
 		Repository:        "hornet",
 		FixVersionStrFunc: fixVersion,
+		TagFilterFunc:     includeVersionInCheck,
 	}
 
 	fmt.Printf(`
@@ -95,6 +96,19 @@ func fixVersion(version string) string {
 		ver = strings.Replace(ver, "-rc", "-rc.", 1)
 	}
 	return ver
+}
+
+func includeVersionInCheck(version string) bool {
+	isPrerelease := func(ver string) bool {
+		return strings.Contains(ver, "-rc")
+	}
+
+	if isPrerelease(AppVersion) {
+		// When using pre-release versions, check for any updates
+		return true
+	}
+
+	return !isPrerelease(version)
 }
 
 func checkLatestVersion() {

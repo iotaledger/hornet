@@ -16,6 +16,7 @@ import NodeStore from "app/stores/NodeStore";
 import {inject, observer} from "mobx-react";
 import ListGroup from "react-bootstrap/ListGroup";
 import Card from "react-bootstrap/Card";
+import Badge from "react-bootstrap/Badge";
 import MemChart from "app/components/MemChart";
 import {Choose, Otherwise, When} from 'tsx-control-statements/components';
 import * as style from '../../assets/main.css';
@@ -41,7 +42,16 @@ export class Dashboard extends React.Component<Props, any> {
                     <Col md={6} xs={12}>
                         <Card className={`${style.hornetCardEqual}`}>
                             <Card.Body>
-                                <Card.Title>Status</Card.Title>
+                                <Card.Title>
+                                    Status
+                                    {' '}
+                                    {
+                                        this.props.nodeStore.isNodeSync ?
+                                            <Badge variant="success">Synced</Badge>
+                                            :
+                                            <Badge variant="warning">Not Synced</Badge>
+                                    }
+                                </Card.Title>
                                 <Row>
                                     <Col>
                                         <ListGroup variant={"flush"}>

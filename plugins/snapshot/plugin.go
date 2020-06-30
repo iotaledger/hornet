@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -34,6 +35,7 @@ var (
 	log    *logger.Logger
 
 	overwriteCooAddress = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
+	forceGlobalSnapshot = pflag.Bool("forceGlobalSnapshot", false, "force loading of a global snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
@@ -95,7 +97,7 @@ func configure(plugin *node.Plugin) {
 		// Check coordinator address in database
 		if !bytes.Equal(snapshotInfo.CoordinatorAddress, coordinatorAddress) {
 			if !*overwriteCooAddress {
-				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress, config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
+				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress.Trytes(), config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
 			}
 
 			// Overwrite old coordinator address
@@ -103,15 +105,22 @@ func configure(plugin *node.Plugin) {
 			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 
-		// Check the ledger state
-		tangle.GetLedgerStateForLSMI(nil)
-		return
+		if !*forceGlobalSnapshot {
+			// If we don't enforce loading of a global snapshot,
+			// we can check the ledger state of current database and start the node.
+			tangle.GetLedgerStateForLSMI(nil)
+			return
+		}
+	}
+
+	snapshotTypeToLoad := strings.ToLower(config.NodeConfig.GetString(config.CfgSnapshotLoadType))
+
+	if *forceGlobalSnapshot && snapshotTypeToLoad != "global" {
+		log.Fatalf("global snapshot enforced but wrong snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
 	}
 
 	var err = ErrNoSnapshotSpecified
-
-	snapshotTypeToLoad := config.NodeConfig.GetString(config.CfgSnapshotLoadType)
-	switch strings.ToLower(snapshotTypeToLoad) {
+	switch snapshotTypeToLoad {
 	case "global":
 		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
 			err = LoadGlobalSnapshot(path,
@@ -122,6 +131,10 @@ func configure(plugin *node.Plugin) {
 		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
 
 			if _, fileErr := os.Stat(path); os.IsNotExist(fileErr) {
+				// create dir if it not exists
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					log.Fatalf("could not create snapshot dir '%s'", path)
+				}
 				if url := config.NodeConfig.GetString(config.CfgLocalSnapshotsDownloadURL); url != "" {
 					log.Infof("Downloading snapshot from %s", url)
 					downloadErr := downloadSnapshotFile(path, url)
@@ -139,7 +152,7 @@ func configure(plugin *node.Plugin) {
 			err = LoadSnapshotFromFile(path)
 		}
 	default:
-		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, snapshotTypeToLoad)
+		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
 	}
 
 	if err != nil {
@@ -227,7 +240,7 @@ func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
 }
 
 func installGenesisTransaction() {
-	// ensure genesis transaction exists
+	// ensure genesis transaction exists for legacy gossip
 	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
 	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
 	genesis.Hash = consts.NullHashTrytes

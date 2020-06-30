@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	autopeering "github.com/iotaledger/hive.go/autopeering/peer"
@@ -19,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/handshake"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
 var (
@@ -171,6 +173,10 @@ func (m *Manager) IsStaticallyPeered(ips []string, port uint16) bool {
 
 		// check all peers in the reconnect pool
 		for _, reconnectInfo := range m.reconnect {
+			// if the static peer has no DNS records, CachedIPs would be nil
+			if reconnectInfo.CachedIPs == nil {
+				continue
+			}
 			for reconnectInfoIP := range reconnectInfo.CachedIPs.IPs {
 				reconnectID := peer.NewID(reconnectInfoIP.String(), reconnectInfo.OriginAddr.Port)
 
@@ -238,8 +244,8 @@ func (m *Manager) WhitelistRemove(id string) {
 }
 
 // PeerConsumerFunc is a function which consumes a peer.
-// If it returns true, it signals that no further calls should be made to the function.
-type PeerConsumerFunc func(p *peer.Peer) (abort bool)
+// If it returns false, it signals that no further calls should be made to the function.
+type PeerConsumerFunc func(p *peer.Peer) bool
 
 // ForAllConnected executes the given function for each currently connected peer until
 // abort is returned from within the consumer function. The consumer function is
@@ -251,10 +257,49 @@ func (m *Manager) ForAllConnected(f PeerConsumerFunc) {
 		if !p.Handshaked() {
 			continue
 		}
-		if f(p) {
+		if !f(p) {
 			break
 		}
 	}
+}
+
+// ForAll executes the given function for each peer until
+// abort is returned from within the consumer function.
+func (m *Manager) ForAll(f PeerConsumerFunc) {
+	m.RLock()
+	defer m.RUnlock()
+	for _, p := range m.connected {
+		if !f(p) {
+			return
+		}
+	}
+	for _, p := range m.reconnect {
+		peer := &peer.Peer{
+			ID:          p.OriginAddr.Addr,
+			InitAddress: p.OriginAddr,
+			Addresses:   p.CachedIPs,
+			Autopeering: p.Autopeering,
+		}
+		if !f(peer) {
+			return
+		}
+	}
+}
+
+// AnySTINGPeerConnected returns true if any of the connected, handshaked peers supports the STING protocol.
+func (m *Manager) AnySTINGPeerConnected() bool {
+	stingPeerConnected := false
+
+	m.ForAllConnected(func(p *peer.Peer) bool {
+		if !p.Protocol.Supports(sting.FeatureSet) {
+			return true
+		}
+
+		stingPeerConnected = true
+		return false
+	})
+
+	return stingPeerConnected
 }
 
 // PeerInfos returns snapshots of the currently connected and in the reconnect pool residing peers.
@@ -311,32 +356,45 @@ func (m *Manager) SlotsFilled() bool {
 // SetupEventHandlers inits the event handlers for handshaking, the underlying connection and errors.
 func (m *Manager) SetupEventHandlers(p *peer.Peer) {
 
-	// pipe data from the connection into the protocol
-	p.Conn.Events.ReceiveData.Attach(events.NewClosure(p.Protocol.Receive))
+	onProtocolReceive := events.NewClosure(p.Protocol.Receive)
 
-	// propagate errors up
-	p.Conn.Events.Error.Attach(events.NewClosure(func(err error) {
+	onConnectionError := events.NewClosure(func(err error) {
 		if p.Disconnected {
 			return
 		}
 		m.Events.Error.Trigger(err)
-	}))
+	})
 
-	// any error on the protocol level resolves to shutting down the connection
-	p.Protocol.Events.Error.Attach(events.NewClosure(func(err error) {
+	onProtocolError := events.NewClosure(func(err error) {
 		if p.Disconnected {
 			return
 		}
 		if err := p.Conn.Close(); err != nil {
 			m.Events.Error.Trigger(err)
 		}
-	}))
+	})
 
-	p.Conn.Events.Close.Attach(events.NewClosure(func() {
+	onConnectionClose := events.NewClosure(func() {
 		m.Lock()
 		m.moveFromConnectedToReconnectPool(p)
 		m.Unlock()
-	}))
+
+		p.Conn.Events.ReceiveData.Detach(onProtocolReceive)
+		p.Conn.Events.Error.Detach(onConnectionError)
+		p.Protocol.Events.Error.Detach(onProtocolError)
+	})
+
+	// pipe data from the connection into the protocol
+	p.Conn.Events.ReceiveData.Attach(onProtocolReceive)
+
+	// propagate errors up
+	p.Conn.Events.Error.Attach(onConnectionError)
+
+	// any error on the protocol level resolves to shutting down the connection
+	p.Protocol.Events.Error.Attach(onProtocolError)
+
+	// move peer to reconnected pool and detach all events
+	p.Conn.Events.Close.Attach(onConnectionClose)
 
 	m.setupHandshakeEventHandlers(p)
 }
@@ -456,6 +514,12 @@ func (m *Manager) Listen() error {
 	if err != nil {
 		return fmt.Errorf("%w: '%s' is an invalid bind address", err, m.Opts.BindAddress)
 	}
+
+	// We assume that addr is a literal IPv6 address if it has colons.
+	if strings.Contains(addr, ":") {
+		addr = "[" + addr + "]"
+	}
+
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return fmt.Errorf("%w: '%s' contains an invalid port", err, m.Opts.BindAddress)

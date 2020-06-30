@@ -79,13 +79,7 @@ func StoreApprover(txHash hornet.Hash, approverHash hornet.Hash) *CachedApprover
 
 	approver := hornet.NewApprover(txHash, approverHash)
 
-	cachedObj := approversStorage.ComputeIfAbsent(approver.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // approvers +1
-		approver.Persist()
-		approver.SetModified()
-		return approver
-	})
-
-	return &CachedApprover{CachedObject: cachedObj}
+	return &CachedApprover{CachedObject: approversStorage.Store(approver)}
 }
 
 // approvers +-0

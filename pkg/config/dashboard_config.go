@@ -1,5 +1,9 @@
 package config
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 const (
 	// the bind address on which the dashboard can be access from
 	CfgDashboardBindAddress = "dashboard.bindAddress"
@@ -18,11 +22,11 @@ const (
 )
 
 func init() {
-	NodeConfig.SetDefault(CfgDashboardBindAddress, "localhost:8081")
-	NodeConfig.SetDefault(CfgDashboardDevMode, false)
-	NodeConfig.SetDefault(CfgDashboardBasicAuthEnabled, false)
-	NodeConfig.SetDefault(CfgDashboardBasicAuthUsername, "")
-	NodeConfig.SetDefault(CfgDashboardBasicAuthPasswordHash, "")
-	NodeConfig.SetDefault(CfgDashboardBasicAuthPasswordSalt, "")
-	NodeConfig.SetDefault(CfgDashboardTheme, "default")
+	flag.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
+	flag.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
+	flag.Bool(CfgDashboardBasicAuthEnabled, false, "whether to use HTTP basic auth")
+	flag.String(CfgDashboardBasicAuthUsername, "", "the HTTP basic auth username")
+	flag.String(CfgDashboardBasicAuthPasswordHash, "", "the HTTP basic auth username")
+	flag.String(CfgDashboardBasicAuthPasswordSalt, "", "the HTTP basic auth password+salt as a sha256 hash")
+	flag.String(CfgDashboardTheme, "default", "the theme for the dashboard to use (default or dark)")
 }

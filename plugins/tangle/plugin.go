@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -32,6 +33,9 @@ var (
 	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
+
+	onSolidMilestoneChanged        *events.Closure
+	onPruningMilestoneIndexChanged *events.Closure
 )
 
 func init() {
@@ -66,6 +70,36 @@ func configure(plugin *node.Plugin) {
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
 	)
 
+	configureEvents()
+	configureTangleProcessor(plugin)
+
+	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
+}
+
+func run(plugin *node.Plugin) {
+
+	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.GetBool(config.CfgDatabaseDebug) {
+		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
+
+		if err := revalidateDatabase(); err != nil {
+			if err == tangle.ErrOperationAborted {
+				log.Info("database revalidation aborted")
+				os.Exit(0)
+			}
+			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
+		}
+		log.Info("database revalidation successful")
+	}
+
+	// run a full database garbage collection at startup
+	database.RunGarbageCollection()
+
+	daemon.BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
+		attachEvents()
+		<-shutdownSignal
+		detachEvents()
+	}, shutdown.PriorityHeartbeats)
+
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		abortMilestoneSolidification()
@@ -84,36 +118,6 @@ func configure(plugin *node.Plugin) {
 
 	}, shutdown.PriorityFlushToDatabase)
 
-	Events.SolidMilestoneChanged.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		defer cachedBndl.Release() // bundle -1
-		// notify peers about our new solid milestone index
-		gossip.BroadcastHeartbeat()
-	}))
-
-	Events.PruningMilestoneIndexChanged.Attach(events.NewClosure(func(msIndex milestone.Index) {
-		// notify peers about our new pruning milestone index
-		gossip.BroadcastHeartbeat()
-	}))
-
-	configureTangleProcessor(plugin)
-
-	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
-}
-
-func run(plugin *node.Plugin) {
-
-	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.GetBool(config.CfgDatabaseDebug) {
-		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
-
-		if err := revalidateDatabase(); err != nil {
-			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
-		}
-		log.Info("database revalidation successful")
-	}
-
-	// run a full database garbage collection at startup
-	database.RunGarbageCollection()
-
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
 	if latestMilestoneFromDatabase < tangle.GetSolidMilestoneIndex() {
@@ -127,6 +131,29 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
+}
+
+func configureEvents() {
+	onSolidMilestoneChanged = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+		defer cachedBndl.Release() // bundle -1
+		// notify peers about our new solid milestone index
+		gossip.BroadcastHeartbeat()
+	})
+
+	onPruningMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+		// notify peers about our new pruning milestone index
+		gossip.BroadcastHeartbeat()
+	})
+}
+
+func attachEvents() {
+	Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+	Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+}
+
+func detachEvents() {
+	Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+	Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 }
 
 // SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup

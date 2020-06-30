@@ -64,7 +64,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		result.MilestoneStartIndex = snapshotInfo.PruningIndex
-		result.LastSnapshottedMilestoneIndex = snapshotInfo.PruningIndex
+		result.LastSnapshottedMilestoneIndex = snapshotInfo.SnapshotIndex
 	}
 
 	// System time

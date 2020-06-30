@@ -1,10 +1,10 @@
 package autopeering
 
 import (
-	"encoding/base64"
 	"net"
 	"strconv"
 
+	"github.com/mr-tron/base58/base58"
 	"go.etcd.io/bbolt"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
@@ -67,7 +67,7 @@ func NewLocal() *Local {
 	// set the private key from the seed provided in the config
 	var seed [][]byte
 	if str := config.NodeConfig.GetString(config.CfgNetAutopeeringSeed); str != "" {
-		bytes, err := base64.StdEncoding.DecodeString(str)
+		bytes, err := base58.Decode(str)
 		if err != nil {
 			log.Fatalf("Invalid %s: %s", config.CfgNetAutopeeringSeed, err)
 		}
@@ -92,7 +92,7 @@ func NewLocal() *Local {
 		log.Fatalf("Error creating local: %s", err)
 	}
 
-	log.Infof("Initialized local: peer://%s@%s", base64.StdEncoding.EncodeToString(local.PublicKey().Bytes()), local.Address())
+	log.Infof("Initialized local: peer://%s@%s", local.PublicKey().String(), local.Address())
 
 	return &Local{
 		PeerLocal: local,

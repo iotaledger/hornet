@@ -1,5 +1,9 @@
 package config
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 // PeerConfig holds the initial information about peers.
 type PeerConfig struct {
 	ID         string `json:"identity" mapstructure:"identity"`
@@ -39,26 +43,27 @@ const (
 )
 
 func init() {
+
 	// gossip
-	NodeConfig.SetDefault(CfgNetPreferIPv6, false)
-	NodeConfig.SetDefault(CfgNetGossipBindAddress, "0.0.0.0:15600")
-	NodeConfig.SetDefault(CfgNetGossipReconnectAttemptIntervalSeconds, 60)
+	flag.Bool(CfgNetPreferIPv6, false, "defines if IPv6 is preferred for peers added through the API")
+	flag.String(CfgNetGossipBindAddress, "0.0.0.0:15600", "the bind address of the gossip TCP server")
+	flag.Int(CfgNetGossipReconnectAttemptIntervalSeconds, 60, "the number of seconds to wait before trying to reconnect to a disconnected peer")
 
 	// peering
-	PeeringConfig.SetDefault(CfgPeeringAcceptAnyConnection, false)
-	PeeringConfig.SetDefault(CfgPeeringMaxPeers, 5)
+	flag.Bool(CfgPeeringAcceptAnyConnection, false, "enable inbound connections from unknown peers")
+	flag.Int(CfgPeeringMaxPeers, 5, "set the maximum number of peers")
 	PeeringConfig.SetDefault(CfgPeers, []PeerConfig{})
 
 	// autopeering
-	NodeConfig.SetDefault(CfgNetAutopeeringEntryNodes, []string{
-		"LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
-		"zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
-		"npLI53UCxBvOJaV0xv/mzWuV+f+pduc6GzE83jM/5uo=@entrynode.tanglebay.org:14626",
-	})
-	NodeConfig.SetDefault(CfgNetAutopeeringBindAddr, "0.0.0.0:14626")
-	NodeConfig.SetDefault(CfgNetAutopeeringSeed, nil)
-	NodeConfig.SetDefault(CfgNetAutopeeringRunAsEntryNode, false)
-	NodeConfig.SetDefault(CfgNetAutopeeringInboundPeers, 2)
-	NodeConfig.SetDefault(CfgNetAutopeeringOutboundPeers, 2)
-	NodeConfig.SetDefault(CfgNetAutopeeringSaltLifetime, 30)
+	flag.StringSlice(CfgNetAutopeeringEntryNodes, []string{
+		"46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
+		"EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
+		"2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
+	}, "list of autopeering entry nodes to use")
+	flag.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for global services such as autopeering and gossip")
+	flag.String(CfgNetAutopeeringSeed, "", "private key seed used to derive the node identity; optional Base64 encoded 256-bit string")
+	flag.Bool(CfgNetAutopeeringRunAsEntryNode, false, "whether the node should act as an autopeering entry node")
+	flag.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")
+	flag.Int(CfgNetAutopeeringOutboundPeers, 2, "the number of outbound autopeers")
+	flag.Int(CfgNetAutopeeringSaltLifetime, 30, "lifetime (in minutes) of the private and public local salt")
 }

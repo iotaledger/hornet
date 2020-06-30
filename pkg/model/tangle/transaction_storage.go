@@ -20,6 +20,10 @@ func TransactionCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedTx *CachedTransaction))(params[0].(*CachedTransaction).Retain())
 }
 
+func TransactionHashCaller(handler interface{}, params ...interface{}) {
+	handler.(func(txHash hornet.Hash))(params[0].(hornet.Hash))
+}
+
 func NewTransactionCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedTx *CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
@@ -178,35 +182,31 @@ func ContainsTransaction(txHash hornet.Hash) bool {
 // tx +1
 func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *CachedTransaction, newlyAdded bool) {
 
-	// Store metadata first, because existence is checked via tx
-	newlyAddedMetadata := false
-	metadata, _, _ := metadataFactory(transaction.GetTxHash())
-	cachedMeta := metadataStorage.ComputeIfAbsent(metadata.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
-		newlyAddedMetadata = true
-		metadata.Persist()
-		metadata.SetModified()
-		return metadata
-	})
+	// Store tx + metadata atomically in the same callback
+	var cachedMeta objectstorage.CachedObject
 
 	cachedTxData := txStorage.ComputeIfAbsent(transaction.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // tx +1
 		newlyAdded = true
 
-		if !newlyAddedMetadata {
-			// Metadata was known, but transaction was missing => Reset corrupted metadata
-			cachedMeta.Get().(*hornet.TransactionMetadata).Reset()
-		}
+		metadata, _, _ := metadataFactory(transaction.GetTxHash())
+		cachedMeta = metadataStorage.Store(metadata) // meta +1
 
 		transaction.Persist()
 		transaction.SetModified()
 		return transaction
 	})
 
+	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
+	if !newlyAdded {
+		cachedMeta = metadataStorage.Load(transaction.GetTxHash()) // meta +1
+	}
+
 	return &CachedTransaction{tx: cachedTxData, metadata: cachedMeta}, newlyAdded
 }
 
 type TransactionConsumer func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject)
 
-type TransactionHashBytesConsumer func(txHash hornet.Hash)
+type TransactionHashBytesConsumer func(txHash hornet.Hash) bool
 
 func ForEachTransaction(consumer TransactionConsumer) {
 	txStorage.ForEach(func(txHash []byte, cachedTx objectstorage.CachedObject) bool {
@@ -227,15 +227,15 @@ func ForEachTransaction(consumer TransactionConsumer) {
 // ForEachTransactionHash loops over all transaction hashes.
 func ForEachTransactionHash(consumer TransactionHashBytesConsumer) {
 	txStorage.ForEachKeyOnly(func(txHash []byte) bool {
-		consumer(txHash)
-		return true
+		return consumer(txHash)
 	}, false)
 }
 
 // tx +-0
 func DeleteTransaction(txHash hornet.Hash) {
-	txStorage.Delete(txHash)
+	// metadata has to be deleted before the tx, otherwise we could run into a data race in the object storage
 	metadataStorage.Delete(txHash)
+	txStorage.Delete(txHash)
 }
 
 func ShutdownTransactionStorage() {

@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/iotaledger/hive.go/daemon"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -31,13 +31,23 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 func runRequestWorkers() {
 	daemon.BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
+
+	requestQueueEnqueueLoop:
 		for {
 			select {
 			case <-shutdownSignal:
 				return
 			case <-enqueueTicker.C:
-				newlyEnqueued := requestQueue.EnqueuePending(discardRequestsOlderThan)
-				if newlyEnqueued > 0 {
+				for _, reqBackpressureSignal := range requestBackpressureSignals {
+					if reqBackpressureSignal() {
+						// skip enqueueing of the pending requests if a backpressure signal is set to true to reduce pressure
+						continue requestQueueEnqueueLoop
+					}
+				}
+
+				// always fire the signal if something is in the queue, otherwise the sting request is not kicking in
+				queued := requestQueue.EnqueuePending(discardRequestsOlderThan)
+				if queued > 0 {
 					select {
 					case requestQueueEnqueueSignal <- struct{}{}:
 					default:
@@ -53,26 +63,25 @@ func runRequestWorkers() {
 			case <-shutdownSignal:
 				return
 			case <-requestQueueEnqueueSignal:
-				for _, reqBackpressureSignal := range requestBackpressureSignals {
-					if reqBackpressureSignal() {
-						// skip enqueueing of the pending requests if a backpressure signal is set to true to reduce pressure
-						continue
-					}
+
+				// abort if no peer is connected or no peer supports sting
+				if !manager.AnySTINGPeerConnected() {
+					continue
 				}
 
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					manager.ForAllConnected(func(p *peer.Peer) bool {
 						if !p.Protocol.Supports(sting.FeatureSet) {
-							return false
+							return true
 						}
 						// we only send a request message if the peer actually has the data
 						if !p.HasDataFor(r.MilestoneIndex) {
-							return false
+							return true
 						}
 
 						helpers.SendTransactionRequest(p, r.Hash)
-						return true
+						return false
 					})
 				}
 			}
@@ -170,29 +179,34 @@ func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms milestone.Index) {
 	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
-		cachedMsBundle := tangle.GetMilestoneOrNil(ms) // bundle +1
-		if cachedMsBundle == nil {
+
+		cachedMs := tangle.GetCachedMilestoneOrNil(ms) // milestone +1
+		if cachedMs == nil {
 			log.Panicf("milestone %d wasn't found", ms)
 		}
 
-		msBundleTailHash := cachedMsBundle.GetBundle().GetTailHash()
-		cachedMsBundle.Release(true) // bundle -1
+		msHash := cachedMs.GetMilestone().Hash
+		cachedMs.Release(true) // bundle -1
 
-		dag.TraverseApprovees(msBundleTailHash,
-			// predicate
-			func(cachedTx *tangle.CachedTransaction) bool { // tx +1
+		dag.TraverseApprovees(msHash,
+			// traversal stops if no more transactions pass the given condition
+			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 				defer cachedTx.Release(true) // tx -1
 				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
-				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed
+				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTx *tangle.CachedTransaction) { // tx +1
+			func(cachedTx *tangle.CachedTransaction) error { // tx +1
 				defer cachedTx.Release(true) // tx -1
 				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+				return nil
 			},
 			// called on missing approvees
-			func(approveeHash hornet.Hash) {
+			func(approveeHash hornet.Hash) error {
 				Request(approveeHash, ms, preventDiscard...)
-			}, true)
+				return nil
+			},
+			// called on solid entry points
+			func(txHash hornet.Hash) {}, true, false, nil)
 	}
 }

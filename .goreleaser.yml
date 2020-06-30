@@ -100,6 +100,7 @@ archives:
       - LICENSE
       - config.json
       - config_comnet.json
+      - config_devnet.json
       - peering.json
       - profiles.json
       - mqtt_config.json
@@ -123,6 +124,7 @@ nfpms:
     config_files:
       "config.json": "/var/lib/hornet/config.json"
       "config_comnet.json": "/var/lib/hornet/config_comnet.json"
+      "config_devnet.json": "/var/lib/hornet/config_devnet.json"
       "mqtt_config.json": "/var/lib/hornet/mqtt_config.json"
       "peering.json": "/var/lib/hornet/peering.json"
       "profiles.json": "/var/lib/hornet/profiles.json"

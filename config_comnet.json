@@ -50,8 +50,8 @@
       "depth": 50,
       "intervalSynced": 200,
       "intervalUnsynced": 1000,
-      "path": "export_comnet.bin",
-      "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
+      "path": "snapshots/comnet/export.bin",
+      "downloadURL": "https://ls.tanglebay.org/comnet/export.bin"
     },
     "global": {
       "path": "snapshot.csv",
@@ -67,7 +67,7 @@
     "enabled": true
   },
   "coordinator": {
-    "address": "BODHQPXSMDNHBWVZHVATBAHQGZSKWQLXYZNOXMKNUCOZCPTWHHNFBBHFOEGPTWGGUVDJPZAYZIMXIIGVD",
+    "address": "YBWDHGHUEB9KSOPONTLTOSSKITIBE9MXPASCLREDNV9HEABYBPTHRQGWNJWQFSYAYZRDXXIOZHWBC9DWC",
     "securityLevel": 2,
     "merkleTreeDepth": 23,
     "mwm": 10,
@@ -86,9 +86,9 @@
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "entryNodes": [
-        "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641",
-        "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@entrynode.comnet.tanglebay.org:14636",
-        "1bU0uI+apA7YRna530e3SYfTDtUsobrLObt58pe5c5E=@enter.comnet.hornet.zone:14627"
+        "iotaCrvEWGfaeA1HutcULjD4uZnPhEnD5xNGfGs8vhe@enter.comnet.thetangle.org:14647",
+        "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
+        "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
       ],
       "seed": ""
     }
@@ -110,6 +110,9 @@
     "outputPaths": [
       "stdout"
     ]
+  },
+  "warpsync": {
+    "advancementRange": 50
   },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
