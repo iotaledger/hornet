@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"crypto"
 	"os"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -29,6 +31,8 @@ var (
 	belowMaxDepthTransactionLimit int
 	log                           *logger.Logger
 	updateSyncedAtStartup         bool
+
+	milestoneMerkleTreeHashFunc crypto.Hash
 
 	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
@@ -46,6 +50,8 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
+	milestoneMerkleTreeHashFunc = coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc))
+
 	configureRefsAnInvalidBundleStorage()
 
 	tangle.LoadInitialValuesFromDatabase()
@@ -68,6 +74,7 @@ func configure(plugin *node.Plugin) {
 		hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:49]),
 		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
+		milestoneMerkleTreeHashFunc,
 	)
 
 	configureEvents()

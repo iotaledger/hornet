@@ -1,10 +1,15 @@
 package coordinator
 
 import (
+	"crypto"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	_ "golang.org/x/crypto/blake2b" // import implementation
+
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
@@ -45,16 +50,17 @@ type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
 	// config options
-	seed                   trinary.Hash
-	securityLvl            consts.SecurityLevel
-	merkleTreeDepth        int
-	minWeightMagnitude     int
-	stateFilePath          string
-	milestoneIntervalSec   int
-	checkpointTransactions int
-	powFunc                pow.ProofOfWorkFunc
-	tipselFunc             tipselection.TipSelectionFunc
-	sendBundleFunc         SendBundleFunc
+	seed                    trinary.Hash
+	securityLvl             consts.SecurityLevel
+	merkleTreeDepth         int
+	minWeightMagnitude      int
+	stateFilePath           string
+	milestoneIntervalSec    int
+	checkpointTransactions  int
+	powFunc                 pow.ProofOfWorkFunc
+	tipselFunc              tipselection.TipSelectionFunc
+	sendBundleFunc          SendBundleFunc
+	milestoneMerkleHashFunc crypto.Hash
 
 	// internal state
 	state               *State
@@ -67,19 +73,44 @@ type Coordinator struct {
 	Events *coordinatorEvents
 }
 
+// Maps the passed name to one of the supported crypto.Hash hashing functions.
+// Also verifies that the available function is available or else panics.
+func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
+	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead
+	var hashFunc crypto.Hash
+	switch strings.ToLower(name) {
+	case "blake2b-512":
+		hashFunc = crypto.BLAKE2b_512
+	case "blake2b-384":
+		hashFunc = crypto.BLAKE2b_384
+	case "blake2b-256":
+		hashFunc = crypto.BLAKE2b_256
+	case "blake2s-256":
+		hashFunc = crypto.BLAKE2s_256
+	default:
+		panic(fmt.Sprintf("Unsupported merkle tree hash func '%s'", name))
+	}
+
+	if !hashFunc.Available() {
+		panic(fmt.Sprintf("Merkle tree hash func '%s' not available. Please check the package imports", name))
+	}
+	return hashFunc
+}
+
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipSelectionFunc, sendBundleFunc SendBundleFunc) *Coordinator {
+func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
 	result := &Coordinator{
-		seed:                   seed,
-		securityLvl:            securityLvl,
-		merkleTreeDepth:        merkleTreeDepth,
-		minWeightMagnitude:     minWeightMagnitude,
-		stateFilePath:          stateFilePath,
-		milestoneIntervalSec:   milestoneIntervalSec,
-		checkpointTransactions: checkpointTransactions,
-		powFunc:                powFunc,
-		tipselFunc:             tipselFunc,
-		sendBundleFunc:         sendBundleFunc,
+		seed:                    seed,
+		securityLvl:             securityLvl,
+		merkleTreeDepth:         merkleTreeDepth,
+		minWeightMagnitude:      minWeightMagnitude,
+		stateFilePath:           stateFilePath,
+		milestoneIntervalSec:    milestoneIntervalSec,
+		checkpointTransactions:  checkpointTransactions,
+		powFunc:                 powFunc,
+		tipselFunc:              tipselFunc,
+		sendBundleFunc:          sendBundleFunc,
+		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
 		Events: &coordinatorEvents{
 			IssuedCheckpoint: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:  events.NewEvent(MilestoneCaller),
@@ -210,7 +241,13 @@ func (coo *Coordinator) issueCheckpoint() error {
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) error {
 
-	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, coo.powFunc)
+	// compute merkle tree root
+	byteEncodedMerkleTreeRootHash, err := whiteflag.ComputeMerkleTreeRootHash(coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	if err != nil {
+		return err
+	}
+
+	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, byteEncodedMerkleTreeRootHash, coo.powFunc)
 	if err != nil {
 		return err
 	}

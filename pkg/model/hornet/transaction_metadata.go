@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	TransactionMetadataSolid     = 0
-	TransactionMetadataConfirmed = 1
+	TransactionMetadataSolid       = 0
+	TransactionMetadataConfirmed   = 1
+	TransactionMetadataConflicting = 2
 )
 
 type TransactionMetadata struct {
@@ -102,6 +103,23 @@ func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex mil
 			m.confirmationIndex = 0
 		}
 		m.metadata = m.metadata.ModifyFlag(TransactionMetadataConfirmed, confirmed)
+		m.SetModified(true)
+	}
+}
+
+func (m *TransactionMetadata) IsConflicting() bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasFlag(TransactionMetadataConflicting)
+}
+
+func (m *TransactionMetadata) SetConflicting(conflicting bool) {
+	m.Lock()
+	defer m.Unlock()
+
+	if conflicting != m.metadata.HasFlag(TransactionMetadataConflicting) {
+		m.metadata = m.metadata.ModifyFlag(TransactionMetadataConflicting, conflicting)
 		m.SetModified(true)
 	}
 }

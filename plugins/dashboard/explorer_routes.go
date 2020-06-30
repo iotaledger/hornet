@@ -43,8 +43,9 @@ type ExplorerTx struct {
 	AttachmentTimestampLowerBound int64          `json:"attachment_timestamp_lower_bound"`
 	AttachmentTimestampUpperBound int64          `json:"attachment_timestamp_upper_bound"`
 	Confirmed                     struct {
-		State     bool            `json:"state"`
-		Milestone milestone.Index `json:"milestone_index"`
+		State       bool            `json:"state"`
+		Conflicting bool            `json:"conflicting"`
+		Milestone   milestone.Index `json:"milestone_index"`
 	} `json:"confirmed"`
 	Approvers      []string        `json:"approvers"`
 	Solid          bool            `json:"solid"`
@@ -62,6 +63,7 @@ func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 
 	originTx := cachedTx.GetTransaction().Tx
 	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
+	conflicting := cachedTx.GetMetadata().IsConflicting()
 	t := &ExplorerTx{
 		Hash:                          originTx.Hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
@@ -80,9 +82,10 @@ func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 		AttachmentTimestampLowerBound: originTx.AttachmentTimestampLowerBound,
 		AttachmentTimestampUpperBound: originTx.AttachmentTimestampUpperBound,
 		Confirmed: struct {
-			State     bool            `json:"state"`
-			Milestone milestone.Index `json:"milestone_index"`
-		}{confirmed, by},
+			State       bool            `json:"state"`
+			Conflicting bool            `json:"conflicting"`
+			Milestone   milestone.Index `json:"milestone_index"`
+		}{confirmed, conflicting, by},
 		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
 

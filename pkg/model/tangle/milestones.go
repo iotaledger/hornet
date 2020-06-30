@@ -2,8 +2,8 @@ package tangle
 
 import (
 	"bytes"
+	"crypto"
 	"fmt"
-
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
@@ -28,18 +28,20 @@ var (
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
 
-	coordinatorAddress         hornet.Hash
-	coordinatorSecurityLevel   int
-	coordinatorMerkleTreeDepth uint64
-	maxMilestoneIndex          milestone.Index
+	coordinatorAddress                 hornet.Hash
+	coordinatorSecurityLevel           int
+	coordinatorMerkleTreeDepth         uint64
+	coordinatorMilestoneMerkleHashFunc crypto.Hash
+	maxMilestoneIndex                  milestone.Index
 
 	ErrInvalidMilestone = errors.New("invalid milestone")
 )
 
-func ConfigureMilestones(cooAddr hornet.Hash, cooSecLvl int, cooMerkleTreeDepth uint64) {
+func ConfigureMilestones(cooAddr hornet.Hash, cooSecLvl int, cooMerkleTreeDepth uint64, cooMilestoneMerkleHashFunc crypto.Hash) {
 	coordinatorAddress = cooAddr
 	coordinatorSecurityLevel = cooSecLvl
 	coordinatorMerkleTreeDepth = cooMerkleTreeDepth
+	coordinatorMilestoneMerkleHashFunc = cooMilestoneMerkleHashFunc
 	maxMilestoneIndex = 1 << coordinatorMerkleTreeDepth
 }
 

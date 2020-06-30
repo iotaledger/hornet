@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/t6b1"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -67,7 +68,7 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
 	// get the siblings in the current Merkle tree
 	leafSiblings, err := merkleTree.AuditPath(uint32(index))
@@ -76,7 +77,11 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	}
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
-	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.KeyFragmentLength/consts.TrinaryRadix)
+
+	// append t6b1 encoded merkle tree root hash to the head's signature message fragment data
+	siblingsTrytes += t6b1.MustBytesToTrytes(whiteFlagMerkleRootTreeHash)
+
+	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 
 	tag := tagForIndex(index)
 

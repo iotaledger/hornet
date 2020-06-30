@@ -1,32 +1,54 @@
 package tangle
 
 import (
+	"bytes"
+	"encoding/hex"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 // confirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction) {
+func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.CachedBundle) {
+	defer cachedMsBundle.Release()
 
 	ts := time.Now()
+	confirmation, err := whiteflag.ComputeConfirmation(milestoneMerkleTreeHashFunc, cachedMsBundle.Retain())
+	if err != nil {
+		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
+		log.Panicf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
+	}
+
+	// Verify the calculated MerkleTreeHash with the one inside the milestone
+	merkleTreeHash := cachedMsBundle.GetBundle().GetMilestoneMerkleTreeHash()
+	if !bytes.Equal(confirmation.MerkleTreeHash, merkleTreeHash) {
+		log.Panicf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(confirmation.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
+	}
+
+	tc := time.Now()
+
+	err = tangle.ApplyLedgerDiffWithoutLocking(confirmation.AddressMutations, milestoneIndex)
+	if err != nil {
+		log.Panicf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
+	}
+
+	cachedMsTailTx := cachedMsBundle.GetBundle().GetTail()
 
 	cachedTxs := make(map[string]*tangle.CachedTransaction)
 	cachedTxs[string(cachedMsTailTx.GetTransaction().GetTxHash())] = cachedMsTailTx
-
-	cachedBndls := make(map[string]*tangle.CachedBundle)
+	cachedBundles := make(map[string]*tangle.CachedBundle)
 
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
 
 		// Release all bundles at the end
-		for _, cachedBndl := range cachedBndls {
-			cachedBndl.Release(true) // bundle -1
+		for _, cachedBundle := range cachedBundles {
+			cachedBundle.Release(true) // bundle -1
 		}
 
 		// Release all txs at the end
@@ -35,136 +57,80 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cac
 		}
 	}()
 
-	txsToConfirm := make(map[string]struct{})
-	txsToTraverse := make(map[string]struct{})
-	totalLedgerChanges := make(map[string]int64)
-	txsToTraverse[string(cachedMsTailTx.GetTransaction().GetTxHash())] = struct{}{}
-
-	// Collect all tx to check by traversing the tangle
-	// Loop as long as new transactions are added in every loop cycle
-	for len(txsToTraverse) != 0 {
-
-		for txHash := range txsToTraverse {
-			delete(txsToTraverse, txHash)
-
-			if _, checked := txsToConfirm[txHash]; checked {
-				// Tx was already checked => ignore
-				continue
-			}
-
-			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
-				// Ignore solid entry points (snapshot milestone included)
-				continue
-			}
-
-			cachedTx, exists := cachedTxs[txHash]
-			if !exists {
-				cachedTx = tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-				if cachedTx == nil {
-					log.Panicf("confirmMilestone: Transaction not found: %v", hornet.Hash(txHash).Trytes())
-				}
-				cachedTxs[txHash] = cachedTx
-			}
-
-			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
-			if confirmed {
-				if at > milestoneIndex {
-					log.Panicf("transaction %s was already confirmed by a newer milestone %d", hornet.Hash(txHash).Trytes(), at)
-				}
-
-				// Tx is already confirmed by another milestone => ignore
-				if at < milestoneIndex {
-					continue
-				}
-
-				// If confirmationIndex == milestoneIndex,
-				// we have to walk the ledger changes again (for re-applying the ledger changes after shutdown)
-			}
-
-			// Mark the approvees to be traversed
-			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
-			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
-
-			if !cachedTx.GetTransaction().IsTail() {
-				continue
-			}
-
-			txBundle := cachedTx.GetTransaction().Tx.Bundle
-
-			cachedBndl, exists := cachedBndls[txHash]
-			if !exists {
-				cachedBndl = tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
-				if cachedBndl == nil {
-					log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle)
-				}
-				cachedBndls[txHash] = cachedBndl
-			}
-
-			if !cachedBndl.GetBundle().IsValid() {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not valid: %v", hornet.Hash(txHash).Trytes(), txBundle)
-			}
-
-			if !cachedBndl.GetBundle().IsValueSpam() {
-				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
-				for address, change := range ledgerChanges {
-					totalLedgerChanges[address] += change
-				}
-			}
-
-			// we only add the tail transaction to the txsToConfirm set, in order to not
-			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not
-			// reference the same trunk transaction (as seen from the PoV of the bundle).
-			// if we wouldn't do it like this, we have a high chance of computing an
-			// inconsistent ledger state.
-			txsToConfirm[txHash] = struct{}{}
-		}
-	}
-	tc := time.Now()
-
-	err := tangle.ApplyLedgerDiffWithoutLocking(totalLedgerChanges, milestoneIndex)
-	if err != nil {
-		log.Panicf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
-	}
-
-	for txHash := range txsToConfirm {
-
-		cachedTx, exists := cachedTxs[txHash]
+	loadTx := func(txHash hornet.Hash) *tangle.CachedTransaction {
+		cachedTx, exists := cachedTxs[string(txHash)]
 		if !exists {
-			cachedTx = tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
+			cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
 			if cachedTx == nil {
-				log.Panicf("confirmMilestone: Transaction not found: %v", hornet.Hash(txHash).Trytes())
+				log.Panicf("confirmMilestone: Transaction not found: %v", txHash.Trytes())
 			}
-			cachedTxs[txHash] = cachedTx
+			cachedTxs[string(txHash)] = cachedTx
 		}
+		return cachedTx
+	}
 
-		// confirm all txs of the bundle
-		// we are only iterating over tail txs
-		cachedBndl, exists := cachedBndls[txHash]
+	loadBundle := func(txHash hornet.Hash) *tangle.CachedBundle {
+		cachedBundle, exists := cachedBundles[string(txHash)]
 		if !exists {
-			cachedBndl = tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
-			if cachedBndl == nil {
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), cachedTx.GetTransaction().Tx.Bundle)
+			cachedBundle = tangle.GetCachedBundleOrNil(txHash) // bundle +1
+			if cachedBundle == nil {
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not found", txHash.Trytes())
 			}
-			cachedBndls[txHash] = cachedBndl
+			cachedBundles[string(txHash)] = cachedBundle
 		}
+		return cachedBundle
+	}
 
-		bndlTxHashes := cachedBndl.GetBundle().GetTxHashes()
-		for _, bndlTxHash := range bndlTxHashes {
-
-			cachedBndlTx, exists := cachedTxs[string(bndlTxHash)]
-			if !exists {
-				cachedBndlTx = tangle.GetCachedTransactionOrNil(bndlTxHash) // tx +1
-				if cachedTx == nil {
-					log.Panicf("confirmMilestone: Transaction not found: %v", bndlTxHash.Trytes())
-				}
-				cachedTxs[string(bndlTxHash)] = cachedBndlTx
-			}
-
-			cachedBndlTx.GetMetadata().SetConfirmed(true, milestoneIndex)
-			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-			Events.TransactionConfirmed.Trigger(cachedBndlTx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+	// load the bundle for the given tail tx and iterate over each tx in the bundle
+	forEachBundleTxWithTailTxHash := func(txHash hornet.Hash, do func(tx *tangle.CachedTransaction)) {
+		bundleTxHashes := loadBundle(txHash).GetBundle().GetTxHashes()
+		for _, bundleTxHash := range bundleTxHashes {
+			cachedBundleTx := loadTx(bundleTxHash)
+			do(cachedBundleTx)
 		}
 	}
 
-	log.Infof("Milestone confirmed (%d): txsToConfirm: %v, collect: %v, total: %v", milestoneIndex, len(txsToConfirm), tc.Sub(ts), time.Since(ts))
+	var txsConfirmed int
+	var txsConflicting int
+	var txsValue int
+	var txsZeroValue int
+
+	// confirm all txs of the included tails
+	for _, txHash := range confirmation.TailsIncluded {
+		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
+			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			txsConfirmed++
+			txsValue++
+			metrics.SharedServerMetrics.ValueTransactions.Inc()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+		})
+	}
+
+	// confirm all txs of the zero value tails
+	for _, txHash := range confirmation.TailsExcludedZeroValue {
+		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
+			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			txsConfirmed++
+			txsZeroValue++
+			metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+		})
+	}
+
+	// confirm all conflicting txs of the conflicting tails
+	for _, txHash := range confirmation.TailsExcludedConflicting {
+		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
+			tx.GetMetadata().SetConflicting(true)
+			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			txsConflicting++
+			txsConfirmed++
+			metrics.SharedServerMetrics.ConflictingTransactions.Inc()
+			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
+		})
+	}
+
+	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, txsValue, txsZeroValue, txsConflicting, tc.Sub(ts), time.Since(ts))
 }
