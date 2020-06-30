@@ -2,6 +2,106 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 30.06.2020
+
+### Added
+
+    - Config opts modifiable via CLI and env variables
+    - Config setting for warpsync advancement range
+    - Snapshots dir
+    - Dockerfile to build a local dev image
+    - Ability to let the Prometheus plugin create a 'file service discovery' file
+    - Snapshot index and Pruning index to Prometheus
+    - Flag to force load a global snapshot if db exists
+
+### Changed
+
+    - Comnet coo address
+    - Make database revalidation abortable
+    - Replace ComputeIfAbsent with Store to reduce IO pressure
+    - Updated mqtt lib
+    - Updated hive.go
+    - Wait until all txs of coo bundles are processed in the storage layer
+    - Use new merkle package from iota.go incl. "Shake" key derivation
+    - Updated rpm package
+    - Detach events
+    - README
+    - Bump to Go 1.14.4
+    - Coo plugin milestone validation
+    - Only check for pre-release updates if a pre-release version is running
+    - Autopeering seed encoding to base58
+    - Use tanglebay for comnet snapshots
+    - Updated external libs
+    - Increase shutdown time for big databases
+
+### Fixed
+
+    - Race condition in tryConstructBundle
+    - Remove unused modules (Dashboard)
+    - Missing tryte conversion
+    - Ignored autopeering max peers
+    - Dashboard issues
+    - IsStaticallyPeered check
+    - Missing ca-certificates in Docker files
+    - Check to prevent pruning of genesis tx
+    - Below max depth for SolidEntryPoints
+    - Gossip bind address for IPv6
+    - Synchronization with IRI nodes
+
+### Config file changes
+
+`config.json`
+
+```diff
+  "snapshots": {
+      "local": {
+-        "path": "export.bin",
++        "path": "snapshots/mainnet/export.bin",
+  },
+  "autopeering": {
+        "entryNodes": [
+-        "LehlDBPJ6kfcfLOK6kAU4nD7B/BdR7SJhai7yFCbCCM=@enter.hornet.zone:14626",
+-        "zEiNuQMDfZ6F8QDisa1ndX32ykBTyYCxbtkO0vkaWd0=@enter.manapotion.io:18626",
+-        "EsY+zvaselQYA33AVNzrYIGLplboIh4r8oO+vLKQAVM=@entrynode.tanglebay.org:14626"
++        "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
++        "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
++        "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626"
+        ],
+  },
++ "warpsync": {
++     "advancementRange": 200
++ },
+```
+
+`config_comnet.json`
+
+```diff
+  "snapshots": {
+      "local": {
+-        "path": "export_comnet.bin",
+-        "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
++        "path": "snapshots/comnet/export.bin",
++        "downloadURL": "https://ls.tanglebay.org/comnet/export.bin"
+  },
+  "coordinator": {
+-    "address": "BODHQPXSMDNHBWVZHVATBAHQGZSKWQLXYZNOXMKNUCOZCPTWHHNFBBHFOEGPTWGGUVDJPZAYZIMXIIGVD",
++    "address": "YBWDHGHUEB9KSOPONTLTOSSKITIBE9MXPASCLREDNV9HEABYBPTHRQGWNJWQFSYAYZRDXXIOZHWBC9DWC",
+  },
+  "autopeering": {
+      "entryNodes": [
+-        "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641",
+-        "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@entrynode.comnet.tanglebay.org:14636",
+-        "1bU0uI+apA7YRna530e3SYfTDtUsobrLObt58pe5c5E=@enter.comnet.hornet.zone:14627"
++        "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u@enter.comnet.thetangle.org:14641",
++        "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
++        "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
+      ],
+  },
++ "warpsync": {
++   "advancementRange": 50
++ },
+```
+
 ## [0.4.1-rc4] - 23.06.2020
 
 ### Changed
