@@ -89,7 +89,9 @@
         "autopeering": {
             "bindAddress": "0.0.0.0:14626",
             "runAsEntryNode": false,
-            "entryNodes": [],
+            "entryNodes": [
+                "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637"
+            ],
             "seed": ""
         }
     },

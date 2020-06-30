@@ -65,7 +65,8 @@ All notable changes to this project will be documented in this file.
 -        "EsY+zvaselQYA33AVNzrYIGLplboIh4r8oO+vLKQAVM=@entrynode.tanglebay.org:14626"
 +        "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
 +        "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
-+        "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626"
++        "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
++        "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627"
         ],
   },
 + "warpsync": {
@@ -92,7 +93,7 @@ All notable changes to this project will be documented in this file.
 -        "TANGLEleGqaMFFSTiyAV/vvdING/xuJNTDW16oCXZbo=@enter.comnet.thetangle.org:14641",
 -        "YRdteHJeawDw6UMw22yePwiQYlc1CsrmWhVljzfc6uw=@entrynode.comnet.tanglebay.org:14636",
 -        "1bU0uI+apA7YRna530e3SYfTDtUsobrLObt58pe5c5E=@enter.comnet.hornet.zone:14627"
-+        "67it5aiegGwyLPSewfc2Bv42BvdRAdNjaGjf3VMhoG2u@enter.comnet.thetangle.org:14641",
++        "iotaCrvEWGfaeA1HutcULjD4uZnPhEnD5xNGfGs8vhe@enter.comnet.thetangle.org:14647",
 +        "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
 +        "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
       ],
