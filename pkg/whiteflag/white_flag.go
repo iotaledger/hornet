@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"errors"
 	"fmt"
+
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/trinary"

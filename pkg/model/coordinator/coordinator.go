@@ -3,9 +3,10 @@ package coordinator
 import (
 	"crypto"
 	"fmt"
-	_ "golang.org/x/crypto/blake2b" // import implementation
 	"os"
 	"time"
+
+	_ "golang.org/x/crypto/blake2b" // import implementation
 
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/pkg/errors"
