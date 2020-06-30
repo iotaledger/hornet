@@ -263,6 +263,19 @@ func (m *Manager) ForAllConnected(f PeerConsumerFunc) {
 	}
 }
 
+// ForAll executes the given function for each peer until
+// abort is returned from within the consumer function.
+func (m *Manager) ForAll(f PeerConsumerFunc) {
+	m.RLock()
+	defer m.RUnlock()
+	for _, p := range m.connected {
+		if f(p) {
+			break
+		}
+	}
+
+}
+
 // AnySTINGPeerConnected returns true if any of the connected, handshaked peers supports the STING protocol.
 func (m *Manager) AnySTINGPeerConnected() bool {
 	stingPeerConnected := false
