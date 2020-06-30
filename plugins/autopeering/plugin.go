@@ -132,10 +132,10 @@ func configureEvents() {
 		var found *peer.Peer
 		peering.Manager().ForAll(func(p *peer.Peer) bool {
 			if p.Autopeering == nil || p.Autopeering.ID() != ev.DroppedID {
-				return false
+				return true
 			}
 			found = p
-			return true
+			return false
 		})
 
 		if found == nil {

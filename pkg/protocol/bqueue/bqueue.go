@@ -54,13 +54,13 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 		case b := <-bc.c:
 			bc.manager.ForAllConnected(func(p *peer.Peer) (abort bool) {
 				if _, excluded := b.ExcludePeers[p.ID]; excluded {
-					return
+					return true
 				}
 
 				// just send the transaction when the peer supports STING
 				if p.Protocol.Supports(sting.FeatureSet) {
 					helpers.SendTransaction(p, b.TxData)
-					return
+					return true
 				}
 
 				reqHashBytes := b.RequestedTxHash
@@ -71,7 +71,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 				}
 
 				helpers.SendTransactionAndRequest(p, b.TxData, reqHashBytes)
-				return false
+				return true
 			})
 		}
 	}

@@ -244,8 +244,8 @@ func (m *Manager) WhitelistRemove(id string) {
 }
 
 // PeerConsumerFunc is a function which consumes a peer.
-// If it returns true, it signals that no further calls should be made to the function.
-type PeerConsumerFunc func(p *peer.Peer) (abort bool)
+// If it returns false, it signals that no further calls should be made to the function.
+type PeerConsumerFunc func(p *peer.Peer) bool
 
 // ForAllConnected executes the given function for each currently connected peer until
 // abort is returned from within the consumer function. The consumer function is
@@ -257,7 +257,7 @@ func (m *Manager) ForAllConnected(f PeerConsumerFunc) {
 		if !p.Handshaked() {
 			continue
 		}
-		if f(p) {
+		if !f(p) {
 			break
 		}
 	}
@@ -269,11 +269,21 @@ func (m *Manager) ForAll(f PeerConsumerFunc) {
 	m.RLock()
 	defer m.RUnlock()
 	for _, p := range m.connected {
-		if f(p) {
-			break
+		if !f(p) {
+			return
 		}
 	}
-
+	for _, p := range m.reconnect {
+		peer := &peer.Peer{
+			ID:          p.OriginAddr.Addr,
+			InitAddress: p.OriginAddr,
+			Addresses:   p.CachedIPs,
+			Autopeering: p.Autopeering,
+		}
+		if !f(peer) {
+			return
+		}
+	}
 }
 
 // AnySTINGPeerConnected returns true if any of the connected, handshaked peers supports the STING protocol.
@@ -282,11 +292,11 @@ func (m *Manager) AnySTINGPeerConnected() bool {
 
 	m.ForAllConnected(func(p *peer.Peer) bool {
 		if !p.Protocol.Supports(sting.FeatureSet) {
-			return false
+			return true
 		}
 
 		stingPeerConnected = true
-		return true
+		return false
 	})
 
 	return stingPeerConnected
