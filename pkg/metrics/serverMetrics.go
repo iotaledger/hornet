@@ -18,9 +18,9 @@ type ServerMetrics struct {
 	KnownTransactions atomic.Uint32
 	// The number of confirmed transactions.
 	ConfirmedTransactions atomic.Uint32
-	// The number of conflicting transactions.
+	// The number of value transactions.
 	ValueTransactions atomic.Uint32
-	// The number of conflicting transactions.
+	// The number of zero value transactions.
 	ZeroValueTransactions atomic.Uint32
 	// The number of conflicting transactions.
 	ConflictingTransactions atomic.Uint32

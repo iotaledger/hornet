@@ -56,12 +56,9 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			inclusionStates = append(inclusionStates, false)
 			continue
 		}
-		// check if tx is set as confirmed
-		confirmed := cachedTx.GetMetadata().IsConfirmed()
-		// Avoid passing true for conflicting tx to be backwards compatible
-		if confirmed && cachedTx.GetMetadata().IsConflicting() {
-			confirmed = false
-		}
+		// check if tx is set as confirmed. Avoid passing true for conflicting tx to be backwards compatible
+		confirmed := cachedTx.GetMetadata().IsConfirmed() && !cachedTx.GetMetadata().IsConflicting()
+
 		cachedTx.Release(true) // tx -1
 		inclusionStates = append(inclusionStates, confirmed)
 	}

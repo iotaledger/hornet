@@ -38,7 +38,6 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 	}
 
 	cachedMsTailTx := cachedMsBundle.GetBundle().GetTail()
-	defer cachedMsTailTx.Release()
 
 	cachedTxs := make(map[string]*tangle.CachedTransaction)
 	cachedTxs[string(cachedMsTailTx.GetTransaction().GetTxHash())] = cachedMsTailTx
@@ -75,16 +74,15 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 		if !exists {
 			cachedBundle = tangle.GetCachedBundleOrNil(txHash) // bundle +1
 			if cachedBundle == nil {
-				cachedTx := loadTx(txHash)
-				log.Panicf("confirmMilestone: Tx: %v, Bundle not found: %v", txHash.Trytes(), cachedTx.GetTransaction().Tx.Bundle)
+				log.Panicf("confirmMilestone: Tx: %v, Bundle not found", txHash.Trytes())
 			}
 			cachedBundles[string(txHash)] = cachedBundle
 		}
 		return cachedBundle
 	}
 
-	// we are only iterating over tail txs
-	onEachBundleTx := func(txHash hornet.Hash, do func(tx *tangle.CachedTransaction)) {
+	// load the bundle for the given tail tx and iterate over each tx in the bundle
+	forEachBundleTxWithTailTxHash := func(txHash hornet.Hash, do func(tx *tangle.CachedTransaction)) {
 		bundleTxHashes := loadBundle(txHash).GetBundle().GetTxHashes()
 		for _, bundleTxHash := range bundleTxHashes {
 			cachedBundleTx := loadTx(bundleTxHash)
@@ -99,7 +97,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 
 	// confirm all txs of the included tails
 	for _, txHash := range confirmation.TailsIncluded {
-		onEachBundleTx(txHash, func(tx *tangle.CachedTransaction) {
+		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
 			txsConfirmed++
 			txsValue++
@@ -111,7 +109,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 
 	// confirm all txs of the zero value tails
 	for _, txHash := range confirmation.TailsExcludedZeroValue {
-		onEachBundleTx(txHash, func(tx *tangle.CachedTransaction) {
+		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
 			txsConfirmed++
 			txsZeroValue++
@@ -123,7 +121,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 
 	// confirm all conflicting txs of the conflicting tails
 	for _, txHash := range confirmation.TailsExcludedConflicting {
-		onEachBundleTx(txHash, func(tx *tangle.CachedTransaction) {
+		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConflicting(true)
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
 			txsConflicting++
@@ -134,5 +132,5 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 		})
 	}
 
-	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, txsValue, txsZeroValue, txsConflicting, len(confirmation.TailsExcludedZeroValue), tc.Sub(ts), time.Since(ts))
+	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, txsValue, txsZeroValue, txsConflicting, tc.Sub(ts), time.Since(ts))
 }

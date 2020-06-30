@@ -81,7 +81,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	// append t6b1 encoded merkle tree root hash to the head's signature message fragment data
 	siblingsTrytes += t6b1.MustBytesToTrytes(whiteFlagMerkleRootTreeHash)
 
-	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.KeyFragmentLength/consts.TrinaryRadix)
+	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 
 	tag := tagForIndex(index)
 

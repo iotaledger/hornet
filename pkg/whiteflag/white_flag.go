@@ -124,7 +124,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	if cachedTx == nil {
 		return fmt.Errorf("%w: candidate tx %s doesn't exist", ErrMissingTransaction, currentTxHash.Trytes())
 	}
-	defer cachedTx.Release()
+	defer cachedTx.Release(true)
 	currentTx := cachedTx.GetTransaction()
 
 	if !currentTx.IsTail() {
@@ -136,17 +136,18 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	if cachedBundle == nil {
 		return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", ErrMissingBundle, currentTx.Tx.Bundle, currentTx.GetTxHash().Trytes())
 	}
-	defer cachedBundle.Release()
+	defer cachedBundle.Release(true)
 
 	if !cachedBundle.GetBundle().IsValid() || !cachedBundle.GetBundle().ValidStrictSemantics() {
 		return fmt.Errorf("%w: bundle %s is invalid", ErrMilestoneApprovedInvalidBundle, currentTx.Tx.Bundle)
 	}
 
 	cachedBundleHeadTx := cachedBundle.GetBundle().GetHead()
-	defer cachedBundleHeadTx.Release()
+	defer cachedBundleHeadTx.Release(true)
 	bundleHeadTx := cachedBundleHeadTx.GetTransaction()
 	headTxTrunkHash := bundleHeadTx.GetTrunkHash()
 	headTxBranchHash := bundleHeadTx.GetBranchHash()
+	trunkAndBranchAreEqual := bytes.Equal(headTxTrunkHash, headTxBranchHash)
 
 	var cachedTrunkTx, cachedBranchTx *tangle.CachedTransaction
 	var trunkVisited, trunkConfirmed, branchVisited, branchConfirmed bool
@@ -156,7 +157,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 			if cachedTrunkTx = tangle.GetCachedTransactionOrNil(headTxTrunkHash); cachedTrunkTx == nil {
 				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash.Trytes())
 			}
-			defer cachedTrunkTx.Release()
+			defer cachedTrunkTx.Release(true)
 
 			// verify that head tx is indeed a tail
 			if !cachedTrunkTx.GetTransaction().IsTail() {
@@ -173,13 +174,13 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 		}
 
 	}
-	if !bytes.Equal(headTxTrunkHash, headTxBranchHash) {
+	if !trunkAndBranchAreEqual {
 		if !tangle.SolidEntryPointsContain(headTxBranchHash) {
 			if _, branchVisited = visited[string(headTxBranchHash)]; !branchVisited {
 				if cachedBranchTx = tangle.GetCachedTransactionOrNil(headTxBranchHash); cachedBranchTx == nil {
 					return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash.Trytes())
 				}
-				defer cachedBranchTx.Release()
+				defer cachedBranchTx.Release(true)
 
 				// verify that trunk tx is indeed a tail
 				if !cachedBranchTx.GetTransaction().IsTail() {
@@ -273,7 +274,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 		return nil
 	}
 
-	if !tangle.SolidEntryPointsContain(headTxBranchHash) && !branchVisited && !branchConfirmed {
+	if !trunkAndBranchAreEqual && !tangle.SolidEntryPointsContain(headTxBranchHash) && !branchVisited && !branchConfirmed {
 		stack.PushFront(headTxBranchHash)
 		return nil
 	}

@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
@@ -77,14 +78,14 @@ type Coordinator struct {
 func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead
 	var hashFunc crypto.Hash
-	switch name {
-	case "BLAKE2b-512":
+	switch strings.ToLower(name) {
+	case "blake2b-512":
 		hashFunc = crypto.BLAKE2b_512
-	case "BLAKE2b-384":
+	case "blake2b-384":
 		hashFunc = crypto.BLAKE2b_384
-	case "BLAKE2b-256":
+	case "blake2b-256":
 		hashFunc = crypto.BLAKE2b_256
-	case "BLAKE2s-256":
+	case "blake2s-256":
 		hashFunc = crypto.BLAKE2s_256
 	default:
 		panic(fmt.Sprintf("Unsupported merkle tree hash func '%s'", name))

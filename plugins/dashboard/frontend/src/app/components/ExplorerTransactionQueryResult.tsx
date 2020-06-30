@@ -201,8 +201,9 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                 {tx.tag}
                                             </Link>
                                         </ListGroup.Item>
-                                        <ListGroup.Item className={style.monospace}>Obsolete
-                                            Tag: {tx.obsolete_tag}</ListGroup.Item>
+                                        <ListGroup.Item className={style.monospace}>
+                                            Obsolete Tag: {tx.obsolete_tag}
+                                        </ListGroup.Item>
                                     </ListGroup>
                                 </Col>
                                 <Col>

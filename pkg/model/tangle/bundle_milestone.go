@@ -47,12 +47,12 @@ func (bundle *Bundle) GetMilestoneMerkleTreeHash() []byte {
 
 	// t6b1 encoding, so 6 trits per byte
 	merkleRootHashSizeInTrytes := coordinatorMilestoneMerkleHashFunc.Size() * 6 / consts.TrinaryRadix
-	siblingsTrytesLength := coordinatorMerkleTreeDepth * consts.HashTrytesSize
+	auditPathLength := coordinatorMerkleTreeDepth * consts.HashTrytesSize
 
-	if (siblingsTrytesLength + uint64(merkleRootHashSizeInTrytes)) > consts.KeyFragmentLength/consts.TrinaryRadix {
+	if (auditPathLength + uint64(merkleRootHashSizeInTrytes)) > consts.SignatureMessageFragmentSizeInTrytes {
 		return nil
 	}
 
-	merkleRootHashTrytes := headTx.GetTransaction().Tx.SignatureMessageFragment[:merkleRootHashSizeInTrytes]
+	merkleRootHashTrytes := headTx.GetTransaction().Tx.SignatureMessageFragment[auditPathLength:merkleRootHashSizeInTrytes]
 	return t6b1.MustTrytesToBytes(merkleRootHashTrytes)[:coordinatorMilestoneMerkleHashFunc.Size()]
 }
