@@ -1,6 +1,8 @@
 package tangle
 
 import (
+	"bytes"
+	"encoding/hex"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -20,6 +22,12 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		log.Panicf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
+	}
+
+	// Verify the calculated MerkleTreeHash with the one inside the milestone
+	merkleTreeHash := cachedMsBundle.GetBundle().GetMilestoneMerkleTreeHash()
+	if !bytes.Equal(confirmation.MerkleTreeHash, merkleTreeHash) {
+		log.Panicf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(confirmation.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
 	}
 
 	tc := time.Now()
