@@ -53,6 +53,6 @@ func (bundle *Bundle) GetMilestoneMerkleTreeHash() []byte {
 		return nil
 	}
 
-	merkleRootHashTrytes := headTx.GetTransaction().Tx.SignatureMessageFragment[auditPathLength:merkleRootHashSizeInTrytes]
+	merkleRootHashTrytes := headTx.GetTransaction().Tx.SignatureMessageFragment[auditPathLength : int(auditPathLength)+merkleRootHashSizeInTrytes]
 	return t6b1.MustTrytesToBytes(merkleRootHashTrytes)[:coordinatorMilestoneMerkleHashFunc.Size()]
 }
