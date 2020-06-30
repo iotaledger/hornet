@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	_ "golang.org/x/crypto/blake2b" // import implementation
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/iota.go/trinary"
