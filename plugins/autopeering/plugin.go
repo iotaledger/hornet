@@ -130,12 +130,12 @@ func configureEvents() {
 		log.Infof("[dropped event] trying to remove connection to %s", ev.DroppedID)
 
 		var found *peer.Peer
-		peering.Manager().ForAllConnected(func(p *peer.Peer) bool {
+		peering.Manager().ForAll(func(p *peer.Peer) bool {
 			if p.Autopeering == nil || p.Autopeering.ID() != ev.DroppedID {
-				return false
+				return true
 			}
 			found = p
-			return true
+			return false
 		})
 
 		if found == nil {

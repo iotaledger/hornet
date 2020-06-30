@@ -73,15 +73,15 @@ func runRequestWorkers() {
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					manager.ForAllConnected(func(p *peer.Peer) bool {
 						if !p.Protocol.Supports(sting.FeatureSet) {
-							return false
+							return true
 						}
 						// we only send a request message if the peer actually has the data
 						if !p.HasDataFor(r.MilestoneIndex) {
-							return false
+							return true
 						}
 
 						helpers.SendTransactionRequest(p, r.Hash)
-						return true
+						return false
 					})
 				}
 			}
