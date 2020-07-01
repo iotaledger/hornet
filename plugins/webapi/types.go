@@ -64,21 +64,6 @@ type BradcastTransactionsReturn struct {
 	Duration int `json:"duration"`
 }
 
-/////////////////// checkConsistency //////////////////////////////
-
-// CheckConsistency struct
-type CheckConsistency struct {
-	Command string         `mapstructure:"command"`
-	Tails   []trinary.Hash `mapstructure:"tails"`
-}
-
-// CheckConsistencyReturn struct
-type CheckConsistencyReturn struct {
-	State    bool   `json:"state"`
-	Info     string `json:"info,omitempty"`
-	Duration int    `json:"duration"`
-}
-
 //////////////////////// error ////////////////////////////////////
 
 // ErrorReturn struct
@@ -197,9 +182,7 @@ type GetNodeAPIConfigurationReturn struct {
 
 // GetTransactionsToApprove struct
 type GetTransactionsToApprove struct {
-	Command   string       `mapstructure:"command"`
-	Depth     uint         `mapstructure:"depth"`
-	Reference trinary.Hash `mapstructure:"reference"`
+	Command string `mapstructure:"command"`
 }
 
 // GetTransactionsToApproveReturn struct

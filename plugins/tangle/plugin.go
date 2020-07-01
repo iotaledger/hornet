@@ -27,10 +27,9 @@ import (
 )
 
 var (
-	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
-	belowMaxDepthTransactionLimit int
-	log                           *logger.Logger
-	updateSyncedAtStartup         bool
+	PLUGIN                = node.NewPlugin("Tangle", node.Enabled, configure, run)
+	log                   *logger.Logger
+	updateSyncedAtStartup bool
 
 	milestoneMerkleTreeHashFunc crypto.Hash
 
@@ -49,7 +48,6 @@ func init() {
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
 	milestoneMerkleTreeHashFunc = coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc))
 
 	configureRefsAnInvalidBundleStorage()

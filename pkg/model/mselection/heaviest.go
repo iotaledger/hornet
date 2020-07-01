@@ -1,6 +1,7 @@
 package mselection
 
 import (
+	"bytes"
 	"container/list"
 	"context"
 	"errors"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/tipselection"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/willf/bitset"
@@ -17,8 +17,7 @@ import (
 
 // Errors during milestone selection
 var (
-	ErrUnsupportedDepth = errors.New("unsupported depth value")
-	ErrNodeNotSynced    = errors.New("node is not synchronized")
+	ErrWrongReference = errors.New("reference does not match root")
 )
 
 const capIncreaseFactor = 1.15
@@ -27,6 +26,7 @@ const capIncreaseFactor = 1.15
 type HeaviestSelector struct {
 	sync.Mutex
 
+	rootItem  *item
 	approvers map[trinary.Hash]*item
 	tips      *list.List
 }
@@ -49,20 +49,20 @@ func (s *HeaviestSelector) SetRoot(root hornet.Hash) {
 	s.Lock()
 	defer s.Unlock()
 
-	rootItem := &item{hash: root, refs: bitset.New(0)} // the root doesn't reference anything
+	s.rootItem = &item{hash: root, refs: bitset.New(0)} // the root doesn't reference anything
 	// create an empty map only containing the root item
 	s.approvers = make(map[trinary.Hash]*item, int(float64(len(s.approvers))*capIncreaseFactor))
-	s.approvers[string(root)] = rootItem
+	s.approvers[string(root)] = s.rootItem
 	// create an empty list only containing the root item
 	s.tips = list.New()
-	rootItem.tip = s.tips.PushBack(rootItem)
+	s.rootItem.tip = s.tips.PushBack(s.rootItem)
 }
 
-// SelectTips selects two tips to be used for the next milestone.
+// selectTips selects two tips to be used for the next milestone.
 // It returns a pair of tips, confirming the most transactions in the future cone of the root.
 // The selection can be cancelled anytime via the provided context. In this case, it returns the current best solution.
-// SelectTips be called concurrently with other HeaviestSelector methods. However, it only considers the tips
-// that were present at the beginning of the SelectTips call.
+// selectTips be called concurrently with other HeaviestSelector methods. However, it only considers the tips
+// that were present at the beginning of the selectTips call.
 // TODO: add a proper interface for ms selection that is used by the coordinator
 func (s *HeaviestSelector) SelectTips(ctx context.Context) ([]hornet.Hash, error) {
 	// copy the tips to release the lock at allow faster iteration
@@ -105,23 +105,25 @@ func (s *HeaviestSelector) SelectTips(ctx context.Context) ([]hornet.Hash, error
 	return randomPair(best.pairs), nil
 }
 
-// LegacySelectTips selects two tips to be used for the next milestone.
-// TODO: This is only provided to match tipselection.TipSelectionFunc and should be removed once no longer required.
-func (s *HeaviestSelector) LegacySelectTips(depth uint, reference *hornet.Hash) (hornet.Hashes, *tipselection.TipSelStats, error) {
-	if depth != 0 {
-		return nil, nil, ErrUnsupportedDepth
-	}
-	// TODO: do sanity check whether reference matches the root
+// SelectTipsWithReference selects two tips to be used for the next milestone.
+func (s *HeaviestSelector) SelectTipsWithReference(reference *hornet.Hash) (hornet.Hashes, error) {
+	// ToDo: what about locking, so that root doesn't change?
 
-	if !tangle.IsNodeSyncedWithThreshold() {
-		return nil, nil, ErrNodeNotSynced
+	if reference != nil {
+		if !bytes.Equal(s.rootItem.hash, *reference) {
+			return nil, ErrWrongReference
+		}
+	}
+
+	if !tangle.IsNodeSynced() {
+		return nil, tangle.ErrNodeNotSynced
 	}
 
 	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(100*time.Millisecond))
 	defer cancel()
 	tips, _ := s.SelectTips(ctx)
-	return tips, nil, nil
+	return tips, nil
 }
 
 // OnNewSolidTransaction adds a new transaction tx to be processed by s.

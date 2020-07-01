@@ -34,14 +34,11 @@ var (
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
-	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-
-	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
 
 	// Release mode
 	gin.SetMode(gin.ReleaseMode)

@@ -11,13 +11,9 @@ class TPSMetric {
 
 class TipSelMetric {
     duration: number;
-    entry_point: string;
-    reference: string;
-    depth: number;
     steps_taken: number;
     steps_jumped: number;
     evaluated: number;
-    global_below_max_depth_cache_hit_ratio: number;
     ts: string;
 }
 
@@ -611,17 +607,14 @@ export class NodeStore {
 
     @computed
     get tipSelSeries() {
+        let duration = Object.assign({}, chartSeriesOpts,
+            series("Duration", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
+        );
         let stepsTaken = Object.assign({}, chartSeriesOpts,
             series("Steps Taken", 'rgba(14, 230, 183, 1)', 'rgba(14, 230, 183,0.4)')
         );
         let stepsJumped = Object.assign({}, chartSeriesOpts,
             series("Steps Jumped", 'rgba(14, 230, 100,1)', 'rgba(14, 230, 100,0.4)')
-        );
-        let duration = Object.assign({}, chartSeriesOpts,
-            series("Duration", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
-        );
-        let depth = Object.assign({}, chartSeriesOpts,
-            series("Depth", 'rgba(230, 14, 147,1)', 'rgba(230, 14, 147,0.4)')
         );
         let evaluated = Object.assign({}, chartSeriesOpts,
             series("Evaluated", 'rgba(230, 165, 14,1)', 'rgba(230, 165, 14,0.4)')
@@ -631,38 +624,17 @@ export class NodeStore {
         for (let i = 0; i < this.collected_tip_sel_metrics.length; i++) {
             let metric = this.collected_tip_sel_metrics[i];
             labels.push(metric.ts);
+            duration.data.push(Math.floor(metric.duration / 1000000));
             stepsTaken.data.push(metric.steps_taken);
             stepsJumped.data.push(metric.steps_jumped);
-            duration.data.push(Math.floor(metric.duration / 1000000));
-            depth.data.push(metric.depth);
             evaluated.data.push(metric.evaluated);
         }
 
         return {
             labels: labels,
-            datasets: [stepsTaken, stepsJumped, duration, depth, evaluated],
+            datasets: [stepsTaken, stepsJumped, duration, evaluated],
         };
     }
-
-    @computed
-    get tipSelCacheSeries() {
-        let belowMaxDepthCacheHit = Object.assign({}, chartSeriesOpts,
-            series("Below Max Depth Cache Hit", 'rgba(42, 58, 122,1)', 'rgba(42, 58, 122,0.4)')
-        );
-
-        let labels = [];
-        for (let i = 0; i < this.collected_tip_sel_metrics.length; i++) {
-            let metric = this.collected_tip_sel_metrics[i];
-            labels.push(metric.ts);
-            belowMaxDepthCacheHit.data.push(metric.global_below_max_depth_cache_hit_ratio * 100);
-        }
-
-        return {
-            labels: labels,
-            datasets: [belowMaxDepthCacheHit],
-        };
-    }
-
 
     @computed
     get spamMetricsSeries() {

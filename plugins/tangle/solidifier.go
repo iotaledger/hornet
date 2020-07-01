@@ -65,6 +65,17 @@ func markTransactionAsSolid(cachedTx *tangle.CachedTransaction) {
 
 	Events.TransactionSolid.Trigger(cachedTx) // tx pass +1
 
+	if cachedTx.GetTransaction().IsTail() {
+		cachedBndl := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash()) // bundle +1
+		if cachedBndl == nil {
+			// bundle must be created here
+			log.Panicf("markTransactionAsSolid: Bundle not found: %v", cachedTx.GetTransaction().GetTxHash().Trytes())
+		}
+		defer cachedBndl.Release(true) // bundle -1
+
+		Events.BundleSolid.Trigger(cachedBndl) // bundle pass +1
+	}
+
 	cachedTx.Release(true)
 }
 
@@ -224,6 +235,9 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 	// No transactions to request => the whole cone is solid
 	// We can mark all transactions in random order as solid
+
+	// ToDo: for new tipselect it must be in order from oldest to latest
+	//		 Update the future cone transaction root snapshot indexes
 
 	for txHash := range txsToSolidify {
 		cachedTx, exists := cachedTxs[txHash]

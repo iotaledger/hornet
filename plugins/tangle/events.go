@@ -17,6 +17,7 @@ var Events = pluginEvents{
 	TransactionSolid:              events.NewEvent(tangle.TransactionCaller),
 	TransactionConfirmed:          events.NewEvent(tangle.TransactionConfirmedCaller),
 	TransactionStored:             events.NewEvent(tangle.TransactionCaller),
+	BundleSolid:                   events.NewEvent(tangle.BundleCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.BundleCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),
@@ -32,6 +33,7 @@ type pluginEvents struct {
 	TransactionSolid              *events.Event
 	TransactionConfirmed          *events.Event
 	TransactionStored             *events.Event
+	BundleSolid                   *events.Event
 	ReceivedNewMilestone          *events.Event
 	LatestMilestoneChanged        *events.Event
 	SolidMilestoneChanged         *events.Event

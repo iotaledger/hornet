@@ -5,13 +5,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
 
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/trinary"
-
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/urts"
 )
 
 func init() {
@@ -20,28 +17,10 @@ func init() {
 
 func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
-	query := &GetTransactionsToApprove{}
 
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	var reference *hornet.Hash
-	if len(query.Reference) > 0 {
-		if !guards.IsTransactionHash(query.Reference) {
-			e.Error = "Invalid reference hash supplied"
-			c.JSON(http.StatusBadRequest, e)
-			return
-		}
-		refHash := hornet.Hash(trinary.MustTrytesToBytes(query.Reference)[:49])
-		reference = &refHash
-	}
-
-	tips, _, err := tipselection.SelectTips(query.Depth, reference)
+	tips, err := urts.TipSelector.SelectTips()
 	if err != nil {
-		if err == tipselection.ErrNodeNotSynced {
+		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
 			e.Error = err.Error()
 			c.JSON(http.StatusServiceUnavailable, e)
 			return

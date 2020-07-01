@@ -50,7 +50,7 @@ func configure(plugin *node.Plugin) {
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
 	// use the heaviest pair tip selection for the milestones
-	selector = mselection.HPS(consts.NullHashTrytes)
+	selector = mselection.HPS(hornet.NullHashBytes)
 
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex)
@@ -58,13 +58,13 @@ func configure(plugin *node.Plugin) {
 		log.Panic(err)
 	}
 
-	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash trinary.Hash) {
-		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash)
+	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash hornet.Hash) {
+		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash.Trytes())
 		selector.SetRoot(txHash)
 	}))
 
-	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash trinary.Hash) {
-		log.Infof("milestone issued (%d): %v", index, tailTxHash)
+	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
+		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
 		selector.SetRoot(tailTxHash)
 	}))
 }
@@ -87,7 +87,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions),
 		powFunc,
-		selector.LegacySelectTips, // tipselection.SelectTips,
+		selector.SelectTipsWithReference,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)

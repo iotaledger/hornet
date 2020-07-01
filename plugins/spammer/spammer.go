@@ -17,7 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/plugins/urts"
 
 	"go.uber.org/atomic"
 )
@@ -63,7 +63,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	timeStart := time.Now()
-	tips, _, err := tipselection.SelectTips(depth, nil)
+	tips, err := urts.TipSelector.SelectTips()
 	if err != nil {
 		return
 	}

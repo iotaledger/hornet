@@ -37,6 +37,9 @@ type TransactionMetadata struct {
 
 	// oldestRootSnapshotIndex is the lowest confirmed index of the past cone of this transaction
 	oldestRootSnapshotIndex milestone.Index
+
+	// rootSnapshotCalculationIndex is the solid index yrtsi and ortsi were calculated at
+	rootSnapshotCalculationIndex milestone.Index
 }
 
 func NewTransactionMetadata(txHash Hash) *TransactionMetadata {
@@ -124,6 +127,23 @@ func (m *TransactionMetadata) SetConflicting(conflicting bool) {
 	}
 }
 
+func (m *TransactionMetadata) SetRootSnapshotIndexes(yrtsi milestone.Index, ortsi milestone.Index, rtsci milestone.Index) {
+	m.Lock()
+	defer m.Unlock()
+
+	m.youngestRootSnapshotIndex = yrtsi
+	m.oldestRootSnapshotIndex = ortsi
+	m.rootSnapshotCalculationIndex = rtsci
+	m.SetModified(true)
+}
+
+func (m *TransactionMetadata) GetRootSnapshotIndexes() (milestone.Index, milestone.Index, milestone.Index) {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.youngestRootSnapshotIndex, m.oldestRootSnapshotIndex, m.rootSnapshotCalculationIndex
+}
+
 func (m *TransactionMetadata) Reset() {
 	m.Lock()
 	defer m.Unlock()
@@ -134,6 +154,7 @@ func (m *TransactionMetadata) Reset() {
 	m.confirmationIndex = 0
 	m.youngestRootSnapshotIndex = 0
 	m.oldestRootSnapshotIndex = 0
+	m.rootSnapshotCalculationIndex = 0
 	m.SetModified(true)
 }
 
@@ -164,14 +185,16 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 		4 bytes uint32 confirmationIndex
 		4 bytes uint32 youngestRootSnapshotIndex
 		4 bytes uint32 oldestRootSnapshotIndex
+		4 bytes uint32 rootSnapshotCalculationIndex
 	*/
 
-	value := make([]byte, 17)
+	value := make([]byte, 21)
 	value[0] = byte(m.metadata)
 	binary.LittleEndian.PutUint32(value[1:], uint32(m.solidificationTimestamp))
 	binary.LittleEndian.PutUint32(value[5:], uint32(m.confirmationIndex))
 	binary.LittleEndian.PutUint32(value[9:], uint32(m.youngestRootSnapshotIndex))
 	binary.LittleEndian.PutUint32(value[13:], uint32(m.oldestRootSnapshotIndex))
+	binary.LittleEndian.PutUint32(value[17:], uint32(m.rootSnapshotCalculationIndex))
 
 	return value
 }
@@ -186,6 +209,7 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumed
 		4 bytes uint32 confirmationIndex
 		4 bytes uint32 youngestRootSnapshotIndex
 		4 bytes uint32 oldestRootSnapshotIndex
+		4 bytes uint32 rootSnapshotCalculationIndex
 	*/
 
 	m.metadata = bitmask.BitMask(data[0])
@@ -193,6 +217,13 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumed
 	m.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
 	m.youngestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[9:13]))
 	m.oldestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[13:17]))
+	m.rootSnapshotCalculationIndex = 0
+
+	if len(data) == 21 {
+		// ToDo: Remove at next DbVersion update
+		m.rootSnapshotCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[17:21]))
+		return 21, nil
+	}
 
 	return 17, nil
 }
