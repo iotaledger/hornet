@@ -55,7 +55,7 @@ func BroadcastQueue() bqueue.Queue {
 // Processor returns the message processor instance of the gossip plugin.
 func Processor() *processor.Processor {
 	msgProcessorOnce.Do(func() {
-		msgProcessor = processor.New(requestQueue, &processor.Options{
+		msgProcessor = processor.New(requestQueue, peeringplugin.Manager(), &processor.Options{
 			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingTransactionFilter,
 		})

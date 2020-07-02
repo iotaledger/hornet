@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
@@ -37,8 +38,9 @@ var (
 )
 
 // New creates a new processor which parses messages.
-func New(requestQueue rqueue.Queue, opts *Options) *Processor {
+func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options) *Processor {
 	proc := &Processor{
+		pm:           peerManager,
 		requestQueue: requestQueue,
 		Events: Events{
 			TransactionProcessed: events.NewEvent(TransactionProcessedCaller),
@@ -97,6 +99,7 @@ type Events struct {
 // Processor processes submitted messages in parallel and fires appropriate completion events.
 type Processor struct {
 	Events       Events
+	pm           *peering.Manager
 	wp           *workerpool.WorkerPool
 	requestQueue rqueue.Queue
 	workUnits    *objectstorage.ObjectStorage
@@ -197,8 +200,10 @@ func (proc *Processor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 	msIndex, err := sting.ExtractRequestedMilestoneIndex(data)
 	if err != nil {
-		p.Metrics.InvalidRequests.Inc()
 		metrics.SharedServerMetrics.InvalidRequests.Inc()
+
+		// drop the connection to the peer
+		proc.pm.Remove(p.ID)
 		return
 	}
 
@@ -261,7 +266,12 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		return
 	case wu.Is(Invalid):
 		wu.processingLock.Unlock()
-		p.Metrics.InvalidTransactions.Inc()
+
+		metrics.SharedServerMetrics.InvalidTransactions.Inc()
+
+		// drop the connection to the peer
+		proc.pm.Remove(p.ID)
+
 		return
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
@@ -269,6 +279,20 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		// emit an event to say that a transaction was fully processed
 		if request := proc.requestQueue.Received(wu.tx.GetTxHash()); request != nil {
 			proc.Events.TransactionProcessed.Trigger(wu.tx, request, p)
+			wu.wasStale = false
+			return
+		}
+
+		if wu.wasStale {
+			metrics.SharedServerMetrics.StaleTransactions.Inc()
+			p.Metrics.StaleTransactions.Inc()
+			return
+		}
+
+		if tangle.ContainsTransaction(wu.tx.GetTxHash()) {
+			metrics.SharedServerMetrics.KnownTransactions.Inc()
+			p.Metrics.KnownTransactions.Inc()
+			return
 		}
 
 		return
@@ -308,8 +332,8 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	wu.UpdateState(Hashed)
 
 	// mark the WorkUnit as containing a stale transaction but
-	// still reply to every peer's request.
 	if request == nil && !timestampValid {
+		wu.wasStale = true
 		wu.stale()
 		return
 	}
@@ -318,6 +342,9 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	containsTx := tangle.ContainsTransaction(hornetTx.GetTxHash())
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, request, p)
+
+	// increase the known transaction count for all other peers
+	wu.increaseKnownTxCount(p)
 
 	// broadcast the transaction if it wasn't requested and the timestamp is
 	// within what we consider a sensible delta from now

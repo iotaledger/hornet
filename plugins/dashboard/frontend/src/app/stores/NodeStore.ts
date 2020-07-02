@@ -190,9 +190,6 @@ class NeighborMetrics {
         let knownTx = Object.assign({}, chartSeriesOpts,
             series("Known Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
         );
-        let invalid = Object.assign({}, chartSeriesOpts,
-            series("Invalid Txs", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
-        );
         let stale = Object.assign({}, chartSeriesOpts,
             series("Stale Txs", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
         );
@@ -210,7 +207,6 @@ class NeighborMetrics {
             labels.push(metric.ts);
             newTx.data.push(metric.info.numberOfNewTransactions - prevMetric.info.numberOfNewTransactions);
             knownTx.data.push(metric.info.numberOfKnownTransactions - prevMetric.info.numberOfKnownTransactions);
-            invalid.data.push(metric.info.numberOfInvalidTransactions - prevMetric.info.numberOfInvalidTransactions);
             stale.data.push(metric.info.numberOfStaleTransactions - prevMetric.info.numberOfStaleTransactions);
             sent.data.push(metric.info.numberOfSentTransactions - prevMetric.info.numberOfSentTransactions);
             droppedSent.data.push(metric.info.numberOfDroppedSentPackets - prevMetric.info.numberOfDroppedSentPackets);
@@ -219,7 +215,7 @@ class NeighborMetrics {
         return {
             labels: labels,
             datasets: [
-                newTx, knownTx, invalid, stale, sent, droppedSent
+                newTx, knownTx, stale, sent, droppedSent
             ],
         };
     }
@@ -251,8 +247,6 @@ class NeighborInfo {
     numberOfAllTransactions: number;
     numberOfNewTransactions: number;
     numberOfKnownTransactions: number;
-    numberOfInvalidTransactions: number;
-    numberOfInvalidRequests: number;
     numberOfStaleTransactions: number;
     numberOfReceivedTransactionReq: number;
     numberOfReceivedMilestoneReq: number;

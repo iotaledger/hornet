@@ -4,6 +4,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
@@ -51,6 +52,7 @@ type WorkUnit struct {
 	receivedTxBytes []byte
 	receivedTxHash  hornet.Hash
 	tx              *hornet.Transaction
+	wasStale        bool
 
 	// status
 	stateLock syncutils.RWMutex
@@ -108,7 +110,7 @@ func (wu *WorkUnit) punish() {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
-		p.Metrics.InvalidTransactions.Inc()
+		metrics.SharedServerMetrics.InvalidTransactions.Inc()
 
 		// drop the connection to the peer
 		peering.Manager().Remove(p.ID)
@@ -121,6 +123,7 @@ func (wu *WorkUnit) stale() {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
+		metrics.SharedServerMetrics.StaleTransactions.Inc()
 		p.Metrics.StaleTransactions.Inc()
 	}
 }
@@ -137,5 +140,20 @@ func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 		TxData:          wu.receivedTxBytes,
 		RequestedTxHash: wu.receivedTxHash,
 		ExcludePeers:    exclude,
+	}
+}
+
+// increases the known transaction metric of all peers
+// except the given peer
+func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *peer.Peer) {
+	wu.receivedFromLock.Lock()
+	defer wu.receivedFromLock.Unlock()
+
+	for _, p := range wu.receivedFrom {
+		if p.ID == excludedPeer.ID {
+			continue
+		}
+		metrics.SharedServerMetrics.KnownTransactions.Inc()
+		p.Metrics.KnownTransactions.Inc()
 	}
 }
