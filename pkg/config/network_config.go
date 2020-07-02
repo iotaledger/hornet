@@ -59,6 +59,7 @@ func init() {
 		"46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
 		"EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
 		"2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
+		"iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627",
 	}, "list of autopeering entry nodes to use")
 	flag.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for global services such as autopeering and gossip")
 	flag.String(CfgNetAutopeeringSeed, "", "private key seed used to derive the node identity; optional Base64 encoded 256-bit string")
