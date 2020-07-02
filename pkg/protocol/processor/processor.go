@@ -22,7 +22,6 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
@@ -65,8 +64,6 @@ func New(requestQueue rqueue.Queue, opts *Options) *Processor {
 		data := task.Param(2).([]byte)
 
 		switch task.Param(1).(message.Type) {
-		case legacy.MessageTypeTransactionAndRequest:
-			proc.processTransactionAndRequest(p, data)
 		case sting.MessageTypeTransaction:
 			proc.processTransaction(p, data)
 		case sting.MessageTypeTransactionRequest:
@@ -242,28 +239,12 @@ func (proc *Processor) processTransactionRequest(p *peer.Peer, data []byte) {
 	p.EnqueueForSending(transactionMsg)
 }
 
-// gets or creates a new WorkUnit for the given transaction, flags a Request for the
-// requested transaction and then processes the WorkUnit.
-func (proc *Processor) processTransactionAndRequest(p *peer.Peer, data []byte) {
-
-	// the data contains a transaction and a request for a transaction
-	txDataLen := len(data) - sting.RequestedTransactionHashMsgBytesLength
-	requestedTxHash := sting.ExtractRequestedTransactionHash(data)
-
-	txData := data[:txDataLen]
-	cachedWorkUnit := proc.workUnitFor(txData) // workUnit +1
-	defer cachedWorkUnit.Release()             // workUnit -1
-	workUnit := cachedWorkUnit.WorkUnit()
-	workUnit.addRequest(p, requestedTxHash)
-	proc.processWorkUnit(workUnit, p)
-}
-
 // gets or creates a new WorkUnit for the given transaction and then processes the WorkUnit.
 func (proc *Processor) processTransaction(p *peer.Peer, data []byte) {
 	cachedWorkUnit := proc.workUnitFor(data) // workUnit +1
 	defer cachedWorkUnit.Release()           // workUnit -1
 	workUnit := cachedWorkUnit.WorkUnit()
-	workUnit.addRequest(p, nil)
+	workUnit.addReceivedFrom(p, nil)
 	proc.processWorkUnit(workUnit, p)
 }
 
@@ -290,8 +271,6 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 			proc.Events.TransactionProcessed.Trigger(wu.tx, request, p)
 		}
 
-		// since this WorkUnit is finished, we reply to all requests within it
-		wu.replyToAllRequests(proc.requestQueue)
 		return
 	}
 
@@ -332,7 +311,6 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	// still reply to every peer's request.
 	if request == nil && !timestampValid {
 		wu.stale()
-		wu.replyToAllRequests(proc.requestQueue)
 		return
 	}
 
@@ -346,9 +324,6 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	if request == nil && broadcast && !containsTx {
 		proc.Events.BroadcastTransaction.Trigger(wu.broadcast())
 	}
-
-	// fulfill all requests by replying to every peer
-	wu.replyToAllRequests(proc.requestQueue)
 }
 
 // checks whether the given transaction's timestamp is valid.

@@ -16,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/processor"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
@@ -81,10 +80,6 @@ func configure(plugin *node.Plugin) {
 
 	// register event handlers for messages
 	manager.Events.PeerConnected.Attach(events.NewClosure(func(p *peer.Peer) {
-
-		if p.Protocol.Supports(legacy.FeatureSet) {
-			addLegacyMessageEventHandlers(p)
-		}
 
 		if p.Protocol.Supports(sting.FeatureSet) {
 			addSTINGMessageEventHandlers(p)
