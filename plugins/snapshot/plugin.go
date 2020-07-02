@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -20,7 +18,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -70,7 +67,6 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-	installGenesisTransaction()
 
 	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
@@ -237,17 +233,4 @@ func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
 	defer localSnapshotLock.Unlock()
 
 	return pruneDatabase(targetIndex, nil)
-}
-
-func installGenesisTransaction() {
-	// ensure genesis transaction exists for legacy gossip
-	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
-	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
-	genesis.Hash = consts.NullHashTrytes
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(genesisTxTrits))
-	genesisTx := hornet.NewTransactionFromTx(genesis, txBytesTruncated)
-
-	// ensure the bundle is also existent for the genesis tx
-	cachedTx, _ := tangle.AddTransactionToStorage(genesisTx, 0, false, false, true)
-	cachedTx.Release() // tx -1
 }
