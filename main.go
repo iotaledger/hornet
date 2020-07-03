@@ -29,6 +29,7 @@ import (
 )
 
 func main() {
+	cli.HideConfigFlags()
 	cli.PrintVersion()
 	cli.ParseConfig()
 	toolset.HandleTools()
