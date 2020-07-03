@@ -11,7 +11,6 @@
       "permitRemoteAccess": [
         "getNodeInfo",
         "getBalances",
-        "checkConsistency",
         "getTransactionsToApprove",
         "getInclusionStates",
         "getNodeAPIConfiguration",
