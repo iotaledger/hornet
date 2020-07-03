@@ -15,8 +15,12 @@ import (
 	"github.com/gohornet/hornet/pkg/config"
 )
 
-var enabledPlugins []string
-var disabledPlugins []string
+var (
+	enabledPlugins  []string
+	disabledPlugins []string
+
+	version = flag.BoolP("version", "v", false, "Prints the HORNET version")
+)
 
 func AddPluginStatus(name string, status int) {
 	switch status {
@@ -47,9 +51,13 @@ func PrintConfig() {
 	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 }
 
+// HideConfigFlags hides all non essential flags from the help/usage text.
+func HideConfigFlags() {
+	config.HideConfigFlags()
+}
+
 // PrintVersion prints out the HORNET version
 func PrintVersion() {
-	version := flag.BoolP("version", "v", false, "Prints the HORNET version")
 	flag.Parse()
 	if *version {
 		fmt.Println(AppName + " " + AppVersion)

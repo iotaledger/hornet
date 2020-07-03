@@ -47,6 +47,14 @@ var (
 	}
 )
 
+// HideConfigFlags hides all non essential flags from the help/usage text.
+func HideConfigFlags() {
+	flag.VisitAll(func(f *flag.Flag) {
+		_, notHidden := nonHiddenFlags[f.Name]
+		f.Hidden = !notHidden
+	})
+}
+
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
 //
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
@@ -63,12 +71,6 @@ func FetchConfig() error {
 	NodeConfig.AutomaticEnv()
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
-
-	// hide all but the most essential flags
-	flag.VisitAll(func(f *flag.Flag) {
-		_, notHidden := nonHiddenFlags[f.Name]
-		f.Hidden = !notHidden
-	})
 
 	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
 	if err != nil {
