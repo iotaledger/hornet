@@ -20,6 +20,7 @@ var (
 	disabledPlugins []string
 
 	version = flag.BoolP("version", "v", false, "Prints the HORNET version")
+	help    = flag.BoolP("help", "h", false, "Prints the HORNET help")
 )
 
 func AddPluginStatus(name string, status int) {
@@ -61,6 +62,10 @@ func PrintVersion() {
 	flag.Parse()
 	if *version {
 		fmt.Println(AppName + " " + AppVersion)
+		os.Exit(0)
+	}
+	if *help {
+		flag.Usage()
 		os.Exit(0)
 	}
 }
