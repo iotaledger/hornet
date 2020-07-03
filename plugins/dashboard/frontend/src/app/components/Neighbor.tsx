@@ -102,9 +102,6 @@ export class Neighbor extends React.Component<Props, any> {
                                     </If>
                                     <small>
                                         <Choose>
-                                            <When condition={last.protocol_version === 1}>
-                                                <Badge variant="secondary">Legacy</Badge>
-                                            </When>
                                             <When condition={!last.heartbeat}>
                                                 <Badge variant="warning">Waiting</Badge>
                                             </When>
@@ -117,7 +114,7 @@ export class Neighbor extends React.Component<Props, any> {
                                                 <Badge variant="danger">Milestones Pruned</Badge>
                                             </When>
                                             <Otherwise>
-                                                <Badge variant="success">STING</Badge>
+                                                <Badge variant="success">Synced</Badge>
                                             </Otherwise>
                                         </Choose>
                                     </small>
@@ -166,16 +163,7 @@ export class Neighbor extends React.Component<Props, any> {
                                         <thead>
                                         <tr>
                                             <td><small>All</small></td>
-                                            {
-                                                /*
-                                                    Implementable after the TangleProcessor
-                                                    knows from who actually a tx was received from
-                                                    <td>
-                                                        New
-                                                    </td>
-                                                 */
-                                            }
-                                            <td><small>Invalid</small></td>
+                                            <td><small>New</small></td>
                                             <td><small>Stale</small></td>
                                             <td><small>Sent</small></td>
                                             <td><small>Dropped Packets</small></td>
@@ -184,13 +172,7 @@ export class Neighbor extends React.Component<Props, any> {
                                         <tbody>
                                         <tr>
                                             <td>{last.info.numberOfAllTransactions}</td>
-                                            {
-                                                /*
-                                                    See above
-                                                    <td>{last.info.numberOfNewTransactions}</td>
-                                                 */
-                                            }
-                                            <td><small>{last.info.numberOfInvalidTransactions}</small></td>
+                                            <td>{last.info.numberOfNewTransactions}</td>
                                             <td><small>{last.info.numberOfStaleTransactions}</small></td>
                                             <td><small>{last.info.numberOfSentTransactions}</small></td>
                                             <td><small>{last.info.numberOfDroppedSentPackets}</small></td>

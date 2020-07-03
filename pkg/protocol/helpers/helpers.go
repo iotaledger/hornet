@@ -4,18 +4,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
-
-// SendTransactionAndRequest sends a transaction and request message to the given peer.
-func SendTransactionAndRequest(p *peer.Peer, txData []byte, reqTxHash hornet.Hash) {
-	if !p.Protocol.Supports(legacy.FeatureSet) {
-		return
-	}
-	txAndReqMsg, _ := legacy.NewTransactionAndRequestMessage(txData, reqTxHash)
-	p.EnqueueForSending(txAndReqMsg)
-}
 
 // SendTransaction sends a transaction message to the given peer.
 func SendTransaction(p *peer.Peer, txData []byte) {

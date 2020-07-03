@@ -63,14 +63,6 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 					return true
 				}
 
-				reqHashBytes := b.RequestedTxHash
-
-				// grab a requested transaction hash
-				if r := bc.reqQueue.Next(); r != nil {
-					reqHashBytes = r.Hash
-				}
-
-				helpers.SendTransactionAndRequest(p, b.TxData, reqHashBytes)
 				return true
 			})
 		}

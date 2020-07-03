@@ -7,7 +7,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/handshake"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/stretchr/testify/assert"
@@ -113,7 +112,7 @@ func TestProtocol_Send(t *testing.T) {
 
 func TestProtocol_Supports(t *testing.T) {
 	p := &protocol.Protocol{}
-	p.FeatureSet = sting.FeatureSet | legacy.FeatureSet
+	p.FeatureSet = sting.FeatureSet
 	assert.True(t, p.Supports(sting.FeatureSet))
 	assert.False(t, p.Supports(244))
 }
