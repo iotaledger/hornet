@@ -99,6 +99,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 	for _, txHash := range confirmation.TailsIncluded {
 		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 			txsConfirmed++
 			txsValue++
 			metrics.SharedServerMetrics.ValueTransactions.Inc()
@@ -111,6 +112,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 	for _, txHash := range confirmation.TailsExcludedZeroValue {
 		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 			txsConfirmed++
 			txsZeroValue++
 			metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
@@ -124,6 +126,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 		forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConflicting(true)
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 			txsConflicting++
 			txsConfirmed++
 			metrics.SharedServerMetrics.ConflictingTransactions.Inc()
@@ -131,6 +134,8 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 			Events.TransactionConfirmed.Trigger(tx, milestoneIndex, cachedMsTailTx.GetTransaction().GetTimestamp())
 		})
 	}
+
+	// ToDo: propagate info to the future cone for URTS
 
 	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, txsValue, txsZeroValue, txsConflicting, tc.Sub(ts), time.Since(ts))
 }
