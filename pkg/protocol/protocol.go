@@ -31,7 +31,7 @@ var (
 		[01101110, 01010001, 00010001] denotes that this node supports protocol versions 2, 3, 4, 6, 7, 9, 13, 15, 17 and 21.
 	*/
 
-	// supports protocol messages/feature sets: 2+1
+	// supports protocol messages/feature sets: 2
 	SupportedFeatureSets = []byte{sting.FeatureSet}
 )
 
