@@ -33,6 +33,8 @@ type Confirmation struct {
 	TailsExcludedConflicting []hornet.Hash
 	// The tails which were excluded because they were part of a zero or spam value transfer.
 	TailsExcludedZeroValue []hornet.Hash
+	// The tails which were referenced by the milestone (should be the sum of TailsIncluded + TailsExcludedConflicting + TailsExcludedZeroValue).
+	TailsReferenced []hornet.Hash
 	// Contains the updated state of the addresses which were mutated by the given confirmation.
 	NewAddressState map[string]int64
 	// Contains the mutations to the state of the addresses for the given confirmation.
@@ -62,6 +64,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 		TailsIncluded:            make([]hornet.Hash, 0),
 		TailsExcludedConflicting: make([]hornet.Hash, 0),
 		TailsExcludedZeroValue:   make([]hornet.Hash, 0),
+		TailsReferenced:          make([]hornet.Hash, 0),
 		NewAddressState:          make(map[string]int64),
 		AddressMutations:         make(map[string]int64),
 	}
@@ -207,6 +210,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 		// exclude zero or spam value bundles
 		mutations := bundle.GetLedgerChanges()
 		if bundle.IsValueSpam() || len(mutations) == 0 {
+			wfConf.TailsReferenced = append(wfConf.TailsReferenced, currentTx.GetTxHash())
 			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, currentTx.GetTxHash())
 			return nil
 		}
@@ -248,11 +252,13 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 		}
 
 		if conflicting {
+			wfConf.TailsReferenced = append(wfConf.TailsReferenced, currentTx.GetTxHash())
 			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, currentTx.GetTxHash())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
+		wfConf.TailsReferenced = append(wfConf.TailsReferenced, currentTx.GetTxHash())
 		wfConf.TailsIncluded = append(wfConf.TailsIncluded, currentTx.GetTxHash())
 
 		// incorporate the mutations in accordance with the previous mutations
