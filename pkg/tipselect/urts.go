@@ -26,15 +26,8 @@ type TipSelectionFunc = func() (hornet.Hashes, error)
 
 // TipSelStats holds the stats for a tipselection run.
 type TipSelStats struct {
-	// The duration of the tip-selection for both walks.
+	// The duration of the tip-selection for a single tip.
 	Duration time.Duration `json:"duration"`
-	// The amount of steps taken, respectively transactions walked towards the present of the graph.
-	StepsTaken uint64 `json:"steps_taken"`
-	// The amount of steps jumped, meaning approvers selected without validating, as they were
-	// walked/validated into by the previous walk.
-	StepsJumped uint64 `json:"steps_jumped"`
-	// The amount of transactions which were evaluated.
-	Evaluated uint64 `json:"evaluated"`
 }
 
 // TipCaller is used to signal tip events.
@@ -210,13 +203,6 @@ func (ts *TipSelector) TipCount() int {
 // selectTip selects a tip.
 func (ts *TipSelector) selectTip() (hornet.Hash, error) {
 
-	// record stats
-	start := time.Now()
-	tipSelStats := &TipSelStats{}
-
-	tipSelStats.Duration = time.Since(start)
-	ts.Events.TipSelPerformed.Trigger(tipSelStats)
-
 	if !tangle.IsNodeSyncedWithThreshold() {
 		return nil, tangle.ErrNodeNotSynced
 	}
@@ -229,6 +215,9 @@ func (ts *TipSelector) selectTip() (hornet.Hash, error) {
 		return nil, ErrNoTipsAvailable
 	}
 
+	// record stats
+	start := time.Now()
+
 	// get a random number between 1 and the score sum
 	randScore := utils.RandomInsecure(1, ts.scoreSum)
 
@@ -239,6 +228,7 @@ func (ts *TipSelector) selectTip() (hornet.Hash, error) {
 
 		// if randScore reaches zero or below, we return the given tip
 		if randScore <= 0 {
+			ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start)})
 			return tip.Hash, nil
 		}
 	}

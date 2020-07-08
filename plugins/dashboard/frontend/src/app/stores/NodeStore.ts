@@ -11,9 +11,6 @@ class TPSMetric {
 
 class TipSelMetric {
     duration: number;
-    steps_taken: number;
-    steps_jumped: number;
-    evaluated: number;
     ts: string;
 }
 
@@ -610,29 +607,17 @@ export class NodeStore {
         let duration = Object.assign({}, chartSeriesOpts,
             series("Duration", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
         );
-        let stepsTaken = Object.assign({}, chartSeriesOpts,
-            series("Steps Taken", 'rgba(14, 230, 183, 1)', 'rgba(14, 230, 183,0.4)')
-        );
-        let stepsJumped = Object.assign({}, chartSeriesOpts,
-            series("Steps Jumped", 'rgba(14, 230, 100,1)', 'rgba(14, 230, 100,0.4)')
-        );
-        let evaluated = Object.assign({}, chartSeriesOpts,
-            series("Evaluated", 'rgba(230, 165, 14,1)', 'rgba(230, 165, 14,0.4)')
-        );
 
         let labels = [];
         for (let i = 0; i < this.collected_tip_sel_metrics.length; i++) {
             let metric = this.collected_tip_sel_metrics[i];
             labels.push(metric.ts);
             duration.data.push(Math.floor(metric.duration / 1000000));
-            stepsTaken.data.push(metric.steps_taken);
-            stepsJumped.data.push(metric.steps_jumped);
-            evaluated.data.push(metric.evaluated);
         }
 
         return {
             labels: labels,
-            datasets: [stepsTaken, stepsJumped, duration, evaluated],
+            datasets: [duration],
         };
     }
 
