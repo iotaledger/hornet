@@ -321,14 +321,9 @@ func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.Cached
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
-			// first check if the tx was confirmed => update yrtsi and ortsi with the confirmation index
-			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
-				updateIndexes(at, at)
-				return false, nil
-			}
-
-			// if the tx was not confirmed yet, but already contains recent (calculation index matches LSMI) information
-			// about yrtsi and ortsi, propagate that info
+			// if the tx contains recent (calculation index matches LSMI) information
+			// about yrtsi and ortsi (uncofirmed or confirmed), propagate that info
+			// no need to check confirmation index, since all confirmed txs get updated with yrtsi and ortsi equal confirmation index at confirmation
 			yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
 			if rtsci == tangle.GetSolidMilestoneIndex() {
 				updateIndexes(yrtsi, ortsi)
