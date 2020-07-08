@@ -73,6 +73,33 @@ func markTransactionAsSolid(cachedTx *tangle.CachedTransaction) {
 		}
 		defer cachedBndl.Release(true) // bundle -1
 
+		// search all referenced tails of this bundle
+		approveeTailTxHashes, err := dag.FindAllTails(cachedBndl.GetBundle().GetTailHash(), true)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		invalid := false
+		for approveeTailTxHash := range approveeTailTxHashes {
+			cachedApproveeBndl := tangle.GetCachedBundleOrNil(hornet.Hash(approveeTailTxHash)) // bundle +1
+			if cachedApproveeBndl == nil {
+				// bundle must be created here
+				log.Panicf("BundleSolid: Bundle not found: %v", hornet.Hash(approveeTailTxHash).Trytes())
+			}
+			bndl := cachedApproveeBndl.GetBundle() // bundle -1
+			cachedApproveeBndl.Release(true)
+
+			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
+				// bundle has an invalid past cone
+				invalid = true
+				break
+			}
+		}
+
+		if invalid {
+			cachedBndl.GetBundle().SetInvalidPastCone(true)
+		}
+
 		Events.BundleSolid.Trigger(cachedBndl) // bundle pass +1
 	}
 

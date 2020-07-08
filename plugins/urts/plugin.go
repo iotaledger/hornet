@@ -42,8 +42,8 @@ func configure(plugin *node.Plugin) {
 				wasSyncBefore = true
 			}
 
-			if !bndl.IsValid() || !bndl.ValidStrictSemantics() {
-				// ignore invalid bundles or semantically invalid bundles
+			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
+				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
 				return
 			}
 
