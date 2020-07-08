@@ -450,6 +450,36 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) S
 
 // UpdateTransactionRootSnapshotIndexes updates the transaction root snapshot
 // indexes of the future cone of all given transactions.
+// all the transactions of the newly confirmed cone already have updated transaction root snapshot indexes.
+// we have to walk the future cone, and update the past cone of all transactions that reference an old cone.
+// as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
+// walking the future cone of the same transactions multiple times.
 func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes) {
+	traversed := map[string]struct{}{}
 
+	// we update all transactions in order from oldest to latest
+	for i := len(txHashes) - 1; i >= 0; i-- {
+		txHash := txHashes[i]
+
+		if err := dag.TraverseApprovers(txHash,
+			// traversal stops if no more transactions pass the given condition
+			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
+				defer cachedTx.Release(true) // tx -1
+				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
+				return !previouslyTraversed, nil
+			},
+			// consumer
+			func(cachedTx *tangle.CachedTransaction) error { // tx +1
+				defer cachedTx.Release(true) // tx -1
+				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+
+				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
+				ts.getTransactionRootSnapshotIndexes(cachedTx.Retain()) // tx pass +1
+
+				return nil
+			}, true, nil); err != nil {
+			panic(err)
+		}
+	}
 }
+
