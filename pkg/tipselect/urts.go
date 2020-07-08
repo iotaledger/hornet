@@ -28,6 +28,8 @@ type TipSelectionFunc = func() (hornet.Hashes, error)
 type TipSelStats struct {
 	// The duration of the tip-selection for a single tip.
 	Duration time.Duration `json:"duration"`
+	// The amount of lazy tips found and removed during the tip-selection.
+	LazyTips int `json:"lazy_tips"`
 }
 
 // TipCaller is used to signal tip events.
@@ -52,6 +54,8 @@ const (
 var (
 	// ErrNoTipsAvailable is returned when no tips are available in the node.
 	ErrNoTipsAvailable = errors.New("no tips available")
+	// ErrTipLazy is returned when the choosen tip was lazy already.
+	ErrTipLazy = errors.New("tip already lazy")
 )
 
 // Tip defines a tip.
@@ -130,10 +134,10 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 		return
 	}
 
-	score := ts.calculateScore(tailTxHash)
+	score := ts.calculateScore(tailTxHash, true)
 	if score == ScoreLazy {
-		// Do not add tip at all
-		// ToDo: should lazy tips remove old tips from the pool?
+		// do not add lazy tips.
+		// lazy tips should also not remove other tips from the pool.
 		return
 	}
 
@@ -200,23 +204,13 @@ func (ts *TipSelector) TipCount() int {
 	return len(ts.tipsMap)
 }
 
-// selectTip selects a tip.
-func (ts *TipSelector) selectTip() (hornet.Hash, error) {
-
-	if !tangle.IsNodeSyncedWithThreshold() {
-		return nil, tangle.ErrNodeNotSynced
-	}
-
-	ts.tipsLock.RLock()
-	defer ts.tipsLock.RUnlock()
+// randomTipWithoutLocking picks a random tip from the pool and checks it's "own" score again without acquiring the lock.
+func (ts *TipSelector) randomTipWithoutLocking() (hornet.Hash, error) {
 
 	if ts.scoreSum == 0 {
 		// no semi-/non-lazy tips available
 		return nil, ErrNoTipsAvailable
 	}
-
-	// record stats
-	start := time.Now()
 
 	// get a random number between 1 and the score sum
 	randScore := utils.RandomInsecure(1, ts.scoreSum)
@@ -228,13 +222,48 @@ func (ts *TipSelector) selectTip() (hornet.Hash, error) {
 
 		// if randScore reaches zero or below, we return the given tip
 		if randScore <= 0 {
-			ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start)})
+			// check the "own" score of the tip again to avoid old tips
+			if score := ts.calculateScore(tip.Hash, false); score == ScoreLazy {
+				// remove the tip from the pool because it is outdated
+				ts.removeTipWithoutLocking(tip.Hash)
+				return nil, ErrTipLazy
+			}
 			return tip.Hash, nil
 		}
 	}
 
 	// no tips
 	return nil, ErrNoTipsAvailable
+}
+
+// selectTip selects a tip.
+func (ts *TipSelector) selectTip() (hornet.Hash, error) {
+
+	if !tangle.IsNodeSyncedWithThreshold() {
+		return nil, tangle.ErrNodeNotSynced
+	}
+
+	ts.tipsLock.RLock()
+	defer ts.tipsLock.RUnlock()
+
+	// record stats
+	start := time.Now()
+
+	lazyTips := 0
+	for {
+		tipHash, err := ts.randomTipWithoutLocking()
+		if err == ErrTipLazy {
+			// loop as long as we pick lazy tips to remove them from the pool
+			lazyTips++
+			continue
+		}
+
+		if err == nil {
+			ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start), LazyTips: lazyTips})
+		}
+
+		return tipHash, err
+	}
 }
 
 // SelectTips selects two tips.
@@ -279,7 +308,7 @@ func (ts *TipSelector) updateOutdatedRootSnapshotIndexes(outdatedTransactions ho
 
 // getTransactionRootSnapshotIndexes searches the root snapshot indexes for a given transaction.
 func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
-	defer cachedTx.Release() // tx -1
+	defer cachedTx.Release(true) // tx -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
 	// information about yrtsi and ortsi, return that info
@@ -350,14 +379,14 @@ func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.Cached
 }
 
 // calculateScore calculates the tip selection score of this transaction
-func (ts *TipSelector) calculateScore(txHash hornet.Hash) Score {
+func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) Score {
 	lsmi := tangle.GetSolidMilestoneIndex()
 
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
 		panic(fmt.Sprintf("transaction not found: %v", txHash.Trytes()))
 	}
-	defer cachedTx.Release()
+	defer cachedTx.Release(true)
 
 	ytrsi, ortsi := ts.getTransactionRootSnapshotIndexes(cachedTx.Retain()) // tx +1
 
@@ -371,6 +400,12 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash) Score {
 		return ScoreLazy
 	}
 
+	if !checkApprovees {
+		// if we don't check for the approvee scores, this tip is not lazy.
+		// this is only used to verify that the tip is not lazy already when it gets picked.
+		return ScoreNonLazy
+	}
+
 	// the approvees (trunk and branch) are the transactions this tip approves
 	approveeHashes := map[string]struct{}{
 		string(cachedTx.GetTransaction().GetTrunkHash()):  {},
@@ -379,7 +414,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash) Score {
 
 	approveesLazy := 0
 	for approveeHash := range approveeHashes {
-		approveeScore := ts.calculateScore(hornet.Hash(approveeHash))
+		approveeScore := ts.calculateScore(hornet.Hash(approveeHash), true)
 
 		// direct approvee is already lazy, therefore so is this tip
 		if approveeScore == ScoreLazy {
@@ -392,7 +427,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash) Score {
 		}
 
 		_, approveeORTSI := ts.getTransactionRootSnapshotIndexes(cachedApproveeTx.Retain()) // tx +1
-		cachedApproveeTx.Release()
+		cachedApproveeTx.Release(true)
 
 		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, we mark it as such
 		if lsmi-approveeORTSI > ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI {

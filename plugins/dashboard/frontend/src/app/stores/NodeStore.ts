@@ -11,6 +11,7 @@ class TPSMetric {
 
 class TipSelMetric {
     duration: number;
+    lazy_tips: number;
     ts: string;
 }
 
@@ -607,17 +608,21 @@ export class NodeStore {
         let duration = Object.assign({}, chartSeriesOpts,
             series("Duration", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
         );
+        let lazyTips = Object.assign({}, chartSeriesOpts,
+            series("Lazy tips removed", 'rgba(230, 165, 14,1)', 'rgba(230, 165, 14,0.4)')
+        );
 
         let labels = [];
         for (let i = 0; i < this.collected_tip_sel_metrics.length; i++) {
             let metric = this.collected_tip_sel_metrics[i];
             labels.push(metric.ts);
             duration.data.push(Math.floor(metric.duration / 1000000));
+            lazyTips.data.push(metric.lazy_tips)
         }
 
         return {
             labels: labels,
-            datasets: [duration],
+            datasets: [duration, lazyTips],
         };
     }
 
