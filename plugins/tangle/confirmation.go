@@ -18,7 +18,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 	defer cachedMsBundle.Release()
 
 	ts := time.Now()
-	confirmation, err := whiteflag.ComputeConfirmation(milestoneMerkleTreeHashFunc, cachedMsBundle.Retain())
+	confirmation, err := whiteflag.ComputeConfirmation(milestoneMerkleTreeHashFunc, cachedMsBundle.Retain(), milestoneIndex)
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		log.Panicf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
@@ -135,7 +135,7 @@ func confirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.Cac
 		})
 	}
 
-	// ToDo: propagate info to the future cone for URTS
+	Events.MilestoneConfirmed.Trigger(confirmation)
 
 	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v", milestoneIndex, txsConfirmed, txsValue, txsZeroValue, txsConflicting, tc.Sub(ts), time.Since(ts))
 }

@@ -1,13 +1,19 @@
 package tangle
 
 import (
+	"github.com/iotaledger/hive.go/events"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{}) {
 	handler.(func(metric *ConfirmedMilestoneMetric))(params[0].(*ConfirmedMilestoneMetric))
+}
+
+func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
+	handler.(func(confirmation *whiteflag.Confirmation))(params[0].(*whiteflag.Confirmation))
 }
 
 var Events = pluginEvents{
@@ -20,6 +26,7 @@ var Events = pluginEvents{
 	BundleSolid:                   events.NewEvent(tangle.BundleCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.BundleCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
+	MilestoneConfirmed:            events.NewEvent(ConfirmedMilestoneCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),
 	SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 	PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
@@ -36,6 +43,7 @@ type pluginEvents struct {
 	BundleSolid                   *events.Event
 	ReceivedNewMilestone          *events.Event
 	LatestMilestoneChanged        *events.Event
+	MilestoneConfirmed            *events.Event
 	SolidMilestoneChanged         *events.Event
 	SnapshotMilestoneIndexChanged *events.Event
 	PruningMilestoneIndexChanged  *events.Event

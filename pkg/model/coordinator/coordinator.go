@@ -244,7 +244,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) error {
 
 	// compute merkle tree root
-	byteEncodedMerkleTreeRootHash, err := whiteflag.ComputeMerkleTreeRootHash(coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	byteEncodedMerkleTreeRootHash, err := whiteflag.ComputeMerkleTreeRootHash(coo.milestoneMerkleHashFunc, trunkHash, branchHash, newMilestoneIndex)
 	if err != nil {
 		return err
 	}

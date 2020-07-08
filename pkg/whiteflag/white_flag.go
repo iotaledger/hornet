@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
@@ -27,14 +28,16 @@ var (
 
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
 type Confirmation struct {
+	// The index of the milestone that got confirmed.
+	MilestoneIndex milestone.Index
 	// The tails of bundles which mutate the ledger in the order in which they were applied.
-	TailsIncluded []hornet.Hash
+	TailsIncluded hornet.Hashes
 	// The tails of bundles which were excluded as they were conflicting with the mutations.
-	TailsExcludedConflicting []hornet.Hash
+	TailsExcludedConflicting hornet.Hashes
 	// The tails which were excluded because they were part of a zero or spam value transfer.
-	TailsExcludedZeroValue []hornet.Hash
+	TailsExcludedZeroValue hornet.Hashes
 	// The tails which were referenced by the milestone (should be the sum of TailsIncluded + TailsExcludedConflicting + TailsExcludedZeroValue).
-	TailsReferenced []hornet.Hash
+	TailsReferenced hornet.Hashes
 	// Contains the updated state of the addresses which were mutated by the given confirmation.
 	NewAddressState map[string]int64
 	// Contains the mutations to the state of the addresses for the given confirmation.
@@ -49,7 +52,7 @@ type Confirmation struct {
 // Bundles within the approving cone must obey to strict schematics and be valid. Bundles causing conflicts are
 // ignored but do not create an error.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.CachedBundle) (*Confirmation, error) {
+func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.CachedBundle, milestoneIndex milestone.Index) (*Confirmation, error) {
 	defer cachedMsBundle.Release()
 	msBundle := cachedMsBundle.GetBundle()
 
@@ -61,10 +64,11 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 	stack.PushFront(msTailTxHash)
 
 	wfConfirmation := &Confirmation{
-		TailsIncluded:            make([]hornet.Hash, 0),
-		TailsExcludedConflicting: make([]hornet.Hash, 0),
-		TailsExcludedZeroValue:   make([]hornet.Hash, 0),
-		TailsReferenced:          make([]hornet.Hash, 0),
+		MilestoneIndex:           milestoneIndex,
+		TailsIncluded:            make(hornet.Hashes, 0),
+		TailsExcludedConflicting: make(hornet.Hashes, 0),
+		TailsExcludedZeroValue:   make(hornet.Hashes, 0),
+		TailsReferenced:          make(hornet.Hashes, 0),
 		NewAddressState:          make(map[string]int64),
 		AddressMutations:         make(map[string]int64),
 	}
@@ -83,12 +87,13 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 // ComputeMerkleTreeRootHash computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash trinary.Hash, branchHash trinary.Hash) ([]byte, error) {
+func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash trinary.Hash, branchHash trinary.Hash, milestoneIndex milestone.Index) ([]byte, error) {
 	stack := list.New()
 	stack.PushFront(trunkHash)
 	visited := make(map[string]struct{})
 	wfConfirmation := &Confirmation{
-		TailsIncluded:    make([]hornet.Hash, 0),
+		MilestoneIndex:   milestoneIndex,
+		TailsIncluded:    make(hornet.Hashes, 0),
 		NewAddressState:  make(map[string]int64),
 		AddressMutations: make(map[string]int64),
 	}
