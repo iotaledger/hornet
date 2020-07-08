@@ -458,8 +458,7 @@ func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hash
 	traversed := map[string]struct{}{}
 
 	// we update all transactions in order from oldest to latest
-	for i := len(txHashes) - 1; i >= 0; i-- {
-		txHash := txHashes[i]
+	for _, txHash := range txHashes {
 
 		if err := dag.TraverseApprovers(txHash,
 			// traversal stops if no more transactions pass the given condition
