@@ -72,7 +72,7 @@ func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		// propagate new transaction root snapshot indexes to the future cone for URTS
-		TipSelector.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced)
+		TipSelector.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
 	})
 }
 

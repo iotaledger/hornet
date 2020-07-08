@@ -134,7 +134,9 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 		return
 	}
 
-	score := ts.calculateScore(tailTxHash, true)
+	lsmi := tangle.GetSolidMilestoneIndex()
+
+	score := ts.calculateScore(tailTxHash, true, lsmi)
 	if score == ScoreLazy {
 		// do not add lazy tips.
 		// lazy tips should also not remove other tips from the pool.
@@ -212,6 +214,8 @@ func (ts *TipSelector) randomTipWithoutLocking() (hornet.Hash, error) {
 		return nil, ErrNoTipsAvailable
 	}
 
+	lsmi := tangle.GetSolidMilestoneIndex()
+
 	// get a random number between 1 and the score sum
 	randScore := utils.RandomInsecure(1, ts.scoreSum)
 
@@ -223,7 +227,7 @@ func (ts *TipSelector) randomTipWithoutLocking() (hornet.Hash, error) {
 		// if randScore reaches zero or below, we return the given tip
 		if randScore <= 0 {
 			// check the "own" score of the tip again to avoid old tips
-			if score := ts.calculateScore(tip.Hash, false); score == ScoreLazy {
+			if score := ts.calculateScore(tip.Hash, false, lsmi); score == ScoreLazy {
 				// remove the tip from the pool because it is outdated
 				ts.removeTipWithoutLocking(tip.Hash)
 				return nil, ErrTipLazy
@@ -294,7 +298,7 @@ func (ts *TipSelector) SelectTips() (hornet.Hashes, error) {
 	return tips, nil
 }
 
-func (ts *TipSelector) updateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes) {
+func (ts *TipSelector) updateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
 	for i := len(outdatedTransactions) - 1; i >= 0; i-- {
 		outdatedTxHash := outdatedTransactions[i]
 
@@ -302,18 +306,18 @@ func (ts *TipSelector) updateOutdatedRootSnapshotIndexes(outdatedTransactions ho
 		if cachedTx == nil {
 			panic(tangle.ErrTransactionNotFound)
 		}
-		ts.getTransactionRootSnapshotIndexes(cachedTx)
+		ts.getTransactionRootSnapshotIndexes(cachedTx, lsmi)
 	}
 }
 
 // getTransactionRootSnapshotIndexes searches the root snapshot indexes for a given transaction.
-func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
+func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
 	defer cachedTx.Release(true) // tx -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
 	// information about yrtsi and ortsi, return that info
 	yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
-	if rtsci == tangle.GetSolidMilestoneIndex() {
+	if rtsci == lsmi {
 		return yrtsi, ortsi
 	}
 
@@ -344,7 +348,7 @@ func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.Cached
 			// about yrtsi and ortsi (uncofirmed or confirmed), propagate that info
 			// no need to check confirmation index, since all confirmed txs get updated with yrtsi and ortsi equal confirmation index at confirmation
 			yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
-			if rtsci == tangle.GetSolidMilestoneIndex() {
+			if rtsci == lsmi {
 				updateIndexes(yrtsi, ortsi)
 				return false, nil
 			}
@@ -370,25 +374,23 @@ func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.Cached
 	}
 
 	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest
-	ts.updateOutdatedRootSnapshotIndexes(outdatedTransactions)
+	ts.updateOutdatedRootSnapshotIndexes(outdatedTransactions, lsmi)
 
 	// set the new transaction root snapshot indexes in the metadata of the transaction
-	cachedTx.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, tangle.GetSolidMilestoneIndex())
+	cachedTx.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
 
 	return youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex
 }
 
 // calculateScore calculates the tip selection score of this transaction
-func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) Score {
-	lsmi := tangle.GetSolidMilestoneIndex()
-
+func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool, lsmi milestone.Index) Score {
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
 		panic(fmt.Sprintf("transaction not found: %v", txHash.Trytes()))
 	}
 	defer cachedTx.Release(true)
 
-	ytrsi, ortsi := ts.getTransactionRootSnapshotIndexes(cachedTx.Retain()) // tx +1
+	ytrsi, ortsi := ts.getTransactionRootSnapshotIndexes(cachedTx.Retain(), lsmi) // tx +1
 
 	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
 	if (lsmi - ytrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
@@ -414,7 +416,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) S
 
 	approveesLazy := 0
 	for approveeHash := range approveeHashes {
-		approveeScore := ts.calculateScore(hornet.Hash(approveeHash), true)
+		approveeScore := ts.calculateScore(hornet.Hash(approveeHash), true, lsmi)
 
 		// direct approvee is already lazy, therefore so is this tip
 		if approveeScore == ScoreLazy {
@@ -426,7 +428,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) S
 			panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
 		}
 
-		_, approveeORTSI := ts.getTransactionRootSnapshotIndexes(cachedApproveeTx.Retain()) // tx +1
+		_, approveeORTSI := ts.getTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
 		cachedApproveeTx.Release(true)
 
 		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, we mark it as such
@@ -454,7 +456,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) S
 // we have to walk the future cone, and update the past cone of all transactions that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same transactions multiple times.
-func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes) {
+func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone.Index) {
 	traversed := map[string]struct{}{}
 
 	// we update all transactions in order from oldest to latest
@@ -473,7 +475,7 @@ func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hash
 				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
 
 				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
-				ts.getTransactionRootSnapshotIndexes(cachedTx.Retain()) // tx pass +1
+				ts.getTransactionRootSnapshotIndexes(cachedTx.Retain(), lsmi) // tx pass +1
 
 				return nil
 			}, true, nil); err != nil {
@@ -481,4 +483,3 @@ func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hash
 		}
 	}
 }
-
