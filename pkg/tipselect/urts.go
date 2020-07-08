@@ -447,3 +447,9 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool) S
 
 	return ScoreNonLazy
 }
+
+// UpdateTransactionRootSnapshotIndexes updates the transaction root snapshot
+// indexes of the future cone of all given transactions.
+func (ts *TipSelector) UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes) {
+
+}

@@ -3,13 +3,16 @@ package urts
 import (
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -19,6 +22,10 @@ var (
 
 	TipSelector   *tipselect.TipSelector
 	wasSyncBefore = false
+
+	// Closures
+	onBundleSolid        *events.Closure
+	onMilestoneConfirmed *events.Closure
 )
 
 func configure(plugin *node.Plugin) {
@@ -32,7 +39,19 @@ func configure(plugin *node.Plugin) {
 		config.NodeConfig.GetUint32(config.CfgTipSelMaxApprovers),
 	)
 
-	tangleplugin.Events.BundleSolid.Attach(events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+	configureEvents()
+}
+
+func run(_ *node.Plugin) {
+	daemon.BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
+		attachEvents()
+		<-shutdownSignal
+		detachEvents()
+	}, shutdown.PriorityTipselection)
+}
+
+func configureEvents() {
+	onBundleSolid = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		cachedBndl.ConsumeBundle(func(bndl *tangle.Bundle) { // tx -1
 			if !wasSyncBefore {
 				if !tangle.IsNodeSyncedWithThreshold() {
@@ -49,9 +68,20 @@ func configure(plugin *node.Plugin) {
 
 			TipSelector.AddTip(bndl.GetTailHash())
 		})
-	}))
+	})
+
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		// propagate new transaction root snapshot indexes to the future cone for URTS
+		TipSelector.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced)
+	})
 }
 
-func run(_ *node.Plugin) {
-	// nothing
+func attachEvents() {
+	tangleplugin.Events.BundleSolid.Attach(onBundleSolid)
+	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+}
+
+func detachEvents() {
+	tangleplugin.Events.BundleSolid.Detach(onBundleSolid)
+	tangleplugin.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 }

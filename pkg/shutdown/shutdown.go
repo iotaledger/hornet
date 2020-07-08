@@ -4,6 +4,7 @@ const (
 	PriorityCloseDatabase = iota
 	PriorityFlushToDatabase
 	PriorityRequestsProcessor
+	PriorityTipselection
 	PriorityMilestoneSolidifier
 	PriorityMilestoneProcessor
 	PrioritySolidifierGossip
