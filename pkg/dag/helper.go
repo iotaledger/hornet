@@ -67,7 +67,7 @@ type OnMissingApprovee func(approveeHash hornet.Hash) error
 // OnSolidEntryPoint gets called when during traversal the startTx or approvee is a solid entry point.
 type OnSolidEntryPoint func(txHash hornet.Hash)
 
-// TraverseApprovees starts to traverse the approvees of the given start transaction until
+// TraverseApprovees starts to traverse the approvees (past cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
@@ -98,18 +98,18 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 			// check condition to decide if tx should be consumed and traversed
 			traverse, err := condition(cachedTx.Retain()) // tx + 1
 			if err != nil {
-				cachedTx.Release(forceRelease)
+				cachedTx.Release(forceRelease) // tx -1
 				return err
 			}
 
 			if !traverse {
-				cachedTx.Release(forceRelease)
+				cachedTx.Release(forceRelease) // tx -1
 				continue
 			}
 
 			// consume the tx
 			if err := consumer(cachedTx.Retain()); err != nil { // tx +1
-				cachedTx.Release(forceRelease)
+				cachedTx.Release(forceRelease) // tx -1
 				return err
 			}
 
@@ -146,6 +146,70 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 				cachedApproveeTx.Release() // approvee -1
 
 				txsToTraverse[approveeHash] = struct{}{}
+			}
+		}
+	}
+
+	return nil
+}
+
+// TraverseApprovers starts to traverse the approvers (future cone) of the given start transaction until
+// the traversal stops due to no more transactions passing the given condition.
+func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
+
+	processed := map[string]struct{}{}
+	txsToTraverse := map[string]struct{}{string(startTxHash): {}}
+	for len(txsToTraverse) != 0 {
+		for txHash := range txsToTraverse {
+			delete(txsToTraverse, txHash)
+
+			select {
+			case <-abortSignal:
+				return tangle.ErrOperationAborted
+			default:
+			}
+
+			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
+			if cachedTx == nil {
+				return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", hornet.Hash(txHash).Trytes())
+			}
+
+			// check condition to decide if tx should be consumed and traversed
+			traverse, err := condition(cachedTx.Retain()) // tx + 1
+			if err != nil {
+				cachedTx.Release(forceRelease) // tx -1
+				return err
+			}
+
+			if !traverse {
+				cachedTx.Release(forceRelease) // tx -1
+				continue
+			}
+
+			// consume the tx
+			if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+				cachedTx.Release(forceRelease) // tx -1
+				return err
+			}
+			cachedTx.Release(forceRelease) // tx -1
+
+			for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), forceRelease) {
+
+				if _, checked := processed[string(approverHash)]; checked {
+					continue
+				}
+
+				processed[string(approverHash)] = struct{}{}
+
+				cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // approver +1
+				if cachedApproverTx == nil {
+					return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", approverHash.Trytes())
+				}
+
+				// do not force release since it is loaded again
+				cachedApproverTx.Release() // approver -1
+
+				txsToTraverse[string(approverHash)] = struct{}{}
 			}
 		}
 	}
