@@ -51,7 +51,7 @@
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
       "path": "snapshots/mainnet/export.bin",
-      "downloadURL": "https://ls.manapotion.io/export.bin"
+      "downloadURL": "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
     },
     "global": {
       "path": "snapshotMainnet.txt",
