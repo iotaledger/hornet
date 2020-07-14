@@ -106,9 +106,7 @@ func GetTransactionStorageSize() int {
 	return txStorage.GetSize()
 }
 
-func configureTransactionStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Transactions
+func configureTransactionStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	txStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixTransactions}),

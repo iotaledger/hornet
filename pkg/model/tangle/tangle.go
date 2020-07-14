@@ -7,7 +7,10 @@ import (
 
 	"go.etcd.io/bbolt"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
+
+	"github.com/gohornet/hornet/pkg/profile"
 )
 
 const (
@@ -42,24 +45,45 @@ func ConfigureDatabases(directory string) {
 	tangleDb = boltDB(directory, TangleDbFilename)
 
 	tangleStore := bolt.New(tangleDb)
-	configureHealthStore(tangleStore)
-	configureTransactionStorage(tangleStore)
-	configureBundleTransactionsStorage(tangleStore)
-	configureBundleStorage(tangleStore)
-	configureApproversStorage(tangleStore)
-	configureTagsStorage(tangleStore)
-	configureAddressesStorage(tangleStore)
-	configureMilestoneStorage(tangleStore)
-	configureUnconfirmedTxStorage(tangleStore)
-	configureLedgerStore(tangleStore)
 
 	snapshotDb = boltDB(directory, SnapshotDbFilename)
 	snapshotStore := bolt.New(snapshotDb)
-	configureSnapshotStore(snapshotStore)
 
 	spentDb = boltDB(directory, SpentAddressesDbFilename)
 	spentStore := bolt.New(spentDb)
-	configureSpentAddressesStorage(spentStore)
+
+	ConfigureStorages(tangleStore, snapshotStore, spentStore, profile.LoadProfile().Caches)
+}
+
+func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStore, spentStore kvstore.KVStore, caches profile.Caches) {
+
+	configureHealthStore(tangleStore)
+	configureTransactionStorage(tangleStore, caches.Transactions)
+	configureBundleTransactionsStorage(tangleStore, caches.BundleTransactions)
+	configureBundleStorage(tangleStore, caches.Bundles)
+	configureApproversStorage(tangleStore, caches.Approvers)
+	configureTagsStorage(tangleStore, caches.Tags)
+	configureAddressesStorage(tangleStore, caches.Addresses)
+	configureMilestoneStorage(tangleStore, caches.Milestones)
+	configureUnconfirmedTxStorage(tangleStore, caches.UnconfirmedTx)
+	configureLedgerStore(tangleStore)
+
+	configureSnapshotStore(snapshotStore)
+
+	configureSpentAddressesStorage(spentStore, caches.SpentAddresses)
+}
+
+func ShutdownStorages() {
+
+	ShutdownMilestoneStorage()
+	ShutdownBundleStorage()
+	ShutdownBundleTransactionsStorage()
+	ShutdownTransactionStorage()
+	ShutdownApproversStorage()
+	ShutdownTagsStorage()
+	ShutdownAddressStorage()
+	ShutdownUnconfirmedTxsStorage()
+	ShutdownSpentAddressesStorage()
 }
 
 func LoadInitialValuesFromDatabase() {

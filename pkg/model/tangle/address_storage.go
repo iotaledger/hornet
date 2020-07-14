@@ -51,9 +51,7 @@ func GetAddressesStorageSize() int {
 	return addressesStorage.GetSize()
 }
 
-func configureAddressesStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Addresses
+func configureAddressesStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	addressesStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixAddresses}),

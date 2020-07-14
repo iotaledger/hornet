@@ -112,15 +112,7 @@ func run(plugin *node.Plugin) {
 		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
-		tangle.ShutdownMilestoneStorage()
-		tangle.ShutdownBundleStorage()
-		tangle.ShutdownBundleTransactionsStorage()
-		tangle.ShutdownTransactionStorage()
-		tangle.ShutdownApproversStorage()
-		tangle.ShutdownTagsStorage()
-		tangle.ShutdownAddressStorage()
-		tangle.ShutdownUnconfirmedTxsStorage()
-		tangle.ShutdownSpentAddressesStorage()
+		tangle.ShutdownStorages()
 		log.Info("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase)
