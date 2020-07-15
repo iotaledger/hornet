@@ -2,7 +2,6 @@ package whiteflag
 
 import (
 	"bytes"
-	"crypto"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -27,14 +26,16 @@ type ConfirmedMilestoneStats struct {
 
 // ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func ConfirmMilestone(milestoneIndex milestone.Index, cachedMsBundle *tangle.CachedBundle, milestoneMerkleTreeHashFunc crypto.Hash, forEachConfirmedTx func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64)) (*ConfirmedMilestoneStats, error) {
 	defer cachedMsBundle.Release()
 
 	tangle.WriteLockLedger()
 	defer tangle.WriteUnlockLedger()
 
+	milestoneIndex := cachedMsBundle.GetBundle().GetMilestoneIndex()
+
 	ts := time.Now()
-	confirmation, err := ComputeConfirmation(milestoneMerkleTreeHashFunc, cachedMsBundle.Retain())
+	confirmation, err := ComputeConfirmation(tangle.GetMilestoneMerkleHashFunc(), cachedMsBundle.Retain())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
