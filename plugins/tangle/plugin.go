@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"crypto"
 	"os"
 	"time"
 
@@ -32,8 +31,6 @@ var (
 	log                           *logger.Logger
 	updateSyncedAtStartup         bool
 
-	milestoneMerkleTreeHashFunc crypto.Hash
-
 	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
@@ -50,7 +47,6 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
-	milestoneMerkleTreeHashFunc = coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc))
 
 	configureRefsAnInvalidBundleStorage()
 
@@ -74,7 +70,7 @@ func configure(plugin *node.Plugin) {
 		hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:49]),
 		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
-		milestoneMerkleTreeHashFunc,
+		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()
