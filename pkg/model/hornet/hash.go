@@ -23,7 +23,7 @@ func HashFromHashTrytes(trytes trinary.Trytes) Hash {
 }
 
 func HashFromTagTrytes(trytes trinary.Trytes) Hash {
-	return trinary.MustTrytesToBytes(trytes)[:17]
+	return trinary.MustTrytesToBytes(trytes[:27])[:17]
 }
 
 // Trytes converts the binary Hash to its trinary representation.
