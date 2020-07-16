@@ -10,7 +10,6 @@ import (
 
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -38,7 +37,7 @@ func loadSpentAddresses(filePathSpent string) (int, error) {
 			return 0, err
 		}
 
-		if tangle.MarkAddressAsSpent(hornet.Hash(trinary.MustTrytesToBytes(addr[:81])[:49])) {
+		if tangle.MarkAddressAsSpent(hornet.HashFromAddressTrytes(addr)) {
 			spentAddressesCount++
 		}
 	}
@@ -95,7 +94,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 			return errors.Wrapf(ErrSnapshotImportFailed, "ParseUint: %v", err)
 		}
 
-		ledgerState[string(hornet.Hash(trinary.MustTrytesToBytes(addr[:81])[:49]))] = balance
+		ledgerState[string(hornet.HashFromAddressTrytes(addr))] = balance
 	}
 	if err := scanner.Err(); err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "Scanner: %v", err)
@@ -132,7 +131,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 	}
 
 	spentAddrEnabled := (spentAddressesSum != 0) || ((snapshotIndex == 0) && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled))
-	coordinatorAddress := hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81])[:49])
+	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
 	tangle.SetSnapshotMilestone(coordinatorAddress, hornet.NullHashBytes, snapshotIndex, snapshotIndex, snapshotIndex, 0, spentAddrEnabled)
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(snapshotIndex)
 

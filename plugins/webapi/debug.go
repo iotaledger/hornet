@@ -11,7 +11,6 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -115,7 +114,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	txsToTraverse := make(map[string][]bool)
-	txsToTraverse[string(hornet.Hash(trinary.MustTrytesToBytes(query.TxHash)[:49]))] = make([]bool, 0)
+	txsToTraverse[string(hornet.HashFromHashTrytes(query.TxHash))] = make([]bool, 0)
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -214,7 +213,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedStartTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(query.TxHash)[:49])) // tx +1
+	cachedStartTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(query.TxHash)) // tx +1
 	if cachedStartTx == nil {
 		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
 		c.JSON(http.StatusBadRequest, e)

@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/daemon"
 
@@ -626,7 +625,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	coordinatorAddress := hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81])[:49])
+	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
 	tangle.SetSnapshotMilestone(coordinatorAddress, msHash, milestone.Index(msIndex), milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
 	tangle.SolidEntryPointsAdd(msHash, milestone.Index(msIndex))
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone.Index(msIndex))

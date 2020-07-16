@@ -9,7 +9,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -68,7 +67,7 @@ func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, t := range query.Tails {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(t)[:49])) // tx +1
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(t)) // tx +1
 
 		// Check if TX is known
 		if cachedTx == nil {

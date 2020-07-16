@@ -94,7 +94,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(hornet.Hash(trinary.MustTrytesToBytes(bdl)[:49]), true, maxResults-len(txHashes)).Trytes()...)
+		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(hornet.HashFromHashTrytes(bdl), true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	// Searching for transactions that contains the given address
@@ -109,7 +109,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			addr = addr[:81]
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(hornet.Hash(trinary.MustTrytesToBytes(addr)[:49]), query.ValueOnly, true, maxResults-len(txHashes)).Trytes()...)
+		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(hornet.HashFromAddressTrytes(addr), query.ValueOnly, true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	// Searching for all approvers of the given transactions
@@ -120,7 +120,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetApproverHashes(hornet.Hash(trinary.MustTrytesToBytes(approveeHash)[:49]), true, maxResults-len(txHashes)).Trytes()...)
+		txHashes = append(txHashes, tangle.GetApproverHashes(hornet.HashFromHashTrytes(approveeHash), true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	// Searching for transactions that contain the given tag
@@ -137,7 +137,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetTagHashes(hornet.Hash(trinary.MustTrytesToBytes(tag)[:17]), true, maxResults-len(txHashes)).Trytes()...)
+		txHashes = append(txHashes, tangle.GetTagHashes(hornet.HashFromTagTrytes(tag), true, maxResults-len(txHashes)).Trytes()...)
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})
