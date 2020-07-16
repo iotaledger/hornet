@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -151,6 +152,7 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 	}
 	ts.tipsMap[string(tailTxHash)] = tip
 	ts.scoreSum += int(tip.Score)
+	metrics.SharedServerMetrics.Tips.Add(1)
 
 	ts.Events.TipAdded.Trigger(tip)
 
@@ -186,6 +188,7 @@ func (ts *TipSelector) removeTipWithoutLocking(tailTxHash hornet.Hash) {
 	if tip, exists := ts.tipsMap[string(tailTxHash)]; exists {
 		ts.scoreSum -= int(tip.Score)
 		delete(ts.tipsMap, string(tailTxHash))
+		metrics.SharedServerMetrics.Tips.Sub(1)
 		ts.Events.TipRemoved.Trigger(tip)
 	}
 }
@@ -196,14 +199,6 @@ func (ts *TipSelector) RemoveTip(tailTxHash hornet.Hash) {
 	defer ts.tipsLock.Unlock()
 
 	ts.removeTipWithoutLocking(tailTxHash)
-}
-
-// TipCount returns the amount of current tips.
-func (ts *TipSelector) TipCount() int {
-	ts.tipsLock.RLock()
-	defer ts.tipsLock.RUnlock()
-
-	return len(ts.tipsMap)
 }
 
 // randomTipWithoutLocking picks a random tip from the pool and checks it's "own" score again without acquiring the lock.

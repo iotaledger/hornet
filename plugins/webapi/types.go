@@ -154,7 +154,7 @@ type GetNodeInfoReturn struct {
 	LastSnapshottedMilestoneIndex      milestone.Index `json:"lastSnapshottedMilestoneIndex"`
 	Neighbors                          uint            `json:"neighbors"`
 	Time                               int64           `json:"time"`
-	Tips                               uint16          `json:"tips"`
+	Tips                               uint32          `json:"tips"`
 	TransactionsToRequest              int             `json:"transactionsToRequest"`
 	Features                           []string        `json:"features"`
 	CoordinatorAddress                 trinary.Hash    `json:"coordinatorAddress"`

@@ -191,7 +191,8 @@ func printStatus() {
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"TPS (in/new/out): %05d/%05d/%05d",
+				"TPS (in/new/out): %05d/%05d/%05d, "+
+				"Tips: %d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			receiveTxWorkerPool.GetPendingQueueSize(),
@@ -199,5 +200,6 @@ func printStatus() {
 			tangle.GetLatestMilestoneIndex(),
 			lastIncomingTPS,
 			lastNewTPS,
-			lastOutgoingTPS))
+			lastOutgoingTPS,
+			metrics.SharedServerMetrics.Tips.Load()))
 }
