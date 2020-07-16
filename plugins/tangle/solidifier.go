@@ -403,8 +403,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		conf.TxsValue,
 		conf.TxsZeroValue,
 		conf.TxsConflicting,
-		conf.Collecting,
-		conf.Total,
+		conf.Collecting.Truncate(time.Millisecond),
+		conf.Total.Truncate(time.Millisecond),
 	)
 
 	var ctpsMessage string

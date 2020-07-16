@@ -10,6 +10,7 @@ export class Vertex {
     branch_id: string;
     is_solid: boolean;
     is_confirmed: boolean;
+    is_conflicting: boolean;
     is_milestone: boolean;
     is_tip: boolean;
     is_selected: boolean;
@@ -39,6 +40,7 @@ const idLength = 5;
 export const colorSolid = "#268bd2";
 export const colorUnsolid = "#657b83";
 export const colorConfirmed = "#5ce000";
+export const colorConflicting = "#d17300";
 export const colorMilestone = "#dc322f";
 export const colorTip = "#cb4b16";
 export const colorUnknown = "#b58900";
@@ -53,6 +55,7 @@ export class VisualizerStore {
     @observable verticesLimit = 1500;
     @observable solid_count = 0;
     @observable confirmed_count = 0;
+    @observable conflicting_count = 0;
     @observable tips_count = 0;
     verticesIncomingOrder = [];
     collect: boolean = false;
@@ -131,6 +134,9 @@ export class VisualizerStore {
             if (!existing.is_confirmed && vert.is_confirmed) {
                 this.confirmed_count++;
             }
+            if (!existing.is_conflicting && vert.is_conflicting) {
+                this.conflicting_count++;
+            }
             // update all infos since we might be dealing
             // with a vertex obj only created from missing trunk/branch
             existing.id = vert.id;
@@ -139,6 +145,7 @@ export class VisualizerStore {
             existing.branch_id = vert.branch_id;
             existing.is_solid = vert.is_solid;
             existing.is_confirmed = vert.is_confirmed;
+            existing.is_conflicting = vert.is_conflicting;
             existing.is_milestone = vert.is_milestone;
             existing.is_tip = vert.is_tip;
             existing.is_selected = vert.is_selected;
@@ -150,6 +157,9 @@ export class VisualizerStore {
             }
             if (vert.is_confirmed) {
                 this.confirmed_count++;
+            }
+            if (vert.is_conflicting) {
+                this.conflicting_count++;
             }
             this.verticesIncomingOrder.push(vert.id.substring(0,idLength));
             this.checkLimit();
@@ -189,9 +199,14 @@ export class VisualizerStore {
                 let approvee = this.vertices.get(node.id);
                 if (!approvee) return true;
 
-                if (!approvee.is_confirmed) {
+                if (!approvee.is_confirmed && !approvee.is_conflicting) {
                     // check if transaction is excluded
-                    if (confInfo.excluded_ids.indexOf(approvee.id.substring(0,idLength)) > -1) return false;
+                    if (confInfo.excluded_ids.indexOf(approvee.id.substring(0,idLength)) > -1) {
+                        this.conflicting_count++;
+                        approvee.is_conflicting = true;
+                        this.updateNodeUI(approvee);
+                        return false;
+                    }
 
                     this.confirmed_count++;
                     approvee.is_confirmed = true;
@@ -249,6 +264,9 @@ export class VisualizerStore {
             if (vert.is_confirmed) {
                 this.confirmed_count--;
             }
+            if (vert.is_conflicting) {
+                this.conflicting_count--;
+            }
             if (vert.is_tip) {
                 this.tips_count--;
             }
@@ -272,6 +290,9 @@ export class VisualizerStore {
             }
             if (approvee.is_confirmed) {
                 this.confirmed_count--;
+            }
+            if (approvee.is_conflicting) {
+                this.conflicting_count--;
             }
             if (approvee.is_tip) {
                 this.tips_count--;
@@ -321,6 +342,9 @@ export class VisualizerStore {
         }
         if (vert.is_confirmed) {
             return colorConfirmed;
+        }
+        if (vert.is_conflicting) {
+            return colorConflicting;
         }
         if (vert.is_tip) {
             return colorTip;
@@ -404,6 +428,7 @@ export class VisualizerStore {
         this.selected = null;
         this.solid_count = 0;
         this.confirmed_count = 0;
+        this.conflicting_count = 0;
         this.tips_count = 0;
         this.vertices.clear();
     }
