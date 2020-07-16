@@ -8,11 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/willf/bitset"
+
+	"github.com/iotaledger/iota.go/trinary"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/iota.go/trinary"
-	"github.com/willf/bitset"
 )
 
 // Errors during milestone selection
@@ -37,7 +39,7 @@ type item struct {
 	refs *bitset.BitSet // BitSet of all the referenced transactions
 }
 
-// New creates a new HeaviestSelector instance.
+// HPS creates a new HeaviestSelector instance.
 func HPS(root hornet.Hash) *HeaviestSelector {
 	s := &HeaviestSelector{}
 	s.SetRoot(root)
@@ -58,7 +60,7 @@ func (s *HeaviestSelector) SetRoot(root hornet.Hash) {
 	s.rootItem.tip = s.tips.PushBack(s.rootItem)
 }
 
-// selectTips selects two tips to be used for the next milestone.
+// SelectTips selects two tips to be used for the next milestone.
 // It returns a pair of tips, confirming the most transactions in the future cone of the root.
 // The selection can be cancelled anytime via the provided context. In this case, it returns the current best solution.
 // selectTips be called concurrently with other HeaviestSelector methods. However, it only considers the tips
