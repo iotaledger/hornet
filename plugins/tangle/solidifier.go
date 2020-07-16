@@ -386,6 +386,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	conf, err := whiteflag.ConfirmMilestone(cachedMsToSolidify.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {
 		Events.TransactionConfirmed.Trigger(tx, index, confTime)
 	}, func(confirmation *whiteflag.Confirmation) {
+		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
+		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 		Events.MilestoneConfirmed.Trigger(confirmation)
 	})
 
@@ -402,9 +404,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		conf.Collecting,
 		conf.Total,
 	)
-
-	tangle.SetSolidMilestoneIndex(conf.Index)
-	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 
 	var ctpsMessage string
 	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetBundle().GetTail(), conf.Index); err == nil {
