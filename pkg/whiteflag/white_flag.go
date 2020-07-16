@@ -170,12 +170,12 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 	headTxBranchHash := bundleHeadTx.GetBranchHash()
 	trunkAndBranchAreEqual := bytes.Equal(headTxTrunkHash, headTxBranchHash)
 
-	var cachedTrunkTx, cachedBranchTx *tangle.CachedTransaction
 	var trunkVisited, trunkConfirmed, branchVisited, branchConfirmed bool
 
 	if !tangle.SolidEntryPointsContain(headTxTrunkHash) {
 		if _, trunkVisited = visited[string(headTxTrunkHash)]; !trunkVisited {
-			if cachedTrunkTx = tangle.GetCachedTransactionOrNil(headTxTrunkHash); cachedTrunkTx == nil {
+			cachedTrunkTx := tangle.GetCachedTransactionOrNil(headTxTrunkHash)
+			if cachedTrunkTx == nil {
 				return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxTrunkHash.Trytes())
 			}
 			defer cachedTrunkTx.Release(true)
@@ -189,16 +189,19 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 
 			// auto. set branch trunk to branch data,
 			// gets overwritten in case trunk != branch
-			branchVisited = trunkVisited
 			branchConfirmed = trunkConfirmed
-			cachedBranchTx = cachedTrunkTx
 		}
 
+		// auto. set branch trunk to branch data,
+		// gets overwritten in case trunk != branch
+		branchVisited = trunkVisited
 	}
+
 	if !trunkAndBranchAreEqual {
 		if !tangle.SolidEntryPointsContain(headTxBranchHash) {
 			if _, branchVisited = visited[string(headTxBranchHash)]; !branchVisited {
-				if cachedBranchTx = tangle.GetCachedTransactionOrNil(headTxBranchHash); cachedBranchTx == nil {
+				cachedBranchTx := tangle.GetCachedTransactionOrNil(headTxBranchHash)
+				if cachedBranchTx == nil {
 					return fmt.Errorf("%w: transaction %s", ErrMissingTransaction, headTxBranchHash.Trytes())
 				}
 				defer cachedBranchTx.Release(true)
