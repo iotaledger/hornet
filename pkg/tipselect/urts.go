@@ -155,7 +155,7 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 	ts.Events.TipAdded.Trigger(tip)
 
 	// search all referenced tails of this Tip and remove them from the tip pool
-	approveeTailTxHashes, err := dag.FindAllTails(tailTxHash, true)
+	approveeTailTxHashes, err := dag.FindAllTails(tailTxHash, true, true)
 	if err != nil {
 		return
 	}

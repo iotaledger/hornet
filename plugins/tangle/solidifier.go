@@ -75,7 +75,7 @@ func markTransactionAsSolid(cachedTx *tangle.CachedTransaction) {
 		defer cachedBndl.Release(true) // bundle -1
 
 		// search all referenced tails of this bundle
-		approveeTailTxHashes, err := dag.FindAllTails(cachedBndl.GetBundle().GetTailHash(), true)
+		approveeTailTxHashes, err := dag.FindAllTails(cachedBndl.GetBundle().GetTailHash(), true, true)
 		if err != nil {
 			log.Panic(err)
 		}

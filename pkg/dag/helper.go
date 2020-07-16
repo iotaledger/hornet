@@ -1,6 +1,8 @@
 package dag
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -11,48 +13,45 @@ var (
 	ErrFindAllTailsFailed = errors.New("Unable to find all tails")
 )
 
-func FindAllTails(txHash hornet.Hash, forceRelease bool) (map[string]struct{}, error) {
+// FindAllTails searches all tail transactions the given startTxHash references.
+// If skipStartTx is true, the startTxHash will be ignored and traversed, even if it is a tail transaction.
+func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) (map[string]struct{}, error) {
 
-	txsToTraverse := map[string]struct{}{string(txHash): {}}
-	txsChecked := make(map[string]struct{})
 	tails := make(map[string]struct{})
 
-	// Collect all tx to check by traversing the tangle
-	// Loop as long as new transactions are added in every loop cycle
-	for len(txsToTraverse) != 0 {
+	err := TraverseApprovees(startTxHash,
+		// traversal stops if no more transactions pass the given condition
+		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
+			defer cachedTx.Release(true) // tx -1
 
-		for txHash := range txsToTraverse {
-			delete(txsToTraverse, txHash)
-
-			if _, checked := txsChecked[txHash]; checked {
-				// Tx was already checked => ignore
-				continue
-			}
-			txsChecked[txHash] = struct{}{}
-
-			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
-				// Ignore solid entry points (snapshot milestone included)
-				continue
-			}
-
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
-				return nil, errors.Wrapf(ErrFindAllTailsFailed, "transaction not found: %v", hornet.Hash(txHash).Trytes())
+			if skipStartTx && bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+				// skip the start tx
+				return true, nil
 			}
 
 			if cachedTx.GetTransaction().IsTail() {
-				tails[txHash] = struct{}{}
-				cachedTx.Release(forceRelease) // tx -1
-				continue
+				// transaction is a tail, do not traverse further
+				tails[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+				return false, nil
 			}
 
-			// Mark the approvees to be traversed
-			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
-			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
-			cachedTx.Release(forceRelease) // tx -1
-		}
-	}
-	return tails, nil
+			return true, nil
+		},
+		// consumer
+		func(cachedTx *tangle.CachedTransaction) error { // tx +1
+			defer cachedTx.Release(true) // tx -1
+			return nil
+		},
+		// called on missing approvees
+		func(approveeHash hornet.Hash) error {
+			return errors.Wrapf(ErrFindAllTailsFailed, "transaction not found: %v", approveeHash.Trytes())
+		},
+		// called on solid entry points
+		func(approveeHash hornet.Hash) {
+			// Ignore solid entry points (snapshot milestone included)
+		}, true, false, nil)
+
+	return tails, err
 }
 
 // Predicate defines whether a traversal should continue or not.
