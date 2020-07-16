@@ -89,7 +89,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 // ComputeMerkleTreeRootHash computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash hornet.Hash, milestoneIndex milestone.Index) ([]byte, error) {
+func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash hornet.Hash) ([]byte, error) {
 	stack := list.New()
 	stack.PushFront(trunkHash)
 	visited := make(map[string]struct{})
