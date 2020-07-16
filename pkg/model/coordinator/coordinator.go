@@ -222,7 +222,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 		return err
 	}
 
-	b, err := createCheckpoint(tips[0].Trytes(), tips[1].Trytes(), coo.minWeightMagnitude, coo.powFunc)
+	b, err := createCheckpoint(tips[0], tips[1], coo.minWeightMagnitude, coo.powFunc)
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 }
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
-func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) error {
+func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
 	// compute merkle tree root
 	byteEncodedMerkleTreeRootHash, err := whiteflag.ComputeMerkleTreeRootHash(coo.milestoneMerkleHashFunc, trunkHash, branchHash, newMilestoneIndex)
@@ -296,7 +296,7 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
-		if err := coo.createAndSendMilestone(consts.NullHashTrytes, consts.NullHashTrytes, coo.state.LatestMilestoneIndex); err != nil {
+		if err := coo.createAndSendMilestone(hornet.Hash(hornet.NullHashBytes), hornet.Hash(hornet.NullHashBytes), coo.state.LatestMilestoneIndex); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
 		}
@@ -320,7 +320,7 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 		return err, nil
 	}
 
-	if err := coo.createAndSendMilestone(tips[0].Trytes(), tips[1].Trytes(), coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(tips[0], tips[1], coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, err
 	}

@@ -9,7 +9,6 @@ import (
 
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/math"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -87,7 +86,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 // ComputeMerkleTreeRootHash computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash trinary.Hash, branchHash trinary.Hash, milestoneIndex milestone.Index) ([]byte, error) {
+func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash hornet.Hash, milestoneIndex milestone.Index) ([]byte, error) {
 	stack := list.New()
 	stack.PushFront(trunkHash)
 	visited := make(map[string]struct{})
@@ -106,7 +105,7 @@ func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash trinary
 		// however, we only need to do it if the branch wasn't visited yet.
 		// the referenced branch transaction could for example already be visited
 		// if it is directly/indirectly approved by the trunk.
-		_, branchVisited := visited[branchHash]
+		_, branchVisited := visited[string(branchHash)]
 		if stack.Len() == 0 && !branchVisited {
 			stack.PushFront(branchHash)
 		}

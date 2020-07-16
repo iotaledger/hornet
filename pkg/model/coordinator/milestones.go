@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/t6b1"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -30,7 +31,7 @@ func randomTrytesWithRandomLengthPadded(min int, length int) trinary.Trytes {
 }
 
 // createCheckpoint creates a checkpoint transaction.
-func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
 	tag := randomTrytesWithRandomLengthPadded(5, consts.TagTrinarySize/3)
 
@@ -43,8 +44,8 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 	tx.CurrentIndex = 0
 	tx.LastIndex = 0
 	tx.Bundle = consts.NullHashTrytes
-	tx.TrunkTransaction = trunkHash
-	tx.BranchTransaction = branchHash
+	tx.TrunkTransaction = trunkHash.Trytes()
+	tx.BranchTransaction = branchHash.Trytes()
 	tx.Tag = tag
 	tx.AttachmentTimestamp = 0
 	tx.AttachmentTimestampLowerBound = consts.LowerBoundAttachmentTimestamp
@@ -68,7 +69,7 @@ func createCheckpoint(trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, 
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash trinary.Hash, branchHash trinary.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
 
 	// get the siblings in the current Merkle tree
 	leafSiblings, err := merkleTree.AuditPath(uint32(index))
@@ -96,8 +97,8 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	txSiblings.ObsoleteTag = tag
 	txSiblings.Value = 0
 	txSiblings.Bundle = consts.NullHashTrytes
-	txSiblings.TrunkTransaction = trunkHash
-	txSiblings.BranchTransaction = branchHash
+	txSiblings.TrunkTransaction = trunkHash.Trytes()
+	txSiblings.BranchTransaction = branchHash.Trytes()
 	txSiblings.Tag = tag
 	txSiblings.Nonce = consts.NullTagTrytes
 
@@ -115,7 +116,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 		tx.Value = 0
 		tx.Bundle = consts.NullHashTrytes
 		tx.TrunkTransaction = consts.NullHashTrytes
-		tx.BranchTransaction = trunkHash
+		tx.BranchTransaction = trunkHash.Trytes()
 		tx.Tag = tag
 		tx.Nonce = consts.NullTagTrytes
 
