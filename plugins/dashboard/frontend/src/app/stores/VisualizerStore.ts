@@ -42,7 +42,7 @@ export const colorUnsolid = "#657b83";
 export const colorConfirmed = "#5ce000";
 export const colorConflicting = "#d17300";
 export const colorMilestone = "#dc322f";
-export const colorTip = "#cb4b16";
+export const colorTip = "#00d1a4";
 export const colorUnknown = "#b58900";
 export const colorHighlighted = "#d33682";
 export const colorSelected = "#fdf6e3";
@@ -342,14 +342,14 @@ export class VisualizerStore {
         if (vert.is_milestone) {
             return colorMilestone;
         }
-        if (vert.is_confirmed) {
-            return colorConfirmed;
+        if (vert.is_tip) {
+            return colorTip;
         }
         if (vert.is_conflicting) {
             return colorConflicting;
         }
-        if (vert.is_tip) {
-            return colorTip;
+        if (vert.is_confirmed) {
+            return colorConfirmed;
         }
         if (vert.is_solid) {
             return colorSolid;

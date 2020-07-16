@@ -103,6 +103,10 @@ export class Visualizer extends React.Component<Props, any> {
                                 Milestone
                             </Badge>
                             {' '}
+                            <Badge pill style={{background: VisuStore.colorTip, color: "white"}}>
+                                Tip
+                            </Badge>
+                            {' '}
                             <Badge pill style={{background: VisuStore.colorUnknown, color: "white"}}>
                                 Unknown
                             </Badge>
