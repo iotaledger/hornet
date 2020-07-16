@@ -416,6 +416,11 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool, l
 
 	approveesLazy := 0
 	for approveeHash := range approveeHashes {
+		// ignore solid entry points
+		if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
+			continue
+		}
+
 		approveeScore := ts.calculateScore(hornet.Hash(approveeHash), true, lsmi)
 
 		// direct approvee is already lazy, therefore so is this tip
