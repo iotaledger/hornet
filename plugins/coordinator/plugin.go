@@ -122,7 +122,7 @@ func run(plugin *node.Plugin) {
 		timeutil.Ticker(func() {
 			err, criticalErr := coo.IssueNextCheckpointOrMilestone()
 			if criticalErr != nil {
-				log.Panic(err)
+				log.Panic(criticalErr)
 			}
 			if err != nil {
 				log.Warn(err)
