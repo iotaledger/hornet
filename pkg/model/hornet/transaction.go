@@ -2,7 +2,6 @@ package hornet
 
 import (
 	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -65,7 +64,7 @@ func getTimestampFromTx(transaction *transaction.Transaction) int64 {
 
 func (tx *Transaction) GetTxHash() Hash {
 	tx.txHashOnce.Do(func() {
-		tx.txHash = trinary.MustTrytesToBytes(tx.Tx.Hash)[:49]
+		tx.txHash = HashFromHashTrytes(tx.Tx.Hash)
 	})
 
 	return tx.txHash
@@ -73,7 +72,7 @@ func (tx *Transaction) GetTxHash() Hash {
 
 func (tx *Transaction) GetTrunkHash() Hash {
 	tx.trunkHashOnce.Do(func() {
-		tx.trunkHash = trinary.MustTrytesToBytes(tx.Tx.TrunkTransaction)[:49]
+		tx.trunkHash = HashFromHashTrytes(tx.Tx.TrunkTransaction)
 	})
 
 	return tx.trunkHash
@@ -81,7 +80,7 @@ func (tx *Transaction) GetTrunkHash() Hash {
 
 func (tx *Transaction) GetBranchHash() Hash {
 	tx.branchHashOnce.Do(func() {
-		tx.branchHash = trinary.MustTrytesToBytes(tx.Tx.BranchTransaction)[:49]
+		tx.branchHash = HashFromHashTrytes(tx.Tx.BranchTransaction)
 	})
 
 	return tx.branchHash
@@ -89,21 +88,21 @@ func (tx *Transaction) GetBranchHash() Hash {
 
 func (tx *Transaction) GetBundleHash() Hash {
 	tx.bundleHashOnce.Do(func() {
-		tx.bundleHash = trinary.MustTrytesToBytes(tx.Tx.Bundle)[:49]
+		tx.bundleHash = HashFromHashTrytes(tx.Tx.Bundle)
 	})
 	return tx.bundleHash
 }
 
 func (tx *Transaction) GetTag() Hash {
 	tx.tagOnce.Do(func() {
-		tx.tag = trinary.MustTrytesToBytes(tx.Tx.Tag)[:17]
+		tx.tag = HashFromTagTrytes(tx.Tx.Tag)
 	})
 	return tx.tag
 }
 
 func (tx *Transaction) GetAddress() Hash {
 	tx.addressOnce.Do(func() {
-		tx.address = trinary.MustTrytesToBytes(tx.Tx.Address)[:49]
+		tx.address = HashFromAddressTrytes(tx.Tx.Address)
 	})
 	return tx.address
 }
@@ -150,7 +149,7 @@ func (tx *Transaction) UnmarshalObjectStorageValue(data []byte) (consumedBytes i
 	*/
 
 	tx.RawBytes = data
-	transactionHash := trinary.MustBytesToTrytes(tx.txHash, 81)
+	transactionHash := tx.txHash.Trytes()
 
 	transaction, err := compressed.TransactionFromCompressedBytes(tx.RawBytes, transactionHash)
 	if err != nil {

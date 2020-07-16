@@ -14,6 +14,18 @@ var (
 // Hash is the binary representation of a trinary Hash.
 type Hash []byte
 
+func HashFromAddressTrytes(trytes trinary.Trytes) Hash {
+	return trinary.MustTrytesToBytes(trytes[:81])[:49]
+}
+
+func HashFromHashTrytes(trytes trinary.Trytes) Hash {
+	return trinary.MustTrytesToBytes(trytes[:81])[:49]
+}
+
+func HashFromTagTrytes(trytes trinary.Trytes) Hash {
+	return trinary.MustTrytesToBytes(trytes)[:17]
+}
+
 // Trytes converts the binary Hash to its trinary representation.
 func (h Hash) Trytes() trinary.Trytes {
 	if len(h) == 49 {

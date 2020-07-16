@@ -116,7 +116,7 @@ func sendBundle(b coordinator.Bundle) error {
 	// collect all tx hashes of the bundle
 	txHashes := make(map[string]struct{})
 	for _, t := range b {
-		txHashes[string(hornet.Hash(trinary.MustTrytesToBytes(t.Hash)[:49]))] = struct{}{}
+		txHashes[string(hornet.HashFromHashTrytes(t.Hash))] = struct{}{}
 	}
 
 	txHashesLock := syncutils.Mutex{}

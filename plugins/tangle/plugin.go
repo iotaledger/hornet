@@ -12,8 +12,8 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
+
 	"github.com/iotaledger/iota.go/address"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -67,7 +67,7 @@ func configure(plugin *node.Plugin) {
 	}
 
 	tangle.ConfigureMilestones(
-		hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:49]),
+		hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)),
 		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),

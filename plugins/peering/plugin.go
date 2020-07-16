@@ -6,18 +6,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/peering"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol"
-	"github.com/gohornet/hornet/pkg/protocol/handshake"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/peering"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol"
+	"github.com/gohornet/hornet/pkg/protocol/handshake"
+	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 const (
@@ -35,7 +36,7 @@ var (
 func Manager() *peering.Manager {
 	managerOnce.Do(func() {
 		// init protocol package with handshake data
-		cooAddrBytes := trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:handshake.ByteEncodedCooAddressBytesLength]
+		cooAddrBytes := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
 		mwm := config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 		bindAddr := config.NodeConfig.GetString(config.CfgNetGossipBindAddress)
 		if err := protocol.Init(cooAddrBytes, mwm, bindAddr); err != nil {
