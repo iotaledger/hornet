@@ -29,6 +29,8 @@ var (
 type Confirmation struct {
 	// The index of the milestone that got confirmed.
 	MilestoneIndex milestone.Index
+	// The transaction hash of the tail transaction of the milestone that got confirmed.
+	MilestoneHash hornet.Hash
 	// The tails of bundles which mutate the ledger in the order in which they were applied.
 	TailsIncluded hornet.Hashes
 	// The tails of bundles which were excluded as they were conflicting with the mutations.
@@ -64,6 +66,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 
 	wfConfirmation := &Confirmation{
 		MilestoneIndex:           milestoneIndex,
+		MilestoneHash:            msTailTxHash,
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
 		TailsExcludedZeroValue:   make(hornet.Hashes, 0),
@@ -91,7 +94,6 @@ func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 	stack.PushFront(trunkHash)
 	visited := make(map[string]struct{})
 	wfConfirmation := &Confirmation{
-		MilestoneIndex:   milestoneIndex,
 		TailsIncluded:    make(hornet.Hashes, 0),
 		NewAddressState:  make(map[string]int64),
 		AddressMutations: make(map[string]int64),

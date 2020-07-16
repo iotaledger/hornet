@@ -11,6 +11,7 @@ import (
 	tanglemodel "github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
@@ -120,21 +121,24 @@ func runVisualizer() {
 		})
 	})
 
-	notifyConfirmedInfo := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		cachedBndl.ConsumeBundle(func(bndl *tanglePackage.Bundle) { // bundle -1
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
+	notifyMilestoneConfirmedInfo := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
 
-			visualizerWorkerPool.TrySubmit(
-				&msg{
-					Type: MsgTypeConfirmedInfo,
-					Data: &confirmationinfo{
-						ID:          bndl.GetTailHash().Trytes()[:VisualizerIdLength],
-						ExcludedIDs: make([]string, 0),
-					},
-				}, false)
-		})
+		var excludedIDs []string
+		for _, txHash := range confirmation.TailsExcludedConflicting {
+			excludedIDs = append(excludedIDs, txHash.Trytes()[:VisualizerIdLength])
+		}
+
+		visualizerWorkerPool.TrySubmit(
+			&msg{
+				Type: MsgTypeConfirmedInfo,
+				Data: &confirmationinfo{
+					ID:          confirmation.MilestoneHash.Trytes()[:VisualizerIdLength],
+					ExcludedIDs: excludedIDs,
+				},
+			}, false)
 	})
 
 	notifyTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
@@ -174,8 +178,8 @@ func runVisualizer() {
 		defer tangle.Events.TransactionSolid.Detach(notifySolidInfo)
 		tangle.Events.ReceivedNewMilestone.Attach(notifyMilestoneInfo)
 		defer tangle.Events.ReceivedNewMilestone.Detach(notifyMilestoneInfo)
-		tangle.Events.SolidMilestoneChanged.Attach(notifyConfirmedInfo)
-		defer tangle.Events.SolidMilestoneChanged.Detach(notifyConfirmedInfo)
+		tangle.Events.MilestoneConfirmed.Attach(notifyMilestoneConfirmedInfo)
+		defer tangle.Events.MilestoneConfirmed.Detach(notifyMilestoneConfirmedInfo)
 		urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
 		defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
 		urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
