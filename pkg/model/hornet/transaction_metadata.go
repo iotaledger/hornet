@@ -137,7 +137,7 @@ func (m *TransactionMetadata) SetRootSnapshotIndexes(yrtsi milestone.Index, orts
 	m.SetModified(true)
 }
 
-func (m *TransactionMetadata) GetRootSnapshotIndexes() (milestone.Index, milestone.Index, milestone.Index) {
+func (m *TransactionMetadata) GetRootSnapshotIndexes() (yrtsi milestone.Index, ortsi milestone.Index, rtsci milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
