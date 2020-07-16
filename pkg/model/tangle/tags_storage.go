@@ -38,9 +38,7 @@ func GetTagsStorageSize() int {
 	return tagsStorage.GetSize()
 }
 
-func configureTagsStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Tags
+func configureTagsStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	tagsStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixTags}),

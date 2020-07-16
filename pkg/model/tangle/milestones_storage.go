@@ -36,9 +36,7 @@ func GetMilestoneStorageSize() int {
 	return milestoneStorage.GetSize()
 }
 
-func configureMilestoneStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Milestones
+func configureMilestoneStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	milestoneStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixMilestones}),

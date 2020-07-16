@@ -40,9 +40,7 @@ func GetUnconfirmedTxStorageSize() int {
 	return unconfirmedTxStorage.GetSize()
 }
 
-func configureUnconfirmedTxStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.UnconfirmedTx
+func configureUnconfirmedTxStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	unconfirmedTxStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixUnconfirmedTransactions}),

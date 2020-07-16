@@ -35,9 +35,7 @@ func GetBundleStorageSize() int {
 	return bundleStorage.GetSize()
 }
 
-func configureBundleStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Bundles
+func configureBundleStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	bundleStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixBundles}),

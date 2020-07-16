@@ -45,6 +45,10 @@ func ConfigureMilestones(cooAddr hornet.Hash, cooSecLvl int, cooMerkleTreeDepth 
 	maxMilestoneIndex = 1 << coordinatorMerkleTreeDepth
 }
 
+func GetMilestoneMerkleHashFunc() crypto.Hash {
+	return coordinatorMilestoneMerkleHashFunc
+}
+
 // GetMilestoneOrNil returns the CachedBundle of a milestone index or nil if it doesn't exist.
 // bundle +1
 func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {

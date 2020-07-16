@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
 )
 
@@ -380,30 +381,44 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		return
 	}
 
-	tangle.WriteLockLedger()
-	defer tangle.WriteUnlockLedger()
-	confirmMilestone(milestoneIndexToSolidify, cachedMsToSolidify.Retain()) // bundle pass +1
+	conf, err := whiteflag.ConfirmMilestone(cachedMsToSolidify.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {
+		Events.TransactionConfirmed.Trigger(tx, index, confTime)
+	})
 
-	tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
+		conf.Index,
+		conf.TxsConfirmed,
+		conf.TxsValue,
+		conf.TxsZeroValue,
+		conf.TxsConflicting,
+		conf.Collecting,
+		conf.Total,
+	)
+
+	tangle.SetSolidMilestoneIndex(conf.Index)
 	Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
 
 	var ctpsMessage string
-	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetBundle().GetTail(), milestoneIndexToSolidify); err == nil {
+	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetBundle().GetTail(), conf.Index); err == nil {
 		ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.TPS, metric.CTPS, metric.ConfirmationRate)
 		if tangle.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the TPS and conf.rate is wrong)
 			if firstSyncedMilestone == 0 {
-				firstSyncedMilestone = milestoneIndexToSolidify
+				firstSyncedMilestone = conf.Index
 			}
 
-			if milestoneIndexToSolidify > firstSyncedMilestone+1 {
+			if conf.Index > firstSyncedMilestone+1 {
 				// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
 				Events.NewConfirmedMilestoneMetric.Trigger(metric)
 			}
 		}
 	}
 
-	log.Infof("New solid milestone: %d%s", milestoneIndexToSolidify, ctpsMessage)
+	log.Infof("New solid milestone: %d%s", conf.Index, ctpsMessage)
 
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
