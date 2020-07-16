@@ -386,6 +386,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	conf, err := whiteflag.ConfirmMilestone(cachedMsToSolidify.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {
 		Events.TransactionConfirmed.Trigger(tx, index, confTime)
+	}, func(confirmation *whiteflag.Confirmation) {
+		Events.MilestoneConfirmed.Trigger(confirmation)
 	})
 
 	if err != nil {

@@ -26,7 +26,7 @@ type ConfirmedMilestoneStats struct {
 
 // ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 	defer cachedMsBundle.Release()
 
 	tangle.WriteLockLedger()
@@ -167,7 +167,7 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 		}
 	}
 
-	Events.MilestoneConfirmed.Trigger(confirmation)
+	onMilestoneConfirmed(confirmation)
 
 	conf.Collecting = tc.Sub(ts)
 	conf.Total = time.Since(ts)
