@@ -197,8 +197,13 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		// consumer
 		func(cachedTx *tangle.CachedTransaction) error { // tx +1
 			defer cachedTx.Release(true) // tx -1
-			// release the transactions at the end of the function to speed up solidification
-			cachedTxs[string(cachedTx.GetTransaction().GetTxHash())] = cachedTx.Retain()
+
+			_, exists := cachedTxs[string(cachedTx.GetTransaction().GetTxHash())]
+			if !exists {
+				// release the transactions at the end of the function to speed up solidification
+				cachedTxs[string(cachedTx.GetTransaction().GetTxHash())] = cachedTx.Retain()
+			}
+
 			return nil
 		},
 		// called on missing approvees
