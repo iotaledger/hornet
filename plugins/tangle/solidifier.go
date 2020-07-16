@@ -256,10 +256,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 					continue
 				}
 
-				if _, added := gossipSolidifierWorkerPool.Submit(cachedApproverTx.Retain()); !added { // tx pass +1
-					// Do no force release here, otherwise cacheTime for new Tx could be ignored
-					cachedApproverTx.Release() // tx -1
-				}
+				checkSolidityAndPropagate(cachedApproverTx.Retain()) // tx pass +1
 
 				// Do no force release here, otherwise cacheTime for new Tx could be ignored
 				cachedApproverTx.Release() // tx -1

@@ -36,6 +36,7 @@ var (
 
 	onSolidMilestoneChanged        *events.Closure
 	onPruningMilestoneIndexChanged *events.Closure
+	onReceivedNewTx                *events.Closure
 )
 
 func init() {
@@ -95,10 +96,16 @@ func run(plugin *node.Plugin) {
 	database.RunGarbageCollection()
 
 	daemon.BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
-		attachEvents()
+		attachHeartbeatEvents()
 		<-shutdownSignal
-		detachEvents()
+		detachHeartbeatEvents()
 	}, shutdown.PriorityHeartbeats)
+
+	daemon.BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
+		attachSolidifierGossipEvents()
+		<-shutdownSignal
+		detachSolidifierGossipEvents()
+	}, shutdown.PrioritySolidifierGossip)
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
@@ -136,16 +143,33 @@ func configureEvents() {
 		// notify peers about our new pruning milestone index
 		gossip.BroadcastHeartbeat()
 	})
+
+	onReceivedNewTx = events.NewClosure(func(cachedTx *tangle.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		// Force release possible here, since processIncomingTx still holds a reference
+		defer cachedTx.Release(true) // tx -1
+
+		if tangle.IsNodeSyncedWithThreshold() {
+			checkSolidityAndPropagate(cachedTx.Retain()) // tx pass +1
+		}
+	})
 }
 
-func attachEvents() {
+func attachHeartbeatEvents() {
 	Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
 	Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 }
 
-func detachEvents() {
+func attachSolidifierGossipEvents() {
+	Events.ReceivedNewTransaction.Attach(onReceivedNewTx)
+}
+
+func detachHeartbeatEvents() {
 	Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
 	Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+}
+
+func detachSolidifierGossipEvents() {
+	Events.ReceivedNewTransaction.Detach(onReceivedNewTx)
 }
 
 // SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup
