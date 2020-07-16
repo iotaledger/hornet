@@ -24,6 +24,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 
 	p.Protocol.Events.Received[sting.MessageTypeTransactionRequest].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedTransactionRequests.Inc()
+		metrics.SharedServerMetrics.ReceivedTransactionRequests.Inc()
 		msgProcessor.Process(p, sting.MessageTypeTransactionRequest, data)
 	}))
 
@@ -34,6 +35,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 
 	p.Protocol.Events.Received[sting.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedMilestoneRequests.Inc()
+		metrics.SharedServerMetrics.ReceivedMilestoneRequests.Inc()
 		msgProcessor.Process(p, sting.MessageTypeMilestoneRequest, data)
 	}))
 
@@ -44,6 +46,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 
 	p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedHeartbeats.Inc()
+		metrics.SharedServerMetrics.ReceivedHeartbeats.Inc()
 		p.LatestHeartbeat = sting.ParseHeartbeat(data)
 		p.Events.HeartbeatUpdated.Trigger(p.LatestHeartbeat)
 	}))

@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"errors"
 	"time"
 
@@ -171,11 +170,6 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 	for txHashToDelete := range txsToDelete {
 		if daemon.IsStopped() {
 			return tangle.ErrOperationAborted
-		}
-
-		if bytes.Equal(hornet.Hash(txHashToDelete), hornet.NullHashBytes) {
-			// do not delete genesis transaction
-			continue
 		}
 
 		percentage := int((deletionCounter / total) * 100)

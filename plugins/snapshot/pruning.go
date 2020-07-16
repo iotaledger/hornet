@@ -1,7 +1,6 @@
 package snapshot
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/pkg/errors"
@@ -86,11 +85,6 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 	}
 
 	for txHashToDelete := range txsToDeleteMap {
-
-		if bytes.Equal(hornet.Hash(txHashToDelete), hornet.NullHashBytes) {
-			// do not delete genesis transaction
-			continue
-		}
 
 		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToDelete)) // tx +1
 		if cachedTx == nil {

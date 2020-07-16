@@ -232,7 +232,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 	}
 
 	coo.lastCheckpointCount++
-	lastCheckpointHash := hornet.Hash(trinary.MustTrytesToBytes(b[0].Hash)[:49])
+	lastCheckpointHash := hornet.HashFromHashTrytes(b[0].Hash)
 	coo.lastCheckpointHash = &lastCheckpointHash
 
 	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, lastCheckpointHash)
@@ -260,7 +260,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 
 	txHashes := hornet.Hashes{}
 	for _, tx := range b {
-		txHashes = append(txHashes, hornet.Hash(trinary.MustTrytesToBytes(tx.Hash)[:49]))
+		txHashes = append(txHashes, hornet.HashFromHashTrytes(tx.Hash))
 	}
 
 	tailTx := b[0]
@@ -269,7 +269,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 	coo.lastCheckpointCount = 0
 
 	// always reference the last milestone directly to speed up syncing (or indirectly via checkpoints)
-	latestMilestoneHash := hornet.Hash(trinary.MustTrytesToBytes(tailTx.Hash)[:49])
+	latestMilestoneHash := hornet.HashFromHashTrytes(tailTx.Hash)
 	coo.lastCheckpointHash = &latestMilestoneHash
 
 	coo.state.LatestMilestoneHash = latestMilestoneHash

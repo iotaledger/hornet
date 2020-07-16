@@ -49,9 +49,7 @@ func GetBundleTransactionsStorageSize() int {
 	return bundleTransactionsStorage.GetSize()
 }
 
-func configureBundleTransactionsStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.BundleTransactions
+func configureBundleTransactionsStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	bundleTransactionsStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixBundleTransactions}),

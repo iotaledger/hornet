@@ -12,9 +12,7 @@ import (
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
-	"github.com/gohornet/hornet/plugins/graph"
 	"github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/profiling"
@@ -55,8 +53,6 @@ func main() {
 			dashboard.PLUGIN,
 			zmq.PLUGIN,
 			mqtt.PLUGIN,
-			graph.PLUGIN,
-			monitor.PLUGIN,
 			spammer.PLUGIN,
 			coordinator.PLUGIN,
 			prometheus.PLUGIN,

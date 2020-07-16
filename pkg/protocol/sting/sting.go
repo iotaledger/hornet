@@ -152,13 +152,6 @@ func NewMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte
 	return buf.Bytes(), nil
 }
 
-// ExtractRequestedTransactionHash extracts the requested transaction hash from the given source.
-func ExtractRequestedTransactionHash(source []byte) []byte {
-	reqHashBytes := make([]byte, RequestedTransactionHashMsgBytesLength)
-	copy(reqHashBytes, source[len(source)-RequestedTransactionHashMsgBytesLength:])
-	return reqHashBytes
-}
-
 // ExtractRequestedMilestoneIndex extracts the requested milestone index from the given source.
 func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 	if len(source) != 4 {

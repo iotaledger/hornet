@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
@@ -123,6 +124,7 @@ func (p *Peer) EnqueueForSending(data []byte) {
 	select {
 	case p.SendQueue <- data:
 	default:
+		metrics.SharedServerMetrics.DroppedMessages.Inc()
 		p.Metrics.DroppedMessages.Inc()
 	}
 }
@@ -140,8 +142,6 @@ func (p *Peer) Info() *Info {
 		NumberOfAllTransactions:        p.Metrics.ReceivedTransactions.Load(),
 		NumberOfNewTransactions:        p.Metrics.NewTransactions.Load(),
 		NumberOfKnownTransactions:      p.Metrics.KnownTransactions.Load(),
-		NumberOfInvalidTransactions:    p.Metrics.InvalidTransactions.Load(),
-		NumberOfInvalidRequests:        p.Metrics.InvalidRequests.Load(),
 		NumberOfStaleTransactions:      p.Metrics.StaleTransactions.Load(),
 		NumberOfReceivedTransactionReq: p.Metrics.ReceivedTransactionRequests.Load(),
 		NumberOfReceivedMilestoneReq:   p.Metrics.ReceivedMilestoneRequests.Load(),
@@ -189,12 +189,8 @@ type Metrics struct {
 	NewTransactions atomic.Uint32
 	// The number of received transactions which are already known.
 	KnownTransactions atomic.Uint32
-	// The number of received invalid transactions.
-	InvalidTransactions atomic.Uint32
 	// The number of received transactions of which their timestamp is stale.
 	StaleTransactions atomic.Uint32
-	// The number of received invalid requests (both transactions and milestones).
-	InvalidRequests atomic.Uint32
 	// The number of received transactions.
 	ReceivedTransactions atomic.Uint32
 	// The number of received transaction requests.
@@ -227,8 +223,6 @@ type Info struct {
 	NumberOfAllTransactions        uint32 `json:"numberOfAllTransactions"`
 	NumberOfNewTransactions        uint32 `json:"numberOfNewTransactions"`
 	NumberOfKnownTransactions      uint32 `json:"numberOfKnownTransactions"`
-	NumberOfInvalidTransactions    uint32 `json:"numberOfInvalidTransactions"`
-	NumberOfInvalidRequests        uint32 `json:"numberOfInvalidRequests"`
 	NumberOfStaleTransactions      uint32 `json:"numberOfStaleTransactions"`
 	NumberOfReceivedTransactionReq uint32 `json:"numberOfReceivedTransactionReq"`
 	NumberOfReceivedMilestoneReq   uint32 `json:"numberOfReceivedMilestoneReq"`

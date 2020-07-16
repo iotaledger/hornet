@@ -16,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/processor"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
@@ -56,7 +55,7 @@ func BroadcastQueue() bqueue.Queue {
 // Processor returns the message processor instance of the gossip plugin.
 func Processor() *processor.Processor {
 	msgProcessorOnce.Do(func() {
-		msgProcessor = processor.New(requestQueue, &processor.Options{
+		msgProcessor = processor.New(requestQueue, peeringplugin.Manager(), &processor.Options{
 			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingTransactionFilter,
 		})
@@ -81,10 +80,6 @@ func configure(plugin *node.Plugin) {
 
 	// register event handlers for messages
 	manager.Events.PeerConnected.Attach(events.NewClosure(func(p *peer.Peer) {
-
-		if p.Protocol.Supports(legacy.FeatureSet) {
-			addLegacyMessageEventHandlers(p)
-		}
 
 		if p.Protocol.Supports(sting.FeatureSet) {
 			addSTINGMessageEventHandlers(p)

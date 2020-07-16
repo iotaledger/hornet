@@ -129,28 +129,6 @@
       "valueSpam": false,
       "workers": 0
   },
-  "graph": {
-      "webRootPath": "IOTAtangle/webroot",
-      "domain": "",
-      "webSocket": {
-        "uri": ""
-      },
-      "bindAddress": "localhost:8083",
-      "networkName": "meets HORNET devnet",
-      "explorerTxLink": "http://localhost:8081/explorer/tx/",
-      "explorerBundleLink": "http://localhost:8081/explorer/bundle/"
-  },
-  "monitor": {
-      "tangleMonitorPath": "tanglemonitor/frontend",
-      "domain": "",
-      "initialTransactions": 15000,
-      "remoteApiPort": 4433,
-      "webBindAddress": "localhost:4434",
-      "apiBindAddress": "localhost:4433",
-      "webSocket": {
-        "uri": ""
-      }
-  },
   "mqtt": {
       "config": "mqtt_config.json"
   },

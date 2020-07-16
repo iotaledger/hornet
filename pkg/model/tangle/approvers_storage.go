@@ -37,9 +37,7 @@ func GetApproversStorageSize() int {
 	return approversStorage.GetSize()
 }
 
-func configureApproversStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Approvers
+func configureApproversStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	approversStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixApprovers}),
