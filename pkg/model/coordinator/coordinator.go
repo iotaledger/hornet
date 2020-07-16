@@ -164,6 +164,9 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			return fmt.Errorf("previous milestone does not match latest milestone in database: %d != %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
+		// if we bootstrap a network, NullHash has to be set as a solid entry point
+		tangle.SolidEntryPointsAdd(hornet.NullHashBytes, startIndex)
+
 		latestMilestoneHash := hornet.NullHashBytes
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced

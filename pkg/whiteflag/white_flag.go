@@ -91,25 +91,37 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, cachedMsBundle *tangle.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 func ComputeMerkleTreeRootHash(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash hornet.Hash) ([]byte, error) {
 	stack := list.New()
-	stack.PushFront(trunkHash)
+
 	visited := make(map[string]struct{})
 	wfConfirmation := &Confirmation{
 		TailsIncluded:    make(hornet.Hashes, 0),
 		NewAddressState:  make(map[string]int64),
 		AddressMutations: make(map[string]int64),
 	}
+
+	if !tangle.SolidEntryPointsContain(trunkHash) {
+		stack.PushFront(trunkHash)
+	}
+
 	for stack.Len() > 0 {
 		if err := ProcessStack(stack, wfConfirmation, visited); err != nil {
 			return nil, err
 		}
-		// since we first feed the stack the trunk,
-		// we need to make sure that we also examine the branch path.
-		// however, we only need to do it if the branch wasn't visited yet.
-		// the referenced branch transaction could for example already be visited
-		// if it is directly/indirectly approved by the trunk.
-		_, branchVisited := visited[string(branchHash)]
-		if stack.Len() == 0 && !branchVisited {
-			stack.PushFront(branchHash)
+	}
+
+	// since we first feed the stack the trunk,
+	// we need to make sure that we also examine the branch path.
+	// however, we only need to do it if the branch wasn't visited yet.
+	// the referenced branch transaction could for example already be visited
+	// if it is directly/indirectly approved by the trunk.
+	_, branchVisited := visited[string(branchHash)]
+	if !branchVisited && !tangle.SolidEntryPointsContain(branchHash) {
+		stack.PushFront(branchHash)
+	}
+
+	for stack.Len() > 0 {
+		if err := ProcessStack(stack, wfConfirmation, visited); err != nil {
+			return nil, err
 		}
 	}
 
