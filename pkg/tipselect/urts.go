@@ -339,10 +339,19 @@ func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.Cached
 	// are no solid entry points and have no recent calculation index
 	var outdatedTransactions hornet.Hashes
 
+	startTxHash := cachedTx.GetMetadata().GetTxHash()
+
+	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
+	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
 	if err := dag.TraverseApprovees(cachedTx.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
+
+			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+				// skip the start transaction, so it doesn't get added to the outdatedTransactions
+				return true, nil
+			}
 
 			// if the tx contains recent (calculation index matches LSMI) information
 			// about yrtsi and ortsi (uncofirmed or confirmed), propagate that info
