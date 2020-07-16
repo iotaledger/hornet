@@ -201,7 +201,7 @@ export class VisualizerStore {
 
                 if (!approvee.is_confirmed && !approvee.is_conflicting) {
                     // check if transaction is excluded
-                    if (confInfo.excluded_ids.indexOf(approvee.id.substring(0,idLength)) > -1) {
+                    if (confInfo.excluded_ids?.indexOf(approvee.id.substring(0,idLength)) > -1) {
                         this.conflicting_count++;
                         approvee.is_conflicting = true;
                         this.updateNodeUI(approvee);
@@ -213,6 +213,8 @@ export class VisualizerStore {
                     this.updateNodeUI(approvee);
                     return false
                 }
+
+                // abort if node was confirmed or conflicting
                 return true;
             },
             false,
@@ -324,7 +326,7 @@ export class VisualizerStore {
     }
 
     isHighlighted = (vert: Vertex) => {
-        return ((this.searchFilter) && ((vert.id.indexOf(this.searchFilter) >= 0) || (vert.tag.indexOf(this.searchFilter) >= 0)))
+        return ((this.searchFilter) && ((vert.id?.indexOf(this.searchFilter) >= 0) || (vert.tag?.indexOf(this.searchFilter) >= 0)))
     }
 
     colorForVertexState = (vert: Vertex) => {
