@@ -101,7 +101,7 @@ type TipSelector struct {
 
 	// tipsMap contains only semi- and non-lazy tips.
 	tipsMap  map[string]*Tip
-	tipsLock syncutils.RWMutex
+	tipsLock syncutils.Mutex
 	// scoreSum is the sum of the score of all tips.
 	scoreSum int
 	// Events are the events that are triggered by the TipSelector.
@@ -242,8 +242,8 @@ func (ts *TipSelector) selectTip() (hornet.Hash, error) {
 		return nil, tangle.ErrNodeNotSynced
 	}
 
-	ts.tipsLock.RLock()
-	defer ts.tipsLock.RUnlock()
+	ts.tipsLock.Lock()
+	defer ts.tipsLock.Unlock()
 
 	// record stats
 	start := time.Now()
