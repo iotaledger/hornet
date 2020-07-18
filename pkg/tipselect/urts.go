@@ -426,24 +426,20 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool, l
 	approveesLazy := 0
 	for approveeHash := range approveeHashes {
 		// ignore solid entry points
+		var approveeORTSI milestone.Index
+
 		if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
-			continue
+			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
+			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
+		} else {
+			cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // tx +1
+			if cachedApproveeTx == nil {
+				panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
+			}
+
+			_, approveeORTSI = ts.getTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
+			cachedApproveeTx.Release(true)
 		}
-
-		approveeScore := ts.calculateScore(hornet.Hash(approveeHash), true, lsmi)
-
-		// direct approvee is already lazy, therefore so is this tip
-		if approveeScore == ScoreLazy {
-			return ScoreLazy
-		}
-
-		cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // tx +1
-		if cachedApproveeTx == nil {
-			panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
-		}
-
-		_, approveeORTSI := ts.getTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
-		cachedApproveeTx.Release(true)
 
 		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, we mark it as such
 		if lsmi-approveeORTSI > ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI {
