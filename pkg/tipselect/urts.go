@@ -44,7 +44,7 @@ func WalkerStatsCaller(handler interface{}, params ...interface{}) {
 }
 
 const (
-	// ScoreLazy is a lazy zip and should not be selected.
+	// ScoreLazy is a lazy tip and should not be selected.
 	ScoreLazy Score = iota
 	// ScoreSemiLazy is a somewhat lazy tip.
 	ScoreSemiLazy
