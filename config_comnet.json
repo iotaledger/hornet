@@ -96,8 +96,8 @@
     "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
     "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
     "belowMaxDepth": 15,
-    "maxReferencedTipAgeSeconds": 30,
-    "maxApprovers": 3
+    "maxReferencedTipAgeSeconds": 3,
+    "maxApprovers": 2
   },
   "node": {
     "alias": "",

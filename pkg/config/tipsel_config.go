@@ -29,7 +29,7 @@ func init() {
 		"value between OTRSI of the approvees of a given transaction in relation to the current LSMI")
 	flag.Int(CfgTipSelBelowMaxDepth, 15, "threshold value which indicates that a transaction "+
 		"is not relevant in relation to the recent parts of the tangle")
-	flag.Int(CfgTipSelMaxReferencedTipAgeSeconds, 30, "the maximum time a tip remains in the tip pool "+
+	flag.Int(CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first transaction")
 	flag.Int(CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
 		"before the tip is removed from the tip pool")
