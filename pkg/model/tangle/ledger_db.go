@@ -224,7 +224,7 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 			newBalance := int64(balances[address]) - change
 
 			if newBalance < 0 {
-				return nil, 0, fmt.Errorf("Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", milestoneIndex, address, balances[address], change)
+				return nil, 0, fmt.Errorf("Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", milestoneIndex, hornet.Hash(address).Trytes(), balances[address], change)
 			} else if newBalance == 0 {
 				delete(balances, address)
 			} else {
@@ -262,7 +262,7 @@ func ApplyLedgerDiffWithoutLocking(diff map[string]int64, index milestone.Index)
 		newBalance := int64(balance) + change
 
 		if newBalance < 0 {
-			panic(fmt.Sprintf("Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", index, address, balance, change))
+			panic(fmt.Sprintf("Ledger diff for milestone %d creates negative balance for address %s: current %d, diff %d", index, hornet.Hash(address).Trytes(), balance, change))
 		} else if newBalance > 0 {
 			// Save balance
 			balanceBatch.Set(databaseKeyForAddress(hornet.Hash(address)), bytesFromBalance(uint64(newBalance)))
