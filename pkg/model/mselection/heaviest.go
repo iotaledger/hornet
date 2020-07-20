@@ -130,18 +130,24 @@ func (s *HeaviestSelector) SelectTipsWithReference(reference *hornet.Hash) (horn
 
 // OnNewSolidTransaction adds a new transaction tx to be processed by s.
 // The tx must be solid and OnNewSolidTransaction must be called in the order of solidification.
-// TODO: working on bundles instead of txs would improvements performance
-func (s *HeaviestSelector) OnNewSolidTransaction(tx *hornet.Transaction) {
+func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.CachedBundle) {
+	defer bndl.Release()
+
+	if bndl.GetBundle().IsInvalidPastCone() || !bndl.GetBundle().IsValid() || !bndl.GetBundle().ValidStrictSemantics() {
+		// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
+		return
+	}
+
 	s.Lock()
 	defer s.Unlock()
 
 	// filter duplicate transaction
-	if _, contains := s.approvers[string(tx.GetTxHash())]; contains {
+	if _, contains := s.approvers[string(bndl.GetBundle().GetTailHash())]; contains {
 		return
 	}
 
-	trunkItem := s.approvers[string(tx.GetTrunkHash())]
-	branchItem := s.approvers[string(tx.GetBranchHash())]
+	trunkItem := s.approvers[string(bndl.GetBundle().GetTrunk(true))]
+	branchItem := s.approvers[string(bndl.GetBundle().GetBranch(true))]
 	// if neither trunk nor branch reference the root, ignore this transaction
 	if trunkItem == nil && branchItem == nil {
 		return
@@ -151,7 +157,7 @@ func (s *HeaviestSelector) OnNewSolidTransaction(tx *hornet.Transaction) {
 
 	// compute the referenced transactions
 	idx := uint(len(s.approvers)) - 1
-	it := &item{hash: tx.GetTxHash(), refs: bitset.New(idx + 1).Set(idx)}
+	it := &item{hash: bndl.GetBundle().GetTailHash(), refs: bitset.New(idx + 1).Set(idx)}
 	if trunkItem != nil {
 		it.refs.InPlaceUnion(trunkItem.refs)
 	}

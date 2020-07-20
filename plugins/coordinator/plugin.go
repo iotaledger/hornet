@@ -107,16 +107,15 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 func run(plugin *node.Plugin) {
 	// pass all new transactions to the selector
-	notifyNewTx := events.NewClosure(func(cachedTx *tangle.CachedTransaction) {
-		defer cachedTx.Release()
+	notifyNewTx := events.NewClosure(func(cachedBundle *tangle.CachedBundle) {
 		// TODO: use a queue for this? Especially during SelectTips this should be stopped.
-		selector.OnNewSolidTransaction(cachedTx.GetTransaction())
+		selector.OnNewSolidBundle(cachedBundle)
 	})
 
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
-		tanglePlugin.Events.TransactionSolid.Attach(notifyNewTx)
-		defer tanglePlugin.Events.TransactionSolid.Detach(notifyNewTx)
+		tanglePlugin.Events.BundleSolid.Attach(notifyNewTx)
+		defer tanglePlugin.Events.BundleSolid.Detach(notifyNewTx)
 
 		// TODO: add some random jitter to make the ms intervals not predictable
 		timeutil.Ticker(func() {
