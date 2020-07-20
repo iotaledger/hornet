@@ -128,8 +128,8 @@ func (s *HeaviestSelector) SelectTipsWithReference(reference *hornet.Hash) (horn
 	return tips, nil
 }
 
-// OnNewSolidTransaction adds a new transaction tx to be processed by s.
-// The tx must be solid and OnNewSolidTransaction must be called in the order of solidification.
+// OnNewSolidBundle adds a new transaction tx to be processed by s.
+// The bundle must be solid and OnNewSolidBundle must be called in the order of solidification.
 func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.CachedBundle) {
 	defer bndl.Release()
 
