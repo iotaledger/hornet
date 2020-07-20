@@ -272,14 +272,14 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 			validMutations[addr] = validMutations[addr] + change
 		}
 
+		wfConf.TailsReferenced = append(wfConf.TailsReferenced, currentTx.GetTxHash())
+
 		if conflicting {
-			wfConf.TailsReferenced = append(wfConf.TailsReferenced, currentTx.GetTxHash())
 			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, currentTx.GetTxHash())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConf.TailsReferenced = append(wfConf.TailsReferenced, currentTx.GetTxHash())
 		wfConf.TailsIncluded = append(wfConf.TailsIncluded, currentTx.GetTxHash())
 
 		// incorporate the mutations in accordance with the previous mutations
