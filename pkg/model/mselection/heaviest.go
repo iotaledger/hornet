@@ -133,11 +133,6 @@ func (s *HeaviestSelector) SelectTipsWithReference(reference *hornet.Hash) (horn
 func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.CachedBundle) {
 	defer bndl.Release()
 
-	if bndl.GetBundle().IsInvalidPastCone() || !bndl.GetBundle().IsValid() || !bndl.GetBundle().ValidStrictSemantics() {
-		// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
-		return
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
