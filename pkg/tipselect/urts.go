@@ -137,7 +137,7 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	score := ts.calculateScore(tailTxHash, true, lsmi)
+	score := ts.calculateScore(tailTxHash, lsmi)
 	if score == ScoreLazy {
 		// do not add lazy tips.
 		// lazy tips should also not remove other tips from the pool.
@@ -222,7 +222,7 @@ func (ts *TipSelector) randomTipWithoutLocking() (hornet.Hash, error) {
 		// if randScore reaches zero or below, we return the given tip
 		if randScore <= 0 {
 			// check the "own" score of the tip again to avoid old tips
-			if score := ts.calculateScore(tip.Hash, false, lsmi); score == ScoreLazy {
+			if score := ts.calculateScore(tip.Hash, lsmi); score == ScoreLazy {
 				// remove the tip from the pool because it is outdated
 				ts.removeTipWithoutLocking(tip.Hash)
 				return nil, ErrTipLazy
@@ -392,7 +392,7 @@ func (ts *TipSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.Cached
 }
 
 // calculateScore calculates the tip selection score of this transaction
-func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool, lsmi milestone.Index) Score {
+func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
 		panic(fmt.Sprintf("transaction not found: %v", txHash.Trytes()))
@@ -409,12 +409,6 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, checkApprovees bool, l
 	// if the OTRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
 	if (lsmi - ortsi) > ts.belowMaxDepth {
 		return ScoreLazy
-	}
-
-	if !checkApprovees {
-		// if we don't check for the approvee scores, this tip is not lazy.
-		// this is only used to verify that the tip is not lazy already when it gets picked.
-		return ScoreNonLazy
 	}
 
 	// the approvees (trunk and branch) are the transactions this tip approves
