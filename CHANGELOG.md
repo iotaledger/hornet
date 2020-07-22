@@ -2,6 +2,78 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] - 22.06.2020
+
+### Added
+
+    - Snapshot download fallback sources (#568)
+
+### Changed
+
+    - Using --version instead of --help for checking if the docker image works
+    - Update autopeering entry nodes
+
+### Fixed
+
+    - Hiding of all non essential config flags
+    - Ignoring all entry nodes if one is not found
+    - Explicit --help/-h flag to print the help instead of using the built-in missing help flag error handling of pflag
+    - Missing trytes convertion to ledger panic logs
+
+### Config file changes
+
+`config.json`
+
+```diff
+- "downloadURL": "https://ls.manapotion.io/export.bin"
++ "downloadURLs": [
++   "https://ls.manapotion.io/export.bin",
++   "https://x-vps.com/export.bin",
++   "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
++ ]
+
+  "entryNodes": [
+-   "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
++   "FvfwJuCMoWJvcJLSYww7whPxouZ9WFJ55uyxTxKxJ1ez@enter.hornet.zone:14626",
+-   "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
+-   "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627"
++   "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627",
++   "12w9FrzMdDQ42aBgFrv1siHuJMhuZ4SMVHRFSS7Zb72W@entrynode.iotatoken.nl:14626",
++   "DboTc1v61Xdyvggj8VRszy92ScUTLgfwZaHvXsU8zr7e@entrynode.tanglebay.org:14626"
+  ],
+```
+
+`config_comnet.json`
+
+```diff
+- "downloadURL": "https://ls.tanglebay.org/comnet/export.bin"
++ "downloadURLs": [
++   "https://ls.manapotion.io/comnet/export.bin"
++ ]
+
+  "entryNodes": [
+-   "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
+-   "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
++   "GLZAWBGqvm6ZRT7jGMFAKyUJNPdvx4i5A1GPRZbGS6C9@enter.comnet.hornet.zone:14627",
++   "J1Hn5r9pS5FkLeYqXWstC2Zyjxj73grEWvjuene3qjM9@entrynode.comnet.tanglebay.org:14636"
+  ],
+```
+
+`config_devnet.json`
+
+```diff
+- "downloadURL": "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
++ "downloadURLs": [
++   "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
++ ]
+
+  "entryNodes": [
+-   "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637"
++   "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637",
++   "BqXajrWBFGYcJduK7kxiSMW3hv9fXRLzt9jK7JZZPAzp@entrynode.devnet.tanglebay.org:14646"
+  ],
+```
+
 ## [0.4.1] - 30.06.2020
 
 ### Added
