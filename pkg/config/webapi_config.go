@@ -37,7 +37,6 @@ func init() {
 		[]string{
 			"getNodeInfo",
 			"getBalances",
-			"checkConsistency",
 			"getTransactionsToApprove",
 			"getInclusionStates",
 			"getNodeAPIConfiguration",

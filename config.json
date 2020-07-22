@@ -11,7 +11,6 @@
     "permitRemoteAccess": [
       "getNodeInfo",
       "getBalances",
-      "checkConsistency",
       "getTransactionsToApprove",
       "getInclusionStates",
       "getNodeAPIConfiguration",
@@ -99,8 +98,11 @@
     }
   },
   "tipsel": {
-    "belowMaxDepthTransactionLimit": 20000,
-    "maxDepth": 5
+    "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
+    "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
+    "belowMaxDepth": 15,
+    "maxReferencedTipAgeSeconds": 3,
+    "maxApprovers": 2
   },
   "node": {
     "alias": "",
@@ -121,7 +123,6 @@
   },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
-    "depth": 1,
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
     "cpuMaxUsage": 0.8,

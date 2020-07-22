@@ -9,7 +9,6 @@ import (
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
@@ -23,7 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/tipselection"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 // Bundle represents grouped together transactions forming a transfer.
@@ -31,6 +30,9 @@ type Bundle = []*transaction.Transaction
 
 // SendBundleFunc is a function which sends a bundle to the network.
 type SendBundleFunc = func(b Bundle) error
+
+// TipSelectionFunc is a function which performs a tipselection and returns two tips.
+type TipSelectionFunc = func() (hornet.Hash, error)
 
 var (
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
@@ -58,7 +60,7 @@ type Coordinator struct {
 	milestoneIntervalSec    int
 	checkpointTransactions  int
 	powFunc                 pow.ProofOfWorkFunc
-	tipselFunc              tipselection.TipSelectionFunc
+	tipselFunc              TipSelectionFunc
 	sendBundleFunc          SendBundleFunc
 	milestoneMerkleHashFunc crypto.Hash
 
@@ -98,7 +100,7 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc tipselection.TipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
+func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc TipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
 	result := &Coordinator{
 		seed:                    seed,
 		securityLvl:             securityLvl,
@@ -162,6 +164,9 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			return fmt.Errorf("previous milestone does not match latest milestone in database: %d != %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
+		// if we bootstrap a network, NullHash has to be set as a solid entry point
+		tangle.SolidEntryPointsAdd(hornet.NullHashBytes, startIndex)
+
 		latestMilestoneHash := hornet.NullHashBytes
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
@@ -215,12 +220,12 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // only honest tipselection will reference our checkpoints, so the milestone will reference honest tips.
 func (coo *Coordinator) issueCheckpoint() error {
 
-	tips, _, err := coo.tipselFunc(0, coo.lastCheckpointHash)
+	tip, err := coo.tipselFunc()
 	if err != nil {
 		return err
 	}
 
-	b, err := createCheckpoint(tips[0].Trytes(), tips[1].Trytes(), coo.minWeightMagnitude, coo.powFunc)
+	b, err := createCheckpoint(tip, *coo.lastCheckpointHash, coo.minWeightMagnitude, coo.powFunc)
 	if err != nil {
 		return err
 	}
@@ -233,13 +238,13 @@ func (coo *Coordinator) issueCheckpoint() error {
 	lastCheckpointHash := hornet.HashFromHashTrytes(b[0].Hash)
 	coo.lastCheckpointHash = &lastCheckpointHash
 
-	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, b[0].Hash)
+	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, lastCheckpointHash, tip)
 
 	return nil
 }
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
-func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHash trinary.Hash, newMilestoneIndex milestone.Index) error {
+func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
 	// compute merkle tree root
 	byteEncodedMerkleTreeRootHash, err := whiteflag.ComputeMerkleTreeRootHash(coo.milestoneMerkleHashFunc, trunkHash, branchHash)
@@ -279,7 +284,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash trinary.Hash, branchHas
 		return err
 	}
 
-	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneHash.Trytes())
+	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneHash)
 
 	return nil
 }
@@ -294,7 +299,7 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
-		if err := coo.createAndSendMilestone(consts.NullHashTrytes, consts.NullHashTrytes, coo.state.LatestMilestoneIndex); err != nil {
+		if err := coo.createAndSendMilestone(hornet.Hash(hornet.NullHashBytes), hornet.Hash(hornet.NullHashBytes), coo.state.LatestMilestoneIndex); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
 		}
@@ -312,13 +317,13 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 	}
 
 	// issue new milestone
-	tips, _, err := coo.tipselFunc(0, coo.lastCheckpointHash)
+	tip, err := coo.tipselFunc()
 	if err != nil {
 		// tipselection failed => not critical
 		return err, nil
 	}
 
-	if err := coo.createAndSendMilestone(tips[0].Trytes(), tips[1].Trytes(), coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(tip, *coo.lastCheckpointHash, coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, err
 	}
@@ -329,4 +334,9 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 // GetInterval returns the interval milestones or checkpoints should be issued.
 func (coo *Coordinator) GetInterval() time.Duration {
 	return time.Second * time.Duration(coo.milestoneIntervalSec) / time.Duration(coo.checkpointTransactions+1)
+}
+
+// State returns the current state of the coordinator.
+func (coo *Coordinator) State() *State {
+	return coo.state
 }

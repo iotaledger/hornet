@@ -76,44 +76,6 @@ const reqLineChartOptions = Object.assign({
     }
 }, defaultChartOptions);
 
-const cacheLineChartOpts = Object.assign({}, {
-    scales: {
-        xAxes: [{
-            ticks: {
-                autoSkip: true,
-                maxTicksLimit: 8,
-                fontSize: 8,
-            },
-            showXLabels: 10,
-            gridLines: {
-                display: false
-            }
-        }],
-        yAxes: [{
-            gridLines: {
-                display: false
-            },
-            ticks: {
-                fontSize: 10,
-                maxTicksLimit: 4,
-                suggestedMin: 0,
-                beginAtZero: true,
-                suggestedMax: 100,
-                callback: function (value, index, values) {
-                    return `${value}%`;
-                }
-            },
-        }],
-    },
-    tooltips: {
-        callbacks: {
-            label: function (tooltipItem, data) {
-                return `Hit Rate: ${tooltipItem.value}%`;
-            }
-        }
-    }
-}, defaultChartOptions);
-
 const dbSizeLineChartOpts = Object.assign({}, {
     scales: {
         xAxes: [{
@@ -168,10 +130,6 @@ export class Misc extends React.Component<Props, any> {
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.tipSelSeries}
                                           options={lineChartOptions}/>
-                                </div>
-                                <div className={style.hornetChart}>
-                                    <Line data={this.props.nodeStore.tipSelCacheSeries}
-                                          options={cacheLineChartOpts}/>
                                 </div>
                             </Card.Body>
                         </Card>

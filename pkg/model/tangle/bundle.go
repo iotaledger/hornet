@@ -28,6 +28,7 @@ const (
 	MetadataIsValueSpam          = 4
 	MetadataValidStrictSemantics = 5
 	MetadataConflicting          = 6
+	MetadataInvalidPastCone      = 7
 )
 
 // Storable Object
@@ -223,6 +224,16 @@ func (bundle *Bundle) IsConflicting() bool {
 	}
 
 	return tailConflicting
+}
+
+func (bundle *Bundle) SetInvalidPastCone(invalidPastCone bool) {
+	if invalidPastCone != bundle.metadata.HasFlag(MetadataInvalidPastCone) {
+		bundle.metadata = bundle.metadata.ModifyFlag(MetadataInvalidPastCone, invalidPastCone)
+	}
+}
+
+func (bundle *Bundle) IsInvalidPastCone() bool {
+	return bundle.metadata.HasFlag(MetadataInvalidPastCone)
 }
 
 func (bundle *Bundle) GetMetadata() byte {

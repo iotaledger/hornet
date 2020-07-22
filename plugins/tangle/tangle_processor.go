@@ -32,8 +32,6 @@ var (
 
 func configureTangleProcessor(_ *node.Plugin) {
 
-	configureGossipSolidifier()
-
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		processIncomingTx(task.Param(0).(*hornet.Transaction), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
 		task.Return(nil)
@@ -55,8 +53,6 @@ func configureTangleProcessor(_ *node.Plugin) {
 
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
-
-	runGossipSolidifier()
 
 	submitReceivedTxForProcessing := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 		receiveTxWorkerPool.Submit(transaction, request, p)
@@ -195,7 +191,8 @@ func printStatus() {
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"TPS (in/new/out): %05d/%05d/%05d",
+				"TPS (in/new/out): %05d/%05d/%05d, "+
+				"Tips: %d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			receiveTxWorkerPool.GetPendingQueueSize(),
@@ -203,5 +200,6 @@ func printStatus() {
 			tangle.GetLatestMilestoneIndex(),
 			lastIncomingTPS,
 			lastNewTPS,
-			lastOutgoingTPS))
+			lastOutgoingTPS,
+			metrics.SharedServerMetrics.Tips.Load()))
 }

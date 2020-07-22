@@ -14,16 +14,16 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/mselection"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
-	"github.com/gohornet/hornet/plugins/tipselection"
 )
 
 func init() {
@@ -38,7 +38,8 @@ var (
 	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
 	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
-	coo *coordinator.Coordinator
+	coo      *coordinator.Coordinator
+	selector *mselection.HeaviestSelector
 )
 
 func configure(plugin *node.Plugin) {
@@ -47,18 +48,23 @@ func configure(plugin *node.Plugin) {
 	// set the node as synced at startup, so the coo plugin can select tips
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
+	// use the heaviest pair tip selection for the milestones
+	selector = mselection.New()
+
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash trinary.Hash) {
-		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash)
+	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash hornet.Hash, tipHash hornet.Hash) {
+		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash.Trytes())
+		selector.ResetCone(tipHash)
 	}))
 
-	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash trinary.Hash) {
-		log.Infof("milestone issued (%d): %v", index, tailTxHash)
+	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
+		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
+		selector.Reset()
 	}))
 }
 
@@ -80,7 +86,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions),
 		powFunc,
-		tipselection.SelectTips,
+		selector.SelectTip,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
@@ -93,16 +99,36 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		return nil, err
 	}
 
+	// initialize the selector
+	selector.Reset()
+
 	return coo, nil
 }
 
 func run(plugin *node.Plugin) {
+	// pass all new solid bundles to the selector
+	onBundleSolid := events.NewClosure(func(cachedBundle *tangle.CachedBundle) {
+		cachedBundle.ConsumeBundle(func(bndl *tangle.Bundle) { // bundle -1
+
+			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
+				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
+				return
+			}
+
+			selector.OnNewSolidBundle(bndl)
+		})
+	})
+
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+		tanglePlugin.Events.BundleSolid.Attach(onBundleSolid)
+		defer tanglePlugin.Events.BundleSolid.Detach(onBundleSolid)
+
+		// TODO: add some random jitter to make the ms intervals not predictable
 		timeutil.Ticker(func() {
 			err, criticalErr := coo.IssueNextCheckpointOrMilestone()
 			if criticalErr != nil {
-				log.Panic(err)
+				log.Panic(criticalErr)
 			}
 			if err != nil {
 				log.Warn(err)

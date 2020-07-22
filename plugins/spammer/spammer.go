@@ -17,7 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/plugins/urts"
 
 	"go.uber.org/atomic"
 )
@@ -45,7 +45,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
-	if peering.Manager().ConnectedPeerCount() == 0 {
+	if checkPeersConnected && peering.Manager().ConnectedPeerCount() == 0 {
 		time.Sleep(time.Second)
 		return
 	}
@@ -63,14 +63,14 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	timeStart := time.Now()
-	tips, _, err := tipselection.SelectTips(depth, nil)
+	tips, err := urts.TipSelector.SelectTips()
 	if err != nil {
 		return
 	}
 	durationGTTA := time.Since(timeStart)
 
 	txCountValue := int(txCount.Add(int32(bundleSize)))
-	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
+	infoMsg := fmt.Sprintf("gTTA took %v", durationGTTA.Truncate(time.Millisecond))
 
 	b, err := createBundle(txAddress, message, tagSubstring, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {

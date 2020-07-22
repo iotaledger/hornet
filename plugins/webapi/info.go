@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -77,6 +78,9 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	} else {
 		result.Features = []string{}
 	}
+
+	// Tips
+	result.Tips = metrics.SharedServerMetrics.Tips.Load()
 
 	// TX to request
 	queued, pending, _ := gossip.RequestQueue().Size()

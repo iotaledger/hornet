@@ -20,7 +20,7 @@ import (
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/gohornet/hornet/plugins/webapi"
 	"github.com/gohornet/hornet/plugins/zmq"
@@ -47,7 +47,7 @@ func main() {
 			tangle.PLUGIN,
 			peering.PLUGIN,
 			warpsync.PLUGIN,
-			tipselection.PLUGIN,
+			urts.PLUGIN,
 			metrics.PLUGIN,
 			snapshot.PLUGIN,
 			dashboard.PLUGIN,

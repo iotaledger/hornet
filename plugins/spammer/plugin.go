@@ -17,25 +17,26 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/coordinator"
 )
 
 var (
 	PLUGIN = node.NewPlugin("Spammer", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	txAddress          string
-	message            string
-	tagSubstring       string
-	depth              uint
-	cpuMaxUsage        float64
-	rateLimit          float64
-	mwm                int
-	bundleSize         int
-	valueSpam          bool
-	spammerWorkerCount int
-	spammerAvgHeap     *utils.TimeHeap
-	spammerStartTime   time.Time
-	lastSentSpamTxsCnt uint32
+	txAddress           string
+	message             string
+	tagSubstring        string
+	cpuMaxUsage         float64
+	rateLimit           float64
+	mwm                 int
+	bundleSize          int
+	valueSpam           bool
+	spammerWorkerCount  int
+	checkPeersConnected bool
+	spammerAvgHeap      *utils.TimeHeap
+	spammerStartTime    time.Time
+	lastSentSpamTxsCnt  uint32
 )
 
 func configure(plugin *node.Plugin) {
@@ -44,13 +45,13 @@ func configure(plugin *node.Plugin) {
 	txAddress = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
 	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
-	depth = config.NodeConfig.GetUint(config.CfgSpammerDepth)
 	cpuMaxUsage = config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
 	rateLimit = config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
 	mwm = config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 	bundleSize = config.NodeConfig.GetInt(config.CfgSpammerBundleSize)
 	valueSpam = config.NodeConfig.GetBool(config.CfgSpammerValueSpam)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
+	checkPeersConnected = node.IsSkipped(coordinator.PLUGIN)
 	spammerAvgHeap = utils.NewTimeHeap()
 
 	if bundleSize < 1 {

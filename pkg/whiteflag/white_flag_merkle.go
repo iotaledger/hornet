@@ -18,7 +18,7 @@ type Hasher struct {
 	crypto.Hash
 }
 
-// New creates a new Hasher on the passed in hash function.
+// NewHasher creates a new Hasher on the passed in hash function.
 func NewHasher(h crypto.Hash) *Hasher {
 	return &Hasher{Hash: h}
 }

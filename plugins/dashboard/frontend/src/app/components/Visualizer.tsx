@@ -14,6 +14,7 @@ import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import {toInputUppercase} from "app/misc/Utils";
+import { If } from 'tsx-control-statements/components';
 
 interface Props {
     visualizerStore?: VisuStore.VisualizerStore;
@@ -61,17 +62,19 @@ export class Visualizer extends React.Component<Props, any> {
 
     render() {
         let {
-            vertices, solid_count, confirmed_count, selected,
+            vertices, solid_count, confirmed_count, conflicting_count, selected,
             selected_approvers_count, selected_approvees_count,
             verticesLimit, tips_count, paused, search
         } = this.props.visualizerStore;
         let {last_tps_metric, collecting} = this.props.nodeStore;
         let solid_percentage = 0.0;
         let confirmed_percentage = 0.0;
+        let conflicting_percentage = 0.0;
 
         if (vertices.size != 0) {
             solid_percentage = solid_count / vertices.size*100
             confirmed_percentage = confirmed_count / vertices.size*100
+            conflicting_percentage = conflicting_count / vertices.size*100
         }
 
         return (
@@ -92,8 +95,16 @@ export class Visualizer extends React.Component<Props, any> {
                                 Confirmed
                             </Badge>
                             {' '}
+                            <Badge pill style={{background: VisuStore.colorConflicting, color: "white"}}>
+                                Conflicting
+                            </Badge>
+                            {' '}
                             <Badge pill style={{background: VisuStore.colorMilestone, color: "white"}}>
                                 Milestone
+                            </Badge>
+                            {' '}
+                            <Badge pill style={{background: VisuStore.colorTip, color: "white"}}>
+                                Tip
                             </Badge>
                             {' '}
                             <Badge pill style={{background: VisuStore.colorUnknown, color: "white"}}>
@@ -105,17 +116,18 @@ export class Visualizer extends React.Component<Props, any> {
                             </Badge>
                             <br/>
                             Transactions: {vertices.size}, TPS: {last_tps_metric.new}, Tips: {tips_count}<br/>
-                            Confirmed/Unconfirmed: {confirmed_count}/{vertices.size - confirmed_count} ({confirmed_percentage.toFixed(2)}%)<br/>
-                            Solid/Unsolid: {solid_count}/{vertices.size - solid_count} ({solid_percentage.toFixed(2)}%)<br/>
-                            Selected: {selected ?
-                            <Link to={`/explorer/tx/${selected.id}`} target="_blank" rel='noopener noreferrer'>
-                                {selected.id.substr(0, 10)}
-                            </Link>
-                            : "-"}
-                            <br/>
-                            Approvers/Approvees: {selected ?
-                            <span>{selected_approvers_count}/{selected_approvees_count}</span>
-                            : '-/-'}
+                            Confirmed: {confirmed_percentage.toFixed(2)}%, Conflicting: {conflicting_percentage.toFixed(2)}%, Solid: {solid_percentage.toFixed(2)}%<br/>
+                            <If condition={!!selected}>
+                                Selected: {selected ?
+                                <Link to={`/explorer/tx/${selected.id}`} target="_blank" rel='noopener noreferrer'>
+                                    {selected.id.substr(0, 10)}
+                                </Link>
+                                : "-"}
+                                <br/>
+                                Approvers/Approvees: {selected ?
+                                <span>{selected_approvers_count}/{selected_approvees_count}</span>
+                                : '-/-'}
+                            </If>
                         </p>
                     </Col>
                     <Col xs={{span: 3, offset: 4}}>

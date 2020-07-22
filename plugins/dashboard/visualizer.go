@@ -10,7 +10,10 @@ import (
 	tanglePackage "github.com/gohornet/hornet/pkg/model/tangle"
 	tanglemodel "github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/tangle"
+	"github.com/gohornet/hornet/plugins/urts"
 )
 
 const (
@@ -46,13 +49,11 @@ type confirmationinfo struct {
 	ExcludedIDs []string `json:"excluded_ids"`
 }
 
-/*
 // tipinfo holds information about whether a given transaction is a tip or not.
 type tipinfo struct {
 	ID    string `json:"id"`
 	IsTip bool   `json:"is_tip"`
 }
-*/
 
 func configureVisualizer() {
 	visualizerWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -120,54 +121,55 @@ func runVisualizer() {
 		})
 	})
 
-	notifyConfirmedInfo := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		cachedBndl.ConsumeBundle(func(bndl *tanglePackage.Bundle) { // bundle -1
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
+	notifyMilestoneConfirmedInfo := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
 
-			visualizerWorkerPool.TrySubmit(
-				&msg{
-					Type: MsgTypeConfirmedInfo,
-					Data: &confirmationinfo{
-						ID:          bndl.GetTailHash().Trytes()[:VisualizerIdLength],
-						ExcludedIDs: make([]string, 0),
-					},
-				}, false)
-		})
+		var excludedIDs []string
+		for _, txHash := range confirmation.TailsExcludedConflicting {
+			excludedIDs = append(excludedIDs, txHash.Trytes()[:VisualizerIdLength])
+		}
+
+		visualizerWorkerPool.TrySubmit(
+			&msg{
+				Type: MsgTypeConfirmedInfo,
+				Data: &confirmationinfo{
+					ID:          confirmation.MilestoneHash.Trytes()[:VisualizerIdLength],
+					ExcludedIDs: excludedIDs,
+				},
+			}, false)
 	})
 
-	/*
-		notifyTipAdded := events.NewClosure(func(txHash trinary.Hash) {
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
+	notifyTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
 
-			visualizerWorkerPool.TrySubmit(
-				&msg{
-					Type: MsgTypeTipInfo,
-					Data: &tipinfo{
-						ID:    txHash[:VisualizerIdLength],
-						IsTip: true,
-					},
-				}, true)
-		})
+		visualizerWorkerPool.TrySubmit(
+			&msg{
+				Type: MsgTypeTipInfo,
+				Data: &tipinfo{
+					ID:    tip.Hash.Trytes()[:VisualizerIdLength],
+					IsTip: true,
+				},
+			}, true)
+	})
 
-		notifyTipRemoved := events.NewClosure(func(txHash trinary.Hash) {
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
+	notifyTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
 
-			visualizerWorkerPool.TrySubmit(
-				&msg{
-					Type: MsgTypeTipInfo,
-					Data: &tipinfo{
-						ID:    txHash[:VisualizerIdLength],
-						IsTip: false,
-					},
-				}, true)
-		})
-	*/
+		visualizerWorkerPool.TrySubmit(
+			&msg{
+				Type: MsgTypeTipInfo,
+				Data: &tipinfo{
+					ID:    tip.Hash.Trytes()[:VisualizerIdLength],
+					IsTip: false,
+				},
+			}, true)
+	})
 
 	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
 		tangle.Events.ReceivedNewTransaction.Attach(notifyNewVertex)
@@ -176,14 +178,12 @@ func runVisualizer() {
 		defer tangle.Events.TransactionSolid.Detach(notifySolidInfo)
 		tangle.Events.ReceivedNewMilestone.Attach(notifyMilestoneInfo)
 		defer tangle.Events.ReceivedNewMilestone.Detach(notifyMilestoneInfo)
-		tangle.Events.SolidMilestoneChanged.Attach(notifyConfirmedInfo)
-		defer tangle.Events.SolidMilestoneChanged.Detach(notifyConfirmedInfo)
-		/*
-			tangle.Events.TipAdded.Attach(notifyTipAdded)
-			defer tangle.Events.TipAdded.Detach(notifyTipAdded)
-			tangle.Events.TipRemoved.Attach(notifyTipRemoved)
-			defer tangle.Events.TipRemoved.Detach(notifyTipRemoved)
-		*/
+		tangle.Events.MilestoneConfirmed.Attach(notifyMilestoneConfirmedInfo)
+		defer tangle.Events.MilestoneConfirmed.Detach(notifyMilestoneConfirmedInfo)
+		urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
+		defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
+		urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
+		defer urts.TipSelector.Events.TipRemoved.Detach(notifyTipRemoved)
 
 		visualizerWorkerPool.Start()
 		<-shutdownSignal
