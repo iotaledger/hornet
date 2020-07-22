@@ -38,6 +38,8 @@ var (
 	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
 	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
+	maxTipsCount      int
+	maxApproveesCount int
 	coo      *coordinator.Coordinator
 	selector *mselection.HeaviestSelector
 )
@@ -47,9 +49,6 @@ func configure(plugin *node.Plugin) {
 
 	// set the node as synced at startup, so the coo plugin can select tips
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
-
-	// use the heaviest pair tip selection for the milestones
-	selector = mselection.New()
 
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex)
@@ -75,7 +74,18 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		return nil, err
 	}
 
+	// use the heaviest branch tip selection for the milestones
+	selector = mselection.New(
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+	)
+
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
+
+
+	maxTipsCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTipsCount)
+	maxApproveesCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxApproveesCount)
 
 	coo := coordinator.New(
 		seed,
@@ -84,7 +94,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
-		config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions),
 		powFunc,
 		selector.SelectTip,
 		sendBundle,

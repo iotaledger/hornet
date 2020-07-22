@@ -58,7 +58,6 @@ type Coordinator struct {
 	minWeightMagnitude      int
 	stateFilePath           string
 	milestoneIntervalSec    int
-	checkpointTransactions  int
 	powFunc                 pow.ProofOfWorkFunc
 	tipselFunc              TipSelectionFunc
 	sendBundleFunc          SendBundleFunc
@@ -100,7 +99,7 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, checkpointTransactions int, powFunc pow.ProofOfWorkFunc, tipselFunc TipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
+func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powFunc pow.ProofOfWorkFunc, tipselFunc TipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
 	result := &Coordinator{
 		seed:                    seed,
 		securityLvl:             securityLvl,
@@ -108,7 +107,6 @@ func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth in
 		minWeightMagnitude:      minWeightMagnitude,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
-		checkpointTransactions:  checkpointTransactions,
 		powFunc:                 powFunc,
 		tipselFunc:              tipselFunc,
 		sendBundleFunc:          sendBundleFunc,
