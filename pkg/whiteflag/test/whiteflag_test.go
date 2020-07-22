@@ -3,12 +3,13 @@ package test
 import (
 	"crypto"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	_ "golang.org/x/crypto/blake2b"
 	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
@@ -138,7 +139,10 @@ func sendFrom(t *testing.T, tag trinary.Trytes, fromSeed trinary.Trytes, fromInd
 	require.NoError(t, err)
 
 	fromAddress, err := address.GenerateAddresses(fromSeed, fromIndex, 2, consts.SecurityLevelMedium, true)
+	require.NoError(t, err)
+
 	toAddress, err := address.GenerateAddress(toSeed, toIndex, consts.SecurityLevelMedium, true)
+	require.NoError(t, err)
 
 	fmt.Println("Send", value, "from", fromAddress[0], "to", toAddress, "and remaining", balance-value, "to", fromAddress[1])
 
