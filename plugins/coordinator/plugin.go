@@ -49,7 +49,7 @@ func configure(plugin *node.Plugin) {
 	tanglePlugin.SetUpdateSyncedAtStartup(true)
 
 	// use the heaviest pair tip selection for the milestones
-	selector = mselection.HPS(hornet.NullHashBytes)
+	selector = mselection.New()
 
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex)
@@ -57,14 +57,14 @@ func configure(plugin *node.Plugin) {
 		log.Panic(err)
 	}
 
-	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash hornet.Hash) {
+	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash hornet.Hash, tipHash hornet.Hash) {
 		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash.Trytes())
-		selector.SetRoot(txHash)
+		selector.ResetCone(tipHash)
 	}))
 
 	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
 		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
-		selector.SetRoot(tailTxHash)
+		selector.Reset()
 	}))
 }
 
@@ -86,7 +86,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointTransactions),
 		powFunc,
-		selector.SelectTipsWithReference,
+		selector.SelectTip,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
@@ -100,7 +100,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 	}
 
 	// initialize the selector
-	selector.SetRoot(coo.State().LatestMilestoneHash)
+	selector.Reset()
 
 	return coo, nil
 }
@@ -108,13 +108,15 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 func run(plugin *node.Plugin) {
 	// pass all new solid bundles to the selector
 	onBundleSolid := events.NewClosure(func(cachedBundle *tangle.CachedBundle) {
+		cachedBundle.ConsumeBundle(func(bndl *tangle.Bundle) { // bundle -1
 
-		if cachedBundle.GetBundle().IsInvalidPastCone() || !cachedBundle.GetBundle().IsValid() || !cachedBundle.GetBundle().ValidStrictSemantics() {
-			// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
-			return
-		}
+			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
+				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
+				return
+			}
 
-		selector.OnNewSolidBundle(cachedBundle) //+1
+			selector.OnNewSolidBundle(bndl)
+		})
 	})
 
 	// create a background worker that issues milestones

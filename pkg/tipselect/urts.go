@@ -419,7 +419,6 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 
 	approveesLazy := 0
 	for approveeHash := range approveeHashes {
-		// ignore solid entry points
 		var approveeORTSI milestone.Index
 
 		if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {

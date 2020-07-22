@@ -32,7 +32,7 @@ type Bundle = []*transaction.Transaction
 type SendBundleFunc = func(b Bundle) error
 
 // TipSelectionFunc is a function which performs a tipselection and returns two tips.
-type TipSelectionFunc = func(reference *hornet.Hash) (hornet.Hashes, error)
+type TipSelectionFunc = func() (hornet.Hash, error)
 
 var (
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
@@ -220,12 +220,12 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // only honest tipselection will reference our checkpoints, so the milestone will reference honest tips.
 func (coo *Coordinator) issueCheckpoint() error {
 
-	tips, err := coo.tipselFunc(coo.lastCheckpointHash)
+	tip, err := coo.tipselFunc()
 	if err != nil {
 		return err
 	}
 
-	b, err := createCheckpoint(tips[0], tips[1], coo.minWeightMagnitude, coo.powFunc)
+	b, err := createCheckpoint(tip, *coo.lastCheckpointHash, coo.minWeightMagnitude, coo.powFunc)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (coo *Coordinator) issueCheckpoint() error {
 	lastCheckpointHash := hornet.HashFromHashTrytes(b[0].Hash)
 	coo.lastCheckpointHash = &lastCheckpointHash
 
-	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, lastCheckpointHash)
+	coo.Events.IssuedCheckpoint.Trigger(coo.lastCheckpointCount, coo.checkpointTransactions, lastCheckpointHash, tip)
 
 	return nil
 }
@@ -317,13 +317,13 @@ func (coo *Coordinator) IssueNextCheckpointOrMilestone() (error, error) {
 	}
 
 	// issue new milestone
-	tips, err := coo.tipselFunc(coo.lastCheckpointHash)
+	tip, err := coo.tipselFunc()
 	if err != nil {
 		// tipselection failed => not critical
 		return err, nil
 	}
 
-	if err := coo.createAndSendMilestone(tips[0], tips[1], coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(tip, *coo.lastCheckpointHash, coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, err
 	}

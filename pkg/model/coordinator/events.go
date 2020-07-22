@@ -7,7 +7,7 @@ import (
 
 // CheckpointCaller is used to signal issued checkpoints.
 func CheckpointCaller(handler interface{}, params ...interface{}) {
-	handler.(func(index int, lastIndex int, txHash hornet.Hash))(params[0].(int), params[1].(int), params[2].(hornet.Hash))
+	handler.(func(index int, lastIndex int, txHash hornet.Hash, tipHash hornet.Hash))(params[0].(int), params[1].(int), params[2].(hornet.Hash), params[3].(hornet.Hash))
 }
 
 // MilestoneCaller is used to signal issued milestones.
