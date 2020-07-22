@@ -345,5 +345,5 @@ func randomTip(tips hornet.Hashes) hornet.Hash {
 	if len(tips) == 0 {
 		panic("empty tips")
 	}
-	return tips[utils.RandomInsecure(0, len(tips))]
+	return tips[utils.RandomInsecure(0, len(tips)-1)]
 }
