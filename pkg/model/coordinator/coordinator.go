@@ -39,10 +39,10 @@ var (
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
 )
 
-// coordinatorEvents are the events issued by the coordinator.
-type coordinatorEvents struct {
+// CoordinatorEvents are the events issued by the coordinator.
+type CoordinatorEvents struct {
 	// Fired when a checkpoint transaction is issued.
-	IssuedCheckpoint *events.Event
+	IssuedCheckpointTransaction *events.Event
 	// Fired when a milestone is issued.
 	IssuedMilestone *events.Event
 }
@@ -111,9 +111,9 @@ func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth in
 		tipselFunc:              tipselFunc,
 		sendBundleFunc:          sendBundleFunc,
 		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
-		Events: &coordinatorEvents{
-			IssuedCheckpoint: events.NewEvent(CheckpointCaller),
-			IssuedMilestone:  events.NewEvent(MilestoneCaller),
+		Events: &CoordinatorEvents{
+			IssuedCheckpointTransaction: events.NewEvent(CheckpointCaller),
+			IssuedMilestone:             events.NewEvent(MilestoneCaller),
 		},
 	}
 

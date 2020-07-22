@@ -56,9 +56,8 @@ func configure(plugin *node.Plugin) {
 		log.Panic(err)
 	}
 
-	coo.Events.IssuedCheckpoint.Attach(events.NewClosure(func(index int, lastIndex int, txHash hornet.Hash, tipHash hornet.Hash) {
-		log.Infof("checkpoint issued (%d/%d): %v", index, lastIndex, txHash.Trytes())
-		selector.ResetCone(tipHash)
+	coo.Events.IssuedCheckpointTransaction.Attach(events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
+		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
 	}))
 
 	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
@@ -186,4 +185,12 @@ func sendBundle(b coordinator.Bundle) error {
 	wgBundleProcessed.Wait()
 
 	return nil
+}
+
+// GetEvents returns the events of the coordinator
+func GetEvents() *coordinator.CoordinatorEvents {
+	if coo == nil {
+		return nil
+	}
+	return coo.Events
 }
