@@ -1,7 +1,6 @@
 package mselection
 
 import (
-	"bytes"
 	"container/list"
 	"context"
 	"errors"
@@ -191,7 +190,7 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) {
 					panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
 				}
 
-				_, approveeORTSI = s.getTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
+				_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
 				cachedApproveeTx.Release(true)
 			}
 
@@ -220,104 +219,7 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) {
 	s.removeTip(trunkItem)
 	s.removeTip(branchItem)
 	it.tip = s.tips.PushBack(it)
-}
 
-func (s *HeaviestSelector) updateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
-	for i := len(outdatedTransactions) - 1; i >= 0; i-- {
-		outdatedTxHash := outdatedTransactions[i]
-
-		cachedTx := tangle.GetCachedTransactionOrNil(outdatedTxHash)
-		if cachedTx == nil {
-			panic(tangle.ErrTransactionNotFound)
-		}
-		s.getTransactionRootSnapshotIndexes(cachedTx, lsmi)
-	}
-}
-
-// getTransactionRootSnapshotIndexes searches the root snapshot indexes for a given transaction.
-func (s *HeaviestSelector) getTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
-	defer cachedTx.Release(true) // tx -1
-
-	// if the tx already contains recent (calculation index matches LSMI)
-	// information about yrtsi and ortsi, return that info
-	yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
-	if rtsci == lsmi {
-		return yrtsi, ortsi
-	}
-
-	snapshotInfo := tangle.GetSnapshotInfo()
-
-	youngestTxRootSnapshotIndex = 0
-	oldestTxRootSnapshotIndex = 0
-
-	updateIndexes := func(yrtsi milestone.Index, ortsi milestone.Index) {
-		if (youngestTxRootSnapshotIndex == 0) || (youngestTxRootSnapshotIndex < yrtsi) {
-			youngestTxRootSnapshotIndex = yrtsi
-		}
-		if (oldestTxRootSnapshotIndex == 0) || (oldestTxRootSnapshotIndex > ortsi) {
-			oldestTxRootSnapshotIndex = ortsi
-		}
-	}
-
-	// collect all approvees in the cone that are not confirmed,
-	// are no solid entry points and have no recent calculation index
-	var outdatedTransactions hornet.Hashes
-
-	startTxHash := cachedTx.GetMetadata().GetTxHash()
-
-	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
-	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
-	if err := dag.TraverseApprovees(cachedTx.GetMetadata().GetTxHash(),
-		// traversal stops if no more transactions pass the given condition
-		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-			defer cachedTx.Release(true) // tx -1
-
-			// first check if the tx was confirmed => update yrtsi and ortsi with the confirmation index
-			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
-				updateIndexes(at, at)
-				return false, nil
-			}
-
-			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
-				// skip the start transaction, so it doesn't get added to the outdatedTransactions
-				return true, nil
-			}
-
-			// if the tx was not confirmed yet, but already contains recent (calculation index matches LSMI) information
-			// about yrtsi and ortsi, propagate that info
-			yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
-			if rtsci == lsmi {
-				updateIndexes(yrtsi, ortsi)
-				return false, nil
-			}
-
-			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
-
-			return true, nil
-		},
-		// consumer
-		func(cachedTx *tangle.CachedTransaction) error { // tx +1
-			defer cachedTx.Release(true) // tx -1
-			return nil
-		},
-		// called on missing approvees
-		func(approveeHash hornet.Hash) error {
-			return fmt.Errorf("missing approvee %v", approveeHash.Trytes())
-		},
-		// called on solid entry points
-		func(txHash hornet.Hash) {
-			updateIndexes(snapshotInfo.EntryPointIndex, snapshotInfo.EntryPointIndex)
-		}, true, false, nil); err != nil {
-		panic(err)
-	}
-
-	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest
-	s.updateOutdatedRootSnapshotIndexes(outdatedTransactions, lsmi)
-
-	// set the new transaction root snapshot indexes in the metadata of the transaction
-	cachedTx.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
-
-	return youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex
 }
 
 func (s *HeaviestSelector) removeTip(it *item) {
