@@ -21,4 +21,4 @@ jobs:
         run: docker build . --file docker/Dockerfile --tag hornet:latest
 
       - name: Test HORNET Docker image
-        run: docker run --rm --name hornet hornet:latest --help 2>/dev/null | grep -q "help requested"
+        run: docker run --rm --name hornet hornet:latest --version 2>/dev/null | grep -q "HORNET"
