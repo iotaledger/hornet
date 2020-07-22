@@ -16,7 +16,7 @@ const (
 	// path to the local snapshot file
 	CfgLocalSnapshotsPath = "snapshots.local.path"
 	// URL to load the local snapshot file from
-	CfgLocalSnapshotsDownloadURL = "snapshots.local.downloadURL"
+	CfgLocalSnapshotsDownloadURLs = "snapshots.local.downloadURLs"
 	// path to the global snapshot file containing the ledger state
 	CfgGlobalSnapshotPath = "snapshots.global.path"
 	// paths to the spent addresses files
@@ -37,7 +37,7 @@ func init() {
 	flag.Int(CfgLocalSnapshotsIntervalSynced, 50, "interval, in milestone transactions, at which snapshot files are created if the ledger is fully synchronized")
 	flag.Int(CfgLocalSnapshotsIntervalUnsynced, 1000, "interval, in milestone transactions, at which snapshot files are created if the ledger is not fully synchronized")
 	flag.String(CfgLocalSnapshotsPath, "snapshots/mainnet/export.bin", "path to the local snapshot file")
-	flag.String(CfgLocalSnapshotsDownloadURL, "", "URL to load the local snapshot file from")
+	flag.StringSlice(CfgLocalSnapshotsDownloadURLs, []string{}, "URLs to load the local snapshot file from. Provide multiple URLs as fall back sources")
 	flag.String(CfgGlobalSnapshotPath, "snapshotMainnet.txt", "path to the global snapshot file containing the ledger state")
 	flag.StringSlice(CfgGlobalSnapshotSpentAddressesPaths, []string{
 		"previousEpochsSpentAddresses1.txt",
