@@ -161,6 +161,24 @@ func GetBundleTransactionHashes(bundleHash hornet.Hash, forceRelease bool, maxFi
 }
 
 // bundleTx +1
+func GetAllBundleTransactionHashes(maxFind ...int) hornet.Hashes {
+	var bundleTransactionHashes hornet.Hashes
+
+	i := 0
+	bundleTransactionsStorage.ForEachKeyOnly(func(key []byte) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			return false
+		}
+
+		bundleTransactionHashes = append(bundleTransactionHashes, key[50:99])
+		return true
+	}, false)
+
+	return bundleTransactionHashes
+}
+
+// bundleTx +1
 func GetBundleTailTransactionHashes(bundleHash hornet.Hash, forceRelease bool, maxFind ...int) hornet.Hashes {
 	var bundleTransactionHashes hornet.Hashes
 
