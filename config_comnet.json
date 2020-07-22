@@ -50,7 +50,7 @@
       "intervalSynced": 200,
       "intervalUnsynced": 1000,
       "path": "snapshots/comnet/export.bin",
-      "downloadURL": "https://ls.tanglebay.org/comnet/export.bin"
+      "downloadURL": "https://ls.manapotion.io/comnet/export.bin"
     },
     "global": {
       "path": "snapshot.csv",
