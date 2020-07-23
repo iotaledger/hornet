@@ -75,7 +75,7 @@ type Coordinator struct {
 	Events *CoordinatorEvents
 }
 
-// Maps the passed name to one of the supported crypto.Hash hashing functions.
+// MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.Hash hashing functions.
 // Also verifies that the available function is available or else panics.
 func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead

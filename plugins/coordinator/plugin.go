@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"sync"
+	"time"
 
 	"github.com/spf13/pflag"
 
@@ -16,14 +17,16 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/mselection"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 func init() {
@@ -46,13 +49,19 @@ var (
 
 	coo      *coordinator.Coordinator
 	selector *mselection.HeaviestSelector
+
+	// Closures
+	onBundleSolid                 *events.Closure
+	onMilestoneConfirmed          *events.Closure
+	onIssuedCheckpointTransaction *events.Closure
+	onIssuedMilestone             *events.Closure
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	// set the node as synced at startup, so the coo plugin can select tips
-	tanglePlugin.SetUpdateSyncedAtStartup(true)
+	tangleplugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex)
@@ -60,13 +69,7 @@ func configure(plugin *node.Plugin) {
 		log.Panic(err)
 	}
 
-	coo.Events.IssuedCheckpointTransaction.Attach(events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
-		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
-	}))
-
-	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
-		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
-	}))
+	configureEvents()
 }
 
 func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinator, error) {
@@ -116,25 +119,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 }
 
 func run(plugin *node.Plugin) {
-	// pass all new solid bundles to the selector
-	onBundleSolid := events.NewClosure(func(cachedBundle *tangle.CachedBundle) {
-		cachedBundle.ConsumeBundle(func(bndl *tangle.Bundle) { // bundle -1
-
-			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
-				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
-				return
-			}
-
-			if tipCount, approveeCount := selector.OnNewSolidBundle(bndl); (tipCount >= maxTipsCount) || (approveeCount >= maxApproveesCount) {
-				// issue next checkpoint
-				select {
-				case nextCheckpointSignal <- struct{}{}:
-				default:
-					// do not block if already another signal is waiting
-				}
-			}
-		})
-	})
 
 	// create a background worker that signals to issue new milestones
 	daemon.BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
@@ -152,8 +136,7 @@ func run(plugin *node.Plugin) {
 
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
-		tanglePlugin.Events.BundleSolid.Attach(onBundleSolid)
-		defer tanglePlugin.Events.BundleSolid.Detach(onBundleSolid)
+		attachEvents()
 
 		// bootstrap the network if not done yet
 		if criticalErr := coo.Bootstrap(); criticalErr != nil {
@@ -190,7 +173,10 @@ func run(plugin *node.Plugin) {
 				break coordinatorLoop
 			}
 		}
+
+		detachEvents()
 	}, shutdown.PriorityCoordinator)
+
 }
 
 func sendBundle(b coordinator.Bundle) error {
@@ -218,8 +204,8 @@ func sendBundle(b coordinator.Bundle) error {
 		}
 	})
 
-	tanglePlugin.Events.ProcessedTransaction.Attach(processedTxEvent)
-	defer tanglePlugin.Events.ProcessedTransaction.Detach(processedTxEvent)
+	tangleplugin.Events.ProcessedTransaction.Attach(processedTxEvent)
+	defer tangleplugin.Events.ProcessedTransaction.Detach(processedTxEvent)
 
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
@@ -241,4 +227,58 @@ func GetEvents() *coordinator.CoordinatorEvents {
 		return nil
 	}
 	return coo.Events
+}
+
+func configureEvents() {
+	// pass all new solid bundles to the selector
+	onBundleSolid = events.NewClosure(func(cachedBundle *tangle.CachedBundle) {
+		cachedBundle.ConsumeBundle(func(bndl *tangle.Bundle) { // bundle -1
+
+			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
+				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
+				return
+			}
+
+			if tipCount, approveeCount := selector.OnNewSolidBundle(bndl); (tipCount >= maxTipsCount) || (approveeCount >= maxApproveesCount) {
+				log.Debugf("Coordinator Tipselector: tipCount: %d, approveeCount: %d", tipCount, approveeCount)
+
+				// issue next checkpoint
+				select {
+				case nextCheckpointSignal <- struct{}{}:
+				default:
+					// do not block if already another signal is waiting
+				}
+			}
+		})
+	})
+
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		ts := time.Now()
+
+		// propagate new transaction root snapshot indexes to the future cone for URTS
+		dag.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
+
+		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+	})
+
+	onIssuedCheckpointTransaction = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
+		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
+	})
+
+	onIssuedMilestone = events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
+		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
+	})
+}
+
+func attachEvents() {
+	tangleplugin.Events.BundleSolid.Attach(onBundleSolid)
+	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	coo.Events.IssuedCheckpointTransaction.Attach(onIssuedCheckpointTransaction)
+	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
+}
+
+func detachEvents() {
+	tangleplugin.Events.BundleSolid.Detach(onBundleSolid)
+	tangleplugin.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	coo.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }
