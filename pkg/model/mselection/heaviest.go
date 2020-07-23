@@ -74,12 +74,13 @@ func (s *HeaviestSelector) reset() {
 	s.tips = list.New()
 }
 
+// ToDo: fix comment
 // selectTip selects a tip to be used for the next milestone.
 // It returns a tip, confirming the most transactions in the future cone.
 // The selection can be cancelled anytime via the provided context. In this case, it returns the current best solution.
 // selectTip be called concurrently with other HeaviestSelector methods. However, it only considers the tips
 // that were present at the beginning of the selectTip call.
-func (s *HeaviestSelector) selectTip(tips []*item, ctx context.Context) (*selectedTip, error) {
+func (s *HeaviestSelector) selectTip(ctx context.Context, tips []*item) (*selectedTip, error) {
 
 	lastTip := tips[len(tips)-1]
 
@@ -88,7 +89,7 @@ func (s *HeaviestSelector) selectTip(tips []*item, ctx context.Context) (*select
 		count uint
 	}{
 		tips: []*selectedTip{
-			&selectedTip{
+			{
 				item:  lastTip,
 				index: len(tips) - 1,
 			}},
@@ -122,7 +123,8 @@ func (s *HeaviestSelector) selectTip(tips []*item, ctx context.Context) (*select
 	return randomTip(best.tips), nil
 }
 
-// selectTip selects a tip to be used for the next milestone.
+// ToDo: fix comment
+// SelectTips selects a tip to be used for the next milestone.
 // It returns a tip, confirming the most transactions in the future cone.
 // The selection can be cancelled anytime via the provided context. In this case, it returns the current best solution.
 // selectTip be called concurrently with other HeaviestSelector methods. However, it only considers the tips
@@ -146,7 +148,7 @@ func (s *HeaviestSelector) SelectTips(enforceTips bool) (hornet.Hashes, error) {
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(100*time.Millisecond))
 		defer cancel()
 
-		tip, err := s.selectTip(tips, ctx)
+		tip, err := s.selectTip(ctx, tips)
 		if err != nil {
 			break
 		}
