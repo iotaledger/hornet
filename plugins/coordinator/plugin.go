@@ -89,7 +89,10 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
 
 	nextCheckpointSignal = make(chan struct{})
-	nextMilestoneSignal = make(chan struct{})
+
+	// must be a buffered channel, otherwise signal gets
+	// lost if checkpoint is generated at the same time
+	nextMilestoneSignal = make(chan struct{}, 1)
 
 	maxTipsCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTipsCount)
 	maxApproveesCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxApproveesCount)
