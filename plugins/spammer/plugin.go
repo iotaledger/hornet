@@ -18,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/urts"
 )
 
 var (
@@ -41,6 +42,12 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
+
+	// do not enable the spammer if URTS is disabled
+	if node.IsSkipped(urts.PLUGIN) {
+		plugin.Status = node.Disabled
+		return
+	}
 
 	txAddress = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
@@ -109,6 +116,11 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(_ *node.Plugin) {
+
+	// do not enable the spammer if URTS is disabled
+	if node.IsSkipped(urts.PLUGIN) {
+		return
+	}
 
 	// create a background worker that "measures" the spammer averages values every second
 	daemon.BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {

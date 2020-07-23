@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -17,6 +18,13 @@ func init() {
 
 func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
+
+	// do not reply if URTS is disabled
+	if node.IsSkipped(urts.PLUGIN) {
+		e.Error = "tipselection plugin disabled in this node"
+		c.JSON(http.StatusServiceUnavailable, e)
+		return
+	}
 
 	tips, err := urts.TipSelector.SelectTips()
 	if err != nil {

@@ -3,6 +3,7 @@ package dashboard
 import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -31,6 +32,11 @@ func configureTipSelMetric() {
 }
 
 func runTipSelMetricWorker() {
+
+	// check if URTS plugin is enabled
+	if node.IsSkipped(urts.PLUGIN) {
+		return
+	}
 
 	notifyTipSelPerformed := events.NewClosure(func(metrics *tipselect.TipSelStats) {
 		tipSelMetricWorkerPool.TrySubmit(metrics)

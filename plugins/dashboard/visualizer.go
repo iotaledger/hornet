@@ -3,6 +3,7 @@ package dashboard
 import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -200,10 +201,14 @@ func runVisualizer() {
 		}
 		tangle.Events.MilestoneConfirmed.Attach(notifyMilestoneConfirmedInfo)
 		defer tangle.Events.MilestoneConfirmed.Detach(notifyMilestoneConfirmedInfo)
-		urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
-		defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
-		urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
-		defer urts.TipSelector.Events.TipRemoved.Detach(notifyTipRemoved)
+
+		// check if URTS plugin is enabled
+		if !node.IsSkipped(urts.PLUGIN) {
+			urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
+			defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
+			urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
+			defer urts.TipSelector.Events.TipRemoved.Detach(notifyTipRemoved)
+		}
 
 		visualizerWorkerPool.Start()
 		<-shutdownSignal
