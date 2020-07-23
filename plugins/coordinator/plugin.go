@@ -40,6 +40,10 @@ var (
 
 	maxTipsCount      int
 	maxApproveesCount int
+
+	nextCheckpointSignal chan struct{}
+	nextMilestoneSignal  chan struct{}
+
 	coo      *coordinator.Coordinator
 	selector *mselection.HeaviestSelector
 )
@@ -62,7 +66,6 @@ func configure(plugin *node.Plugin) {
 
 	coo.Events.IssuedMilestone.Attach(events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
 		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
-		selector.Reset()
 	}))
 }
 
@@ -82,6 +85,8 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
 
+	nextCheckpointSignal = make(chan struct{})
+	nextMilestoneSignal = make(chan struct{})
 
 	maxTipsCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTipsCount)
 	maxApproveesCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxApproveesCount)
@@ -94,7 +99,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		powFunc,
-		selector.SelectTip,
+		selector.SelectTips,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
@@ -106,9 +111,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 	if err := coo.InitState(bootstrap, milestone.Index(startIndex)); err != nil {
 		return nil, err
 	}
-
-	// initialize the selector
-	selector.Reset()
 
 	return coo, nil
 }
@@ -123,25 +125,71 @@ func run(plugin *node.Plugin) {
 				return
 			}
 
-			selector.OnNewSolidBundle(bndl)
+			if tipCount, approveeCount := selector.OnNewSolidBundle(bndl); (tipCount >= maxTipsCount) || (approveeCount >= maxApproveesCount) {
+				// issue next checkpoint
+				select {
+				case nextCheckpointSignal <- struct{}{}:
+				default:
+					// do not block if already another signal is waiting
+				}
+			}
 		})
 	})
+
+	// create a background worker that signals to issue new milestones
+	daemon.BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
+
+		timeutil.Ticker(func() {
+			// issue next milestone
+			select {
+			case nextMilestoneSignal <- struct{}{}:
+			default:
+				// do not block if already another signal is waiting
+			}
+		}, coo.GetInterval(), shutdownSignal)
+
+	}, shutdown.PriorityCoordinator)
 
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		tanglePlugin.Events.BundleSolid.Attach(onBundleSolid)
 		defer tanglePlugin.Events.BundleSolid.Detach(onBundleSolid)
 
-		// TODO: add some random jitter to make the ms intervals not predictable
-		timeutil.Ticker(func() {
-			err, criticalErr := coo.IssueNextCheckpointOrMilestone()
-			if criticalErr != nil {
-				log.Panic(criticalErr)
+		// bootstrap the network if not done yet
+		if criticalErr := coo.Bootstrap(); criticalErr != nil {
+			log.Panic(criticalErr)
+		}
+
+	coordinatorLoop:
+		for {
+			select {
+			case <-nextCheckpointSignal:
+				// check the thresholds again, because a new milestone could have been issued in the meantime
+				if tipCount, approveeCount := selector.GetStats(); (tipCount < maxTipsCount) && (approveeCount < maxApproveesCount) {
+					continue
+				}
+
+				// issue a checkpoint
+				if err := coo.IssueCheckpoint(); err != nil {
+					// issuing checkpoint failed => not critical
+					if err != mselection.ErrNoTipsAvailable {
+						log.Warn(err)
+					}
+				}
+
+			case <-nextMilestoneSignal:
+				err, criticalErr := coo.IssueMilestone()
+				if criticalErr != nil {
+					log.Panic(criticalErr)
+				}
+				if err != nil {
+					log.Warn(err)
+				}
+
+			case <-shutdownSignal:
+				break coordinatorLoop
 			}
-			if err != nil {
-				log.Warn(err)
-			}
-		}, coo.GetInterval(), shutdownSignal)
+		}
 	}, shutdown.PriorityCoordinator)
 }
 
