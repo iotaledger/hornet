@@ -85,7 +85,7 @@ func markTransactionAsSolid(cachedTx *tangle.CachedTransaction) {
 			cachedApproveeBndl := tangle.GetCachedBundleOrNil(hornet.Hash(approveeTailTxHash)) // bundle +1
 			if cachedApproveeBndl == nil {
 				// bundle must be created here
-				log.Panicf("BundleSolid: Bundle not found: %v", hornet.Hash(approveeTailTxHash).Trytes())
+				log.Panicf("BundleSolid: TxHash: %v, approvee bundle not found: TailTxHash: %v", cachedTx.GetMetadata().GetTxHash().Trytes(), hornet.Hash(approveeTailTxHash).Trytes())
 			}
 			bndl := cachedApproveeBndl.GetBundle() // bundle -1
 			cachedApproveeBndl.Release(true)
@@ -182,21 +182,17 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 			defer cachedTx.Release(true) // tx -1
 
 			// if the tx is solid, there is no need to traverse its approvees
-			if cachedTx.GetMetadata().IsSolid() {
-				return false, nil
-			}
+			return !cachedTx.GetMetadata().IsSolid(), nil
+		},
+		// consumer
+		func(cachedTx *tangle.CachedTransaction) error { // tx +1
+			defer cachedTx.Release(true) // tx -1
 
 			// mark the tx as checked
 			txsChecked++
 
 			// collect the txToSolidify in an ordered way
 			txsToSolidify = append(txsToSolidify, cachedTx.GetTransaction().GetTxHash())
-
-			return true, nil
-		},
-		// consumer
-		func(cachedTx *tangle.CachedTransaction) error { // tx +1
-			defer cachedTx.Release(true) // tx -1
 
 			_, exists := cachedTxs[string(cachedTx.GetTransaction().GetTxHash())]
 			if !exists {
@@ -236,10 +232,10 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 	// no transactions to request => the whole cone is solid
 	// we mark all transactions as solid in order from oldest to latest (needed for the tip pool)
-	for i := len(txsToSolidify) - 1; i >= 0; i-- {
-		cachedTx, exists := cachedTxs[string(txsToSolidify[i])]
+	for _, txHash := range txsToSolidify {
+		cachedTx, exists := cachedTxs[string(txHash)]
 		if !exists {
-			log.Panicf("solidQueueCheck: Tx not found: %v", txsToSolidify[i].Trytes())
+			log.Panicf("solidQueueCheck: Tx not found: %v", txHash.Trytes())
 		}
 
 		markTransactionAsSolid(cachedTx.Retain())

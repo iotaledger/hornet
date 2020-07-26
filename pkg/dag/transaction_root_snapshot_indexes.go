@@ -9,11 +9,9 @@ import (
 )
 
 // UpdateOutdatedRootSnapshotIndexes updates the transaction root snapshot indexes of the given transactions.
-// the "outdatedTransactions" should be ordered from latest to oldest to avoid recursion.
+// the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
 func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
-	for i := len(outdatedTransactions) - 1; i >= 0; i-- {
-		outdatedTxHash := outdatedTransactions[i]
-
+	for _, outdatedTxHash := range outdatedTransactions {
 		cachedTx := tangle.GetCachedTransactionOrNil(outdatedTxHash)
 		if cachedTx == nil {
 			panic(tangle.ErrTransactionNotFound)
@@ -81,13 +79,12 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 				return false, nil
 			}
 
-			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
-
 			return true, nil
 		},
 		// consumer
 		func(cachedTx *tangle.CachedTransaction) error { // tx +1
 			defer cachedTx.Release(true) // tx -1
+			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
 			return nil
 		},
 		// called on missing approvees
