@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -249,26 +248,13 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCo
 		return
 	}
 
-	trunkHash := bndl.GetTrunk(true)
-	branchHash := bndl.GetBranch(true)
-
-	trunkItem := s.trackedTails[string(trunkHash)]
-	branchItem := s.trackedTails[string(branchHash)]
-
-	approveeHashes := make(map[string]struct{})
-	if trunkItem == nil {
-		approveeHashes[string(trunkHash)] = struct{}{}
-	}
-
-	if branchItem == nil {
-		approveeHashes[string(branchHash)] = struct{}{}
-	}
-
-	// we have to check the below max depth criteria for approvees that do not reference our future cone.
-	// if all the unknown approvees do not fail the below max depth criteria, the tip is valid
-	if !checkBelowMaxDepth(approveeHashes) {
+	// we ignore bundles that are below max depth.
+	if isBelowMaxDepth(bndl.GetTail()) {
 		return s.GetTrackedTailsCount()
 	}
+
+	trunkItem := s.trackedTails[string(bndl.GetTrunk(true))]
+	branchItem := s.trackedTails[string(bndl.GetBranch(true))]
 
 	// compute the referenced transactions
 	// all the known approvers in the HeaviestSelector are represented by a unique bit in a bitset.
@@ -320,38 +306,21 @@ func (s *HeaviestSelector) GetTrackedTailsCount() (trackedTails int) {
 	return len(s.trackedTails)
 }
 
-// checkBelowMaxDepth checks the below max depth criteria for the given approvees.
-// if one of the approvees fails the below max depth criteria, the result is false.
-func checkBelowMaxDepth(approveeHashes map[string]struct{}) bool {
+// isBelowMaxDepth checks the below max depth criteria for the given tail transaction.
+func isBelowMaxDepth(cachedTailTx *tangle.CachedTransaction) bool {
+	defer cachedTailTx.Release(true)
 
-	if len(approveeHashes) > 0 {
-		lsmi := tangle.GetSolidMilestoneIndex()
+	lsmi := tangle.GetSolidMilestoneIndex()
 
-		for approveeHash := range approveeHashes {
-			var approveeORTSI milestone.Index
+	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTx.Retain(), lsmi) // tx +1
 
-			if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
-				// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
-				approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
-			} else {
-				cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // tx +1
-				if cachedApproveeTx == nil {
-					panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
-				}
-
-				_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
-				cachedApproveeTx.Release(true)
-			}
-
-			// if the approveeORTSI to LSMI delta of the approvee is equal or greater belowMaxDepth, the tip is invalid.
-			// "equal" is important because the next milestone would reference this transaction.
-			if lsmi-approveeORTSI >= belowMaxDepth {
-				return false
-			}
-		}
+	// if the ORTSI to LSMI delta of the tail transaction is equal or greater belowMaxDepth, the tip is invalid.
+	// "equal" is important because the next milestone would reference this transaction.
+	if lsmi-ortsi >= belowMaxDepth {
+		return true
 	}
 
-	return true
+	return false
 }
 
 // randomTip selects a random tip from the provided slice of tips.
