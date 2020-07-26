@@ -216,6 +216,9 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		func(approveeHash hornet.Hash) {
 			// Ignore solid entry points (snapshot milestone included)
 		}, true, false, abortSignal); err != nil {
+		if err == tangle.ErrOperationAborted {
+			return false, true
+		}
 		log.Panic(err)
 	}
 
