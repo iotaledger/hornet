@@ -121,8 +121,7 @@ func (s *HeaviestSelector) reset() {
 // selectTip selects a tip to be used for the next checkpoint.
 // it returns a tip, confirming the most transactions in the future cone,
 // and the amount of referenced transactions of this tip, that were not referenced by previously chosen tips.
-// the selection can be cancelled anytime via the provided context. in this case, it returns the current best solution.
-func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *bundleTailList) (*bundleTail, uint, error) {
+func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uint, error) {
 
 	if tipsList.Len() == 0 {
 		return nil, 0, ErrNoTipsAvailable
@@ -140,17 +139,6 @@ func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *bundleTailLi
 
 	// loop through all tips and find the one with the most referenced transactions
 	for _, tip := range tipsList.tails {
-		// when the context has been cancelled, return the current best with an error
-		select {
-		case <-ctx.Done():
-			selected, err := randomTip(best.tips)
-			if err != nil {
-				return nil, 0, err
-			}
-			return selected, best.count, ctx.Err()
-		default:
-		}
-
 		c := tip.refs.Count()
 		if c > best.count {
 			// tip with heavier branch found
@@ -182,6 +170,7 @@ func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *bundleTailLi
 // "minHeaviestBranchUnconfirmedTransactionsThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
+// the selection is cancelled after a fixed deadline. in this case, it returns the current collected tips.
 func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error) {
 
 	// copy the tips to release the lock to allow faster iteration
@@ -196,18 +185,28 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 
 	var result hornet.Hashes
 
-	for i := 0; i < s.maxHeaviestBranchTipsPerCheckpoint; i++ {
-		// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(100*time.Millisecond))
+	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(100*time.Millisecond))
+	defer cancel()
 
-		tip, count, err := s.selectTip(ctx, tipsList)
-		cancel()
-		if err != nil && err != context.DeadlineExceeded {
+	deadlineExceeded := false
+
+	for i := 0; i < s.maxHeaviestBranchTipsPerCheckpoint; i++ {
+		// when the context has been cancelled, stop collecting heaviest branch tips
+		select {
+		case <-ctx.Done():
+			deadlineExceeded = true
+		default:
+		}
+
+		tip, count, err := s.selectTip(tipsList)
+		if err != nil {
 			break
 		}
 
-		if (len(result) > minRequiredTips) && (count < uint(s.minHeaviestBranchUnconfirmedTransactionsThreshold)) {
-			// minimum amount of tips reached and the heaviest tips do not confirm enough transactions => no need to collect more
+		if (len(result) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedTransactionsThreshold)) || deadlineExceeded) {
+			// minimum amount of tips reached and the heaviest tips do not confirm enough transactions or the deadline was exceeded
+			// => no need to collect more
 			break
 		}
 
