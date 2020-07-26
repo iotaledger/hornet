@@ -41,8 +41,7 @@ var (
 	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
 	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
-	maxTipsCount      int
-	maxApproveesCount int
+	maxTrackedTails int
 
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
@@ -94,8 +93,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
 
-	maxTipsCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTipsCount)
-	maxApproveesCount = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxApproveesCount)
+	maxTrackedTails = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTrackedTails)
 
 	coo := coordinator.New(
 		seed,
@@ -151,7 +149,7 @@ func run(plugin *node.Plugin) {
 			select {
 			case <-nextCheckpointSignal:
 				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if tipCount, approveeCount := selector.GetStats(); (tipCount < maxTipsCount) && (approveeCount < maxApproveesCount) {
+				if trackedTailsCount := selector.GetTrackedTailsCount(); trackedTailsCount < maxTrackedTails {
 					continue
 				}
 
@@ -242,8 +240,8 @@ func configureEvents() {
 				return
 			}
 
-			if tipCount, approveeCount := selector.OnNewSolidBundle(bndl); (tipCount >= maxTipsCount) || (approveeCount >= maxApproveesCount) {
-				log.Debugf("Coordinator Tipselector: tipCount: %d, approveeCount: %d", tipCount, approveeCount)
+			if trackedTailsCount := selector.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
+				log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
 
 				// issue next checkpoint
 				select {

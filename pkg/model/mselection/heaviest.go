@@ -241,7 +241,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 // OnNewSolidBundle adds a new bundle to be processed by s.
 // The bundle must be solid and OnNewSolidBundle must be called in the order of solidification.
 // We also have to check if the bundle is below max depth.
-func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (tipCount int, approveeCount int) {
+func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCount int) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -268,7 +268,7 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (tipCount int, 
 	// we have to check the below max depth criteria for approvees that do not reference our future cone.
 	// if all the unknown approvees do not fail the below max depth criteria, the tip is valid
 	if !checkBelowMaxDepth(approveeHashes) {
-		return s.GetStats()
+		return s.GetTrackedTailsCount()
 	}
 
 	// compute the referenced transactions
@@ -290,7 +290,7 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (tipCount int, 
 	s.removeTip(branchItem)
 	it.tip = s.tips.PushBack(it)
 
-	return s.GetStats()
+	return s.GetTrackedTailsCount()
 }
 
 // removeTip removes the tip item from s.
@@ -314,9 +314,9 @@ func (s *HeaviestSelector) copyTipItemsToList() *itemList {
 	return &itemList{items: result}
 }
 
-// GetStats returns the amount of known tips and approvees of s.
-func (s *HeaviestSelector) GetStats() (tipCount int, approveeCount int) {
-	return s.tips.Len(), len(s.approvers)
+// GetTrackedTailsCount returns the amount of known bundle tails.
+func (s *HeaviestSelector) GetTrackedTailsCount() (trackedTails int) {
+	return len(s.trackedTails)
 }
 
 // checkBelowMaxDepth checks the below max depth criteria for the given approvees.

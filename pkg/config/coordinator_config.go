@@ -22,12 +22,9 @@ const (
 	CfgCoordinatorIntervalSeconds = "coordinator.intervalSeconds"
 	// the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)
 	CfgCoordinatorMilestoneMerkleTreeHashFunc = "coordinator.milestoneMerkleTreeHashFunc"
-	// the maximum amount of known approvees for milestone tipselection
+	// the maximum amount of known bundle tails for milestone tipselection
 	// if this limit is exceeded, a new checkpoint is issued
-	CfgCoordinatorCheckpointsMaxApproveesCount = "coordinator.checkpoints.maxApproveesCount"
-	// the maximum amount of known tips for milestone tipselection
-	// if this limit is exceeded, a new checkpoint is issued
-	CfgCoordinatorCheckpointsMaxTipsCount = "coordinator.checkpoints.maxTipsCount"
+	CfgCoordinatorCheckpointsMaxTrackedTails = "coordinator.checkpoints.maxTrackedTransactions"
 	// the minimum threshold of unconfirmed transactions in the heaviest branch for milestone tipselection
 	// if the value falls below that threshold, no more heaviest branch tips are picked
 	CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold = "coordinator.tipsel.minHeaviestBranchUnconfirmedTransactionsThreshold"
@@ -49,8 +46,7 @@ func init() {
 	flag.String(CfgCoordinatorMerkleTreeFilePath, "coordinator.tree", "the path to the Merkle tree of the coordinator")
 	flag.Int(CfgCoordinatorIntervalSeconds, 60, "the interval milestones are issued")
 	flag.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
-	flag.Int(CfgCoordinatorCheckpointsMaxApproveesCount, 10000, "maximum amount of known approvees for milestone tipselection")
-	flag.Int(CfgCoordinatorCheckpointsMaxTipsCount, 100, "maximum amount of known tips for milestone tipselection")
+	flag.Int(CfgCoordinatorCheckpointsMaxTrackedTails, 10000, "maximum amount of known bundle tails for milestone tipselection")
 	flag.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 3, "minimum threshold of unconfirmed transactions in the heaviest branch")
 	flag.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips")
 	flag.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint transactions with random tips")
