@@ -78,8 +78,7 @@
     "merkleTreeFilePath": "coordinator.tree",
     "intervalSeconds": 60,
     "checkpoints": {
-      "maxApproveesCount": 10000,
-      "maxTipsCount": 100
+      "maxTrackedTails": 10000
     },
     "tipsel": {
       "minHeaviestBranchUnconfirmedTransactionsThreshold": 3,

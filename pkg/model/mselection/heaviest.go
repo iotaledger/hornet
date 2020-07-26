@@ -36,58 +36,64 @@ type HeaviestSelector struct {
 	maxHeaviestBranchTipsPerCheckpoint                int
 	randomTipsPerCheckpoint                           int
 
-	approvers map[trinary.Hash]*item
-	tips      *list.List
+	trackedTails map[string]*bundleTail // map of all tracked bundle transaction tails
+	tips         *list.List             // list of available tips
+	latestTip    *bundleTail
 }
 
-type item struct {
-	hash hornet.Hash    // hash of the corresponding transaction
+type bundleTail struct {
+	hash hornet.Hash    // hash of the corresponding tail transaction
 	tip  *list.Element  // pointer to the element in the tip list
 	refs *bitset.BitSet // BitSet of all the referenced transactions
 }
 
-type selectedTip struct {
-	item  *item
-	index int
+type bundleTailList struct {
+	tails  map[string]*bundleTail
+	latest *bundleTail
 }
 
-type itemList struct {
-	items []*item
+// Len returns the length of the inner tails slice.
+func (il *bundleTailList) Len() int {
+	return len(il.tails)
 }
 
-// Len returns the length of the inner items slice.
-func (il *itemList) Len() int {
-	return len(il.items)
-}
-
-// randomTip selects a random tip item from the itemList.
-func (il *itemList) randomTip() (*selectedTip, error) {
-	if len(il.items) == 0 {
+// randomTip selects a random tip item from the bundleTailList.
+func (il *bundleTailList) randomTip() (*bundleTail, error) {
+	if len(il.tails) == 0 {
 		return nil, ErrNoTipsAvailable
 	}
 
-	index := utils.RandomInsecure(0, len(il.items)-1)
-	return &selectedTip{item: il.items[index], index: index}, nil
+	randomTailIndex := utils.RandomInsecure(0, len(il.tails)-1)
+
+	for _, tip := range il.tails {
+		randomTailIndex--
+
+		// if randomTailIndex reaches zero or below, we return the given tip
+		if randomTailIndex <= 0 {
+			return tip, nil
+		}
+	}
+
+	return nil, ErrNoTipsAvailable
 }
 
-// applyTip set all bits of all referenced transactions of the tip in all existing tips to zero.
+// referenceTip removes the tip and set all bits of all referenced
+// transactions of the tip in all existing tips to zero.
 // this way we can track which parts of the cone would already be referenced by this tip, and
 // correctly calculate the weight of the remaining tips.
-func (il *itemList) applyTip(tip *selectedTip) {
+func (il *bundleTailList) referenceTip(tip *bundleTail) {
 
 	il.removeTip(tip)
 
 	// set all bits of all referenced transactions in all existing tips to zero
-	for _, otherTip := range il.items {
-		otherTip.refs.InPlaceDifference(tip.item.refs)
+	for _, otherTip := range il.tails {
+		otherTip.refs.InPlaceDifference(tip.refs)
 	}
 }
 
-// removeTip removes the tip from the list if items.
-func (il *itemList) removeTip(tip *selectedTip) {
-	il.items[tip.index] = il.items[len(il.items)-1]
-	il.items[len(il.items)-1] = nil
-	il.items = il.items[:len(il.items)-1]
+// removeTip removes the tip from the map.
+func (il *bundleTailList) removeTip(tip *bundleTail) {
+	delete(il.tails, string(tip.hash))
 }
 
 // New creates a new HeaviestSelector instance.
@@ -101,47 +107,44 @@ func New(minHeaviestBranchUnconfirmedTransactionsThreshold int, maxHeaviestBranc
 	return s
 }
 
-// reset resets the approvers and tips list of s.
+// reset resets the tracked transactions map and tips list of s.
 func (s *HeaviestSelector) reset() {
 	s.Lock()
 	defer s.Unlock()
 
 	// create an empty map
-	s.approvers = make(map[trinary.Hash]*item)
+	s.trackedTails = make(map[trinary.Hash]*bundleTail)
 
 	// create an empty list
 	s.tips = list.New()
 }
 
 // selectTip selects a tip to be used for the next checkpoint.
-// it returns a tip, confirming the most transactions in the future cone.
+// it returns a tip, confirming the most transactions in the future cone,
+// and the amount of referenced transactions of this tip, that were not referenced by previously chosen tips.
 // the selection can be cancelled anytime via the provided context. in this case, it returns the current best solution.
-func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *itemList) (*selectedTip, uint, error) {
+func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *bundleTailList) (*bundleTail, uint, error) {
 
 	if tipsList.Len() == 0 {
 		return nil, 0, ErrNoTipsAvailable
 	}
 
-	lastTip := tipsList.items[tipsList.Len()-1]
-
 	var best = struct {
-		tips  []*selectedTip
+		tips  []*bundleTail
 		count uint
 	}{
-		tips: []*selectedTip{
-			{
-				item:  lastTip,
-				index: tipsList.Len() - 1,
-			}},
-		count: lastTip.refs.Count(),
+		tips: []*bundleTail{
+			tipsList.latest,
+		},
+		count: tipsList.latest.refs.Count(),
 	}
 
 	// loop through all tips and find the one with the most referenced transactions
-	for index, tip := range tipsList.items {
+	for _, tip := range tipsList.tails {
 		// when the context has been cancelled, return the current best with an error
 		select {
 		case <-ctx.Done():
-			selected, err := randomTipFromTips(best.tips)
+			selected, err := randomTip(best.tips)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -152,21 +155,17 @@ func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *itemList) (*
 		c := tip.refs.Count()
 		if c > best.count {
 			// tip with heavier branch found
-			best.tips = []*selectedTip{{
-				item:  tip,
-				index: index,
-			}}
+			best.tips = []*bundleTail{
+				tip,
+			}
 			best.count = c
 		} else if c == best.count {
 			// add the tip to the slice of currently best tips
-			best.tips = append(best.tips, &selectedTip{
-				item:  tip,
-				index: index,
-			})
+			best.tips = append(best.tips, tip)
 		}
 	}
 
-	selected, err := randomTipFromTips(best.tips)
+	selected, err := randomTip(best.tips)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -213,8 +212,8 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 			break
 		}
 
-		tipsList.applyTip(tip)
-		result = append(result, tip.item.hash)
+		tipsList.referenceTip(tip)
+		result = append(result, tip.hash)
 	}
 
 	if len(result) == 0 {
@@ -228,8 +227,8 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 			break
 		}
 
-		tipsList.applyTip(item)
-		result = append(result, item.item.hash)
+		tipsList.referenceTip(item)
+		result = append(result, item.hash)
 	}
 
 	// reset the whole HeaviestSelector if valid tips were found
@@ -246,15 +245,15 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCo
 	defer s.Unlock()
 
 	// filter duplicate transaction
-	if _, contains := s.approvers[string(bndl.GetTailHash())]; contains {
+	if _, contains := s.trackedTails[string(bndl.GetTailHash())]; contains {
 		return
 	}
 
 	trunkHash := bndl.GetTrunk(true)
 	branchHash := bndl.GetBranch(true)
 
-	trunkItem := s.approvers[string(trunkHash)]
-	branchItem := s.approvers[string(branchHash)]
+	trunkItem := s.trackedTails[string(trunkHash)]
+	branchItem := s.trackedTails[string(branchHash)]
 
 	approveeHashes := make(map[string]struct{})
 	if trunkItem == nil {
@@ -275,26 +274,27 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCo
 	// all the known approvers in the HeaviestSelector are represented by a unique bit in a bitset.
 	// if a new approver is added, we expand the bitset by 1 bit and store the Union of the bitsets
 	// of trunk and branch for this approver, to know which parts of the cone are referenced by this approver.
-	idx := uint(len(s.approvers))
-	it := &item{hash: bndl.GetTailHash(), refs: bitset.New(idx + 1).Set(idx)}
+	idx := uint(len(s.trackedTails))
+	it := &bundleTail{hash: bndl.GetTailHash(), refs: bitset.New(idx + 1).Set(idx)}
 	if trunkItem != nil {
 		it.refs.InPlaceUnion(trunkItem.refs)
 	}
 	if branchItem != nil {
 		it.refs.InPlaceUnion(branchItem.refs)
 	}
-	s.approvers[string(it.hash)] = it
+	s.trackedTails[string(it.hash)] = it
 
 	// update tips
 	s.removeTip(trunkItem)
 	s.removeTip(branchItem)
+	s.latestTip = it
 	it.tip = s.tips.PushBack(it)
 
 	return s.GetTrackedTailsCount()
 }
 
 // removeTip removes the tip item from s.
-func (s *HeaviestSelector) removeTip(it *item) {
+func (s *HeaviestSelector) removeTip(it *bundleTail) {
 	if it == nil || it.tip == nil {
 		return
 	}
@@ -303,15 +303,16 @@ func (s *HeaviestSelector) removeTip(it *item) {
 }
 
 // copyTipItemsToList returns a copy of the items corresponding to tips.
-func (s *HeaviestSelector) copyTipItemsToList() *itemList {
+func (s *HeaviestSelector) copyTipItemsToList() *bundleTailList {
 	s.Lock()
 	defer s.Unlock()
 
-	result := make([]*item, 0, s.tips.Len())
+	result := make(map[string]*bundleTail)
 	for e := s.tips.Front(); e != nil; e = e.Next() {
-		result = append(result, e.Value.(*item))
+		tip := e.Value.(*bundleTail)
+		result[string(tip.hash)] = tip
 	}
-	return &itemList{items: result}
+	return &bundleTailList{tails: result, latest: s.latestTip}
 }
 
 // GetTrackedTailsCount returns the amount of known bundle tails.
@@ -353,8 +354,8 @@ func checkBelowMaxDepth(approveeHashes map[string]struct{}) bool {
 	return true
 }
 
-// randomTipFromTips selects a random tip from the provided slice of tips.
-func randomTipFromTips(tips []*selectedTip) (*selectedTip, error) {
+// randomTip selects a random tip from the provided slice of tips.
+func randomTip(tips []*bundleTail) (*bundleTail, error) {
 	if len(tips) == 0 {
 		return nil, ErrNoTipsAvailable
 	}
