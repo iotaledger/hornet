@@ -53,6 +53,8 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 
 	startTxHash := cachedTx.GetMetadata().GetTxHash()
 
+	indexesValid := true
+
 	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
 	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
 	if err := TraverseApprovees(cachedTx.GetMetadata().GetTxHash(),
@@ -98,7 +100,7 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 			updateIndexes(snapshotInfo.EntryPointIndex, snapshotInfo.EntryPointIndex)
 		}, true, false, nil); err != nil {
 		if err == tangle.ErrTransactionNotFound {
-			return 0, 0
+			indexesValid = false
 		}
 		panic(err)
 	}
@@ -106,6 +108,11 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
 	UpdateOutdatedRootSnapshotIndexes(outdatedTransactions, lsmi)
+
+	// only set the calculated root snapshot indexes if all transactions in the past cone were found
+	if !indexesValid {
+		return 0, 0
+	}
 
 	// set the new transaction root snapshot indexes in the metadata of the transaction
 	cachedTx.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
