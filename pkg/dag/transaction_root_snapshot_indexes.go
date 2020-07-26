@@ -2,7 +2,6 @@ package dag
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -91,12 +90,16 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 		},
 		// called on missing approvees
 		func(approveeHash hornet.Hash) error {
-			return fmt.Errorf("missing approvee %v", approveeHash.Trytes())
+			// since this is also called for the future cone, there may be missing approvees
+			return tangle.ErrTransactionNotFound
 		},
 		// called on solid entry points
 		func(txHash hornet.Hash) {
 			updateIndexes(snapshotInfo.EntryPointIndex, snapshotInfo.EntryPointIndex)
 		}, true, false, nil); err != nil {
+		if err == tangle.ErrTransactionNotFound {
+			return 0, 0
+		}
 		panic(err)
 	}
 
