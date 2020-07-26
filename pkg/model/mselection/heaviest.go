@@ -38,7 +38,6 @@ type HeaviestSelector struct {
 
 	trackedTails map[string]*bundleTail // map of all tracked bundle transaction tails
 	tips         *list.List             // list of available tips
-	latestTip    *bundleTail
 }
 
 type bundleTail struct {
@@ -48,8 +47,7 @@ type bundleTail struct {
 }
 
 type bundleTailList struct {
-	tails  map[string]*bundleTail
-	latest *bundleTail
+	tails map[string]*bundleTail
 }
 
 // Len returns the length of the inner tails slice.
@@ -133,10 +131,8 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 		tips  []*bundleTail
 		count uint
 	}{
-		tips: []*bundleTail{
-			tipsList.latest,
-		},
-		count: tipsList.latest.refs.Count(),
+		tips:  []*bundleTail{},
+		count: 0,
 	}
 
 	// loop through all tips and find the one with the most referenced transactions
@@ -152,6 +148,10 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 			// add the tip to the slice of currently best tips
 			best.tips = append(best.tips, tip)
 		}
+	}
+
+	if len(best.tips) == 0 {
+		return nil, 0, ErrNoTipsAvailable
 	}
 
 	// select a random tip from the provided slice of tips.
@@ -274,7 +274,6 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCo
 	// update tips
 	s.removeTip(trunkItem)
 	s.removeTip(branchItem)
-	s.latestTip = it
 	it.tip = s.tips.PushBack(it)
 
 	return s.GetTrackedTailsCount()
@@ -299,7 +298,7 @@ func (s *HeaviestSelector) tipsToList() *bundleTailList {
 		tip := e.Value.(*bundleTail)
 		result[string(tip.hash)] = tip
 	}
-	return &bundleTailList{tails: result, latest: s.latestTip}
+	return &bundleTailList{tails: result}
 }
 
 // GetTrackedTailsCount returns the amount of known bundle tails.
