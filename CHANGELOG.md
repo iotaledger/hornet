@@ -2,7 +2,68 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.4.2] - 22.06.2020
+## [0.5.0-rc1] - 26.07.2020
+
+**Breaking change:**  
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - Implements white-flag confirmation (#432)
+    - Weighted uniform random tipselection (#553)
+    - Added hornet.Hash utils (#564)
+    - Adaptive heaviest branch tipsel (#567)
+
+### Changed
+
+    - Make code more testable for Chrysalis (#563)
+
+### Fixed
+
+    - RandomInsecure range
+
+### Removed
+
+    - Remove graph and monitor plugin (#555)
+    - Remove legacy protocol support (#556)
+    - checkConsistency API call
+    - Depth from getTransactionsToApprove
+    - Genesis TX special case
+
+### Config file changes
+
+`config.json`
+
+```diff
+ "permitRemoteAccess": [
+-      "checkConsistency",
+ ]
+ "coordinator": {
++    "checkpoints": {
++      "maxTrackedTails": 10000
++    },
++    "tipsel": {
++      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
++      "maxHeaviestBranchTipsPerCheckpoint": 10,
++      "randomTipsPerCheckpoint": 2,
++      "heaviestBranchSelectionDeadlineMilliseconds": 100
++    }
+  }
+  "tipsel": {
+-    "belowMaxDepthTransactionLimit": 20000,
+-    "maxDepth": 5
++    "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
++    "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
++    "belowMaxDepth": 15,
++    "maxReferencedTipAgeSeconds": 3,
++    "maxApprovers": 2
+  },
+  "spammer": {
+-    "depth": 1,
+  },
+```
+
+## [0.4.2] - 22.07.2020
 
 ### Added
 
