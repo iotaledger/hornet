@@ -101,8 +101,9 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 		}, true, false, nil); err != nil {
 		if err == tangle.ErrTransactionNotFound {
 			indexesValid = false
+		} else {
+			panic(err)
 		}
-		panic(err)
 	}
 
 	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest.
