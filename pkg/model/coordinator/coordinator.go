@@ -32,7 +32,7 @@ type Bundle = []*transaction.Transaction
 type SendBundleFunc = func(b Bundle) error
 
 // CheckpointTipSelectionFunc is a function which performs a tipselection and returns several tips for a checkpoint.
-type CheckpointTipSelectionFunc = func(enforceTips bool) (hornet.Hashes, error)
+type CheckpointTipSelectionFunc = func(minRequiredTips int) (hornet.Hashes, error)
 
 var (
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
@@ -219,13 +219,13 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // a checkpoint can contain multiple chained transactions to reference big parts of the unconfirmed cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) issueCheckpointWithoutLocking(enforceTips bool) error {
+func (coo *Coordinator) issueCheckpointWithoutLocking(minRequiredTips int) error {
 
 	if !tangle.IsNodeSynced() {
 		return tangle.ErrNodeNotSynced
 	}
 
-	tips, err := coo.checkpointTipselFunc(enforceTips)
+	tips, err := coo.checkpointTipselFunc(minRequiredTips)
 	if err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func (coo *Coordinator) IssueCheckpoint() error {
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	return coo.issueCheckpointWithoutLocking(false)
+	return coo.issueCheckpointWithoutLocking(0)
 }
 
 // IssueMilestone creates the next milestone.
@@ -353,7 +353,7 @@ func (coo *Coordinator) IssueMilestone() (error, error) {
 	lastCheckpointHash := coo.lastCheckpointHash
 
 	// issue a new checkpoint right in front of the milestone
-	if err := coo.issueCheckpointWithoutLocking(true); err != nil {
+	if err := coo.issueCheckpointWithoutLocking(1); err != nil {
 		// creating checkpoint failed => not critical
 		if coo.lastCheckpointIndex == 0 {
 			// no checkpoint created => use the last milestone hash

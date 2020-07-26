@@ -180,11 +180,11 @@ func (s *HeaviestSelector) selectTip(ctx context.Context, tipsList *itemList) (*
 // to prevent attackers from creating heavier branches while we are searching the best tips.
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if
 // the current best tip is not below "UnconfirmedTransactionsThreshold" before.
-// selecting at least one tip can be enforced, even if none of the heaviest branches matches the
-// "minHeaviestBranchUnconfirmedTransactionsThreshold" criteria with "enforceTips".
+// a minimum amount of selected tips can be enforced, even if none of the heaviest branches matches the
+// "minHeaviestBranchUnconfirmedTransactionsThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
-func (s *HeaviestSelector) SelectTips(enforceTips bool) (hornet.Hashes, error) {
+func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error) {
 
 	// copy the tips to release the lock to allow faster iteration
 	// and to get a frozen view of the tangle, so an attacker can't
@@ -208,9 +208,8 @@ func (s *HeaviestSelector) SelectTips(enforceTips bool) (hornet.Hashes, error) {
 			break
 		}
 
-		// if we want to enforce tips, at least collect one
-		if count < uint(s.minHeaviestBranchUnconfirmedTransactionsThreshold) && !(enforceTips && len(result) == 0) {
-			// the heaviest tips do not confirm enough transactions => no need to collect more
+		if (len(result) > minRequiredTips) && (count < uint(s.minHeaviestBranchUnconfirmedTransactionsThreshold)) {
+			// minimum amount of tips reached and the heaviest tips do not confirm enough transactions => no need to collect more
 			break
 		}
 
