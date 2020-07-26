@@ -152,10 +152,9 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 		}
 	}
 
-	selected, err := randomTip(best.tips)
-	if err != nil {
-		return nil, 0, err
-	}
+	// select a random tip from the provided slice of tips.
+	selected := best.tips[utils.RandomInsecure(0, len(best.tips)-1)]
+
 	return selected, best.count, nil
 }
 
@@ -320,13 +319,4 @@ func isBelowMaxDepth(cachedTailTx *tangle.CachedTransaction) bool {
 	}
 
 	return false
-}
-
-// randomTip selects a random tip from the provided slice of tips.
-func randomTip(tips []*bundleTail) (*bundleTail, error) {
-	if len(tips) == 0 {
-		return nil, ErrNoTipsAvailable
-	}
-
-	return tips[utils.RandomInsecure(0, len(tips)-1)], nil
 }
