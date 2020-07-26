@@ -49,8 +49,8 @@ func init() {
 	flag.Int(CfgCoordinatorIntervalSeconds, 60, "the interval milestones are issued")
 	flag.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
 	flag.Int(CfgCoordinatorCheckpointsMaxTrackedTails, 10000, "maximum amount of known bundle tails for milestone tipselection")
-	flag.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 3, "minimum threshold of unconfirmed transactions in the heaviest branch")
+	flag.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 20, "minimum threshold of unconfirmed transactions in the heaviest branch")
 	flag.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips")
-	flag.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint transactions with random tips")
+	flag.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 2, "amount of checkpoint transactions with random tips")
 	flag.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
 }

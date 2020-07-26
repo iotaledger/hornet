@@ -174,10 +174,11 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 // the selection is cancelled after a fixed deadline. in this case, it returns the current collected tips.
 func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error) {
 
-	// copy the tips to release the lock to allow faster iteration
+	// create a working list with the current tips to release the lock to allow faster iteration
 	// and to get a frozen view of the tangle, so an attacker can't
 	// create heavier branches while we are searching the best tips
-	tipsList := s.copyTipItemsToList()
+	// caution: the tips are not copied, do not mutate!
+	tipsList := s.tipsToList()
 
 	// tips could be empty after a reset
 	if tipsList.Len() == 0 {
@@ -288,8 +289,8 @@ func (s *HeaviestSelector) removeTip(it *bundleTail) {
 	it.tip = nil
 }
 
-// copyTipItemsToList returns a copy of the items corresponding to tips.
-func (s *HeaviestSelector) copyTipItemsToList() *bundleTailList {
+// tipsToList returns a new list containing the current tips.
+func (s *HeaviestSelector) tipsToList() *bundleTailList {
 	s.Lock()
 	defer s.Unlock()
 
@@ -316,9 +317,5 @@ func isBelowMaxDepth(cachedTailTx *tangle.CachedTransaction) bool {
 
 	// if the ORTSI to LSMI delta of the tail transaction is equal or greater belowMaxDepth, the tip is invalid.
 	// "equal" is important because the next milestone would reference this transaction.
-	if lsmi-ortsi >= belowMaxDepth {
-		return true
-	}
-
-	return false
+	return lsmi-ortsi >= belowMaxDepth
 }
