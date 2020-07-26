@@ -2,9 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc2] - 26.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Changed
+
+    - Removed detaching events from Conn.Events temporarily
+
 ## [0.5.0-rc1] - 26.07.2020
 
-**Breaking change:**  
+**Breaking change:**
 ** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
 
 ### Added
