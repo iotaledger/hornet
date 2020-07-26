@@ -74,6 +74,11 @@ func configureEvents() {
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		ts := time.Now()
 
+		// do not propagate during syncing, because it is not needed at all
+		if !tangle.IsNodeSyncedWithThreshold() {
+			return
+		}
+
 		// propagate new transaction root snapshot indexes to the future cone for URTS
 		dag.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
 
