@@ -51,6 +51,7 @@
       "intervalUnsynced": 1000,
       "path": "snapshots/comnet/export.bin",
       "downloadURLs": [
+        "https://ls.tanglebay.org/comnet/export.bin",
         "https://ls.manapotion.io/comnet/export.bin"
       ]
     },
@@ -68,7 +69,7 @@
     "enabled": true
   },
   "coordinator": {
-    "address": "YBWDHGHUEB9KSOPONTLTOSSKITIBE9MXPASCLREDNV9HEABYBPTHRQGWNJWQFSYAYZRDXXIOZHWBC9DWC",
+    "address": "UOMFQOULWQLXQQHFMFRQQTRDKDHVMRFFEGZ9LDU9TFZZ9CHDLZSIAHA9MXNSLYOERCHDUVDFEEZAEOBEW",
     "securityLevel": 2,
     "merkleTreeDepth": 23,
     "mwm": 10,
