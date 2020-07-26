@@ -49,7 +49,7 @@ func (cs *State) MarshalBinary() (data []byte, err error) {
 	return data, nil
 }
 
-// Unmarshal parses the binary encoded representation of the coordinator state.
+// UnmarshalBinary parses the binary encoded representation of the coordinator state.
 func (cs *State) UnmarshalBinary(data []byte) error {
 
 	/*

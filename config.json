@@ -81,7 +81,15 @@
     "stateFilePath": "coordinator.state",
     "merkleTreeFilePath": "coordinator.tree",
     "intervalSeconds": 60,
-    "checkpointTransactions": 5
+    "checkpoints": {
+      "maxTrackedTails": 10000
+    },
+    "tipsel": {
+      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
+      "maxHeaviestBranchTipsPerCheckpoint": 10,
+      "randomTipsPerCheckpoint": 2,
+      "heaviestBranchSelectionDeadlineMilliseconds": 100
+    }
   },
   "network": {
     "preferIPv6": false,

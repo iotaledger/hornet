@@ -290,7 +290,7 @@ func ProcessStack(stack *list.List, wfConf *Confirmation, visited map[string]str
 
 		// incorporate the mutations in accordance with the previous mutations
 		for addr, mutation := range validMutations {
-			wfConf.AddressMutations[addr] = mutation
+			wfConf.AddressMutations[addr] = wfConf.AddressMutations[addr] + mutation
 		}
 
 		return nil

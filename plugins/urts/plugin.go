@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -71,8 +72,12 @@ func configureEvents() {
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		ts := time.Now()
+
 		// propagate new transaction root snapshot indexes to the future cone for URTS
-		TipSelector.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
+		dag.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
+
+		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 }
 
