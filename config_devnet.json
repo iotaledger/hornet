@@ -83,7 +83,8 @@
     "tipsel": {
       "minHeaviestBranchUnconfirmedTransactionsThreshold": 3,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
-      "randomTipsPerCheckpoint": 3
+      "randomTipsPerCheckpoint": 3,
+      "heaviestBranchSelectionDeadlineMilliseconds": 100
     }
   },
   "network": {

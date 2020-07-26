@@ -34,6 +34,7 @@ type HeaviestSelector struct {
 	minHeaviestBranchUnconfirmedTransactionsThreshold int
 	maxHeaviestBranchTipsPerCheckpoint                int
 	randomTipsPerCheckpoint                           int
+	heaviestBranchSelectionDeadline                   time.Duration
 
 	trackedTails map[string]*bundleTail // map of all tracked bundle transaction tails
 	tips         *list.List             // list of available tips
@@ -96,11 +97,12 @@ func (il *bundleTailList) removeTip(tip *bundleTail) {
 }
 
 // New creates a new HeaviestSelector instance.
-func New(minHeaviestBranchUnconfirmedTransactionsThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int) *HeaviestSelector {
+func New(minHeaviestBranchUnconfirmedTransactionsThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
 	s := &HeaviestSelector{
 		minHeaviestBranchUnconfirmedTransactionsThreshold: minHeaviestBranchUnconfirmedTransactionsThreshold,
 		maxHeaviestBranchTipsPerCheckpoint:                maxHeaviestBranchTipsPerCheckpoint,
 		randomTipsPerCheckpoint:                           randomTipsPerCheckpoint,
+		heaviestBranchSelectionDeadline:                   heaviestBranchSelectionDeadline,
 	}
 	s.reset()
 	return s
@@ -158,7 +160,7 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 	return selected, best.count, nil
 }
 
-// SelectTips tries to collect tips that confirm the most transactions in the future cone.
+// SelectTips tries to collect tips that confirm the most recent transactions since the last reset of the selector.
 // best tips are determined by counting the referenced transactions (heaviest branches) and by "removing" the
 // transactions of the referenced cone of the already choosen tips in the bitsets of the available tips.
 // only tips are considered that were present at the beginning of the SelectTips call,
@@ -185,7 +187,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 	var result hornet.Hashes
 
 	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(100*time.Millisecond))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.heaviestBranchSelectionDeadline))
 	defer cancel()
 
 	deadlineExceeded := false

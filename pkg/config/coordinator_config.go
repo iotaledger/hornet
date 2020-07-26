@@ -34,6 +34,8 @@ const (
 	// the amount of checkpoint transactions with random tips that are picked if a checkpoint is issued and at least
 	// one heaviest branch tip was found, otherwise no random tips will be picked
 	CfgCoordinatorTipselectRandomTipsPerCheckpoint = "coordinator.tipsel.randomTipsPerCheckpoint"
+	// the maximum duration to select the heaviest branch tips in milliseconds
+	CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds = "coordinator.tipsel.heaviestBranchSelectionDeadlineMilliseconds"
 )
 
 func init() {
@@ -50,4 +52,5 @@ func init() {
 	flag.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 3, "minimum threshold of unconfirmed transactions in the heaviest branch")
 	flag.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips")
 	flag.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint transactions with random tips")
+	flag.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
 }
