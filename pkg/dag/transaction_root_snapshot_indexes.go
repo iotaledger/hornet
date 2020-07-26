@@ -67,7 +67,6 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 			}
 
 			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
-				// skip the start transaction, so it doesn't get added to the outdatedTransactions
 				return true, nil
 			}
 
@@ -84,6 +83,12 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 		// consumer
 		func(cachedTx *tangle.CachedTransaction) error { // tx +1
 			defer cachedTx.Release(true) // tx -1
+
+			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+				// skip the start transaction, so it doesn't get added to the outdatedTransactions
+				return nil
+			}
+
 			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
 			return nil
 		},
