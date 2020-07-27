@@ -22,6 +22,7 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 
 	err := TraverseApprovees(startTxHash,
 		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
@@ -69,7 +70,7 @@ type OnSolidEntryPoint func(txHash hornet.Hash)
 
 // processStackApprovees checks if the current element in the stack must be processed or traversed.
 // first the trunk is traversed, then the branch.
-func processStackApprovees(stack *list.List, visited map[string]struct{}, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func processStackApprovees(stack *list.List, visited map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
 	select {
 	case <-abortSignal:
@@ -80,10 +81,11 @@ func processStackApprovees(stack *list.List, visited map[string]struct{}, condit
 	// load candidate tx
 	ele := stack.Front()
 	currentTxHash := ele.Value.(hornet.Hash)
+
 	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
 	if cachedTx == nil {
 		// remove the transaction from the stack, trunk and branch are not traversed
-		visited[string(currentTxHash)] = struct{}{}
+		visited[string(currentTxHash)] = false
 		stack.Remove(ele)
 
 		// stop processing the stack if the caller returns an error
@@ -92,17 +94,23 @@ func processStackApprovees(stack *list.List, visited map[string]struct{}, condit
 
 	defer cachedTx.Release(forceRelease) // tx -1
 
-	// check condition to decide if tx should be consumed and traversed
-	traverse, err := condition(cachedTx.Retain()) // tx + 1
-	if err != nil {
-		// there was an error, stop processing the stack
-		return err
+	traverse, checkedBefore := visited[string(currentTxHash)]
+	if !checkedBefore {
+		// check condition to decide if tx should be consumed and traversed
+		var err error
+		traverse, err = condition(cachedTx.Retain()) // tx + 1
+		if err != nil {
+			// there was an error, stop processing the stack
+			return err
+		}
+
+		// mark the transaction as visited and remember the result of the traverse condition
+		visited[string(currentTxHash)] = traverse
 	}
 
 	if !traverse {
 		// remove the transaction from the stack, trunk and branch are not traversed
 		// transaction will not get consumed
-		visited[string(currentTxHash)] = struct{}{}
 		stack.Remove(ele)
 		return nil
 	}
@@ -110,40 +118,32 @@ func processStackApprovees(stack *list.List, visited map[string]struct{}, condit
 	trunkHash := cachedTx.GetTransaction().GetTrunkHash()
 	branchHash := cachedTx.GetTransaction().GetBranchHash()
 
-	if _, trunkVisited := visited[string(trunkHash)]; !trunkVisited {
-		if !tangle.SolidEntryPointsContain(trunkHash) {
-			// traverse this transaction
-			stack.PushFront(trunkHash)
-			return nil
-		}
-
-		onSolidEntryPoint(trunkHash)
-		if traverseSolidEntryPoints {
-			// traverse this transaction
-			stack.PushFront(trunkHash)
-			return nil
-		}
+	approveeHashes := hornet.Hashes{trunkHash}
+	if !bytes.Equal(trunkHash, branchHash) {
+		approveeHashes = append(approveeHashes, branchHash)
 	}
 
-	if !bytes.Equal(trunkHash, branchHash) {
-		if _, branchVisited := visited[string(branchHash)]; !branchVisited {
-			if !tangle.SolidEntryPointsContain(branchHash) {
+	for _, approveeHash := range approveeHashes {
+		if _, approveeVisited := visited[string(approveeHash)]; !approveeVisited {
+			if !tangle.SolidEntryPointsContain(approveeHash) {
 				// traverse this transaction
-				stack.PushFront(branchHash)
+				stack.PushFront(approveeHash)
 				return nil
 			}
 
-			onSolidEntryPoint(branchHash)
+			onSolidEntryPoint(approveeHash)
 			if traverseSolidEntryPoints {
 				// traverse this transaction
-				stack.PushFront(branchHash)
+				stack.PushFront(approveeHash)
 				return nil
 			}
+
+			// mark the approvee as visited if we do not traverse to not call "onSolidEntryPoint" repeatedly
+			visited[string(approveeHash)] = false
 		}
 	}
 
 	// remove the transaction from the stack
-	visited[string(currentTxHash)] = struct{}{}
 	stack.Remove(ele)
 
 	// consume the transaction
@@ -158,12 +158,14 @@ func processStackApprovees(stack *list.List, visited map[string]struct{}, condit
 // TraverseApprovees starts to traverse the approvees (past cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is a DFS with trunk / branch.
+// Caution: condition func is not in DFS order
 func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
 	stack := list.New()
 	stack.PushFront(startTxHash)
 
-	visited := make(map[string]struct{})
+	// visited map with result of traverse condition
+	visited := make(map[string]bool)
 
 	for stack.Len() > 0 {
 		if err := processStackApprovees(stack, visited, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, abortSignal); err != nil {

@@ -57,6 +57,7 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
 	if err := TraverseApprovees(cachedTx.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 

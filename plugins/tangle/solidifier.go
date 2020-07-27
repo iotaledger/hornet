@@ -178,6 +178,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 	// collect all tx to solidify by traversing the tangle
 	if err := dag.TraverseApprovees(cachedMsTailTx.GetTransaction().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
