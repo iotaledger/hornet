@@ -293,6 +293,28 @@ func (ts *TipSelector) SelectTips() (hornet.Hashes, error) {
 	return tips, nil
 }
 
+// UpdateScores updates the scores of the tips and removes lazy ones.
+func (ts *TipSelector) UpdateScores() {
+
+	ts.tipsLock.Lock()
+	defer ts.tipsLock.Unlock()
+
+	lsmi := tangle.GetSolidMilestoneIndex()
+
+	for _, tip := range ts.tipsMap {
+		oldScore := tip.Score
+
+		// check the score of the tip again to avoid old tips
+		newScore := ts.calculateScore(tip.Hash, lsmi)
+		if newScore == ScoreLazy {
+			// remove the tip from the pool because it is outdated
+			ts.removeTipWithoutLocking(tip.Hash)
+		}
+
+		ts.scoreSum -= int(oldScore - newScore)
+	}
+}
+
 // calculateScore calculates the tip selection score of this transaction
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
