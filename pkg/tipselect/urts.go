@@ -302,16 +302,20 @@ func (ts *TipSelector) UpdateScores() {
 	lsmi := tangle.GetSolidMilestoneIndex()
 
 	for _, tip := range ts.tipsMap {
-		oldScore := tip.Score
-
 		// check the score of the tip again to avoid old tips
 		newScore := ts.calculateScore(tip.Hash, lsmi)
 		if newScore == ScoreLazy {
 			// remove the tip from the pool because it is outdated
+			// this will also decrease the scoreSum by the old score of the tip
 			ts.removeTipWithoutLocking(tip.Hash)
+			continue
 		}
 
-		ts.scoreSum -= int(oldScore - newScore)
+		// set the new score sum
+		ts.scoreSum -= int(tip.Score - newScore)
+
+		// set the new score in the tip
+		tip.Score = newScore
 	}
 }
 
