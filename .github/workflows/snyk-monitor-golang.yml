@@ -16,5 +16,5 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --org=sadjy
+          args: --org=iotaledger
           command: monitor

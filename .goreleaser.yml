@@ -15,7 +15,7 @@ builds:
     env:
       - CGO_ENABLED=1
     ldflags:
-      - -s -w -X github.com/sadjy/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
     flags:
       - -tags=pow_avx
     main: main.go
@@ -30,7 +30,7 @@ builds:
       - CGO_ENABLED=1
       - CC=aarch64-linux-musl-gcc
     ldflags:
-      - -s -w -X github.com/sadjy/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
     flags:
       - -tags=pow_arm_c128
@@ -47,7 +47,7 @@ builds:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
     ldflags:
-      - -s -w -X github.com/sadjy/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
     flags:
       - -tags=pow_avx
     main: main.go
@@ -61,7 +61,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/sadjy/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
     main: main.go
     goos:
       - darwin
@@ -74,8 +74,8 @@ dockers:
   - goos: linux
     goarch: amd64
     image_templates:
-      - "sadjy/hornet:latest"
-      - "sadjy/hornet:{{ .Tag }}"
+      - "iotaledger/hornet:latest"
+      - "iotaledger/hornet:{{ .Tag }}"
     binaries:
       - hornet
     dockerfile: docker/Dockerfile.goreleaser
@@ -112,8 +112,8 @@ archives:
 #     file_name_template: '{{ tolower .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Arch }}'
 #     vendor: GoReleaser
 #     license: Apache 2.0
-#     maintainer: sadjy
-#     homepage: https://github.com/sadjy/hornet
+#     maintainer: iotaledger
+#     homepage: https://github.com/iotaledger/hornet
 #     description: HORNET is a powerful IOTA fullnode software.
 #     formats:
 #       - deb
@@ -166,5 +166,5 @@ release:
   prerelease: auto
   name_template: "{{.ProjectName}}-{{.Version}}"
   github:
-    owner: sadjy
+    owner: iotaledger
     name: hornet

@@ -1,15 +1,15 @@
 FROM alpine:latest
 
-ARG REPO="sadjy/hornet"
+ARG REPO="iotaledger/hornet"
 ARG TAG=latest
 ARG ARCH=ARM64
 ARG OS=Linux
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
-LABEL org.label-schema.name="sadjy/hornet"
+LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.vcs-url="https://github.com/sadjy/hornet"
-LABEL org.label-schema.usage="https://github.com/sadjy/hornet/blob/develop/DOCKER.md"
+LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"
+LABEL org.label-schema.usage="https://github.com/iotaledger/hornet/blob/develop/DOCKER.md"
 
 WORKDIR /app
 
