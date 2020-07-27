@@ -1,0 +1,113 @@
+copying assets into shared volume...
+assets:
+coordinator.tree
+entrypoint.sh
+snapshot.txt
+running tests...
+go: downloading github.com/iotaledger/goshimmer v0.2.1
+go: downloading github.com/stretchr/testify v1.6.1
+go: downloading github.com/davecgh/go-spew v1.1.1
+go: downloading gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+go: downloading github.com/pmezard/go-difflib v1.0.0
+go: downloading github.com/iotaledger/goshimmer/tools/integration-tests/tester v0.0.0-20200722150815-cf7707dbe93f
+go: downloading github.com/docker/docker v1.13.1
+go: downloading github.com/iotaledger/hive.go v0.0.0-20200720084404-e6c3b4717f40
+go: downloading github.com/drand/drand v1.1.0
+go: downloading github.com/mr-tron/base58 v1.2.0
+go: downloading github.com/docker/go-connections v0.4.0
+go: downloading go.dedis.ch/kyber/v3 v3.0.12
+go: downloading github.com/labstack/echo v3.3.10+incompatible
+go: downloading google.golang.org/grpc v1.30.0
+go: downloading golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
+go: downloading go.uber.org/atomic v1.6.0
+go: downloading github.com/dgraph-io/badger v1.6.1
+go: downloading github.com/golang/protobuf v1.4.2
+go: downloading github.com/jonboulle/clockwork v0.1.1-0.20190114141812-62fb9bc030d1
+go: downloading go.uber.org/zap v1.15.0
+go: downloading github.com/hashicorp/go-multierror v1.1.0
+go: downloading github.com/oasisprotocol/ed25519 v0.0.0-20200528083105-55566edd6df0
+go: downloading github.com/prometheus/client_golang v1.7.0
+go: downloading github.com/dgraph-io/badger/v2 v2.0.3
+go: downloading go.uber.org/multierr v1.5.0
+go: downloading github.com/kr/text v0.2.0
+go: downloading golang.org/x/net v0.0.0-20200602114024-627f9648deb9
+go: downloading github.com/labstack/gommon v0.3.0
+go: downloading github.com/drand/kyber v1.1.2
+go: downloading github.com/hashicorp/golang-lru v0.5.4
+go: downloading github.com/spf13/viper v1.7.0
+go: downloading github.com/cespare/xxhash v1.1.0
+go: downloading github.com/go-kit/kit v0.10.0
+go: downloading google.golang.org/protobuf v1.24.0
+go: downloading gopkg.in/ini.v1 v1.51.1
+go: downloading github.com/cespare/xxhash/v2 v2.1.1
+go: downloading github.com/pelletier/go-toml v1.6.0
+go: downloading github.com/dgraph-io/ristretto v0.0.2
+go: downloading github.com/hashicorp/errwrap v1.0.0
+go: downloading go.dedis.ch/fixbuf v1.0.3
+go: downloading golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1
+go: downloading github.com/DataDog/zstd v1.4.1
+go: downloading github.com/hashicorp/hcl v1.0.0
+go: downloading github.com/prometheus/common v0.10.0
+go: downloading github.com/go-logfmt/logfmt v0.5.0
+go: downloading github.com/golang/snappy v0.0.1
+go: downloading github.com/drand/kyber-bls12381 v0.1.0
+go: downloading github.com/docker/go-units v0.4.0
+go: downloading github.com/BurntSushi/toml v0.3.1
+go: downloading github.com/mitchellh/mapstructure v1.3.2
+go: downloading go.etcd.io/bbolt v1.3.5
+go: downloading golang.org/x/text v0.3.2
+go: downloading github.com/magiconair/properties v1.8.1
+go: downloading github.com/nikkolasg/hexjson v0.0.0-20181101101858-78e39397e00c
+go: downloading github.com/subosito/gotenv v1.2.0
+go: downloading github.com/docker/distribution v2.7.1+incompatible
+go: downloading github.com/fsnotify/fsnotify v1.4.9
+go: downloading google.golang.org/genproto v0.0.0-20200608115520-7c474a2e3482
+go: downloading github.com/valyala/fasttemplate v1.1.0
+go: downloading github.com/mattn/go-colorable v0.1.6
+go: downloading go.dedis.ch/protobuf v1.0.11
+go: downloading github.com/pkg/errors v0.9.1
+go: downloading github.com/panjf2000/ants/v2 v2.4.1
+go: downloading github.com/grpc-ecosystem/grpc-gateway v1.14.6
+go: downloading github.com/spf13/afero v1.3.0
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading github.com/mattn/go-isatty v0.0.12
+go: downloading github.com/weaveworks/common v0.0.0-20200512154658-384f10054ec5
+go: downloading github.com/dgryski/go-farm v0.0.0-20191112170834-c2139c5d712b
+go: downloading github.com/prometheus/client_model v0.2.0
+go: downloading github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+go: downloading github.com/dustin/go-humanize v1.0.0
+go: downloading github.com/gogo/status v1.1.0
+go: downloading github.com/prometheus/procfs v0.1.3
+go: downloading github.com/gogo/protobuf v1.3.1
+go: downloading github.com/spf13/cast v1.3.1
+go: downloading github.com/spf13/pflag v1.0.5
+go: downloading github.com/spf13/jwalterweatherman v1.1.0
+go: downloading github.com/opencontainers/go-digest v1.0.0
+go: downloading github.com/dgrijalva/jwt-go v3.2.0+incompatible
+go: downloading github.com/kilic/bls12-381 v0.0.0-20200607163746-32e1441c8a9f
+go: downloading github.com/valyala/bytebufferpool v1.0.0
+go: downloading github.com/opentracing-contrib/go-grpc v0.0.0-20191001143057-db30781987df
+go: downloading github.com/gogo/googleapis v1.4.0
+go: downloading github.com/sirupsen/logrus v1.6.0
+go: downloading github.com/uber/jaeger-client-go v2.23.1+incompatible
+go: downloading github.com/opentracing/opentracing-go v1.1.0
+go: downloading github.com/sercand/kuberesolver v2.4.0+incompatible
+go: finding module for package github.com/drand/drand/beacon
+go: downloading github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
+go: downloading github.com/uber/jaeger-lib v2.2.0+incompatible
+go: downloading gopkg.in/yaml.v2 v2.2.8
+go: downloading github.com/gorilla/mux v1.7.4
+go: downloading github.com/opentracing-contrib/go-stdlib v1.0.0
+go: downloading github.com/matttproud/golang_protobuf_extensions v1.0.1
+go: downloading github.com/weaveworks/promrus v1.2.0
+FAIL	github.com/gohornet/hornet/tools/integration-tests/tester/tests/autopeering [setup failed]
+FAIL
+# github.com/gohornet/hornet/tools/integration-tests/tester/tests/autopeering
+package github.com/gohornet/hornet/tools/integration-tests/tester/tests/autopeering (test)
+	imports github.com/iotaledger/goshimmer/tools/integration-tests/tester/framework
+	imports github.com/iotaledger/goshimmer/client
+	imports github.com/iotaledger/goshimmer/plugins/webapi/drng/info/committee
+	imports github.com/iotaledger/goshimmer/plugins/drng
+	imports github.com/iotaledger/goshimmer/packages/binary/drng
+	imports github.com/iotaledger/goshimmer/packages/binary/drng/subtypes/collectiveBeacon
+	imports github.com/drand/drand/beacon: module github.com/drand/drand@latest found (v1.1.0), but does not contain package github.com/drand/drand/beacon
