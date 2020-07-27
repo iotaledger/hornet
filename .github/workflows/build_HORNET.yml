@@ -2,7 +2,9 @@ name: Build HORNET
 
 on:
   push:
-    tags-ignore: "v*"
+    branches:
+      - master
+    pull_request:
 
 jobs:
   build:

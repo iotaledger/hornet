@@ -1,9 +1,10 @@
 name: Monitor Golang dependencies with Snyk
+
 on:
   push:
     branches:
       - master
-      
+
 jobs:
   security:
     runs-on: ubuntu-latest

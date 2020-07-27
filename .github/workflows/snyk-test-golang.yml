@@ -1,4 +1,5 @@
 name: Test Golang dependencies with Snyk
+
 on:
   push:
     tags-ignore: "v*"
