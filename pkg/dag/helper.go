@@ -176,7 +176,7 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 // processStackApprovers checks if the current element in the stack must be processed and traversed.
 // current element gets consumed first, afterwards it's approvers get traversed in random order.
-func processStackApprovers(stack *list.List, visited map[string]struct{}, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
+func processStackApprovers(stack *list.List, discovered map[string]struct{}, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
 
 	select {
 	case <-abortSignal:
@@ -187,6 +187,10 @@ func processStackApprovers(stack *list.List, visited map[string]struct{}, condit
 	// load candidate tx
 	ele := stack.Front()
 	currentTxHash := ele.Value.(hornet.Hash)
+
+	// remove the transaction from the stack
+	stack.Remove(ele)
+
 	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
 	if cachedTx == nil {
 		// there was an error, stop processing the stack
@@ -202,10 +206,6 @@ func processStackApprovers(stack *list.List, visited map[string]struct{}, condit
 		return err
 	}
 
-	// remove the transaction from the stack
-	visited[string(currentTxHash)] = struct{}{}
-	stack.Remove(ele)
-
 	if !traverse {
 		// transaction will not get consumed and approvers are not traversed
 		return nil
@@ -218,12 +218,13 @@ func processStackApprovers(stack *list.List, visited map[string]struct{}, condit
 	}
 
 	for _, approverHash := range tangle.GetApproverHashes(currentTxHash, forceRelease) {
-		if _, approverVisited := visited[string(approverHash)]; approverVisited {
-			// approver was already visited
+		if _, approverDiscovered := discovered[string(approverHash)]; approverDiscovered {
+			// approver was already discovered
 			continue
 		}
 
 		// traverse the approver
+		discovered[string(approverHash)] = struct{}{}
 		stack.PushBack(approverHash)
 	}
 
@@ -238,10 +239,11 @@ func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Co
 	stack := list.New()
 	stack.PushFront(startTxHash)
 
-	visited := make(map[string]struct{})
+	discovered := make(map[string]struct{})
+	discovered[string(startTxHash)] = struct{}{}
 
 	for stack.Len() > 0 {
-		if err := processStackApprovers(stack, visited, condition, consumer, forceRelease, abortSignal); err != nil {
+		if err := processStackApprovers(stack, discovered, condition, consumer, forceRelease, abortSignal); err != nil {
 			return err
 		}
 	}
