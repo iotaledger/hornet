@@ -52,7 +52,7 @@ export const colorLinkApprovees = "#ffc306";
 
 export class VisualizerStore {
     @observable vertices = new ObservableMap<string, Vertex>();
-    @observable verticesLimit = 1500;
+    @observable verticesLimit = 5000;
     @observable solid_count = 0;
     @observable confirmed_count = 0;
     @observable conflicting_count = 0;
