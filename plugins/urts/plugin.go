@@ -21,8 +21,7 @@ var (
 	PLUGIN = node.NewPlugin("URTS", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	TipSelector   *tipselect.TipSelector
-	wasSyncBefore = false
+	TipSelector *tipselect.TipSelector
 
 	// Closures
 	onBundleSolid        *events.Closure
@@ -54,12 +53,9 @@ func run(_ *node.Plugin) {
 func configureEvents() {
 	onBundleSolid = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		cachedBndl.ConsumeBundle(func(bndl *tangle.Bundle) { // tx -1
-			if !wasSyncBefore {
-				if !tangle.IsNodeSyncedWithThreshold() {
-					// do not add tips if the node is not synced
-					return
-				}
-				wasSyncBefore = true
+			// do not add tips during syncing, because it is not needed at all
+			if !tangle.IsNodeSyncedWithThreshold() {
+				return
 			}
 
 			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
