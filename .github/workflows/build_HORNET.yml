@@ -1,6 +1,8 @@
 name: Build HORNET
+
 on:
   push:
+    tags-ignore: "v*"
 
 jobs:
   build:
