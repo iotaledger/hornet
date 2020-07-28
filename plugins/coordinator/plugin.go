@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -23,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/mselection"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -46,8 +46,9 @@ var (
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
 
-	coo      *coordinator.Coordinator
-	selector *mselection.HeaviestSelector
+	coo        *coordinator.Coordinator
+	selector   *mselection.HeaviestSelector
+	powHandler *pow.Handler
 
 	// Closures
 	onBundleSolid                 *events.Closure
@@ -63,7 +64,12 @@ func configure(plugin *node.Plugin) {
 	tangleplugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
-	coo, err = initCoordinator(*bootstrap, *startIndex)
+	powHandler, err = pow.NewHandler()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	coo, err = initCoordinator(*bootstrap, *startIndex, powHandler)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -71,7 +77,7 @@ func configure(plugin *node.Plugin) {
 	configureEvents()
 }
 
-func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinator, error) {
+func initCoordinator(bootstrap bool, startIndex uint32, powHandler *pow.Handler) (*coordinator.Coordinator, error) {
 
 	seed, err := config.LoadHashFromEnvironment("COO_SEED")
 	if err != nil {
@@ -85,8 +91,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
 		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
-
-	_, powFunc := pow.GetFastestProofOfWorkImpl()
 
 	nextCheckpointSignal = make(chan struct{})
 
@@ -103,7 +107,7 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
-		powFunc,
+		powHandler,
 		selector.SelectTips,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
@@ -177,6 +181,7 @@ func run(plugin *node.Plugin) {
 		}
 
 		detachEvents()
+		powHandler.Close()
 	}, shutdown.PriorityCoordinator)
 
 }

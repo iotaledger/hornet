@@ -6,7 +6,6 @@ import (
 
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -23,7 +22,6 @@ import (
 )
 
 var (
-	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = atomic.NewInt32(0)
 	seed             = utils.RandomTrytesInsecure(81)
@@ -132,7 +130,7 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, sh
 		default:
 		}
 
-		nonce, err := powFunc(trytes, mwm, 1)
+		nonce, err := powHandler.DoPoW(trytes, mwm, 1)
 		if err != nil {
 			return err
 		}

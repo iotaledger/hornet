@@ -15,6 +15,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
@@ -38,6 +39,7 @@ var (
 	spammerAvgHeap      *utils.TimeHeap
 	spammerStartTime    time.Time
 	lastSentSpamTxsCnt  uint32
+	powHandler          *pow.Handler
 )
 
 func configure(plugin *node.Plugin) {
@@ -47,6 +49,11 @@ func configure(plugin *node.Plugin) {
 	if node.IsSkipped(urts.PLUGIN) {
 		plugin.Status = node.Disabled
 		return
+	}
+
+	var err error
+	if powHandler, err = pow.NewHandler(); err != nil {
+		log.Panic(err)
 	}
 
 	txAddress = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
@@ -121,6 +128,8 @@ func run(_ *node.Plugin) {
 	if node.IsSkipped(urts.PLUGIN) {
 		return
 	}
+
+	defer powHandler.Close()
 
 	// create a background worker that "measures" the spammer averages values every second
 	daemon.BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {

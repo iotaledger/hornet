@@ -10,12 +10,12 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/t6b1"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -31,7 +31,7 @@ func randomTrytesWithRandomLengthPadded(min int, length int) trinary.Trytes {
 }
 
 // createCheckpoint creates a checkpoint transaction.
-func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, powHandler *pow.Handler) (Bundle, error) {
 
 	tag := randomTrytesWithRandomLengthPadded(5, consts.TagTrinarySize/3)
 
@@ -61,7 +61,7 @@ func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, po
 		return nil, err
 	}
 
-	if err = doPow(tx, mwm, powFunc); err != nil {
+	if err = doPow(tx, mwm, powHandler); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, po
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powFunc pow.ProofOfWorkFunc) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powHandler *pow.Handler) (Bundle, error) {
 
 	// get the siblings in the current Merkle tree
 	leafSiblings, err := merkleTree.AuditPath(uint32(index))
@@ -131,7 +131,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 		return nil, err
 	}
 
-	if err = doPow(txSiblings, mwm, powFunc); err != nil {
+	if err = doPow(txSiblings, mwm, powHandler); err != nil {
 		return nil, err
 	}
 
@@ -148,7 +148,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 		return nil, fmt.Errorf("Merkle root does not match")
 	}
 
-	if err = chainTransactionsFillSignatures(b, fragments, mwm, powFunc); err != nil {
+	if err = chainTransactionsFillSignatures(b, fragments, mwm, powHandler); err != nil {
 		return nil, err
 	}
 
@@ -168,7 +168,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 }
 
 // doPow calculates the transaction nonce and the hash.
-func doPow(tx *transaction.Transaction, mwm int, powFunc pow.ProofOfWorkFunc) error {
+func doPow(tx *transaction.Transaction, mwm int, powHandler *pow.Handler) error {
 
 	tx.AttachmentTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
 	tx.AttachmentTimestampLowerBound = consts.LowerBoundAttachmentTimestamp
@@ -179,7 +179,7 @@ func doPow(tx *transaction.Transaction, mwm int, powFunc pow.ProofOfWorkFunc) er
 		return err
 	}
 
-	nonce, err := powFunc(trytes, mwm)
+	nonce, err := powHandler.DoPoW(trytes, mwm)
 	if err != nil {
 		return err
 	}
@@ -229,7 +229,7 @@ func finalizeInsecure(bundle Bundle) (Bundle, error) {
 }
 
 // chainTransactionsFillSignatures fills the signature message fragments with the signature and sets the trunk to chain the txs in a bundle.
-func chainTransactionsFillSignatures(b Bundle, fragments []trinary.Trytes, mwm int, powFunc pow.ProofOfWorkFunc) error {
+func chainTransactionsFillSignatures(b Bundle, fragments []trinary.Trytes, mwm int, powHandler *pow.Handler) error {
 	// to chain transactions we start from the LastIndex and move towards index 0.
 	prev := b[len(b)-1].Hash
 
@@ -244,7 +244,7 @@ func chainTransactionsFillSignatures(b Bundle, fragments []trinary.Trytes, mwm i
 		tx.TrunkTransaction = prev
 
 		// perform PoW
-		if err := doPow(tx, mwm, powFunc); err != nil {
+		if err := doPow(tx, mwm, powHandler); err != nil {
 			return err
 		}
 

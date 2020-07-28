@@ -15,13 +15,13 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
@@ -58,7 +58,7 @@ type Coordinator struct {
 	minWeightMagnitude      int
 	stateFilePath           string
 	milestoneIntervalSec    int
-	powFunc                 pow.ProofOfWorkFunc
+	powHandler              *pow.Handler
 	checkpointTipselFunc    CheckpointTipSelectionFunc
 	sendBundleFunc          SendBundleFunc
 	milestoneMerkleHashFunc crypto.Hash
@@ -100,7 +100,7 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powFunc pow.ProofOfWorkFunc, checkpointTipselFunc CheckpointTipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
+func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, checkpointTipselFunc CheckpointTipSelectionFunc, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
 	result := &Coordinator{
 		seed:                    seed,
 		securityLvl:             securityLvl,
@@ -108,7 +108,7 @@ func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth in
 		minWeightMagnitude:      minWeightMagnitude,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
-		powFunc:                 powFunc,
+		powHandler:              powHandler,
 		checkpointTipselFunc:    checkpointTipselFunc,
 		sendBundleFunc:          sendBundleFunc,
 		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
@@ -240,7 +240,7 @@ func (coo *Coordinator) issueCheckpointWithoutLocking(minRequiredTips int) error
 	}
 
 	for i, tip := range tips {
-		b, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powFunc)
+		b, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powHandler)
 		if err != nil {
 			return err
 		}
@@ -269,7 +269,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 		return err
 	}
 
-	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, byteEncodedMerkleTreeRootHash, coo.powFunc)
+	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, byteEncodedMerkleTreeRootHash, coo.powHandler)
 	if err != nil {
 		return err
 	}

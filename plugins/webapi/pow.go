@@ -10,13 +10,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/pow"
 )
 
 func init() {
@@ -25,7 +25,6 @@ func init() {
 
 var (
 	powSet  = false
-	powFunc pow.ProofOfWorkFunc
 	powType string
 )
 
@@ -53,11 +52,18 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	// Set the fastest PoW method
+	// Init the PoW handler
+	powHandler, err := pow.NewHandler()
+	if err != nil {
+		e.Error = fmt.Sprint("Error while initiating PoW function")
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+	defer powHandler.Close()
+
 	if !powSet {
-		powType, powFunc = pow.GetFastestProofOfWorkImpl()
 		powSet = true
-		log.Infof("PoW method: \"%v\"", powType)
+		log.Infof("PoW method: \"%s\"", powHandler.GetPoWType())
 	}
 
 	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
@@ -113,7 +119,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Do the PoW
-		txs[i].Nonce, err = powFunc(trytes, query.MinWeightMagnitude)
+		txs[i].Nonce, err = powHandler.DoPoW(trytes, query.MinWeightMagnitude)
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
