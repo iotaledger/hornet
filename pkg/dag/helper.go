@@ -2,6 +2,7 @@ package dag
 
 import (
 	"bytes"
+	"container/list"
 
 	"github.com/pkg/errors"
 
@@ -21,6 +22,7 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 
 	err := TraverseApprovees(startTxHash,
 		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
@@ -66,87 +68,166 @@ type OnMissingApprovee func(approveeHash hornet.Hash) error
 // OnSolidEntryPoint gets called when during traversal the startTx or approvee is a solid entry point.
 type OnSolidEntryPoint func(txHash hornet.Hash)
 
-// TraverseApprovees starts to traverse the approvees (past cone) of the given start transaction until
-// the traversal stops due to no more transactions passing the given condition.
-func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+// processStackApprovees checks if the current element in the stack must be processed or traversed.
+// first the trunk is traversed, then the branch.
+func processStackApprovees(stack *list.List, visited map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
-	if tangle.SolidEntryPointsContain(startTxHash) {
-		onSolidEntryPoint(startTxHash)
-		if !traverseSolidEntryPoints {
-			return nil
+	select {
+	case <-abortSignal:
+		return tangle.ErrOperationAborted
+	default:
+	}
+
+	// load candidate tx
+	ele := stack.Front()
+	currentTxHash := ele.Value.(hornet.Hash)
+
+	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
+	if cachedTx == nil {
+		// remove the transaction from the stack, trunk and branch are not traversed
+		visited[string(currentTxHash)] = false
+		stack.Remove(ele)
+
+		// stop processing the stack if the caller returns an error
+		return onMissingApprovee(currentTxHash)
+	}
+
+	defer cachedTx.Release(forceRelease) // tx -1
+
+	traverse, checkedBefore := visited[string(currentTxHash)]
+	if !checkedBefore {
+		// check condition to decide if tx should be consumed and traversed
+		var err error
+		traverse, err = condition(cachedTx.Retain()) // tx + 1
+		if err != nil {
+			// there was an error, stop processing the stack
+			return err
+		}
+
+		// mark the transaction as visited and remember the result of the traverse condition
+		visited[string(currentTxHash)] = traverse
+	}
+
+	if !traverse {
+		// remove the transaction from the stack, trunk and branch are not traversed
+		// transaction will not get consumed
+		stack.Remove(ele)
+		return nil
+	}
+
+	trunkHash := cachedTx.GetTransaction().GetTrunkHash()
+	branchHash := cachedTx.GetTransaction().GetBranchHash()
+
+	approveeHashes := hornet.Hashes{trunkHash}
+	if !bytes.Equal(trunkHash, branchHash) {
+		approveeHashes = append(approveeHashes, branchHash)
+	}
+
+	for _, approveeHash := range approveeHashes {
+		if _, approveeVisited := visited[string(approveeHash)]; !approveeVisited {
+			if !tangle.SolidEntryPointsContain(approveeHash) {
+				// traverse this transaction
+				stack.PushFront(approveeHash)
+				return nil
+			}
+
+			onSolidEntryPoint(approveeHash)
+			if traverseSolidEntryPoints {
+				// traverse this transaction
+				stack.PushFront(approveeHash)
+				return nil
+			}
+
+			// mark the approvee as visited if we do not traverse to not call "onSolidEntryPoint" repeatedly
+			visited[string(approveeHash)] = false
 		}
 	}
 
-	processed := map[string]struct{}{}
-	txsToTraverse := map[string]struct{}{string(startTxHash): {}}
-	for len(txsToTraverse) != 0 {
-		for txHash := range txsToTraverse {
-			delete(txsToTraverse, txHash)
+	// remove the transaction from the stack
+	stack.Remove(ele)
 
-			select {
-			case <-abortSignal:
-				return tangle.ErrOperationAborted
-			default:
-			}
+	// consume the transaction
+	if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+		// there was an error, stop processing the stack
+		return err
+	}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
-				return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", hornet.Hash(txHash).Trytes())
-			}
+	return nil
+}
 
-			// check condition to decide if tx should be consumed and traversed
-			traverse, err := condition(cachedTx.Retain()) // tx + 1
-			if err != nil {
-				cachedTx.Release(forceRelease) // tx -1
-				return err
-			}
+// TraverseApprovees starts to traverse the approvees (past cone) of the given start transaction until
+// the traversal stops due to no more transactions passing the given condition.
+// It is a DFS with trunk / branch.
+// Caution: condition func is not in DFS order
+func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
-			if !traverse {
-				cachedTx.Release(forceRelease) // tx -1
-				continue
-			}
+	stack := list.New()
+	stack.PushFront(startTxHash)
 
-			// consume the tx
-			if err := consumer(cachedTx.Retain()); err != nil { // tx +1
-				cachedTx.Release(forceRelease) // tx -1
-				return err
-			}
+	// visited map with result of traverse condition
+	visited := make(map[string]bool)
 
-			approveeHashes := map[string]struct{}{
-				string(cachedTx.GetTransaction().GetTrunkHash()):  {},
-				string(cachedTx.GetTransaction().GetBranchHash()): {},
-			}
-
-			cachedTx.Release(forceRelease) // tx -1
-
-			for approveeHash := range approveeHashes {
-				if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
-					onSolidEntryPoint(hornet.Hash(approveeHash))
-					if !traverseSolidEntryPoints {
-						continue
-					}
-				}
-
-				if _, checked := processed[approveeHash]; checked {
-					continue
-				}
-
-				processed[approveeHash] = struct{}{}
-
-				cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // approvee +1
-				if cachedApproveeTx == nil {
-					if err := onMissingApprovee(hornet.Hash(approveeHash)); err != nil {
-						return err
-					}
-					continue
-				}
-
-				// do not force release since it is loaded again
-				cachedApproveeTx.Release() // approvee -1
-
-				txsToTraverse[approveeHash] = struct{}{}
-			}
+	for stack.Len() > 0 {
+		if err := processStackApprovees(stack, visited, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, abortSignal); err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+// processStackApprovers checks if the current element in the stack must be processed and traversed.
+// current element gets consumed first, afterwards it's approvers get traversed in random order.
+func processStackApprovers(stack *list.List, discovered map[string]struct{}, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
+
+	select {
+	case <-abortSignal:
+		return tangle.ErrOperationAborted
+	default:
+	}
+
+	// load candidate tx
+	ele := stack.Front()
+	currentTxHash := ele.Value.(hornet.Hash)
+
+	// remove the transaction from the stack
+	stack.Remove(ele)
+
+	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
+	if cachedTx == nil {
+		// there was an error, stop processing the stack
+		return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
+	}
+
+	defer cachedTx.Release(forceRelease) // tx -1
+
+	// check condition to decide if tx should be consumed and traversed
+	traverse, err := condition(cachedTx.Retain()) // tx + 1
+	if err != nil {
+		// there was an error, stop processing the stack
+		return err
+	}
+
+	if !traverse {
+		// transaction will not get consumed and approvers are not traversed
+		return nil
+	}
+
+	// consume the transaction
+	if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+		// there was an error, stop processing the stack
+		return err
+	}
+
+	for _, approverHash := range tangle.GetApproverHashes(currentTxHash, forceRelease) {
+		if _, approverDiscovered := discovered[string(approverHash)]; approverDiscovered {
+			// approver was already discovered
+			continue
+		}
+
+		// traverse the approver
+		discovered[string(approverHash)] = struct{}{}
+		stack.PushBack(approverHash)
 	}
 
 	return nil
@@ -154,62 +235,18 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 // TraverseApprovers starts to traverse the approvers (future cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
+// It is unsorted BFS because the approvers are not ordered in the database.
 func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
 
-	processed := map[string]struct{}{}
-	txsToTraverse := map[string]struct{}{string(startTxHash): {}}
-	for len(txsToTraverse) != 0 {
-		for txHash := range txsToTraverse {
-			delete(txsToTraverse, txHash)
+	stack := list.New()
+	stack.PushFront(startTxHash)
 
-			select {
-			case <-abortSignal:
-				return tangle.ErrOperationAborted
-			default:
-			}
+	discovered := make(map[string]struct{})
+	discovered[string(startTxHash)] = struct{}{}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
-				return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", hornet.Hash(txHash).Trytes())
-			}
-
-			// check condition to decide if tx should be consumed and traversed
-			traverse, err := condition(cachedTx.Retain()) // tx + 1
-			if err != nil {
-				cachedTx.Release(forceRelease) // tx -1
-				return err
-			}
-
-			if !traverse {
-				cachedTx.Release(forceRelease) // tx -1
-				continue
-			}
-
-			// consume the tx
-			if err := consumer(cachedTx.Retain()); err != nil { // tx +1
-				cachedTx.Release(forceRelease) // tx -1
-				return err
-			}
-			cachedTx.Release(forceRelease) // tx -1
-
-			for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), forceRelease) {
-
-				if _, checked := processed[string(approverHash)]; checked {
-					continue
-				}
-
-				processed[string(approverHash)] = struct{}{}
-
-				cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // approver +1
-				if cachedApproverTx == nil {
-					return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", approverHash.Trytes())
-				}
-
-				// do not force release since it is loaded again
-				cachedApproverTx.Release() // approver -1
-
-				txsToTraverse[string(approverHash)] = struct{}{}
-			}
+	for stack.Len() > 0 {
+		if err := processStackApprovers(stack, discovered, condition, consumer, forceRelease, abortSignal); err != nil {
+			return err
 		}
 	}
 

@@ -52,7 +52,7 @@ func configure(plugin *node.Plugin) {
 	}
 
 	var err error
-	if powHandler, err = pow.NewHandler(); err != nil {
+	if powHandler, err = pow.NewHandler(config.NodeConfig.GetBool(config.CfgSpammerPreferLocalPoW)); err != nil {
 		log.Panic(err)
 	}
 
@@ -129,7 +129,13 @@ func run(_ *node.Plugin) {
 		return
 	}
 
-	defer powHandler.Close()
+	// close the PoW handler on shutdown
+	daemon.BackgroundWorker("Close PoW handler", func(shutdownSignal <-chan struct{}) {
+		<-shutdownSignal
+		log.Info("Closing PoW handler...")
+		powHandler.Close()
+		log.Info("Closing PoW handler... done")
+	}, shutdown.PriorityCloseDatabase)
 
 	// create a background worker that "measures" the spammer averages values every second
 	daemon.BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {

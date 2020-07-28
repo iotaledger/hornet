@@ -226,6 +226,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	dag.TraverseApprovees(cachedStartTx.GetTransaction().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 

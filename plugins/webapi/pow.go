@@ -53,7 +53,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Init the PoW handler
-	powHandler, err := pow.NewHandler()
+	powHandler, err := pow.NewHandler(config.NodeConfig.GetBool(config.CfgWebAPIPreferLocalPoW))
 	if err != nil {
 		e.Error = fmt.Sprint("Error while initiating PoW function")
 		c.JSON(http.StatusInternalServerError, e)
