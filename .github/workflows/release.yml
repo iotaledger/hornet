@@ -6,7 +6,7 @@ on:
 
 jobs:
   release:
-    name: Release
+    name: release
     runs-on: [ubuntu-latest]
     container:
       image: iotmod/goreleaser-cgo-cross-compiler:1.14.4
@@ -15,10 +15,11 @@ jobs:
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-
       - name: Docker login
-        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD      
       - name: Release HORNET
         run: goreleaser --rm-dist
         env:
