@@ -92,11 +92,17 @@ type TipSelector struct {
 	// belowMaxDepth is a threshold value which indicates that a transaction
 	// is not relevant in relation to the recent parts of the tangle.
 	belowMaxDepth milestone.Index
+	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
+	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
+	// referenced tips get removed directly to reduce the amount of tips in the network.
+	retentionRulesTipsLimit int
 	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first transaction.
+	// this is used to widen the cone of the tangle.
 	maxReferencedTipAgeSeconds time.Duration
 	// maxApprovers is the maximum amount of references by other transactions
 	// before the tip is removed from the tip pool.
+	// this is used to widen the cone of the tangle.
 	maxApprovers uint32
 
 	// tipsMap contains only semi- and non-lazy tips.
@@ -109,11 +115,12 @@ type TipSelector struct {
 }
 
 // New creates a new tip-selector.
-func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int, maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI int, belowMaxDepth int, maxReferencedTipAgeSeconds time.Duration, maxApprovers uint32) *TipSelector {
+func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int, maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI int, belowMaxDepth int, retentionRulesTipsLimit int, maxReferencedTipAgeSeconds time.Duration, maxApprovers uint32) *TipSelector {
 	return &TipSelector{
 		maxDeltaTxYoungestRootSnapshotIndexToLSMI:        milestone.Index(maxDeltaTxYoungestRootSnapshotIndexToLSMI),
 		maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI: milestone.Index(maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
 		belowMaxDepth:              milestone.Index(belowMaxDepth),
+		retentionRulesTipsLimit:    retentionRulesTipsLimit,
 		maxReferencedTipAgeSeconds: maxReferencedTipAgeSeconds,
 		maxApprovers:               maxApprovers,
 		tipsMap:                    make(map[string]*Tip),
@@ -164,9 +171,20 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 
 	for approveeTailTxHash := range approveeTailTxHashes {
 		if approveeTip, exists := ts.tipsMap[approveeTailTxHash]; exists {
+			// if the amount of known tips is above the limit, remove the tip directly
+			if len(ts.tipsMap) > ts.retentionRulesTipsLimit {
+				ts.removeTipWithoutLocking(hornet.Hash(approveeTailTxHash))
+				continue
+			}
+
 			// check if the maximum amount of approvers for this tip is reached
 			if approveeTip.ApproversCount.Add(1) >= ts.maxApprovers {
 				ts.removeTipWithoutLocking(hornet.Hash(approveeTailTxHash))
+				continue
+			}
+
+			if ts.maxReferencedTipAgeSeconds == time.Duration(0) {
+				// check for maxReferenceTipAge is disabled
 				continue
 			}
 
