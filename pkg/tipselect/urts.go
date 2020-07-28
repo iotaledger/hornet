@@ -190,12 +190,8 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 
 			// check if the tip was referenced by another transaction before
 			if approveeTip.TimeFirstApprover.IsZero() {
+				// mark the tip as referenced
 				approveeTip.TimeFirstApprover = time.Now()
-
-				// remove the tip after it reaches its maximum age
-				time.AfterFunc(ts.maxReferencedTipAgeSeconds, func() {
-					ts.RemoveTip(hornet.Hash(approveeTailTxHash))
-				})
 			}
 		}
 	}
@@ -309,6 +305,33 @@ func (ts *TipSelector) SelectTips() (hornet.Hashes, error) {
 	// no second tip found, use the same again
 	tips = append(tips, trunk)
 	return tips, nil
+}
+
+// CleanUpReferencedTips checks if tips were referenced before
+// and removes them if they reached their maximum age.
+func (ts *TipSelector) CleanUpReferencedTips() int {
+
+	ts.tipsLock.Lock()
+	defer ts.tipsLock.Unlock()
+
+	count := 0
+	for _, tip := range ts.tipsMap {
+		if tip.TimeFirstApprover.IsZero() {
+			// not referenced by another transaction
+			continue
+		}
+
+		// check if the tip reached its maximum age
+		if time.Since(tip.TimeFirstApprover) < ts.maxReferencedTipAgeSeconds {
+			continue
+		}
+
+		// remove the tip from the pool because it is outdated
+		ts.removeTipWithoutLocking(tip.Hash)
+		count++
+	}
+
+	return count
 }
 
 // UpdateScores updates the scores of the tips and removes lazy ones.

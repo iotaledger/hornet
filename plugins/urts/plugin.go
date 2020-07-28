@@ -49,6 +49,19 @@ func run(_ *node.Plugin) {
 		<-shutdownSignal
 		detachEvents()
 	}, shutdown.PriorityTipselection)
+
+	daemon.BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+		for {
+			select {
+			case <-shutdownSignal:
+				return
+			case <-time.After(time.Second):
+				ts := time.Now()
+				removedTipCount := TipSelector.CleanUpReferencedTips()
+				log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+			}
+		}
+	}, shutdown.PriorityTipselection)
 }
 
 func configureEvents() {
