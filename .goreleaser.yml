@@ -78,7 +78,7 @@ dockers:
       - "iotaledger/hornet:{{ .Tag }}"
     binaries:
       - hornet
-    dockerfile: docker/Dockerfile
+    dockerfile: docker/Dockerfile.dev
     skip_push: auto
 
 # Archives
