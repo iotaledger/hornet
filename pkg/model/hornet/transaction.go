@@ -1,6 +1,8 @@
 package hornet
 
 import (
+	"fmt"
+
 	"github.com/iotaledger/iota.go/transaction"
 
 	"github.com/iotaledger/hive.go/objectstorage"
@@ -126,7 +128,7 @@ func (tx *Transaction) IsValue() bool {
 // ObjectStorage interface
 
 func (tx *Transaction) Update(_ objectstorage.StorableObject) {
-	panic("Transaction should never be updated")
+	panic(fmt.Sprintf("Transaction should never be updated: %v", tx.txHash.Trytes()))
 }
 
 func (tx *Transaction) ObjectStorageKey() []byte {
