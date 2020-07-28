@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc5] - 28.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - "retentionRulesTipsLimit" parameter for URTS
+
+### Changed
+
+    - Do not leak go routines to check "maxReferencedTipAgeSeconds"
+
+### Fixed
+
+    - DFS walk in TraverseApprovees
+
 ## [0.5.0-rc4] - 28.07.2020
 
 **Breaking change:**
@@ -28,6 +45,10 @@ All notable changes to this project will be documented in this file.
 
 **Breaking change:**
 ** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Fixed
+
+    - Panic in GetTransactionRootSnapshotIndexes if transaction not found
 
 ## [0.5.0-rc2] - 26.07.2020
 
