@@ -105,7 +105,7 @@ archives:
       - profiles.json
       - mqtt_config.json
 
-DEB and RPM packages
+# DEB and RPM packages
 nfpms:
   - id: nfpm
     package_name: hornet
