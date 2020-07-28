@@ -49,6 +49,16 @@ func GetMilestoneMerkleHashFunc() crypto.Hash {
 	return coordinatorMilestoneMerkleHashFunc
 }
 
+func ResetMilestoneIndexes() {
+	solidMilestoneLock.Lock()
+	latestMilestoneLock.Lock()
+	defer solidMilestoneLock.Unlock()
+	defer latestMilestoneLock.Unlock()
+
+	solidMilestoneIndex = 0
+	latestMilestoneIndex = 0
+}
+
 // GetMilestoneOrNil returns the CachedBundle of a milestone index or nil if it doesn't exist.
 // bundle +1
 func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
