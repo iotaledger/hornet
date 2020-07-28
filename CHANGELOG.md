@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc4] - 28.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Changed
+
+    - Use stack based DFS in TraverseApprovees
+    - Use stack based BFS in TraverseApprovers
+    - Do not update root transaction snapshot indexes if not synced
+    - Set higher default verticesLimit in visualizer
+    - Do not add tips to URTS if the node becomes unsync
+    - Update scores of the URTS tips
+
+### Fixed
+
+    - Fix solidifier
+    - Catch ErrOperationAborted of the solidifier
+    - Fix wrong scoreSum in URTS
+    - Fix nil pointer in removeMessageEventHandlers
+    - Panic if ErrTransactionNotFound in GetTransactionRootSnapshotIndexes
+
+## [0.5.0-rc3] - 26.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
 ## [0.5.0-rc2] - 26.07.2020
 
 **Breaking change:**

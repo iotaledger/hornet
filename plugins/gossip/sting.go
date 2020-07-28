@@ -60,11 +60,25 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 // removeMessageEventHandlers removes all the event handlers for sent and received messages.
 func removeMessageEventHandlers(p *peer.Peer) {
 
-	for _, event := range p.Protocol.Events.Received {
-		event.DetachAll()
+	if (p == nil) || (p.Protocol == nil) {
+		return
 	}
 
-	for _, event := range p.Protocol.Events.Sent {
-		event.DetachAll()
+	if p.Protocol.Events.Received != nil {
+		for _, event := range p.Protocol.Events.Received {
+			if event == nil {
+				continue
+			}
+			event.DetachAll()
+		}
+	}
+
+	if p.Protocol.Events.Sent != nil {
+		for _, event := range p.Protocol.Events.Sent {
+			if event == nil {
+				continue
+			}
+			event.DetachAll()
+		}
 	}
 }

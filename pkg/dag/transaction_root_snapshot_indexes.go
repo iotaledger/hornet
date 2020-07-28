@@ -9,11 +9,9 @@ import (
 )
 
 // UpdateOutdatedRootSnapshotIndexes updates the transaction root snapshot indexes of the given transactions.
-// the "outdatedTransactions" should be ordered from latest to oldest to avoid recursion.
+// the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
 func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
-	for i := len(outdatedTransactions) - 1; i >= 0; i-- {
-		outdatedTxHash := outdatedTransactions[i]
-
+	for _, outdatedTxHash := range outdatedTransactions {
 		cachedTx := tangle.GetCachedTransactionOrNil(outdatedTxHash)
 		if cachedTx == nil {
 			panic(tangle.ErrTransactionNotFound)
@@ -53,10 +51,13 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 
 	startTxHash := cachedTx.GetMetadata().GetTxHash()
 
+	indexesValid := true
+
 	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
 	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
 	if err := TraverseApprovees(cachedTx.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
 		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 			defer cachedTx.Release(true) // tx -1
 
@@ -67,7 +68,6 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 			}
 
 			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
-				// skip the start transaction, so it doesn't get added to the outdatedTransactions
 				return true, nil
 			}
 
@@ -79,13 +79,18 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 				return false, nil
 			}
 
-			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
-
 			return true, nil
 		},
 		// consumer
 		func(cachedTx *tangle.CachedTransaction) error { // tx +1
 			defer cachedTx.Release(true) // tx -1
+
+			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+				// skip the start transaction, so it doesn't get added to the outdatedTransactions
+				return nil
+			}
+
+			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
 			return nil
 		},
 		// called on missing approvees
@@ -98,14 +103,20 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 			updateIndexes(snapshotInfo.EntryPointIndex, snapshotInfo.EntryPointIndex)
 		}, true, false, nil); err != nil {
 		if err == tangle.ErrTransactionNotFound {
-			return 0, 0
+			indexesValid = false
+		} else {
+			panic(err)
 		}
-		panic(err)
 	}
 
 	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
 	UpdateOutdatedRootSnapshotIndexes(outdatedTransactions, lsmi)
+
+	// only set the calculated root snapshot indexes if all transactions in the past cone were found
+	if !indexesValid {
+		return 0, 0
+	}
 
 	// set the new transaction root snapshot indexes in the metadata of the transaction
 	cachedTx.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)

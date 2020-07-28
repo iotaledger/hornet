@@ -190,6 +190,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		err := dag.TraverseApprovees(cachedMs.GetMilestone().Hash,
 			// traversal stops if no more transactions pass the given condition
+			// Caution: condition func is not in DFS order
 			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
 				defer cachedTx.Release(true) // tx -1
 				if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
