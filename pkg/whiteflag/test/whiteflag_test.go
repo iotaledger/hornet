@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"crypto"
 	"fmt"
 	"io/ioutil"
@@ -346,7 +347,9 @@ func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bo
 	ms := tangle.GetMilestoneOrNil(milestoneIndex)
 	require.NotNil(t, ms)
 
+	var wfConf *whiteflag.Confirmation
 	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+		wfConf = confirmation
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(t, err)
@@ -359,7 +362,7 @@ func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bo
 	assertTotalSupplyStillValid(t)
 
 	if printTangle {
-		fmt.Print(generateDotFileFromTangle(t))
+		fmt.Print(generateDotFileFromTangle(t, wfConf))
 	}
 
 	return ms, conf
@@ -450,7 +453,19 @@ func shortened(bundle *tangle.CachedBundle) string {
 	return tag[0:tagLength]
 }
 
-func generateDotFileFromTangle(t *testing.T) string {
+func generateDotFileFromTangle(t *testing.T, conf *whiteflag.Confirmation) string {
+
+	indexOf := func(hash hornet.Hash) int {
+		if conf == nil {
+			return -1
+		}
+		for i := 0; i < len(conf.TailsReferenced)-1; i++ {
+			if bytes.Equal(conf.TailsReferenced[i], hash) {
+				return i
+			}
+		}
+		return -1
+	}
 
 	visitedBundles := make(map[string]tangle.CachedBundles)
 
@@ -475,27 +490,35 @@ func generateDotFileFromTangle(t *testing.T) string {
 		for _, bndl := range bndls {
 			shortBundle := shortened(bndl)
 
+			tailHash := bndl.GetBundle().GetTailHash()
+			if index := indexOf(tailHash); index != -1 {
+				dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortBundle, index, shortBundle)
+			}
+
 			bundleHead := bndl.GetBundle().GetHead()
 			//if singleBundle {
 			trunk := bndl.GetBundle().GetTrunk(true)
 			if tangle.SolidEntryPointsContain(trunk) {
-				dotFile += fmt.Sprintf("\"%s\" -> \"%s\";\n", shortBundle, shortenedHash(trunk))
+				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Trunk\" ];\n", shortBundle, shortenedHash(trunk))
 			} else {
 				trunkBundles := tangle.GetBundlesOfTransactionOrNil(trunk, false)
-				dotFile += fmt.Sprintf("\"%s\" -> \"%s\";\n", shortBundle, shortened(trunkBundles[0]))
+				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Trunk\" ];\n", shortBundle, shortened(trunkBundles[0]))
 				trunkBundles.Release()
 			}
 
 			branch := bndl.GetBundle().GetBranch(true)
 			if tangle.SolidEntryPointsContain(branch) {
-				dotFile += fmt.Sprintf("\"%s\" -> \"%s\";\n", shortBundle, shortenedHash(branch))
+				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Branch\" ];\n", shortBundle, shortenedHash(branch))
 			} else {
 				branchBundles := tangle.GetBundlesOfTransactionOrNil(branch, false)
-				dotFile += fmt.Sprintf("\"%s\" -> \"%s\";\n", shortBundle, shortened(branchBundles[0]))
+				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Branch\" ];\n", shortBundle, shortened(branchBundles[0]))
 				branchBundles.Release()
 			}
 
 			if bndl.GetBundle().IsMilestone() {
+				if conf != nil && bndl.GetBundle().GetMilestoneIndex() == conf.MilestoneIndex {
+					dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortBundle)
+				}
 				milestones = append(milestones, shortBundle)
 			} else if bndl.GetBundle().IsConfirmed() {
 				if bndl.GetBundle().IsConflicting() {
