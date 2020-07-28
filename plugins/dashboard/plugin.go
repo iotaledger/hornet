@@ -73,6 +73,7 @@ func configure(plugin *node.Plugin) {
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
 		case *tangle.Bundle:
+			// Milestone
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangleplugin.ConfirmedMilestoneMetric:
 			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
@@ -310,7 +311,6 @@ type cachesmetric struct {
 	SpentAddresses               cache `json:"spent_addresses"`
 	Transactions                 cache `json:"transactions"`
 	IncomingTransactionWorkUnits cache `json:"incoming_transaction_work_units"`
-	RefsInvalidBundle            cache `json:"refs_invalid_bundle"`
 }
 
 type cache struct {
@@ -397,9 +397,6 @@ func currentNodeStatus() *nodestatus {
 		},
 		IncomingTransactionWorkUnits: cache{
 			Size: gossip.Processor().WorkUnitsSize(),
-		},
-		RefsInvalidBundle: cache{
-			Size: tangleplugin.GetRefsAnInvalidBundleStorageSize(),
 		},
 	}
 
