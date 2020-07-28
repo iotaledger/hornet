@@ -51,14 +51,15 @@ const (
 )
 
 var (
-	coo     *coordinator.Coordinator
-	nextTip = hornet.NullHashBytes
+	coo                   *coordinator.Coordinator
+	nextTip               = hornet.NullHashBytes
+	nextBundleIsMilestone = true
 
 	// This is just used to clean up at the end of a test
 	cachedBundles tangle.CachedBundles
 
 	// This is to avoid panics when running multiple tests
-	solidEntryPointsOnce sync.Once
+	setupTangleOnce sync.Once
 )
 
 func setupTestEnvironment(t *testing.T, store kvstore.KVStore) {
@@ -261,13 +262,19 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 		for i := len(b) - 1; i >= 0; i-- {
 			bndl = append(bndl, *b[i])
 		}
-		ms := storeBundle(t, bndl, true) // No need to release, since we store all the bundles for later cleanup
-		tangle.SetLatestMilestoneIndex(ms.GetBundle().GetMilestoneIndex())
+		ms := storeBundle(t, bndl, nextBundleIsMilestone) // No need to release, since we store all the bundles for later cleanup
+		if !nextBundleIsMilestone {
+			// This is a hack since the new COO tipsel sends a checkpoint just before the snapshot
+			nextBundleIsMilestone = true
+		}
+		if ms.GetBundle().IsMilestone() {
+			tangle.SetLatestMilestoneIndex(ms.GetBundle().GetMilestoneIndex())
+		}
 		return nil
 	}
 
-	tipSelFunc := func() (hornet.Hash, error) {
-		return nextTip, nil
+	tipSelFunc := func(minRequiredTips int) (hornet.Hashes, error) {
+		return hornet.Hashes{nextTip}, nil
 	}
 
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
@@ -276,7 +283,7 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 	require.NoError(t, err)
 	dirAndFile := fmt.Sprintf("%s/coordinator.state", dir)
 
-	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, 0, powFunc, tipSelFunc, storeBundleFunc, merkleHashFunc)
+	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powFunc, tipSelFunc, storeBundleFunc, merkleHashFunc)
 	require.NotNil(t, coo)
 
 	err = coo.InitMerkleTree("coordinator.tree", cooAddress)
@@ -289,6 +296,22 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 
 	// Configure Milestones
 	tangle.ConfigureMilestones(hornet.HashFromAddressTrytes(cooAddress), int(secLevel), merkleTreeDepth, merkleHashFunc)
+
+	// Initial milestone has no checkpoint
+	nextBundleIsMilestone = true
+
+	err = coo.Bootstrap()
+	require.NoError(t, err)
+
+	ms := tangle.GetMilestoneOrNil(1)
+	require.NotNil(t, ms)
+
+	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+	})
+	require.NoError(t, err)
+	require.Equal(t, 3, conf.TxsConfirmed)
+	ms.Release(true)
 
 	return coo
 }
@@ -306,12 +329,14 @@ func verifyLMI(t *testing.T, index milestone.Index) {
 func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bool) (*tangle.CachedBundle, *whiteflag.ConfirmedMilestoneStats) {
 
 	nextTip = tip
+	// Mark the next bundle stores as not a milestone, since it will be a checkpoint
+	nextBundleIsMilestone = false
 
 	currentIndex := tangle.GetSolidMilestoneIndex()
 	verifyLMI(t, currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
-	noncriticalErr, criticalErr := coo.IssueNextCheckpointOrMilestone()
+	noncriticalErr, criticalErr := coo.IssueMilestone()
 	require.NoError(t, noncriticalErr)
 	require.NoError(t, criticalErr)
 
@@ -322,7 +347,7 @@ func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bo
 	require.NotNil(t, ms)
 
 	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
-		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex)
+		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(t, err)
 
@@ -372,7 +397,7 @@ func setupCoordinatorAndIssueInitialMilestones(t *testing.T, initialBalances map
 	store := mapdb.NewMapDB()
 	setupTestEnvironment(t, store)
 
-	solidEntryPointsOnce.Do(func() {
+	setupTangleOnce.Do(func() {
 		tangle.LoadInitialValuesFromDatabase()
 	})
 	tangle.ResetSolidEntryPoints()
@@ -389,14 +414,14 @@ func setupCoordinatorAndIssueInitialMilestones(t *testing.T, initialBalances map
 	coo := configureCoordinator(t)
 	require.NotNil(t, coo)
 
-	verifyLSMI(t, 0)
+	verifyLSMI(t, 1)
 
 	var milestones tangle.CachedBundles
 	for i := 1; i <= numberOfMilestones; i++ {
-		// 1st milestone
-		ms, conf := issueAndConfirmMilestoneOnTip(t, hornet.NullHashBytes, false)
-		require.Equal(t, 3, conf.TxsConfirmed)
-		require.Equal(t, 3, conf.TxsZeroValue)
+		// 2nd milestone
+		ms, conf := issueAndConfirmMilestoneOnTip(t, hornet.NullHashBytes, true)
+		require.Equal(t, 4, conf.TxsConfirmed) // 3 for milestone + 1 for checkpoint
+		require.Equal(t, 4, conf.TxsZeroValue) // 3 for milestone + 1 for checkpoint
 		require.Equal(t, 0, conf.TxsValue)
 		require.Equal(t, 0, conf.TxsConflicting)
 		milestones = append(milestones, ms)
@@ -417,7 +442,12 @@ func shortened(bundle *tangle.CachedBundle) string {
 	tail := bundle.GetBundle().GetTail()
 	defer tail.Release()
 	tag := tail.GetTransaction().Tx.Tag
-	return tag[0:strings.IndexByte(tag, '9')]
+	// Cut the tags at the first 9 or at max length 4
+	tagLength := strings.IndexByte(tag, '9')
+	if tagLength == -1 || tagLength > 4 || tagLength == 0 {
+		tagLength = 4
+	}
+	return tag[0:tagLength]
 }
 
 func generateDotFileFromTangle(t *testing.T) string {
@@ -510,20 +540,25 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	milestones := setupCoordinatorAndIssueInitialMilestones(t, balances, 3)
 
 	// Issue some transactions
+	// Valid transfer 100 from seed1[0] to seed2[0]
 	bundleA := storeBundle(t, attachTo(t, milestones[0].GetBundle().GetTailHash(), milestones[1].GetBundle().GetTailHash(), sendFrom(t, "A", seed1, 0, 1000, seed2, 0, 100)), false)
+	// Valid transfer 200 from seed1[1] to seed2[0]
 	bundleB := storeBundle(t, attachTo(t, bundleA.GetBundle().GetTailHash(), milestones[0].GetBundle().GetTailHash(), sendFrom(t, "B", seed1, 1, 900, seed2, 0, 200)), false)
+	// Invalid transfer 10 from seed3[0] to seed2[0] (insufficient funds)
 	bundleC := storeBundle(t, attachTo(t, milestones[2].GetBundle().GetTailHash(), bundleB.GetBundle().GetTailHash(), sendFrom(t, "C", seed3, 0, 99999, seed2, 0, 10)), false)
+	// Invalid transfer 150 from seed4[1] to seed2[0] (insufficient funds)
 	bundleD := storeBundle(t, attachTo(t, bundleA.GetBundle().GetTailHash(), bundleC.GetBundle().GetTailHash(), sendFrom(t, "D", seed4, 1, 99999, seed2, 0, 150)), false)
+	// Valid transfer 150 from seed2[0] to seed4[0]
 	bundleE := storeBundle(t, attachTo(t, bundleB.GetBundle().GetTailHash(), bundleD.GetBundle().GetTailHash(), sendFrom(t, "E", seed2, 0, 300, seed4, 0, 150)), false)
 
-	// Confirming milestone
+	// Confirming milestone at bundle C (bundle D and E are not included)
 	_, conf := issueAndConfirmMilestoneOnTip(t, bundleC.GetBundle().GetTailHash(), true)
-	require.Equal(t, 4+4+4+3, conf.TxsConfirmed) // 3 are for the milestone itself
+	require.Equal(t, 4+4+4+3+1, conf.TxsConfirmed) // 3 are for the milestone itself + 1 for checkpoint
 	require.Equal(t, 8, conf.TxsValue)
 	require.Equal(t, 4, conf.TxsConflicting)
-	require.Equal(t, 3, conf.TxsZeroValue) // The milestone
+	require.Equal(t, 3+1, conf.TxsZeroValue) // The milestone + checkpoint
 
-	// Verify balances
+	// Verify balances (seed, index, balance)
 	assertAddressBalance(t, seed1, 0, 0)
 	assertAddressBalance(t, seed1, 1, 0)
 	assertAddressBalance(t, seed1, 2, 700)
@@ -534,14 +569,14 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	assertAddressBalance(t, seed4, 0, 0)
 	assertAddressBalance(t, seed4, 1, 0)
 
-	// Confirming milestone
+	// Confirming milestone at bundle E
 	_, conf = issueAndConfirmMilestoneOnTip(t, bundleE.GetBundle().GetTailHash(), true)
-	require.Equal(t, 4+4+3, conf.TxsConfirmed) // 3 are for the milestone itself
+	require.Equal(t, 4+4+3+1, conf.TxsConfirmed) // 3 are for the milestone itself + 1 for checkpoint
 	require.Equal(t, 4, conf.TxsValue)
 	require.Equal(t, 4, conf.TxsConflicting)
-	require.Equal(t, 3, conf.TxsZeroValue) // The milestone
+	require.Equal(t, 3+1, conf.TxsZeroValue) // The milestone + checkpoint
 
-	// Verify balances
+	// Verify balances (seed, index, balance)
 	assertAddressBalance(t, seed1, 0, 0)
 	assertAddressBalance(t, seed1, 1, 0)
 	assertAddressBalance(t, seed1, 2, 700)
@@ -565,6 +600,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	// Fill up the balances
 	balances := make(map[string]uint64)
 	milestones := setupCoordinatorAndIssueInitialMilestones(t, balances, 3)
+	print(milestones)
 
 	// Issue some transactions
 	bundleA := storeBundle(t, attachTo(t, milestones[0].GetBundle().GetTailHash(), milestones[1].GetBundle().GetTailHash(), zeroValueTx(t, "A")), false)
@@ -573,22 +609,23 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	bundleD := storeBundle(t, attachTo(t, bundleB.GetBundle().GetTailHash(), bundleC.GetBundle().GetTailHash(), zeroValueTx(t, "D")), false)
 	bundleE := storeBundle(t, attachTo(t, bundleB.GetBundle().GetTailHash(), bundleA.GetBundle().GetTailHash(), zeroValueTx(t, "E")), false)
 
-	// Confirming milestone
+	// Confirming milestone include all tx up to bundle E. This should only include A, B and E
 	_, conf := issueAndConfirmMilestoneOnTip(t, bundleE.GetBundle().GetTailHash(), true)
-	require.Equal(t, 3+3, conf.TxsConfirmed) // A, B, E + Milestone
+	require.Equal(t, 3+3+1, conf.TxsConfirmed) // A, B, E + 3 for Milestone + 1 for checkpoint
+	require.Equal(t, 3+3+1, conf.TxsZeroValue) // 3 are for the milestone itself + 1 for checkpoint
 	require.Equal(t, 0, conf.TxsValue)
 	require.Equal(t, 0, conf.TxsConflicting)
-	require.Equal(t, 3+3, conf.TxsZeroValue) // 3 are for the milestone itself
 
+	// Issue another bundle
 	bundleF := storeBundle(t, attachTo(t, bundleD.GetBundle().GetTailHash(), bundleE.GetBundle().GetTailHash(), zeroValueTx(t, "F")), false)
 
-	// Confirming milestone
+	// Confirming milestone at bundle F. This should confirm D, C and F
 	_, conf = issueAndConfirmMilestoneOnTip(t, bundleF.GetBundle().GetTailHash(), true)
 
-	require.Equal(t, 3+3, conf.TxsConfirmed) // D, C, F + Milestone
+	require.Equal(t, 3+3+1, conf.TxsConfirmed) // D, C, F + 3 for Milestone + 1 for checkpoint
+	require.Equal(t, 3+3+1, conf.TxsZeroValue) // 3 are for the milestone itself + 1 for checkpoint
 	require.Equal(t, 0, conf.TxsValue)
 	require.Equal(t, 0, conf.TxsConflicting)
-	require.Equal(t, 3+3, conf.TxsZeroValue) // 3 are for the milestone itself
 
 	// Clean up all the bundles we created
 	cachedBundles.Release()
