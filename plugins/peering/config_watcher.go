@@ -26,6 +26,17 @@ func runConfigWatcher() {
 
 		modified, added, removed := getPeerConfigDiff()
 
+		// remove peers if we do not accept connections from unknown peers
+		if !acceptAnyPeer && len(removed) > 0 {
+			for _, p := range removed {
+				if err := Manager().Remove(p.ID); err != nil {
+					log.Warnf("removing peer due to config change failed with: %v", err)
+					continue
+				}
+				log.Infof("removed peer %s due to config change", p.ID)
+			}
+		}
+
 		// modify peers
 		if len(modified) > 0 {
 			log.Infof("modifying peers due to config change")
@@ -50,17 +61,6 @@ func runConfigWatcher() {
 				}
 			}
 		}
-
-		// remove peers
-		if len(removed) > 0 {
-			for _, p := range removed {
-				if err := Manager().Remove(p.ID); err != nil {
-					log.Warnf("removing peer due to config change failed with: %v", err)
-					continue
-				}
-				log.Infof("removed peer %s due to config change", p.ID)
-			}
-		}
 	})
 }
 
@@ -74,6 +74,11 @@ func getPeerConfigDiff() (modified, added, removed []config.PeerConfig) {
 	}
 
 	for _, currentPeer := range currentPeers {
+		if currentPeer.Autopeered {
+			// ignore autopeered neighbors
+			continue
+		}
+
 		found := false
 		for _, configPeer := range configPeers {
 			if strings.EqualFold(currentPeer.Address, configPeer.ID) || strings.EqualFold(currentPeer.DomainWithPort, configPeer.ID) {
@@ -81,8 +86,10 @@ func getPeerConfigDiff() (modified, added, removed []config.PeerConfig) {
 				if (currentPeer.PreferIPv6 != configPeer.PreferIPv6) || (currentPeer.Alias != configPeer.Alias) {
 					modified = append(modified, configPeer)
 				}
+				break
 			}
 		}
+
 		if !found {
 			removed = append(removed, config.PeerConfig{ID: currentPeer.Address, PreferIPv6: currentPeer.PreferIPv6})
 		}
@@ -97,10 +104,18 @@ func getPeerConfigDiff() (modified, added, removed []config.PeerConfig) {
 
 		found := false
 		for _, currentPeer := range currentPeers {
+			if currentPeer.Autopeered {
+				// ignore autopeered neighbors
+				found = true
+				break
+			}
+
 			if strings.EqualFold(currentPeer.Address, configPeer.ID) || strings.EqualFold(currentPeer.DomainWithPort, configPeer.ID) {
 				found = true
+				break
 			}
 		}
+
 		if !found {
 			added = append(added, configPeer)
 		}

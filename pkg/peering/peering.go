@@ -322,9 +322,11 @@ func (m *Manager) PeerInfos() []*peer.Info {
 			Alias:          originAddr.Alias,
 			ConnectionType: "tcp",
 			Connected:      false,
+			Autopeered:     false,
 			PreferIPv6:     originAddr.PreferIPv6,
 		}
 		if reconnectInfo.Autopeering != nil {
+			info.Autopeered = true
 			info.AutopeeringID = reconnectInfo.Autopeering.ID().String()
 		}
 		infos = append(infos, info)
