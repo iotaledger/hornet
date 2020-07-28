@@ -93,7 +93,7 @@ func configure(plugin *node.Plugin) {
 
 		disconnectSignal := make(chan struct{})
 		p.Conn.Events.Close.Attach(events.NewClosure(func() {
-			//removeMessageEventHandlers(p)
+			removeMessageEventHandlers(p)
 			close(disconnectSignal)
 		}))
 
