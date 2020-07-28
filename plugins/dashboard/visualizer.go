@@ -3,6 +3,7 @@ package dashboard
 import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -12,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
@@ -121,6 +123,21 @@ func runVisualizer() {
 		})
 	})
 
+	// show checkpoints as milestones in the coordinator node
+	notifyIssuedCheckpointTransaction := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
+
+		visualizerWorkerPool.TrySubmit(
+			&msg{
+				Type: MsgTypeMilestoneInfo,
+				Data: &metainfo{
+					ID: txHash.Trytes()[:VisualizerIdLength],
+				},
+			}, false)
+	})
+
 	notifyMilestoneConfirmedInfo := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
@@ -178,12 +195,20 @@ func runVisualizer() {
 		defer tangle.Events.TransactionSolid.Detach(notifySolidInfo)
 		tangle.Events.ReceivedNewMilestone.Attach(notifyMilestoneInfo)
 		defer tangle.Events.ReceivedNewMilestone.Detach(notifyMilestoneInfo)
+		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
+			cooEvents.IssuedCheckpointTransaction.Attach(notifyIssuedCheckpointTransaction)
+			defer cooEvents.IssuedCheckpointTransaction.Detach(notifyIssuedCheckpointTransaction)
+		}
 		tangle.Events.MilestoneConfirmed.Attach(notifyMilestoneConfirmedInfo)
 		defer tangle.Events.MilestoneConfirmed.Detach(notifyMilestoneConfirmedInfo)
-		urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
-		defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
-		urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
-		defer urts.TipSelector.Events.TipRemoved.Detach(notifyTipRemoved)
+
+		// check if URTS plugin is enabled
+		if !node.IsSkipped(urts.PLUGIN) {
+			urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
+			defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
+			urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
+			defer urts.TipSelector.Events.TipRemoved.Detach(notifyTipRemoved)
+		}
 
 		visualizerWorkerPool.Start()
 		<-shutdownSignal

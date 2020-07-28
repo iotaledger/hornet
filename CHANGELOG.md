@@ -2,6 +2,196 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc5] - 28.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - "retentionRulesTipsLimit" parameter for URTS
+
+### Changed
+
+    - Do not leak go routines to check "maxReferencedTipAgeSeconds"
+
+### Fixed
+
+    - DFS walk in TraverseApprovees
+
+## [0.5.0-rc4] - 28.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Changed
+
+    - Use stack based DFS in TraverseApprovees
+    - Use stack based BFS in TraverseApprovers
+    - Do not update root transaction snapshot indexes if not synced
+    - Set higher default verticesLimit in visualizer
+    - Do not add tips to URTS if the node becomes unsync
+    - Update scores of the URTS tips
+
+### Fixed
+
+    - Fix solidifier
+    - Catch ErrOperationAborted of the solidifier
+    - Fix wrong scoreSum in URTS
+    - Fix nil pointer in removeMessageEventHandlers
+    - Panic if ErrTransactionNotFound in GetTransactionRootSnapshotIndexes
+
+## [0.5.0-rc3] - 26.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Fixed
+
+    - Panic in GetTransactionRootSnapshotIndexes if transaction not found
+
+## [0.5.0-rc2] - 26.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Changed
+
+    - Removed detaching events from Conn.Events temporarily
+
+## [0.5.0-rc1] - 26.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - Implements white-flag confirmation (#432)
+    - Weighted uniform random tipselection (#553)
+    - Added hornet.Hash utils (#564)
+    - Adaptive heaviest branch tipsel (#567)
+
+### Changed
+
+    - Make code more testable for Chrysalis (#563)
+
+### Fixed
+
+    - RandomInsecure range
+
+### Removed
+
+    - Remove graph and monitor plugin (#555)
+    - Remove legacy protocol support (#556)
+    - checkConsistency API call
+    - Depth from getTransactionsToApprove
+    - Genesis TX special case
+
+### Config file changes
+
+`config.json`
+
+```diff
+ "permitRemoteAccess": [
+-      "checkConsistency",
+ ]
+ "coordinator": {
++    "checkpoints": {
++      "maxTrackedTails": 10000
++    },
++    "tipsel": {
++      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
++      "maxHeaviestBranchTipsPerCheckpoint": 10,
++      "randomTipsPerCheckpoint": 2,
++      "heaviestBranchSelectionDeadlineMilliseconds": 100
++    }
+  }
+  "tipsel": {
+-    "belowMaxDepthTransactionLimit": 20000,
+-    "maxDepth": 5
++    "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
++    "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
++    "belowMaxDepth": 15,
++    "maxReferencedTipAgeSeconds": 3,
++    "maxApprovers": 2
+  },
+  "spammer": {
+-    "depth": 1,
+  },
+```
+
+## [0.4.2] - 22.07.2020
+
+### Added
+
+    - Snapshot download fallback sources (#568)
+
+### Changed
+
+    - Using --version instead of --help for checking if the docker image works
+    - Update autopeering entry nodes
+
+### Fixed
+
+    - Hiding of all non essential config flags
+    - Ignoring all entry nodes if one is not found
+    - Explicit --help/-h flag to print the help instead of using the built-in missing help flag error handling of pflag
+    - Missing trytes convertion to ledger panic logs
+
+### Config file changes
+
+`config.json`
+
+```diff
+- "downloadURL": "https://ls.manapotion.io/export.bin"
++ "downloadURLs": [
++   "https://ls.manapotion.io/export.bin",
++   "https://x-vps.com/export.bin",
++   "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
++ ]
+
+  "entryNodes": [
+-   "46CstniGgfWMdAySiWuS7bVfugwuHZCUQKVaC4Y34EYJ@enter.hornet.zone:14626",
++   "FvfwJuCMoWJvcJLSYww7whPxouZ9WFJ55uyxTxKxJ1ez@enter.hornet.zone:14626",
+-   "2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
+-   "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627"
++   "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627",
++   "12w9FrzMdDQ42aBgFrv1siHuJMhuZ4SMVHRFSS7Zb72W@entrynode.iotatoken.nl:14626",
++   "DboTc1v61Xdyvggj8VRszy92ScUTLgfwZaHvXsU8zr7e@entrynode.tanglebay.org:14626"
+  ],
+```
+
+`config_comnet.json`
+
+```diff
+- "downloadURL": "https://ls.tanglebay.org/comnet/export.bin"
++ "downloadURLs": [
++   "https://ls.manapotion.io/comnet/export.bin"
++ ]
+
+  "entryNodes": [
+-   "7Y1GSTTwJLMPCffNJhWggZPtwVce5hsgAVcHanNa6HXh@entrynode.comnet.tanglebay.org:14636",
+-   "FPE6kHwZhvw8g163faJwTaPzYePbYtaXhwpWxFKuJfEY@enter.comnet.hornet.zone:14627"
++   "GLZAWBGqvm6ZRT7jGMFAKyUJNPdvx4i5A1GPRZbGS6C9@enter.comnet.hornet.zone:14627",
++   "J1Hn5r9pS5FkLeYqXWstC2Zyjxj73grEWvjuene3qjM9@entrynode.comnet.tanglebay.org:14636"
+  ],
+```
+
+`config_devnet.json`
+
+```diff
+- "downloadURL": "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
++ "downloadURLs": [
++   "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
++ ]
+
+  "entryNodes": [
+-   "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637"
++   "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637",
++   "BqXajrWBFGYcJduK7kxiSMW3hv9fXRLzt9jK7JZZPAzp@entrynode.devnet.tanglebay.org:14646"
+  ],
+```
+
 ## [0.4.1] - 30.06.2020
 
 ### Added

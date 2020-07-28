@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -20,8 +21,7 @@ var (
 	PLUGIN = node.NewPlugin("URTS", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	TipSelector   *tipselect.TipSelector
-	wasSyncBefore = false
+	TipSelector *tipselect.TipSelector
 
 	// Closures
 	onBundleSolid        *events.Closure
@@ -35,6 +35,7 @@ func configure(plugin *node.Plugin) {
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth),
+		config.NodeConfig.GetInt(config.CfgTipSelRetentionRulesTipsLimit),
 		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelMaxReferencedTipAgeSeconds))),
 		config.NodeConfig.GetUint32(config.CfgTipSelMaxApprovers),
 	)
@@ -48,17 +49,27 @@ func run(_ *node.Plugin) {
 		<-shutdownSignal
 		detachEvents()
 	}, shutdown.PriorityTipselection)
+
+	daemon.BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+		for {
+			select {
+			case <-shutdownSignal:
+				return
+			case <-time.After(time.Second):
+				ts := time.Now()
+				removedTipCount := TipSelector.CleanUpReferencedTips()
+				log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+			}
+		}
+	}, shutdown.PriorityTipselection)
 }
 
 func configureEvents() {
 	onBundleSolid = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
 		cachedBndl.ConsumeBundle(func(bndl *tangle.Bundle) { // tx -1
-			if !wasSyncBefore {
-				if !tangle.IsNodeSyncedWithThreshold() {
-					// do not add tips if the node is not synced
-					return
-				}
-				wasSyncBefore = true
+			// do not add tips during syncing, because it is not needed at all
+			if !tangle.IsNodeSyncedWithThreshold() {
+				return
 			}
 
 			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
@@ -71,8 +82,19 @@ func configureEvents() {
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		// do not propagate during syncing, because it is not needed at all
+		if !tangle.IsNodeSyncedWithThreshold() {
+			return
+		}
+
 		// propagate new transaction root snapshot indexes to the future cone for URTS
-		TipSelector.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
+		ts := time.Now()
+		dag.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
+		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+
+		ts = time.Now()
+		TipSelector.UpdateScores()
+		log.Debugf("UpdateScores finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 }
 

@@ -131,8 +131,6 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
 
-	Events.ProcessedTransaction.Trigger(incomingTx.GetTxHash())
-
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewTransactions.Inc()
 
@@ -160,6 +158,12 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		}
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
+
+	// "ProcessedTransaction" event has to be fired after "ReceivedNewTransaction" event,
+	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
+	// with the transactions it issued itself because the transactions may be not solid yet and therefore their bundles
+	// are not created yet.
+	Events.ProcessedTransaction.Trigger(incomingTx.GetTxHash())
 
 	if request != nil {
 		// mark the received request as processed

@@ -42,9 +42,8 @@ var (
 func configureAP(local *Local) {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
-		log.Errorf("Invalid entry nodes; ignoring: %v", err)
+		log.Warn(err)
 	}
-	log.Debugf("Entry node peers: %v", entryNodes)
 
 	gossipServiceKeyHash := fnv.New32a()
 	gossipServiceKeyHash.Write([]byte(services.GossipServiceKey()))
@@ -122,42 +121,56 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	log.Info("Stopping Autopeering ...")
 }
 
+func parseEntryNode(entryNodeDefinition string) (entryNode *peer.Peer, err error) {
+	if entryNodeDefinition == "" {
+		return nil, nil
+	}
+
+	parts := strings.Split(entryNodeDefinition, "@")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("%w: entry node parts must be 2, is %d", ErrParsingEntryNode, len(parts))
+	}
+
+	pubKey, err := base58.Decode(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid public key: %s", ErrParsingEntryNode, err)
+	}
+
+	entryAddr, err := iputils.ParseOriginAddress(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid entry node address %s", err, parts[1])
+	}
+
+	ipAddresses, err := iputils.GetIPAddressesFromHost(entryAddr.Addr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
+	}
+
+	publicKey, _, err := ed25519.PublicKeyFromBytes(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	services := service.New()
+	services.Update(service.PeeringKey, "udp", int(entryAddr.Port))
+
+	ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6))
+
+	return peer.NewPeer(identity.New(publicKey), ip, services), nil
+}
+
 func parseEntryNodes() (result []*peer.Peer, err error) {
 	for _, entryNodeDefinition := range config.NodeConfig.GetStringSlice(config.CfgNetAutopeeringEntryNodes) {
-		if entryNodeDefinition == "" {
+		entryNode, err := parseEntryNode(entryNodeDefinition)
+		if err != nil {
+			log.Warnf("invalid entry node; ignoring: %v, error: %v", entryNodeDefinition, err)
 			continue
 		}
+		result = append(result, entryNode)
+	}
 
-		parts := strings.Split(entryNodeDefinition, "@")
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("%w: entry node parts must be 2, is %d", ErrParsingEntryNode, len(parts))
-		}
-
-		pubKey, err := base58.Decode(parts[0])
-		if err != nil {
-			return nil, fmt.Errorf("%w: invalid public key: %s", ErrParsingEntryNode, err)
-		}
-
-		entryAddr, err := iputils.ParseOriginAddress(parts[1])
-		if err != nil {
-			return nil, fmt.Errorf("%w: invalid entry node address %s", err, parts[1])
-		}
-
-		ipAddresses, err := iputils.GetIPAddressesFromHost(entryAddr.Addr)
-		if err != nil {
-			return nil, fmt.Errorf("%w: while handling %s", err, parts[1])
-		}
-
-		publicKey, _, err := ed25519.PublicKeyFromBytes(pubKey)
-		if err != nil {
-			return nil, err
-		}
-
-		services := service.New()
-		services.Update(service.PeeringKey, "udp", int(entryAddr.Port))
-
-		ip := ipAddresses.GetPreferredAddress(config.NodeConfig.GetBool(config.CfgNetPreferIPv6))
-		result = append(result, peer.NewPeer(identity.New(publicKey), ip, services))
+	if len(result) == 0 {
+		return nil, errors.New("no valid entry nodes found")
 	}
 
 	return result, nil

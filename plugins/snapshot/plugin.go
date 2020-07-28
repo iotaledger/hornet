@@ -33,8 +33,9 @@ var (
 	forceGlobalSnapshot = pflag.Bool("forceGlobalSnapshot", false, "force loading of a global snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURL)
+	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURLs)
 	ErrSnapshotDownloadWasAborted      = errors.New("snapshot download was aborted")
+	ErrSnapshotDownloadNoValidSource   = errors.New("no valid source found, snapshot download not possible")
 	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
 	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
 	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
@@ -129,9 +130,9 @@ func configure(plugin *node.Plugin) {
 				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 					log.Fatalf("could not create snapshot dir '%s'", path)
 				}
-				if url := config.NodeConfig.GetString(config.CfgLocalSnapshotsDownloadURL); url != "" {
-					log.Infof("Downloading snapshot from %s", url)
-					downloadErr := downloadSnapshotFile(path, url)
+				if urls := config.NodeConfig.GetStringSlice(config.CfgLocalSnapshotsDownloadURLs); len(urls) > 0 {
+					log.Infof("Downloading snapshot from one of the provided sources %v", urls)
+					downloadErr := downloadSnapshotFile(path, urls)
 					if downloadErr != nil {
 						err = errors.Wrap(downloadErr, "Error downloading snapshot file")
 						break
