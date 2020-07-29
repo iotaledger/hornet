@@ -64,7 +64,6 @@ func isValidPeer(p *peer.Peer) bool {
 	}
 
 	// gossip service must be valid
-
 	if gossipService.Network() != "tcp" || !netutil.IsValidPort(gossipService.Port()) {
 		return false
 	}

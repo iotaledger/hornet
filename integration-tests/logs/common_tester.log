@@ -1,0 +1,11 @@
+copying assets into shared volume...
+assets:
+coordinator.tree
+entrypoint.sh
+previousEpochsSpentAddresses.txt
+snapshot.csv
+running tests...
+=== RUN   TestCommon
+--- PASS: TestCommon (30.63s)
+PASS
+ok  	github.com/gohornet/hornet/integration-tests/tester/tests/common	30.646s

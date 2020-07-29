@@ -1,8 +1,0 @@
-copying assets into shared volume...
-assets:
-coordinator.tree
-entrypoint.sh
-snapshot.txt
-running tests...
-can't load package: package ./tests/common: cannot find package "." in:
-	/tmp/hornet/tools/integration-tests/tester/tests/common

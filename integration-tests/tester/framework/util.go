@@ -9,7 +9,7 @@ import (
 
 // getWebAPIBaseURL returns the web API base url for the given IP.
 func getWebAPIBaseURL(hostname string) string {
-	return fmt.Sprintf("http://%s:%s", hostname, APIPort)
+	return fmt.Sprintf("http://%s:%d", hostname, WebAPIPort)
 }
 
 // createLogFile creates a log file from the given logs ReadCloser.

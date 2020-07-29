@@ -1,10 +1,10 @@
-package autopeering
+package common
 
 import (
 	"os"
 	"testing"
 
-	"github.com/iotaledger/goshimmer/tools/integration-tests/tester/framework"
+	"github.com/gohornet/hornet/integration-tests/tester/framework"
 )
 
 var f *framework.Framework
@@ -13,11 +13,8 @@ var f *framework.Framework
 // It is therefore used to initialize the integration testing framework.
 func TestMain(m *testing.M) {
 	var err error
-	f, err = framework.Instance()
-	if err != nil {
+	if f, err = framework.Instance(); err != nil {
 		panic(err)
 	}
-
-	// call the tests
 	os.Exit(m.Run())
 }

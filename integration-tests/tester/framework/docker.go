@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 )
 
 // newDockerClient creates a Docker client that communicates via the Docker socket.
@@ -54,58 +52,17 @@ func NewDockerContainerFromExisting(c *client.Client, name string) (*DockerConta
 	return nil, fmt.Errorf("could not find container with name '%s'", name)
 }
 
-// CreateHornetEntryNode creates a new container with the Hornet entry node's configuration.
-func (d *DockerContainer) CreateHornetEntryNode(name string, seed string) error {
+// CreateNode creates a new node container.
+func (d *DockerContainer) CreateNode(cfg *NodeConfig) error {
 	containerConfig := &container.Config{
-		Image:        "hornet:dev",
-		ExposedPorts: nil,
-		Cmd: strslice.StrSlice{
-			"--logger.level=debug",
-			fmt.Sprintf("--node.disablePlugins=%s", disabledPluginsEntryNode),
-			"--autopeering.entryNodes=",
-			fmt.Sprintf("--autopeering.seed=base58:%s", seed),
-		},
+		Image:        containerNodeImage,
+		ExposedPorts: cfg.ExposedPorts(),
+		Env:          cfg.Envs,
+		Cmd:          cfg.CLIFlags(),
 	}
 
-	return d.CreateContainer(name, containerConfig)
-}
-
-// CreateHornetPeer creates a new container with the Hornet peer's configuration.
-func (d *DockerContainer) CreateHornetPeer(config NodeConfig) error {
-	// configure Hornet container instance
-	containerConfig := &container.Config{
-		Image: "hornet:dev",
-		ExposedPorts: nat.PortSet{
-			nat.Port(fmt.Sprintf("%d/tcp", APIPort)): {},
-		},
-		Env: []string{fmt.Sprintf("COO_SEED=%s", coordinatorSeed)},
-		Cmd: strslice.StrSlice{
-			"--logger.level=debug",
-			fmt.Sprintf("--node.disablePlugins=%s", config.DisabledPlugins),
-			fmt.Sprintf("--node.enablePlugins=%s", func() string {
-				var plugins []string
-				if config.Coordinator {
-					plugins = append(plugins, "Coordinator")
-				}
-				return strings.Join(plugins, ",")
-			}()),
-			fmt.Sprintf("--coordinator.mwm=%d", ParaPoWDifficulty),
-			fmt.Sprintf("--coordinator.address=%s", coordinatorAddress),
-			fmt.Sprintf("--coordinator.intervalSeconds=%d", coordinatorIntervalSeconds),
-			fmt.Sprintf("--coordinator.securityLevel=%d", coordinatorSecurityLevel),
-			fmt.Sprintf("--coordinator.merkleTreeDepth=%d", coordinatorMerkleTreeDepth),
-			"--snapshots.loadType=global",
-			"--snapshots.global.path=snapshot.csv",
-			"--snapshots.global.index=0",
-			fmt.Sprintf("--snapshots.local.path=%s", config.SnapshotFilePath),
-			fmt.Sprintf("--httpAPI.bindAddress=%d", APIPort),
-			fmt.Sprintf("--autopeering.seed=base58:%s", config.AutopeeringSeed),
-			fmt.Sprintf("--autopeering.entryNodes=%s@%s:14626", config.EntryNodePublicKey, config.EntryNodeHost),
-		},
-	}
-
-	return d.CreateContainer(config.Name, containerConfig, &container.HostConfig{
-		Binds: []string{"hornet-testing-assets:/assets:rw"},
+	return d.CreateContainer(cfg.Name, containerConfig, &container.HostConfig{
+		Binds: cfg.Binds,
 	})
 }
 
@@ -127,7 +84,7 @@ func (d *DockerContainer) CreatePumba(name string, containerName string, targetI
 	}
 
 	slice := strslice.StrSlice{
-		"--tc-image=gaiadocker/iproute2",
+		fmt.Sprintf("--tc-image=%s", containerIPRouteImage),
 		"loss",
 		"--percent=100",
 		containerName,
@@ -135,7 +92,7 @@ func (d *DockerContainer) CreatePumba(name string, containerName string, targetI
 	cmd = append(cmd, slice...)
 
 	containerConfig := &container.Config{
-		Image: "gaiaadm/pumba:0.7.2",
+		Image: containerPumbaImage,
 		Cmd:   cmd,
 	}
 

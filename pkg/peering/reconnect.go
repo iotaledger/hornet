@@ -95,6 +95,7 @@ next:
 // adds the given peers to the reconnect pool.
 func (m *Manager) moveInitialPeersToReconnectPool(peers []*config.PeerConfig) {
 	for _, peerConf := range peers {
+		fmt.Println("conf", peerConf)
 		if peerConf.ID == "" {
 			continue
 		}

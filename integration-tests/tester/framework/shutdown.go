@@ -1,4 +1,4 @@
-package tests
+package framework
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Shutdowner is something which can be shutdown.
+// Shutdowner can shutdown itself.
 type Shutdowner interface {
 	Shutdown() error
 }

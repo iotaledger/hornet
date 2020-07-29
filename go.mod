@@ -4,9 +4,10 @@ go 1.15
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0
-	github.com/drand/drand v1.1.0
+	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200506085104-5ee50844ed64
 	github.com/fhmq/hmq v0.0.0-20200624071425-481a61c520fe
@@ -24,11 +25,12 @@ require (
 	github.com/iotaledger/goshimmer v0.2.1
 	github.com/iotaledger/goshimmer/tools/integration-tests/tester v0.0.0-20200722150815-cf7707dbe93f
 	github.com/iotaledger/hive.go v0.0.0-20200720084404-e6c3b4717f40
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200622064951-7fa4854396b2
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200729151348-3ce576f7cd9e
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/prometheus/client_golang v1.7.1
