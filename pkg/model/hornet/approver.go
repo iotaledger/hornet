@@ -1,6 +1,8 @@
 package hornet
 
 import (
+	"fmt"
+
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
@@ -28,7 +30,7 @@ func (a *Approver) GetApproverHash() Hash {
 // ObjectStorage interface
 
 func (a *Approver) Update(_ objectstorage.StorableObject) {
-	panic("Approver should never be updated")
+	panic(fmt.Sprintf("Approver should never be updated: %v, TxHash: %v", a.approverHash.Trytes(), a.txHash.Trytes()))
 }
 
 func (a *Approver) ObjectStorageKey() []byte {

@@ -53,6 +53,13 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
+	// Reject empty requests
+	if len(query.Trytes) == 0 {
+		e.Error = "No trytes given."
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
 	// Set the fastest PoW method
 	if !powSet {
 		powType, powFunc = pow.GetFastestProofOfWorkImpl()

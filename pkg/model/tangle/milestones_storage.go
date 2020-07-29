@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -62,7 +63,7 @@ type Milestone struct {
 // ObjectStorage interface
 
 func (ms *Milestone) Update(_ objectstorage.StorableObject) {
-	panic("Milestone should never be updated")
+	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.Hash.Trytes(), ms.Index))
 }
 
 func (ms *Milestone) ObjectStorageKey() []byte {

@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc6] - 29.07.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - Added whiteflag test setup (#572)
+    - Add autopeering rule to drop neighbors with LSMI below our pruning index
+
+### Removed
+
+    - Unused RefsInvalidBundles cache
+
+### Fixed
+
+    - Visualizer: wrong color of some connections between transactions
+    - Index out of range in attachToTangle
+    - Do not drop autopeering and "acceptAny" peers on peering.json change
+
 ## [0.5.0-rc5] - 28.07.2020
 
 **Breaking change:**
