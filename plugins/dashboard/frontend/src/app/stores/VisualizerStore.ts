@@ -314,14 +314,14 @@ export class VisualizerStore {
         } else {
             node = this.graph.addNode(vert.id.substring(0,idLength), vert);
         }
-        if (vert.trunk_id && (!node.links || !node.links.some(link => link.fromId === vert.trunk_id))) {
-            this.graph.addLink(vert.trunk_id, vert.id.substring(0,idLength));
+        if (vert.trunk_id && (!node.links || !node.links.some(link => link.toId === vert.trunk_id))) {
+            this.graph.addLink(vert.id.substring(0,idLength), vert.trunk_id);
         }
         if (vert.trunk_id === vert.branch_id) {
             return;
         }
-        if (vert.branch_id && (!node.links || !node.links.some(link => link.fromId === vert.branch_id))) {
-            this.graph.addLink(vert.branch_id, vert.id.substring(0,idLength));
+        if (vert.branch_id && (!node.links || !node.links.some(link => link.toId === vert.branch_id))) {
+            this.graph.addLink(vert.id.substring(0,idLength), vert.branch_id);
         }
     }
 
@@ -448,6 +448,10 @@ export class VisualizerStore {
         let node = this.graph.getNode(vert.id.substring(0,idLength));
         this.updateNodeUI(vert);
 
+        // set -1 because starting node is also counted
+        this.selected_approvers_count = -1;
+        this.selected_approvees_count = -1;
+
         const seenForward = [];
         const seenBackwards = [];
         dfsIterator(
@@ -560,7 +564,7 @@ export default VisualizerStore;
 // node is the starting node for the walk.
 // cb is called on every node. If true, the links of the node are skipped.
 // if up is true, the future cone is walked, otherwise past cone.
-// cbLinks is called on every link.
+// cbLinks is called on every walked link.
 // seenNodes is the array of walked nodes.
 function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) {
     seenNodes.push(node);
@@ -572,15 +576,22 @@ function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) 
         if (cb(node)) continue;
 
         for (const link of node.links) {
-            if (cbLinks) cbLinks(link);
 
-            if (!up && link.toId === node.id.substring(0,idLength) && !seenNodes.includes(graph.getNode(link.fromId))) {
-                seenNodes.push(graph.getNode(link.fromId));
-                continue;
+            if (!up && link.fromId === node.id.substring(0,idLength)) {
+                if (cbLinks) cbLinks(link);
+
+                if (!seenNodes.includes(graph.getNode(link.toId))) {
+                    seenNodes.push(graph.getNode(link.toId));
+                    continue;
+                }
             }
 
-            if (up && link.fromId === node.id.substring(0,idLength) && !seenNodes.includes(graph.getNode(link.toId))) {
-                seenNodes.push(graph.getNode(link.toId));
+            if (up && link.toId === node.id.substring(0,idLength)) {
+                if (cbLinks) cbLinks(link);
+
+                if (!seenNodes.includes(graph.getNode(link.fromId))) {
+                    seenNodes.push(graph.getNode(link.fromId));
+                }
             }
         }
     }
