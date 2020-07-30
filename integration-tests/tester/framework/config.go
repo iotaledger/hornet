@@ -47,7 +47,7 @@ func DefaultConfig() *NodeConfig {
 		Name: "",
 		Envs: []string{"LOGGER_LEVEL=debug"},
 		Binds: []string{
-			"hornet-testing-assets:/assets:rw",
+			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
 		},
 		Network:     DefaultNetworkConfig(),
 		Snapshot:    DefaultSnapshotConfig(),

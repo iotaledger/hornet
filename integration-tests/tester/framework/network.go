@@ -42,7 +42,7 @@ func (n *Network) PrefixName(suffix string) string {
 	return fmt.Sprintf("%s-%s", n.Name, suffix)
 }
 
-// AwaitOnline awaits until all nodes are online or the given context is cancelled.
+// AwaitOnline awaits until all nodes are online or the given context is canceled.
 func (n *Network) AwaitOnline(ctx context.Context) error {
 	log.Println("waiting for nodes to become online...")
 	for _, node := range n.Nodes {
