@@ -36,7 +36,7 @@ func (n *AutopeeredNetwork) createEntryNode() error {
 	n.entryNode = NewDockerContainer(n.dockerClient)
 
 	cfg := DefaultConfig()
-	cfg.Name = containerNameEntryNode
+	cfg.Name = n.PrefixName(containerNameEntryNode)
 	cfg.Network.RunAsEntryNode = true
 	cfg.Network.AutopeeringSeed = seed
 	cfg.Plugins.Disabled = disabledPluginsEntryNode
@@ -57,8 +57,7 @@ func (n *AutopeeredNetwork) createEntryNode() error {
 // AwaitPeering waits until all peers have reached the minimum amount of neighbors.
 // Returns error if this minimum is not reached after autopeeringMaxTries.
 func (n *AutopeeredNetwork) AwaitPeering(minimumNeighbors int) error {
-	log.Printf("Waiting for autopeering...\n")
-	defer log.Printf("Waiting for autopeering... done\n")
+	log.Printf("waiting for nodes to fulfill min. autopeer criteria (%d)...", minimumNeighbors)
 
 	if minimumNeighbors == 0 {
 		return nil
@@ -75,7 +74,6 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumNeighbors int) error {
 			p.SetNeighbors(resp)
 		}
 
-		// verify neighbor requirement
 		min := 100
 		total := 0
 		for _, p := range n.Nodes {
@@ -85,12 +83,13 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumNeighbors int) error {
 			}
 			total += neighbors
 		}
+
 		if min >= minimumNeighbors {
-			log.Printf("Neighbors: min=%d avg=%.2f\n", min, float64(total)/float64(len(n.Nodes)))
+			log.Printf("neighbors: min=%d avg=%.2f\n", min, float64(total)/float64(len(n.Nodes)))
 			return nil
 		}
 
-		log.Println("Not done yet. Try again in 5 seconds...")
+		log.Printf("criteria (%d) not fulfilled yet. trying again in 5 seconds...", minimumNeighbors)
 		time.Sleep(5 * time.Second)
 	}
 
@@ -99,8 +98,12 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumNeighbors int) error {
 
 // CreatePeer creates a new Hornet node initialized with the right entry node.
 func (n *AutopeeredNetwork) CreatePeer(cfg *NodeConfig) (*Node, error) {
+	ip, err := n.entryNode.IP(n.Name)
+	if err != nil {
+		return nil, err
+	}
 	cfg.Network.EntryNodes = []string{
-		fmt.Sprintf("%s@%s:14626", n.PrefixName(containerNameEntryNode), n.entryNodePublicKey()),
+		fmt.Sprintf("%s@%s:14626", n.entryNodePublicKey(), ip),
 	}
 	return n.Network.CreatePeer(cfg)
 }
@@ -153,9 +156,9 @@ func (n *AutopeeredNetwork) entryNodePublicKey() string {
 }
 
 // createPumba creates and starts a Pumba Docker container.
-func (n *AutopeeredNetwork) createPumba(name string, containerName string, targetIPs []string) (*DockerContainer, error) {
+func (n *AutopeeredNetwork) createPumba(pumbaContainerName string, targetContainerName string, targetIPs []string) (*DockerContainer, error) {
 	container := NewDockerContainer(n.dockerClient)
-	if err := container.CreatePumba(name, containerName, targetIPs); err != nil {
+	if err := container.CreatePumba(pumbaContainerName, targetContainerName, targetIPs); err != nil {
 		return nil, err
 	}
 	if err := container.Start(); err != nil {

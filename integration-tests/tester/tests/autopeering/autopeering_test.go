@@ -1,4 +1,4 @@
-package common
+package autopeering
 
 import (
 	"context"
@@ -10,10 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCommon boots up a statically peered network and then checks that all
-// nodes are sync, meaning that they actually received milestones.
-func TestCommon(t *testing.T) {
-	n, err := f.CreateStaticNetwork("test_common", framework.DefaultStaticPeeringLayout)
+// TestAutopeering creates an autopeered network and then checks whether all nodes are synced.
+// This test exists merely as a sanity check to verify that nodes still can connect to each other and
+// are able to synchronize.
+func TestAutopeering(t *testing.T) {
+	n, err := f.CreateAutopeeredNetwork("autop", 4, 2)
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 

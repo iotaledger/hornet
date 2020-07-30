@@ -20,7 +20,7 @@ const (
 	autopeeringMaxTries = 50
 
 	containerNodeImage    = "hornet:dev"
-	containerPumbaImage   = "gaiaadm/pumba:0.7.2"
+	containerPumbaImage   = "gaiaadm/pumba:0.7.4"
 	containerIPRouteImage = "gaiadocker/iproute2"
 
 	containerNameTester      = "/tester"
@@ -44,9 +44,8 @@ var (
 // DefaultConfig returns the default NodeConfig.
 func DefaultConfig() *NodeConfig {
 	return &NodeConfig{
-		AutopeeringSeed: "",
-		Name:            "",
-		Envs:            []string{"LOGGER_LEVEL=debug"},
+		Name: "",
+		Envs: []string{"LOGGER_LEVEL=debug"},
 		Binds: []string{
 			"hornet-testing-assets:/assets:rw",
 		},
@@ -60,8 +59,6 @@ func DefaultConfig() *NodeConfig {
 
 // NodeConfig defines the config of a Hornet node.
 type NodeConfig struct {
-	// The autopeering seed.
-	AutopeeringSeed string
 	// The name of this node.
 	Name string
 	// Environment variables.
@@ -80,8 +77,16 @@ type NodeConfig struct {
 	Plugins PluginConfig
 }
 
+// AsCoo adjusts the config to make it usable as the Coordinator's config.
+func (cfg *NodeConfig) AsCoo() {
+	cfg.Coordinator.Bootstrap = true
+	cfg.Coordinator.RunAsCoo = true
+	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Coordinator")
+	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_SEED=%s", cfg.Coordinator.Seed))
+}
+
 // CLIFlags returns the config as CLI flags.
-func (cfg NodeConfig) CLIFlags() []string {
+func (cfg *NodeConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, cfg.Network.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Snapshot.CLIFlags()...)
@@ -92,7 +97,7 @@ func (cfg NodeConfig) CLIFlags() []string {
 }
 
 // ExposedPorts returns a set of to expose ports on the container.
-func (cfg NodeConfig) ExposedPorts() nat.PortSet {
+func (cfg *NodeConfig) ExposedPorts() nat.PortSet {
 	return nat.PortSet{
 		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
 	}
@@ -115,7 +120,7 @@ type NetworkConfig struct {
 }
 
 // CLIFlags returns the config as CLI flags.
-func (netConfig NetworkConfig) CLIFlags() []string {
+func (netConfig *NetworkConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", config.CfgNetAutopeeringSeed, netConfig.AutopeeringSeed),
 		fmt.Sprintf("--%s=%s", config.CfgNetAutopeeringEntryNodes, strings.Join(netConfig.EntryNodes, ",")),
@@ -143,7 +148,7 @@ type WebAPIConfig struct {
 }
 
 // CLIFlags returns the config as CLI flags.
-func (webAPIConfig WebAPIConfig) CLIFlags() []string {
+func (webAPIConfig *WebAPIConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", config.CfgWebAPIBindAddress, webAPIConfig.BindAddress),
 		fmt.Sprintf("--%s=%s", config.CfgWebAPIPermitRemoteAccess, strings.Join(webAPIConfig.PermittedAPICalls, ",")),
@@ -190,7 +195,7 @@ type PluginConfig struct {
 }
 
 // CLIFlags returns the config as CLI flags.
-func (pluginConfig PluginConfig) CLIFlags() []string {
+func (pluginConfig *PluginConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--node.enablePlugins=%s", strings.Join(pluginConfig.Enabled, ",")),
 		fmt.Sprintf("--node.disablePlugins=%s", strings.Join(pluginConfig.Disabled, ",")),
@@ -222,7 +227,7 @@ type SnapshotConfig struct {
 }
 
 // CLIFlags returns the config as CLI flags.
-func (snapshotConfig SnapshotConfig) CLIFlags() []string {
+func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", config.CfgSnapshotLoadType, snapshotConfig.LoadType),
 		fmt.Sprintf("--%s=%s", config.CfgGlobalSnapshotPath, snapshotConfig.GlobalSnapshotFilePath),
@@ -268,7 +273,7 @@ type CoordinatorConfig struct {
 }
 
 // CLIFlags returns the config as CLI flags.
-func (cooConfig CoordinatorConfig) CLIFlags() []string {
+func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMWM, cooConfig.MWM),

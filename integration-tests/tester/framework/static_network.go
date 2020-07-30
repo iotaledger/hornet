@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -12,6 +13,38 @@ type connected bool
 // StaticPeeringLayout defines how in a statically peered
 // network nodes are peered to each other.
 type StaticPeeringLayout map[int]map[int]connected
+
+// Validate validates whether the static peering layout is valid by checking:
+//	- the layout isn't empty
+//	- keys must be continuous numbers reflecting the ID of the node
+//	- a node must hold nodes to peer to and they must exist in the map
+//	- a node doesn't peer to itself
+func (spl StaticPeeringLayout) Validate() error {
+	if len(spl) == 0 {
+		return ErrLayoutEmpty
+	}
+
+	// we i-loop over the map to verify that the keys are indeed continuous numbers
+	for i := 0; i < len(spl); i++ {
+		peers, has := spl[i]
+		if !has {
+			return fmt.Errorf("%w: %d", ErrNodeMissingInLayout, i)
+		}
+		if len(peers) == 0 {
+			return fmt.Errorf("%w: %d", ErrNoStaticPeers, i)
+		}
+		for peerID := range peers {
+			if peerID == i {
+				return fmt.Errorf("%w: id %d", ErrSelfPeering, i)
+			}
+			if _, has := spl[peerID]; !has {
+				return fmt.Errorf("%w: %d can't peer to undefined peer %d", ErrNodeMissingInLayout, i, peerID)
+			}
+		}
+	}
+
+	return nil
+}
 
 // DefaultStaticPeeringLayout defines a static peering layout with 4 nodes
 // which are all statically peered to each other.
@@ -30,18 +63,16 @@ type StaticNetwork struct {
 
 // ConnectNodes peers the nodes of the network according to the given layout with each other.
 func (n *StaticNetwork) ConnectNodes() error {
-
 	// await for all nodes to become online
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := n.AwaitOnline(ctx); err != nil {
 		return err
 	}
 
-	// cool down period
-	time.Sleep(2 * time.Second)
-
 	// manually connect peers to each other according to the layout
+	log.Printf("statically peering %d nodes", len(n.layout))
+	s := time.Now()
 	for i := 0; i < len(n.layout); i++ {
 		peers := n.layout[i]
 		node := n.Nodes[i]
@@ -56,32 +87,45 @@ func (n *StaticNetwork) ConnectNodes() error {
 			if _, err := node.WebAPI.AddNeighbors(uri); err != nil {
 				return fmt.Errorf("%w: couldn't add peer %v", err, uri)
 			}
-			time.Sleep(1* time.Millisecond)
+			log.Printf("connected %s with %s", node.IP, peer.IP)
 		}
 	}
+
+	peeringCtx, peeringCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer peeringCtxCancel()
+	if err := n.AwaitPeering(peeringCtx); err != nil {
+		return err
+	}
+	log.Printf("static peering took %v", time.Since(s))
 	return nil
 }
 
 // AwaitPeering awaits until all nodes are peered according to the peering layout.
 func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
-	for nodeID, itsPeers := range n.layout {
+	log.Println("verifying peering...")
+	for nodeID, layoutNeighbors := range n.layout {
+		node := n.Nodes[nodeID]
 		for {
-			select {
-			case <-ctx.Done():
-				return ErrNodesDidNotPeerInTime
-			default:
+			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotPeerInTime); err != nil {
+				return err
 			}
-			node := n.Nodes[nodeID]
+
 			neighbors, err := node.DebugWebAPI.Neighbors()
 			if err != nil {
-				time.Sleep(250 * time.Millisecond)
 				continue
 			}
 
-			// we don't check whether the node is actually peered
-			// to what was layed out but since there is no autopeering
-			// the neighbors must match what was defined in the layout.
-			if len(neighbors) == len(itsPeers) {
+			var peered int
+			for layoutNeighbor := range layoutNeighbors {
+				layoutNode := n.Nodes[layoutNeighbor]
+				for _, neighbor := range neighbors {
+					if neighbor.Address == fmt.Sprintf("%s:15600", layoutNode.IP) {
+						peered++
+					}
+				}
+			}
+
+			if peered == len(layoutNeighbors) {
 				break
 			}
 		}

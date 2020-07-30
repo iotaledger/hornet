@@ -4,8 +4,9 @@
 package framework
 
 import (
+	"context"
 	"errors"
-	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -72,52 +73,21 @@ func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout)
 		return nil, err
 	}
 
-	if len(layout) == 0 {
-		return nil, ErrLayoutEmpty
+	if err := layout.Validate(); err != nil {
+		return nil, err
 	}
-
-	/*
-		// precompute the container names to define the static peers within the config
-		// at startup without having to rely on addNeighbors. this ensures that we
-		// don't encounter any race condition if we addNeighbors() too fast.
-		var containerNames []string
-		for i := 0; i < len(layout); i++ {
-			containerNames = append(containerNames, fmt.Sprintf("%s-%s%d", name, containerNameReplica, i))
-		}
-	*/
 
 	for i := 0; i < len(layout); i++ {
 		cfg := DefaultConfig()
+		if i == 0 {
+			cfg.AsCoo()
+		}
+		// since we use addNeighbors to peer the nodes with each other, we need to let
+		// them accept any connection. we don't define the neighbors on startup to prevent
+		// nodes from canceling out each other's connection.
 		cfg.Network.AcceptAnyConnection = true
 		cfg.Network.MaxPeers = len(layout)
-		// make the first node the coordinator
-		if i == 0 {
-			cfg.Coordinator.Bootstrap = true
-			cfg.Coordinator.RunAsCoo = true
-			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Coordinator")
-			cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_SEED=%s", cfg.Coordinator.Seed))
-		}
-		// disable autopeering
 		cfg.Plugins.Disabled = append(cfg.Plugins.Disabled, "autopeering")
-		// define static peers
-		peers, has := layout[i]
-		if !has {
-			return nil, fmt.Errorf("%w: %d", ErrNodeMissingInLayout, i)
-		}
-		if len(peers) == 0 {
-			return nil, fmt.Errorf("%w: %d", ErrNoStaticPeers, i)
-		}
-		//var staticPeers []string
-		for peerID := range peers {
-			if peerID == i {
-				return nil, fmt.Errorf("%w: id %d", ErrSelfPeering, i)
-			}
-			if _, has := layout[peerID]; !has {
-				return nil, fmt.Errorf("%w: %d can't peer to undefined peer %d", ErrNodeMissingInLayout, i, peerID)
-			}
-			//staticPeers = append(staticPeers, fmt.Sprintf("%s:15600", containerNames[peerID]))
-		}
-		//cfg.Network.StaticPeers = staticPeers
 		if _, err = network.CreatePeer(cfg); err != nil {
 			return nil, err
 		}
@@ -143,20 +113,23 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumN
 		return nil, err
 	}
 
-	// create Hornet nodes
 	for i := 0; i < peerCount; i++ {
 		cfg := DefaultConfig()
 		if i == 0 {
-			cfg.Coordinator.Bootstrap = true
-			cfg.Coordinator.RunAsCoo = true
+			cfg.AsCoo()
 		}
-		if _, err = network.CreatePeer(cfg); err != nil {
+		if _, err = autoNetwork.CreatePeer(cfg); err != nil {
 			return nil, err
 		}
 	}
 
-	// wait until containers are fully started
-	time.Sleep(1 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := network.AwaitOnline(ctx); err != nil {
+		return nil, err
+	}
+
+	// await minimum auto. peers
 	if err := autoNetwork.AwaitPeering(minimumNeighbors); err != nil {
 		return nil, err
 	}
@@ -178,11 +151,8 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 		return nil, err
 	}
 
-	if err = autoNetwork.createEntryNode(); err != nil {
-		return nil, err
-	}
-
 	// block all traffic from/to entry node
+	log.Println("blocking traffic to entry node...")
 	pumbaEntryNodeName := network.PrefixName(containerNameEntryNode) + containerNameSuffixPumba
 	pumbaEntryNode, err := autoNetwork.createPumba(
 		pumbaEntryNodeName,
@@ -200,20 +170,23 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 	for i := 0; i < peerCount; i++ {
 		cfg := DefaultConfig()
 		if i == 0 {
-			cfg.Coordinator.Bootstrap = true
-			cfg.Coordinator.RunAsCoo = true
+			cfg.AsCoo()
 		}
-		if _, err = network.CreatePeer(cfg); err != nil {
+		if _, err = autoNetwork.CreatePeer(cfg); err != nil {
 			return nil, err
 		}
 	}
 
-	// wait until containers are fully started
-	time.Sleep(2 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := network.AwaitOnline(ctx); err != nil {
+		return nil, err
+	}
 
 	// create partitions
 	chunkSize := peerCount / partitions
 	var end int
+	log.Printf("partitioning nodes from each other (%d partitions, %d nodes per partition)...", partitions, chunkSize)
 	for i := 0; end < peerCount; i += chunkSize {
 		end = i + chunkSize
 		// last partitions takes the rest
@@ -229,6 +202,7 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 	time.Sleep(5 * time.Second)
 
 	// delete pumba for entry node
+	log.Println("unblocking traffic to entry node...")
 	if err := pumbaEntryNode.Stop(); err != nil {
 		return nil, err
 	}

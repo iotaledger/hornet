@@ -24,7 +24,7 @@ const (
 	// set the maximum number of peers
 	CfgPeeringMaxPeers = "maxPeers"
 	// set the URLs and IP addresses of peers
-	CfgPeers = "peers"
+	CfgPeers = "peering.peers"
 	// sets a list of static peers, this is only used for CLI flags
 	CfgPeersList = "peerslist"
 

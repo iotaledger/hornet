@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,16 @@ import (
 // getWebAPIBaseURL returns the web API base url for the given IP.
 func getWebAPIBaseURL(hostname string) string {
 	return fmt.Sprintf("http://%s:%d", hostname, WebAPIPort)
+}
+
+// returns the given error if the provided context is done.
+func returnErrIfCtxDone(ctx context.Context, err error) error {
+	select {
+	case <-ctx.Done():
+		return err
+	default:
+		return nil
+	}
 }
 
 // createLogFile creates a log file from the given logs ReadCloser.

@@ -3,8 +3,8 @@ package framework
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -44,15 +44,13 @@ func (n *Network) PrefixName(suffix string) string {
 
 // AwaitOnline awaits until all nodes are online or the given context is cancelled.
 func (n *Network) AwaitOnline(ctx context.Context) error {
+	log.Println("waiting for nodes to become online...")
 	for _, node := range n.Nodes {
 		for {
-			select {
-			case <-ctx.Done():
-				return ErrNodesNotOnlineInTime
-			default:
+			if err := returnErrIfCtxDone(ctx, ErrNodesNotOnlineInTime); err != nil {
+				return err
 			}
 			if _, err := node.WebAPI.GetNodeInfo(); err != nil {
-				time.Sleep(250 * time.Millisecond)
 				continue
 			}
 			break
@@ -65,14 +63,11 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 func (n *Network) AwaitAllSync(ctx context.Context) error {
 	for _, node := range n.Nodes {
 		for {
-			select {
-			case <-ctx.Done():
-				return ErrNodesDidNotSyncInTime
-			default:
+			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {
+				return err
 			}
 			info, err := node.DebugWebAPI.Info()
 			if err != nil {
-				time.Sleep(250 * time.Millisecond)
 				continue
 			}
 			if info.IsSynced {
@@ -95,7 +90,7 @@ func (n *Network) CreatePeer(cfg *NodeConfig) (*Node, error) {
 	seed := privateKey.Seed().String()
 
 	cfg.Name = name
-	cfg.AutopeeringSeed = seed
+	cfg.Network.AutopeeringSeed = seed
 
 	// create Docker container
 	container := NewDockerContainer(n.dockerClient)

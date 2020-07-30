@@ -1,12 +1,12 @@
 #!/bin/bash
 
-TEST_NAMES='common'
+TEST_NAMES='common autopeering'
 
 echo "Build Hornet image"
 docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
 
 echo "Pull additional Docker images"
-docker pull gaiaadm/pumba:0.7.2
+docker pull gaiaadm/pumba:0.7.4
 docker pull gaiadocker/iproute2:latest
 
 echo "Run integration tests"
