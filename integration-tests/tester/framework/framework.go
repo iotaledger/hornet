@@ -4,7 +4,6 @@
 package framework
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -124,34 +123,10 @@ func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout)
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	if err := network.AwaitOnline(ctx); err != nil {
+	staticNet := &StaticNetwork{Network: network, layout: layout}
+	if err := staticNet.ConnectNodes(); err != nil {
 		return nil, err
 	}
-
-	time.Sleep(1 * time.Second)
-
-	// manually connect peers to each other
-	for i := 0; i < len(layout); i++ {
-		peers := layout[i]
-		node := network.Nodes[i]
-		var uris []string
-		for peerIndex := range peers {
-			peer := network.Nodes[peerIndex]
-			alreadyPeered := layout[peerIndex][i]
-			if alreadyPeered {
-				continue
-			}
-			uris = append(uris, fmt.Sprintf("tcp://%s:15600", peer.IP))
-			layout[peerIndex][i] = true
-		}
-		if _, err := node.WebAPI.AddNeighbors(uris...); err != nil {
-			return nil, fmt.Errorf("%w: couldn't add peers %v", err, uris)
-		}
-	}
-
-	staticNet := &StaticNetwork{Network: network, layout: layout}
 	return staticNet, nil
 }
 
