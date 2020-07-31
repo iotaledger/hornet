@@ -13,3 +13,58 @@ jobs:
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+
+      - name: Build HORNET image
+        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+
+      - name: Pull additional Docker images
+        run: |
+          docker pull gaiaadm/pumba:0.7.4
+          docker pull gaiadocker/iproute2:latest
+
+      - name: Run integration tests
+        run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
+
+      - name: Create logs from tester
+        if: always()
+        run: |
+          docker logs tester &> integration-tests/logs/tester.log
+
+      - name: Save logs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ env.TEST_NAME }}
+          path: integration-tests/logs
+
+  autopeering:
+    name: autopeering
+    env:
+      TEST_NAME: autopeering
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Build HORNET image
+        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+
+      - name: Pull additional Docker images
+        run: |
+          docker pull gaiaadm/pumba:0.7.4
+          docker pull gaiadocker/iproute2:latest
+
+      - name: Run integration tests
+        run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
+
+      - name: Create logs from tester
+        if: always()
+        run: |
+          docker logs tester &> integration-tests/logs/tester.log
+
+      - name: Save logs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ env.TEST_NAME }}
+          path: integration-tests/logs
