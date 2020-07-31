@@ -26,7 +26,7 @@ func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) 
 		return
 	}
 
-	tips, err := urts.TipSelector.SelectTips()
+	tips, err := urts.TipSelector.SelectNonLazyTips()
 	if err != nil {
 		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
 			e.Error = err.Error()

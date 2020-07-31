@@ -80,7 +80,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Tips
-	result.Tips = metrics.SharedServerMetrics.Tips.Load()
+	result.Tips = metrics.SharedServerMetrics.TipsNonLazy.Load() + metrics.SharedServerMetrics.TipsSemiLazy.Load()
 
 	// TX to request
 	queued, pending, _ := gossip.RequestQueue().Size()

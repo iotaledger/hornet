@@ -63,7 +63,10 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	timeStart := time.Now()
-	tips, err := urts.TipSelector.SelectTips()
+
+	tipselFunc := urts.TipSelector.SelectNonLazyTips
+
+	tips, err := tipselFunc()
 	if err != nil {
 		return
 	}
