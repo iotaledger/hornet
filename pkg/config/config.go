@@ -74,17 +74,17 @@ func FetchConfig() error {
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
 
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName))
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName), true)
 	if err != nil {
 		return err
 	}

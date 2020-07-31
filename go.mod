@@ -25,6 +25,7 @@ require (
 	github.com/iotaledger/goshimmer v0.2.1
 	github.com/iotaledger/goshimmer/tools/integration-tests/tester v0.0.0-20200722150815-cf7707dbe93f
 	github.com/iotaledger/hive.go v0.0.0-20200720084404-e6c3b4717f40
+	github.com/iotaledger/hive.go v0.0.0-20200731104332-b8674bf95bc3
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200729151348-3ce576f7cd9e
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0
@@ -48,4 +49,6 @@ require (
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
+	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
+	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 )
