@@ -28,21 +28,25 @@ type ConfirmedMilestoneStats struct {
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
 func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 	defer cachedMsBundle.Release()
+	msBundle := cachedMsBundle.GetBundle()
 
 	tangle.WriteLockLedger()
 	defer tangle.WriteUnlockLedger()
 
-	milestoneIndex := cachedMsBundle.GetBundle().GetMilestoneIndex()
+	milestoneIndex := msBundle.GetMilestoneIndex()
 
 	ts := time.Now()
-	confirmation, err := ComputeConfirmation(tangle.GetMilestoneMerkleHashFunc(), cachedMsBundle.Retain(), milestoneIndex)
+
+	confirmation, err := ComputeConfirmation(tangle.GetMilestoneMerkleHashFunc(), msBundle.GetTailHash())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
 	}
+	confirmation.MilestoneIndex = milestoneIndex
+	confirmation.MilestoneHash = msBundle.GetTailHash()
 
 	// Verify the calculated MerkleTreeHash with the one inside the milestone
-	merkleTreeHash := cachedMsBundle.GetBundle().GetMilestoneMerkleTreeHash()
+	merkleTreeHash := msBundle.GetMilestoneMerkleTreeHash()
 	if !bytes.Equal(confirmation.MerkleTreeHash, merkleTreeHash) {
 		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(confirmation.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
 	}
@@ -54,7 +58,7 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 		return nil, fmt.Errorf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
 	}
 
-	cachedMsTailTx := cachedMsBundle.GetBundle().GetTail()
+	cachedMsTailTx := msBundle.GetTail()
 
 	cachedTxs := make(map[string]*tangle.CachedTransaction)
 	cachedTxs[string(cachedMsTailTx.GetTransaction().GetTxHash())] = cachedMsTailTx
