@@ -37,23 +37,27 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 
 	ts := time.Now()
 
-	confirmation, err := ComputeConfirmation(tangle.GetMilestoneMerkleHashFunc(), msBundle.GetTailHash())
+	mutations, err := ComputeWhiteFlagMutations(tangle.GetMilestoneMerkleHashFunc(), msBundle.GetTailHash())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
 	}
-	confirmation.MilestoneIndex = milestoneIndex
-	confirmation.MilestoneHash = msBundle.GetTailHash()
+
+	confirmation := &Confirmation{
+		MilestoneIndex: milestoneIndex,
+		MilestoneHash: msBundle.GetTailHash(),
+		Mutations: mutations,
+	}
 
 	// Verify the calculated MerkleTreeHash with the one inside the milestone
 	merkleTreeHash := msBundle.GetMilestoneMerkleTreeHash()
-	if !bytes.Equal(confirmation.MerkleTreeHash, merkleTreeHash) {
-		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(confirmation.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
+	if !bytes.Equal(mutations.MerkleTreeHash, merkleTreeHash) {
+		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(mutations.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
 	}
 
 	tc := time.Now()
 
-	err = tangle.ApplyLedgerDiffWithoutLocking(confirmation.AddressMutations, milestoneIndex)
+	err = tangle.ApplyLedgerDiffWithoutLocking(mutations.AddressMutations, milestoneIndex)
 	if err != nil {
 		return nil, fmt.Errorf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
 	}
@@ -126,7 +130,7 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	confirmationTime := cachedMsTailTx.GetTransaction().GetTimestamp()
 
 	// confirm all txs of the included tails
-	for _, txHash := range confirmation.TailsIncluded {
+	for _, txHash := range mutations.TailsIncluded {
 		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
 			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
@@ -141,7 +145,7 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	}
 
 	// confirm all txs of the zero value tails
-	for _, txHash := range confirmation.TailsExcludedZeroValue {
+	for _, txHash := range mutations.TailsExcludedZeroValue {
 		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
 			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
@@ -156,7 +160,7 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	}
 
 	// confirm all conflicting txs of the conflicting tails
-	for _, txHash := range confirmation.TailsExcludedConflicting {
+	for _, txHash := range mutations.TailsExcludedConflicting {
 		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConflicting(true)
 			tx.GetMetadata().SetConfirmed(true, milestoneIndex)

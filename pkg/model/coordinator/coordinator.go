@@ -264,12 +264,12 @@ func (coo *Coordinator) issueCheckpointWithoutLocking(minRequiredTips int) error
 func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
 	// compute merkle tree root
-	wfConfirmation, err := whiteflag.ComputeConfirmation(coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.milestoneMerkleHashFunc, trunkHash, branchHash)
 	if err != nil {
 		return err
 	}
 
-	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, wfConfirmation.MerkleTreeHash, coo.powFunc)
+	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powFunc)
 	if err != nil {
 		return err
 	}

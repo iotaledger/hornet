@@ -25,6 +25,12 @@ type Confirmation struct {
 	MilestoneIndex milestone.Index
 	// The transaction hash of the tail transaction of the milestone that got confirmed.
 	MilestoneHash hornet.Hash
+	// The ledger mutations and referenced transactions of this milestone.
+	Mutations *WhiteFlagMutations
+}
+
+// WhiteFlagMutations contains the ledger mutations and referenced transactions applied to a cone under the "white-flag" approach.
+type WhiteFlagMutations struct {
 	// The tails of bundles which mutate the ledger in the order in which they were applied.
 	TailsIncluded hornet.Hashes
 	// The tails of bundles which were excluded as they were conflicting with the mutations.
@@ -49,8 +55,8 @@ type Confirmation struct {
 // It also computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*Confirmation, error) {
-	wfConf := &Confirmation{
+func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
+	wfConf := &WhiteFlagMutations{
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
 		TailsExcludedZeroValue:   make(hornet.Hashes, 0),
