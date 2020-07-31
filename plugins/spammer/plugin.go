@@ -34,6 +34,7 @@ var (
 	bundleSize          int
 	valueSpam           bool
 	spammerWorkerCount  int
+	semiLazyTipsLimit   uint32
 	checkPeersConnected bool
 	spammerAvgHeap      *utils.TimeHeap
 	spammerStartTime    time.Time
@@ -58,6 +59,7 @@ func configure(plugin *node.Plugin) {
 	bundleSize = config.NodeConfig.GetInt(config.CfgSpammerBundleSize)
 	valueSpam = config.NodeConfig.GetBool(config.CfgSpammerValueSpam)
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
+	semiLazyTipsLimit = config.NodeConfig.GetUint32(config.CfgSpammerSemiLazyTipsLimit)
 	checkPeersConnected = node.IsSkipped(coordinator.PLUGIN)
 	spammerAvgHeap = utils.NewTimeHeap()
 

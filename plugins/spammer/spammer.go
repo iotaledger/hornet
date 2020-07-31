@@ -65,6 +65,9 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	timeStart := time.Now()
 
 	tipselFunc := urts.TipSelector.SelectNonLazyTips
+	if semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit {
+		tipselFunc = urts.TipSelector.SelectSemiLazyTips
+	}
 
 	tips, err := tipselFunc()
 	if err != nil {
