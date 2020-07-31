@@ -3,6 +3,7 @@ package dag
 import (
 	"bytes"
 	"container/list"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -51,7 +52,7 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 		// called on solid entry points
 		func(approveeHash hornet.Hash) {
 			// Ignore solid entry points (snapshot milestone included)
-		}, true, false, nil)
+		}, true, false, false, nil)
 
 	return tails, err
 }
@@ -70,7 +71,7 @@ type OnSolidEntryPoint func(txHash hornet.Hash)
 
 // processStackApprovees checks if the current element in the stack must be processed or traversed.
 // first the trunk is traversed, then the branch.
-func processStackApprovees(stack *list.List, processed map[string]struct{}, checked map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func processStackApprovees(stack *list.List, processed map[string]struct{}, checked map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
 	select {
 	case <-abortSignal:
@@ -139,8 +140,24 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		return nil
 	}
 
-	trunkHash := cachedTx.GetTransaction().GetTrunkHash()
-	branchHash := cachedTx.GetTransaction().GetBranchHash()
+	var trunkHash, branchHash hornet.Hash
+
+	if !traverseTailsOnly {
+		trunkHash = cachedTx.GetTransaction().GetTrunkHash()
+		branchHash = cachedTx.GetTransaction().GetBranchHash()
+	} else {
+		// load up bundle to retrieve trunk and branch of the head tx
+		cachedBundle := tangle.GetCachedBundleOrNil(currentTxHash)
+		if cachedBundle == nil {
+			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, currentTxHash.Trytes())
+		}
+		defer cachedBundle.Release(true)
+
+		cachedBundleHeadTx := cachedBundle.GetBundle().GetHead()
+		defer cachedBundleHeadTx.Release(true)
+		trunkHash = cachedBundleHeadTx.GetTransaction().GetTrunkHash()
+		branchHash = cachedBundleHeadTx.GetTransaction().GetBranchHash()
+	}
 
 	approveeHashes := hornet.Hashes{trunkHash}
 	if !bytes.Equal(trunkHash, branchHash) {
@@ -174,10 +191,9 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 // the traversal stops due to no more transactions passing the given condition.
 // It is a DFS with trunk / branch.
 // Caution: condition func is not in DFS order
-func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
 	stack := list.New()
-	stack.PushFront(startTxHash)
 
 	// processed map with already processed transactions
 	processed := make(map[string]struct{})
@@ -185,8 +201,9 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 	// checked map with result of traverse condition
 	checked := make(map[string]bool)
 
+	stack.PushFront(startTxHash)
 	for stack.Len() > 0 {
-		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, abortSignal); err != nil {
+		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
 			return err
 		}
 	}
