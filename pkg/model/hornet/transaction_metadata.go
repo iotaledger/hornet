@@ -2,6 +2,7 @@ package hornet
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/iotaledger/hive.go/bitmask"
@@ -168,7 +169,7 @@ func (m *TransactionMetadata) GetMetadata() byte {
 // ObjectStorage interface
 
 func (m *TransactionMetadata) Update(_ objectstorage.StorableObject) {
-	panic("TransactionMetadata should never be updated")
+	panic(fmt.Sprintf("TransactionMetadata should never be updated: %v", m.txHash.Trytes()))
 }
 
 func (m *TransactionMetadata) ObjectStorageKey() []byte {

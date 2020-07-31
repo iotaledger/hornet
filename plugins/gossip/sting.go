@@ -1,11 +1,13 @@
 package gossip
 
 import (
+	"github.com/iotaledger/hive.go/events"
+
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
-
-	"github.com/iotaledger/hive.go/events"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 // sets up the event handlers which propagate STING messages.
@@ -48,6 +50,14 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 		p.Metrics.ReceivedHeartbeats.Inc()
 		metrics.SharedServerMetrics.ReceivedHeartbeats.Inc()
 		p.LatestHeartbeat = sting.ParseHeartbeat(data)
+
+		if p.Autopeering != nil && p.LatestHeartbeat.SolidMilestoneIndex < tangle.GetSnapshotInfo().PruningIndex {
+			// peer is connected via autopeering and its latest solid milestone index is below our pruning index.
+			// we can't help this neighbor to become sync, so it's better to drop the connection and free the slots for other peers.
+			log.Infof("dropping autopeered neighbor %s / %s because LSMI (%d) is below our pruning index (%d)", p.Autopeering.Address(), p.Autopeering.ID(), p.LatestHeartbeat.SolidMilestoneIndex, tangle.GetSnapshotInfo().PruningIndex)
+			peering.Manager().Remove(p.ID)
+		}
+
 		p.Events.HeartbeatUpdated.Trigger(p.LatestHeartbeat)
 	}))
 

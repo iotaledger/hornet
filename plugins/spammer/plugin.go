@@ -51,11 +51,6 @@ func configure(plugin *node.Plugin) {
 		return
 	}
 
-	var err error
-	if powHandler, err = pow.NewHandler(config.NodeConfig.GetBool(config.CfgSpammerPreferLocalPoW)); err != nil {
-		log.Panic(err)
-	}
-
 	txAddress = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerAddress), consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3]
 	message = config.NodeConfig.GetString(config.CfgSpammerMessage)
 	tagSubstring = trinary.MustPad(config.NodeConfig.GetString(config.CfgSpammerTag), consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
@@ -67,6 +62,13 @@ func configure(plugin *node.Plugin) {
 	spammerWorkerCount = int(config.NodeConfig.GetUint(config.CfgSpammerWorkers))
 	checkPeersConnected = node.IsSkipped(coordinator.PLUGIN)
 	spammerAvgHeap = utils.NewTimeHeap()
+
+	var err error
+	if powHandler, err = pow.NewHandler(); err != nil {
+		log.Panic(err)
+	}
+
+	log.Info("Used PoW type: ", powHandler.GetPoWType())
 
 	if bundleSize < 1 {
 		bundleSize = 1

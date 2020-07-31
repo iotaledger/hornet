@@ -139,7 +139,9 @@ func configureEvents() {
 		})
 
 		if found == nil {
-			log.Warnf("didn't find autopeered peer %s for removal", ev.DroppedID)
+			// this can happen if we remove the peer in the manager manually.
+			// the peer gets removed from the manager first, and afterwards the event in the autopeering is fired.
+			log.Debugf("didn't find autopeered peer %s for removal", ev.DroppedID)
 			return
 		}
 

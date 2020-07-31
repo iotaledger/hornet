@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"bytes"
+	"fmt"
 	"time"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -71,9 +72,9 @@ type BundleTransaction struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	BundleHash []byte
+	BundleHash hornet.Hash
 	IsTail     bool
-	TxHash     []byte
+	TxHash     hornet.Hash
 }
 
 func (bt *BundleTransaction) GetTxHash() hornet.Hash {
@@ -86,7 +87,7 @@ func (bt *BundleTransaction) GetBundleHash() hornet.Hash {
 
 // ObjectStorage interface
 func (bt *BundleTransaction) Update(_ objectstorage.StorableObject) {
-	panic("BundleTransaction should never be updated")
+	panic(fmt.Sprintf("BundleTransaction should never be updated: %v, TxHash: %v", bt.BundleHash.Trytes(), bt.TxHash.Trytes()))
 }
 
 func (bt *BundleTransaction) ObjectStorageKey() []byte {
@@ -156,6 +157,24 @@ func GetBundleTransactionHashes(bundleHash hornet.Hash, forceRelease bool, maxFi
 		bundleTransactionHashes = append(bundleTransactionHashes, key[50:99])
 		return true
 	}, false, databaseKeyPrefixForBundleHash(bundleHash))
+
+	return bundleTransactionHashes
+}
+
+// bundleTx +1
+func GetAllBundleTransactionHashes(maxFind ...int) hornet.Hashes {
+	var bundleTransactionHashes hornet.Hashes
+
+	i := 0
+	bundleTransactionsStorage.ForEachKeyOnly(func(key []byte) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			return false
+		}
+
+		bundleTransactionHashes = append(bundleTransactionHashes, key[50:99])
+		return true
+	}, false)
 
 	return bundleTransactionHashes
 }

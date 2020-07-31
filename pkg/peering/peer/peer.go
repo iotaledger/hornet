@@ -153,9 +153,11 @@ func (p *Peer) Info() *Info {
 		NumberOfDroppedSentPackets:     p.Metrics.DroppedMessages.Load(),
 		ConnectionType:                 "tcp",
 		Connected:                      false,
+		Autopeered:                     false,
 		AutopeeringID:                  "",
 	}
 	if p.Autopeering != nil {
+		info.Autopeered = true
 		info.AutopeeringID = p.Autopeering.ID().String()
 	}
 	return info
@@ -234,5 +236,6 @@ type Info struct {
 	NumberOfDroppedSentPackets     uint32 `json:"numberOfDroppedSentPackets"`
 	ConnectionType                 string `json:"connectionType"`
 	Connected                      bool   `json:"connected"`
+	Autopeered                     bool   `json:"autopeered"`
 	AutopeeringID                  string `json:"autopeeringId,omitempty"`
 }

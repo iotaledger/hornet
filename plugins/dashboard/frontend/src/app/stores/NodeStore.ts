@@ -53,7 +53,6 @@ class CacheMetrics {
     milestones: CacheMetric;
     transactions: CacheMetric;
     incoming_transaction_work_units: CacheMetric;
-    refs_invalid_bundle: CacheMetric;
     ts: string;
 }
 
@@ -778,9 +777,6 @@ export class NodeStore {
         let incomingTxsWorkUnits = Object.assign({}, chartSeriesOpts,
             series("Incoming Txs WorkUnits", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
         );
-        let refsInvalidBundle = Object.assign({}, chartSeriesOpts,
-            series("Ref. Invalid Bundle (Tip-Sel)", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
-        );
 
         let labels = [];
         for (let i = 0; i < this.collected_cache_metrics.length; i++) {
@@ -792,13 +788,12 @@ export class NodeStore {
             milestones.data.push(metric.milestones.size);
             txs.data.push(metric.transactions.size);
             incomingTxsWorkUnits.data.push(metric.incoming_transaction_work_units.size);
-            refsInvalidBundle.data.push(metric.refs_invalid_bundle.size);
         }
 
         return {
             labels: labels,
             datasets: [
-                reqQ, approvers, bundles, milestones, txs, incomingTxsWorkUnits, refsInvalidBundle
+                reqQ, approvers, bundles, milestones, txs, incomingTxsWorkUnits
             ],
         };
     }

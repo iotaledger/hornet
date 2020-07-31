@@ -52,7 +52,7 @@ func configureBundleStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 // ObjectStorage interface
 func (bundle *Bundle) Update(_ objectstorage.StorableObject) {
-	panic("Bundle should never be updated")
+	panic(fmt.Sprintf("Bundle should never be updated: %v, TxHash: %v", bundle.hash.Trytes(), bundle.tailTx.Trytes()))
 }
 
 func (bundle *Bundle) ObjectStorageKey() []byte {

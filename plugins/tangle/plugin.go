@@ -46,8 +46,6 @@ func init() {
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	configureRefsAnInvalidBundleStorage()
-
 	tangle.LoadInitialValuesFromDatabase()
 
 	updateSyncedAtStartup = *syncedAtStartup

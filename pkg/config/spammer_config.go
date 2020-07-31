@@ -5,8 +5,6 @@ import (
 )
 
 const (
-	// whether to prefer local PoW regardless of whether faster remote PoW is available
-	CfgSpammerPreferLocalPoW = "spammer.preferLocalPoW"
 	// the target address of the spam
 	CfgSpammerAddress = "spammer.address"
 	// the message to embed within the spam transactions
@@ -26,7 +24,6 @@ const (
 )
 
 func init() {
-	flag.Bool(CfgSpammerPreferLocalPoW, true, "whether to prefer local PoW regardless of whether faster remote PoW is available")
 	flag.String(CfgSpammerAddress, "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999", "the target address of the spam")
 	flag.String(CfgSpammerMessage, "Spamming with HORNET tipselect", "the message to embed within the spam transactions")
 	flag.String(CfgSpammerTag, "HORNET99SPAMMER999999999999", "the tag of the transaction")

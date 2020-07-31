@@ -35,6 +35,7 @@ func configure(plugin *node.Plugin) {
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth),
+		config.NodeConfig.GetInt(config.CfgTipSelRetentionRulesTipsLimit),
 		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelMaxReferencedTipAgeSeconds))),
 		config.NodeConfig.GetUint32(config.CfgTipSelMaxApprovers),
 	)
@@ -47,6 +48,19 @@ func run(_ *node.Plugin) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
+	}, shutdown.PriorityTipselection)
+
+	daemon.BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+		for {
+			select {
+			case <-shutdownSignal:
+				return
+			case <-time.After(time.Second):
+				ts := time.Now()
+				removedTipCount := TipSelector.CleanUpReferencedTips()
+				log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+			}
+		}
 	}, shutdown.PriorityTipselection)
 }
 

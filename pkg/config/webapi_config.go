@@ -13,8 +13,6 @@ const (
 	CfgWebAPIWhitelistedAddresses = "httpAPI.whitelistedAddresses"
 	// whether to allow the health check route anyways
 	CfgWebAPIExcludeHealthCheckFromAuth = "httpAPI.excludeHealthCheckFromAuth"
-	// whether to prefer local PoW regardless of whether faster remote PoW is available
-	CfgWebAPIPreferLocalPoW = "httpAPI.preferLocalPoW"
 	// whether to use HTTP basic auth for the HTTP API
 	CfgWebAPIBasicAuthEnabled = "httpAPI.basicAuth.enabled"
 	// the username of the HTTP basic auth
@@ -50,7 +48,6 @@ func init() {
 		}, "the allowed HTTP API calls which can be called from non whitelisted addresses")
 	flag.StringSlice(CfgWebAPIWhitelistedAddresses, []string{}, "the whitelist of addresses which are allowed to access the HTTP API")
 	flag.Bool(CfgWebAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
-	flag.Bool(CfgWebAPIPreferLocalPoW, true, "whether to prefer local PoW regardless of whether faster remote PoW is available")
 	flag.Bool(CfgWebAPIBasicAuthEnabled, false, "whether to use HTTP basic auth for the HTTP API")
 	flag.String(CfgWebAPIBasicAuthUsername, "", "the username of the HTTP basic auth")
 	flag.String(CfgWebAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a sha256 hash")

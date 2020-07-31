@@ -70,7 +70,7 @@ type OnSolidEntryPoint func(txHash hornet.Hash)
 
 // processStackApprovees checks if the current element in the stack must be processed or traversed.
 // first the trunk is traversed, then the branch.
-func processStackApprovees(stack *list.List, visited map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func processStackApprovees(stack *list.List, processed map[string]struct{}, checked map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
 	select {
 	case <-abortSignal:
@@ -82,10 +82,31 @@ func processStackApprovees(stack *list.List, visited map[string]bool, condition 
 	ele := stack.Front()
 	currentTxHash := ele.Value.(hornet.Hash)
 
+	if _, wasProcessed := processed[string(currentTxHash)]; wasProcessed {
+		// transaction was already processed
+		// remove the transaction from the stack
+		stack.Remove(ele)
+		return nil
+	}
+
+	// check if the transaction is a solid entry point
+	if tangle.SolidEntryPointsContain(currentTxHash) {
+		onSolidEntryPoint(currentTxHash)
+
+		if !traverseSolidEntryPoints {
+			// remove the transaction from the stack, trunk and branch are not traversed
+			processed[string(currentTxHash)] = struct{}{}
+			delete(checked, string(currentTxHash))
+			stack.Remove(ele)
+			return nil
+		}
+	}
+
 	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
 	if cachedTx == nil {
 		// remove the transaction from the stack, trunk and branch are not traversed
-		visited[string(currentTxHash)] = false
+		processed[string(currentTxHash)] = struct{}{}
+		delete(checked, string(currentTxHash))
 		stack.Remove(ele)
 
 		// stop processing the stack if the caller returns an error
@@ -94,23 +115,26 @@ func processStackApprovees(stack *list.List, visited map[string]bool, condition 
 
 	defer cachedTx.Release(forceRelease) // tx -1
 
-	traverse, checkedBefore := visited[string(currentTxHash)]
+	traverse, checkedBefore := checked[string(currentTxHash)]
 	if !checkedBefore {
-		// check condition to decide if tx should be consumed and traversed
 		var err error
+
+		// check condition to decide if tx should be consumed and traversed
 		traverse, err = condition(cachedTx.Retain()) // tx + 1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
 		}
 
-		// mark the transaction as visited and remember the result of the traverse condition
-		visited[string(currentTxHash)] = traverse
+		// mark the transaction as checked and remember the result of the traverse condition
+		checked[string(currentTxHash)] = traverse
 	}
 
 	if !traverse {
 		// remove the transaction from the stack, trunk and branch are not traversed
 		// transaction will not get consumed
+		processed[string(currentTxHash)] = struct{}{}
+		delete(checked, string(currentTxHash))
 		stack.Remove(ele)
 		return nil
 	}
@@ -124,26 +148,17 @@ func processStackApprovees(stack *list.List, visited map[string]bool, condition 
 	}
 
 	for _, approveeHash := range approveeHashes {
-		if _, approveeVisited := visited[string(approveeHash)]; !approveeVisited {
-			if !tangle.SolidEntryPointsContain(approveeHash) {
-				// traverse this transaction
-				stack.PushFront(approveeHash)
-				return nil
-			}
-
-			onSolidEntryPoint(approveeHash)
-			if traverseSolidEntryPoints {
-				// traverse this transaction
-				stack.PushFront(approveeHash)
-				return nil
-			}
-
-			// mark the approvee as visited if we do not traverse to not call "onSolidEntryPoint" repeatedly
-			visited[string(approveeHash)] = false
+		if _, approveeProcessed := processed[string(approveeHash)]; !approveeProcessed {
+			// approvee was not processed yet
+			// traverse this transaction
+			stack.PushFront(approveeHash)
+			return nil
 		}
 	}
 
 	// remove the transaction from the stack
+	processed[string(currentTxHash)] = struct{}{}
+	delete(checked, string(currentTxHash))
 	stack.Remove(ele)
 
 	// consume the transaction
@@ -164,11 +179,14 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 	stack := list.New()
 	stack.PushFront(startTxHash)
 
-	// visited map with result of traverse condition
-	visited := make(map[string]bool)
+	// processed map with already processed transactions
+	processed := make(map[string]struct{})
+
+	// checked map with result of traverse condition
+	checked := make(map[string]bool)
 
 	for stack.Len() > 0 {
-		if err := processStackApprovees(stack, visited, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, abortSignal); err != nil {
+		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, abortSignal); err != nil {
 			return err
 		}
 	}

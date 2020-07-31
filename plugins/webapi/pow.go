@@ -53,7 +53,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Init the PoW handler
-	powHandler, err := pow.NewHandler(config.NodeConfig.GetBool(config.CfgWebAPIPreferLocalPoW))
+	powHandler, err := pow.NewHandler()
 	if err != nil {
 		e.Error = fmt.Sprint("Error while initiating PoW function")
 		c.JSON(http.StatusInternalServerError, e)
@@ -61,6 +61,14 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 	defer powHandler.Close()
 
+	// Reject empty requests
+	if len(query.Trytes) == 0 {
+		e.Error = "No trytes given."
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	// Set the fastest PoW method
 	if !powSet {
 		powSet = true
 		log.Infof("PoW method: \"%s\"", powHandler.GetPoWType())
