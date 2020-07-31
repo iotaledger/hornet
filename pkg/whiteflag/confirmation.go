@@ -45,8 +45,8 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 
 	confirmation := &Confirmation{
 		MilestoneIndex: milestoneIndex,
-		MilestoneHash: msBundle.GetTailHash(),
-		Mutations: mutations,
+		MilestoneHash:  msBundle.GetTailHash(),
+		Mutations:      mutations,
 	}
 
 	// Verify the calculated MerkleTreeHash with the one inside the milestone
