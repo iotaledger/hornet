@@ -94,7 +94,9 @@ func FetchConfig() error {
 
 func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
-	parameter.PrintConfig(PeeringConfig)
+	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
+	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
+	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
 	parameter.PrintConfig(ProfilesConfig)
 }
 
