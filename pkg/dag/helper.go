@@ -187,6 +187,43 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 	return nil
 }
 
+// TraverseApproveesTrunkBranch starts to traverse the approvees (past cone) of the given trunk transaction until
+// the traversal stops due to no more transactions passing the given condition.
+// Afterwards it traverses the approvees (past cone) of the given branch transaction.
+// It is a DFS with trunk / branch.
+// Caution: condition func is not in DFS order
+func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
+
+	stack := list.New()
+
+	// processed map with already processed transactions
+	processed := make(map[string]struct{})
+
+	// checked map with result of traverse condition
+	checked := make(map[string]bool)
+
+	stack.PushFront(trunkTxHash)
+	for stack.Len() > 0 {
+		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
+			return err
+		}
+	}
+
+	// since we first feed the stack the trunk,
+	// we need to make sure that we also examine the branch path.
+	// however, we only need to do it if the branch wasn't processed yet.
+	// the referenced branch transaction could for example already be processed
+	// if it is directly/indirectly approved by the trunk.
+	stack.PushFront(branchTxHash)
+	for stack.Len() > 0 {
+		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // TraverseApprovees starts to traverse the approvees (past cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is a DFS with trunk / branch.
