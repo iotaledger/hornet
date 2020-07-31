@@ -1,4 +1,4 @@
-# golang 1.14.4-buster
+# golang 1.14.6-buster
 FROM golang@sha256:ebe7f5d1a2a6b884bc1a45b8c1ff7e26b7b95938a3e8847ea96fc6761fdc2b77 AS build
 
 # Ensure ca-certficates are up to date
