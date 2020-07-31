@@ -50,7 +50,7 @@ type Confirmation struct {
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*Confirmation, error) {
-	wfConfirmation := &Confirmation{
+	wfConf := &Confirmation{
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
 		TailsExcludedZeroValue:   make(hornet.Hashes, 0),
@@ -99,8 +99,8 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, 
 		bundle := cachedBundle.GetBundle()
 		mutations := bundle.GetLedgerChanges()
 		if bundle.IsValueSpam() || len(mutations) == 0 {
-			wfConfirmation.TailsReferenced = append(wfConfirmation.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
-			wfConfirmation.TailsExcludedZeroValue = append(wfConfirmation.TailsExcludedZeroValue, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTx.GetTransaction().GetTxHash())
 			return nil
 		}
 
@@ -116,7 +116,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, 
 		for addr, change := range mutations {
 
 			// load state from milestone cone mutation or previous milestone
-			balance, has := wfConfirmation.NewAddressState[addr]
+			balance, has := wfConf.NewAddressState[addr]
 			if !has {
 				balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.Hash(addr))
 				if err != nil {
@@ -140,25 +140,25 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, 
 			validMutations[addr] = validMutations[addr] + change
 		}
 
-		wfConfirmation.TailsReferenced = append(wfConfirmation.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
+		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
 
 		if conflicting {
-			wfConfirmation.TailsExcludedConflicting = append(wfConfirmation.TailsExcludedConflicting, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTx.GetTransaction().GetTxHash())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConfirmation.TailsIncluded = append(wfConfirmation.TailsIncluded, cachedTx.GetTransaction().GetTxHash())
+		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTx.GetTransaction().GetTxHash())
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.
 		for addr, balance := range patchedState {
-			wfConfirmation.NewAddressState[addr] = balance
+			wfConf.NewAddressState[addr] = balance
 		}
 
 		// incorporate the mutations in accordance with the previous mutations
 		for addr, mutation := range validMutations {
-			wfConfirmation.AddressMutations[addr] = wfConfirmation.AddressMutations[addr] + mutation
+			wfConf.AddressMutations[addr] = wfConf.AddressMutations[addr] + mutation
 		}
 
 		return nil
@@ -166,7 +166,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, 
 
 	// called on missing approvees
 	onMissingApprovee := func(approveeHash hornet.Hash) error {
-		return tangle.ErrTransactionNotFound
+		return fmt.Errorf("%w: transaction %s", tangle.ErrTransactionNotFound, approveeHash.Trytes())
 	}
 
 	// called on solid entry points
@@ -201,7 +201,7 @@ func ComputeConfirmation(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, 
 	}
 
 	// compute merkle tree root hash
-	wfConfirmation.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConfirmation.TailsIncluded)
+	wfConf.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConf.TailsIncluded)
 
-	return wfConfirmation, nil
+	return wfConf, nil
 }

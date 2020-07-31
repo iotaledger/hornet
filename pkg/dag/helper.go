@@ -153,10 +153,8 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		}
 		defer cachedBundle.Release(true)
 
-		cachedBundleHeadTx := cachedBundle.GetBundle().GetHead()
-		defer cachedBundleHeadTx.Release(true)
-		trunkHash = cachedBundleHeadTx.GetTransaction().GetTrunkHash()
-		branchHash = cachedBundleHeadTx.GetTransaction().GetBranchHash()
+		trunkHash = cachedBundle.GetBundle().GetTrunk(true)
+		branchHash = cachedBundle.GetBundle().GetBranch(true)
 	}
 
 	approveeHashes := hornet.Hashes{trunkHash}
