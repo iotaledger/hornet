@@ -208,6 +208,6 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 				return nil
 			},
 			// called on solid entry points
-			func(txHash hornet.Hash) {}, true, false, nil)
+			func(txHash hornet.Hash) {}, true, false, false, nil)
 	}
 }

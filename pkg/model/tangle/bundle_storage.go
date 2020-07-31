@@ -394,7 +394,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		bndl := cachedBndl.GetBundle()
 		bndl.ApplySpentAddresses()
 
-		if bndl.IsValid() && bndl.IsMilestone() {
+		if bndl.IsValid() && bndl.ValidStrictSemantics() && bndl.IsMilestone() {
 			// Force release to store milestones without caching
 			//
 			// Milestone has to be stored after the bundle itself, otherwise there would be a race condition

@@ -459,8 +459,8 @@ func generateDotFileFromTangle(t *testing.T, conf *whiteflag.Confirmation) strin
 		if conf == nil {
 			return -1
 		}
-		for i := 0; i < len(conf.TailsReferenced)-1; i++ {
-			if bytes.Equal(conf.TailsReferenced[i], hash) {
+		for i := 0; i < len(conf.Mutations.TailsReferenced)-1; i++ {
+			if bytes.Equal(conf.Mutations.TailsReferenced[i], hash) {
 				return i
 			}
 		}
