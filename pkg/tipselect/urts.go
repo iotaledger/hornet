@@ -429,6 +429,7 @@ func CalculateScore(txHash hornet.Hash, lsmi milestone.Index, maxDeltaTxYoungest
 	if cachedBundle == nil {
 		panic(fmt.Errorf("%w: bundle %s of tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, txHash.Trytes()))
 	}
+	defer cachedBundle.Release(true)
 
 	// the approvees (trunk and branch) are the tail transactions this tip approves
 	approveeHashes := map[string]struct{}{
