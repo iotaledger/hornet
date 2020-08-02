@@ -150,7 +150,7 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	score := ts.calculateScore(tailTxHash, lsmi)
+	score := CalculateScore(tailTxHash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
 	if score == ScoreLazy {
 		// do not add lazy tips.
 		// lazy tips should also not remove other tips from the pool, otherwise the tip pool will run empty.
@@ -263,7 +263,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 		// if randTip reaches zero or below, we return the given tip
 		if randTip <= 0 {
 			// check the score of the tip again to avoid old tips
-			if score := ts.calculateScore(tip.Hash, lsmi); score == ScoreLazy {
+			if score := CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI); score == ScoreLazy {
 				// remove the tip from the pool because it is outdated
 				ts.removeTipWithoutLocking(tip.Hash)
 				return nil, ErrTipLazy
@@ -389,7 +389,7 @@ func (ts *TipSelector) UpdateScores() {
 
 	for _, tip := range ts.nonLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		tip.Score = ts.calculateScore(tip.Hash, lsmi)
+		tip.Score = CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			ts.removeTipWithoutLocking(tip.Hash)
@@ -405,23 +405,23 @@ func (ts *TipSelector) UpdateScores() {
 	}
 }
 
-// calculateScore calculates the tip selection score of this transaction
-func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
+// CalculateScore calculates the tip selection score of this transaction
+func CalculateScore(txHash hornet.Hash, lsmi milestone.Index, maxDeltaTxYoungestRootSnapshotIndexToLSMI milestone.Index, belowMaxDepth milestone.Index, maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI milestone.Index) Score {
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
-		panic(fmt.Sprintf("transaction not found: %v", txHash.Trytes()))
+		panic(fmt.Errorf("%w: %v", tangle.ErrTransactionNotFound, txHash.Trytes()))
 	}
 	defer cachedTx.Release(true)
 
 	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTx.Retain(), lsmi) // tx +1
 
 	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
-	if (lsmi - ytrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
+	if (lsmi - ytrsi) > maxDeltaTxYoungestRootSnapshotIndexToLSMI {
 		return ScoreLazy
 	}
 
 	// if the OTRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
-	if (lsmi - ortsi) > ts.belowMaxDepth {
+	if (lsmi - ortsi) > belowMaxDepth {
 		return ScoreLazy
 	}
 
@@ -454,7 +454,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 		}
 
 		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, we mark it as such
-		if lsmi-approveeORTSI > ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI {
+		if lsmi-approveeORTSI > maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI {
 			approveesLazy++
 		}
 	}
