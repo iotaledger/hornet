@@ -458,7 +458,6 @@ func CalculateScore(txHash hornet.Hash, lsmi milestone.Index, maxDeltaTxYoungest
 		string(cachedBundle.GetBundle().GetBranch(true)): {},
 	}
 
-	approveesLazy := 0
 	for approveeHash := range approveeHashes {
 		var approveeORTSI milestone.Index
 
@@ -475,20 +474,10 @@ func CalculateScore(txHash hornet.Hash, lsmi milestone.Index, maxDeltaTxYoungest
 			cachedApproveeTx.Release(true)
 		}
 
-		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, we mark it as such
+		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, the tip is semi-lazy
 		if lsmi-approveeORTSI > maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI {
-			approveesLazy++
+			return ScoreSemiLazy
 		}
-	}
-
-	// if all available approvees' OTRSI violates the LSMI delta in relation to C2 the tip is lazy too
-	if len(approveeHashes) == approveesLazy {
-		return ScoreLazy
-	}
-
-	// if only one of the approvees violated the OTRSI to LMSI delta, the tip is considered semi-lazy
-	if approveesLazy == 1 {
-		return ScoreSemiLazy
 	}
 
 	return ScoreNonLazy
