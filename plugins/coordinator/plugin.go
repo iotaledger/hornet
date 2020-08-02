@@ -264,7 +264,7 @@ func run(plugin *node.Plugin) {
 					// add the semi-lazy checkpoint to the list the non-lazy checkpoint should reference
 					nonLazyTips = append(nonLazyTips, lastCheckpointHashSemiLazy)
 
-					nonLazyCheckpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy+1, lastCheckpointHashNonLazy, semiLazyTips)
+					nonLazyCheckpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy+1, lastCheckpointHashNonLazy, nonLazyTips)
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						log.Warn(err)
