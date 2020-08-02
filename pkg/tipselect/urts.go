@@ -250,8 +250,6 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 		return nil, ErrNoTipsAvailable
 	}
 
-	lsmi := tangle.GetSolidMilestoneIndex()
-
 	// get a random number between 1 and the amount of tips
 	randTip := utils.RandomInsecure(1, len(tipsMap)+1)
 
@@ -262,12 +260,6 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 
 		// if randTip reaches zero or below, we return the given tip
 		if randTip <= 0 {
-			// check the score of the tip again to avoid old tips
-			if score := CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI); score == ScoreLazy {
-				// remove the tip from the pool because it is outdated
-				ts.removeTipWithoutLocking(tip.Hash)
-				return nil, ErrTipLazy
-			}
 			return tip.Hash, nil
 		}
 	}
@@ -276,8 +268,8 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	return nil, ErrNoTipsAvailable
 }
 
-// selectTip selects a tip.
-func (ts *TipSelector) selectTip(tipsMap map[string]*Tip) (hornet.Hash, error) {
+// selectTipWithoutLocking selects a tip.
+func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.Hash, error) {
 
 	if !tangle.IsNodeSyncedWithThreshold() {
 		return nil, tangle.ErrNodeNotSynced
@@ -310,7 +302,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.Hashes, error
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	trunk, err := ts.selectTip(tipsMap)
+	trunk, err := ts.selectTipWithoutLocking(tipsMap)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +310,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.Hashes, error
 
 	// retry the tipselection several times if trunk and branch are equal
 	for i := 0; i < 10; i++ {
-		branch, err := ts.selectTip(tipsMap)
+		branch, err := ts.selectTipWithoutLocking(tipsMap)
 		if err != nil {
 			return nil, err
 		}
@@ -399,8 +391,27 @@ func (ts *TipSelector) UpdateScores() {
 		if tip.Score == ScoreSemiLazy {
 			// remove the tip from the pool because it is outdated
 			ts.removeTipWithoutLocking(tip.Hash)
+			// add the tip to the semi-lazy tips map
 			ts.semiLazyTipsMap[string(tip.Hash)] = tip
 			metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
+		}
+	}
+
+	for _, tip := range ts.semiLazyTipsMap {
+		// check the score of the tip again to avoid old tips
+		tip.Score = CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
+		if tip.Score == ScoreLazy {
+			// remove the tip from the pool because it is outdated
+			ts.removeTipWithoutLocking(tip.Hash)
+			continue
+		}
+
+		if tip.Score == ScoreNonLazy {
+			// remove the tip from the pool because it is outdated
+			ts.removeTipWithoutLocking(tip.Hash)
+			// add the tip to the non-lazy tips map
+			ts.nonLazyTipsMap[string(tip.Hash)] = tip
+			metrics.SharedServerMetrics.TipsNonLazy.Add(1)
 		}
 	}
 }
