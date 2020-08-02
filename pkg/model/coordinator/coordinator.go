@@ -176,7 +176,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
 		state.LatestMilestoneHash = latestMilestoneHash
-		state.LatestMilestoneIndex = startIndex
+		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = 0
 		state.LatestMilestoneTransactions = hornet.Hashes{hornet.NullHashBytes}
 
@@ -259,7 +259,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
-		if err := coo.createAndSendMilestone(hornet.Hash(hornet.NullHashBytes), hornet.Hash(hornet.NullHashBytes), coo.state.LatestMilestoneIndex); err != nil {
+		if err := coo.createAndSendMilestone(hornet.Hash(hornet.NullHashBytes), hornet.Hash(hornet.NullHashBytes), coo.state.LatestMilestoneIndex+1); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
 		}
