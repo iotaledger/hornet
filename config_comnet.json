@@ -115,9 +115,16 @@
     "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
     "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
     "belowMaxDepth": 15,
-    "retentionRulesTipsLimit": 100,
-    "maxReferencedTipAgeSeconds": 3,
-    "maxApprovers": 2
+    "nonLazy": {
+      "retentionRulesTipsLimit": 100,
+      "maxReferencedTipAgeSeconds": 3,
+      "maxApprovers": 2
+    },
+    "semiLazy": {
+      "retentionRulesTipsLimit": 20,
+      "maxReferencedTipAgeSeconds": 3,
+      "maxApprovers": 2
+    }
   },
   "node": {
     "alias": "",
@@ -146,7 +153,7 @@
     "bundleSize": 1,
     "valueSpam": false,
     "workers": 0,
-    "semiLazyTipsLimit": 20
+    "semiLazyTipsLimit": 30
   },
   "mqtt": {
     "config": "mqtt_config.json"

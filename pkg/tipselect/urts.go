@@ -94,16 +94,28 @@ type TipSelector struct {
 	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
 	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
-	// referenced tips get removed directly to reduce the amount of tips in the network.
-	retentionRulesTipsLimit int
+	// referenced tips get removed directly to reduce the amount of tips in the network. (non-lazy pool)
+	retentionRulesTipsLimitNonLazy int
 	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first transaction.
-	// this is used to widen the cone of the tangle.
-	maxReferencedTipAgeSeconds time.Duration
+	// this is used to widen the cone of the tangle. (non-lazy pool)
+	maxReferencedTipAgeSecondsNonLazy time.Duration
 	// maxApprovers is the maximum amount of references by other transactions
 	// before the tip is removed from the tip pool.
-	// this is used to widen the cone of the tangle.
-	maxApprovers uint32
+	// this is used to widen the cone of the tangle. (non-lazy pool)
+	maxApproversNonLazy uint32
+	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
+	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
+	// referenced tips get removed directly to reduce the amount of tips in the network. (semi-lazy pool)
+	retentionRulesTipsLimitSemiLazy int
+	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
+	// after it was referenced by the first transaction.
+	// this is used to widen the cone of the tangle. (semi-lazy pool)
+	maxReferencedTipAgeSecondsSemiLazy time.Duration
+	// maxApprovers is the maximum amount of references by other transactions
+	// before the tip is removed from the tip pool.
+	// this is used to widen the cone of the tangle. (semi-lazy pool)
+	maxApproversSemiLazy uint32
 	// nonLazyTipsMap contains only non-lazy tips.
 	nonLazyTipsMap map[string]*Tip
 	// semiLazyTipsMap contains only semi-lazy tips.
@@ -115,16 +127,28 @@ type TipSelector struct {
 }
 
 // New creates a new tip-selector.
-func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int, maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI int, belowMaxDepth int, retentionRulesTipsLimit int, maxReferencedTipAgeSeconds time.Duration, maxApprovers uint32) *TipSelector {
+func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
+	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI int,
+	belowMaxDepth int,
+	retentionRulesTipsLimitNonLazy int,
+	maxReferencedTipAgeSecondsNonLazy time.Duration,
+	maxApproversNonLazy uint32,
+	retentionRulesTipsLimitSemiLazy int,
+	maxReferencedTipAgeSecondsSemiLazy time.Duration,
+	maxApproversSemiLazy uint32) *TipSelector {
+
 	return &TipSelector{
 		maxDeltaTxYoungestRootSnapshotIndexToLSMI:        milestone.Index(maxDeltaTxYoungestRootSnapshotIndexToLSMI),
 		maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI: milestone.Index(maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
-		belowMaxDepth:              milestone.Index(belowMaxDepth),
-		retentionRulesTipsLimit:    retentionRulesTipsLimit,
-		maxReferencedTipAgeSeconds: maxReferencedTipAgeSeconds,
-		maxApprovers:               maxApprovers,
-		nonLazyTipsMap:             make(map[string]*Tip),
-		semiLazyTipsMap:            make(map[string]*Tip),
+		belowMaxDepth:                      milestone.Index(belowMaxDepth),
+		retentionRulesTipsLimitNonLazy:     retentionRulesTipsLimitNonLazy,
+		maxReferencedTipAgeSecondsNonLazy:  maxReferencedTipAgeSecondsNonLazy,
+		maxApproversNonLazy:                maxApproversNonLazy,
+		retentionRulesTipsLimitSemiLazy:    retentionRulesTipsLimitSemiLazy,
+		maxReferencedTipAgeSecondsSemiLazy: maxReferencedTipAgeSecondsSemiLazy,
+		maxApproversSemiLazy:               maxApproversSemiLazy,
+		nonLazyTipsMap:                     make(map[string]*Tip),
+		semiLazyTipsMap:                    make(map[string]*Tip),
 		Events: Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
@@ -184,20 +208,20 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 		string(bndl.GetBranch(true)): {},
 	}
 
-	checkTip := func(approveeTip *Tip, lenTipsMap int) {
+	checkTip := func(approveeTip *Tip, lenTipsMap int, retentionRulesTipsLimit int, maxApprovers uint32, maxReferencedTipAgeSeconds time.Duration) {
 		// if the amount of known tips is above the limit, remove the tip directly
-		if lenTipsMap > ts.retentionRulesTipsLimit {
+		if lenTipsMap > retentionRulesTipsLimit {
 			ts.removeTipWithoutLocking(hornet.Hash(approveeTip.Hash))
 			return
 		}
 
 		// check if the maximum amount of approvers for this tip is reached
-		if approveeTip.ApproversCount.Add(1) >= ts.maxApprovers {
+		if approveeTip.ApproversCount.Add(1) >= maxApprovers {
 			ts.removeTipWithoutLocking(hornet.Hash(approveeTip.Hash))
 			return
 		}
 
-		if ts.maxReferencedTipAgeSeconds == time.Duration(0) {
+		if maxReferencedTipAgeSeconds == time.Duration(0) {
 			// check for maxReferenceTipAge is disabled
 			return
 		}
@@ -214,11 +238,11 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 		switch tip.Score {
 		case ScoreNonLazy:
 			if approveeTip, exists := ts.nonLazyTipsMap[approveeTailTxHash]; exists {
-				checkTip(approveeTip, len(ts.nonLazyTipsMap))
+				checkTip(approveeTip, len(ts.nonLazyTipsMap), ts.retentionRulesTipsLimitNonLazy, ts.maxApproversNonLazy, ts.maxReferencedTipAgeSecondsNonLazy)
 			}
 		case ScoreSemiLazy:
 			if approveeTip, exists := ts.semiLazyTipsMap[approveeTailTxHash]; exists {
-				checkTip(approveeTip, len(ts.semiLazyTipsMap))
+				checkTip(approveeTip, len(ts.semiLazyTipsMap), ts.retentionRulesTipsLimitSemiLazy, ts.maxApproversSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy)
 			}
 		}
 	}
@@ -353,14 +377,14 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	checkTip := func(tip *Tip) {
+	checkTip := func(tip *Tip, maxReferencedTipAgeSeconds time.Duration) {
 		if tip.TimeFirstApprover.IsZero() {
 			// not referenced by another transaction
 			return
 		}
 
 		// check if the tip reached its maximum age
-		if time.Since(tip.TimeFirstApprover) < ts.maxReferencedTipAgeSeconds {
+		if time.Since(tip.TimeFirstApprover) < maxReferencedTipAgeSeconds {
 			return
 		}
 
@@ -370,11 +394,11 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
-		checkTip(tip)
+		checkTip(tip, ts.maxReferencedTipAgeSecondsNonLazy)
 		count++
 	}
 	for _, tip := range ts.semiLazyTipsMap {
-		checkTip(tip)
+		checkTip(tip, ts.maxReferencedTipAgeSecondsSemiLazy)
 		count++
 	}
 
