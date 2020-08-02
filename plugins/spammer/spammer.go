@@ -73,6 +73,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	tips, err := tipselFunc()
 	if err != nil {
+		log.Debugf(err.Error())
 		return
 	}
 	durationGTTA := time.Since(timeStart)
