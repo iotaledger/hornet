@@ -199,7 +199,7 @@ func run(plugin *node.Plugin) {
 				}
 
 				// issue a non-lazy checkpoint
-				checkpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy+1, lastCheckpointHashNonLazy, tips)
+				checkpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy, lastCheckpointHashNonLazy, tips)
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					log.Warn(err)
@@ -224,7 +224,7 @@ func run(plugin *node.Plugin) {
 				}
 
 				// issue a semi-lazy checkpoint
-				checkpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy+1, lastCheckpointHashSemiLazy, tips)
+				checkpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy, lastCheckpointHashSemiLazy, tips)
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					log.Warn(err)
@@ -243,7 +243,7 @@ func run(plugin *node.Plugin) {
 						log.Warn(err)
 					}
 				} else {
-					semiLazyCheckpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy+1, lastCheckpointHashSemiLazy, semiLazyTips)
+					semiLazyCheckpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy, lastCheckpointHashSemiLazy, semiLazyTips)
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						log.Warn(err)
@@ -264,7 +264,7 @@ func run(plugin *node.Plugin) {
 					// add the semi-lazy checkpoint to the list the non-lazy checkpoint should reference
 					nonLazyTips = append(nonLazyTips, lastCheckpointHashSemiLazy)
 
-					nonLazyCheckpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy+1, lastCheckpointHashNonLazy, nonLazyTips)
+					nonLazyCheckpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy, lastCheckpointHashNonLazy, nonLazyTips)
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						log.Warn(err)
