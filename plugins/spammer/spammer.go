@@ -80,7 +80,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		log.Debugf(fmt.Errorf("%w: %s (%d)", err, tipselName, tipsCount).Error())
 		return
 	}
-	log.Debugf(fmt.Errorf("OK: %s (%d)", tipselName, tipsCount).Error())
+	log.Debugf(fmt.Errorf("OK: %s (%d) Tips: %d", tipselName, tipsCount, len(tips)).Error())
 
 	durationGTTA := time.Since(timeStart)
 
