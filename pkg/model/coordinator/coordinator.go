@@ -29,7 +29,7 @@ import (
 type Bundle = []*transaction.Transaction
 
 // SendBundleFunc is a function which sends a bundle to the network.
-type SendBundleFunc = func(b Bundle) error
+type SendBundleFunc = func(b Bundle, isMilestone bool) error
 
 var (
 	// ErrNoTipsGiven is returned when no tips were given to issue a checkpoint.
@@ -220,7 +220,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 		return err
 	}
 
-	if err := coo.sendBundleFunc(b); err != nil {
+	if err := coo.sendBundleFunc(b, true); err != nil {
 		return err
 	}
 
@@ -291,7 +291,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointName string, checkpointIndex i
 			return nil, err
 		}
 
-		if err := coo.sendBundleFunc(b); err != nil {
+		if err := coo.sendBundleFunc(b, false); err != nil {
 			return nil, err
 		}
 

@@ -305,7 +305,7 @@ func run(plugin *node.Plugin) {
 
 }
 
-func sendBundle(b coordinator.Bundle) error {
+func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 
 	// collect all tx hashes of the bundle
 	txHashes := make(map[string]struct{})
@@ -319,6 +319,11 @@ func sendBundle(b coordinator.Bundle) error {
 	wgBundleProcessed := sync.WaitGroup{}
 	wgBundleProcessed.Add(len(txHashes))
 
+	if isMilestone {
+		// also wait for solid milestone changed event
+		wgBundleProcessed.Add(1)
+	}
+
 	processedTxEvent := events.NewClosure(func(txHash hornet.Hash) {
 		txHashesLock.Lock()
 		defer txHashesLock.Unlock()
@@ -330,8 +335,20 @@ func sendBundle(b coordinator.Bundle) error {
 		}
 	})
 
+	var solidMilestoneChangedEvent *events.Closure
+	if isMilestone {
+		solidMilestoneChangedEvent = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+			defer cachedBndl.Release(true)
+			wgBundleProcessed.Done()
+		})
+	}
+
 	tangleplugin.Events.ProcessedTransaction.Attach(processedTxEvent)
 	defer tangleplugin.Events.ProcessedTransaction.Detach(processedTxEvent)
+	if isMilestone {
+		tangleplugin.Events.SolidMilestoneChanged.Attach(solidMilestoneChangedEvent)
+		defer tangleplugin.Events.SolidMilestoneChanged.Attach(solidMilestoneChangedEvent)
+	}
 
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
@@ -342,6 +359,7 @@ func sendBundle(b coordinator.Bundle) error {
 	}
 
 	// wait until all txs of the bundle are processed in the storage layer
+	// if it was a milestone, also wait until the solid milestone changed
 	wgBundleProcessed.Wait()
 
 	return nil

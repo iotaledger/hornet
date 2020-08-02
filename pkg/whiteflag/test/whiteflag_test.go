@@ -257,7 +257,7 @@ func attachTo(t *testing.T, trunk hornet.Hash, branch hornet.Hash, trytes []trin
 
 func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 
-	storeBundleFunc := func(b coordinator.Bundle) error {
+	storeBundleFunc := func(b coordinator.Bundle, isMilestone bool) error {
 		var bndl = make(bundle.Bundle, 0)
 		// Insert it the reverse way
 		for i := len(b) - 1; i >= 0; i-- {
