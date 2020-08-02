@@ -210,13 +210,16 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 	}
 
 	for approveeTailTxHash := range approveeTailTxHashes {
-		if approveeTip, exists := ts.nonLazyTipsMap[approveeTailTxHash]; exists {
-			checkTip(approveeTip, len(ts.nonLazyTipsMap))
-			continue
-		}
-
-		if approveeTip, exists := ts.semiLazyTipsMap[approveeTailTxHash]; exists {
-			checkTip(approveeTip, len(ts.semiLazyTipsMap))
+		// we have to separate between the pools, to prevent semi-lazy tips from emptying the non-lazy pool
+		switch tip.Score {
+		case ScoreNonLazy:
+			if approveeTip, exists := ts.nonLazyTipsMap[approveeTailTxHash]; exists {
+				checkTip(approveeTip, len(ts.nonLazyTipsMap))
+			}
+		case ScoreSemiLazy:
+			if approveeTip, exists := ts.semiLazyTipsMap[approveeTailTxHash]; exists {
+				checkTip(approveeTip, len(ts.semiLazyTipsMap))
+			}
 		}
 	}
 }
