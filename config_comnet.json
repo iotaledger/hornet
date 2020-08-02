@@ -132,11 +132,13 @@
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "message": "Spamming with HORNET tipselect",
     "tag": "HORNET99INTEGRATED99SPAMMER",
+    "tagSemiLazy": "",
     "cpuMaxUsage": 0.8,
     "tpsRateLimit": 0.0,
     "bundleSize": 1,
     "valueSpam": false,
-    "workers": 0
+    "workers": 0,
+    "semiLazyTipsLimit": 20
   },
   "mqtt": {
     "config": "mqtt_config.json"
