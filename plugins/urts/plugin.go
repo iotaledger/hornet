@@ -77,7 +77,7 @@ func configureEvents() {
 				return
 			}
 
-			TipSelector.AddTip(bndl.GetTailHash())
+			TipSelector.AddTip(bndl)
 		})
 	})
 

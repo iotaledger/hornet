@@ -134,9 +134,11 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int, maxDeltaTxApproveesOldes
 }
 
 // AddTip adds the given tailTxHash as a tip.
-func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
+func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
+
+	tailTxHash := bndl.GetTailHash()
 
 	if _, exists := ts.nonLazyTipsMap[string(tailTxHash)]; exists {
 		// tip already exists
@@ -175,10 +177,11 @@ func (ts *TipSelector) AddTip(tailTxHash hornet.Hash) {
 
 	ts.Events.TipAdded.Trigger(tip)
 
-	// search all referenced tails of this Tip and remove them from the tip pool
-	approveeTailTxHashes, err := dag.FindAllTails(tailTxHash, true, true)
-	if err != nil {
-		return
+	// the approvees (trunk and branch) are the tail transactions this tip approves
+	// remove them from the tip pool
+	approveeTailTxHashes := map[string]struct{}{
+		string(bndl.GetTrunk(true)):  {},
+		string(bndl.GetBranch(true)): {},
 	}
 
 	checkTip := func(approveeTip *Tip, lenTipsMap int) {
@@ -251,15 +254,15 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	}
 
 	// get a random number between 1 and the amount of tips
-	randTip := utils.RandomInsecure(1, len(tipsMap)+1)
+	randTip := utils.RandomInsecure(0, len(tipsMap))
 
 	// iterate over the tipsMap and subtract each tip from randTip
 	for _, tip := range tipsMap {
 		// subtract the tip from randTip
 		randTip--
 
-		// if randTip reaches zero or below, we return the given tip
-		if randTip <= 0 {
+		// if randTip reaches below zero, we return the given tip
+		if randTip < 0 {
 			return tip.Hash, nil
 		}
 	}
