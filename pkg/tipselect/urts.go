@@ -318,6 +318,10 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.Hashes, error
 	for i := 0; i < 10; i++ {
 		branch, err := ts.selectTipWithoutLocking(tipsMap)
 		if err != nil {
+			if err == ErrNoTipsAvailable {
+				// do not search other tips if there are none
+				break
+			}
 			return nil, err
 		}
 
