@@ -427,6 +427,7 @@ func (ts *TipSelector) UpdateScores() {
 			ts.removeTipWithoutLocking(tip.Hash)
 			// add the tip to the semi-lazy tips map
 			ts.semiLazyTipsMap[string(tip.Hash)] = tip
+			ts.Events.TipAdded.Trigger(tip)
 			metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
 		}
 	}
@@ -445,6 +446,7 @@ func (ts *TipSelector) UpdateScores() {
 			ts.removeTipWithoutLocking(tip.Hash)
 			// add the tip to the non-lazy tips map
 			ts.nonLazyTipsMap[string(tip.Hash)] = tip
+			ts.Events.TipAdded.Trigger(tip)
 			metrics.SharedServerMetrics.TipsNonLazy.Add(1)
 		}
 	}
