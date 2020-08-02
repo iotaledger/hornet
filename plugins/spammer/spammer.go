@@ -88,11 +88,13 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	b, err := createBundle(txAddress, message, tag, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
+		log.Debugf(fmt.Errorf("createBundle: %w", err).Error())
 		return
 	}
 
 	err = doPow(b, tips[0].Trytes(), tips[1].Trytes(), mwm, shutdownSignal)
 	if err != nil {
+		log.Debugf(fmt.Errorf("doPow: %w", err).Error())
 		return
 	}
 
@@ -102,11 +104,12 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(&tx)
 		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
+			log.Debugf(fmt.Errorf("CompressAndEmit: %w", err).Error())
 			return
 		}
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
-	log.Debugf(fmt.Errorf("OK: %s (%d) Tips: %d, Tag: %s", tipselName, tipsCount, len(tips)).Error(), tag)
+	log.Debugf(fmt.Errorf("OK: %s (%d) Tips: %d, Tag: %s", tipselName, tipsCount, len(tips), tag).Error())
 
 	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
 }
