@@ -52,9 +52,9 @@ const (
 )
 
 var (
-	coo                   *coordinator.Coordinator
-	nextTip               = hornet.NullHashBytes
-	nextBundleIsMilestone = true
+	coo               *coordinator.Coordinator
+	nextTip           = hornet.NullHashBytes
+	lastMilestoneHash = hornet.NullHashBytes
 
 	// This is just used to clean up at the end of a test
 	cachedBundles tangle.CachedBundles
@@ -263,19 +263,11 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 		for i := len(b) - 1; i >= 0; i-- {
 			bndl = append(bndl, *b[i])
 		}
-		ms := storeBundle(t, bndl, nextBundleIsMilestone) // No need to release, since we store all the bundles for later cleanup
-		if !nextBundleIsMilestone {
-			// This is a hack since the new COO tipsel sends a checkpoint just before the snapshot
-			nextBundleIsMilestone = true
-		}
-		if ms.GetBundle().IsMilestone() {
-			tangle.SetLatestMilestoneIndex(ms.GetBundle().GetMilestoneIndex())
-		}
-		return nil
-	}
+		ms := storeBundle(t, bndl, true) // No need to release, since we store all the bundles for later cleanup
 
-	tipSelFunc := func(minRequiredTips int) (hornet.Hashes, error) {
-		return hornet.Hashes{nextTip}, nil
+		tangle.SetLatestMilestoneIndex(ms.GetBundle().GetMilestoneIndex())
+
+		return nil
 	}
 
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
@@ -284,7 +276,7 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 	require.NoError(t, err)
 	dirAndFile := fmt.Sprintf("%s/coordinator.state", dir)
 
-	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powFunc, tipSelFunc, storeBundleFunc, merkleHashFunc)
+	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powFunc, storeBundleFunc, merkleHashFunc)
 	require.NotNil(t, coo)
 
 	err = coo.InitMerkleTree("coordinator.tree", cooAddress)
@@ -298,11 +290,11 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 	// Configure Milestones
 	tangle.ConfigureMilestones(hornet.HashFromAddressTrytes(cooAddress), int(secLevel), merkleTreeDepth, merkleHashFunc)
 
-	// Initial milestone has no checkpoint
-	nextBundleIsMilestone = true
-
-	err = coo.Bootstrap()
+	milestoneHash, err := coo.Bootstrap()
 	require.NoError(t, err)
+
+	nextTip = milestoneHash
+	lastMilestoneHash = milestoneHash
 
 	ms := tangle.GetMilestoneOrNil(1)
 	require.NotNil(t, ms)
@@ -330,16 +322,15 @@ func verifyLMI(t *testing.T, index milestone.Index) {
 func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bool) (*tangle.CachedBundle, *whiteflag.ConfirmedMilestoneStats) {
 
 	nextTip = tip
-	// Mark the next bundle stores as not a milestone, since it will be a checkpoint
-	nextBundleIsMilestone = false
 
 	currentIndex := tangle.GetSolidMilestoneIndex()
 	verifyLMI(t, currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
-	noncriticalErr, criticalErr := coo.IssueMilestone()
+	milestoneHash, noncriticalErr, criticalErr := coo.IssueMilestone(lastMilestoneHash, nextTip)
 	require.NoError(t, noncriticalErr)
 	require.NoError(t, criticalErr)
+	lastMilestoneHash = milestoneHash
 
 	verifyLMI(t, currentIndex+1)
 
@@ -423,8 +414,8 @@ func setupCoordinatorAndIssueInitialMilestones(t *testing.T, initialBalances map
 	for i := 1; i <= numberOfMilestones; i++ {
 		// 2nd milestone
 		ms, conf := issueAndConfirmMilestoneOnTip(t, hornet.NullHashBytes, true)
-		require.Equal(t, 4, conf.TxsConfirmed) // 3 for milestone + 1 for checkpoint
-		require.Equal(t, 4, conf.TxsZeroValue) // 3 for milestone + 1 for checkpoint
+		require.Equal(t, 3, conf.TxsConfirmed) // 3 for milestone
+		require.Equal(t, 3, conf.TxsZeroValue) // 3 for milestone
 		require.Equal(t, 0, conf.TxsValue)
 		require.Equal(t, 0, conf.TxsConflicting)
 		milestones = append(milestones, ms)
@@ -576,10 +567,10 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Confirming milestone at bundle C (bundle D and E are not included)
 	_, conf := issueAndConfirmMilestoneOnTip(t, bundleC.GetBundle().GetTailHash(), true)
-	require.Equal(t, 4+4+4+3+1, conf.TxsConfirmed) // 3 are for the milestone itself + 1 for checkpoint
+	require.Equal(t, 4+4+4+3, conf.TxsConfirmed) // 3 are for the milestone itself
 	require.Equal(t, 8, conf.TxsValue)
 	require.Equal(t, 4, conf.TxsConflicting)
-	require.Equal(t, 3+1, conf.TxsZeroValue) // The milestone + checkpoint
+	require.Equal(t, 3, conf.TxsZeroValue) // The milestone
 
 	// Verify balances (seed, index, balance)
 	assertAddressBalance(t, seed1, 0, 0)
@@ -594,10 +585,10 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Confirming milestone at bundle E
 	_, conf = issueAndConfirmMilestoneOnTip(t, bundleE.GetBundle().GetTailHash(), true)
-	require.Equal(t, 4+4+3+1, conf.TxsConfirmed) // 3 are for the milestone itself + 1 for checkpoint
+	require.Equal(t, 4+4+3, conf.TxsConfirmed) // 3 are for the milestone itself
 	require.Equal(t, 4, conf.TxsValue)
 	require.Equal(t, 4, conf.TxsConflicting)
-	require.Equal(t, 3+1, conf.TxsZeroValue) // The milestone + checkpoint
+	require.Equal(t, 3, conf.TxsZeroValue) // The milestone
 
 	// Verify balances (seed, index, balance)
 	assertAddressBalance(t, seed1, 0, 0)
@@ -634,8 +625,8 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 
 	// Confirming milestone include all tx up to bundle E. This should only include A, B and E
 	_, conf := issueAndConfirmMilestoneOnTip(t, bundleE.GetBundle().GetTailHash(), true)
-	require.Equal(t, 3+3+1, conf.TxsConfirmed) // A, B, E + 3 for Milestone + 1 for checkpoint
-	require.Equal(t, 3+3+1, conf.TxsZeroValue) // 3 are for the milestone itself + 1 for checkpoint
+	require.Equal(t, 3+3, conf.TxsConfirmed) // A, B, E + 3 for Milestone
+	require.Equal(t, 3+3, conf.TxsZeroValue) // 3 are for the milestone itself
 	require.Equal(t, 0, conf.TxsValue)
 	require.Equal(t, 0, conf.TxsConflicting)
 
@@ -645,8 +636,8 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	// Confirming milestone at bundle F. This should confirm D, C and F
 	_, conf = issueAndConfirmMilestoneOnTip(t, bundleF.GetBundle().GetTailHash(), true)
 
-	require.Equal(t, 3+3+1, conf.TxsConfirmed) // D, C, F + 3 for Milestone + 1 for checkpoint
-	require.Equal(t, 3+3+1, conf.TxsZeroValue) // 3 are for the milestone itself + 1 for checkpoint
+	require.Equal(t, 3+3, conf.TxsConfirmed) // D, C, F + 3 for Milestone
+	require.Equal(t, 3+3, conf.TxsZeroValue) // 3 are for the milestone itself
 	require.Equal(t, 0, conf.TxsValue)
 	require.Equal(t, 0, conf.TxsConflicting)
 
