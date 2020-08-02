@@ -80,7 +80,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		log.Debugf(fmt.Errorf("%w: %s (%d)", err, tipselName, tipsCount).Error())
 		return
 	}
-	log.Debugf(fmt.Errorf("OK: %s (%d) Tips: %d", tipselName, tipsCount, len(tips)).Error())
 
 	durationGTTA := time.Since(timeStart)
 
@@ -107,6 +106,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
+	log.Debugf(fmt.Errorf("OK: %s (%d) Tips: %d, Tag: %s", tipselName, tipsCount, len(tips)).Error(), tag)
 
 	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
 }
