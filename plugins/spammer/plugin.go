@@ -120,6 +120,9 @@ func configure(plugin *node.Plugin) {
 	if len(tagSubstring) > 20 {
 		tagSubstring = string([]rune(tagSubstring)[:20])
 	}
+	if len(tagSemiLazySubstring) > 20 {
+		tagSemiLazySubstring = string([]rune(tagSemiLazySubstring)[:20])
+	}
 }
 
 func run(_ *node.Plugin) {
