@@ -24,6 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/mselection"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
@@ -41,13 +42,25 @@ var (
 	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
 	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
-	maxTrackedTails int
+	maxTrackedTails                                  int
+	maxDeltaTxYoungestRootSnapshotIndexToLSMI        milestone.Index
+	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI milestone.Index
+	belowMaxDepth                                    milestone.Index
 
-	nextCheckpointSignal chan struct{}
-	nextMilestoneSignal  chan struct{}
+	nextCheckpointNonLazySignal  chan struct{}
+	nextCheckpointSemiLazySignal chan struct{}
+	nextMilestoneSignal          chan struct{}
 
-	coo      *coordinator.Coordinator
-	selector *mselection.HeaviestSelector
+	coo              *coordinator.Coordinator
+	selectorNonLazy  *mselection.HeaviestSelector
+	selectorSemiLazy *mselection.HeaviestSelector
+
+	//
+	lastCheckpointIndexNonLazy  int
+	lastCheckpointIndexSemiLazy int
+	lastCheckpointHashNonLazy   hornet.Hash
+	lastCheckpointHashSemiLazy  hornet.Hash
+	lastMilestoneHash           hornet.Hash
 
 	// Closures
 	onBundleSolid                 *events.Closure
@@ -79,7 +92,15 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 	}
 
 	// use the heaviest branch tip selection for the milestones
-	selector = mselection.New(
+	selectorNonLazy = mselection.New(
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+	)
+
+	// use the heaviest branch tip selection for the milestones
+	selectorSemiLazy = mselection.New(
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
@@ -88,13 +109,18 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
 
-	nextCheckpointSignal = make(chan struct{})
+	nextCheckpointNonLazySignal = make(chan struct{})
+	nextCheckpointSemiLazySignal = make(chan struct{})
 
 	// must be a buffered channel, otherwise signal gets
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
 
 	maxTrackedTails = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTrackedTails)
+
+	maxDeltaTxYoungestRootSnapshotIndexToLSMI = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI))
+	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI))
+	belowMaxDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth))
 
 	coo := coordinator.New(
 		seed,
@@ -104,7 +130,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		powFunc,
-		selector.SelectTips,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
@@ -141,35 +166,130 @@ func run(plugin *node.Plugin) {
 		attachEvents()
 
 		// bootstrap the network if not done yet
-		if criticalErr := coo.Bootstrap(); criticalErr != nil {
+		milestoneHash, criticalErr := coo.Bootstrap()
+		if criticalErr != nil {
 			log.Panic(criticalErr)
 		}
+
+		// init the last milestone hash
+		lastMilestoneHash = milestoneHash
+
+		// init the checkpoints
+		lastCheckpointHashNonLazy = milestoneHash
+		lastCheckpointHashSemiLazy = milestoneHash
+		lastCheckpointIndexNonLazy = 0
+		lastCheckpointIndexSemiLazy = 0
 
 	coordinatorLoop:
 		for {
 			select {
-			case <-nextCheckpointSignal:
+			case <-nextCheckpointNonLazySignal:
 				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if trackedTailsCount := selector.GetTrackedTailsCount(); trackedTailsCount < maxTrackedTails {
+				if trackedTailsCount := selectorNonLazy.GetTrackedTailsCount(); trackedTailsCount < maxTrackedTails {
 					continue
 				}
 
-				// issue a checkpoint
-				if err := coo.IssueCheckpoint(); err != nil {
+				tips, err := selectorNonLazy.SelectTips(0)
+				if err != nil {
 					// issuing checkpoint failed => not critical
 					if err != mselection.ErrNoTipsAvailable {
 						log.Warn(err)
 					}
+					continue
 				}
 
+				// issue a non-lazy checkpoint
+				checkpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy+1, lastCheckpointHashNonLazy, tips)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					log.Warn(err)
+					continue
+				}
+				lastCheckpointIndexNonLazy++
+				lastCheckpointHashNonLazy = checkpointHash
+
+			case <-nextCheckpointSemiLazySignal:
+				// check the thresholds again, because a new milestone could have been issued in the meantime
+				if trackedTailsCount := selectorSemiLazy.GetTrackedTailsCount(); trackedTailsCount < maxTrackedTails {
+					continue
+				}
+
+				tips, err := selectorSemiLazy.SelectTips(0)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					if err != mselection.ErrNoTipsAvailable {
+						log.Warn(err)
+					}
+					continue
+				}
+
+				// issue a semi-lazy checkpoint
+				checkpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy+1, lastCheckpointHashSemiLazy, tips)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					log.Warn(err)
+					continue
+				}
+				lastCheckpointIndexSemiLazy++
+				lastCheckpointHashSemiLazy = checkpointHash
+
 			case <-nextMilestoneSignal:
-				err, criticalErr := coo.IssueMilestone()
+
+				// issue a new semi-lazy checkpoint right in front of the milestone
+				semiLazyTips, err := selectorSemiLazy.SelectTips(1)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					if err != mselection.ErrNoTipsAvailable {
+						log.Warn(err)
+					}
+				} else {
+					semiLazyCheckpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy+1, lastCheckpointHashSemiLazy, semiLazyTips)
+					if err != nil {
+						// issuing checkpoint failed => not critical
+						log.Warn(err)
+					} else {
+						// use the new checkpoint hash
+						lastCheckpointHashSemiLazy = semiLazyCheckpointHash
+					}
+				}
+
+				// issue a new non-lazy checkpoint right in front of the milestone
+				nonLazyTips, err := selectorNonLazy.SelectTips(1)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					if err != mselection.ErrNoTipsAvailable {
+						log.Warn(err)
+					}
+				} else {
+					// add the semi-lazy checkpoint to the list the non-lazy checkpoint should reference
+					nonLazyTips = append(nonLazyTips, lastCheckpointHashSemiLazy)
+
+					nonLazyCheckpointHash, err := coo.IssueCheckpoint("non-lazy", lastCheckpointIndexNonLazy+1, lastCheckpointHashNonLazy, semiLazyTips)
+					if err != nil {
+						// issuing checkpoint failed => not critical
+						log.Warn(err)
+					} else {
+						// use the new checkpoint hash
+						lastCheckpointHashNonLazy = nonLazyCheckpointHash
+					}
+				}
+
+				milestoneHash, err, criticalErr := coo.IssueMilestone(lastMilestoneHash, lastCheckpointHashNonLazy)
 				if criticalErr != nil {
 					log.Panic(criticalErr)
 				}
 				if err != nil {
 					log.Warn(err)
 				}
+
+				// remember the last milestone hash
+				lastMilestoneHash = milestoneHash
+
+				// reset the checkpoints
+				lastCheckpointHashNonLazy = milestoneHash
+				lastCheckpointHashSemiLazy = milestoneHash
+				lastCheckpointIndexNonLazy = 0
+				lastCheckpointIndexSemiLazy = 0
 
 			case <-shutdownSignal:
 				break coordinatorLoop
@@ -241,14 +361,36 @@ func configureEvents() {
 				return
 			}
 
-			if trackedTailsCount := selector.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
-				log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
+			score := tipselect.CalculateScore(bndl.GetTailHash(), tangle.GetSolidMilestoneIndex(), maxDeltaTxYoungestRootSnapshotIndexToLSMI, belowMaxDepth, maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
+			switch score {
+			case tipselect.ScoreLazy:
+				// we ignore tips that are lazy.
+				return
 
-				// issue next checkpoint
-				select {
-				case nextCheckpointSignal <- struct{}{}:
-				default:
-					// do not block if already another signal is waiting
+			case tipselect.ScoreSemiLazy:
+				// add semi-lazy tips to the semi-lazy heaviest branch selector
+				if trackedTailsCount := selectorSemiLazy.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
+					log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
+
+					// issue next checkpoint
+					select {
+					case nextCheckpointSemiLazySignal <- struct{}{}:
+					default:
+						// do not block if already another signal is waiting
+					}
+				}
+
+			case tipselect.ScoreNonLazy:
+				// add non-lazy tips to the non-lazy heaviest branch selector
+				if trackedTailsCount := selectorNonLazy.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
+					log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
+
+					// issue next checkpoint
+					select {
+					case nextCheckpointNonLazySignal <- struct{}{}:
+					default:
+						// do not block if already another signal is waiting
+					}
 				}
 			}
 		})
@@ -268,8 +410,8 @@ func configureEvents() {
 		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 
-	onIssuedCheckpointTransaction = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
-		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
+	onIssuedCheckpointTransaction = events.NewClosure(func(checkpointName string, checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
+		log.Infof("%s checkpoint (%d) transaction issued (%d/%d): %v", checkpointName, checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
 	})
 
 	onIssuedMilestone = events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
