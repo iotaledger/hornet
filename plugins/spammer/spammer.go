@@ -1,6 +1,7 @@
 package spammer
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -65,21 +66,27 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	timeStart := time.Now()
 
 	tipselFunc := urts.TipSelector.SelectNonLazyTips
+	tag := tagSubstring
+
+	reduceSemiLazyTips := semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit
+
 	tipselName := "non-lazy"
 	tipsCount := metrics.SharedServerMetrics.TipsNonLazy.Load()
-	tag := tagSubstring
-	if semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit {
-		tipselFunc = urts.TipSelector.SelectSemiLazyTips
-		tipsCount = metrics.SharedServerMetrics.TipsSemiLazy.Load()
-		tipselName = "semi-lazy"
-		tag = tagSemiLazySubstring
-	}
 
-	println(fmt.Sprintf("Tag: %v (%d), TagLazy: %v (%d)", tagSubstring, len(tagSubstring), tagSemiLazySubstring, len(tagSemiLazySubstring)))
+	if reduceSemiLazyTips {
+		tipselFunc = urts.TipSelector.SelectSemiLazyTips
+		tag = tagSemiLazySubstring
+		tipselName = "semi-lazy"
+		tipsCount = metrics.SharedServerMetrics.TipsSemiLazy.Load()
+	}
 
 	tips, err := tipselFunc()
 	if err != nil {
 		log.Debugf(fmt.Errorf("%w: %s (%d)", err, tipselName, tipsCount).Error())
+		return
+	}
+	if reduceSemiLazyTips && bytes.Equal(tips[0], tips[1]) {
+		log.Debugf("semi-lazy tips equal")
 		return
 	}
 
@@ -90,13 +97,11 @@ func doSpam(shutdownSignal <-chan struct{}) {
 
 	b, err := createBundle(txAddress, message, tag, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
-		log.Debugf(fmt.Errorf("createBundle: %w", err).Error())
 		return
 	}
 
 	err = doPow(b, tips[0].Trytes(), tips[1].Trytes(), mwm, shutdownSignal)
 	if err != nil {
-		log.Debugf(fmt.Errorf("doPow: %w", err).Error())
 		return
 	}
 
@@ -106,7 +111,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 		txTrits, _ := transaction.TransactionToTrits(&tx)
 		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
-			log.Debugf(fmt.Errorf("CompressAndEmit: %w", err).Error())
 			return
 		}
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
