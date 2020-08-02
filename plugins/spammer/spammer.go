@@ -75,6 +75,8 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		tag = tagSemiLazySubstring
 	}
 
+	println(fmt.Sprintf("Tag: %v (%d), TagLazy: %v (%d)", tagSubstring, len(tagSubstring), tagSemiLazySubstring, len(tagSemiLazySubstring)))
+
 	tips, err := tipselFunc()
 	if err != nil {
 		log.Debugf(fmt.Errorf("%w: %s (%d)", err, tipselName, tipsCount).Error())
