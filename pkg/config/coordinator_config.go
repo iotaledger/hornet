@@ -25,17 +25,21 @@ const (
 	// the maximum amount of known bundle tails for milestone tipselection
 	// if this limit is exceeded, a new checkpoint is issued
 	CfgCoordinatorCheckpointsMaxTrackedTails = "coordinator.checkpoints.maxTrackedTransactions"
+	// the config group used for the non-lazy tip-pool
+	CfgCoordinatorTipselectNonLazy = "coordinator.tipsel.nonLazy."
+	// the config group used for the semi-lazy tip-pool
+	CfgCoordinatorTipselectSemiLazy = "coordinator.tipsel.semiLazy."
 	// the minimum threshold of unconfirmed transactions in the heaviest branch for milestone tipselection
 	// if the value falls below that threshold, no more heaviest branch tips are picked
-	CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold = "coordinator.tipsel.minHeaviestBranchUnconfirmedTransactionsThreshold"
+	CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold = "minHeaviestBranchUnconfirmedTransactionsThreshold"
 	// the maximum amount of checkpoint transactions with heaviest branch tips that are picked
 	// if the heaviest branch is not below "UnconfirmedTransactionsThreshold" before
-	CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint = "coordinator.tipsel.maxHeaviestBranchTipsPerCheckpoint"
+	CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint = "maxHeaviestBranchTipsPerCheckpoint"
 	// the amount of checkpoint transactions with random tips that are picked if a checkpoint is issued and at least
 	// one heaviest branch tip was found, otherwise no random tips will be picked
-	CfgCoordinatorTipselectRandomTipsPerCheckpoint = "coordinator.tipsel.randomTipsPerCheckpoint"
+	CfgCoordinatorTipselectRandomTipsPerCheckpoint = "randomTipsPerCheckpoint"
 	// the maximum duration to select the heaviest branch tips in milliseconds
-	CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds = "coordinator.tipsel.heaviestBranchSelectionDeadlineMilliseconds"
+	CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds = "heaviestBranchSelectionDeadlineMilliseconds"
 )
 
 func init() {
@@ -49,8 +53,12 @@ func init() {
 	flag.Int(CfgCoordinatorIntervalSeconds, 60, "the interval milestones are issued")
 	flag.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
 	flag.Int(CfgCoordinatorCheckpointsMaxTrackedTails, 10000, "maximum amount of known bundle tails for milestone tipselection")
-	flag.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 20, "minimum threshold of unconfirmed transactions in the heaviest branch")
-	flag.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips")
-	flag.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 2, "amount of checkpoint transactions with random tips")
-	flag.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
+	flag.Int(CfgCoordinatorTipselectNonLazy+CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 20, "minimum threshold of unconfirmed transactions in the heaviest branch (non-lazy)")
+	flag.Int(CfgCoordinatorTipselectNonLazy+CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips (non-lazy)")
+	flag.Int(CfgCoordinatorTipselectNonLazy+CfgCoordinatorTipselectRandomTipsPerCheckpoint, 2, "amount of checkpoint transactions with random tips (non-lazy)")
+	flag.Int(CfgCoordinatorTipselectNonLazy+CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds (non-lazy)")
+	flag.Int(CfgCoordinatorTipselectSemiLazy+CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 20, "minimum threshold of unconfirmed transactions in the heaviest branch (semi-lazy)")
+	flag.Int(CfgCoordinatorTipselectSemiLazy+CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips (semi-lazy)")
+	flag.Int(CfgCoordinatorTipselectSemiLazy+CfgCoordinatorTipselectRandomTipsPerCheckpoint, 2, "amount of checkpoint transactions with random tips (semi-lazy)")
+	flag.Int(CfgCoordinatorTipselectSemiLazy+CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds (semi-lazy)")
 }
