@@ -65,17 +65,23 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	timeStart := time.Now()
 
 	tipselFunc := urts.TipSelector.SelectNonLazyTips
+	tipselName := "non-lazy"
+	tipsCount := metrics.SharedServerMetrics.TipsNonLazy.Load()
 	tag := tagSubstring
 	if semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit {
 		tipselFunc = urts.TipSelector.SelectSemiLazyTips
+		tipsCount = metrics.SharedServerMetrics.TipsSemiLazy.Load()
+		tipselName = "semi-lazy"
 		tag = tagSemiLazySubstring
 	}
 
 	tips, err := tipselFunc()
 	if err != nil {
-		log.Debugf(err.Error())
+		log.Debugf(fmt.Errorf("%w: %s (%d)", err, tipselName, tipsCount).Error())
 		return
 	}
+	log.Debugf(fmt.Errorf("OK: %s (%d)", tipselName, tipsCount).Error())
+
 	durationGTTA := time.Since(timeStart)
 
 	txCountValue := int(txCount.Add(int32(bundleSize)))
