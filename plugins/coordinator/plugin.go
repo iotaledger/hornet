@@ -347,7 +347,7 @@ func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 	defer tangleplugin.Events.ProcessedTransaction.Detach(processedTxEvent)
 	if isMilestone {
 		tangleplugin.Events.SolidMilestoneChanged.Attach(solidMilestoneChangedEvent)
-		defer tangleplugin.Events.SolidMilestoneChanged.Attach(solidMilestoneChangedEvent)
+		defer tangleplugin.Events.SolidMilestoneChanged.Detach(solidMilestoneChangedEvent)
 	}
 
 	for _, t := range b {
