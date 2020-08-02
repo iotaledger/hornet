@@ -226,6 +226,10 @@ func run(plugin *node.Plugin) {
 				// issue a semi-lazy checkpoint
 				checkpointHash, err := coo.IssueCheckpoint("semi-lazy", lastCheckpointIndexSemiLazy+1, lastCheckpointHashSemiLazy, tips)
 				if err != nil {
+					if err == tangle.ErrNodeNotSynced {
+						// Coordinator is not synchronized, trigger the solidifier manually
+						tangleplugin.TriggerSolidifier()
+					}
 					// issuing checkpoint failed => not critical
 					log.Warn(err)
 					continue
