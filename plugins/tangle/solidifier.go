@@ -293,7 +293,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	- If tx are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted
 	*/
-	log.Infof("solidifyMilestone: %s", force)
 	if !force {
 		/*
 			If solidification is not forced, we will only run the solidifier under one of the following conditions:
@@ -335,7 +334,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	if currentSolidIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
-		log.Infof("Latest milestone already solid: %d/%d", currentSolidIndex, latestIndex)
 		return
 	}
 
@@ -343,7 +341,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	cachedMsToSolidify := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
 	if cachedMsToSolidify == nil {
 		// No newer milestone available
-		log.Infof("No newer milestone available: %d", currentSolidIndex)
 		return
 	}
 

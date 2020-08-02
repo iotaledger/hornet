@@ -69,24 +69,18 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	tag := tagSubstring
 
 	reduceSemiLazyTips := semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit
-
-	tipselName := "non-lazy"
-	tipsCount := metrics.SharedServerMetrics.TipsNonLazy.Load()
-
 	if reduceSemiLazyTips {
 		tipselFunc = urts.TipSelector.SelectSemiLazyTips
 		tag = tagSemiLazySubstring
-		tipselName = "semi-lazy"
-		tipsCount = metrics.SharedServerMetrics.TipsSemiLazy.Load()
 	}
 
 	tips, err := tipselFunc()
 	if err != nil {
-		log.Debugf(fmt.Errorf("%w: %s (%d)", err, tipselName, tipsCount).Error())
 		return
 	}
+
 	if reduceSemiLazyTips && bytes.Equal(tips[0], tips[1]) {
-		log.Debugf("semi-lazy tips equal")
+		// do not spam if the tip is equal since that would not reduce the semi lazy count
 		return
 	}
 
@@ -115,7 +109,6 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		}
 		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
 	}
-	log.Debugf(fmt.Errorf("OK: %s (%d) Tips: %d, Tag: %s", tipselName, tipsCount, len(tips), tag).Error())
 
 	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
 }
