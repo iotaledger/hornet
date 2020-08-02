@@ -425,10 +425,15 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 		return ScoreLazy
 	}
 
-	// the approvees (trunk and branch) are the transactions this tip approves
+	cachedBundle := tangle.GetCachedBundleOrNil(txHash) // bundle +1
+	if cachedBundle == nil {
+		panic(fmt.Errorf("%w: bundle %s of tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, txHash.Trytes()))
+	}
+
+	// the approvees (trunk and branch) are the tail transactions this tip approves
 	approveeHashes := map[string]struct{}{
-		string(cachedTx.GetTransaction().GetTrunkHash()):  {},
-		string(cachedTx.GetTransaction().GetBranchHash()): {},
+		string(cachedBundle.GetBundle().GetTrunk(true)):  {},
+		string(cachedBundle.GetBundle().GetBranch(true)): {},
 	}
 
 	approveesLazy := 0
