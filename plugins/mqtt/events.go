@@ -156,9 +156,10 @@ func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index)
 		return err
 	}
 
-	return mqttBroker.Send(topicConfTrytes, fmt.Sprintf(`{"msIndex":%d,"trytes":"%v","timestamp":"%s"}`,
-		msIndex, // Index of the milestone that confirmed the transaction
-		trytes,  // Transaction trytes
+	return mqttBroker.Send(topicConfTrytes, fmt.Sprintf(`{"txHash":"%v","trytes":"%v","msIndex":%d,"timestamp":"%s"}`,
+		iotaTx.Hash, // Transaction hash
+		trytes,      // Transaction trytes
+		msIndex,     // Index of the milestone that confirmed the transaction
 		time.Now().UTC().Format(time.RFC3339),
 	))
 }

@@ -174,8 +174,9 @@ func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index)
 	}
 
 	messages := []string{
-		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
+		iotaTx.Hash,                           // Transaction hash
 		trytes,                                // Transaction trytes
+		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
 	}
 
 	return publisher.Send(topicConfTrytes, messages)
