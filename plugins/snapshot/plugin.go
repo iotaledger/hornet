@@ -201,6 +201,7 @@ func run(_ *node.Plugin) {
 				if pruningEnabled {
 					if solidMilestoneIndex <= pruningDelay {
 						// Not enough history
+						localSnapshotLock.Unlock()
 						return
 					}
 
