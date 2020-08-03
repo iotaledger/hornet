@@ -279,7 +279,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 		randTip--
 
 		// if randTip reaches below zero, we return the given tip
-		if randTip < 0 {
+		if randTip <= 0 {
 			return tip.Hash, nil
 		}
 	}
@@ -298,21 +298,10 @@ func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	// record stats
 	start := time.Now()
 
-	lazyTips := 0
-	for {
-		tipHash, err := ts.randomTipWithoutLocking(tipsMap)
-		if err == ErrTipLazy {
-			// loop as long as we pick lazy tips to remove them from the pool
-			lazyTips++
-			continue
-		}
+	tipHash, err := ts.randomTipWithoutLocking(tipsMap)
+	ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start)})
 
-		if err == nil {
-			ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start), LazyTips: lazyTips})
-		}
-
-		return tipHash, err
-	}
+	return tipHash, err
 }
 
 // SelectTips selects two tips.
