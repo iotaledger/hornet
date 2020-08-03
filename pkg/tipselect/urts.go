@@ -271,15 +271,15 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	}
 
 	// get a random number between 1 and the amount of tips
-	randTip := utils.RandomInsecure(0, len(tipsMap))
+	randTip := utils.RandomInsecure(0, len(tipsMap)-1)
 
 	// iterate over the tipsMap and subtract each tip from randTip
 	for _, tip := range tipsMap {
 		// subtract the tip from randTip
 		randTip--
 
-		// if randTip reaches below zero, we return the given tip
-		if randTip <= 0 {
+		// if randTip is below zero, we return the given tip
+		if randTip < 0 {
 			return tip.Hash, nil
 		}
 	}

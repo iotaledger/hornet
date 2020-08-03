@@ -60,8 +60,8 @@ func (il *bundleTailList) randomTip() (*bundleTail, error) {
 	for _, tip := range il.tails {
 		randomTailIndex--
 
-		// if randomTailIndex reaches zero or below, we return the given tip
-		if randomTailIndex <= 0 {
+		// if randomTailIndex is below zero, we return the given tip
+		if randomTailIndex < 0 {
 			return tip, nil
 		}
 	}
