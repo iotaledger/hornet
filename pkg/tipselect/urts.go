@@ -208,22 +208,20 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 		string(bndl.GetBranch(true)): {},
 	}
 
-	checkTip := func(approveeTip *Tip, lenTipsMap int, retentionRulesTipsLimit int, maxApprovers uint32, maxReferencedTipAgeSeconds time.Duration) {
+	checkTip := func(tipsMap map[string]*Tip, approveeTip *Tip, retentionRulesTipsLimit int, maxApprovers uint32, maxReferencedTipAgeSeconds time.Duration) bool {
 		// if the amount of known tips is above the limit, remove the tip directly
-		if lenTipsMap > retentionRulesTipsLimit {
-			ts.removeTipWithoutLocking(hornet.Hash(approveeTip.Hash))
-			return
+		if len(tipsMap) > retentionRulesTipsLimit {
+			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(approveeTip.Hash))
 		}
 
 		// check if the maximum amount of approvers for this tip is reached
 		if approveeTip.ApproversCount.Add(1) >= maxApprovers {
-			ts.removeTipWithoutLocking(hornet.Hash(approveeTip.Hash))
-			return
+			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(approveeTip.Hash))
 		}
 
 		if maxReferencedTipAgeSeconds == time.Duration(0) {
 			// check for maxReferenceTipAge is disabled
-			return
+			return false
 		}
 
 		// check if the tip was referenced by another transaction before
@@ -231,6 +229,8 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 			// mark the tip as referenced
 			approveeTip.TimeFirstApprover = time.Now()
 		}
+
+		return false
 	}
 
 	for approveeTailTxHash := range approveeTailTxHashes {
@@ -238,38 +238,28 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 		switch tip.Score {
 		case ScoreNonLazy:
 			if approveeTip, exists := ts.nonLazyTipsMap[approveeTailTxHash]; exists {
-				checkTip(approveeTip, len(ts.nonLazyTipsMap), ts.retentionRulesTipsLimitNonLazy, ts.maxApproversNonLazy, ts.maxReferencedTipAgeSecondsNonLazy)
+				if checkTip(ts.nonLazyTipsMap, approveeTip, ts.retentionRulesTipsLimitNonLazy, ts.maxApproversNonLazy, ts.maxReferencedTipAgeSecondsNonLazy) {
+					metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+				}
 			}
 		case ScoreSemiLazy:
 			if approveeTip, exists := ts.semiLazyTipsMap[approveeTailTxHash]; exists {
-				checkTip(approveeTip, len(ts.semiLazyTipsMap), ts.retentionRulesTipsLimitSemiLazy, ts.maxApproversSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy)
+				if checkTip(ts.semiLazyTipsMap, approveeTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxApproversSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy) {
+					metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+				}
 			}
 		}
 	}
 }
 
 // removeTipWithoutLocking removes the given tailTxHash from the tipsMap without acquiring the lock.
-func (ts *TipSelector) removeTipWithoutLocking(tailTxHash hornet.Hash) {
-	if tip, exists := ts.nonLazyTipsMap[string(tailTxHash)]; exists {
-		delete(ts.nonLazyTipsMap, string(tailTxHash))
-		metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, tailTxHash hornet.Hash) bool {
+	if tip, exists := tipsMap[string(tailTxHash)]; exists {
+		delete(tipsMap, string(tailTxHash))
 		ts.Events.TipRemoved.Trigger(tip)
-		return
+		return true
 	}
-
-	if tip, exists := ts.semiLazyTipsMap[string(tailTxHash)]; exists {
-		delete(ts.semiLazyTipsMap, string(tailTxHash))
-		metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
-		ts.Events.TipRemoved.Trigger(tip)
-	}
-}
-
-// RemoveTip removes the given tailTxHash from the tipsMap.
-func (ts *TipSelector) RemoveTip(tailTxHash hornet.Hash) {
-	ts.tipsLock.Lock()
-	defer ts.tipsLock.Unlock()
-
-	ts.removeTipWithoutLocking(tailTxHash)
+	return false
 }
 
 // randomTipWithoutLocking picks a random tip from the pool and checks it's "own" score again without acquiring the lock.
@@ -377,29 +367,33 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	checkTip := func(tip *Tip, maxReferencedTipAgeSeconds time.Duration) {
+	checkTip := func(tipsMap map[string]*Tip, tip *Tip, maxReferencedTipAgeSeconds time.Duration) bool {
 		if tip.TimeFirstApprover.IsZero() {
 			// not referenced by another transaction
-			return
+			return false
 		}
 
 		// check if the tip reached its maximum age
 		if time.Since(tip.TimeFirstApprover) < maxReferencedTipAgeSeconds {
-			return
+			return false
 		}
 
 		// remove the tip from the pool because it is outdated
-		ts.removeTipWithoutLocking(tip.Hash)
+		return ts.removeTipWithoutLocking(tipsMap, tip.Hash)
 	}
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
-		checkTip(tip, ts.maxReferencedTipAgeSecondsNonLazy)
-		count++
+		if checkTip(ts.nonLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsNonLazy) {
+			metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+			count++
+		}
 	}
 	for _, tip := range ts.semiLazyTipsMap {
-		checkTip(tip, ts.maxReferencedTipAgeSecondsSemiLazy)
-		count++
+		if checkTip(ts.semiLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsSemiLazy) {
+			metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+			count++
+		}
 	}
 
 	return count
@@ -418,13 +412,17 @@ func (ts *TipSelector) UpdateScores() {
 		tip.Score = CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
-			ts.removeTipWithoutLocking(tip.Hash)
+			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.Hash) {
+				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+			}
 			continue
 		}
 
 		if tip.Score == ScoreSemiLazy {
 			// remove the tip from the pool because it is outdated
-			ts.removeTipWithoutLocking(tip.Hash)
+			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.Hash) {
+				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+			}
 			// add the tip to the semi-lazy tips map
 			ts.semiLazyTipsMap[string(tip.Hash)] = tip
 			ts.Events.TipAdded.Trigger(tip)
@@ -437,13 +435,17 @@ func (ts *TipSelector) UpdateScores() {
 		tip.Score = CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
-			ts.removeTipWithoutLocking(tip.Hash)
+			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.Hash) {
+				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+			}
 			continue
 		}
 
 		if tip.Score == ScoreNonLazy {
 			// remove the tip from the pool because it is outdated
-			ts.removeTipWithoutLocking(tip.Hash)
+			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.Hash) {
+				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+			}
 			// add the tip to the non-lazy tips map
 			ts.nonLazyTipsMap[string(tip.Hash)] = tip
 			ts.Events.TipAdded.Trigger(tip)
