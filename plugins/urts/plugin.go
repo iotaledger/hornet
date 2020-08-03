@@ -98,8 +98,8 @@ func configureEvents() {
 		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()
-		TipSelector.UpdateScores()
-		log.Debugf("UpdateScores finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+		removedTipCount := TipSelector.UpdateScores()
+		log.Debugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})
 }
 

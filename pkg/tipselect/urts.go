@@ -400,19 +400,21 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 }
 
 // UpdateScores updates the scores of the tips and removes lazy ones.
-func (ts *TipSelector) UpdateScores() {
+func (ts *TipSelector) UpdateScores() int {
 
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
+	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
 		// check the score of the tip again to avoid old tips
 		tip.Score = CalculateScore(tip.Hash, lsmi, ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI, ts.belowMaxDepth, ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.Hash) {
+				count++
 				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
 			}
 			continue
@@ -421,12 +423,14 @@ func (ts *TipSelector) UpdateScores() {
 		if tip.Score == ScoreSemiLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.Hash) {
+				count++
 				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
 			}
 			// add the tip to the semi-lazy tips map
 			ts.semiLazyTipsMap[string(tip.Hash)] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
+			count--
 		}
 	}
 
@@ -436,6 +440,7 @@ func (ts *TipSelector) UpdateScores() {
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.Hash) {
+				count++
 				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
 			}
 			continue
@@ -444,14 +449,18 @@ func (ts *TipSelector) UpdateScores() {
 		if tip.Score == ScoreNonLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.Hash) {
+				count++
 				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
 			}
 			// add the tip to the non-lazy tips map
 			ts.nonLazyTipsMap[string(tip.Hash)] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			metrics.SharedServerMetrics.TipsNonLazy.Add(1)
+			count--
 		}
 	}
+
+	return count
 }
 
 // CalculateScore calculates the tip selection score of this transaction
