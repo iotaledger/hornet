@@ -77,7 +77,7 @@ func FetchConfig() error {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, false, !hasFlag(defaultPeeringConfigName))
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName))
 	if err != nil {
 		return err
 	}
