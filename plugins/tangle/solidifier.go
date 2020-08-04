@@ -212,7 +212,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		// called on solid entry points
 		func(approveeHash hornet.Hash) {
 			// Ignore solid entry points (snapshot milestone included)
-		}, true, false, abortSignal); err != nil {
+		}, true, false, false, abortSignal); err != nil {
 		if err == tangle.ErrOperationAborted {
 			return false, true
 		}
@@ -293,7 +293,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	- If tx are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted
 	*/
-
 	if !force {
 		/*
 			If solidification is not forced, we will only run the solidifier under one of the following conditions:

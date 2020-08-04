@@ -9,6 +9,8 @@ var (
 	ErrOperationAborted = errors.New("operation was aborted")
 	// ErrTransactionNotFound is returned when a transaction was not found.
 	ErrTransactionNotFound = errors.New("transaction not found")
+	// ErrBundleNotFound is returned when a bundle was not found.
+	ErrBundleNotFound = errors.New("bundle not found")
 	// ErrNodeNotSynced is returned when the node is not synchronized.
 	ErrNodeNotSynced = errors.New("node is not synchronized")
 )

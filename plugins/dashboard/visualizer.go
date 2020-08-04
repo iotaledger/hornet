@@ -144,7 +144,7 @@ func runVisualizer() {
 		}
 
 		var excludedIDs []string
-		for _, txHash := range confirmation.TailsExcludedConflicting {
+		for _, txHash := range confirmation.Mutations.TailsExcludedConflicting {
 			excludedIDs = append(excludedIDs, txHash.Trytes()[:VisualizerIdLength])
 		}
 

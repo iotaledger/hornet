@@ -16,6 +16,7 @@ const (
 	topicLM           = "lm"
 	topicLSM          = "lsm"
 	topicSN           = "sn"
+	topicConfTrytes   = "conf_trytes"
 	topicTxTrytes     = "trytes"
 	topicTX           = "tx"
 	topicSpentAddress = "spent_address"
@@ -30,6 +31,7 @@ var (
 		topicLM,
 		topicLSM,
 		topicSN,
+		topicConfTrytes,
 		topicTxTrytes,
 		topicTX,
 		topicSpentAddress,

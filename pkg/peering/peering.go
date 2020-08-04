@@ -371,8 +371,9 @@ func (m *Manager) SetupEventHandlers(p *peer.Peer) {
 		if p.Disconnected {
 			return
 		}
-		if err := p.Conn.Close(); err != nil {
-			m.Events.Error.Trigger(err)
+		m.Events.Error.Trigger(err)
+		if closeErr := p.Conn.Close(); closeErr != nil {
+			m.Events.Error.Trigger(closeErr)
 		}
 	})
 

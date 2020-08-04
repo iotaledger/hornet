@@ -214,6 +214,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			true,
 			// the pruning target index is also a solid entry point => traverse it anyways
 			milestoneIndex == targetIndex,
+			false,
 			nil)
 
 		cachedMs.Release(true) // milestone -1

@@ -196,7 +196,7 @@ func printStatus() {
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
 				"TPS (in/new/out): %05d/%05d/%05d, "+
-				"Tips: %d",
+				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			receiveTxWorkerPool.GetPendingQueueSize(),
@@ -205,5 +205,6 @@ func printStatus() {
 			lastIncomingTPS,
 			lastNewTPS,
 			lastOutgoingTPS,
-			metrics.SharedServerMetrics.Tips.Load()))
+			metrics.SharedServerMetrics.TipsNonLazy.Load(),
+			metrics.SharedServerMetrics.TipsSemiLazy.Load()))
 }

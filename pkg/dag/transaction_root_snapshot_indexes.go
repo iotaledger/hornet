@@ -101,7 +101,7 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 		// called on solid entry points
 		func(txHash hornet.Hash) {
 			updateIndexes(snapshotInfo.EntryPointIndex, snapshotInfo.EntryPointIndex)
-		}, true, false, nil); err != nil {
+		}, true, false, false, nil); err != nil {
 		if err == tangle.ErrTransactionNotFound {
 			indexesValid = false
 		} else {

@@ -35,9 +35,14 @@ func configure(plugin *node.Plugin) {
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth),
-		config.NodeConfig.GetInt(config.CfgTipSelRetentionRulesTipsLimit),
-		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelMaxReferencedTipAgeSeconds))),
-		config.NodeConfig.GetUint32(config.CfgTipSelMaxApprovers),
+
+		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
+		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
+		config.NodeConfig.GetUint32(config.CfgTipSelNonLazy+config.CfgTipSelMaxApprovers),
+
+		config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
+		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
+		config.NodeConfig.GetUint32(config.CfgTipSelSemiLazy+config.CfgTipSelMaxApprovers),
 	)
 
 	configureEvents()
@@ -77,7 +82,7 @@ func configureEvents() {
 				return
 			}
 
-			TipSelector.AddTip(bndl.GetTailHash())
+			TipSelector.AddTip(bndl)
 		})
 	})
 
@@ -89,12 +94,12 @@ func configureEvents() {
 
 		// propagate new transaction root snapshot indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateTransactionRootSnapshotIndexes(confirmation.TailsReferenced, confirmation.MilestoneIndex)
+		dag.UpdateTransactionRootSnapshotIndexes(confirmation.Mutations.TailsReferenced, confirmation.MilestoneIndex)
 		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()
-		TipSelector.UpdateScores()
-		log.Debugf("UpdateScores finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+		removedTipCount := TipSelector.UpdateScores()
+		log.Debugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})
 }
 
