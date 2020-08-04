@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc7] - 04.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Changed
+
+    - URTS now uses separate tip-pools for semi- and non-lazy to prevent below-max-depth attacks
+    - Coordinator now waits until the milestone is solid
+    - Definition of semi-lazy tips in URTS was changed
+    - Spammer now tries to reduce semi-lazy tips if certain threshold reached
+    - Use dag helper in whiteflag (#583)
+
+### Fixed
+
+    - Coordinator bootstrapping
+    - Peering configs now recognized via CLI
+    - Error reason for connection abort is now shown
+    - Deadlock in snapshotting and pruning
+    - Fix wrong approveeHashes in URTS calculateScore
+
 ## [0.5.0-rc6] - 29.07.2020
 
 **Breaking change:**
