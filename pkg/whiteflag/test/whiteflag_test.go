@@ -31,6 +31,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	hornet_pow "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -270,13 +271,14 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 		return nil
 	}
 
-	_, powFunc := pow.GetFastestProofOfWorkImpl()
+	powHandler, err := hornet_pow.NewHandler()
+	require.NoError(t, err)
 
 	dir, err := ioutil.TempDir("", "coo.test")
 	require.NoError(t, err)
 	dirAndFile := fmt.Sprintf("%s/coordinator.state", dir)
 
-	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powFunc, storeBundleFunc, merkleHashFunc)
+	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powHandler, storeBundleFunc, merkleHashFunc)
 	require.NotNil(t, coo)
 
 	err = coo.InitMerkleTree("coordinator.tree", cooAddress)
