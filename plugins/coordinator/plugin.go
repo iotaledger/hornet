@@ -103,8 +103,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 	maxTrackedTails = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTrackedTails)
 
-	maxDeltaTxYoungestRootSnapshotIndexToLSMI = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI))
-	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI))
 	belowMaxDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth))
 
 	coo := coordinator.New(
