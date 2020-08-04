@@ -274,7 +274,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 // a checkpoint can contain multiple chained transactions to reference big parts of the unconfirmed cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) IssueCheckpoint(checkpointName string, checkpointIndex int, lastCheckpointHash hornet.Hash, tips hornet.Hashes) (hornet.Hash, error) {
+func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash hornet.Hash, tips hornet.Hashes) (hornet.Hash, error) {
 
 	if len(tips) == 0 {
 		return nil, ErrNoTipsGiven
@@ -299,7 +299,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointName string, checkpointIndex i
 
 		lastCheckpointHash = hornet.HashFromHashTrytes(b[0].Hash)
 
-		coo.Events.IssuedCheckpointTransaction.Trigger(checkpointName, checkpointIndex, i, len(tips), lastCheckpointHash)
+		coo.Events.IssuedCheckpointTransaction.Trigger(checkpointIndex, i, len(tips), lastCheckpointHash)
 	}
 
 	return lastCheckpointHash, nil
