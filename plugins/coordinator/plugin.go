@@ -217,6 +217,7 @@ func run(plugin *node.Plugin) {
 						tangleplugin.TriggerSolidifier()
 					}
 					log.Warn(err)
+					continue
 				}
 
 				// remember the last milestone hash
