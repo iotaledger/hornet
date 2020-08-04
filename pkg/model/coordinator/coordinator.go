@@ -306,7 +306,6 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 }
 
 // IssueMilestone creates the next milestone.
-// a new checkpoint is created right in front of the milestone to raise confirmation rate.
 // Returns non-critical and critical errors.
 func (coo *Coordinator) IssueMilestone(trunkHash hornet.Hash, branchHash hornet.Hash) (hornet.Hash, error, error) {
 
