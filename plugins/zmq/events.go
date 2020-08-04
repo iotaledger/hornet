@@ -38,8 +38,12 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, _ int64) {
 
 	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
-		err := publishConfTx(tx.Tx, msIndex)
-		if err != nil {
+
+		if err := publishConfTx(tx.Tx, msIndex); err != nil {
+			log.Error(err.Error())
+		}
+
+		if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
 			log.Error(err.Error())
 		}
 
@@ -159,6 +163,23 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 	}
 
 	return publisher.Send(topicSN, messages)
+}
+
+// Publish confirmed trytes
+func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+
+	trytes, err := transaction.TransactionToTrytes(iotaTx)
+	if err != nil {
+		return err
+	}
+
+	messages := []string{
+		iotaTx.Hash,                           // Transaction hash
+		trytes,                                // Transaction trytes
+		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
+	}
+
+	return publisher.Send(topicConfTrytes, messages)
 }
 
 // Publish transaction trytes of an tx that has recently been added to the ledger
