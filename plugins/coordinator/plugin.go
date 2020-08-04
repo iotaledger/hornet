@@ -91,20 +91,20 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		return nil, err
 	}
 
-	// use the heaviest branch tip selection for non-lazy tips for the milestones
+	// use the heaviest branch tip selection for the milestones
 	selectorNonLazy = mselection.New(
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectNonLazy+config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectNonLazy+config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectNonLazy+config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectNonLazy+config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
 
-	// use the heaviest branch tip selection for semi-lazy tips for the milestones
+	// use the heaviest branch tip selection for the milestones
 	selectorSemiLazy = mselection.New(
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectSemiLazy+config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectSemiLazy+config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectSemiLazy+config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectSemiLazy+config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
 
 	_, powFunc := pow.GetFastestProofOfWorkImpl()

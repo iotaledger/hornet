@@ -81,18 +81,10 @@
       "maxTrackedTails": 10000
     },
     "tipsel": {
-      "nonLazy": {
-        "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
-        "maxHeaviestBranchTipsPerCheckpoint": 10,
-        "randomTipsPerCheckpoint": 2,
-        "heaviestBranchSelectionDeadlineMilliseconds": 100
-      },
-      "semiLazy": {
-        "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
-        "maxHeaviestBranchTipsPerCheckpoint": 10,
-        "randomTipsPerCheckpoint": 2,
-        "heaviestBranchSelectionDeadlineMilliseconds": 100
-      }
+      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
+      "maxHeaviestBranchTipsPerCheckpoint": 10,
+      "randomTipsPerCheckpoint": 2,
+      "heaviestBranchSelectionDeadlineMilliseconds": 100
     }
   },
   "network": {
