@@ -260,7 +260,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
 		// trunk and branch reference the last known milestone or NullHash if startIndex = 1 (see InitState)
-		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneHash, coo.state.LatestMilestoneHash), coo.state.LatestMilestoneIndex+1); err != nil {
+		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneHash, coo.state.LatestMilestoneHash, coo.state.LatestMilestoneIndex+1); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
 		}
