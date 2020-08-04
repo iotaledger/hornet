@@ -1,7 +1,6 @@
 package pow
 
 import (
-	"errors"
 	"os"
 	"sync"
 	"time"
@@ -10,8 +9,6 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 	powsrvio "gitlab.com/powsrv.io/go/client"
 )
-
-var errTooManyArguments = errors.New("too many arguments")
 
 const powsrvReinitCooldown = 30 * time.Second
 
