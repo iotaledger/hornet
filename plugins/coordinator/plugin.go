@@ -41,10 +41,8 @@ var (
 	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
 	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
-	maxTrackedTails                                  int
-	maxDeltaTxYoungestRootSnapshotIndexToLSMI        milestone.Index
-	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI milestone.Index
-	belowMaxDepth                                    milestone.Index
+	maxTrackedTails int
+	belowMaxDepth   milestone.Index
 
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
