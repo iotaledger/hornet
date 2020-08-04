@@ -52,6 +52,8 @@ type ServerMetrics struct {
 	ValidatedBundles atomic.Uint32
 	// The number of seen spent addresses.
 	SeenSpentAddresses atomic.Uint32
-	// The number of tips.
-	Tips atomic.Uint32
+	// The number of non-lazy tips.
+	TipsNonLazy atomic.Uint32
+	// The number of semi-lazy tips.
+	TipsSemiLazy atomic.Uint32
 }

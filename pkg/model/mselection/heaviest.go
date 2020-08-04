@@ -11,15 +11,9 @@ import (
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
-)
-
-const (
-	belowMaxDepth milestone.Index = 15
 )
 
 var (
@@ -66,8 +60,8 @@ func (il *bundleTailList) randomTip() (*bundleTail, error) {
 	for _, tip := range il.tails {
 		randomTailIndex--
 
-		// if randomTailIndex reaches zero or below, we return the given tip
-		if randomTailIndex <= 0 {
+		// if randomTailIndex is below zero, we return the given tip
+		if randomTailIndex < 0 {
 			return tip, nil
 		}
 	}
@@ -239,7 +233,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 
 // OnNewSolidBundle adds a new bundle to be processed by s.
 // The bundle must be solid and OnNewSolidBundle must be called in the order of solidification.
-// We also have to check if the bundle is below max depth.
+// The bundle must also not be below max depth.
 func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCount int) {
 	s.Lock()
 	defer s.Unlock()
@@ -247,11 +241,6 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCo
 	// filter duplicate transaction
 	if _, contains := s.trackedTails[string(bndl.GetTailHash())]; contains {
 		return
-	}
-
-	// we ignore bundles that are below max depth.
-	if isBelowMaxDepth(bndl.GetTail()) {
-		return s.GetTrackedTailsCount()
 	}
 
 	trunkItem := s.trackedTails[string(bndl.GetTrunk(true))]
@@ -304,17 +293,4 @@ func (s *HeaviestSelector) tipsToList() *bundleTailList {
 // GetTrackedTailsCount returns the amount of known bundle tails.
 func (s *HeaviestSelector) GetTrackedTailsCount() (trackedTails int) {
 	return len(s.trackedTails)
-}
-
-// isBelowMaxDepth checks the below max depth criteria for the given tail transaction.
-func isBelowMaxDepth(cachedTailTx *tangle.CachedTransaction) bool {
-	defer cachedTailTx.Release(true)
-
-	lsmi := tangle.GetSolidMilestoneIndex()
-
-	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTx.Retain(), lsmi) // tx +1
-
-	// if the ORTSI to LSMI delta of the tail transaction is equal or greater belowMaxDepth, the tip is invalid.
-	// "equal" is important because the next milestone would reference this transaction.
-	return lsmi-ortsi >= belowMaxDepth
 }

@@ -42,12 +42,17 @@ var (
 	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
 	maxTrackedTails int
+	belowMaxDepth   milestone.Index
 
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
 
 	coo      *coordinator.Coordinator
 	selector *mselection.HeaviestSelector
+
+	lastCheckpointIndex int
+	lastCheckpointHash  hornet.Hash
+	lastMilestoneHash   hornet.Hash
 
 	// Closures
 	onBundleSolid                 *events.Closure
@@ -96,6 +101,8 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 
 	maxTrackedTails = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTrackedTails)
 
+	belowMaxDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth))
+
 	coo := coordinator.New(
 		seed,
 		consts.SecurityLevel(config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel)),
@@ -104,7 +111,6 @@ func initCoordinator(bootstrap bool, startIndex uint32) (*coordinator.Coordinato
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		powFunc,
-		selector.SelectTips,
 		sendBundle,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
@@ -141,9 +147,17 @@ func run(plugin *node.Plugin) {
 		attachEvents()
 
 		// bootstrap the network if not done yet
-		if criticalErr := coo.Bootstrap(); criticalErr != nil {
+		milestoneHash, criticalErr := coo.Bootstrap()
+		if criticalErr != nil {
 			log.Panic(criticalErr)
 		}
+
+		// init the last milestone hash
+		lastMilestoneHash = milestoneHash
+
+		// init the checkpoints
+		lastCheckpointHash = milestoneHash
+		lastCheckpointIndex = 0
 
 	coordinatorLoop:
 		for {
@@ -154,22 +168,64 @@ func run(plugin *node.Plugin) {
 					continue
 				}
 
-				// issue a checkpoint
-				if err := coo.IssueCheckpoint(); err != nil {
+				tips, err := selector.SelectTips(0)
+				if err != nil {
 					// issuing checkpoint failed => not critical
 					if err != mselection.ErrNoTipsAvailable {
 						log.Warn(err)
 					}
+					continue
 				}
 
+				// issue a checkpoint
+				checkpointHash, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointHash, tips)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					log.Warn(err)
+					continue
+				}
+				lastCheckpointIndex++
+				lastCheckpointHash = checkpointHash
+
 			case <-nextMilestoneSignal:
-				err, criticalErr := coo.IssueMilestone()
+
+				// issue a new checkpoint right in front of the milestone
+				tips, err := selector.SelectTips(1)
+				if err != nil {
+					// issuing checkpoint failed => not critical
+					if err != mselection.ErrNoTipsAvailable {
+						log.Warn(err)
+					}
+				} else {
+					checkpointHash, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointHash, tips)
+					if err != nil {
+						// issuing checkpoint failed => not critical
+						log.Warn(err)
+					} else {
+						// use the new checkpoint hash
+						lastCheckpointHash = checkpointHash
+					}
+				}
+
+				milestoneHash, err, criticalErr := coo.IssueMilestone(lastMilestoneHash, lastCheckpointHash)
 				if criticalErr != nil {
 					log.Panic(criticalErr)
 				}
 				if err != nil {
+					if err == tangle.ErrNodeNotSynced {
+						// Coordinator is not synchronized, trigger the solidifier manually
+						tangleplugin.TriggerSolidifier()
+					}
 					log.Warn(err)
+					continue
 				}
+
+				// remember the last milestone hash
+				lastMilestoneHash = milestoneHash
+
+				// reset the checkpoints
+				lastCheckpointHash = milestoneHash
+				lastCheckpointIndex = 0
 
 			case <-shutdownSignal:
 				break coordinatorLoop
@@ -181,7 +237,7 @@ func run(plugin *node.Plugin) {
 
 }
 
-func sendBundle(b coordinator.Bundle) error {
+func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 
 	// collect all tx hashes of the bundle
 	txHashes := make(map[string]struct{})
@@ -195,6 +251,11 @@ func sendBundle(b coordinator.Bundle) error {
 	wgBundleProcessed := sync.WaitGroup{}
 	wgBundleProcessed.Add(len(txHashes))
 
+	if isMilestone {
+		// also wait for solid milestone changed event
+		wgBundleProcessed.Add(1)
+	}
+
 	processedTxEvent := events.NewClosure(func(txHash hornet.Hash) {
 		txHashesLock.Lock()
 		defer txHashesLock.Unlock()
@@ -206,8 +267,20 @@ func sendBundle(b coordinator.Bundle) error {
 		}
 	})
 
+	var solidMilestoneChangedEvent *events.Closure
+	if isMilestone {
+		solidMilestoneChangedEvent = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+			defer cachedBndl.Release(true)
+			wgBundleProcessed.Done()
+		})
+	}
+
 	tangleplugin.Events.ProcessedTransaction.Attach(processedTxEvent)
 	defer tangleplugin.Events.ProcessedTransaction.Detach(processedTxEvent)
+	if isMilestone {
+		tangleplugin.Events.SolidMilestoneChanged.Attach(solidMilestoneChangedEvent)
+		defer tangleplugin.Events.SolidMilestoneChanged.Detach(solidMilestoneChangedEvent)
+	}
 
 	for _, t := range b {
 		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
@@ -218,9 +291,22 @@ func sendBundle(b coordinator.Bundle) error {
 	}
 
 	// wait until all txs of the bundle are processed in the storage layer
+	// if it was a milestone, also wait until the solid milestone changed
 	wgBundleProcessed.Wait()
 
 	return nil
+}
+
+// isBelowMaxDepth checks the below max depth criteria for the given tail transaction.
+func isBelowMaxDepth(cachedTailTx *tangle.CachedTransaction) bool {
+	defer cachedTailTx.Release(true)
+
+	lsmi := tangle.GetSolidMilestoneIndex()
+
+	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTx.Retain(), lsmi) // tx +1
+
+	// if the OTRSI to LSMI delta is over belowMaxDepth, then the tip is invalid.
+	return (lsmi - ortsi) > belowMaxDepth
 }
 
 // GetEvents returns the events of the coordinator
@@ -241,6 +327,12 @@ func configureEvents() {
 				return
 			}
 
+			if isBelowMaxDepth(bndl.GetTail()) {
+				// ignore tips that are below max depth
+				return
+			}
+
+			// add tips to the heaviest branch selector
 			if trackedTailsCount := selector.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
 				log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
 

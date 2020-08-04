@@ -1,6 +1,7 @@
 package spammer
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -63,16 +64,32 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	timeStart := time.Now()
-	tips, err := urts.TipSelector.SelectTips()
+
+	tipselFunc := urts.TipSelector.SelectNonLazyTips
+	tag := tagSubstring
+
+	reduceSemiLazyTips := semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit
+	if reduceSemiLazyTips {
+		tipselFunc = urts.TipSelector.SelectSemiLazyTips
+		tag = tagSemiLazySubstring
+	}
+
+	tips, err := tipselFunc()
 	if err != nil {
 		return
 	}
+
+	if reduceSemiLazyTips && bytes.Equal(tips[0], tips[1]) {
+		// do not spam if the tip is equal since that would not reduce the semi lazy count
+		return
+	}
+
 	durationGTTA := time.Since(timeStart)
 
 	txCountValue := int(txCount.Add(int32(bundleSize)))
 	infoMsg := fmt.Sprintf("gTTA took %v", durationGTTA.Truncate(time.Millisecond))
 
-	b, err := createBundle(txAddress, message, tagSubstring, bundleSize, valueSpam, txCountValue, infoMsg)
+	b, err := createBundle(txAddress, message, tag, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
 		return
 	}

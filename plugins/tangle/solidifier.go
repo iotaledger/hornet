@@ -293,7 +293,6 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	- If tx are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted
 	*/
-
 	if !force {
 		/*
 			If solidification is not forced, we will only run the solidifier under one of the following conditions:
