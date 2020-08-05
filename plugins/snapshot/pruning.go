@@ -25,6 +25,7 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 	txsToCheckMap := make(map[string]struct{})
 
 	// Check if tx is still unconfirmed
+loopOverUnconfirmed:
 	for _, txHash := range tangle.GetUnconfirmedTxHashes(targetIndex, true) {
 		if _, exists := txsToCheckMap[string(txHash)]; exists {
 			continue
@@ -40,6 +41,19 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
 			// transaction was already confirmed
 			cachedTx.Release(true) // tx -1
 			continue
+		}
+
+		if tangle.IsMaybeMilestoneTx(cachedTx.Retain()) {
+			bundles := tangle.GetBundlesOfTransactionOrNil(txHash, true)
+			if bundles != nil && len(bundles) > 0 {
+				for _, bndl := range bundles {
+					if bndl.GetBundle().IsMilestone() {
+						cachedTx.Release(true) // tx -1
+						// Do not prune unconfirmed tx that are part of a milestone
+						continue loopOverUnconfirmed
+					}
+				}
+			}
 		}
 
 		// do not force release, since it is loaded again
