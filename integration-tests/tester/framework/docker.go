@@ -56,7 +56,7 @@ func NewDockerContainerFromExisting(c *client.Client, name string) (*DockerConta
 func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
 	containerConfig := &container.Config{
 		Image:        containerNodeImage,
-		ExposedPorts: cfg.ExposedPorts(),
+		ExposedPorts: cfg.ExposedPorts,
 		Env:          cfg.Envs,
 		Cmd:          cfg.CLIFlags(),
 	}

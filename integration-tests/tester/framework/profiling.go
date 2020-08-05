@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -9,15 +10,20 @@ import (
 	"time"
 
 	"github.com/go-echarts/go-echarts/charts"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/metrics"
+	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gorilla/websocket"
 )
 
 const (
-	cpuProfilePrefix  = "cpu_profile"
-	heapProfilePrefix = "heap_profile"
-	tpsChartPrefix    = "tps_chart"
+	cpuProfilePrefix   = "cpu_profile"
+	heapProfilePrefix  = "heap_profile"
+	metricsChartPrefix = "metrics_charts"
 )
+
+const byteMBDivider = 1000000
 
 // Profiler profiles a node for metrics.
 type Profiler struct {
@@ -48,13 +54,205 @@ func (n *Profiler) TakeHeapSnapshot() error {
 	return n.writeProfile(fileName, profileBytes)
 }
 
-// GraphTPS graphs the TPS by consuming the TPS metric from the node's websocket.
-func (n *Profiler) GraphTPS(dur time.Duration) error {
-	line := charts.NewLine()
+// GraphMetrics graphs metrics about TPS, memory consumption, confirmation rate of the node and saves it into the log dir.
+func (n *Profiler) GraphMetrics(dur time.Duration) error {
+	var err error
+
+	// TPS
+	var tpsChartXAxis []string
+	var newTPS, incomingTPS, outgoingTPS []int32
+	tpsChart := charts.NewLine()
+	tpsChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Transactions Per Second"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+
+	// conf. and issuance rate
+	confRateChart := charts.NewLine()
+	confRateChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Confirmation Rate"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+	issuanceRateChart := charts.NewBar()
+	issuanceRateChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Milestone Issuance Delta"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+	var confIssXAxis []string
+	var confRate []float64
+	var issuanceInterval []float64
+
+	// memory
+	memChart := charts.NewLine()
+	memObjsChart := charts.NewLine()
+	memChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Memory"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+	memObjsChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Heap Objects"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+	var memChartXAxis []string
+	var memSys, memHeapSys, memHeapInUse, memHeapIdle, memHeapReleased, memHeapObjects, memMSpanInUse, memMCacheInUse, memStackSys []uint64
+
+	// db size
+	dbSizeChart := charts.NewLine()
+	dbSizeChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Database Size"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+	var dbSizeXAxis []string
+	var dbSizeTangle, dbSizeSnapshot, dbSizeSpent []int64
+
+	// tip selection
+	tipSelChart := charts.NewLine()
+	tipSelChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Tip-Selection"},
+		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
+	)
+	var tipSelXAxis []string
+	var tipSelDur []int64
 
 	conn, _, err := websocket.DefaultDialer.Dial(n.websocketURI, nil)
 	if err != nil {
 		return err
+	}
+
+	s := time.Now()
+	end := s.Add(dur)
+	for time.Now().Before(end) {
+		if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			return err
+		}
+		_, msgRaw, err := conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		m := &dashboard.Msg{}
+		if err := json.Unmarshal(msgRaw, m); err != nil {
+			return err
+		}
+		if m.Data == nil {
+			continue
+		}
+		switch m.Type {
+
+		case dashboard.MsgTypeTPSMetric:
+			tpsMetric := &metrics.TPSMetrics{}
+			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: tpsMetric}); err != nil {
+				return err
+			}
+			tpsChartXAxis = append(tpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			incomingTPS = append(incomingTPS, int32(tpsMetric.Incoming))
+			outgoingTPS = append(outgoingTPS, -int32(tpsMetric.Outgoing))
+			newTPS = append(newTPS, int32(tpsMetric.New))
+
+		case dashboard.MsgTypeTipSelMetric:
+			tipSelMetric := &tipselect.TipSelStats{}
+			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: tipSelMetric}); err != nil {
+				return err
+			}
+
+			tipSelXAxis = append(tpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			tipSelDur = append(tipSelDur, int64(tipSelMetric.Duration)/int64(time.Millisecond))
+
+		case dashboard.MsgTypeConfirmedMsMetrics:
+			confMetrics := []*tangleplugin.ConfirmedMilestoneMetric{}
+			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: &confMetrics}); err != nil {
+				return err
+			}
+			if len(confMetrics) == 0 {
+				continue
+			}
+			confMetric := confMetrics[len(confMetrics)-1]
+			confIssXAxis = append(confIssXAxis, fmt.Sprintf("Ms %s", strconv.Itoa(int(confMetric.MilestoneIndex))))
+			confRate = append(confRate, confMetric.ConfirmationRate)
+			issuanceInterval = append(issuanceInterval, confMetric.TimeSinceLastMilestone)
+
+		case dashboard.MsgTypeDatabaseSizeMetric:
+			dbSizeMetrics := []*dashboard.DBSizeMetric{}
+			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: &dbSizeMetrics}); err != nil {
+				return err
+			}
+			if len(dbSizeMetrics) == 0 {
+				continue
+			}
+			dbSizeMetric := dbSizeMetrics[len(dbSizeMetrics)-1]
+			dbSizeXAxis = append(tpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			dbSizeTangle = append(dbSizeTangle, dbSizeMetric.Tangle/byteMBDivider)
+			dbSizeSnapshot = append(dbSizeTangle, dbSizeMetric.Snapshot/byteMBDivider)
+			dbSizeSpent = append(dbSizeTangle, dbSizeMetric.Spent/byteMBDivider)
+
+		case dashboard.MsgTypeNodeStatus:
+			nodeStatus := &dashboard.NodeStatus{
+				Mem: &dashboard.MemMetrics{},
+			}
+			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: nodeStatus}); err != nil {
+				return err
+			}
+
+			memMetrics := nodeStatus.Mem
+			memChartXAxis = append(memChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			memSys = append(memSys, memMetrics.Sys/byteMBDivider)
+			memHeapSys = append(memHeapSys, memMetrics.HeapSys/byteMBDivider)
+			memHeapInUse = append(memHeapInUse, memMetrics.HeapInuse/byteMBDivider)
+			memHeapIdle = append(memHeapIdle, memMetrics.HeapIdle/byteMBDivider)
+			memHeapReleased = append(memHeapReleased, memMetrics.HeapReleased/byteMBDivider)
+			memHeapObjects = append(memHeapObjects, memMetrics.HeapObjects)
+			memMSpanInUse = append(memMSpanInUse, memMetrics.MSpanInuse/byteMBDivider)
+			memMCacheInUse = append(memMCacheInUse, memMetrics.MCacheInuse/byteMBDivider)
+			memStackSys = append(memStackSys, memMetrics.StackSys/byteMBDivider)
+		}
+	}
+
+	tpsChart.AddXAxis(tpsChartXAxis).
+		AddYAxis("New", newTPS).
+		AddYAxis("Incoming", incomingTPS).
+		AddYAxis("Outgoing", outgoingTPS)
+
+	confRateChart.AddXAxis(confIssXAxis).
+		AddYAxis("Conf. Rate %", confRate)
+	issuanceRateChart.AddXAxis(confIssXAxis).
+		AddYAxis("Issuance Delta", issuanceInterval)
+
+	dbSizeChart.AddXAxis(dbSizeXAxis).AddYAxis("Tangle", dbSizeTangle).
+		AddYAxis("Snapshot", dbSizeSnapshot).
+		AddYAxis("Spent", dbSizeSpent)
+
+	memChart.AddXAxis(memChartXAxis).
+		AddYAxis("Sys", memSys).
+		AddYAxis("Heap Sys", memHeapSys).
+		AddYAxis("Heap In Use", memHeapInUse).
+		AddYAxis("Heap Idle", memHeapIdle).
+		AddYAxis("Heap Released", memHeapReleased).
+		AddYAxis("M Span In Use", memMSpanInUse).
+		AddYAxis("M Cache In Use", memMCacheInUse).
+		AddYAxis("Stack Sys", memStackSys)
+
+	memObjsChart.AddXAxis(memChartXAxis).AddYAxis("Objects", memHeapObjects)
+
+	tipSelChart.AddXAxis(tipSelXAxis).AddYAxis("Duration", tipSelDur)
+
+	chartPage := charts.NewPage()
+	chartPage.PageTitle = n.targetName
+	chartPage.Add(tpsChart, memChart, dbSizeChart, memObjsChart, tipSelChart, confRateChart, issuanceRateChart)
+
+	var buf bytes.Buffer
+	if err := chartPage.Render(&buf); err != nil {
+		return fmt.Errorf("unable to render metrics charts: %w", err)
+	}
+
+	return writeFileInLogDir(fmt.Sprintf("%s_%s_%d.html", n.targetName, metricsChartPrefix, time.Now().Unix()), ioutil.NopCloser(&buf))
+}
+
+// graphTPS graphs the TPS by consuming the TPS metric from the node's websocket.
+func (n *Profiler) graphTPS(dur time.Duration) (*charts.Line, error) {
+	line := charts.NewLine()
+
+	conn, _, err := websocket.DefaultDialer.Dial(n.websocketURI, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	// read tps ws msgs
@@ -65,10 +263,10 @@ func (n *Profiler) GraphTPS(dur time.Duration) error {
 	for time.Now().Before(end) {
 		m := &dashboard.Msg{}
 		if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			return err
+			return nil, err
 		}
 		if err := conn.ReadJSON(m); err != nil {
-			return err
+			return nil, err
 		}
 		if m.Type != dashboard.MsgTypeTPSMetric {
 			continue
@@ -76,7 +274,7 @@ func (n *Profiler) GraphTPS(dur time.Duration) error {
 		tpsMetrics := m.Data.(map[string]interface{})
 		xAxis = append(xAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
 		incomingTPS = append(incomingTPS, int(tpsMetrics["incoming"].(float64)))
-		outgoingTPS = append(outgoingTPS, int(tpsMetrics["outgoing"].(float64)))
+		outgoingTPS = append(outgoingTPS, -int(tpsMetrics["outgoing"].(float64)))
 		newTPS = append(newTPS, int(tpsMetrics["new"].(float64)))
 	}
 	line.AddXAxis(xAxis).
@@ -84,12 +282,51 @@ func (n *Profiler) GraphTPS(dur time.Duration) error {
 		AddYAxis("Incoming", incomingTPS).
 		AddYAxis("Outgoing", outgoingTPS)
 
-	var buf bytes.Buffer
-	if err := line.Render(&buf); err != nil {
-		return fmt.Errorf("unable to render TPS chart: %w", err)
+	return line, nil
+}
+
+// graphConfRate graphs the confirmation rate.
+func (n *Profiler) graphConfRate(dur time.Duration) (*charts.Line, *charts.Bar, error) {
+	confRateLineChart := charts.NewLine()
+	issuanceIntervalBarChart := charts.NewBar()
+
+	conn, _, err := websocket.DefaultDialer.Dial(n.websocketURI, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return writeFileInLogDir(fmt.Sprintf("%s_%s_%d.html", n.targetName, tpsChartPrefix, time.Now().Unix()), ioutil.NopCloser(&buf))
+	// read tps ws msgs
+	var xAxis []string
+	var confRate []float64
+	var issuanceInterval []float64
+	s := time.Now()
+	end := s.Add(dur)
+	for time.Now().Before(end) {
+		m := &dashboard.Msg{}
+		if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			return nil, nil, err
+		}
+		if err := conn.ReadJSON(m); err != nil {
+			return nil, nil, err
+		}
+		if m.Type != dashboard.MsgTypeConfirmedMsMetrics {
+			continue
+		}
+		if m.Data == nil {
+			continue
+		}
+		confMetrics := m.Data.([]map[string]interface{})
+		confMetric := confMetrics[len(confMetrics)-1]
+		xAxis = append(xAxis, fmt.Sprintf("Ms %s", strconv.Itoa(int(confMetric["ms_index"].(float64)))))
+		confRate = append(confRate, confMetric["conf_rate"].(float64))
+		issuanceInterval = append(issuanceInterval, confMetric["time_since_last_ms"].(float64))
+	}
+	confRateLineChart.AddXAxis(xAxis).
+		AddYAxis("Conf. Rate %", confRate)
+	issuanceIntervalBarChart.AddXAxis(xAxis).
+		AddYAxis("Issuance Delta", issuanceInterval)
+
+	return confRateLineChart, issuanceIntervalBarChart, nil
 }
 
 // queries the given pprof URI and returns the profile data.

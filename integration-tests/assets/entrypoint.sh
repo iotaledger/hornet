@@ -7,3 +7,5 @@ echo "assets:"
 ls /assets
 echo "running tests..."
 go test ./tests/"${TEST_NAME}" -v -timeout 30m
+echo "changing perms on files inside log dir..."
+chmod 777 /tmp/logs/*

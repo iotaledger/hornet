@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -23,5 +24,11 @@ func TestCommon(t *testing.T) {
 	assert.NoError(t, n.TakeCPUProfiles(5))
 	assert.NoError(t, n.TakeHeapSnapshots())
 
-	assert.NoError(t, n.Coordinator().GraphTPS(25*time.Second))
+	duration := 30 * time.Second
+
+	go func() {
+		assert.NoError(t, n.SpamZeroVal(duration, runtime.NumCPU(), 50))
+	}()
+
+	assert.NoError(t, n.Coordinator().GraphMetrics(duration))
 }

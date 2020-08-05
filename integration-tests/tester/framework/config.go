@@ -43,7 +43,7 @@ var (
 
 // DefaultConfig returns the default NodeConfig.
 func DefaultConfig() *NodeConfig {
-	return &NodeConfig{
+	cfg := &NodeConfig{
 		Name: "",
 		Envs: []string{"LOGGER_LEVEL=debug"},
 		Binds: []string{
@@ -57,6 +57,12 @@ func DefaultConfig() *NodeConfig {
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
 	}
+	cfg.ExposedPorts = nat.PortSet{
+		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
+		"6060/tcp": {},
+		"8081/tcp": {},
+	}
+	return cfg
 }
 
 // NodeConfig defines the config of a Hornet node.
@@ -67,6 +73,8 @@ type NodeConfig struct {
 	Envs []string
 	// Binds for the container.
 	Binds []string
+	// Exposed ports of this container.
+	ExposedPorts nat.PortSet
 	// Network config.
 	Network NetworkConfig
 	// Web API config.
@@ -102,15 +110,6 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
 	return cliFlags
-}
-
-// ExposedPorts returns a set of to expose ports on the container.
-func (cfg *NodeConfig) ExposedPorts() nat.PortSet {
-	return nat.PortSet{
-		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
-		"6060/tcp": {},
-		"8081/tcp": {},
-	}
 }
 
 // NetworkConfig defines the network specific configuration.

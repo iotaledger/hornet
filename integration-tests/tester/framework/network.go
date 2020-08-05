@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -239,4 +240,21 @@ func (n *Network) TakeHeapSnapshots() error {
 		}(n)
 	}
 	return profErr
+}
+
+// SpamZeroVal starts spamming zero value transactions on all nodes for the given duration.
+func (n *Network) SpamZeroVal(dur time.Duration, parallelism int, batchSize ...int) error {
+	log.Printf("spamming zero value transactions on all nodes")
+	var wg sync.WaitGroup
+	wg.Add(len(n.Nodes))
+	var spamErr error
+	for _, n := range n.Nodes {
+		go func(n *Node) {
+			defer wg.Done()
+			if _, err := n.Spam(dur, 1, parallelism, batchSize...); err != nil {
+				spamErr = err
+			}
+		}(n)
+	}
+	return spamErr
 }
