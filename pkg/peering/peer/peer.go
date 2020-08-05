@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iotaledger/hive.go/events"
 	"go.uber.org/atomic"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/identity"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
 
@@ -37,6 +38,10 @@ func Caller(handler interface{}, params ...interface{}) {
 
 func OriginAddressCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iputils.OriginAddress))(params[0].(*iputils.OriginAddress))
+}
+
+func IdentityCaller(handler interface{}, params ...interface{}) {
+	handler.(func(identity.ID))(params[0].(identity.ID))
 }
 
 // NewInboundPeer creates a new peer instance which is marked as being inbound.

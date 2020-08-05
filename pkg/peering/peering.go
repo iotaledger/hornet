@@ -58,6 +58,7 @@ func NewManager(opts Options, peers ...*config.PeerConfig) *Manager {
 			Reconnecting:                          events.NewEvent(events.Int32Caller),
 			ReconnectRemovedAlreadyConnected:      events.NewEvent(peer.Caller),
 			AutopeeredPeerHandshaking:             events.NewEvent(peer.Caller),
+			AutopeeredPeerBecameStatic:            events.NewEvent(peer.IdentityCaller),
 			IPLookupError:                         events.NewEvent(events.ErrorCaller),
 			Shutdown:                              events.NewEvent(events.CallbackCaller),
 			Error:                                 events.NewEvent(events.ErrorCaller),
@@ -141,6 +142,8 @@ type Events struct {
 	PeerHandshakingIncoming *events.Event
 	// Fired when the handshaking phase with an outbound autopeered peer is initiated.
 	AutopeeredPeerHandshaking *events.Event
+	// Fired when an autopeered peer was added as a static neighbor.
+	AutopeeredPeerBecameStatic *events.Event
 	// Fired when a reconnect is initiated over the entire reconnect pool.
 	Reconnecting *events.Event
 	// Fired when during the reconnect phase a peer is already connected.
@@ -414,41 +417,74 @@ func (m *Manager) Add(addr string, preferIPv6 bool, alias string, autoPeer ...*a
 	originAddr.PreferIPv6 = preferIPv6
 	originAddr.Alias = alias
 
-	// check whether the peer is already connected or in the reconnect pool
-	// given any of the IP addresses to which the peer address resolved to
-	m.Lock()
-
-	// check whether already in reconnect pool
-	if _, exists := m.reconnect[addr]; exists {
-		m.Unlock()
-		return fmt.Errorf("%w: '%s' is already in the reconnect pool", ErrPeerAlreadyInReconnect, addr)
-	}
-
 	// check whether the peer is already connected by examining all IP addresses
 	possibleIPs, err := iputils.GetIPAddressesFromHost(originAddr.Addr)
 	if err != nil {
-		m.Unlock()
 		return err
 	}
+
+	m.Lock()
+
+	reconnect := false
+	isAutopeer := len(autoPeer) > 0
+
+	defer func() {
+		m.Unlock()
+		if reconnect {
+			m.Reconnect()
+		}
+	}()
+
+	// check whether the peer is already connected or in the reconnect pool
+	// given any of the IP addresses to which the peer address resolved to
 	for ip := range possibleIPs.IPs {
+		// check whether already in connected pool
 		id := peer.NewID(ip.String(), originAddr.Port)
-		if _, exists := m.connected[id]; exists {
-			m.Unlock()
-			return fmt.Errorf("%w: '%s' is already connected as '%s'", ErrPeerAlreadyConnected, addr, id)
+		if peer, exists := m.connected[id]; exists {
+			if !isAutopeer && peer.Autopeering != nil {
+				autopeeringIdentity := peer.Autopeering.Identity
+
+				// mark the autopeer as statically connected now
+				peer.Autopeering = nil
+
+				// Remove the autopeering entry in the Selector (this will not drop the connection because we set "Autopeering" to nil)
+				m.Events.AutopeeredPeerBecameStatic.Trigger(autopeeringIdentity)
+
+				// no need to drop the connection
+				return nil
+			}
+			return fmt.Errorf("%w: '%s' is already connected as '%s'", ErrPeerAlreadyConnected, originAddr.String(), id)
+		}
+
+		// check whether already in reconnect pool
+		if reconnectInfo, exists := m.reconnect[originAddr.String()]; exists {
+			if !isAutopeer && reconnectInfo.Autopeering != nil {
+				autopeeringIdentity := reconnectInfo.Autopeering.Identity
+
+				// mark the autopeer as statically connected now
+				reconnectInfo.Autopeering = nil
+
+				// Remove the autopeering entry in the Selector (this will not drop the connection because we set "Autopeering" to nil)
+				m.Events.AutopeeredPeerBecameStatic.Trigger(autopeeringIdentity)
+
+				// force reconnect attempts now
+				reconnect = true
+				return nil
+			}
+			return fmt.Errorf("%w: '%s' is already in the reconnect pool", ErrPeerAlreadyInReconnect, originAddr.String())
 		}
 	}
 
 	// construct reconnect info
 	reconnectInfo := &reconnectinfo{OriginAddr: originAddr, CachedIPs: possibleIPs}
-	if len(autoPeer) > 0 {
+	if isAutopeer {
 		reconnectInfo.Autopeering = autoPeer[0]
 	}
 
 	m.moveToReconnectPool(reconnectInfo)
 
 	// force reconnect attempts now
-	m.Unlock()
-	m.Reconnect()
+	reconnect = true
 	return nil
 }
 
