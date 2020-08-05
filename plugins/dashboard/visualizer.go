@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	VisualizerIdLength = 5
+	VisualizerIdLength = 7
 )
 
 var (
