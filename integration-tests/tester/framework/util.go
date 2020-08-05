@@ -23,8 +23,26 @@ func returnErrIfCtxDone(ctx context.Context, err error) error {
 	}
 }
 
-// createLogFile creates a log file from the given logs ReadCloser.
-func createLogFile(name string, logs io.ReadCloser) error {
+// consumes the given read closer by piping its content to a file in the log directory by the given name.
+func writeFileInLogDir(name string, readCloser io.ReadCloser) error {
+	defer readCloser.Close()
+
+	f, err := os.Create(fmt.Sprintf("%s%s", logsDir, name))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, readCloser); err != nil {
+		return fmt.Errorf("couldn't copy content: %w", err)
+	}
+
+	return nil
+}
+
+// createContainerLogFile creates a log file from the given ReadCloser.
+// it strips away non ascii chars from the given ReadCloser.
+func createContainerLogFile(name string, logs io.ReadCloser) error {
 	defer logs.Close()
 
 	f, err := os.Create(fmt.Sprintf("%s%s.log", logsDir, name))

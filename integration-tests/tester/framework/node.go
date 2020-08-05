@@ -2,6 +2,8 @@ package framework
 
 import (
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/iotaledger/hive.go/identity"
@@ -14,13 +16,17 @@ type Node struct {
 	Name string
 	// the IP address of this node within the network.
 	IP string
+	// The configuration with which the node was started.
+	Config *NodeConfig
 	// The autopeering identity of the peer.
 	*identity.Identity
 	// The iota.go web API instance used to communicate with the node.
 	WebAPI *api.API
 	// The more specific web API providing more information for debugging purposes.
 	DebugWebAPI *WebAPI
-	// the DockerContainer that this peer is running in
+	// The profiler instance.
+	Profiler
+	// The DockerContainer that this peer is running in
 	*DockerContainer
 	// The Neighbors of the peer.
 	neighbors []*peer.Info
@@ -28,7 +34,7 @@ type Node struct {
 
 // newNode creates a new instance of Node with the given information.
 // dockerContainer needs to be started in order to determine the container's (and therefore peer's) IP correctly.
-func newNode(name string, identity *identity.Identity, dockerContainer *DockerContainer, network *Network) (*Node, error) {
+func newNode(name string, identity *identity.Identity, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
 	// after container is started we can get its IP
 	ip, err := dockerContainer.IP(network.Name)
 	if err != nil {
@@ -43,8 +49,17 @@ func newNode(name string, identity *identity.Identity, dockerContainer *DockerCo
 	testWebAPI := NewWebAPI(getWebAPIBaseURL(ip))
 
 	return &Node{
-		Name:            name,
+		Name: name,
+		Profiler: Profiler{
+			pprofURI:     fmt.Sprintf("http://%s:6060", ip),
+			websocketURI: fmt.Sprintf("ws://%s:8081/ws", ip),
+			targetName:   name,
+			Client: http.Client{
+				Timeout: 2 * time.Minute,
+			},
+		},
 		IP:              ip,
+		Config:          cfg,
 		Identity:        identity,
 		WebAPI:          iotaAPI,
 		DebugWebAPI:     testWebAPI,

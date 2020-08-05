@@ -52,8 +52,8 @@ func NewDockerContainerFromExisting(c *client.Client, name string) (*DockerConta
 	return nil, fmt.Errorf("could not find container with name '%s'", name)
 }
 
-// CreateNode creates a new node container.
-func (d *DockerContainer) CreateNode(cfg *NodeConfig) error {
+// CreateNodeContainer creates a new node container.
+func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
 	containerConfig := &container.Config{
 		Image:        containerNodeImage,
 		ExposedPorts: cfg.ExposedPorts(),
@@ -66,8 +66,8 @@ func (d *DockerContainer) CreateNode(cfg *NodeConfig) error {
 	})
 }
 
-// CreatePumba creates a new container with Pumba configuration.
-func (d *DockerContainer) CreatePumba(name string, containerName string, targetIPs []string) error {
+// CreatePumbaContainer creates a new container with Pumba configuration.
+func (d *DockerContainer) CreatePumbaContainer(name string, containerName string, targetIPs []string) error {
 	hostConfig := &container.HostConfig{
 		Binds: strslice.StrSlice{"/var/run/docker.sock:/var/run/docker.sock:ro"},
 	}

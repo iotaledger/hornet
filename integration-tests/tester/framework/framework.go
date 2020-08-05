@@ -65,9 +65,12 @@ func newFramework() (*Framework, error) {
 	return f, nil
 }
 
+// CfgOverrideFunc is a function which overrides configuration values.
+type CfgOverrideFunc func(index int, cfg *NodeConfig)
+
 // CreateStaticNetwork creates a network made out of statically peered nodes by the given layout.
 // The first node is initialized with the Coordinator plugin enabled.
-func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout) (*StaticNetwork, error) {
+func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout, cfgOverrideF ...CfgOverrideFunc) (*StaticNetwork, error) {
 	network, err := newNetwork(f.dockerClient, strings.ToLower(name), NetworkTypeStatic, f.tester)
 	if err != nil {
 		return nil, err
@@ -88,7 +91,10 @@ func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout)
 		cfg.Network.AcceptAnyConnection = true
 		cfg.Network.MaxPeers = len(layout)
 		cfg.Plugins.Disabled = append(cfg.Plugins.Disabled, "autopeering")
-		if _, err = network.CreatePeer(cfg); err != nil {
+		if len(cfgOverrideF) > 0 && cfgOverrideF[0] != nil {
+			cfgOverrideF[0](i, cfg)
+		}
+		if _, err = network.CreateNode(cfg); err != nil {
 			return nil, err
 		}
 	}
@@ -102,7 +108,7 @@ func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout)
 
 // CreateAutopeeredNetwork creates a network consisting out of peersCount nodes.
 // It waits for the nodes to autopeer until the minimum neighbors criteria is met for every node.
-func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumNeighbors int) (*AutopeeredNetwork, error) {
+func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumNeighbors int, cfgOverrideF ...CfgOverrideFunc) (*AutopeeredNetwork, error) {
 	network, err := newNetwork(f.dockerClient, strings.ToLower(name), NetworkTypeAutopeered, f.tester)
 	if err != nil {
 		return nil, err
@@ -117,6 +123,9 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumN
 		cfg := DefaultConfig()
 		if i == 0 {
 			cfg.AsCoo()
+		}
+		if len(cfgOverrideF) > 0 && cfgOverrideF[0] != nil {
+			cfgOverrideF[0](i, cfg)
 		}
 		if _, err = autoNetwork.CreatePeer(cfg); err != nil {
 			return nil, err
@@ -140,7 +149,7 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumN
 // CreateNetworkWithPartitions creates a network consisting out of partitions that contain peerCount nodes per partition.
 // It waits for the peers to autopeer until the minimum neighbors criteria is met for every peer.
 // The entry node is reachable by all nodes at all times.
-func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitions, minimumNeighbors int) (*AutopeeredNetwork, error) {
+func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitions, minimumNeighbors int, cfgOverrideF ...CfgOverrideFunc) (*AutopeeredNetwork, error) {
 	network, err := newNetwork(f.dockerClient, strings.ToLower(name), NetworkTypeAutopeered, f.tester)
 	if err != nil {
 		return nil, err
@@ -171,6 +180,9 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 		cfg := DefaultConfig()
 		if i == 0 {
 			cfg.AsCoo()
+		}
+		if len(cfgOverrideF) > 0 && cfgOverrideF[0] != nil {
+			cfgOverrideF[0](i, cfg)
 		}
 		if _, err = autoNetwork.CreatePeer(cfg); err != nil {
 			return nil, err
@@ -212,7 +224,7 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 		return nil, err
 	}
 
-	if err := createLogFile(pumbaEntryNodeName, logs); err != nil {
+	if err := createContainerLogFile(pumbaEntryNodeName, logs); err != nil {
 		return nil, err
 	}
 

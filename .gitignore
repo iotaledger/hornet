@@ -44,6 +44,8 @@ snapshot/
 
 # log files
 hornet.log
+integration-tests/logs/*.html
+integration-tests/logs/*.profile
 
 # coordinator files
 layer*.csv

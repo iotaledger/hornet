@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCommon boots up a statically peered network and then checks that all
-// nodes are sync, meaning that they actually received milestones.
-func TestCommon(t *testing.T) {
+// TestNetworkBenchmark boots up a statically peered network and then graphs TPS, CPU and memory profiles
+// while the network is sustaining a high inflow of transactions.
+func TestNetworkBenchmark(t *testing.T) {
 	n, err := f.CreateStaticNetwork("test_common", framework.DefaultStaticPeeringLayout)
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
@@ -20,8 +20,4 @@ func TestCommon(t *testing.T) {
 	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer syncCtxCancel()
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
-	assert.NoError(t, n.TakeCPUProfiles(5))
-	assert.NoError(t, n.TakeHeapSnapshots())
-
-	assert.NoError(t, n.Coordinator().GraphTPS(25*time.Second))
 }

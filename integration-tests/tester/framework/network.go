@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -61,6 +62,7 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 
 // AwaitAllSync awaits until all nodes see themselves as synced.
 func (n *Network) AwaitAllSync(ctx context.Context) error {
+	log.Println("waiting for nodes to become synced...")
 	for _, node := range n.Nodes {
 		for {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {
@@ -78,8 +80,8 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 	return nil
 }
 
-// CreatePeer creates a new Hornet node in the network and returns it.
-func (n *Network) CreatePeer(cfg *NodeConfig) (*Node, error) {
+// CreateNode creates a new Hornet node in the network and returns it.
+func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
 	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameReplica, len(n.Nodes)))
 
 	// create identity
@@ -94,7 +96,7 @@ func (n *Network) CreatePeer(cfg *NodeConfig) (*Node, error) {
 
 	// create Docker container
 	container := NewDockerContainer(n.dockerClient)
-	if err = container.CreateNode(cfg); err != nil {
+	if err = container.CreateNodeContainer(cfg); err != nil {
 		return nil, err
 	}
 	if err = container.ConnectToNetwork(n.ID); err != nil {
@@ -104,7 +106,7 @@ func (n *Network) CreatePeer(cfg *NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	peer, err := newNode(name, identity.New(publicKey), container, n)
+	peer, err := newNode(name, identity.New(publicKey), cfg, container, n)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +149,7 @@ func (n *Network) Shutdown() error {
 		if err != nil {
 			return err
 		}
-		if err = createLogFile(p.Name, logs); err != nil {
+		if err = createContainerLogFile(p.Name, logs); err != nil {
 			return err
 		}
 	}
@@ -189,7 +191,52 @@ func (n *Network) Shutdown() error {
 	return nil
 }
 
-// RandomPeer returns a random peer out of the list of peers.
-func (n *Network) RandomPeer() *Node {
+// RandomNode returns a random peer out of the list of peers.
+func (n *Network) RandomNode() *Node {
 	return n.Nodes[rand.Intn(len(n.Nodes))]
+}
+
+// Coordinator returns the node with the coordinator plugin enabled.
+func (n *Network) Coordinator() *Node {
+	return n.Nodes[0]
+}
+
+// TakeCPUProfile takes a CPU profile on all nodes within the network.
+func (n *Network) TakeCPUProfiles(durSec int) error {
+	log.Printf("taking CPU profile (%d secs) on all nodes", durSec)
+	var wg sync.WaitGroup
+	wg.Add(len(n.Nodes))
+	var profErr error
+	for _, n := range n.Nodes {
+		go func(node *Node) {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println(r)
+				}
+			}()
+			defer wg.Done()
+			if err := node.TakeCPUProfile(durSec); err != nil {
+				profErr = err
+			}
+		}(n)
+	}
+	wg.Wait()
+	return profErr
+}
+
+// TakeHeapSnapshot takes a heap snapshot on all nodes within the network.
+func (n *Network) TakeHeapSnapshots() error {
+	log.Printf("taking heap snapshot on all nodes")
+	var wg sync.WaitGroup
+	wg.Add(len(n.Nodes))
+	var profErr error
+	for _, n := range n.Nodes {
+		go func(n *Node) {
+			defer wg.Done()
+			if err := n.TakeHeapSnapshot(); err != nil {
+				profErr = err
+			}
+		}(n)
+	}
+	return profErr
 }

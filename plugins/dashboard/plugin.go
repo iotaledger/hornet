@@ -75,13 +75,13 @@ func configure(plugin *node.Plugin) {
 			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
 		case milestone.Index:
 			// Milestone
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&Msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangleplugin.ConfirmedMilestoneMetric:
-			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
+			hub.BroadcastMsg(&Msg{MsgTypeConfirmedMsMetrics, x})
 		case []*dbSize:
-			hub.BroadcastMsg(&msg{MsgTypeDatabaseSizeMetric, x})
+			hub.BroadcastMsg(&Msg{MsgTypeDatabaseSizeMetric, x})
 		case *databaseplugin.DatabaseCleanup:
-			hub.BroadcastMsg(&msg{MsgTypeDatabaseCleanupEvent, x})
+			hub.BroadcastMsg(&Msg{MsgTypeDatabaseCleanupEvent, x})
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
@@ -223,7 +223,8 @@ const (
 	MsgTypeAvgSpamMetrics
 )
 
-type msg struct {
+// Msg represents a websocket message.
+type Msg struct {
 	Type byte        `json:"type"`
 	Data interface{} `json:"data"`
 }

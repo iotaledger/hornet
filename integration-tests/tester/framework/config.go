@@ -38,7 +38,7 @@ const (
 
 var (
 	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "webapi"}
-	disabledPluginsPeer      = []string{"dashboard"}
+	disabledPluginsPeer      = []string{}
 )
 
 // DefaultConfig returns the default NodeConfig.
@@ -54,6 +54,8 @@ func DefaultConfig() *NodeConfig {
 		Coordinator: DefaultCoordinatorConfig(),
 		WebAPI:      DefaultWebAPIConfig(),
 		Plugins:     DefaultPluginConfig(),
+		Profiling:   DefaultProfilingConfig(),
+		Dashboard:   DefaultDashboardConfig(),
 	}
 }
 
@@ -75,6 +77,10 @@ type NodeConfig struct {
 	Coordinator CoordinatorConfig
 	// Plugin config.
 	Plugins PluginConfig
+	// Profiling config.
+	Profiling ProfilingConfig
+	// Dashboard config.
+	Dashboard DashboardConfig
 }
 
 // AsCoo adjusts the config to make it usable as the Coordinator's config.
@@ -93,6 +99,8 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.WebAPI.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
 	return cliFlags
 }
 
@@ -100,6 +108,8 @@ func (cfg *NodeConfig) CLIFlags() []string {
 func (cfg *NodeConfig) ExposedPorts() nat.PortSet {
 	return nat.PortSet{
 		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
+		"6060/tcp": {},
+		"8081/tcp": {},
 	}
 }
 
@@ -297,5 +307,45 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		IssuanceIntervalSeconds: 10,
 		MerkleTreeDepth:         18,
 		MerkleTreeFilePath:      "/assets/coordinator.tree",
+	}
+}
+
+// ProfilingConfig defines the profiling specific configuration.
+type ProfilingConfig struct {
+	// The bind address of the pprof server.
+	BindAddress string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (profilingConfig *ProfilingConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", config.CfgProfilingBindAddress, profilingConfig.BindAddress),
+	}
+}
+
+// DefaultProfilingConfig returns the default profiling config.
+func DefaultProfilingConfig() ProfilingConfig {
+	return ProfilingConfig{
+		BindAddress: "0.0.0.0:6060",
+	}
+}
+
+// DashboardConfig holds the dashboard specific configuration.
+type DashboardConfig struct {
+	// The bind address of the dashboard
+	BindAddress string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (dashboardConfig *DashboardConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", config.CfgDashboardBindAddress, dashboardConfig.BindAddress),
+	}
+}
+
+// DefaultDashboardConfig returns the default profiling config.
+func DefaultDashboardConfig() DashboardConfig {
+	return DashboardConfig{
+		BindAddress: "0.0.0.0:8081",
 	}
 }

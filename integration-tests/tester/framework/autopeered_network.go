@@ -41,7 +41,7 @@ func (n *AutopeeredNetwork) createEntryNode() error {
 	cfg.Network.AutopeeringSeed = seed
 	cfg.Plugins.Disabled = disabledPluginsEntryNode
 
-	if err = n.entryNode.CreateNode(cfg); err != nil {
+	if err = n.entryNode.CreateNodeContainer(cfg); err != nil {
 		return err
 	}
 	if err = n.entryNode.ConnectToNetwork(n.ID); err != nil {
@@ -105,7 +105,7 @@ func (n *AutopeeredNetwork) CreatePeer(cfg *NodeConfig) (*Node, error) {
 	cfg.Network.EntryNodes = []string{
 		fmt.Sprintf("%s@%s:14626", n.entryNodePublicKey(), ip),
 	}
-	return n.Network.CreatePeer(cfg)
+	return n.Network.CreateNode(cfg)
 }
 
 // Shutdown shuts down the network.
@@ -124,7 +124,7 @@ func (n *AutopeeredNetwork) Shutdown() error {
 	if err != nil {
 		return err
 	}
-	if err := createLogFile(n.PrefixName(containerNameEntryNode), logs); err != nil {
+	if err := createContainerLogFile(n.PrefixName(containerNameEntryNode), logs); err != nil {
 		return err
 	}
 
@@ -158,7 +158,7 @@ func (n *AutopeeredNetwork) entryNodePublicKey() string {
 // createPumba creates and starts a Pumba Docker container.
 func (n *AutopeeredNetwork) createPumba(pumbaContainerName string, targetContainerName string, targetIPs []string) (*DockerContainer, error) {
 	container := NewDockerContainer(n.dockerClient)
-	if err := container.CreatePumba(pumbaContainerName, targetContainerName, targetIPs); err != nil {
+	if err := container.CreatePumbaContainer(pumbaContainerName, targetContainerName, targetIPs); err != nil {
 		return nil, err
 	}
 	if err := container.Start(); err != nil {
@@ -279,7 +279,7 @@ func (p *Partition) deletePartition() error {
 		if err != nil {
 			return err
 		}
-		err = createLogFile(fmt.Sprintf("%s%s", p.name, p.peers[i].Name), logs)
+		err = createContainerLogFile(fmt.Sprintf("%s%s", p.name, p.peers[i].Name), logs)
 		if err != nil {
 			return err
 		}
