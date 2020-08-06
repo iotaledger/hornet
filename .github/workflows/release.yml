@@ -24,3 +24,22 @@ jobs:
         run: goreleaser --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload to PPA
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          mkdir -p ~/.gnupg && apt-key adv --keyserver pool.sks-keyservers.net --recv-keys ED75B5A4483DA07C
+          echo "deb http://repo.aptly.info/ squeeze main" >> /etc/apt/sources.list
+          apt update && apt install aptly moreutils jq -y
+          aptly repo create hornet
+          aptly repo add hornet dist/hornet_*_amd64.deb 
+          aptly repo list
+          aptly repo show hornet
+          jq '.S3PublishEndpoints += { "ppa-bucket" : { "region" : "${{ secrets.AWS_DEFAULT_REGION }}", "bucket" : "${{ secrets.AWS_BUCKET_NAME }}", "acl" : "public-read" } }' ~/.aptly.conf | sponge ~/.aptly.conf
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" > /tmp/private.key 
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --batch --yes --passphrase-fd 0 --import /tmp/private.key
+          aptly publish repo -distribution="stable" -passphrase="$GPG_PASSPHRASE" -batch hornet s3:ppa-bucket:hornet
