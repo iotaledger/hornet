@@ -143,6 +143,7 @@ func StoreMilestone(bndl *Bundle) *CachedMilestone {
 			Hash:  bndl.GetMilestoneHash(),
 		}
 
+		// milestones should never exist in the database already, even with an unclean database
 		return &CachedMilestone{CachedObject: milestoneStorage.Store(milestone)}
 	}
 

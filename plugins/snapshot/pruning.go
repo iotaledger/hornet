@@ -44,15 +44,17 @@ loopOverUnconfirmed:
 		}
 
 		if tangle.IsMaybeMilestoneTx(cachedTx.Retain()) {
-			bundles := tangle.GetBundlesOfTransactionOrNil(txHash, true)
+			bundles := tangle.GetBundlesOfTransactionOrNil(txHash, true) // bundles +1
 			if bundles != nil && len(bundles) > 0 {
 				for _, bndl := range bundles {
 					if bndl.GetBundle().IsMilestone() {
 						cachedTx.Release(true) // tx -1
+						bundles.Release(true)  // bundles -1
 						// Do not prune unconfirmed tx that are part of a milestone
 						continue loopOverUnconfirmed
 					}
 				}
+				bundles.Release(true) // bundles -1
 			}
 		}
 
