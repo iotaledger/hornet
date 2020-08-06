@@ -23,11 +23,6 @@ func init() {
 	addEndpoint("attachToTangle", attachToTangle, implementedAPIcalls)
 }
 
-var (
-	powSet  = false
-	powType string
-)
-
 func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
 	query := &AttachToTangle{}
@@ -45,9 +40,9 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		query.MinWeightMagnitude = mwm
 	}
 
-	// Reject unnecessarily high MWM
-	if query.MinWeightMagnitude > mwm {
-		e.Error = fmt.Sprintf("MWM too high. MWM: %v, Max allowed: %v", query.MinWeightMagnitude, mwm)
+	// Reject wrong MWM
+	if query.MinWeightMagnitude != mwm {
+		e.Error = fmt.Sprintf("Wrong MinWeightMagnitude. requested: %d, expected: %d", query.MinWeightMagnitude, mwm)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
@@ -57,12 +52,6 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		e.Error = "No trytes given."
 		c.JSON(http.StatusBadRequest, e)
 		return
-	}
-
-	// Set the fastest PoW method
-	if !powSet {
-		powSet = true
-		log.Infof("PoW method: \"%s\"", pow.Handler().GetPoWType())
 	}
 
 	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
@@ -118,12 +107,14 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Do the PoW
+		ts := time.Now()
 		txs[i].Nonce, err = pow.Handler().DoPoW(trytes, query.MinWeightMagnitude)
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
+		log.Debugf("PoW method: \"%s\", MWM: %d, took %v", pow.Handler().GetPoWType(), mwm, time.Since(ts).Truncate(time.Millisecond))
 
 		// Convert tx to trits
 		txTrits, err := transaction.TransactionToTrits(&txs[i])
