@@ -37,8 +37,6 @@ jobs:
           apt update && apt install aptly moreutils jq -y
           aptly repo create hornet
           aptly repo add hornet dist/hornet_*_amd64.deb 
-          aptly repo list
-          aptly repo show hornet
           jq '.S3PublishEndpoints += { "ppa-bucket" : { "region" : "${{ secrets.AWS_DEFAULT_REGION }}", "bucket" : "${{ secrets.AWS_BUCKET_NAME }}", "acl" : "public-read" } }' ~/.aptly.conf | sponge ~/.aptly.conf
           echo "${{ secrets.GPG_PRIVATE_KEY }}" > /tmp/private.key 
           echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --batch --yes --passphrase-fd 0 --import /tmp/private.key
