@@ -22,10 +22,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/mselection"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/pow"
+	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/pow"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -47,9 +48,8 @@ var (
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
 
-	coo        *coordinator.Coordinator
-	selector   *mselection.HeaviestSelector
-	powHandler *pow.Handler
+	coo      *coordinator.Coordinator
+	selector *mselection.HeaviestSelector
 
 	lastCheckpointIndex int
 	lastCheckpointHash  hornet.Hash
@@ -69,12 +69,7 @@ func configure(plugin *node.Plugin) {
 	tangleplugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
-	powHandler, err = pow.NewHandler()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	coo, err = initCoordinator(*bootstrap, *startIndex, powHandler)
+	coo, err = initCoordinator(*bootstrap, *startIndex, pow.Handler())
 	if err != nil {
 		log.Panic(err)
 	}
@@ -82,7 +77,7 @@ func configure(plugin *node.Plugin) {
 	configureEvents()
 }
 
-func initCoordinator(bootstrap bool, startIndex uint32, powHandler *pow.Handler) (*coordinator.Coordinator, error) {
+func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
 	seed, err := config.LoadHashFromEnvironment("COO_SEED")
 	if err != nil {
@@ -237,7 +232,6 @@ func run(plugin *node.Plugin) {
 		}
 
 		detachEvents()
-		powHandler.Close()
 	}, shutdown.PriorityCoordinator)
 
 }

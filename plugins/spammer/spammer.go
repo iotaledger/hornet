@@ -17,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/urts"
 
 	"go.uber.org/atomic"
@@ -147,7 +148,7 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, sh
 		default:
 		}
 
-		nonce, err := powHandler.DoPoW(trytes, mwm, 1)
+		nonce, err := pow.Handler().DoPoW(trytes, mwm, 1)
 		if err != nil {
 			return err
 		}

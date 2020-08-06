@@ -1,7 +1,6 @@
 package pow
 
 import (
-	"os"
 	"sync"
 	"time"
 
@@ -10,34 +9,19 @@ import (
 	powsrvio "gitlab.com/powsrv.io/go/client"
 )
 
-const powsrvReinitCooldown = 30 * time.Second
-
 // Handler struct
 type Handler struct {
 	sync.RWMutex
 
-	powsrvClient      *powsrvio.PowClient
-	localPoWFunc      pow.ProofOfWorkFunc
-	powType           string
-	lastInitTimestamp int64
+	powsrvClient         *powsrvio.PowClient
+	localPoWFunc         pow.ProofOfWorkFunc
+	powType              string
+	powsrvReinitCooldown time.Duration
+	lastInitTimestamp    time.Time
 }
 
-// tryReinitPowsrvWithoutLocking tries to reinit powsrv.io if the connection got lost.
-// the lock needs to be handled by the caller
-func (h *Handler) tryReinitPowsrvWithoutLocking() {
-	if h.powsrvClient == nil {
-		return
-	}
-
-	if h.lastInitTimestamp+powsrvReinitCooldown.Nanoseconds() <= time.Now().UnixNano() {
-		h.powsrvClient.Close()
-		h.powsrvClient.Init()
-		h.lastInitTimestamp = time.Now().UnixNano()
-	}
-}
-
-// NewHandler creates a new PoW handler instance
-func NewHandler() (*Handler, error) {
+// New creates a new PoW handler instance
+func New(powsrvAPIKey string, powsrvReinitCooldown time.Duration) *Handler {
 
 	var localPoWFunc pow.ProofOfWorkFunc
 	var powsrvClient *powsrvio.PowClient
@@ -46,8 +30,8 @@ func NewHandler() (*Handler, error) {
 	// Get the fastest available local PoW func
 	powType, localPoWFunc = pow.GetFastestProofOfWorkImpl()
 
-	// Check wether a powsrv.io API key is set
-	if powsrvAPIKey, isSet := os.LookupEnv("POWSRV_API_KEY"); isSet {
+	// Check whether a powsrv.io API key is set
+	if powsrvAPIKey != "" {
 		powsrvClient = &powsrvio.PowClient{
 			APIKey:        powsrvAPIKey,
 			ReadTimeOutMs: 3000,
@@ -60,15 +44,29 @@ func NewHandler() (*Handler, error) {
 		} else {
 			powType = "powsrv.io"
 		}
-
 	}
 
 	return &Handler{
-		localPoWFunc:      localPoWFunc,
-		powsrvClient:      powsrvClient,
-		powType:           powType,
-		lastInitTimestamp: time.Now().UnixNano(),
-	}, nil
+		localPoWFunc:         localPoWFunc,
+		powsrvClient:         powsrvClient,
+		powType:              powType,
+		powsrvReinitCooldown: powsrvReinitCooldown,
+		lastInitTimestamp:    time.Now(),
+	}
+}
+
+// tryReinitPowsrvWithoutLocking tries to reinit powsrv.io if the connection got lost.
+// the lock needs to be handled by the caller
+func (h *Handler) tryReinitPowsrvWithoutLocking() {
+	if h.powsrvClient == nil {
+		return
+	}
+
+	if time.Since(h.lastInitTimestamp) >= h.powsrvReinitCooldown {
+		h.powsrvClient.Close()
+		h.powsrvClient.Init()
+		h.lastInitTimestamp = time.Now()
+	}
 }
 
 // GetPoWType returns the fastest available PoW type which gets used for PoW requests

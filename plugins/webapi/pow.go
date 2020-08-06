@@ -16,7 +16,7 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/plugins/pow"
 )
 
 func init() {
@@ -52,15 +52,6 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	// Init the PoW handler
-	powHandler, err := pow.NewHandler()
-	if err != nil {
-		e.Error = fmt.Sprint("Error while initiating PoW function")
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-	defer powHandler.Close()
-
 	// Reject empty requests
 	if len(query.Trytes) == 0 {
 		e.Error = "No trytes given."
@@ -71,7 +62,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Set the fastest PoW method
 	if !powSet {
 		powSet = true
-		log.Infof("PoW method: \"%s\"", powHandler.GetPoWType())
+		log.Infof("PoW method: \"%s\"", pow.Handler().GetPoWType())
 	}
 
 	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
@@ -127,7 +118,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Do the PoW
-		txs[i].Nonce, err = powHandler.DoPoW(trytes, query.MinWeightMagnitude)
+		txs[i].Nonce, err = pow.Handler().DoPoW(trytes, query.MinWeightMagnitude)
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
