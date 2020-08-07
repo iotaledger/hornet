@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/willf/bitset"
+
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -32,7 +34,7 @@ var (
 	*/
 
 	// supported protocol messages/feature sets
-	SupportedFeatureSets = []byte{sting.FeatureSet}
+	SupportedFeatureSets = bitset.From([]uint64{sting.FeatureSet})
 )
 
 var (

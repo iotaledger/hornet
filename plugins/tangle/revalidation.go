@@ -74,6 +74,20 @@ func revalidateDatabase() error {
 		return err
 	}
 
+	// clean up bundles of which their tail tx doesn't exist in the database anymore
+	if err := cleanupBundles(); err != nil {
+		return err
+	}
+
+	tangle.FlushTransactionStorage()
+	tangle.FlushBundleStorage()
+	tangle.FlushMilestoneStorage()
+	tangle.FlushAddressStorage()
+	tangle.FlushApproversStorage()
+	tangle.FlushBundleTransactionsStorage()
+	tangle.FlushTagsStorage()
+	tangle.FlushUnconfirmedTxsStorage()
+
 	// Get the ledger state of the last snapshot
 	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
 	if err != nil {
@@ -213,6 +227,48 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 	}
 
 	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))
+
+	return nil
+}
+
+// deletes all bundles of which their tail tx doesn't exist in the database anymore.
+func cleanupBundles() error {
+
+	start := time.Now()
+
+	var bundleCounter int64
+	var deletionCounter int64
+	tangle.ForEachBundleHash(func(tailTxHash hornet.Hash) bool {
+		bundleCounter++
+
+		if daemon.IsStopped() {
+			return false
+		}
+
+		if (bundleCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d bundles", bundleCounter)
+		}
+
+		storedTx := tangle.GetStoredTransactionOrNil(tailTxHash)
+
+		// delete bundle if transaction doesn't exist
+		if storedTx == nil {
+			tangle.DeleteBundle(tailTxHash)
+			deletionCounter++
+			return true
+		}
+
+		return true
+	})
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d bundles deleted, took %v", deletionCounter, time.Since(start))
 
 	return nil
 }

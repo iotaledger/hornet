@@ -64,7 +64,6 @@ func Manager() *peering.Manager {
 			ValidHandshake: handshake.Handshake{
 				ByteEncodedCooAddress: cooAddrBytes,
 				MWM:                   byte(mwm),
-				SupportedVersions:     protocol.SupportedFeatureSets,
 			},
 			MaxConnected:  config.PeeringConfig.GetInt(config.CfgPeeringMaxPeers),
 			AcceptAnyPeer: config.PeeringConfig.GetBool(config.CfgPeeringAcceptAnyConnection),
