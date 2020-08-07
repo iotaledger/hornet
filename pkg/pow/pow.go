@@ -74,6 +74,7 @@ func (h *Handler) connectPowsrv() bool {
 		h.powsrvLock.RUnlock()
 		return false
 	}
+	h.powsrvLock.RUnlock()
 
 	// aquire write lock
 	h.powsrvLock.Lock()
