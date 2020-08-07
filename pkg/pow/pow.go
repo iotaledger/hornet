@@ -76,11 +76,11 @@ func (h *Handler) connectPowsrv() bool {
 	}
 	h.powsrvLock.RUnlock()
 
-	// aquire write lock
+	// acquire write lock
 	h.powsrvLock.Lock()
 	defer h.powsrvLock.Unlock()
 
-	// check again after aquiring the write lock
+	// check again after acquiring the write lock
 	if h.powsrvConnected || time.Since(h.powsrvLastInit) < h.powsrvInitCooldown {
 		return h.powsrvConnected
 	}
@@ -102,7 +102,7 @@ func (h *Handler) connectPowsrv() bool {
 }
 
 // disconnectPowsrv disconnects from powsrv.io
-// write lock must be aquired outside.
+// write lock must be acquired outside.
 func (h *Handler) disconnectPowsrv() {
 
 	if h.powsrvErrorHandled {
