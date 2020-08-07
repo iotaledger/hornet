@@ -393,7 +393,7 @@ func (m *Manager) ConnectedAndSyncedPeerCount() (uint8, uint8) {
 			latestIndex = lsi
 		}
 
-		if p.LatestHeartbeat.SolidMilestoneIndex >= (latestIndex - isNeighborSyncedThreshold) {
+		if p.LatestHeartbeat.SolidMilestoneIndex < (latestIndex - isNeighborSyncedThreshold) {
 			// node not synced
 			continue
 		}
