@@ -66,7 +66,7 @@ func configureVisualizer() {
 
 func runVisualizer() {
 
-	notifyNewVertex := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
@@ -89,7 +89,7 @@ func runVisualizer() {
 		})
 	})
 
-	notifySolidInfo := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction) {
+	onTransactionSolid := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction) {
 		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
@@ -105,7 +105,7 @@ func runVisualizer() {
 		})
 	})
 
-	notifyMilestoneInfo := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
+	onReceivedNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		cachedBndl.ConsumeBundle(func(bndl *tanglePackage.Bundle) { // bundle -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
@@ -124,7 +124,7 @@ func runVisualizer() {
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	notifyIssuedCheckpointTransaction := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
+	onIssuedCheckpointTransaction := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -138,7 +138,7 @@ func runVisualizer() {
 			}, false)
 	})
 
-	notifyMilestoneConfirmedInfo := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -158,7 +158,7 @@ func runVisualizer() {
 			}, false)
 	})
 
-	notifyTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
+	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -173,7 +173,7 @@ func runVisualizer() {
 			}, true)
 	})
 
-	notifyTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
+	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -189,25 +189,25 @@ func runVisualizer() {
 	})
 
 	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewTransaction.Attach(notifyNewVertex)
-		defer tangle.Events.ReceivedNewTransaction.Detach(notifyNewVertex)
-		tangle.Events.TransactionSolid.Attach(notifySolidInfo)
-		defer tangle.Events.TransactionSolid.Detach(notifySolidInfo)
-		tangle.Events.ReceivedNewMilestone.Attach(notifyMilestoneInfo)
-		defer tangle.Events.ReceivedNewMilestone.Detach(notifyMilestoneInfo)
+		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
+		defer tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
+		tangle.Events.TransactionSolid.Attach(onTransactionSolid)
+		defer tangle.Events.TransactionSolid.Detach(onTransactionSolid)
+		tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
+		defer tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
 		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
-			cooEvents.IssuedCheckpointTransaction.Attach(notifyIssuedCheckpointTransaction)
-			defer cooEvents.IssuedCheckpointTransaction.Detach(notifyIssuedCheckpointTransaction)
+			cooEvents.IssuedCheckpointTransaction.Attach(onIssuedCheckpointTransaction)
+			defer cooEvents.IssuedCheckpointTransaction.Detach(onIssuedCheckpointTransaction)
 		}
-		tangle.Events.MilestoneConfirmed.Attach(notifyMilestoneConfirmedInfo)
-		defer tangle.Events.MilestoneConfirmed.Detach(notifyMilestoneConfirmedInfo)
+		tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+		defer tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 
 		// check if URTS plugin is enabled
 		if !node.IsSkipped(urts.PLUGIN) {
-			urts.TipSelector.Events.TipAdded.Attach(notifyTipAdded)
-			defer urts.TipSelector.Events.TipAdded.Detach(notifyTipAdded)
-			urts.TipSelector.Events.TipRemoved.Attach(notifyTipRemoved)
-			defer urts.TipSelector.Events.TipRemoved.Detach(notifyTipRemoved)
+			urts.TipSelector.Events.TipAdded.Attach(onTipAdded)
+			defer urts.TipSelector.Events.TipAdded.Detach(onTipAdded)
+			urts.TipSelector.Events.TipRemoved.Attach(onTipRemoved)
+			defer urts.TipSelector.Events.TipRemoved.Detach(onTipRemoved)
 		}
 
 		visualizerWorkerPool.Start()

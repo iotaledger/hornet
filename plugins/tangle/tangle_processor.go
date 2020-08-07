@@ -54,11 +54,11 @@ func configureTangleProcessor(_ *node.Plugin) {
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
-	submitReceivedTxForProcessing := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
+	onTransactionProcessed := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 		receiveTxWorkerPool.Submit(transaction, request, p)
 	})
 
-	updateMetrics := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
+	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
 		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
@@ -77,18 +77,18 @@ func runTangleProcessor(_ *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
-		metricsplugin.Events.TPSMetricsUpdated.Attach(updateMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
 		<-shutdownSignal
-		metricsplugin.Events.TPSMetricsUpdated.Detach(updateMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
-		gossip.Processor().Events.TransactionProcessed.Attach(submitReceivedTxForProcessing)
+		gossip.Processor().Events.TransactionProcessed.Attach(onTransactionProcessed)
 		receiveTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
-		gossip.Processor().Events.TransactionProcessed.Detach(submitReceivedTxForProcessing)
+		gossip.Processor().Events.TransactionProcessed.Detach(onTransactionProcessed)
 		receiveTxWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
