@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/willf/bitset"
+
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/tlv"
 )
@@ -57,65 +59,42 @@ type Handshake struct {
 }
 
 // SupportedVersion returns the highest supported protocol version.
-func (hs Handshake) SupportedVersion(supportedMessageTypes []byte) (version int, err error) {
-	highestSupportedVersion := 0
-	highestSupportedVersionByPeer := 0
+func (hs Handshake) SupportedVersion(ownSupportedMessagesBitset *bitset.BitSet) (version int, err error) {
+	hsSupportedMessagesBitset := bitset.New(uint(len(hs.SupportedVersions) * 8))
+	hsSupportedMessagesBitset.UnmarshalBinary(hs.SupportedVersions)
 
-	for i, ownSupportedVersion := range supportedMessageTypes {
-		// max check up to advertised versions by the peer
-		if i >= len(hs.SupportedVersions) {
-			break
-		}
+	bothSupportedMessagesBitset := hsSupportedMessagesBitset.Union(ownSupportedMessagesBitset)
 
-		// get versions matched by both
-		supported := hs.SupportedVersions[i] & ownSupportedVersion
-
-		// none supported
-		if supported == 0 {
-			continue
-		}
-
-		// iterate through all bits and find highest (more to the left is higher)
-		highest := 0
-		var j uint
-		for j = 0; j < 8; j++ {
-			if ((supported >> j) & 1) == 1 {
-				highest = int(j + 1)
-			}
-		}
-		highestSupportedVersion = highest + (i * 8)
-	}
-
-	// if the highest version is still 0, it means that we don't support
-	// any protocol version the peer supports
-	if highestSupportedVersion == 0 {
-		// grab last byte denoting the highest versions.
-		// a node will only hold version bytes if at least one version in that
-		// byte is supported, therefore it's safe to assume, that the last byte contains
-		// the highest supported version of a given node.
-		lastVersionsByte := hs.SupportedVersions[len(hs.SupportedVersions)-1]
-
-		// iterate through all bits and find highest (more to the left is higher)
-		highest := 0
-		var j uint
-		for j = 0; j < 8; j++ {
-			if ((lastVersionsByte >> j) & 0x01) == 0x01 {
-				highest = int(j + 1)
+	if !bothSupportedMessagesBitset.Any() {
+		// we don't support any protocol version the peer supports
+		// return the highest supported version of a given node
+		for i := hsSupportedMessagesBitset.Len() - 1; i >= 0; i-- {
+			if hsSupportedMessagesBitset.Test(i) {
+				return 1 << i, ErrVersionNotSupported
 			}
 		}
 
-		highestSupportedVersionByPeer = highest + ((len(hs.SupportedVersions) - 1) * 8)
-
-		return highestSupportedVersionByPeer, ErrVersionNotSupported
 	}
 
-	return highestSupportedVersion, nil
+	for i := bothSupportedMessagesBitset.Len() - 1; i >= 0; i-- {
+		if bothSupportedMessagesBitset.Test(i) {
+			return 1 << i, nil
+		}
+	}
+
+	return 0, ErrVersionNotSupported
 }
 
 // NewHandshakeMessage creates a new handshake message.
-func NewHandshakeMessage(supportedMessageTypes []byte, ownSourcePort uint16, ownByteEncodedCooAddress []byte, ownUsedMWM byte) ([]byte, error) {
+func NewHandshakeMessage(ownSupportedMessagesBitset *bitset.BitSet, ownSourcePort uint16, ownByteEncodedCooAddress []byte, ownUsedMWM byte) ([]byte, error) {
 
 	maxLength := HandshakeMessageDefinition.MaxBytesLength
+
+	supportedMessageTypes, err := ownSupportedMessagesBitset.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
 	payloadLengthBytes := maxLength - (maxLength - 60) + uint16(len(supportedMessageTypes))
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+payloadLengthBytes))
 
