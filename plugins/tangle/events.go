@@ -26,8 +26,10 @@ var Events = pluginEvents{
 	BundleSolid:                   events.NewEvent(tangle.BundleCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.BundleCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.BundleCaller),
+	LatestMilestoneIndexChanged:   events.NewEvent(milestone.IndexCaller),
 	MilestoneConfirmed:            events.NewEvent(ConfirmedMilestoneCaller),
 	SolidMilestoneChanged:         events.NewEvent(tangle.BundleCaller),
+	SolidMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
 	SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 	PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
 	NewConfirmedMilestoneMetric:   events.NewEvent(NewConfirmedMilestoneMetricCaller),
@@ -43,8 +45,10 @@ type pluginEvents struct {
 	BundleSolid                   *events.Event
 	ReceivedNewMilestone          *events.Event
 	LatestMilestoneChanged        *events.Event
+	LatestMilestoneIndexChanged   *events.Event
 	MilestoneConfirmed            *events.Event
 	SolidMilestoneChanged         *events.Event
+	SolidMilestoneIndexChanged    *events.Event
 	SnapshotMilestoneIndexChanged *events.Event
 	PruningMilestoneIndexChanged  *events.Event
 	NewConfirmedMilestoneMetric   *events.Event

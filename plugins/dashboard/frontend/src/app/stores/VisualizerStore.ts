@@ -34,7 +34,7 @@ export class TipInfo {
 const vertexSizeSmall = 10;
 const vertexSizeMedium = 20;
 const vertexSizeBig = 30;
-const idLength = 5;
+const idLength = 7;
 
 // Solarized color palette
 export const colorSolid = "#268bd2";

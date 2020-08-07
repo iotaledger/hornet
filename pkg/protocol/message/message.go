@@ -18,6 +18,8 @@ type Type byte
 type Definition struct {
 	ID             Type
 	MaxBytesLength uint16
+	// VariableLength defines if the message is fixed size or not
+	// if it is fixed, the message length must be MaxBytesLength
 	VariableLength bool
 }
 

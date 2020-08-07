@@ -14,7 +14,10 @@ func BroadcastHeartbeat() {
 	if snapshotInfo == nil {
 		return
 	}
-	heartbeatMsg, _ := sting.NewHeartbeatMessage(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex)
+
+	connected, synced := manager.ConnectedAndSyncedPeerCount()
+
+	heartbeatMsg, _ := sting.NewHeartbeatMessage(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
 	manager.ForAllConnected(func(p *peer.Peer) bool {
 		if !p.Protocol.Supports(sting.FeatureSet) {
 			return true

@@ -187,7 +187,20 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 		newlyAdded = true
 
 		metadata, _, _ := metadataFactory(transaction.GetTxHash())
-		cachedMeta = metadataStorage.Store(metadata) // meta +1
+
+		metaCreated := false
+		cachedMeta = metadataStorage.ComputeIfAbsent(metadata.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
+			metaCreated = true
+			metadata.Persist()
+			metadata.SetModified()
+			return metadata
+		})
+
+		if !metaCreated {
+			// this can only happen if the database was unclean
+			// we have to reset the metadata
+			cachedMeta.Get().(*hornet.TransactionMetadata).Reset()
+		}
 
 		transaction.Persist()
 		transaction.SetModified()

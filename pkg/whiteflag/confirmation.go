@@ -132,13 +132,15 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	// confirm all txs of the included tails
 	for _, txHash := range mutations.TailsIncluded {
 		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
-			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
-			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-			conf.TxsConfirmed++
-			conf.TxsValue++
-			metrics.SharedServerMetrics.ValueTransactions.Inc()
-			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-			forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+			if !tx.GetMetadata().IsConfirmed() {
+				tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+				tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+				conf.TxsConfirmed++
+				conf.TxsValue++
+				metrics.SharedServerMetrics.ValueTransactions.Inc()
+				metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+				forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+			}
 		}); err != nil {
 			return nil, err
 		}
@@ -147,13 +149,15 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	// confirm all txs of the zero value tails
 	for _, txHash := range mutations.TailsExcludedZeroValue {
 		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
-			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
-			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-			conf.TxsConfirmed++
-			conf.TxsZeroValue++
-			metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
-			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-			forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+			if !tx.GetMetadata().IsConfirmed() {
+				tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+				tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+				conf.TxsConfirmed++
+				conf.TxsZeroValue++
+				metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
+				metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+				forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+			}
 		}); err != nil {
 			return nil, err
 		}
@@ -163,13 +167,15 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	for _, txHash := range mutations.TailsExcludedConflicting {
 		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
 			tx.GetMetadata().SetConflicting(true)
-			tx.GetMetadata().SetConfirmed(true, milestoneIndex)
-			tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-			conf.TxsConfirmed++
-			conf.TxsConflicting++
-			metrics.SharedServerMetrics.ConflictingTransactions.Inc()
-			metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-			forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+			if !tx.GetMetadata().IsConfirmed() {
+				tx.GetMetadata().SetConfirmed(true, milestoneIndex)
+				tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+				conf.TxsConfirmed++
+				conf.TxsConflicting++
+				metrics.SharedServerMetrics.ConflictingTransactions.Inc()
+				metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
+				forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+			}
 		}); err != nil {
 			return nil, err
 		}

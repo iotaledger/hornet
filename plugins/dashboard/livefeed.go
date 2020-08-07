@@ -15,9 +15,11 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-var liveFeedWorkerCount = 1
-var liveFeedWorkerQueueSize = 50
-var liveFeedWorkerPool *workerpool.WorkerPool
+var (
+	liveFeedWorkerCount     = 1
+	liveFeedWorkerQueueSize = 50
+	liveFeedWorkerPool      *workerpool.WorkerPool
+)
 
 func configureLiveFeed() {
 	liveFeedWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -38,7 +40,7 @@ func runLiveFeed() {
 
 	newTxRateLimiter := time.NewTicker(time.Second / 10)
 
-	notifyNewTx := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
@@ -51,16 +53,15 @@ func runLiveFeed() {
 		})
 	})
 
-	notifyLMChanged := events.NewClosure(func(cachedBndl *tanglemodel.CachedBundle) {
-		liveFeedWorkerPool.TrySubmit(cachedBndl.GetBundle().GetMilestoneIndex())
-		cachedBndl.Release(true) // bundle -1
+	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		liveFeedWorkerPool.TrySubmit(msIndex)
 	})
 
 	daemon.BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewTransaction.Attach(notifyNewTx)
-		defer tangle.Events.ReceivedNewTransaction.Detach(notifyNewTx)
-		tangle.Events.LatestMilestoneChanged.Attach(notifyLMChanged)
-		defer tangle.Events.LatestMilestoneChanged.Detach(notifyLMChanged)
+		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
+		defer tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
+		tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		defer tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
 		liveFeedWorkerPool.Start()
 		<-shutdownSignal

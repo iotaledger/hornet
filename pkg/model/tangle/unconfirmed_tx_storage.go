@@ -78,7 +78,13 @@ func StoreUnconfirmedTx(msIndex milestone.Index, txHash hornet.Hash) *CachedUnco
 
 	unconfirmedTx := hornet.NewUnconfirmedTx(msIndex, txHash)
 
-	return &CachedUnconfirmedTx{CachedObject: unconfirmedTxStorage.Store(unconfirmedTx)}
+	cachedObj := unconfirmedTxStorage.ComputeIfAbsent(unconfirmedTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // unconfirmedTx +1
+		unconfirmedTx.Persist()
+		unconfirmedTx.SetModified()
+		return unconfirmedTx
+	})
+
+	return &CachedUnconfirmedTx{CachedObject: cachedObj}
 }
 
 // DeleteUnconfirmedTxs deletes unconfirmed transaction entries.

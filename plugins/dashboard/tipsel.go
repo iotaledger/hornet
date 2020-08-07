@@ -38,16 +38,16 @@ func runTipSelMetricWorker() {
 		return
 	}
 
-	notifyTipSelPerformed := events.NewClosure(func(metrics *tipselect.TipSelStats) {
+	onTipSelPerformed := events.NewClosure(func(metrics *tipselect.TipSelStats) {
 		tipSelMetricWorkerPool.TrySubmit(metrics)
 	})
 
 	daemon.BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
-		urts.TipSelector.Events.TipSelPerformed.Attach(notifyTipSelPerformed)
+		urts.TipSelector.Events.TipSelPerformed.Attach(onTipSelPerformed)
 		tipSelMetricWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[TipSelMetricUpdater] ...")
-		urts.TipSelector.Events.TipSelPerformed.Detach(notifyTipSelPerformed)
+		urts.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)
 		tipSelMetricWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[TipSelMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	autopeering "github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/events"
@@ -17,10 +18,16 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/handshake"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
+)
+
+const (
+	isNeighborSyncedThreshold        = 2
+	updateNeighborsCountCooldownTime = time.Duration(2 * time.Second)
 )
 
 var (
@@ -58,6 +65,7 @@ func NewManager(opts Options, peers ...*config.PeerConfig) *Manager {
 			Reconnecting:                          events.NewEvent(events.Int32Caller),
 			ReconnectRemovedAlreadyConnected:      events.NewEvent(peer.Caller),
 			AutopeeredPeerHandshaking:             events.NewEvent(peer.Caller),
+			AutopeeredPeerBecameStatic:            events.NewEvent(peer.IdentityCaller),
 			IPLookupError:                         events.NewEvent(events.ErrorCaller),
 			Shutdown:                              events.NewEvent(events.CallbackCaller),
 			Error:                                 events.NewEvent(events.ErrorCaller),
@@ -99,6 +107,11 @@ type Manager struct {
 	blacklistMu sync.Mutex
 	// used to enforce one handshake verification at a time.
 	handshakeVerifyMu sync.Mutex
+
+	// only used by ConnectedAndSyncedPeerCount
+	connectedNeighborsCount  uint8
+	syncedNeighborsCount     uint8
+	neighborsCountLastUpdate time.Time
 }
 
 type reconnectinfo struct {
@@ -141,6 +154,8 @@ type Events struct {
 	PeerHandshakingIncoming *events.Event
 	// Fired when the handshaking phase with an outbound autopeered peer is initiated.
 	AutopeeredPeerHandshaking *events.Event
+	// Fired when an autopeered peer was added as a static neighbor.
+	AutopeeredPeerBecameStatic *events.Event
 	// Fired when a reconnect is initiated over the entire reconnect pool.
 	Reconnecting *events.Event
 	// Fired when during the reconnect phase a peer is already connected.
@@ -348,6 +363,52 @@ func (m *Manager) ConnectedPeerCount() int {
 	return len(m.connected)
 }
 
+// ConnectedPeerCount returns the current count of connected peers.
+// it has a cooldown time to not update too frequently.
+func (m *Manager) ConnectedAndSyncedPeerCount() (uint8, uint8) {
+	m.RLock()
+	defer m.RUnlock()
+
+	// check cooldown time
+	if time.Since(m.neighborsCountLastUpdate) < updateNeighborsCountCooldownTime {
+		return m.connectedNeighborsCount, m.syncedNeighborsCount
+	}
+
+	lsi := tangle.GetLatestMilestoneIndex()
+
+	m.connectedNeighborsCount = 0
+	m.syncedNeighborsCount = 0
+	for _, p := range m.connected {
+		if m.connectedNeighborsCount < 255 {
+			// do no count more than 255 neighbors
+			m.connectedNeighborsCount++
+		}
+
+		if p.LatestHeartbeat == nil {
+			continue
+		}
+
+		latestIndex := p.LatestHeartbeat.LatestMilestoneIndex
+		if latestIndex < lsi {
+			latestIndex = lsi
+		}
+
+		if p.LatestHeartbeat.SolidMilestoneIndex >= (latestIndex - isNeighborSyncedThreshold) {
+			// node not synced
+			continue
+		}
+
+		m.syncedNeighborsCount++
+		if m.syncedNeighborsCount == 255 {
+			// do no count more than 255 synced neighbors
+			break
+		}
+	}
+	m.neighborsCountLastUpdate = time.Now()
+
+	return m.connectedNeighborsCount, m.syncedNeighborsCount
+}
+
 // SlotsFilled checks whether all available peer slots are filled.
 func (m *Manager) SlotsFilled() bool {
 	m.RLock()
@@ -414,41 +475,74 @@ func (m *Manager) Add(addr string, preferIPv6 bool, alias string, autoPeer ...*a
 	originAddr.PreferIPv6 = preferIPv6
 	originAddr.Alias = alias
 
-	// check whether the peer is already connected or in the reconnect pool
-	// given any of the IP addresses to which the peer address resolved to
-	m.Lock()
-
-	// check whether already in reconnect pool
-	if _, exists := m.reconnect[addr]; exists {
-		m.Unlock()
-		return fmt.Errorf("%w: '%s' is already in the reconnect pool", ErrPeerAlreadyInReconnect, addr)
-	}
-
 	// check whether the peer is already connected by examining all IP addresses
 	possibleIPs, err := iputils.GetIPAddressesFromHost(originAddr.Addr)
 	if err != nil {
-		m.Unlock()
 		return err
 	}
+
+	m.Lock()
+
+	reconnect := false
+	isAutopeer := len(autoPeer) > 0
+
+	defer func() {
+		m.Unlock()
+		if reconnect {
+			m.Reconnect()
+		}
+	}()
+
+	// check whether the peer is already connected or in the reconnect pool
+	// given any of the IP addresses to which the peer address resolved to
 	for ip := range possibleIPs.IPs {
+		// check whether already in connected pool
 		id := peer.NewID(ip.String(), originAddr.Port)
-		if _, exists := m.connected[id]; exists {
-			m.Unlock()
-			return fmt.Errorf("%w: '%s' is already connected as '%s'", ErrPeerAlreadyConnected, addr, id)
+		if peer, exists := m.connected[id]; exists {
+			if !isAutopeer && peer.Autopeering != nil {
+				autopeeringIdentity := peer.Autopeering.Identity
+
+				// mark the autopeer as statically connected now
+				peer.Autopeering = nil
+
+				// Remove the autopeering entry in the Selector (this will not drop the connection because we set "Autopeering" to nil)
+				m.Events.AutopeeredPeerBecameStatic.Trigger(autopeeringIdentity)
+
+				// no need to drop the connection
+				return nil
+			}
+			return fmt.Errorf("%w: '%s' is already connected as '%s'", ErrPeerAlreadyConnected, originAddr.String(), id)
+		}
+
+		// check whether already in reconnect pool
+		if reconnectInfo, exists := m.reconnect[originAddr.String()]; exists {
+			if !isAutopeer && reconnectInfo.Autopeering != nil {
+				autopeeringIdentity := reconnectInfo.Autopeering.Identity
+
+				// mark the autopeer as statically connected now
+				reconnectInfo.Autopeering = nil
+
+				// Remove the autopeering entry in the Selector (this will not drop the connection because we set "Autopeering" to nil)
+				m.Events.AutopeeredPeerBecameStatic.Trigger(autopeeringIdentity)
+
+				// force reconnect attempts now
+				reconnect = true
+				return nil
+			}
+			return fmt.Errorf("%w: '%s' is already in the reconnect pool", ErrPeerAlreadyInReconnect, originAddr.String())
 		}
 	}
 
 	// construct reconnect info
 	reconnectInfo := &reconnectinfo{OriginAddr: originAddr, CachedIPs: possibleIPs}
-	if len(autoPeer) > 0 {
+	if isAutopeer {
 		reconnectInfo.Autopeering = autoPeer[0]
 	}
 
 	m.moveToReconnectPool(reconnectInfo)
 
 	// force reconnect attempts now
-	m.Unlock()
-	m.Reconnect()
+	reconnect = true
 	return nil
 }
 

@@ -30,18 +30,18 @@ var (
 //
 // Object Storages:
 // 		Stored with caching:
-//			- TxRaw (synced)					=> will be added again by requesting the tx at solidification
-//			- TxMetadata (synced)				=> will be removed and added again by solidifcation
-//			- BundleTransaction (synced)		=> will be added again if missing by solidifcation
-//			- Bundle (always)					=> will be removed and added again by solidifcation
-//			- Approver (synced)					=> will be added again if missing by solidifcation
+//			- TxRaw (synced)					=> will be removed and added again by requesting the tx at solidification
+//			- TxMetadata (synced)				=> will be removed and added again if missing by receiving the tx (if not => reset)
+//			- BundleTransaction (synced)		=> will be removed and added again if missing by receiving the tx
+//			- Bundle (always)					=> will be removed and added again if missing by receiving the tx
+//			- Approver (synced)					=> will be removed and added again if missing by receiving the tx
 //
 // 		Stored without caching:
-//			- Tag								=> will be added again if missing by solidifcation
-//			- Address							=> will be added again if missing by solidifcation
-//			- UnconfirmedTx 						=> will be removed at pruning anyway
-//			- Milestone							=> will be added again at bundle creation if missing
-//			- SpentAddresses					=> will be added again if missing by confirmation
+//			- Tag								=> will be removed and added again if missing by receiving the tx
+//			- Address							=> will be removed and added again if missing by receiving the tx
+//			- UnconfirmedTx 					=> will be removed at pruning anyway
+//			- Milestone							=> will be removed and added again by receiving the tx
+//			- SpentAddresses					=> will be removed and added again if missing by receiving the tx
 //
 // Database:
 // 		- LedgerState
@@ -115,6 +115,16 @@ func cleanMilestones(info *tangle.SnapshotInfo) error {
 		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 			panic(err)
 		}
+
+		milestone := tangle.GetCachedMilestoneOrNil(msIndex) // milestone +1
+		if milestone == nil {
+			return ErrMilestoneNotFound
+		}
+		msHash := milestone.GetMilestone().Hash
+		milestone.Release(true) // milestone -1
+
+		// delete the bundle of the milestone, so the milestone will be created again during syncing
+		tangle.DeleteBundle(msHash)
 		tangle.DeleteMilestone(msIndex)
 	}
 

@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iotaledger/hive.go/events"
 	"go.uber.org/atomic"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/identity"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/network"
 
@@ -37,6 +38,10 @@ func Caller(handler interface{}, params ...interface{}) {
 
 func OriginAddressCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iputils.OriginAddress))(params[0].(*iputils.OriginAddress))
+}
+
+func IdentityCaller(handler interface{}, params ...interface{}) {
+	handler.(func(identity.ID))(params[0].(identity.ID))
 }
 
 // NewInboundPeer creates a new peer instance which is marked as being inbound.
@@ -170,6 +175,15 @@ func (p *Peer) HasDataFor(index milestone.Index) bool {
 		return false
 	}
 	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.SolidMilestoneIndex >= index
+}
+
+// CouldHaveDataFor tells whether the peer given the latest heartbeat message, could have parts of the cone data for the given milestone.
+// Returns false if no heartbeat message was received yet.
+func (p *Peer) CouldHaveDataFor(index milestone.Index) bool {
+	if p.LatestHeartbeat == nil {
+		return false
+	}
+	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.LatestMilestoneIndex >= index
 }
 
 // Handshaked tells whether the peer was handshaked.

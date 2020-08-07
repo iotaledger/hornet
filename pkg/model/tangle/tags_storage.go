@@ -78,7 +78,13 @@ func StoreTag(txTag hornet.Hash, txHash hornet.Hash) *CachedTag {
 
 	tag := hornet.NewTag(txTag[:17], txHash[:49])
 
-	return &CachedTag{CachedObject: tagsStorage.Store(tag)}
+	cachedObj := tagsStorage.ComputeIfAbsent(tag.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // tag +1
+		tag.Persist()
+		tag.SetModified()
+		return tag
+	})
+
+	return &CachedTag{CachedObject: cachedObj}
 }
 
 // tag +-0

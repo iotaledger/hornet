@@ -17,11 +17,11 @@ var (
 	ErrInvalidSourceLength = errors.New("invalid source byte slice")
 )
 
-// FeatureSet denotes the version bit for STING support.
-const FeatureSet = 1 << 1
+// FeatureSet denotes the version bit for STING+Whiteflag support.
+const FeatureSet = 1 << 2
 
 // FeatureSetName is the name of the STING feature set.
-const FeatureSetName = "STING"
+const FeatureSetName = "STING+Whiteflag"
 
 func init() {
 	if err := message.RegisterType(MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition); err != nil {
@@ -75,10 +75,11 @@ var (
 		VariableLength: false,
 	}
 
-	// The heartbeat packet containing the current latest solid and pruned milestone index.
+	// The heartbeat packet containing the current latest solid, pruned and latest milestone index,
+	// number of connected neighbors and number of synced neighbors.
 	HeartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,
-		MaxBytesLength: HeartbeatMilestoneIndexBytesLength * 2,
+		MaxBytesLength: HeartbeatMilestoneIndexBytesLength*3 + 2,
 		VariableLength: false,
 	}
 
@@ -108,8 +109,8 @@ func NewTransactionMessage(txData []byte) ([]byte, error) {
 
 // NewTransactionRequestMessage creates a transaction request message.
 func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+RequestedTransactionHashMsgBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, RequestedTransactionHashMsgBytesLength); err != nil {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+TransactionRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, TransactionRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -121,9 +122,9 @@ func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
 }
 
 // NewHeartbeatMessage creates a new heartbeat message.
-func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMilestoneIndexBytesLength*2))
-	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMilestoneIndexBytesLength*2); err != nil {
+func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -135,13 +136,25 @@ func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneInd
 		return nil, err
 	}
 
+	if err := binary.Write(buf, binary.BigEndian, latestMilestoneIndex); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, connectedNeighbors); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, syncedNeighbors); err != nil {
+		return nil, err
+	}
+
 	return buf.Bytes(), nil
 }
 
 // NewMilestoneRequestMessage creates a new milestone request message.
 func NewMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+RequestedMilestoneIndexMsgBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, RequestedMilestoneIndexMsgBytesLength); err != nil {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MilestoneRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 

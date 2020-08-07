@@ -86,7 +86,8 @@ func configure(plugin *node.Plugin) {
 
 			// send heartbeat and latest milestone request
 			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
-				helpers.SendHeartbeat(p, tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex)
+				connected, synced := manager.ConnectedAndSyncedPeerCount()
+				helpers.SendHeartbeat(p, tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
 				helpers.SendLatestMilestoneRequest(p)
 			}
 		}

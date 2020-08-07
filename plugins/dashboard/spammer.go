@@ -24,22 +24,22 @@ func configureSpammerMetric() {
 
 func runSpammerMetricWorker() {
 
-	notifySpamPerformed := events.NewClosure(func(metrics *spammerPlugin.SpamStats) {
+	onSpamPerformed := events.NewClosure(func(metrics *spammerPlugin.SpamStats) {
 		spammerMetricWorkerPool.TrySubmit(&msg{Type: MsgTypeSpamMetrics, Data: metrics})
 	})
 
-	notifyAvgSpamMetricsUpdated := events.NewClosure(func(metrics *spammerPlugin.AvgSpamMetrics) {
+	onAvgSpamMetricsUpdated := events.NewClosure(func(metrics *spammerPlugin.AvgSpamMetrics) {
 		spammerMetricWorkerPool.TrySubmit(&msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
 	})
 
 	daemon.BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
-		spammerPlugin.Events.SpamPerformed.Attach(notifySpamPerformed)
-		spammerPlugin.Events.AvgSpamMetricsUpdated.Attach(notifyAvgSpamMetricsUpdated)
+		spammerPlugin.Events.SpamPerformed.Attach(onSpamPerformed)
+		spammerPlugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
 		spammerMetricWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[SpammerMetricUpdater] ...")
-		spammerPlugin.Events.SpamPerformed.Detach(notifySpamPerformed)
-		spammerPlugin.Events.AvgSpamMetricsUpdated.Detach(notifyAvgSpamMetricsUpdated)
+		spammerPlugin.Events.SpamPerformed.Detach(onSpamPerformed)
+		spammerPlugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
 		spammerMetricWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[SpammerMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)

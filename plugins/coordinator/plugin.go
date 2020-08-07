@@ -255,7 +255,7 @@ func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 		wgBundleProcessed.Add(1)
 	}
 
-	processedTxEvent := events.NewClosure(func(txHash hornet.Hash) {
+	onProcessedTransaction := events.NewClosure(func(txHash hornet.Hash) {
 		txHashesLock.Lock()
 		defer txHashesLock.Unlock()
 
@@ -266,19 +266,18 @@ func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 		}
 	})
 
-	var solidMilestoneChangedEvent *events.Closure
+	var onSolidMilestoneIndexChanged *events.Closure
 	if isMilestone {
-		solidMilestoneChangedEvent = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-			defer cachedBndl.Release(true)
+		onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 			wgBundleProcessed.Done()
 		})
 	}
 
-	tangleplugin.Events.ProcessedTransaction.Attach(processedTxEvent)
-	defer tangleplugin.Events.ProcessedTransaction.Detach(processedTxEvent)
+	tangleplugin.Events.ProcessedTransaction.Attach(onProcessedTransaction)
+	defer tangleplugin.Events.ProcessedTransaction.Detach(onProcessedTransaction)
 	if isMilestone {
-		tangleplugin.Events.SolidMilestoneChanged.Attach(solidMilestoneChangedEvent)
-		defer tangleplugin.Events.SolidMilestoneChanged.Detach(solidMilestoneChangedEvent)
+		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	}
 
 	for _, t := range b {

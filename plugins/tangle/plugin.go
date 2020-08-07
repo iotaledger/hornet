@@ -34,8 +34,9 @@ var (
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 
-	onSolidMilestoneChanged        *events.Closure
+	onSolidMilestoneIndexChanged   *events.Closure
 	onPruningMilestoneIndexChanged *events.Closure
+	onLatestMilestoneIndexChanged  *events.Closure
 	onReceivedNewTx                *events.Closure
 )
 
@@ -131,14 +132,18 @@ func run(plugin *node.Plugin) {
 }
 
 func configureEvents() {
-	onSolidMilestoneChanged = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		defer cachedBndl.Release() // bundle -1
+	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new solid milestone index
 		gossip.BroadcastHeartbeat()
 	})
 
 	onPruningMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new pruning milestone index
+		gossip.BroadcastHeartbeat()
+	})
+
+	onLatestMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+		// notify peers about our new latest milestone index
 		gossip.BroadcastHeartbeat()
 	})
 
@@ -153,8 +158,9 @@ func configureEvents() {
 }
 
 func attachHeartbeatEvents() {
-	Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+	Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 	Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
 func attachSolidifierGossipEvents() {
@@ -162,8 +168,9 @@ func attachSolidifierGossipEvents() {
 }
 
 func detachHeartbeatEvents() {
-	Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+	Events.SolidMilestoneChanged.Detach(onSolidMilestoneIndexChanged)
 	Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }
 
 func detachSolidifierGossipEvents() {
