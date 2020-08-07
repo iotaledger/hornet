@@ -92,7 +92,9 @@ func (h *Handler) connectPowsrv() bool {
 
 	// connect to powsrv.io
 	if err := h.powsrvClient.Init(); err != nil {
-		h.log.Warnf("Error connecting to powsrv.io: %w", err)
+		if h.log != nil {
+			h.log.Warnf("Error connecting to powsrv.io: %w", err)
+		}
 		return false
 	}
 
@@ -156,7 +158,9 @@ func (h *Handler) DoPoW(trytes trinary.Trytes, mwm int, parallelism ...int) (non
 			h.powsrvLock.Lock()
 			if !h.powsrvErrorHandled {
 				// some error occurred => disconnect from powsrv.io
-				h.log.Warnf("Error during PoW via powsrv.io: %w", err)
+				if h.log != nil {
+					h.log.Warnf("Error during PoW via powsrv.io: %w", err)
+				}
 				h.disconnectPowsrv()
 			}
 			h.powsrvLock.Unlock()
