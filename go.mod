@@ -32,7 +32,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.10
-	gitlab.com/powsrv.io/go/client v0.0.0-20200726093809-495292e91ff6
+	gitlab.com/powsrv.io/go/client v0.0.0-20200807151725-8bc5209c1820
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de

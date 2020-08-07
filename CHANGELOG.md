@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc8] - 07.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - Latest solid milestone and neighbor counts of every neighbor to dashboard
+    - powsrv.io support
+
+### Changed
+
+    - Breaking protocol version change due to whiteflag
+    - Heartbeat message was extended by neighbors count and latest solid milestone
+    - Requests are now sent if an unsynced neighbor may also have the data based on latest solid milestone
+
+### Fixed
+
+    - SupportedFeatureSets logic in handshake
+    - Milestone missing / Milestone updated panics
+    - Database revalidation
+    - Autopeered neighbors can now be added as static neighbors
+    - Hash conflicts in the visualizer
+    - Wrong CTPS calculation on bundle tail reattachments
+
 ## [0.5.0-rc7] - 04.08.2020
 
 **Breaking change:**
