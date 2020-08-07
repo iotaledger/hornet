@@ -109,8 +109,8 @@ func NewTransactionMessage(txData []byte) ([]byte, error) {
 
 // NewTransactionRequestMessage creates a transaction request message.
 func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+RequestedTransactionHashMsgBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, RequestedTransactionHashMsgBytesLength); err != nil {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+TransactionRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, TransactionRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -123,8 +123,8 @@ func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
 
 // NewHeartbeatMessage creates a new heartbeat message.
 func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMilestoneIndexBytesLength*3+2))
-	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMilestoneIndexBytesLength*3); err != nil {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -153,8 +153,8 @@ func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneInd
 
 // NewMilestoneRequestMessage creates a new milestone request message.
 func NewMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+RequestedMilestoneIndexMsgBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, RequestedMilestoneIndexMsgBytesLength); err != nil {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MilestoneRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
