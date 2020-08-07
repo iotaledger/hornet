@@ -155,7 +155,7 @@ func (h *Handler) DoPoW(trytes trinary.Trytes, mwm int, parallelism ...int) (non
 
 			h.powsrvLock.Lock()
 			if !h.powsrvErrorHandled {
-				// some error occured => disconnect from powsrv.io
+				// some error occurred => disconnect from powsrv.io
 				h.log.Warnf("Error during PoW via powsrv.io: %w", err)
 				h.disconnectPowsrv()
 			}
