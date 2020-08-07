@@ -68,16 +68,16 @@ func (hs Handshake) SupportedVersion(ownSupportedMessagesBitset *bitset.BitSet) 
 	if !bothSupportedMessagesBitset.Any() {
 		// we don't support any protocol version the peer supports
 		// return the highest supported version of a given node
-		for i := hsSupportedMessagesBitset.Len() - 1; i >= 0; i-- {
-			if hsSupportedMessagesBitset.Test(i) {
+		for i := int(hsSupportedMessagesBitset.Len()) - 1; i >= 0; i-- {
+			if hsSupportedMessagesBitset.Test(uint(i)) {
 				return 1 << i, ErrVersionNotSupported
 			}
 		}
 
 	}
 
-	for i := bothSupportedMessagesBitset.Len() - 1; i >= 0; i-- {
-		if bothSupportedMessagesBitset.Test(i) {
+	for i := int(bothSupportedMessagesBitset.Len()) - 1; i >= 0; i-- {
+		if bothSupportedMessagesBitset.Test(uint(i)) {
 			return 1 << i, nil
 		}
 	}
