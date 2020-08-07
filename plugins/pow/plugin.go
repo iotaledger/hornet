@@ -29,7 +29,7 @@ func Handler() *powpackage.Handler {
 	handlerOnce.Do(func() {
 		// init the pow handler with all possible settings
 		powsrvAPIKey, _ := config.LoadHashFromEnvironment("POWSRV_API_KEY", 12)
-		handler = powpackage.New(powsrvAPIKey, powsrvReinitCooldown)
+		handler = powpackage.New(log, powsrvAPIKey, powsrvReinitCooldown)
 
 	})
 	return handler

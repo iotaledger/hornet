@@ -1,31 +1,35 @@
 package pow
 
 import (
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/trinary"
+
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/syncutils"
+
 	powsrvio "gitlab.com/powsrv.io/go/client"
 )
 
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
 // or uses local PoW if no API key was specified or the connection failed.
 type Handler struct {
-	sync.RWMutex
+	log *logger.Logger
 
-	powsrvClient         *powsrvio.PowClient
-	powsrvReinitCooldown time.Duration
-	powsrvLastInit       time.Time
-	powsrvConnected      int32
+	powsrvClient       *powsrvio.PowClient
+	powsrvLock         syncutils.RWMutex
+	powsrvInitCooldown time.Duration
+	powsrvLastInit     time.Time
+	powsrvConnected    bool
+	powsrvErrorHandled bool
 
 	localPoWFunc pow.ProofOfWorkFunc
 	localPowType string
 }
 
 // New creates a new PoW handler instance.
-func New(powsrvAPIKey string, powsrvReinitCooldown time.Duration) *Handler {
+func New(log *logger.Logger, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
 
 	// Get the fastest available local PoW func
 	localPoWType, localPoWFunc := pow.GetFastestProofOfWorkUnsyncImpl()
@@ -42,68 +46,119 @@ func New(powsrvAPIKey string, powsrvReinitCooldown time.Duration) *Handler {
 	}
 
 	return &Handler{
-		powsrvClient:         powsrvClient,
-		powsrvReinitCooldown: powsrvReinitCooldown,
-		powsrvLastInit:       time.Time{},
-		powsrvConnected:      0,
-		localPoWFunc:         localPoWFunc,
-		localPowType:         localPoWType,
+		log:                log,
+		powsrvClient:       powsrvClient,
+		powsrvInitCooldown: powsrvInitCooldown,
+		powsrvLastInit:     time.Time{},
+		powsrvConnected:    false,
+		powsrvErrorHandled: false,
+		localPoWFunc:       localPoWFunc,
+		localPowType:       localPoWType,
 	}
 }
 
-// tryReinitPowsrvWithoutLocking tries to reinit powsrv.io if the connection got lost.
-// the lock needs to be handled by the caller
-func (h *Handler) tryReinitPowsrvWithoutLocking() {
+// connectPowsrv tries to connect to powsrv.io if not connected already.
+// it returns if the powsrv is connected or not.
+func (h *Handler) connectPowsrv() bool {
+	if h.powsrvClient == nil {
+		return false
+	}
+
+	h.powsrvLock.RLock()
+	if h.powsrvConnected {
+		h.powsrvLock.RUnlock()
+		return true
+	}
+
+	if time.Since(h.powsrvLastInit) < h.powsrvInitCooldown {
+		h.powsrvLock.RUnlock()
+		return false
+	}
+
+	// aquire write lock
+	h.powsrvLock.Lock()
+	defer h.powsrvLock.Unlock()
+
+	// check again after aquiring the write lock
+	if h.powsrvConnected || time.Since(h.powsrvLastInit) < h.powsrvInitCooldown {
+		return h.powsrvConnected
+	}
+
+	h.powsrvLastInit = time.Now()
+
+	// close an existing connection first
+	h.powsrvClient.Close()
+
+	// connect to powsrv.io
+	if err := h.powsrvClient.Init(); err != nil {
+		h.log.Warnf("Error connecting to powsrv.io: %w", err)
+		return false
+	}
+
+	h.powsrvConnected = true
+	h.powsrvErrorHandled = false
+	return true
+}
+
+// disconnectPowsrv disconnects from powsrv.io
+// write lock must be aquired outside.
+func (h *Handler) disconnectPowsrv() {
+
+	if h.powsrvErrorHandled {
+		// error was already handled
+		// we don't have to disconnect twice because of an error
+		return
+	}
+	h.powsrvErrorHandled = true
+
+	if !h.powsrvConnected {
+		// already disconnected
+		return
+	}
+
+	h.powsrvConnected = false
 	if h.powsrvClient == nil {
 		return
 	}
 
-	if time.Since(h.powsrvLastInit) >= h.powsrvReinitCooldown {
-
-		h.powsrvLastInit = time.Now()
-		if err := h.powsrvClient.Init(); err != nil {
-			return
-		}
-		atomic.StoreInt32(&(h.powsrvConnected), 1)
-	}
+	h.powsrvClient.Close()
 }
 
 // GetPoWType returns the fastest available PoW type which gets used for PoW requests
 func (h *Handler) GetPoWType() string {
-	if atomic.LoadInt32(&(h.powsrvConnected)) == 1 {
+	h.powsrvLock.RLock()
+	defer h.powsrvLock.RUnlock()
+
+	if h.powsrvConnected {
 		return "powsrv.io"
 	}
 
 	return h.localPowType
 }
 
-func (h *Handler) disconnect() {
-	atomic.StoreInt32(&(h.powsrvConnected), 0)
-	h.powsrvClient.Close()
-}
-
 // DoPoW calculates the PoW
 // Either with the fastest available local PoW function or with the help of powsrv.io (optional, POWSRV_API_KEY env var must be available)
 func (h *Handler) DoPoW(trytes trinary.Trytes, mwm int, parallelism ...int) (nonce string, err error) {
-	h.Lock()
-	defer h.Unlock()
 
-	if atomic.LoadInt32(&(h.powsrvConnected)) == 0 {
-		// powsrv.io not connected
-		h.tryReinitPowsrvWithoutLocking()
-	}
-
-	if atomic.LoadInt32(&(h.powsrvConnected)) == 1 {
+	if h.connectPowsrv() {
 		// connected to powsrv.io
 		// powsrv.io only accepts mwm <= 14
 		if mwm <= 14 {
+			h.powsrvLock.RLock()
 			nonce, err := h.powsrvClient.PowFunc(trytes, mwm)
 			if err == nil {
+				h.powsrvLock.RUnlock()
 				return nonce, nil
 			}
+			h.powsrvLock.RUnlock()
 
-			// some error occured => disconnect from powsrv.io
-			h.disconnect()
+			h.powsrvLock.Lock()
+			if !h.powsrvErrorHandled {
+				// some error occured => disconnect from powsrv.io
+				h.log.Warnf("Error during PoW via powsrv.io: %w", err)
+				h.disconnectPowsrv()
+			}
+			h.powsrvLock.Unlock()
 		}
 	}
 
@@ -113,10 +168,8 @@ func (h *Handler) DoPoW(trytes trinary.Trytes, mwm int, parallelism ...int) (non
 
 // Close closes the PoW handler
 func (h *Handler) Close() {
-	h.Lock()
-	defer h.Unlock()
+	h.powsrvLock.Lock()
+	defer h.powsrvLock.Unlock()
 
-	if h.powsrvClient != nil {
-		h.powsrvClient.Close()
-	}
+	h.disconnectPowsrv()
 }
