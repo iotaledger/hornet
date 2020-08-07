@@ -177,6 +177,15 @@ func (p *Peer) HasDataFor(index milestone.Index) bool {
 	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.SolidMilestoneIndex >= index
 }
 
+// CouldHaveDataFor tells whether the peer given the latest heartbeat message, could have parts of the cone data for the given milestone.
+// Returns false if no heartbeat message was received yet.
+func (p *Peer) CouldHaveDataFor(index milestone.Index) bool {
+	if p.LatestHeartbeat == nil {
+		return false
+	}
+	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.LatestMilestoneIndex >= index
+}
+
 // Handshaked tells whether the peer was handshaked.
 func (p *Peer) Handshaked() bool {
 	return p.Protocol != nil && p.Protocol.FeatureSet != 0

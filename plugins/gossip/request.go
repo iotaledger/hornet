@@ -71,18 +71,40 @@ func runRequestWorkers() {
 
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
+					requested := false
 					manager.ForAllConnected(func(p *peer.Peer) bool {
 						if !p.Protocol.Supports(sting.FeatureSet) {
 							return true
 						}
 						// we only send a request message if the peer actually has the data
+						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
 						if !p.HasDataFor(r.MilestoneIndex) {
 							return true
 						}
 
 						helpers.SendTransactionRequest(p, r.Hash)
+						requested = true
 						return false
 					})
+
+					if !requested {
+						// We have no neighbor that has the data for sure,
+						// so we ask all neighbors that could have the data
+						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
+						manager.ForAllConnected(func(p *peer.Peer) bool {
+							if !p.Protocol.Supports(sting.FeatureSet) {
+								return true
+							}
+
+							// we only send a request message if the peer could have the data
+							if !p.CouldHaveDataFor(r.MilestoneIndex) {
+								return true
+							}
+
+							helpers.SendTransactionRequest(p, r.Hash)
+							return true
+						})
+					}
 				}
 			}
 		}

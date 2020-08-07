@@ -49,13 +49,22 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 	p.Protocol.Events.Received[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 		p.Metrics.ReceivedHeartbeats.Inc()
 		metrics.SharedServerMetrics.ReceivedHeartbeats.Inc()
-		p.LatestHeartbeat = sting.ParseHeartbeat(data)
+
+		heartbeat, err := sting.ParseHeartbeat(data)
+		if err != nil {
+			log.Infof("dropping neighbor %s because heartbeat message could not be parsed", p.Autopeering.ID())
+			peering.Manager().Remove(p.ID)
+			return
+		}
+
+		p.LatestHeartbeat = heartbeat
 
 		if p.Autopeering != nil && p.LatestHeartbeat.SolidMilestoneIndex < tangle.GetSnapshotInfo().PruningIndex {
 			// peer is connected via autopeering and its latest solid milestone index is below our pruning index.
 			// we can't help this neighbor to become sync, so it's better to drop the connection and free the slots for other peers.
 			log.Infof("dropping autopeered neighbor %s / %s because LSMI (%d) is below our pruning index (%d)", p.Autopeering.Address(), p.Autopeering.ID(), p.LatestHeartbeat.SolidMilestoneIndex, tangle.GetSnapshotInfo().PruningIndex)
 			peering.Manager().Remove(p.ID)
+			return
 		}
 
 		p.Events.HeartbeatUpdated.Trigger(p.LatestHeartbeat)
