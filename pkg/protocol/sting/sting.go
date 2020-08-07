@@ -123,7 +123,7 @@ func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
 
 // NewHeartbeatMessage creates a new heartbeat message.
 func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMilestoneIndexBytesLength*3))
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMilestoneIndexBytesLength*3+2))
 	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMilestoneIndexBytesLength*3); err != nil {
 		return nil, err
 	}
