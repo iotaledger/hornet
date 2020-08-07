@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	powsrvReinitCooldown = 30 * time.Second
+	powsrvInitCooldown = 30 * time.Second
 )
 
 var (
@@ -29,7 +29,7 @@ func Handler() *powpackage.Handler {
 	handlerOnce.Do(func() {
 		// init the pow handler with all possible settings
 		powsrvAPIKey, _ := config.LoadHashFromEnvironment("POWSRV_API_KEY", 12)
-		handler = powpackage.New(log, powsrvAPIKey, powsrvReinitCooldown)
+		handler = powpackage.New(log, powsrvAPIKey, powsrvInitCooldown)
 
 	})
 	return handler
