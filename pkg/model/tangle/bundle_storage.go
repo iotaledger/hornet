@@ -187,6 +187,13 @@ func GetCachedBundleOrNil(tailTxHash hornet.Hash) *CachedBundle {
 	return &CachedBundle{CachedObject: cachedBundle}
 }
 
+// ForEachBundleHash loops over all bundle hashes.
+func ForEachBundleHash(consumer TransactionHashBytesConsumer) {
+	bundleStorage.ForEachKeyOnly(func(tailTxHash []byte) bool {
+		return consumer(tailTxHash)
+	}, false)
+}
+
 // bundle +-0
 func ContainsBundle(tailTxHash hornet.Hash) bool {
 	return bundleStorage.Contains(databaseKeyForBundle(tailTxHash))
