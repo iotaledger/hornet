@@ -114,5 +114,5 @@ func TestProtocol_Supports(t *testing.T) {
 	p := &protocol.Protocol{}
 	p.FeatureSet = sting.FeatureSet
 	assert.True(t, p.Supports(sting.FeatureSet))
-	assert.False(t, p.Supports(244))
+	assert.False(t, p.Supports(243))
 }
