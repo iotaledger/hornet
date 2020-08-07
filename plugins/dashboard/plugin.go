@@ -72,7 +72,7 @@ func configure(plugin *node.Plugin) {
 			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
-		case *tangle.Bundle:
+		case milestone.Index:
 			// Milestone
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangleplugin.ConfirmedMilestoneMetric:
@@ -125,16 +125,19 @@ func run(_ *node.Plugin) {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	notifyStatus := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
+	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
 		wsSendWorkerPool.TrySubmit(tpsMetrics)
 	})
 
-	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
-		cachedBndl.Release(true) // bundle -1
+	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		wsSendWorkerPool.TrySubmit(msIndex)
 	})
 
-	notifyConfirmedMsMetrics := events.NewClosure(func(metric *tangleplugin.ConfirmedMilestoneMetric) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		wsSendWorkerPool.TrySubmit(msIndex)
+	})
+
+	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tangleplugin.ConfirmedMilestoneMetric) {
 		cachedMilestoneMetrics = append(cachedMilestoneMetrics, metric)
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
@@ -144,17 +147,17 @@ func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		metricsplugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
-		tangleplugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
-		tangleplugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
-		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(notifyConfirmedMsMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
+		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		tangleplugin.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		wsSendWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		metricsplugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
-		tangleplugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
-		tangleplugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(notifyConfirmedMsMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
+		tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		tangleplugin.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
 		wsSendWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[WSSend] ... done")

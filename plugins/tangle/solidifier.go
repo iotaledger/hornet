@@ -389,6 +389,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
 		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
+		Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
 		Events.MilestoneConfirmed.Trigger(confirmation)
 	})
 

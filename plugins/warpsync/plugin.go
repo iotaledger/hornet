@@ -25,12 +25,12 @@ var (
 	log      *logger.Logger
 	warpSync *warpsync.WarpSync
 
-	onPeerConnected         *events.Closure
-	onSolidMilestoneChanged *events.Closure
-	onCheckpointUpdated     *events.Closure
-	onTargetUpdated         *events.Closure
-	onStart                 *events.Closure
-	onDone                  *events.Closure
+	onPeerConnected              *events.Closure
+	onSolidMilestoneIndexChanged *events.Closure
+	onCheckpointUpdated          *events.Closure
+	onTargetUpdated              *events.Closure
+	onStart                      *events.Closure
+	onDone                       *events.Closure
 )
 
 func configure(plugin *node.Plugin) {
@@ -62,10 +62,8 @@ func configureEvents() {
 		}))
 	})
 
-	onSolidMilestoneChanged = events.NewClosure(func(cachedMsBundle *tangle.CachedBundle) { // bundle +1
-		defer cachedMsBundle.Release() // bundle -1
-		index := cachedMsBundle.GetBundle().GetMilestoneIndex()
-		warpSync.UpdateCurrent(index)
+	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) { // bundle +1
+		warpSync.UpdateCurrent(msIndex)
 	})
 
 	onCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32) {
@@ -106,7 +104,7 @@ func configureEvents() {
 
 func attachEvents() {
 	peeringplugin.Manager().Events.PeerConnected.Attach(onPeerConnected)
-	tangleplugin.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
 	warpSync.Events.Start.Attach(onStart)
@@ -115,7 +113,7 @@ func attachEvents() {
 
 func detachEvents() {
 	peeringplugin.Manager().Events.PeerConnected.Detach(onPeerConnected)
-	tangleplugin.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
 	warpSync.Events.Start.Detach(onStart)
