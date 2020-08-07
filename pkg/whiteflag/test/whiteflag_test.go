@@ -31,6 +31,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	hornet_pow "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -270,13 +271,14 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 		return nil
 	}
 
-	_, powFunc := pow.GetFastestProofOfWorkImpl()
-
 	dir, err := ioutil.TempDir("", "coo.test")
 	require.NoError(t, err)
 	dirAndFile := fmt.Sprintf("%s/coordinator.state", dir)
 
-	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powFunc, storeBundleFunc, merkleHashFunc)
+	// init pow handler
+	powHandler := hornet_pow.New(nil, "", 30*time.Second)
+
+	coo = coordinator.New(cooSeed, secLevel, merkleTreeDepth, mwm, dirAndFile, 10, powHandler, storeBundleFunc, merkleHashFunc)
 	require.NotNil(t, coo)
 
 	err = coo.InitMerkleTree("coordinator.tree", cooAddress)
@@ -614,7 +616,6 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	// Fill up the balances
 	balances := make(map[string]uint64)
 	milestones := setupCoordinatorAndIssueInitialMilestones(t, balances, 3)
-	print(milestones)
 
 	// Issue some transactions
 	bundleA := storeBundle(t, attachTo(t, milestones[0].GetBundle().GetTailHash(), milestones[1].GetBundle().GetTailHash(), zeroValueTx(t, "A")), false)

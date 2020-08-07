@@ -10,24 +10,18 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/plugins/pow"
 )
 
 func init() {
 	addEndpoint("attachToTangle", attachToTangle, implementedAPIcalls)
 }
-
-var (
-	powSet  = false
-	powFunc pow.ProofOfWorkFunc
-	powType string
-)
 
 func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
@@ -46,9 +40,9 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		query.MinWeightMagnitude = mwm
 	}
 
-	// Reject unnecessarily high MWM
-	if query.MinWeightMagnitude > mwm {
-		e.Error = fmt.Sprintf("MWM too high. MWM: %v, Max allowed: %v", query.MinWeightMagnitude, mwm)
+	// Reject wrong MWM
+	if query.MinWeightMagnitude != mwm {
+		e.Error = fmt.Sprintf("Wrong MinWeightMagnitude. requested: %d, expected: %d", query.MinWeightMagnitude, mwm)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
@@ -58,13 +52,6 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		e.Error = "No trytes given."
 		c.JSON(http.StatusBadRequest, e)
 		return
-	}
-
-	// Set the fastest PoW method
-	if !powSet {
-		powType, powFunc = pow.GetFastestProofOfWorkImpl()
-		powSet = true
-		log.Infof("PoW method: \"%v\"", powType)
 	}
 
 	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
@@ -120,12 +107,14 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Do the PoW
-		txs[i].Nonce, err = powFunc(trytes, query.MinWeightMagnitude)
+		ts := time.Now()
+		txs[i].Nonce, err = pow.Handler().DoPoW(trytes, query.MinWeightMagnitude)
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
 			return
 		}
+		log.Debugf("PoW method: \"%s\", MWM: %d, took %v", pow.Handler().GetPoWType(), mwm, time.Since(ts).Truncate(time.Millisecond))
 
 		// Convert tx to trits
 		txTrits, err := transaction.TransactionToTrits(&txs[i])
