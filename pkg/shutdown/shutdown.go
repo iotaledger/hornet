@@ -19,6 +19,7 @@ const (
 	PriorityLocalSnapshots
 	PriorityMetricsUpdater
 	PriorityDashboard
+	PriorityPoWHandler
 	PriorityAPI
 	PriorityMetricsPublishers
 	PrioritySpammer
