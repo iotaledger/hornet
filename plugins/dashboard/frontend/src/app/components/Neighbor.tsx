@@ -135,6 +135,15 @@ export class Neighbor extends React.Component<Props, any> {
                                                 Latest Solid Milestone Index: {' '}
                                                 {last.heartbeat.solid_milestone_index}
                                             </ListGroup.Item>
+                                            <ListGroup.Item>
+                                                Latest Milestone Index: {' '}
+                                                {last.heartbeat.latest_milestone_index}
+                                            </ListGroup.Item>
+                                            <ListGroup.Item>
+                                                Pruned Milestone Index: {' '}
+                                                {last.heartbeat.pruned_milestone_index}
+                                            </ListGroup.Item>
+
                                         </If>
                                     </ListGroup>
                                 </Col>
@@ -145,8 +154,12 @@ export class Neighbor extends React.Component<Props, any> {
                                         </ListGroup.Item>
                                         <If condition={!!last.heartbeat}>
                                             <ListGroup.Item>
-                                                Pruned Milestone Index: {' '}
-                                                {last.heartbeat.pruned_milestone_index}
+                                                Neighbors: {' '}
+                                                {last.heartbeat.connected_neighbors}
+                                            </ListGroup.Item>
+                                            <ListGroup.Item>
+                                                Synced Neighbors: {' '}
+                                                {last.heartbeat.synced_neighbors}
                                             </ListGroup.Item>
                                         </If>
                                     </ListGroup>

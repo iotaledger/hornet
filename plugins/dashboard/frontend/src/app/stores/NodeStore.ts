@@ -231,6 +231,9 @@ class NeighborMetric {
 class Heartbeat {
     solid_milestone_index: number;
     pruned_milestone_index: number;
+    latest_milestone_index: number;
+    connected_neighbors: number;
+    synced_neighbors: number;
 }
 
 class NeighborInfo {
@@ -637,7 +640,7 @@ export class NodeStore {
             labels.push(metric.ts);
             durationGTTA.data.push(metric.gtta);
             durationPoW.data.push(metric.pow);
-            durationTotal.data.push(metric.gtta+metric.pow);
+            durationTotal.data.push(metric.gtta + metric.pow);
         }
 
         return {
