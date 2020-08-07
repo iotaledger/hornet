@@ -75,10 +75,11 @@ var (
 		VariableLength: false,
 	}
 
-	// The heartbeat packet containing the current latest solid and pruned milestone index.
+	// The heartbeat packet containing the current latest solid, pruned and latest milestone index,
+	// number of connected neighbors and number of synced neighbors.
 	HeartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,
-		MaxBytesLength: HeartbeatMilestoneIndexBytesLength * 2,
+		MaxBytesLength: HeartbeatMilestoneIndexBytesLength*3 + 2,
 		VariableLength: false,
 	}
 
@@ -121,9 +122,9 @@ func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
 }
 
 // NewHeartbeatMessage creates a new heartbeat message.
-func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMilestoneIndexBytesLength*2))
-	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMilestoneIndexBytesLength*2); err != nil {
+func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMilestoneIndexBytesLength*3))
+	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMilestoneIndexBytesLength*3); err != nil {
 		return nil, err
 	}
 
@@ -132,6 +133,18 @@ func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneInd
 	}
 
 	if err := binary.Write(buf, binary.BigEndian, prunedMilestoneIndex); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, latestMilestoneIndex); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, connectedNeighbors); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, syncedNeighbors); err != nil {
 		return nil, err
 	}
 

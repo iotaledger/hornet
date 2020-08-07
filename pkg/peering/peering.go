@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	autopeering "github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/events"
@@ -17,10 +18,16 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/handshake"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
+)
+
+const (
+	isNeighborSyncedThreshold        = 2
+	updateNeighborsCountCooldownTime = time.Duration(2 * time.Second)
 )
 
 var (
@@ -100,6 +107,11 @@ type Manager struct {
 	blacklistMu sync.Mutex
 	// used to enforce one handshake verification at a time.
 	handshakeVerifyMu sync.Mutex
+
+	// only used by ConnectedAndSyncedPeerCount
+	connectedNeighborsCount  uint8
+	syncedNeighborsCount     uint8
+	neighborsCountLastUpdate time.Time
 }
 
 type reconnectinfo struct {
@@ -349,6 +361,52 @@ func (m *Manager) ConnectedPeerCount() int {
 	m.RLock()
 	defer m.RUnlock()
 	return len(m.connected)
+}
+
+// ConnectedPeerCount returns the current count of connected peers.
+// it has a cooldown time to not update too frequently.
+func (m *Manager) ConnectedAndSyncedPeerCount() (uint8, uint8) {
+	m.RLock()
+	defer m.RUnlock()
+
+	// check cooldown time
+	if time.Since(m.neighborsCountLastUpdate) < updateNeighborsCountCooldownTime {
+		return m.connectedNeighborsCount, m.syncedNeighborsCount
+	}
+
+	lsi := tangle.GetLatestMilestoneIndex()
+
+	m.connectedNeighborsCount = 0
+	m.syncedNeighborsCount = 0
+	for _, p := range m.connected {
+		if m.connectedNeighborsCount < 255 {
+			// do no count more than 255 neighbors
+			m.connectedNeighborsCount++
+		}
+
+		if p.LatestHeartbeat == nil {
+			continue
+		}
+
+		latestIndex := p.LatestHeartbeat.LatestMilestoneIndex
+		if latestIndex < lsi {
+			latestIndex = lsi
+		}
+
+		if p.LatestHeartbeat.SolidMilestoneIndex >= (latestIndex - isNeighborSyncedThreshold) {
+			// node not synced
+			continue
+		}
+
+		m.syncedNeighborsCount++
+		if m.syncedNeighborsCount == 255 {
+			// do no count more than 255 synced neighbors
+			break
+		}
+	}
+	m.neighborsCountLastUpdate = time.Now()
+
+	return m.connectedNeighborsCount, m.syncedNeighborsCount
 }
 
 // SlotsFilled checks whether all available peer slots are filled.

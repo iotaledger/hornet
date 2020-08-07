@@ -11,30 +11,19 @@ type Heartbeat struct {
 	SolidMilestoneIndex  milestone.Index `json:"solid_milestone_index"`
 	PrunedMilestoneIndex milestone.Index `json:"pruned_milestone_index"`
 	LatestMilestoneIndex milestone.Index `json:"latest_milestone_index"`
+	ConnectedNeighbors   int             `json:"connected_neighbors"`
+	SyncedNeighbors      int             `json:"synced_neighbors"`
 }
 
 /// ParseHeartbeat parses the given message into a heartbeat.
-func ParseHeartbeat(data []byte) (*Heartbeat, error) {
-
-	if len(data) < 8 {
-		return nil, ErrInvalidSourceLength
-	}
-
-	solidMilestoneIndex := milestone.Index(binary.BigEndian.Uint32(data[:4]))
-	prunedMilestoneIndex := milestone.Index(binary.BigEndian.Uint32(data[4:8]))
-
-	// fallback if neighbors use the old heartbeat version without LMI
-	latestMilestoneIndex := solidMilestoneIndex
-
-	if len(data) >= 12 {
-		latestMilestoneIndex = milestone.Index(binary.BigEndian.Uint32(data[8:12]))
-	}
-
+func ParseHeartbeat(data []byte) *Heartbeat {
 	return &Heartbeat{
-		SolidMilestoneIndex:  solidMilestoneIndex,
-		PrunedMilestoneIndex: prunedMilestoneIndex,
-		LatestMilestoneIndex: latestMilestoneIndex,
-	}, nil
+		SolidMilestoneIndex:  milestone.Index(binary.BigEndian.Uint32(data[:4])),
+		PrunedMilestoneIndex: milestone.Index(binary.BigEndian.Uint32(data[4:8])),
+		LatestMilestoneIndex: milestone.Index(binary.BigEndian.Uint32(data[8:12])),
+		ConnectedNeighbors:   int(data[12]),
+		SyncedNeighbors:      int(data[13]),
+	}
 }
 
 func HeartbeatCaller(handler interface{}, params ...interface{}) {

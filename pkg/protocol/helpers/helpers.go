@@ -17,12 +17,12 @@ func SendTransaction(p *peer.Peer, txData []byte) {
 }
 
 // SendHeartbeat sends a heartbeat message to the given peer.
-func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex milestone.Index) {
+func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
 	if !p.Protocol.Supports(sting.FeatureSet) {
 		return
 	}
 
-	heartbeatData, _ := sting.NewHeartbeatMessage(solidMsIndex, pruningMsIndex)
+	heartbeatData, _ := sting.NewHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
 	p.EnqueueForSending(heartbeatData)
 }
 
