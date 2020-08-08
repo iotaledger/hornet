@@ -79,14 +79,7 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	tangle.FlushTransactionStorage()
-	tangle.FlushBundleStorage()
-	tangle.FlushMilestoneStorage()
-	tangle.FlushAddressStorage()
-	tangle.FlushApproversStorage()
-	tangle.FlushBundleTransactionsStorage()
-	tangle.FlushTagsStorage()
-	tangle.FlushUnconfirmedTxsStorage()
+	tangle.FlushStorages()
 
 	// Get the ledger state of the last snapshot
 	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
