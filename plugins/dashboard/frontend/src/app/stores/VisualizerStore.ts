@@ -79,6 +79,11 @@ export class VisualizerStore {
 
     constructor(routerStore: RouterStore) {
         this.routerStore = routerStore;
+
+        this.registerHandlers()
+    }
+
+    registerHandlers = () => {
         registerHandler(WSMsgType.Vertex, this.addVertex);
         registerHandler(WSMsgType.SolidInfo, this.addSolidInfo);
         registerHandler(WSMsgType.ConfirmedInfo, this.addConfirmedInfo);

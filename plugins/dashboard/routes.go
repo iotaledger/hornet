@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
+	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -15,21 +16,28 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-// ErrInvalidParameter defines the invalid parameter error.
-var ErrInvalidParameter = errors.New("invalid parameter")
+const (
+	WebsocketCmdRegister   = 0
+	WebsocketCmdUnregister = 1
+)
 
-// ErrInternalError defines the internal error.
-var ErrInternalError = errors.New("internal error")
+var (
+	// ErrInvalidParameter defines the invalid parameter error.
+	ErrInvalidParameter = errors.New("invalid parameter")
 
-// ErrNotFound defines the not found error.
-var ErrNotFound = errors.New("not found")
+	// ErrInternalError defines the internal error.
+	ErrInternalError = errors.New("internal error")
 
-// ErrForbidden defines the forbidden error.
-var ErrForbidden = errors.New("forbidden")
+	// ErrNotFound defines the not found error.
+	ErrNotFound = errors.New("not found")
 
-// holds dashboard assets
-var appBox = packr.New("Dashboard_App", "./frontend/build")
-var assetsBox = packr.New("Dashboard_Assets", "./frontend/src/assets")
+	// ErrForbidden defines the forbidden error.
+	ErrForbidden = errors.New("forbidden")
+
+	// holds dashboard assets
+	appBox    = packr.New("Dashboard_App", "./frontend/build")
+	assetsBox = packr.New("Dashboard_Assets", "./frontend/src/assets")
+)
 
 func indexRoute(e echo.Context) error {
 	if config.NodeConfig.GetBool(config.CfgDashboardDevMode) {
@@ -127,29 +135,109 @@ func setupRoutes(e *echo.Echo) {
 	}
 }
 
-func websocketRoute(c echo.Context) error {
+func websocketRoute(ctx echo.Context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorf("recovered from panic within WS handle func: %s", r)
 		}
 	}()
-	hub.ServeWebsocket(c.Response(), c.Request(), func(client *websockethub.Client) {
-		log.Info("WebSocket client connection established")
 
-		client.Send(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-		client.Send(&msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
-		client.Send(&msg{MsgTypeDatabaseSizeMetric, cachedDbSizeMetrics})
-		client.Send(&msg{MsgTypeDatabaseCleanupEvent, lastDbCleanup})
-		start := tangle.GetLatestMilestoneIndex()
-		for i := start - 10; i <= start; i++ {
-			if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
-				client.Send(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().Tx.Hash, i}})
-				cachedMsTailTx.Release(true) // tx -1
-			} else {
-				break
+	// this function sends the initial values for some topics
+	sendInitValue := func(client *websockethub.Client, initValuesSent map[byte]struct{}, topic byte) {
+		if _, sent := initValuesSent[topic]; sent {
+			return
+		}
+		initValuesSent[topic] = struct{}{}
+
+		switch topic {
+		case MsgTypeNodeStatus:
+			client.Send(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+
+		case MsgTypeConfirmedMsMetrics:
+			client.Send(&msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
+
+		case MsgTypeDatabaseSizeMetric:
+			client.Send(&msg{MsgTypeDatabaseSizeMetric, cachedDbSizeMetrics})
+
+		case MsgTypeDatabaseCleanupEvent:
+			client.Send(&msg{MsgTypeDatabaseCleanupEvent, lastDbCleanup})
+
+		case MsgTypeMs:
+			start := tangle.GetLatestMilestoneIndex()
+			for i := start - 10; i <= start; i++ {
+				if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
+					client.Send(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().Tx.Hash, i}})
+					cachedMsTailTx.Release(true) // tx -1
+				} else {
+					break
+				}
 			}
 		}
-	})
+	}
+
+	topicsLock := syncutils.RWMutex{}
+	registeredTopics := make(map[byte]struct{})
+	initValuesSent := make(map[byte]struct{})
+
+	hub.ServeWebsocket(ctx.Response(), ctx.Request(),
+		// onCreate gets called when the client is created
+		func(client *websockethub.Client) {
+			client.FilterCallback = func(c *websockethub.Client, data interface{}) bool {
+				msg, ok := data.(*msg)
+				if !ok {
+					return false
+				}
+
+				_, registered := registeredTopics[msg.Type]
+				return registered
+			}
+			client.ReceiveChan = make(chan *websockethub.WebsocketMsg, 100)
+
+			go func() {
+				for {
+					select {
+					case <-client.ExitSignal:
+						// client was disconnected
+						return
+
+					case msg, ok := <-client.ReceiveChan:
+						if !ok {
+							// client was disconnected
+							return
+						}
+
+						if msg.MsgType == websockethub.BinaryMessage {
+							if len(msg.Data) < 2 {
+								continue
+							}
+
+							cmd := msg.Data[0]
+							topic := msg.Data[1]
+
+							if cmd == WebsocketCmdRegister {
+								// register topic fo this client
+								topicsLock.Lock()
+								registeredTopics[topic] = struct{}{}
+								topicsLock.Unlock()
+
+								sendInitValue(client, initValuesSent, topic)
+
+							} else if cmd == WebsocketCmdUnregister {
+								// unregister topic fo this client
+								topicsLock.Lock()
+								delete(registeredTopics, topic)
+								topicsLock.Unlock()
+							}
+						}
+					}
+				}
+			}()
+		},
+
+		// onConnect gets called when the client was registered
+		func(client *websockethub.Client) {
+			log.Info("WebSocket client connection established")
+		})
 
 	return nil
 }

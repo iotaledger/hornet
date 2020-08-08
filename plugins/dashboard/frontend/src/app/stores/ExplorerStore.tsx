@@ -3,6 +3,7 @@ import {registerHandler, WSMsgType} from "app/misc/WS";
 import * as React from "react";
 import {Link} from 'react-router-dom';
 import {RouterStore} from "mobx-react-router";
+import NodeStore from "app/stores/NodeStore";
 import {trytesToAscii} from '@iota/converter';
 import {asTransactionTrytes} from '@iota/transaction-converter';
 import {IOTAValue} from "app/components/IOTAValue";
@@ -104,11 +105,19 @@ export class ExplorerStore {
     // formatting
     @observable shortenedValues: boolean = true;
 
+    nodeStore: NodeStore;
     routerStore: RouterStore;
 
-    constructor(routerStore: RouterStore) {
+    constructor(nodeStore: NodeStore, routerStore: RouterStore) {
+        this.nodeStore = nodeStore;
         this.routerStore = routerStore;
-        registerHandler(WSMsgType.Tx, this.addLiveFeedTx);
+
+        this.registerHandlers();
+    }
+
+    registerHandlers = () => {
+        registerHandler(WSMsgType.TxValue, this.addLiveFeedTx);
+        registerHandler(WSMsgType.TxZeroValue, this.addLiveFeedTx);
         registerHandler(WSMsgType.Ms, this.addLiveFeedMs);
     }
 
@@ -281,6 +290,7 @@ export class ExplorerStore {
     @action
     toggleValueOnly = () => {
         this.valueOnly = !this.valueOnly;
+        this.nodeStore.registerExplorerTopics(this.valueOnly);
     };
 
     @action

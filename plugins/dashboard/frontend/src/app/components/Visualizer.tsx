@@ -28,11 +28,12 @@ export class Visualizer extends React.Component<Props, any> {
 
     componentDidMount(): void {
         this.props.visualizerStore.start();
+        this.props.nodeStore.registerVisualizerTopics();
     }
 
     componentWillUnmount(): void {
+        this.props.nodeStore.unregisterVisualizerTopics();
         this.props.visualizerStore.stop();
-        this.props.nodeStore.registerHandlers();
     }
 
     updateVerticesLimit = (e) => {
@@ -52,21 +53,13 @@ export class Visualizer extends React.Component<Props, any> {
         this.props.visualizerStore.searchAndHighlight();
     }
 
-    toggleBackgroundDataCollection = () => {
-        if (this.props.nodeStore.collecting) {
-            this.props.nodeStore.unregisterHandlers();
-            return;
-        }
-        this.props.nodeStore.registerHandlers();
-    }
-
     render() {
         let {
             vertices, solid_count, confirmed_count, conflicting_count, selected,
             selected_approvers_count, selected_approvees_count,
             verticesLimit, tips_count, paused, search
         } = this.props.visualizerStore;
-        let {last_tps_metric, collecting} = this.props.nodeStore;
+        let {last_tps_metric} = this.props.nodeStore;
         let solid_percentage = 0.0;
         let confirmed_percentage = 0.0;
         let conflicting_percentage = 0.0;
@@ -154,22 +147,6 @@ export class Visualizer extends React.Component<Props, any> {
                                 aria-label="vertices-search" onKeyUp={this.searchAndHighlight}
                                 aria-describedby="vertices-search"
                             />
-                        </InputGroup>
-                        <InputGroup className="mr-1" size="sm">
-                            <OverlayTrigger
-                                trigger={['hover', 'focus']} placement="left" overlay={
-                                <Popover id="popover-basic">
-                                    <Popover.Content>
-                                        Ensures that only data needed for the visualizer is collected.
-                                    </Popover.Content>
-                                </Popover>}
-                            >
-                                <Button variant="outline-secondary" onClick={this.toggleBackgroundDataCollection}
-                                        size="sm">
-                                    {collecting ? "Stop Background Data Collection" : "Collect Background data"}
-                                </Button>
-                            </OverlayTrigger>
-                            <br/>
                         </InputGroup>
                         <InputGroup className="mr-1" size="sm">
                             <OverlayTrigger
