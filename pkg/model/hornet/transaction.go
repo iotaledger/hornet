@@ -2,11 +2,11 @@ package hornet
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/iotaledger/iota.go/transaction"
 
 	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/compressed"
 )
@@ -14,12 +14,12 @@ import (
 type Transaction struct {
 	objectstorage.StorableObjectFlags
 
-	txHashOnce     syncutils.Once
-	trunkHashOnce  syncutils.Once
-	branchHashOnce syncutils.Once
-	bundleHashOnce syncutils.Once
-	tagOnce        syncutils.Once
-	addressOnce    syncutils.Once
+	txHashOnce     sync.Once
+	trunkHashOnce  sync.Once
+	branchHashOnce sync.Once
+	bundleHashOnce sync.Once
+	tagOnce        sync.Once
+	addressOnce    sync.Once
 
 	txHash     Hash
 	trunkHash  Hash
