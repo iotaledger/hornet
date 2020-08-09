@@ -93,6 +93,16 @@ func GetTransactionHashesForAddress(address hornet.Hash, valueOnly bool, forceRe
 	return txHashes
 }
 
+// AddressConsumer consumes the given address during looping though all addresses in the persistence layer.
+type AddressConsumer func(address hornet.Hash, txHash hornet.Hash, isValue bool) bool
+
+// ForEachAddress loops over all addresses.
+func ForEachAddress(consumer AddressConsumer, skipCache bool) {
+	addressesStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(key[:49], key[50:99], key[49] == hornet.AddressTxIsValue)
+	}, skipCache)
+}
+
 // address +1
 func StoreAddress(address hornet.Hash, txHash hornet.Hash, isValue bool) *CachedAddress {
 

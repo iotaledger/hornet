@@ -73,6 +73,16 @@ func GetTagHashes(txTag hornet.Hash, forceRelease bool, maxFind ...int) hornet.H
 	return tagHashes
 }
 
+// TagConsumer consumes the given tag during looping though all tags in the persistence layer.
+type TagConsumer func(txTag hornet.Hash, txHash hornet.Hash) bool
+
+// ForEachTag loops over all tags.
+func ForEachTag(consumer TagConsumer, skipCache bool) {
+	tagsStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(key[:17], key[17:66])
+	}, skipCache)
+}
+
 // tag +1
 func StoreTag(txTag hornet.Hash, txHash hornet.Hash) *CachedTag {
 
