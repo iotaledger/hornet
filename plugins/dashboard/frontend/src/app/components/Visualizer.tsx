@@ -25,15 +25,33 @@ interface Props {
 @inject("nodeStore")
 @observer
 export class Visualizer extends React.Component<Props, any> {
+    updateInterval: any;
+
+    constructor(props: Readonly<Props>) {
+      super(props);
+      this.state = {
+        ticks: 0,
+      };
+    }
 
     componentDidMount(): void {
         this.props.visualizerStore.start();
         this.props.nodeStore.registerVisualizerTopics();
+        this.updateInterval = setInterval(() => this.tick(), 500);
     }
 
     componentWillUnmount(): void {
+        clearInterval(this.updateInterval);
         this.props.nodeStore.unregisterVisualizerTopics();
         this.props.visualizerStore.stop();
+    }
+
+    shouldComponentUpdate(_nextProps, nextState) {
+        return this.state.ticks !== nextState.ticks;
+    }
+
+    tick = () => {
+        this.setState(state => ({ ticks: state.ticks + 1 }));
     }
 
     updateVerticesLimit = (e) => {
