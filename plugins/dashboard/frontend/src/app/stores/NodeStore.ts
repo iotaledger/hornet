@@ -1,6 +1,6 @@
 import {action, computed, observable, ObservableMap} from 'mobx';
 import * as dateformat from 'dateformat';
-import {connectWebSocket, registerHandler, unregisterHandler, WSMsgType} from "app/misc/WS";
+import {connectWebSocket, registerHandler, registerTopic, unregisterTopic, WSMsgType} from "app/misc/WS";
 
 class TPSMetric {
     incoming: number;
@@ -322,6 +322,7 @@ const maxMetricsDataPoints = 900;
 
 export class NodeStore {
     @observable status: Status = new Status();
+    @observable websocket: WebSocket;
     @observable websocketConnected: boolean = false;
     @observable last_tps_metric: TPSMetric = new TPSMetric();
     @observable last_tip_sel_metric: TipSelMetric = new TipSelMetric();
@@ -341,41 +342,118 @@ export class NodeStore {
     @observable last_dbcleanup_event: DbCleanupEvent = new DbCleanupEvent();
     @observable last_spam_metric: SpamMetric = new SpamMetric();
     @observable last_avg_spam_metric: AvgSpamMetric = new AvgSpamMetric();
-    @observable collecting: boolean = true;
 
     constructor() {
         this.registerHandlers();
     }
 
     registerHandlers = () => {
+        // main
         registerHandler(WSMsgType.Status, this.updateStatus);
         registerHandler(WSMsgType.TPSMetrics, this.updateLastTPSMetric);
-        registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
-        registerHandler(WSMsgType.PeerMetric, this.updateNeighborMetrics);
         registerHandler(WSMsgType.ConfirmedMsMetrics, this.updateConfirmedMilestoneMetrics);
-        registerHandler(WSMsgType.DBSizeMetric, this.updateDatabaseSizeMetrics);
+
+        // neighbors
+        registerHandler(WSMsgType.PeerMetric, this.updateNeighborMetrics);
+
+        // misc
+        registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
         registerHandler(WSMsgType.DBCleanup, this.updateDatabaseCleanupStatus);
+        registerHandler(WSMsgType.DBSizeMetric, this.updateDatabaseSizeMetrics);
         registerHandler(WSMsgType.SpamMetrics, this.updateSpamMetrics);
         registerHandler(WSMsgType.AvgSpamMetrics, this.updateAvgSpamMetrics);
-        this.updateCollecting(true);
     }
 
-    unregisterHandlers = () => {
-        unregisterHandler(WSMsgType.Status);
-        unregisterHandler(WSMsgType.TPSMetrics);
-        unregisterHandler(WSMsgType.TipSelMetric);
-        unregisterHandler(WSMsgType.PeerMetric);
-        unregisterHandler(WSMsgType.ConfirmedMsMetrics);
-        unregisterHandler(WSMsgType.DBSizeMetric);
-        unregisterHandler(WSMsgType.DBCleanup);
-        unregisterHandler(WSMsgType.SpamMetrics);
-        unregisterHandler(WSMsgType.AvgSpamMetrics);
-        this.updateCollecting(false);
+    registerWebsocketTopic = (msgType: WSMsgType) => {
+        if (!this.websocketConnected) {
+            return
+        }
+        registerTopic(this.websocket, msgType);
     }
 
-    @action
-    updateCollecting = (collecting: boolean) => {
-        this.collecting = collecting;
+    unregisterWebsocketTopic = (msgType: WSMsgType) => {
+        if (!this.websocketConnected) {
+            return
+        }
+        unregisterTopic(this.websocket, msgType);
+    }
+
+    registerMainTopics = () => {
+        // main
+        this.registerWebsocketTopic(WSMsgType.Status);
+        this.registerWebsocketTopic(WSMsgType.TPSMetrics);
+        this.registerWebsocketTopic(WSMsgType.ConfirmedMsMetrics);
+
+        // explorer
+        this.registerWebsocketTopic(WSMsgType.Ms);
+
+        // misc
+        this.registerWebsocketTopic(WSMsgType.DBSizeMetric);
+    }
+
+    unregisterMainTopics = () => {
+        // main
+        this.unregisterWebsocketTopic(WSMsgType.Status);
+        this.unregisterWebsocketTopic(WSMsgType.TPSMetrics);
+        this.unregisterWebsocketTopic(WSMsgType.ConfirmedMsMetrics);
+
+        // explorer
+        this.unregisterWebsocketTopic(WSMsgType.Ms);
+
+        // misc
+        this.unregisterWebsocketTopic(WSMsgType.DBSizeMetric);
+    }
+
+    registerNeighborTopics = () => {
+        this.registerWebsocketTopic(WSMsgType.PeerMetric);
+    }
+
+    unregisterNeighborTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.PeerMetric);
+    }
+
+    registerExplorerTopics = (valueOnly: boolean) => {
+        this.registerWebsocketTopic(WSMsgType.TxValue);
+        if (valueOnly) {
+            this.unregisterWebsocketTopic(WSMsgType.TxZeroValue);
+        } else {
+            this.registerWebsocketTopic(WSMsgType.TxZeroValue);
+        }
+    }
+
+    unregisterExplorerTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.TxValue);
+        this.unregisterWebsocketTopic(WSMsgType.TxZeroValue);
+    }
+
+    registerVisualizerTopics = () => {
+        this.registerWebsocketTopic(WSMsgType.Vertex);
+        this.registerWebsocketTopic(WSMsgType.SolidInfo);
+        this.registerWebsocketTopic(WSMsgType.ConfirmedInfo);
+        this.registerWebsocketTopic(WSMsgType.MilestoneInfo);
+        this.registerWebsocketTopic(WSMsgType.TipInfo);
+    }
+
+    unregisterVisualizerTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.Vertex);
+        this.unregisterWebsocketTopic(WSMsgType.SolidInfo);
+        this.unregisterWebsocketTopic(WSMsgType.ConfirmedInfo);
+        this.unregisterWebsocketTopic(WSMsgType.MilestoneInfo);
+        this.unregisterWebsocketTopic(WSMsgType.TipInfo);
+    }
+
+    registerMiscTopics = () => {
+        this.registerWebsocketTopic(WSMsgType.TipSelMetric);
+        this.registerWebsocketTopic(WSMsgType.DBCleanup);
+        this.registerWebsocketTopic(WSMsgType.SpamMetrics);
+        this.registerWebsocketTopic(WSMsgType.AvgSpamMetrics);
+    }
+
+    unregisterMiscTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.TipSelMetric);
+        this.unregisterWebsocketTopic(WSMsgType.DBCleanup);
+        this.unregisterWebsocketTopic(WSMsgType.SpamMetrics);
+        this.unregisterWebsocketTopic(WSMsgType.AvgSpamMetrics);
     }
 
     @action
@@ -401,10 +479,18 @@ export class NodeStore {
     }
 
     connect() {
-        connectWebSocket(statusWebSocketPath,
-            () => this.updateWebSocketConnected(true),
+        this.websocket = connectWebSocket(statusWebSocketPath,
+            () => {
+                this.updateWebSocketConnected(true);
+                this.registerMainTopics();
+            },
             () => this.updateWebSocketConnected(false),
-            () => this.updateWebSocketConnected(false))
+            () => this.updateWebSocketConnected(false));
+    }
+
+    disconnect() {
+        this.unregisterMainTopics();
+        this.websocket.close();
     }
 
     @computed

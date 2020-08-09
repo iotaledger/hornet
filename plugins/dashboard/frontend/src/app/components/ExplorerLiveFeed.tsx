@@ -18,6 +18,15 @@ interface Props {
 @inject("explorerStore")
 @observer
 export class ExplorerLiveFeed extends React.Component<Props, any> {
+
+    componentDidMount(): void {
+        this.props.nodeStore.registerExplorerTopics(this.props.explorerStore.valueOnly);
+    }
+
+    componentWillUnmount(): void {
+        this.props.nodeStore.unregisterExplorerTopics();
+    }
+
     render() {
         let {mssLiveFeed, txsLiveFeed} = this.props.explorerStore;
         return (

@@ -118,6 +118,15 @@ const dbSizeLineChartOpts = Object.assign({}, {
 @inject("nodeStore")
 @observer
 export class Misc extends React.Component<Props, any> {
+
+    componentDidMount(): void {
+        this.props.nodeStore.registerMiscTopics();
+    }
+
+    componentWillUnmount(): void {
+        this.props.nodeStore.unregisterMiscTopics();
+    }
+
     render() {
         return (
             <Container fluid>

@@ -73,6 +73,18 @@ func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStor
 	configureSpentAddressesStorage(spentStore, caches.SpentAddresses)
 }
 
+func FlushStorages() {
+	FlushMilestoneStorage()
+	FlushBundleStorage()
+	FlushBundleTransactionsStorage()
+	FlushTransactionStorage()
+	FlushApproversStorage()
+	FlushTagsStorage()
+	FlushAddressStorage()
+	FlushUnconfirmedTxsStorage()
+	FlushSpentAddressesStorage()
+}
+
 func ShutdownStorages() {
 
 	ShutdownMilestoneStorage()

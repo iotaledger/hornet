@@ -194,8 +194,10 @@ const (
 	MsgTypeTPSMetric
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
-	// MsgTypeTx is the type of the Tx message.
-	MsgTypeTx
+	// MsgTypeTx is the type of the zero value Tx message.
+	MsgTypeTxZeroValue
+	// MsgTypeTx is the type of the value Tx message.
+	MsgTypeTxValue
 	// MsgTypeMs is the type of the Ms message.
 	MsgTypeMs
 	// MsgTypePeerMetric is the type of the PeerMetric message.

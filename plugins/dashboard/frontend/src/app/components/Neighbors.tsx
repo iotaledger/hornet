@@ -11,6 +11,15 @@ interface Props {
 @inject("nodeStore")
 @observer
 export class Neighbors extends React.Component<Props, any> {
+
+    componentDidMount(): void {
+        this.props.nodeStore.registerNeighborTopics();
+    }
+
+    componentWillUnmount(): void {
+        this.props.nodeStore.unregisterNeighborTopics();
+    }
+
     render() {
         let neighborsEle = [];
         this.props.nodeStore.neighbor_metrics.forEach((v, k) => {

@@ -127,3 +127,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (i
 func ShutdownSpentAddressesStorage() {
 	spentAddressesStorage.Shutdown()
 }
+
+func FlushSpentAddressesStorage() {
+	spentAddressesStorage.Flush()
+}
