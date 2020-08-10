@@ -14,7 +14,7 @@ import VisualizerStore from "app/stores/VisualizerStore";
 const routerStore = new RouterStore();
 const nodeStore = new NodeStore();
 const explorerStore = new ExplorerStore(nodeStore, routerStore);
-const visualizerStore = new VisualizerStore(nodeStore, routerStore);
+const visualizerStore = new VisualizerStore(routerStore);
 const stores = {
     "routerStore": routerStore,
     "nodeStore": nodeStore,

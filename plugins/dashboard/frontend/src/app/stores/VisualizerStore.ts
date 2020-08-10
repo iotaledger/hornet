@@ -1,7 +1,6 @@
 import {action, observable, ObservableMap} from 'mobx';
 import {registerHandler, WSMsgType} from "app/misc/WS";
 import {RouterStore} from "mobx-react-router";
-import NodeStore from "app/stores/NodeStore";
 import {default as Viva} from 'vivagraphjs';
 
 export class Vertex {
@@ -53,20 +52,19 @@ export const colorLinkApprovees = "#ffc306";
 
 export class VisualizerStore {
     vertices = new ObservableMap<string, Vertex>();
-    verticesLimit = 5000;
-    solid_count_tmp = 0;
-    confirmed_count_tmp = 0;
-    conflicting_count_tmp = 0;
-    tips_count_tmp = 0;
+    @observable verticesLimit = 5000;
+    solid_count = 0;
+    confirmed_count = 0;
+    conflicting_count = 0;
+    tips_count = 0;
     verticesIncomingOrder = [];
     @observable collect: boolean = false;
     routerStore: RouterStore;
-    nodeStore: NodeStore;
 
     // the currently selected vertex via hover
     @observable selected: Vertex;
-    selected_approvers_count_tmp = 0;
-    selected_approvees_count_tmp = 0;
+    selected_approvers_count = 0;
+    selected_approvees_count = 0;
     selected_via_click: boolean = false;
 
     // search
@@ -79,19 +77,7 @@ export class VisualizerStore {
     renderer;
     @observable paused: boolean = false;
 
-    // stats
-    updateStatsInterval: any;
-    tps_new = 0;
-    vertices_count = 0;
-    selected_approvers_count = 0;
-    selected_approvees_count = 0;
-    tips_count = 0;
-    solid_percentage = 0.0;
-    confirmed_percentage = 0.0;
-    conflicting_percentage = 0.0;
-
-    constructor(nodeStore: NodeStore, routerStore: RouterStore) {
-        this.nodeStore = nodeStore;
+    constructor(routerStore: RouterStore) {
         this.routerStore = routerStore;
 
         this.registerHandlers()
@@ -148,13 +134,13 @@ export class VisualizerStore {
             // can only go from unsolid to solid
             if (!existing.is_solid && vert.is_solid) {
                 existing.is_solid = true;
-                this.solid_count_tmp++;
+                this.solid_count++;
             }
             if (!existing.is_confirmed && vert.is_confirmed) {
-                this.confirmed_count_tmp++;
+                this.confirmed_count++;
             }
             if (!existing.is_conflicting && vert.is_conflicting) {
-                this.conflicting_count_tmp++;
+                this.conflicting_count++;
             }
             // update all infos since we might be dealing
             // with a vertex obj only created from missing trunk/branch
@@ -172,13 +158,13 @@ export class VisualizerStore {
             vert = existing
         } else {
             if (vert.is_solid) {
-                this.solid_count_tmp++;
+                this.solid_count++;
             }
             if (vert.is_confirmed) {
-                this.confirmed_count_tmp++;
+                this.confirmed_count++;
             }
             if (vert.is_conflicting) {
-                this.conflicting_count_tmp++;
+                this.conflicting_count++;
             }
             this.verticesIncomingOrder.push(vert.id.substring(0,idLength));
             this.checkLimit();
@@ -196,7 +182,7 @@ export class VisualizerStore {
             return;
         }
         if (!vert.is_solid) {
-            this.solid_count_tmp++;
+            this.solid_count++;
         }
         vert.is_solid = true;
         this.updateNodeUI(vert);
@@ -221,13 +207,13 @@ export class VisualizerStore {
                 if (!approvee.is_confirmed && !approvee.is_conflicting) {
                     // check if transaction is excluded
                     if (confInfo.excluded_ids?.indexOf(approvee.id.substring(0,idLength)) > -1) {
-                        this.conflicting_count_tmp++;
+                        this.conflicting_count++;
                         approvee.is_conflicting = true;
                         this.updateNodeUI(approvee);
                         return false;
                     }
 
-                    this.confirmed_count_tmp++;
+                    this.confirmed_count++;
                     approvee.is_confirmed = true;
                     this.updateNodeUI(approvee);
                     return false
@@ -260,7 +246,7 @@ export class VisualizerStore {
         if (!vert) {
             return;
         }
-        this.tips_count_tmp += tipInfo.is_tip ? 1 : vert.is_tip ? -1 : 0;
+        this.tips_count += tipInfo.is_tip ? 1 : vert.is_tip ? -1 : 0;
         vert.is_tip = tipInfo.is_tip;
         this.updateNodeUI(vert);
     };
@@ -280,16 +266,16 @@ export class VisualizerStore {
                 continue;
             }
             if (vert.is_solid) {
-                this.solid_count_tmp--;
+                this.solid_count--;
             }
             if (vert.is_confirmed) {
-                this.confirmed_count_tmp--;
+                this.confirmed_count--;
             }
             if (vert.is_conflicting) {
-                this.conflicting_count_tmp--;
+                this.conflicting_count--;
             }
             if (vert.is_tip) {
-                this.tips_count_tmp--;
+                this.tips_count--;
             }
             this.deleteApproveeLink(vert.trunk_id);
             this.deleteApproveeLink(vert.branch_id);
@@ -307,16 +293,16 @@ export class VisualizerStore {
                 this.clearSelected();
             }
             if (approvee.is_solid) {
-                this.solid_count_tmp--;
+                this.solid_count--;
             }
             if (approvee.is_confirmed) {
-                this.confirmed_count_tmp--;
+                this.confirmed_count--;
             }
             if (approvee.is_conflicting) {
-                this.conflicting_count_tmp--;
+                this.conflicting_count--;
             }
             if (approvee.is_tip) {
-                this.tips_count_tmp--;
+                this.tips_count--;
             }
             this.vertices.delete(approveeId);
         }
@@ -399,26 +385,7 @@ export class VisualizerStore {
         nodeUI.size = this.sizeForVertexState(vert);
     }
 
-    updateStats = () => {
-        this.tps_new                     = this.nodeStore.last_tps_metric.new;
-        this.vertices_count              = this.vertices.size;
-        this.selected_approvers_count    = this.selected_approvers_count_tmp;
-        this.selected_approvees_count    = this.selected_approvees_count_tmp;
-        this.tips_count                  = this.tips_count_tmp;
-
-        this.solid_percentage            = 0.0;
-        this.confirmed_percentage        = 0.0;
-        this.conflicting_percentage      = 0.0;
-        if (this.vertices_count != 0) {
-            this.solid_percentage = this.solid_count_tmp / this.vertices_count * 100;
-            this.confirmed_percentage = this.confirmed_count_tmp / this.vertices_count * 100;
-            this.conflicting_percentage = this.conflicting_count_tmp / this.vertices_count * 100;
-        }
-    }
-
     start = () => {
-
-        this.updateStatsInterval = setInterval(() => this.updateStats(), 500);
 
         this.collect = true;
         this.graph = Viva.Graph.graph();
@@ -462,17 +429,15 @@ export class VisualizerStore {
     }
 
     stop = () => {
-        clearInterval(this.updateStatsInterval);
-
         this.collect = false;
         this.renderer.dispose();
         this.graph = null;
         this.paused = false;
         this.selected = null;
-        this.solid_count_tmp = 0;
-        this.confirmed_count_tmp = 0;
-        this.conflicting_count_tmp = 0;
-        this.tips_count_tmp = 0;
+        this.solid_count = 0;
+        this.confirmed_count = 0;
+        this.conflicting_count = 0;
+        this.tips_count = 0;
         this.vertices.clear();
     }
 
@@ -490,8 +455,8 @@ export class VisualizerStore {
         this.updateNodeUI(vert);
 
         // set -1 because starting node is also counted
-        this.selected_approvers_count_tmp = -1;
-        this.selected_approvees_count_tmp = -1;
+        this.selected_approvers_count = -1;
+        this.selected_approvees_count = -1;
 
         const seenForward = [];
         const seenBackwards = [];
@@ -499,7 +464,7 @@ export class VisualizerStore {
             this.graph,
             node,
             node => {
-                this.selected_approvers_count_tmp++;
+                this.selected_approvers_count++;
             },
             true,
             link => {
@@ -514,7 +479,7 @@ export class VisualizerStore {
             this.graph,
             node,
             node => {
-                this.selected_approvees_count_tmp++;
+                this.selected_approvees_count++;
             },
             false,
             link => {
@@ -546,8 +511,8 @@ export class VisualizerStore {
 
     @action
     clearSelected = () => {
-        this.selected_approvers_count_tmp = 0;
-        this.selected_approvees_count_tmp = 0;
+        this.selected_approvers_count = 0;
+        this.selected_approvees_count = 0;
         if (this.selected_via_click || !this.selected) {
             return;
         }

@@ -30,6 +30,14 @@ export class Visualizer extends React.Component<Props, any> {
     constructor(props: Readonly<Props>) {
         super(props);
         this.state = {
+            tps_new: 0,
+            vertices_count: 0,
+            selected_approvers_count: 0,
+            selected_approvees_count: 0,
+            tips_count: 0,
+            solid_percentage: 0.0,
+            confirmed_percentage: 0.0,
+            conflicting_percentage: 0.0,
             updateTicks: 0,
             topicsRegistered: false,
         };
@@ -57,7 +65,36 @@ export class Visualizer extends React.Component<Props, any> {
             this.props.nodeStore.registerVisualizerTopics();
             this.setState({topicsRegistered: true})
         }
-        this.setState(state => ({ updateTicks: state.updateTicks + 1 }));
+
+        let {
+            vertices, selected_approvers_count, selected_approvees_count,
+            tips_count, solid_count, confirmed_count, conflicting_count
+        } = this.props.visualizerStore;
+
+        let {last_tps_metric} = this.props.nodeStore;
+
+        this.setState(state => ({
+            tps_new: last_tps_metric.new,
+            vertices_count: vertices.size,
+            selected_approvers_count: selected_approvers_count,
+            selected_approvees_count: selected_approvees_count,
+            tips_count: tips_count,
+            updateTicks: state.updateTicks + 1
+        }));
+
+        if (vertices.size == 0) {
+            this.setState(state => ({
+                solid_percentage: 0.0,
+                confirmed_percentage: 0.0,
+                conflicting_percentage: 0.0,
+            }));
+        } else {
+            this.setState(state => ({
+                solid_percentage: solid_count / vertices.size * 100,
+                confirmed_percentage: confirmed_count / vertices.size * 100,
+                conflicting_percentage: conflicting_count / vertices.size * 100,
+            }));
+        }
     }
 
     updateVerticesLimit = (e) => {
@@ -78,11 +115,7 @@ export class Visualizer extends React.Component<Props, any> {
     }
 
     render() {
-        let {
-            tps_new, vertices_count, selected, selected_approvers_count, selected_approvees_count,
-            verticesLimit, tips_count, paused, search,
-            solid_percentage, confirmed_percentage, conflicting_percentage
-        } = this.props.visualizerStore;
+        let {selected, verticesLimit, paused, search} = this.props.visualizerStore;
 
         return (
             <Container fluid>
@@ -122,8 +155,8 @@ export class Visualizer extends React.Component<Props, any> {
                                 Highlighted
                             </Badge>
                             <br/>
-                            Transactions: {vertices_count}, TPS: {tps_new}, Tips: {tips_count}<br/>
-                            Confirmed: {confirmed_percentage.toFixed(2)}%, Conflicting: {conflicting_percentage.toFixed(2)}%, Solid: {solid_percentage.toFixed(2)}%<br/>
+                            Transactions: {this.state.vertices_count}, TPS: {this.state.tps_new}, Tips: {this.state.tips_count}<br/>
+                            Confirmed: {this.state.confirmed_percentage.toFixed(2)}%, Conflicting: {this.state.conflicting_percentage.toFixed(2)}%, Solid: {this.state.solid_percentage.toFixed(2)}%<br/>
                             <If condition={!!selected}>
                                 Selected: {selected ?
                                 <Link to={`/explorer/tx/${selected.id}`} target="_blank" rel='noopener noreferrer'>
@@ -132,7 +165,7 @@ export class Visualizer extends React.Component<Props, any> {
                                 : "-"}
                                 <br/>
                                 Approvers/Approvees: {selected ?
-                                <span>{selected_approvers_count}/{selected_approvees_count}</span>
+                                <span>{this.state.selected_approvers_count}/{this.state.selected_approvees_count}</span>
                                 : '-/-'}
                             </If>
                         </p>
