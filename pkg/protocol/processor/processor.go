@@ -54,6 +54,7 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 		objectstorage.CacheTime(time.Duration(wuCacheOpts.CacheTimeMs)),
 		objectstorage.PersistenceEnabled(false),
 		objectstorage.KeysOnly(true),
+		objectstorage.StoreOnCreation(false),
 		objectstorage.LeakDetectionEnabled(wuCacheOpts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: wuCacheOpts.LeakDetectionOptions.MaxConsumersPerObject,

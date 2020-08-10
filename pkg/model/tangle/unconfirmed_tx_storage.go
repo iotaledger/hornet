@@ -49,6 +49,7 @@ func configureUnconfirmedTxStorage(store kvstore.KVStore, opts profile.CacheOpts
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(4, 49),
 		objectstorage.KeysOnly(true),
+		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
