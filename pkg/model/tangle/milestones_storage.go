@@ -44,6 +44,7 @@ func configureMilestoneStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -123,14 +124,14 @@ func SearchLatestMilestoneIndexInStore() milestone.Index {
 	return latestMilestoneIndex
 }
 
-// MilestoneIndexConsumer consumes the given index during looping though all milestones in the persistence layer.
+// MilestoneIndexConsumer consumes the given index during looping through all milestones in the persistence layer.
 type MilestoneIndexConsumer func(index milestone.Index) bool
 
-// ForEachMilestoneIndex loops though all milestones in the persistence layer.
-func ForEachMilestoneIndex(consumer MilestoneIndexConsumer) {
+// ForEachMilestoneIndex loops through all milestones in the persistence layer.
+func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))
-	}, false)
+	}, skipCache)
 }
 
 // milestone +1

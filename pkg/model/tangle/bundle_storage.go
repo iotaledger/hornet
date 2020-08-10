@@ -42,6 +42,7 @@ func configureBundleStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		bundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.StoreOnCreation(false),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -187,11 +188,23 @@ func GetCachedBundleOrNil(tailTxHash hornet.Hash) *CachedBundle {
 	return &CachedBundle{CachedObject: cachedBundle}
 }
 
+// GetStoredBundleOrNil returns a bundle object without accessing the cache layer.
+func GetStoredBundleOrNil(tailTxHash hornet.Hash) *Bundle {
+	storedBundle := bundleStorage.LoadObjectFromStore(tailTxHash)
+	if storedBundle == nil {
+		return nil
+	}
+	return storedBundle.(*Bundle)
+}
+
+// BundleHashConsumer consumes the given tailTxHash during looping through all bundles in the persistence layer.
+type BundleHashConsumer func(txHash hornet.Hash) bool
+
 // ForEachBundleHash loops over all bundle hashes.
-func ForEachBundleHash(consumer TransactionHashBytesConsumer) {
+func ForEachBundleHash(consumer BundleHashConsumer, skipCache bool) {
 	bundleStorage.ForEachKeyOnly(func(tailTxHash []byte) bool {
 		return consumer(tailTxHash)
-	}, false)
+	}, skipCache)
 }
 
 // bundle +-0

@@ -60,6 +60,7 @@ func configureAddressesStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 1, 49),
 		objectstorage.KeysOnly(true),
+		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -93,18 +94,20 @@ func GetTransactionHashesForAddress(address hornet.Hash, valueOnly bool, forceRe
 	return txHashes
 }
 
+// AddressConsumer consumes the given address during looping through all addresses in the persistence layer.
+type AddressConsumer func(address hornet.Hash, txHash hornet.Hash, isValue bool) bool
+
+// ForEachAddress loops over all addresses.
+func ForEachAddress(consumer AddressConsumer, skipCache bool) {
+	addressesStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(key[:49], key[50:99], key[49] == hornet.AddressTxIsValue)
+	}, skipCache)
+}
+
 // address +1
 func StoreAddress(address hornet.Hash, txHash hornet.Hash, isValue bool) *CachedAddress {
-
 	addressObj := hornet.NewAddress(address, txHash, isValue)
-
-	cachedObj := addressesStorage.ComputeIfAbsent(addressObj.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // address +1
-		addressObj.Persist()
-		addressObj.SetModified()
-		return addressObj
-	})
-
-	return &CachedAddress{CachedObject: cachedObj}
+	return &CachedAddress{CachedObject: addressesStorage.Store(addressObj)}
 }
 
 // address +-0

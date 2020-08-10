@@ -113,6 +113,7 @@ func configureTransactionStorage(store kvstore.KVStore, opts profile.CacheOpts) 
 		transactionFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -125,6 +126,7 @@ func configureTransactionStorage(store kvstore.KVStore, opts profile.CacheOpts) 
 		metadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.StoreOnCreation(false),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -172,9 +174,14 @@ func GetStoredMetadataOrNil(txHash hornet.Hash) *hornet.TransactionMetadata {
 	return storedMeta.(*hornet.TransactionMetadata)
 }
 
-// tx +-0
+// ContainsTransaction returns if the given transaction exists in the cache/persistence layer.
 func ContainsTransaction(txHash hornet.Hash) bool {
 	return txStorage.Contains(txHash)
+}
+
+// TransactionExistsInStore returns if the given transaction exists in the persistence layer.
+func TransactionExistsInStore(txHash hornet.Hash) bool {
+	return txStorage.ObjectExistsInStore(txHash)
 }
 
 // tx +1
@@ -187,20 +194,7 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 		newlyAdded = true
 
 		metadata, _, _ := metadataFactory(transaction.GetTxHash())
-
-		metaCreated := false
-		cachedMeta = metadataStorage.ComputeIfAbsent(metadata.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // meta +1
-			metaCreated = true
-			metadata.Persist()
-			metadata.SetModified()
-			return metadata
-		})
-
-		if !metaCreated {
-			// this can only happen if the database was unclean
-			// we have to reset the metadata
-			cachedMeta.Get().(*hornet.TransactionMetadata).Reset()
-		}
+		cachedMeta = metadataStorage.Store(metadata) // meta +1
 
 		transaction.Persist()
 		transaction.SetModified()
@@ -216,8 +210,6 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 }
 
 type TransactionConsumer func(cachedTx objectstorage.CachedObject, cachedTxMeta objectstorage.CachedObject)
-
-type TransactionHashBytesConsumer func(txHash hornet.Hash) bool
 
 func ForEachTransaction(consumer TransactionConsumer) {
 	txStorage.ForEach(func(txHash []byte, cachedTx objectstorage.CachedObject) bool {
@@ -235,18 +227,33 @@ func ForEachTransaction(consumer TransactionConsumer) {
 	})
 }
 
+// TransactionHashConsumer consumes the given transaction hash during looping through all transactions in the persistence layer.
+type TransactionHashConsumer func(txHash hornet.Hash) bool
+
 // ForEachTransactionHash loops over all transaction hashes.
-func ForEachTransactionHash(consumer TransactionHashBytesConsumer) {
+func ForEachTransactionHash(consumer TransactionHashConsumer, skipCache bool) {
 	txStorage.ForEachKeyOnly(func(txHash []byte) bool {
 		return consumer(txHash)
-	}, false)
+	}, skipCache)
 }
 
-// tx +-0
+// ForEachTransactionMetadataHash loops over all transaction metadata hashes.
+func ForEachTransactionMetadataHash(consumer TransactionHashConsumer, skipCache bool) {
+	metadataStorage.ForEachKeyOnly(func(txHash []byte) bool {
+		return consumer(txHash)
+	}, skipCache)
+}
+
+// DeleteTransaction deletes the transaction and metadata in the cache/persistence layer.
 func DeleteTransaction(txHash hornet.Hash) {
 	// metadata has to be deleted before the tx, otherwise we could run into a data race in the object storage
 	metadataStorage.Delete(txHash)
 	txStorage.Delete(txHash)
+}
+
+// DeleteTransactionMetadata deletes the metadata in the cache/persistence layer.
+func DeleteTransactionMetadata(txHash hornet.Hash) {
+	metadataStorage.Delete(txHash)
 }
 
 func ShutdownTransactionStorage() {

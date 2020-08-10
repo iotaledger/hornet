@@ -46,6 +46,7 @@ func configureApproversStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 49),
 		objectstorage.KeysOnly(true),
+		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -72,25 +73,25 @@ func GetApproverHashes(txHash hornet.Hash, forceRelease bool, maxFind ...int) ho
 	return approverHashes
 }
 
+// ApproverConsumer consumes the given approver during looping through all approvers in the persistence layer.
+type ApproverConsumer func(txHash hornet.Hash, approverHash hornet.Hash) bool
+
+// ForEachApprover loops over all approvers.
+func ForEachApprover(consumer ApproverConsumer, skipCache bool) {
+	approversStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(key[:49], key[49:98])
+	}, skipCache)
+}
+
 // approvers +1
 func StoreApprover(txHash hornet.Hash, approverHash hornet.Hash) *CachedApprover {
-
 	approver := hornet.NewApprover(txHash, approverHash)
-
-	cachedObj := approversStorage.ComputeIfAbsent(approver.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // approvers +1
-		approver.Persist()
-		approver.SetModified()
-		return approver
-	})
-
-	return &CachedApprover{CachedObject: cachedObj}
+	return &CachedApprover{CachedObject: approversStorage.Store(approver)}
 }
 
 // approvers +-0
 func DeleteApprover(txHash hornet.Hash, approverHash hornet.Hash) {
-
 	approver := hornet.NewApprover(txHash, approverHash)
-
 	approversStorage.Delete(approver.ObjectStorageKey())
 }
 

@@ -51,6 +51,8 @@ var (
 //
 func revalidateDatabase() error {
 
+	start := time.Now()
+
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return ErrSnapshotInfoMissing
@@ -65,7 +67,12 @@ func revalidateDatabase() error {
 	log.Infof("reverting database state back to local snapshot %d...", snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
-	if err := cleanMilestones(snapshotInfo); err != nil {
+	if err := cleanupMilestones(snapshotInfo); err != nil {
+		return err
+	}
+
+	// deletes all ledger diffs which have a confirmation milestone newer than the last local snapshot's milestone.
+	if err := cleanupLedgerDiffs(snapshotInfo); err != nil {
 		return err
 	}
 
@@ -74,8 +81,38 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// clean up bundles of which their tail tx doesn't exist in the database anymore
+	// deletes all transaction metadata where the tx doesn't exist in the database anymore.
+	if err := cleanupTransactionMetadata(); err != nil {
+		return err
+	}
+
+	// deletes all bundles where a single tx of the bundle doesn't exist in the database anymore.
 	if err := cleanupBundles(); err != nil {
+		return err
+	}
+
+	// deletes all bundles transactions where the tx doesn't exist in the database anymore.
+	if err := cleanupBundleTransactions(); err != nil {
+		return err
+	}
+
+	// deletes all approvers where the tx doesn't exist in the database anymore.
+	if err := cleanupApprovers(); err != nil {
+		return err
+	}
+
+	// deletes all tags where the tx doesn't exist in the database anymore.
+	if err := cleanupTags(); err != nil {
+		return err
+	}
+
+	// deletes all addresses where the tx doesn't exist in the database anymore.
+	if err := cleanupAddresses(); err != nil {
+		return err
+	}
+
+	// deletes all unconfirmed txs that are left in the database (we do not need them since we deleted all unconfirmed txs).
+	if err := cleanupUnconfirmedTxs(); err != nil {
 		return err
 	}
 
@@ -99,23 +136,31 @@ func revalidateDatabase() error {
 	// Set the valid solid milestone index
 	tangle.OverwriteSolidMilestoneIndex(snapshotInfo.SnapshotIndex)
 
+	log.Infof("reverted state back to local snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
+
 	return nil
 }
 
 // deletes milestones above the given snapshot's milestone index.
-func cleanMilestones(info *tangle.SnapshotInfo) error {
-	milestonesToDelete := map[milestone.Index]struct{}{}
+func cleanupMilestones(info *tangle.SnapshotInfo) error {
 
+	start := time.Now()
+
+	var milestonesCounter int64
+	var deletionCounter int64
 	tangle.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
-		if msIndex > info.SnapshotIndex {
-			milestonesToDelete[msIndex] = struct{}{}
-		}
-		return true
-	})
+		milestonesCounter++
 
-	for msIndex := range milestonesToDelete {
-		if daemon.IsStopped() {
-			return tangle.ErrOperationAborted
+		if (milestonesCounter % 1000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d milestones", milestonesCounter)
+		}
+
+		// do not delete older milestones
+		if msIndex <= info.SnapshotIndex {
+			return true
 		}
 
 		tangle.DeleteUnconfirmedTxs(msIndex)
@@ -123,108 +168,157 @@ func cleanMilestones(info *tangle.SnapshotInfo) error {
 			panic(err)
 		}
 
-		milestone := tangle.GetCachedMilestoneOrNil(msIndex) // milestone +1
-		if milestone == nil {
-			return ErrMilestoneNotFound
-		}
-		msHash := milestone.GetMilestone().Hash
-		milestone.Release(true) // milestone -1
-
-		// delete the bundle of the milestone, so the milestone will be created again during syncing
-		tangle.DeleteBundle(msHash)
 		tangle.DeleteMilestone(msIndex)
-	}
-
-	return nil
-}
-
-// deletes all transactions (and their bundle, first seen tx, etc.) which are not confirmed,
-// not solid, their confirmation milestone is newer/ of which their solidification time is younger
-// than the last local snapshot's milestone.
-func cleanupTransactions(info *tangle.SnapshotInfo) error {
-	txsToDelete := map[string]struct{}{}
-
-	start := time.Now()
-	var txCounter int64
-	tangle.ForEachTransactionHash(func(txHash hornet.Hash) bool {
-		txCounter++
-
-		if (txCounter % 50000) == 0 {
-			if daemon.IsStopped() {
-				return false
-			}
-			log.Infof("analyzed %d transactions", txCounter)
-		}
-
-		storedTxMeta := tangle.GetStoredMetadataOrNil(txHash)
-
-		// delete transaction if no metadata
-		if storedTxMeta == nil {
-			txsToDelete[string(txHash)] = struct{}{}
-			return true
-		}
-
-		// not solid
-		if !storedTxMeta.IsSolid() {
-			txsToDelete[string(txHash)] = struct{}{}
-			return true
-		}
-
-		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			txsToDelete[string(txHash)] = struct{}{}
-		}
+		deletionCounter++
 
 		return true
-	})
+	}, true)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	var deletionCounter float64
-	total := float64(len(txsToDelete))
-	lastPercentage := 0
-	for txHashToDelete := range txsToDelete {
-		if daemon.IsStopped() {
-			return tangle.ErrOperationAborted
-		}
-
-		percentage := int((deletionCounter / total) * 100)
-		if lastPercentage+5 <= percentage {
-			lastPercentage = percentage
-			log.Infof("reverting (this might take a while)...%d/%d (%d%%)", int(deletionCounter), len(txsToDelete), percentage)
-		}
-
-		storedTx := tangle.GetStoredTransactionOrNil(hornet.Hash(txHashToDelete))
-		if storedTx == nil {
-			continue
-		}
-
-		deletionCounter++
-
-		// No need to safely remove the transactions from the bundle,
-		// since reattachment txs confirmed by another milestone wouldn't be
-		// pruned anyway if they are confirmed before snapshot index.
-		tangle.DeleteBundleTransaction(storedTx.GetBundleHash(), storedTx.GetTxHash(), true)
-		tangle.DeleteBundleTransaction(storedTx.GetBundleHash(), storedTx.GetTxHash(), false)
-		tangle.DeleteBundle(storedTx.GetTxHash())
-
-		// Delete the reference in the approvees
-		tangle.DeleteApprover(storedTx.GetTrunkHash(), storedTx.GetTxHash())
-		tangle.DeleteApprover(storedTx.GetBranchHash(), storedTx.GetTxHash())
-
-		tangle.DeleteTag(storedTx.GetTag(), storedTx.GetTxHash())
-		tangle.DeleteAddress(storedTx.GetAddress(), storedTx.GetTxHash())
-		tangle.DeleteApprovers(storedTx.GetTxHash())
-		tangle.DeleteTransaction(storedTx.GetTxHash())
-	}
-
-	log.Infof("reverted state back to local snapshot %d, %d transactions deleted, took %v", info.SnapshotIndex, int(deletionCounter), time.Since(start))
+	log.Infof("%d milestones deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
-// deletes all bundles of which their tail tx doesn't exist in the database anymore.
+// deletes all ledger diffs which have a confirmation milestone newer than the last local snapshot's milestone.
+func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
+
+	start := time.Now()
+
+	milestoneIndexesToDelete := make(map[milestone.Index]struct{})
+
+	var ledgerDiffsCounter int64
+	var deletionCounter int64
+	tangle.ForEachLedgerDiffHash(func(msIndex milestone.Index, address hornet.Hash) bool {
+		ledgerDiffsCounter++
+
+		if (ledgerDiffsCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
+		}
+
+		// above snapshot index
+		if msIndex > info.SnapshotIndex {
+			milestoneIndexesToDelete[msIndex] = struct{}{}
+			return true
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	for msIndex := range milestoneIndexesToDelete {
+		deletionCounter++
+
+		if daemon.IsStopped() {
+			return tangle.ErrOperationAborted
+		}
+
+		tangle.DeleteLedgerDiffForMilestone(msIndex)
+	}
+
+	log.Infof("%d ledger diffs milestones deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all transactions which are not confirmed, not solid or
+// their confirmation milestone is newer than the last local snapshot's milestone.
+func cleanupTransactions(info *tangle.SnapshotInfo) error {
+
+	start := time.Now()
+
+	var txsCounter int64
+	var deletionCounter int64
+	tangle.ForEachTransactionHash(func(txHash hornet.Hash) bool {
+		txsCounter++
+
+		if (txsCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d transactions", txsCounter)
+		}
+
+		storedTxMeta := tangle.GetStoredMetadataOrNil(txHash)
+
+		// delete transaction if metadata doesn't exist
+		if storedTxMeta == nil {
+			tangle.DeleteTransaction(txHash)
+			deletionCounter++
+			return true
+		}
+
+		// not solid
+		if !storedTxMeta.IsSolid() {
+			tangle.DeleteTransaction(txHash)
+			deletionCounter++
+			return true
+		}
+
+		// not confirmed or above snapshot index
+		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
+			tangle.DeleteTransaction(txHash)
+			deletionCounter++
+			return true
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d transactions deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all transaction metadata where the tx doesn't exist in the database anymore.
+func cleanupTransactionMetadata() error {
+
+	start := time.Now()
+
+	var metadataCounter int64
+	var deletionCounter int64
+	tangle.ForEachTransactionMetadataHash(func(txHash hornet.Hash) bool {
+		metadataCounter++
+
+		if (metadataCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d transaction metadata", metadataCounter)
+		}
+
+		// delete metadata if transaction doesn't exist
+		if !tangle.TransactionExistsInStore(txHash) {
+			tangle.DeleteTransactionMetadata(txHash)
+			deletionCounter++
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d transaction metadata deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all bundles where a single tx of the bundle doesn't exist in the database anymore.
 func cleanupBundles() error {
 
 	start := time.Now()
@@ -234,10 +328,6 @@ func cleanupBundles() error {
 	tangle.ForEachBundleHash(func(tailTxHash hornet.Hash) bool {
 		bundleCounter++
 
-		if daemon.IsStopped() {
-			return false
-		}
-
 		if (bundleCounter % 50000) == 0 {
 			if daemon.IsStopped() {
 				return false
@@ -245,23 +335,217 @@ func cleanupBundles() error {
 			log.Infof("analyzed %d bundles", bundleCounter)
 		}
 
-		storedTx := tangle.GetStoredTransactionOrNil(tailTxHash)
-
-		// delete bundle if transaction doesn't exist
-		if storedTx == nil {
-			tangle.DeleteBundle(tailTxHash)
-			deletionCounter++
+		bundle := tangle.GetStoredBundleOrNil(tailTxHash)
+		if bundle == nil {
 			return true
 		}
 
+		for _, txHash := range bundle.GetTxHashes() {
+			// delete bundle if a single transaction of the bundle doesn't exist
+			if !tangle.TransactionExistsInStore(txHash) {
+				tangle.DeleteBundle(tailTxHash)
+				deletionCounter++
+				return true
+			}
+		}
+
 		return true
-	})
+	}, true)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d bundles deleted, took %v", deletionCounter, time.Since(start))
+	log.Infof("%d bundles deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all bundles transactions where the tx doesn't exist in the database anymore.
+func cleanupBundleTransactions() error {
+
+	start := time.Now()
+
+	var bundleTxsCounter int64
+	var deletionCounter int64
+	tangle.ForEachBundleTransaction(func(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool {
+		bundleTxsCounter++
+
+		if (bundleTxsCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d bundle transactions", bundleTxsCounter)
+		}
+
+		// delete bundle transaction if transaction doesn't exist
+		if !tangle.TransactionExistsInStore(txHash) {
+			tangle.DeleteBundleTransaction(bundleHash, txHash, isTail)
+			deletionCounter++
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d bundle transactions deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all approvers where the tx doesn't exist in the database anymore.
+func cleanupApprovers() error {
+
+	start := time.Now()
+
+	var approverCounter int64
+	var deletionCounter int64
+	tangle.ForEachApprover(func(txHash hornet.Hash, approverHash hornet.Hash) bool {
+		approverCounter++
+
+		if (approverCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d approvers", approverCounter)
+		}
+
+		// delete approver if transaction doesn't exist
+		if !tangle.TransactionExistsInStore(txHash) {
+			tangle.DeleteApprover(txHash, approverHash)
+			deletionCounter++
+		}
+
+		// delete approver if approver transaction doesn't exist
+		if !tangle.TransactionExistsInStore(approverHash) {
+			tangle.DeleteApprover(txHash, approverHash)
+			deletionCounter++
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d approvers deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all tags where the tx doesn't exist in the database anymore.
+func cleanupTags() error {
+
+	start := time.Now()
+
+	var tagsCounter int64
+	var deletionCounter int64
+	tangle.ForEachTag(func(txTag hornet.Hash, txHash hornet.Hash) bool {
+		tagsCounter++
+
+		if (tagsCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d tags", tagsCounter)
+		}
+
+		// delete tag if transaction doesn't exist
+		if !tangle.TransactionExistsInStore(txHash) {
+			tangle.DeleteTag(txTag, txHash)
+			deletionCounter++
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d tags deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all addresses where the tx doesn't exist in the database anymore.
+func cleanupAddresses() error {
+
+	start := time.Now()
+
+	var addressesCounter int64
+	var deletionCounter int64
+	tangle.ForEachAddress(func(address hornet.Hash, txHash hornet.Hash, isValue bool) bool {
+		addressesCounter++
+
+		if (addressesCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d addresses", addressesCounter)
+		}
+
+		// delete address if transaction doesn't exist
+		if !tangle.TransactionExistsInStore(txHash) {
+			tangle.DeleteAddress(address, txHash)
+			deletionCounter++
+		}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	log.Infof("%d addresses deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// deletes all unconfirmed txs that are left in the database (we do not need them since we deleted all unconfirmed txs).
+func cleanupUnconfirmedTxs() error {
+
+	start := time.Now()
+
+	var unconfirmedTxsCounter int64
+	var deletionCounter int64
+
+	unconfirmedMilestoneIndexes := make(map[milestone.Index]struct{})
+
+	tangle.ForEachUnconfirmedTx(func(msIndex milestone.Index, txHash hornet.Hash) bool {
+		unconfirmedTxsCounter++
+
+		if (unconfirmedTxsCounter % 50000) == 0 {
+			if daemon.IsStopped() {
+				return false
+			}
+			log.Infof("analyzed %d unconfirmed txs", unconfirmedTxsCounter)
+		}
+
+		unconfirmedMilestoneIndexes[msIndex] = struct{}{}
+
+		return true
+	}, true)
+
+	if daemon.IsStopped() {
+		return tangle.ErrOperationAborted
+	}
+
+	for msIndex := range unconfirmedMilestoneIndexes {
+
+		if daemon.IsStopped() {
+			return tangle.ErrOperationAborted
+		}
+
+		deletionCounter += int64(tangle.DeleteUnconfirmedTxs(msIndex))
+	}
+
+	log.Infof("%d unconfirmed txs deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

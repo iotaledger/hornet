@@ -59,6 +59,7 @@ func configureBundleTransactionsStorage(store kvstore.KVStore, opts profile.Cach
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(49, 1, 49), // BundleHash, IsTail, TxHash
 		objectstorage.KeysOnly(true),
+		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -197,6 +198,16 @@ func GetBundleTailTransactionHashes(bundleHash hornet.Hash, forceRelease bool, m
 	return bundleTransactionHashes
 }
 
+// BundleTransactionConsumer consumes the given bundle transaction during looping through all bundle transactions in the persistence layer.
+type BundleTransactionConsumer func(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool
+
+// ForEachBundleTransaction loops over all bundle transactions.
+func ForEachBundleTransaction(consumer BundleTransactionConsumer, skipCache bool) {
+	bundleTransactionsStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(key[:49], key[50:99], key[49] == BundleTxIsTail)
+	}, skipCache)
+}
+
 // bundleTx +-0
 func ContainsBundleTransaction(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool {
 	return bundleTransactionsStorage.Contains(databaseKeyForBundleTransaction(bundleHash, txHash, isTail))
@@ -204,20 +215,12 @@ func ContainsBundleTransaction(bundleHash hornet.Hash, txHash hornet.Hash, isTai
 
 // bundleTx +1
 func StoreBundleTransaction(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) *CachedBundleTransaction {
-
 	bundleTx := &BundleTransaction{
 		BundleHash: bundleHash,
 		IsTail:     isTail,
 		TxHash:     txHash,
 	}
-
-	cachedObj := bundleTransactionsStorage.ComputeIfAbsent(bundleTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // bundleTx +1
-		bundleTx.Persist()
-		bundleTx.SetModified()
-		return bundleTx
-	})
-
-	return &CachedBundleTransaction{CachedObject: cachedObj}
+	return &CachedBundleTransaction{CachedObject: bundleTransactionsStorage.Store(bundleTx)}
 }
 
 // bundleTx +-0
