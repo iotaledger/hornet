@@ -66,6 +66,10 @@ export class Visualizer extends React.Component<Props, any> {
             this.setState({topicsRegistered: true})
         }
 
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
+
         let {
             vertices, selected_approvers_count, selected_approvees_count,
             tips_count, solid_count, confirmed_count, conflicting_count

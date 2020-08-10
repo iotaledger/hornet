@@ -43,6 +43,10 @@ export class ExplorerLiveFeed extends React.Component<Props, any> {
             this.props.nodeStore.registerExplorerTopics(this.props.explorerStore.valueOnly);
             this.setState({topicsRegistered: true})
         }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
     }
 
     render() {

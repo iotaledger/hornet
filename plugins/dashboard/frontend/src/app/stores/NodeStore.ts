@@ -486,8 +486,9 @@ export class NodeStore {
     }
 
     connect() {
-        this.websocket = connectWebSocket(statusWebSocketPath,
+        var websocket = connectWebSocket(statusWebSocketPath,
             () => {
+                this.websocket = websocket;
                 this.updateWebSocketConnected(true);
                 this.registerMainTopics();
             },

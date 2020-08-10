@@ -34,6 +34,10 @@ export class Neighbors extends React.Component<Props, any> {
             this.props.nodeStore.registerNeighborTopics();
             this.setState({topicsRegistered: true})
         }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
     }
 
     render() {
