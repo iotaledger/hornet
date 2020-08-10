@@ -28,30 +28,36 @@ export class Visualizer extends React.Component<Props, any> {
     updateInterval: any;
 
     constructor(props: Readonly<Props>) {
-      super(props);
-      this.state = {
-        ticks: 0,
-      };
+        super(props);
+        this.state = {
+            updateTicks: 0,
+            topicsRegistered: false,
+        };
     }
 
     componentDidMount(): void {
         this.props.visualizerStore.start();
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
         this.props.nodeStore.registerVisualizerTopics();
-        this.updateInterval = setInterval(() => this.tick(), 500);
     }
 
     componentWillUnmount(): void {
         clearInterval(this.updateInterval);
+        this.setState({topicsRegistered: false})
         this.props.nodeStore.unregisterVisualizerTopics();
         this.props.visualizerStore.stop();
     }
 
     shouldComponentUpdate(_nextProps, nextState) {
-        return this.state.ticks !== nextState.ticks;
+        return this.state.updateTicks !== nextState.updateTicks;
     }
 
-    tick = () => {
-        this.setState(state => ({ ticks: state.ticks + 1 }));
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerVisualizerTopics();
+            this.setState({topicsRegistered: true})
+        }
+        this.setState(state => ({ updateTicks: state.updateTicks + 1 }));
     }
 
     updateVerticesLimit = (e) => {
