@@ -18,13 +18,35 @@ interface Props {
 @inject("explorerStore")
 @observer
 export class ExplorerLiveFeed extends React.Component<Props, any> {
+    updateInterval: any;
+
+    constructor(props: Readonly<Props>) {
+        super(props);
+        this.state = {
+            topicsRegistered: false,
+        };
+    }
 
     componentDidMount(): void {
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
         this.props.nodeStore.registerExplorerTopics(this.props.explorerStore.valueOnly);
     }
 
     componentWillUnmount(): void {
+        clearInterval(this.updateInterval);
+        this.setState({topicsRegistered: false})
         this.props.nodeStore.unregisterExplorerTopics();
+    }
+
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerExplorerTopics(this.props.explorerStore.valueOnly);
+            this.setState({topicsRegistered: true})
+        }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
     }
 
     render() {

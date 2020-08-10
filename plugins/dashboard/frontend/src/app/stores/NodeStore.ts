@@ -478,14 +478,22 @@ export class NodeStore {
         this.last_avg_spam_metric = new AvgSpamMetric();
     }
 
+    reconnect() {
+        this.updateWebSocketConnected(false);
+        setTimeout(() => {
+            this.connect();
+        }, 5000);
+    }
+
     connect() {
-        this.websocket = connectWebSocket(statusWebSocketPath,
+        var websocket = connectWebSocket(statusWebSocketPath,
             () => {
+                this.websocket = websocket;
                 this.updateWebSocketConnected(true);
                 this.registerMainTopics();
             },
-            () => this.updateWebSocketConnected(false),
-            () => this.updateWebSocketConnected(false));
+            () => this.reconnect(),
+            () => this.reconnect());
     }
 
     disconnect() {

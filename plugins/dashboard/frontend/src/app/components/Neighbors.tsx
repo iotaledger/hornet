@@ -11,13 +11,33 @@ interface Props {
 @inject("nodeStore")
 @observer
 export class Neighbors extends React.Component<Props, any> {
+    updateInterval: any;
+
+    constructor(props: Readonly<Props>) {
+        super(props);
+        this.state = {
+            topicsRegistered: false,
+        };
+    }
 
     componentDidMount(): void {
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
         this.props.nodeStore.registerNeighborTopics();
     }
 
     componentWillUnmount(): void {
         this.props.nodeStore.unregisterNeighborTopics();
+    }
+
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerNeighborTopics();
+            this.setState({topicsRegistered: true})
+        }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
     }
 
     render() {

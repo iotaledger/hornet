@@ -118,13 +118,35 @@ const dbSizeLineChartOpts = Object.assign({}, {
 @inject("nodeStore")
 @observer
 export class Misc extends React.Component<Props, any> {
+    updateInterval: any;
+
+    constructor(props: Readonly<Props>) {
+        super(props);
+        this.state = {
+            topicsRegistered: false,
+        };
+    }
 
     componentDidMount(): void {
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
         this.props.nodeStore.registerMiscTopics();
     }
 
     componentWillUnmount(): void {
+        clearInterval(this.updateInterval);
+        this.setState({topicsRegistered: false})
         this.props.nodeStore.unregisterMiscTopics();
+    }
+
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerMiscTopics();
+            this.setState({topicsRegistered: true})
+        }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
     }
 
     render() {

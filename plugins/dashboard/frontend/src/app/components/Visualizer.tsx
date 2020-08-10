@@ -28,30 +28,77 @@ export class Visualizer extends React.Component<Props, any> {
     updateInterval: any;
 
     constructor(props: Readonly<Props>) {
-      super(props);
-      this.state = {
-        ticks: 0,
-      };
+        super(props);
+        this.state = {
+            tps_new: 0,
+            vertices_count: 0,
+            selected_approvers_count: 0,
+            selected_approvees_count: 0,
+            tips_count: 0,
+            solid_percentage: 0.0,
+            confirmed_percentage: 0.0,
+            conflicting_percentage: 0.0,
+            updateTicks: 0,
+            topicsRegistered: false,
+        };
     }
 
     componentDidMount(): void {
         this.props.visualizerStore.start();
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
         this.props.nodeStore.registerVisualizerTopics();
-        this.updateInterval = setInterval(() => this.tick(), 500);
     }
 
     componentWillUnmount(): void {
         clearInterval(this.updateInterval);
+        this.setState({topicsRegistered: false})
         this.props.nodeStore.unregisterVisualizerTopics();
         this.props.visualizerStore.stop();
     }
 
     shouldComponentUpdate(_nextProps, nextState) {
-        return this.state.ticks !== nextState.ticks;
+        return this.state.updateTicks !== nextState.updateTicks;
     }
 
-    tick = () => {
-        this.setState(state => ({ ticks: state.ticks + 1 }));
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerVisualizerTopics();
+            this.setState({topicsRegistered: true})
+        }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
+
+        let {
+            vertices, selected_approvers_count, selected_approvees_count,
+            tips_count, solid_count, confirmed_count, conflicting_count
+        } = this.props.visualizerStore;
+
+        let {last_tps_metric} = this.props.nodeStore;
+
+        this.setState(state => ({
+            tps_new: last_tps_metric.new,
+            vertices_count: vertices.size,
+            selected_approvers_count: selected_approvers_count,
+            selected_approvees_count: selected_approvees_count,
+            tips_count: tips_count,
+            updateTicks: state.updateTicks + 1
+        }));
+
+        if (vertices.size == 0) {
+            this.setState(state => ({
+                solid_percentage: 0.0,
+                confirmed_percentage: 0.0,
+                conflicting_percentage: 0.0,
+            }));
+        } else {
+            this.setState(state => ({
+                solid_percentage: solid_count / vertices.size * 100,
+                confirmed_percentage: confirmed_count / vertices.size * 100,
+                conflicting_percentage: conflicting_count / vertices.size * 100,
+            }));
+        }
     }
 
     updateVerticesLimit = (e) => {
@@ -72,21 +119,7 @@ export class Visualizer extends React.Component<Props, any> {
     }
 
     render() {
-        let {
-            vertices, solid_count, confirmed_count, conflicting_count, selected,
-            selected_approvers_count, selected_approvees_count,
-            verticesLimit, tips_count, paused, search
-        } = this.props.visualizerStore;
-        let {last_tps_metric} = this.props.nodeStore;
-        let solid_percentage = 0.0;
-        let confirmed_percentage = 0.0;
-        let conflicting_percentage = 0.0;
-
-        if (vertices.size != 0) {
-            solid_percentage = solid_count / vertices.size*100
-            confirmed_percentage = confirmed_count / vertices.size*100
-            conflicting_percentage = conflicting_count / vertices.size*100
-        }
+        let {selected, verticesLimit, paused, search} = this.props.visualizerStore;
 
         return (
             <Container fluid>
@@ -126,8 +159,8 @@ export class Visualizer extends React.Component<Props, any> {
                                 Highlighted
                             </Badge>
                             <br/>
-                            Transactions: {vertices.size}, TPS: {last_tps_metric.new}, Tips: {tips_count}<br/>
-                            Confirmed: {confirmed_percentage.toFixed(2)}%, Conflicting: {conflicting_percentage.toFixed(2)}%, Solid: {solid_percentage.toFixed(2)}%<br/>
+                            Transactions: {this.state.vertices_count}, TPS: {this.state.tps_new}, Tips: {this.state.tips_count}<br/>
+                            Confirmed: {this.state.confirmed_percentage.toFixed(2)}%, Conflicting: {this.state.conflicting_percentage.toFixed(2)}%, Solid: {this.state.solid_percentage.toFixed(2)}%<br/>
                             <If condition={!!selected}>
                                 Selected: {selected ?
                                 <Link to={`/explorer/tx/${selected.id}`} target="_blank" rel='noopener noreferrer'>
@@ -136,7 +169,7 @@ export class Visualizer extends React.Component<Props, any> {
                                 : "-"}
                                 <br/>
                                 Approvers/Approvees: {selected ?
-                                <span>{selected_approvers_count}/{selected_approvees_count}</span>
+                                <span>{this.state.selected_approvers_count}/{this.state.selected_approvees_count}</span>
                                 : '-/-'}
                             </If>
                         </p>

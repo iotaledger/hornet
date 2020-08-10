@@ -51,20 +51,20 @@ export const colorLinkApprovers = "#ff5aaa";
 export const colorLinkApprovees = "#ffc306";
 
 export class VisualizerStore {
-    @observable vertices = new ObservableMap<string, Vertex>();
+    vertices = new ObservableMap<string, Vertex>();
     @observable verticesLimit = 5000;
-    @observable solid_count = 0;
-    @observable confirmed_count = 0;
-    @observable conflicting_count = 0;
-    @observable tips_count = 0;
+    solid_count = 0;
+    confirmed_count = 0;
+    conflicting_count = 0;
+    tips_count = 0;
     verticesIncomingOrder = [];
-    collect: boolean = false;
+    @observable collect: boolean = false;
     routerStore: RouterStore;
 
     // the currently selected vertex via hover
     @observable selected: Vertex;
-    @observable selected_approvers_count = 0;
-    @observable selected_approvees_count = 0;
+    selected_approvers_count = 0;
+    selected_approvees_count = 0;
     selected_via_click: boolean = false;
 
     // search
@@ -386,6 +386,7 @@ export class VisualizerStore {
     }
 
     start = () => {
+
         this.collect = true;
         this.graph = Viva.Graph.graph();
 
