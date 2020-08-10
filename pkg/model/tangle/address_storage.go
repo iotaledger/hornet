@@ -105,16 +105,8 @@ func ForEachAddress(consumer AddressConsumer, skipCache bool) {
 
 // address +1
 func StoreAddress(address hornet.Hash, txHash hornet.Hash, isValue bool) *CachedAddress {
-
 	addressObj := hornet.NewAddress(address, txHash, isValue)
-
-	cachedObj := addressesStorage.ComputeIfAbsent(addressObj.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // address +1
-		addressObj.Persist()
-		addressObj.SetModified()
-		return addressObj
-	})
-
-	return &CachedAddress{CachedObject: cachedObj}
+	return &CachedAddress{CachedObject: addressesStorage.Store(addressObj)}
 }
 
 // address +-0

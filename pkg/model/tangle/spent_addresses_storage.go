@@ -85,13 +85,10 @@ func MarkAddressAsSpentWithoutLocking(address hornet.Hash) bool {
 
 	spentAddress, _, _ := spentAddressFactory(address)
 
-	newlyAdded := false
-	spentAddressesStorage.ComputeIfAbsent(spentAddress.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject {
-		newlyAdded = true
-		spentAddress.Persist()
-		spentAddress.SetModified()
-		return spentAddress
-	}).Release(true)
+	cachedSpentAddress, newlyAdded := spentAddressesStorage.StoreIfAbsent(spentAddress)
+	if cachedSpentAddress != nil {
+		cachedSpentAddress.Release(true)
+	}
 
 	return newlyAdded
 }

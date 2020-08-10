@@ -214,20 +214,12 @@ func ContainsBundleTransaction(bundleHash hornet.Hash, txHash hornet.Hash, isTai
 
 // bundleTx +1
 func StoreBundleTransaction(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) *CachedBundleTransaction {
-
 	bundleTx := &BundleTransaction{
 		BundleHash: bundleHash,
 		IsTail:     isTail,
 		TxHash:     txHash,
 	}
-
-	cachedObj := bundleTransactionsStorage.ComputeIfAbsent(bundleTx.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // bundleTx +1
-		bundleTx.Persist()
-		bundleTx.SetModified()
-		return bundleTx
-	})
-
-	return &CachedBundleTransaction{CachedObject: cachedObj}
+	return &CachedBundleTransaction{CachedObject: bundleTransactionsStorage.Store(bundleTx)}
 }
 
 // bundleTx +-0
