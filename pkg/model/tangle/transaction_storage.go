@@ -227,7 +227,7 @@ func ForEachTransaction(consumer TransactionConsumer) {
 	})
 }
 
-// TransactionHashConsumer consumes the given transaction hash during looping though all transactions in the persistence layer.
+// TransactionHashConsumer consumes the given transaction hash during looping through all transactions in the persistence layer.
 type TransactionHashConsumer func(txHash hornet.Hash) bool
 
 // ForEachTransactionHash loops over all transaction hashes.

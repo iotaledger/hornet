@@ -124,10 +124,10 @@ func SearchLatestMilestoneIndexInStore() milestone.Index {
 	return latestMilestoneIndex
 }
 
-// MilestoneIndexConsumer consumes the given index during looping though all milestones in the persistence layer.
+// MilestoneIndexConsumer consumes the given index during looping through all milestones in the persistence layer.
 type MilestoneIndexConsumer func(index milestone.Index) bool
 
-// ForEachMilestoneIndex loops though all milestones in the persistence layer.
+// ForEachMilestoneIndex loops through all milestones in the persistence layer.
 func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 	milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))

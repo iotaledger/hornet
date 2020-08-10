@@ -197,7 +197,7 @@ func GetStoredBundleOrNil(tailTxHash hornet.Hash) *Bundle {
 	return storedBundle.(*Bundle)
 }
 
-// BundleHashConsumer consumes the given tailTxHash during looping though all bundles in the persistence layer.
+// BundleHashConsumer consumes the given tailTxHash during looping through all bundles in the persistence layer.
 type BundleHashConsumer func(txHash hornet.Hash) bool
 
 // ForEachBundleHash loops over all bundle hashes.

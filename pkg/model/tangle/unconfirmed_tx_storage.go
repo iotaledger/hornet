@@ -74,6 +74,16 @@ func GetUnconfirmedTxHashes(msIndex milestone.Index, forceRelease bool) hornet.H
 	return unconfirmedTxHashes
 }
 
+// UnconfirmedTxConsumer consumes the given unconfirmed transaction during looping through all unconfirmed transactions in the persistence layer.
+type UnconfirmedTxConsumer func(msIndex milestone.Index, txHash hornet.Hash) bool
+
+// ForEachUnconfirmedTx loops over all unconfirmed transactions.
+func ForEachUnconfirmedTx(consumer UnconfirmedTxConsumer, skipCache bool) {
+	unconfirmedTxStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:53])
+	}, skipCache)
+}
+
 // unconfirmedTx +1
 func StoreUnconfirmedTx(msIndex milestone.Index, txHash hornet.Hash) *CachedUnconfirmedTx {
 	unconfirmedTx := hornet.NewUnconfirmedTx(msIndex, txHash)
@@ -81,7 +91,7 @@ func StoreUnconfirmedTx(msIndex milestone.Index, txHash hornet.Hash) *CachedUnco
 }
 
 // DeleteUnconfirmedTxs deletes unconfirmed transaction entries.
-func DeleteUnconfirmedTxs(msIndex milestone.Index) {
+func DeleteUnconfirmedTxs(msIndex milestone.Index) int {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
@@ -96,6 +106,8 @@ func DeleteUnconfirmedTxs(msIndex milestone.Index) {
 	for _, key := range keysToDelete {
 		unconfirmedTxStorage.Delete(key)
 	}
+
+	return len(keysToDelete)
 }
 
 func ShutdownUnconfirmedTxsStorage() {

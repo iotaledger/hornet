@@ -175,6 +175,16 @@ func GetLedgerDiffForMilestoneWithoutLocking(index milestone.Index, abortSignal 
 	return diff, nil
 }
 
+// LedgerDiffHashConsumer consumes the given ledger diff addresses during looping through all ledger diffs in the persistence layer.
+type LedgerDiffHashConsumer func(msIndex milestone.Index, address hornet.Hash) bool
+
+// ForEachLedgerDiffHash loops over all ledger diffs.
+func ForEachLedgerDiffHash(consumer LedgerDiffHashConsumer, skipCache bool) {
+	ledgerDiffStore.IterateKeys([]byte{}, func(key kvstore.Key) bool {
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:53])
+	})
+}
+
 func GetLedgerDiffForMilestone(index milestone.Index, abortSignal <-chan struct{}) (map[string]int64, error) {
 
 	ReadLockLedger()

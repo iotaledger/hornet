@@ -198,7 +198,7 @@ func GetBundleTailTransactionHashes(bundleHash hornet.Hash, forceRelease bool, m
 	return bundleTransactionHashes
 }
 
-// BundleTransactionConsumer consumes the given bundle transaction during looping though all bundle transactions in the persistence layer.
+// BundleTransactionConsumer consumes the given bundle transaction during looping through all bundle transactions in the persistence layer.
 type BundleTransactionConsumer func(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool
 
 // ForEachBundleTransaction loops over all bundle transactions.

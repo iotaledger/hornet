@@ -73,7 +73,7 @@ func GetApproverHashes(txHash hornet.Hash, forceRelease bool, maxFind ...int) ho
 	return approverHashes
 }
 
-// ApproverConsumer consumes the given approver during looping though all approvers in the persistence layer.
+// ApproverConsumer consumes the given approver during looping through all approvers in the persistence layer.
 type ApproverConsumer func(txHash hornet.Hash, approverHash hornet.Hash) bool
 
 // ForEachApprover loops over all approvers.
