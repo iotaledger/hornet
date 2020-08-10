@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc9] - 11.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - Automatic dashboard websocket reconnect
+
+### Changed
+
+    - Reduced dashboard traffic by introducing subscriptions to topics
+
+### Fixed
+
+    - Websocket/dashboard deadlock
+    - Dashboard visualizer re-rendered to often
+    - Database revalidation
+
 ## [0.5.0-rc8] - 07.08.2020
 
 **Breaking change:**
