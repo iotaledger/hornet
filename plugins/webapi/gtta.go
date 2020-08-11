@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/iota.go/guards"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -26,6 +28,14 @@ func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) 
 		return
 	}
 
+	query := &GetTransactionsToApprove{}
+
+	if err := mapstructure.Decode(i, query); err != nil {
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
 	tips, err := urts.TipSelector.SelectNonLazyTips()
 	if err != nil {
 		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
@@ -35,6 +45,16 @@ func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) 
 		}
 		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 		c.JSON(http.StatusInternalServerError, e)
+		return
+	}
+
+	if len(query.Reference) > 0 {
+		if !guards.IsTransactionHash(query.Reference) {
+			e.Error = "Invalid reference hash supplied"
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+		c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: query.Reference})
 		return
 	}
 
