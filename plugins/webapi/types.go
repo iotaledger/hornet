@@ -186,6 +186,23 @@ type GetNodeAPIConfigurationReturn struct {
 	Duration            int             `json:"duration"`
 }
 
+///////////////// getTipInfo ////////////////////////
+
+// GetTipInfo struct
+type GetTipInfo struct {
+	Command         string       `mapstructure:"command"`
+	TailTransaction trinary.Hash `mapstructure:"tailTransaction"`
+}
+
+// GetTipInfoReturn struct
+type GetTipInfoReturn struct {
+	Confirmed      bool `json:"confirmed"`
+	Conflicting    bool `json:"conflicting"`
+	ShouldPromote  bool `json:"shouldPromote"`
+	ShouldReattach bool `json:"shouldReattach"`
+	Duration       int  `json:"duration"`
+}
+
 ///////////////// getTransactionsToApprove ////////////////////////
 
 // GetTransactionsToApprove struct

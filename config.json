@@ -12,6 +12,7 @@
       "getNodeInfo",
       "getBalances",
       "checkConsistency",
+      "getTipInfo",
       "getTransactionsToApprove",
       "getInclusionStates",
       "getNodeAPIConfiguration",
