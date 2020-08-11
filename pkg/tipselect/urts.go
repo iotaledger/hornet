@@ -456,7 +456,9 @@ func (ts *TipSelector) UpdateScores() int {
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
-		panic(fmt.Errorf("%w: %v", tangle.ErrTransactionNotFound, txHash.Trytes()))
+		// we need to return lazy instead of panic here, because the transaction could have been pruned already
+		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
+		return ScoreLazy
 	}
 	defer cachedTx.Release(true)
 
