@@ -20,6 +20,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 	}))
 
 	p.Protocol.Events.Sent[sting.MessageTypeTransaction].Attach(events.NewClosure(func() {
+		p.Metrics.SentPackets.Inc()
 		p.Metrics.SentTransactions.Inc()
 		metrics.SharedServerMetrics.SentTransactions.Inc()
 	}))
@@ -31,6 +32,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 	}))
 
 	p.Protocol.Events.Sent[sting.MessageTypeTransactionRequest].Attach(events.NewClosure(func() {
+		p.Metrics.SentPackets.Inc()
 		p.Metrics.SentTransactionRequests.Inc()
 		metrics.SharedServerMetrics.SentTransactionRequests.Inc()
 	}))
@@ -42,6 +44,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 	}))
 
 	p.Protocol.Events.Sent[sting.MessageTypeMilestoneRequest].Attach(events.NewClosure(func() {
+		p.Metrics.SentPackets.Inc()
 		p.Metrics.SentMilestoneRequests.Inc()
 		metrics.SharedServerMetrics.SentMilestoneRequests.Inc()
 	}))
@@ -64,6 +67,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 	}))
 
 	p.Protocol.Events.Sent[sting.MessageTypeHeartbeat].Attach(events.NewClosure(func() {
+		p.Metrics.SentPackets.Inc()
 		p.Metrics.SentHeartbeats.Inc()
 		metrics.SharedServerMetrics.SentHeartbeats.Inc()
 	}))

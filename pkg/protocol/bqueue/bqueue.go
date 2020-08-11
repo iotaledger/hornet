@@ -52,7 +52,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 		case <-shutdownSignal:
 			return
 		case b := <-bc.c:
-			bc.manager.ForAllConnected(func(p *peer.Peer) (abort bool) {
+			bc.manager.ForAllConnected(func(p *peer.Peer) bool {
 				if _, excluded := b.ExcludePeers[p.ID]; excluded {
 					return true
 				}

@@ -4,6 +4,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.uber.org/atomic"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/protocol"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 // ConnectionOrigin defines whether a connection was initialized inbound or outbound.
@@ -29,8 +31,13 @@ const (
 	Outbound
 )
 
-// SendQueueSize defines the size of the send queue of every created peer.
-const SendQueueSize = 1500
+const (
+	// SendQueueSize defines the size of the send queue of every created peer.
+	SendQueueSize = 1500
+	// CheckStaledAutopeerInterval is the interval autopeered neighbors
+	// are checked whether they are staled.
+	CheckStaledAutopeerInterval = 60 * time.Second
+)
 
 func Caller(handler interface{}, params ...interface{}) {
 	handler.(func(*Peer))(params[0].(*Peer))
@@ -116,11 +123,46 @@ type Peer struct {
 	Disconnected bool
 	// Events happening on the peer.
 	Events Events
+	// The last amount of sent transactions at the last autopeer stale check
+	staledAutopeerCheckLastSentPackets uint32
+	// The last amount of dropped packets at the last autopeer stale check
+	staledAutopeerCheckLastDroppedPackets uint32
 }
 
 // IsInbound tells whether the peer's connection was inbound.
 func (p *Peer) IsInbound() bool {
 	return p.ConnectionOrigin == Inbound
+}
+
+// CheckStaledAutopeer checks if the maximum percentage of dropped packages is exceeded.
+func (p *Peer) CheckStaledAutopeer(maxPercentage int) (bool, float32) {
+	if p.Autopeering == nil {
+		// not connected via autopeering
+		return false, 0
+	}
+
+	if p.staledAutopeerCheckLastSentPackets == 0 && p.staledAutopeerCheckLastDroppedPackets == 0 {
+		// initialize the check for the first time
+		p.staledAutopeerCheckLastSentPackets = p.Metrics.SentPackets.Load()
+		p.staledAutopeerCheckLastDroppedPackets = p.Metrics.DroppedPackets.Load()
+		return false, 0
+	}
+
+	sentPackets := utils.GetUint32Diff(p.Metrics.SentPackets.Load(), p.staledAutopeerCheckLastSentPackets)
+	droppedPackets := utils.GetUint32Diff(p.Metrics.DroppedPackets.Load(), p.staledAutopeerCheckLastDroppedPackets)
+
+	// store for next interval
+	p.staledAutopeerCheckLastSentPackets = p.Metrics.SentPackets.Load()
+	p.staledAutopeerCheckLastDroppedPackets = p.Metrics.DroppedPackets.Load()
+
+	totalPackets := droppedPackets + sentPackets
+	if totalPackets == 0 {
+		// no messages sent
+		return false, 0
+	}
+
+	percentageDropped := float32(droppedPackets) / float32(totalPackets) * 100.0
+	return percentageDropped >= float32(maxPercentage), percentageDropped
 }
 
 // EnqueueForSending enqueues the given data to be sent to the peer.
@@ -130,7 +172,7 @@ func (p *Peer) EnqueueForSending(data []byte) {
 	case p.SendQueue <- data:
 	default:
 		metrics.SharedServerMetrics.DroppedMessages.Inc()
-		p.Metrics.DroppedMessages.Inc()
+		p.Metrics.DroppedPackets.Inc()
 	}
 }
 
@@ -151,11 +193,12 @@ func (p *Peer) Info() *Info {
 		NumberOfReceivedTransactionReq: p.Metrics.ReceivedTransactionRequests.Load(),
 		NumberOfReceivedMilestoneReq:   p.Metrics.ReceivedMilestoneRequests.Load(),
 		NumberOfReceivedHeartbeats:     p.Metrics.ReceivedHeartbeats.Load(),
+		NumberOfSentPackets:            p.Metrics.SentPackets.Load(),
 		NumberOfSentTransactions:       p.Metrics.SentTransactions.Load(),
 		NumberOfSentTransactionsReq:    p.Metrics.SentTransactionRequests.Load(),
 		NumberOfSentMilestoneReq:       p.Metrics.SentMilestoneRequests.Load(),
 		NumberOfSentHeartbeats:         p.Metrics.SentHeartbeats.Load(),
-		NumberOfDroppedSentPackets:     p.Metrics.DroppedMessages.Load(),
+		NumberOfDroppedSentPackets:     p.Metrics.DroppedPackets.Load(),
 		ConnectionType:                 "tcp",
 		Connected:                      false,
 		Autopeered:                     false,
@@ -215,6 +258,8 @@ type Metrics struct {
 	ReceivedMilestoneRequests atomic.Uint32
 	// The number of received heartbeats.
 	ReceivedHeartbeats atomic.Uint32
+	// The number of sent packets.
+	SentPackets atomic.Uint32
 	// The number of sent transactions.
 	SentTransactions atomic.Uint32
 	// The number of sent transaction requests.
@@ -223,8 +268,8 @@ type Metrics struct {
 	SentMilestoneRequests atomic.Uint32
 	// The number of sent heartbeats.
 	SentHeartbeats atomic.Uint32
-	// The number of dropped messages.
-	DroppedMessages atomic.Uint32
+	// The number of dropped packets.
+	DroppedPackets atomic.Uint32
 }
 
 // Info acts as a static snapshot of information about a peer.
@@ -243,6 +288,7 @@ type Info struct {
 	NumberOfReceivedTransactionReq uint32 `json:"numberOfReceivedTransactionReq"`
 	NumberOfReceivedMilestoneReq   uint32 `json:"numberOfReceivedMilestoneReq"`
 	NumberOfReceivedHeartbeats     uint32 `json:"numberOfReceivedHeartbeats"`
+	NumberOfSentPackets            uint32 `json:"numberOfSentPackets"`
 	NumberOfSentTransactions       uint32 `json:"numberOfSentTransactions"`
 	NumberOfSentTransactionsReq    uint32 `json:"numberOfSentTransactionsReq"`
 	NumberOfSentMilestoneReq       uint32 `json:"numberOfSentMilestoneReq"`

@@ -148,8 +148,6 @@ func collectPeers() {
 	peersDroppedSentPackets.Reset()
 	peersConnected.Reset()
 
-	peering.Manager().PeerInfos()
-
 	for _, peer := range peering.Manager().PeerInfos() {
 		address, port, _ := net.SplitHostPort(peer.Address)
 		labels := prometheus.Labels{

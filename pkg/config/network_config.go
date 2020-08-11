@@ -40,6 +40,8 @@ const (
 	CfgNetAutopeeringOutboundPeers = "network.autopeering.outboundPeers"
 	// lifetime (in minutes) of the private and public local salt
 	CfgNetAutopeeringSaltLifetime = "network.autopeering.saltLifetime"
+	// maximum percentage of dropped packets in one minute before an autopeered neighbor gets dropped
+	CfgNetAutopeeringMaxDroppedPacketsPercentage = "network.autopeering.maxDroppedPacketsPercentage"
 )
 
 func init() {
@@ -67,4 +69,5 @@ func init() {
 	flag.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")
 	flag.Int(CfgNetAutopeeringOutboundPeers, 2, "the number of outbound autopeers")
 	flag.Int(CfgNetAutopeeringSaltLifetime, 30, "lifetime (in minutes) of the private and public local salt")
+	flag.Int(CfgNetAutopeeringMaxDroppedPacketsPercentage, 30, "maximum percentage of dropped packets in one minute before an autopeered neighbor gets dropped")
 }
