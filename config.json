@@ -34,7 +34,6 @@
   "dashboard": {
     "bindAddress": "localhost:8081",
     "theme": "default",
-    "dev": false,
     "basicAuth": {
       "enabled": false,
       "username": "",
@@ -42,13 +41,9 @@
       "passwordSalt": ""
     }
   },
-  "db": {
-    "path": "mainnetdb"
-  },
   "snapshots": {
     "loadType": "local",
     "local": {
-      "depth": 50,
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
       "path": "snapshots/mainnet/export.bin",
@@ -75,24 +70,6 @@
   "spentAddresses": {
     "enabled": true
   },
-  "coordinator": {
-    "address": "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9",
-    "securityLevel": 2,
-    "merkleTreeDepth": 23,
-    "mwm": 14,
-    "stateFilePath": "coordinator.state",
-    "merkleTreeFilePath": "coordinator.tree",
-    "intervalSeconds": 60,
-    "checkpoints": {
-      "maxTrackedTails": 10000
-    },
-    "tipsel": {
-      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
-      "maxHeaviestBranchTipsPerCheckpoint": 10,
-      "randomTipsPerCheckpoint": 2,
-      "heaviestBranchSelectionDeadlineMilliseconds": 100
-    }
-  },
   "network": {
     "preferIPv6": false,
     "gossip": {
@@ -112,37 +89,11 @@
       "seed": ""
     }
   },
-  "tipsel": {
-    "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
-    "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
-    "belowMaxDepth": 15,
-    "nonLazy": {
-      "retentionRulesTipsLimit": 100,
-      "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
-    },
-    "semiLazy": {
-      "retentionRulesTipsLimit": 20,
-      "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
-    }
-  },
   "node": {
     "alias": "",
     "showAliasInGetNodeInfo": false,
     "disablePlugins": [],
     "enablePlugins": []
-  },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout"
-    ]
-  },
-  "warpsync": {
-    "advancementRange": 200
   },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
@@ -155,9 +106,6 @@
     "valueSpam": false,
     "workers": 0,
     "semiLazyTipsLimit": 30
-  },
-  "mqtt": {
-    "config": "mqtt_config.json"
   },
   "zmq": {
     "bindAddress": "localhost:5556"
