@@ -26,6 +26,7 @@ export class Neighbors extends React.Component<Props, any> {
     }
 
     componentWillUnmount(): void {
+        clearInterval(this.updateInterval);
         this.props.nodeStore.unregisterNeighborTopics();
     }
 
