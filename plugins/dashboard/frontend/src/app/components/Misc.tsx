@@ -181,6 +181,7 @@ export class Misc extends React.Component<Props, any> {
                                         <Line data={this.props.nodeStore.spamMetricsSeries}
                                             options={lineChartOptions}/>
                                     </div>
+                                    <If condition={this.props.nodeStore.avgSpamMetricsSeries.labels.length > 0}>
                                     <small>
                                         New TX: {this.props.nodeStore.last_avg_spam_metric.new.toFixed(3)},
                                         Avg. TPS: {this.props.nodeStore.last_avg_spam_metric.avg.toFixed(3)}
@@ -189,6 +190,7 @@ export class Misc extends React.Component<Props, any> {
                                         <Line data={this.props.nodeStore.avgSpamMetricsSeries}
                                             options={lineChartOptions}/>
                                     </div>
+                                    </If>
                                 </Card.Body>
                             </Card>
                         </Col>
