@@ -641,7 +641,6 @@ func cleanupAddresses() error {
 
 	type address struct {
 		address hornet.Hash
-		isValue bool
 		txHash  hornet.Hash
 	}
 
