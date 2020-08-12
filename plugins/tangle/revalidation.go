@@ -11,6 +11,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
+const (
+	// printStatusInterval is the interval for printing revalidation status messages
+	printStatusInterval = 2 * time.Second
+)
+
 var (
 	ErrSnapshotInfoMissing                   = errors.New("snapshot information not found in database")
 	ErrLatestMilestoneOlderThanSnapshotIndex = errors.New("latest milestone in the database is older than the snapshot index")
@@ -64,7 +69,7 @@ func revalidateDatabase() error {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	log.Infof("reverting database state back to local snapshot %d...", snapshotInfo.SnapshotIndex)
+	log.Infof("reverting database state back to local snapshot %d (this might take a while)... ", snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
 	if err := cleanupMilestones(snapshotInfo); err != nil {
@@ -116,25 +121,14 @@ func revalidateDatabase() error {
 		return err
 	}
 
+	log.Info("flushing storages...")
 	tangle.FlushStorages()
+	log.Info("flushing storages... done!")
 
-	// Get the ledger state of the last snapshot
-	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
-	if err != nil {
+	// apply the ledger from the last snapshot to the database
+	if err := applySnapshotLedger(snapshotInfo); err != nil {
 		return err
 	}
-
-	if snapshotInfo.SnapshotIndex != snapshotIndex {
-		return ErrSnapshotIndexWrong
-	}
-
-	// Store the snapshot balances as the current valid ledger
-	if err = tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
-		return err
-	}
-
-	// Set the valid solid milestone index
-	tangle.OverwriteSolidMilestoneIndex(snapshotInfo.SnapshotIndex)
 
 	log.Infof("reverted state back to local snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
 
@@ -146,15 +140,19 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 
 	start := time.Now()
 
+	milestonesToDelete := make(map[milestone.Index]struct{})
+
+	lastStatusTime := time.Now()
 	var milestonesCounter int64
-	var deletionCounter int64
 	tangle.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
 		milestonesCounter++
 
-		if (milestonesCounter % 1000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d milestones", milestonesCounter)
 		}
 
@@ -163,13 +161,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 			return true
 		}
 
-		tangle.DeleteUnconfirmedTxs(msIndex)
-		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
-			panic(err)
-		}
-
-		tangle.DeleteMilestone(msIndex)
-		deletionCounter++
+		milestonesToDelete[msIndex] = struct{}{}
 
 		return true
 	}, true)
@@ -178,7 +170,29 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d milestones deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(milestonesToDelete))
+	var deletionCounter int64
+	for msIndex := range milestonesToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting milestones...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteUnconfirmedTxs(msIndex)
+		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
+			panic(err)
+		}
+
+		tangle.DeleteMilestone(msIndex)
+	}
+
+	log.Infof("deleting milestones...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -188,25 +202,28 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 
 	start := time.Now()
 
-	milestoneIndexesToDelete := make(map[milestone.Index]struct{})
+	ledgerDiffsToDelete := make(map[milestone.Index]struct{})
 
+	lastStatusTime := time.Now()
 	var ledgerDiffsCounter int64
-	var deletionCounter int64
 	tangle.ForEachLedgerDiffHash(func(msIndex milestone.Index, address hornet.Hash) bool {
 		ledgerDiffsCounter++
 
-		if (ledgerDiffsCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
 		}
 
-		// above snapshot index
-		if msIndex > info.SnapshotIndex {
-			milestoneIndexesToDelete[msIndex] = struct{}{}
+		// do not delete older milestones
+		if msIndex <= info.SnapshotIndex {
 			return true
 		}
+
+		ledgerDiffsToDelete[msIndex] = struct{}{}
 
 		return true
 	}, true)
@@ -215,17 +232,24 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 		return tangle.ErrOperationAborted
 	}
 
-	for msIndex := range milestoneIndexesToDelete {
+	total := float32(len(ledgerDiffsToDelete))
+	var deletionCounter int64
+	for msIndex := range ledgerDiffsToDelete {
 		deletionCounter++
 
-		if daemon.IsStopped() {
-			return tangle.ErrOperationAborted
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting ledger diffs...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
 		}
 
 		tangle.DeleteLedgerDiffForMilestone(msIndex)
 	}
 
-	log.Infof("%d ledger diffs milestones deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting ledger diffs...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -236,15 +260,19 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 
 	start := time.Now()
 
+	transactionsToDelete := make(map[string]struct{})
+
+	lastStatusTime := time.Now()
 	var txsCounter int64
-	var deletionCounter int64
 	tangle.ForEachTransactionHash(func(txHash hornet.Hash) bool {
 		txsCounter++
 
-		if (txsCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d transactions", txsCounter)
 		}
 
@@ -252,33 +280,48 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 
 		// delete transaction if metadata doesn't exist
 		if storedTxMeta == nil {
-			tangle.DeleteTransaction(txHash)
-			deletionCounter++
+			transactionsToDelete[string(txHash)] = struct{}{}
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			tangle.DeleteTransaction(txHash)
-			deletionCounter++
+			transactionsToDelete[string(txHash)] = struct{}{}
 			return true
 		}
 
 		// not confirmed or above snapshot index
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			tangle.DeleteTransaction(txHash)
-			deletionCounter++
+			transactionsToDelete[string(txHash)] = struct{}{}
 			return true
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d transactions", txsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d transactions deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(transactionsToDelete))
+	var deletionCounter int64
+	for txHash := range transactionsToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting transactions...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteTransaction(hornet.Hash(txHash))
+	}
+
+	log.Infof("deleting transactions...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -288,32 +331,53 @@ func cleanupTransactionMetadata() error {
 
 	start := time.Now()
 
+	metadataToDelete := make(map[string]struct{})
+
+	lastStatusTime := time.Now()
 	var metadataCounter int64
-	var deletionCounter int64
 	tangle.ForEachTransactionMetadataHash(func(txHash hornet.Hash) bool {
 		metadataCounter++
 
-		if (metadataCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d transaction metadata", metadataCounter)
 		}
 
 		// delete metadata if transaction doesn't exist
 		if !tangle.TransactionExistsInStore(txHash) {
-			tangle.DeleteTransactionMetadata(txHash)
-			deletionCounter++
+			metadataToDelete[string(txHash)] = struct{}{}
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d transaction metadata", metadataCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d transaction metadata deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(metadataToDelete))
+	var deletionCounter int64
+	for txHash := range metadataToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting transaction metadata...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteTransactionMetadata(hornet.Hash(txHash))
+	}
+
+	log.Infof("deleting transaction metadata...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -323,15 +387,19 @@ func cleanupBundles() error {
 
 	start := time.Now()
 
+	bundlesToDelete := make(map[string]struct{})
+
 	var bundleCounter int64
-	var deletionCounter int64
+	lastStatusTime := time.Now()
 	tangle.ForEachBundleHash(func(tailTxHash hornet.Hash) bool {
 		bundleCounter++
 
-		if (bundleCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d bundles", bundleCounter)
 		}
 
@@ -343,20 +411,37 @@ func cleanupBundles() error {
 		for _, txHash := range bundle.GetTxHashes() {
 			// delete bundle if a single transaction of the bundle doesn't exist
 			if !tangle.TransactionExistsInStore(txHash) {
-				tangle.DeleteBundle(tailTxHash)
-				deletionCounter++
+				bundlesToDelete[string(tailTxHash)] = struct{}{}
 				return true
 			}
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d bundles", bundleCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d bundles deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(bundlesToDelete))
+	var deletionCounter int64
+	for tailTxHash := range bundlesToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting bundles...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteBundle(hornet.Hash(tailTxHash))
+	}
+
+	log.Infof("deleting bundles...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -364,34 +449,61 @@ func cleanupBundles() error {
 // deletes all bundles transactions where the tx doesn't exist in the database anymore.
 func cleanupBundleTransactions() error {
 
+	type bundleTransaction struct {
+		bundleHash hornet.Hash
+		isTail     bool
+		txHash     hornet.Hash
+	}
+
 	start := time.Now()
 
+	bundleTxsToDelete := make(map[string]*bundleTransaction)
+
+	lastStatusTime := time.Now()
 	var bundleTxsCounter int64
-	var deletionCounter int64
 	tangle.ForEachBundleTransaction(func(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool {
 		bundleTxsCounter++
 
-		if (bundleTxsCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d bundle transactions", bundleTxsCounter)
 		}
 
 		// delete bundle transaction if transaction doesn't exist
 		if !tangle.TransactionExistsInStore(txHash) {
-			tangle.DeleteBundleTransaction(bundleHash, txHash, isTail)
-			deletionCounter++
+			bundleTxsToDelete[string(txHash)] = &bundleTransaction{bundleHash: bundleHash, txHash: txHash, isTail: isTail}
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d bundle transactions", bundleTxsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d bundle transactions deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(bundleTxsToDelete))
+	var deletionCounter int64
+	for _, bundleTx := range bundleTxsToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting bundle transactions...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteBundleTransaction(bundleTx.bundleHash, bundleTx.txHash, bundleTx.isTail)
+	}
+
+	log.Infof("deleting bundle transactions...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -399,40 +511,65 @@ func cleanupBundleTransactions() error {
 // deletes all approvers where the tx doesn't exist in the database anymore.
 func cleanupApprovers() error {
 
+	type approver struct {
+		txHash       hornet.Hash
+		approverHash hornet.Hash
+	}
+
 	start := time.Now()
 
+	approversToDelete := make(map[string]*approver)
+
+	lastStatusTime := time.Now()
 	var approverCounter int64
-	var deletionCounter int64
 	tangle.ForEachApprover(func(txHash hornet.Hash, approverHash hornet.Hash) bool {
 		approverCounter++
 
-		if (approverCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d approvers", approverCounter)
 		}
 
 		// delete approver if transaction doesn't exist
 		if !tangle.TransactionExistsInStore(txHash) {
-			tangle.DeleteApprover(txHash, approverHash)
-			deletionCounter++
+			approversToDelete[string(txHash)] = &approver{txHash: txHash, approverHash: approverHash}
 		}
 
 		// delete approver if approver transaction doesn't exist
 		if !tangle.TransactionExistsInStore(approverHash) {
-			tangle.DeleteApprover(txHash, approverHash)
-			deletionCounter++
+			approversToDelete[string(txHash)] = &approver{txHash: txHash, approverHash: approverHash}
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d approvers", approverCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d approvers deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(approversToDelete))
+	var deletionCounter int64
+	for _, approver := range approversToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting approvers...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteApprover(approver.txHash, approver.approverHash)
+	}
+
+	log.Infof("deleting approvers...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -440,34 +577,60 @@ func cleanupApprovers() error {
 // deletes all tags where the tx doesn't exist in the database anymore.
 func cleanupTags() error {
 
+	type tag struct {
+		tag    hornet.Hash
+		txHash hornet.Hash
+	}
+
 	start := time.Now()
 
+	tagsToDelete := make(map[string]*tag)
+
+	lastStatusTime := time.Now()
 	var tagsCounter int64
-	var deletionCounter int64
 	tangle.ForEachTag(func(txTag hornet.Hash, txHash hornet.Hash) bool {
 		tagsCounter++
 
-		if (tagsCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d tags", tagsCounter)
 		}
 
 		// delete tag if transaction doesn't exist
 		if !tangle.TransactionExistsInStore(txHash) {
-			tangle.DeleteTag(txTag, txHash)
-			deletionCounter++
+			tagsToDelete[string(txHash)] = &tag{tag: txTag, txHash: txHash}
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d tags", tagsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d tags deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(tagsToDelete))
+	var deletionCounter int64
+	for _, tag := range tagsToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting tags...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteTag(tag.tag, tag.txHash)
+	}
+
+	log.Infof("deleting tags...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -475,34 +638,61 @@ func cleanupTags() error {
 // deletes all addresses where the tx doesn't exist in the database anymore.
 func cleanupAddresses() error {
 
+	type address struct {
+		address hornet.Hash
+		isValue bool
+		txHash  hornet.Hash
+	}
+
+	addressesToDelete := make(map[string]*address)
+
 	start := time.Now()
 
+	lastStatusTime := time.Now()
 	var addressesCounter int64
-	var deletionCounter int64
-	tangle.ForEachAddress(func(address hornet.Hash, txHash hornet.Hash, isValue bool) bool {
+	tangle.ForEachAddress(func(addressHash hornet.Hash, txHash hornet.Hash, isValue bool) bool {
 		addressesCounter++
 
-		if (addressesCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d addresses", addressesCounter)
 		}
 
 		// delete address if transaction doesn't exist
 		if !tangle.TransactionExistsInStore(txHash) {
-			tangle.DeleteAddress(address, txHash)
-			deletionCounter++
+			addressesToDelete[string(txHash)] = &address{address: addressHash, txHash: txHash}
 		}
 
 		return true
 	}, true)
+	log.Infof("analyzed %d addresses", addressesCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	log.Infof("%d addresses deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	total := float32(len(addressesToDelete))
+	var deletionCounter int64
+	for _, addr := range addressesToDelete {
+		deletionCounter++
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting addresses...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+		}
+
+		tangle.DeleteAddress(addr.address, addr.txHash)
+	}
+
+	log.Infof("deleting addresses...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -512,18 +702,19 @@ func cleanupUnconfirmedTxs() error {
 
 	start := time.Now()
 
-	var unconfirmedTxsCounter int64
-	var deletionCounter int64
-
 	unconfirmedMilestoneIndexes := make(map[milestone.Index]struct{})
 
+	lastStatusTime := time.Now()
+	var unconfirmedTxsCounter int64
 	tangle.ForEachUnconfirmedTx(func(msIndex milestone.Index, txHash hornet.Hash) bool {
 		unconfirmedTxsCounter++
 
-		if (unconfirmedTxsCounter % 50000) == 0 {
+		if time.Since(lastStatusTime) >= printStatusInterval {
 			if daemon.IsStopped() {
 				return false
 			}
+
+			lastStatusTime = time.Now()
 			log.Infof("analyzed %d unconfirmed txs", unconfirmedTxsCounter)
 		}
 
@@ -531,21 +722,56 @@ func cleanupUnconfirmedTxs() error {
 
 		return true
 	}, true)
+	log.Infof("analyzed %d unconfirmed txs", unconfirmedTxsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
+	total := float32(len(unconfirmedMilestoneIndexes))
+	var deletionCounter int64
 	for msIndex := range unconfirmedMilestoneIndexes {
+		deletionCounter++
 
-		if daemon.IsStopped() {
-			return tangle.ErrOperationAborted
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			if daemon.IsStopped() {
+				return tangle.ErrOperationAborted
+			}
+
+			lastStatusTime = time.Now()
+			log.Infof("deleting unconfirmed txs...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
 		}
 
-		deletionCounter += int64(tangle.DeleteUnconfirmedTxs(msIndex))
+		tangle.DeleteUnconfirmedTxs(msIndex)
 	}
 
-	log.Infof("%d unconfirmed txs deleted, took %v", deletionCounter, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting unconfirmed txs...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+
+	return nil
+}
+
+// apply the ledger from the last snapshot to the database
+func applySnapshotLedger(info *tangle.SnapshotInfo) error {
+
+	log.Info("applying snapshot balances to the ledger state...")
+	// Get the ledger state of the last snapshot
+	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
+	if err != nil {
+		return err
+	}
+
+	if info.SnapshotIndex != snapshotIndex {
+		return ErrSnapshotIndexWrong
+	}
+
+	// Store the snapshot balances as the current valid ledger
+	if err = tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
+		return err
+	}
+	log.Info("applying snapshot balances to the ledger state ... done!")
+
+	// Set the valid solid milestone index
+	tangle.OverwriteSolidMilestoneIndex(info.SnapshotIndex)
 
 	return nil
 }
