@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc11] - 12.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Changed
+
+    - Remove tanglebay snapshot source for comnet
+
+### Fixed
+
+    - Fix deadlock in revalidation
+    - Fix possible deadlock at coordinator shutdown
+    - Fix panic in dashboard websocket handling
+
 ## [0.5.0-rc10] - 12.08.2020
 
 **Breaking change:**
