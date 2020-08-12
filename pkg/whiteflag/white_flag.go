@@ -67,17 +67,17 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 
 	// traversal stops if no more transactions pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-		defer cachedTx.Release(true) // tx -1
+	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
+		defer cachedTxMeta.Release(true) // tx -1
 
-		if !cachedTx.GetTransaction().IsTail() {
-			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTx.GetTransaction().GetTxHash().Trytes())
+		if !cachedTxMeta.GetMetadata().IsTail() {
+			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
 		}
 
 		// load up bundle
-		cachedBundle := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash())
+		cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash())
 		if cachedBundle == nil {
-			return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetTxHash().Trytes())
+			return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
 		}
 		defer cachedBundle.Release(true)
 
@@ -87,17 +87,17 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 		}
 
 		// only traverse and process the transaction if it was not confirmed yet
-		return !cachedTx.GetMetadata().IsConfirmed(), nil
+		return !cachedTxMeta.GetMetadata().IsConfirmed(), nil
 	}
 
 	// consumer
-	consumer := func(cachedTx *tangle.CachedTransaction) error { // tx +1
-		defer cachedTx.Release(true) // tx -1
+	consumer := func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
+		defer cachedTxMeta.Release(true) // tx -1
 
 		// load up bundle
-		cachedBundle := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash())
+		cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash())
 		if cachedBundle == nil {
-			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetTxHash().Trytes())
+			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
 		}
 		defer cachedBundle.Release(true)
 
@@ -105,8 +105,8 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 		bundle := cachedBundle.GetBundle()
 		mutations := bundle.GetLedgerChanges()
 		if bundle.IsValueSpam() || len(mutations) == 0 {
-			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
-			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetTxHash())
+			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTxMeta.GetMetadata().GetTxHash())
 			return nil
 		}
 
@@ -146,15 +146,15 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 			validMutations[addr] = validMutations[addr] + change
 		}
 
-		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
+		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetTxHash())
 
 		if conflicting {
-			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTxMeta.GetMetadata().GetTxHash())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTx.GetTransaction().GetTxHash())
+		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTxMeta.GetMetadata().GetTxHash())
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.

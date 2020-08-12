@@ -53,30 +53,30 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // tx +1
-	if cachedTx == nil {
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // tx +1
+	if cachedTxMeta == nil {
 		e.Error = "unknown tail transaction"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
-	defer cachedTx.Release(true)
+	defer cachedTxMeta.Release(true)
 
-	if !cachedTx.GetTransaction().IsTail() {
+	if !cachedTxMeta.GetMetadata().IsTail() {
 		e.Error = "transaction is not a tail"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	if !cachedTx.GetMetadata().IsSolid() {
+	if !cachedTxMeta.GetMetadata().IsSolid() {
 		e.Error = "transaction is not solid"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	conflicting := cachedTx.GetMetadata().IsConflicting()
+	conflicting := cachedTxMeta.GetMetadata().IsConflicting()
 
 	// check if tx is set as confirmed. Avoid passing true for conflicting tx to be backwards compatible
-	confirmed := cachedTx.GetMetadata().IsConfirmed() && !conflicting
+	confirmed := cachedTxMeta.GetMetadata().IsConfirmed() && !conflicting
 
 	if confirmed || conflicting {
 		c.JSON(http.StatusOK, GetTipInfoReturn{
@@ -89,7 +89,7 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	lsmi := tangle.GetSolidMilestoneIndex()
-	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTx.Retain(), lsmi)
+	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi)
 
 	// if the OTRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 	if (lsmi - ortsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth)) {
@@ -113,7 +113,7 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedBundle := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash()) // bundle +1
+	cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
 	if cachedBundle == nil {
 		e.Error = "unknown bundle"
 		c.JSON(http.StatusBadRequest, e)
@@ -123,8 +123,8 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	// the approvees (trunk and branch) are the tail transactions this tip approves
 	approveeHashes := map[string]struct{}{
-		string(cachedBundle.GetBundle().GetTrunk(true)):  {},
-		string(cachedBundle.GetBundle().GetBranch(true)): {},
+		string(cachedBundle.GetBundle().GetTrunkHash(true)):  {},
+		string(cachedBundle.GetBundle().GetBranchHash(true)): {},
 	}
 
 	for approveeHash := range approveeHashes {
@@ -134,15 +134,15 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
 			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
 		} else {
-			cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // tx +1
-			if cachedApproveeTx == nil {
+			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // tx +1
+			if cachedApproveeTxMeta == nil {
 				e.Error = fmt.Sprintf("approvee transaction not found: %v", hornet.Hash(approveeHash).Trytes())
 				c.JSON(http.StatusBadRequest, e)
 				return
 			}
 
-			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
-			cachedApproveeTx.Release(true)
+			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // tx +1
+			cachedApproveeTxMeta.Release(true)
 		}
 
 		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, the tip is semi-lazy and should be promoted

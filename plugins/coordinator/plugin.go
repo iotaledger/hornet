@@ -296,12 +296,12 @@ func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 }
 
 // isBelowMaxDepth checks the below max depth criteria for the given tail transaction.
-func isBelowMaxDepth(cachedTailTx *tangle.CachedTransaction) bool {
-	defer cachedTailTx.Release(true)
+func isBelowMaxDepth(cachedTailTxMeta *tangle.CachedMetadata) bool {
+	defer cachedTailTxMeta.Release(true)
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTx.Retain(), lsmi) // tx +1
+	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTxMeta.Retain(), lsmi) // tx +1
 
 	// if the OTRSI to LSMI delta is over belowMaxDepth, then the tip is invalid.
 	return (lsmi - ortsi) > belowMaxDepth
@@ -325,7 +325,7 @@ func configureEvents() {
 				return
 			}
 
-			if isBelowMaxDepth(bndl.GetTail()) {
+			if isBelowMaxDepth(bndl.GetTailMetadata()) {
 				// ignore tips that are below max depth
 				return
 			}

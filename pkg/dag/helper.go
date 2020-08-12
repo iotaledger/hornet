@@ -24,25 +24,25 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 	err := TraverseApprovees(startTxHash,
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-			defer cachedTx.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
+			defer cachedTxMeta.Release(true) // tx -1
 
-			if skipStartTx && bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+			if skipStartTx && bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
 				// skip the start tx
 				return true, nil
 			}
 
-			if cachedTx.GetTransaction().IsTail() {
+			if cachedTxMeta.GetMetadata().IsTail() {
 				// transaction is a tail, do not traverse further
-				tails[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+				tails[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 				return false, nil
 			}
 
 			return true, nil
 		},
 		// consumer
-		func(cachedTx *tangle.CachedTransaction) error { // tx +1
-			defer cachedTx.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
+			defer cachedTxMeta.Release(true) // tx -1
 			return nil
 		},
 		// called on missing approvees
@@ -58,10 +58,10 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 }
 
 // Predicate defines whether a traversal should continue or not.
-type Predicate func(cachedTx *tangle.CachedTransaction) (bool, error)
+type Predicate func(cachedTxMeta *tangle.CachedMetadata) (bool, error)
 
-// Consumer consumes the given transaction during traversal.
-type Consumer func(cachedTx *tangle.CachedTransaction) error
+// Consumer consumes the given transaction metadata during traversal.
+type Consumer func(cachedTxMeta *tangle.CachedMetadata) error
 
 // OnMissingApprovee gets called when during traversal an approvee is missing.
 type OnMissingApprovee func(approveeHash hornet.Hash) error
@@ -103,8 +103,8 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		}
 	}
 
-	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
-	if cachedTx == nil {
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // tx +1
+	if cachedTxMeta == nil {
 		// remove the transaction from the stack, trunk and branch are not traversed
 		processed[string(currentTxHash)] = struct{}{}
 		delete(checked, string(currentTxHash))
@@ -114,14 +114,14 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		return onMissingApprovee(currentTxHash)
 	}
 
-	defer cachedTx.Release(forceRelease) // tx -1
+	defer cachedTxMeta.Release(forceRelease) // tx -1
 
 	traverse, checkedBefore := checked[string(currentTxHash)]
 	if !checkedBefore {
 		var err error
 
 		// check condition to decide if tx should be consumed and traversed
-		traverse, err = condition(cachedTx.Retain()) // tx + 1
+		traverse, err = condition(cachedTxMeta.Retain()) // tx + 1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
@@ -143,18 +143,18 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 	var trunkHash, branchHash hornet.Hash
 
 	if !traverseTailsOnly {
-		trunkHash = cachedTx.GetTransaction().GetTrunkHash()
-		branchHash = cachedTx.GetTransaction().GetBranchHash()
+		trunkHash = cachedTxMeta.GetMetadata().GetTrunkHash()
+		branchHash = cachedTxMeta.GetMetadata().GetBranchHash()
 	} else {
 		// load up bundle to retrieve trunk and branch of the head tx
 		cachedBundle := tangle.GetCachedBundleOrNil(currentTxHash)
 		if cachedBundle == nil {
-			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, currentTxHash.Trytes())
+			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), currentTxHash.Trytes())
 		}
 		defer cachedBundle.Release(true)
 
-		trunkHash = cachedBundle.GetBundle().GetTrunk(true)
-		branchHash = cachedBundle.GetBundle().GetBranch(true)
+		trunkHash = cachedBundle.GetBundle().GetTrunkHash(true)
+		branchHash = cachedBundle.GetBundle().GetBranchHash(true)
 	}
 
 	approveeHashes := hornet.Hashes{trunkHash}
@@ -177,7 +177,7 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 	stack.Remove(ele)
 
 	// consume the transaction
-	if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+	if err := consumer(cachedTxMeta.Retain()); err != nil { // tx +1
 		// there was an error, stop processing the stack
 		return err
 	}
@@ -263,16 +263,16 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 	// remove the transaction from the stack
 	stack.Remove(ele)
 
-	cachedTx := tangle.GetCachedTransactionOrNil(currentTxHash) // tx +1
-	if cachedTx == nil {
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+	if cachedTxMeta == nil {
 		// there was an error, stop processing the stack
 		return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
 	}
 
-	defer cachedTx.Release(forceRelease) // tx -1
+	defer cachedTxMeta.Release(forceRelease) // tx -1
 
 	// check condition to decide if tx should be consumed and traversed
-	traverse, err := condition(cachedTx.Retain()) // tx + 1
+	traverse, err := condition(cachedTxMeta.Retain()) // tx + 1
 	if err != nil {
 		// there was an error, stop processing the stack
 		return err
@@ -284,7 +284,7 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 	}
 
 	// consume the transaction
-	if err := consumer(cachedTx.Retain()); err != nil { // tx +1
+	if err := consumer(cachedTxMeta.Retain()); err != nil { // tx +1
 		// there was an error, stop processing the stack
 		return err
 	}

@@ -73,8 +73,8 @@ func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]
 
 	txHash := confirmedTxHash
 	for len(path) > 0 {
-		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
-		if cachedTx == nil {
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // tx +1
+		if cachedTxMeta == nil {
 			return nil, fmt.Errorf("createConfirmedApproverResult: Transaction not found: %v", txHash.Trytes())
 		}
 
@@ -83,11 +83,11 @@ func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]
 
 		var nextTxHash hornet.Hash
 		if isTrunk {
-			nextTxHash = cachedTx.GetTransaction().GetTrunkHash()
+			nextTxHash = cachedTxMeta.GetMetadata().GetTrunkHash()
 		} else {
-			nextTxHash = cachedTx.GetTransaction().GetBranchHash()
+			nextTxHash = cachedTxMeta.GetMetadata().GetBranchHash()
 		}
-		cachedTx.Release(true)
+		cachedTxMeta.Release(true)
 
 		tanglePath = append(tanglePath, &ApproverStruct{TxHash: nextTxHash.Trytes(), ReferencedByTrunk: isTrunk})
 		txHash = nextTxHash
@@ -127,17 +127,17 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				return
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
+			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // tx +1
+			if cachedTxMeta == nil {
 				delete(txsToTraverse, txHash)
 				log.Warnf("searchConfirmedApprover: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 				continue
 			}
 
-			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
-			isTailTx := cachedTx.GetTransaction().IsTail()
+			confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
+			isTailTx := cachedTxMeta.GetMetadata().IsTail()
 
-			cachedTx.Release(true) // tx -1
+			cachedTxMeta.Release(true) // tx -1
 
 			if confirmed {
 				resultFound := false
@@ -178,14 +178,14 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			approverHashes := tangle.GetApproverHashes(hornet.Hash(txHash), true)
 			for _, approverHash := range approverHashes {
 
-				approverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
-				if approverTx == nil {
+				approverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // tx +1
+				if approverTxMeta == nil {
 					log.Warnf("searchConfirmedApprover: Approver not found: %v", approverHash.Trytes())
 					continue
 				}
 
-				txsToTraverse[string(approverHash)] = append(txsToTraverse[txHash], bytes.Equal(approverTx.GetTransaction().GetTrunkHash(), hornet.Hash(txHash)))
-				approverTx.Release(true) // tx -1
+				txsToTraverse[string(approverHash)] = append(txsToTraverse[txHash], bytes.Equal(approverTxMeta.GetMetadata().GetTrunkHash(), hornet.Hash(txHash)))
+				approverTxMeta.Release(true) // tx -1
 			}
 
 			delete(txsToTraverse, txHash)
@@ -213,26 +213,26 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedStartTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(query.TxHash)) // tx +1
-	if cachedStartTx == nil {
+	cachedStartTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TxHash)) // tx +1
+	if cachedStartTxMeta == nil {
 		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
-	_, startTxConfirmedAt := cachedStartTx.GetMetadata().GetConfirmed()
-	defer cachedStartTx.Release(true)
+	_, startTxConfirmedAt := cachedStartTxMeta.GetMetadata().GetConfirmed()
+	defer cachedStartTxMeta.Release(true)
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 
-	dag.TraverseApprovees(cachedStartTx.GetTransaction().GetTxHash(),
+	dag.TraverseApprovees(cachedStartTxMeta.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-			defer cachedTx.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
+			defer cachedTxMeta.Release(true) // tx -1
 
-			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
 				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
-					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTx.GetTransaction().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: at})
+					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTxMeta.GetMetadata().GetTxHash().Trytes(), ConfirmedByMilestoneIndex: at})
 					return false, nil
 				}
 			}
@@ -240,14 +240,14 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return true, nil
 		},
 		// consumer
-		func(cachedTx *tangle.CachedTransaction) error { // tx +1
-			defer cachedTx.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
+			defer cachedTxMeta.Release(true) // tx -1
 
 			result.TanglePath = append(result.TanglePath,
 				&TransactionWithApprovers{
-					TxHash:            cachedTx.GetTransaction().GetTxHash().Trytes(),
-					TrunkTransaction:  cachedTx.GetTransaction().GetTrunkHash().Trytes(),
-					BranchTransaction: cachedTx.GetTransaction().GetBranchHash().Trytes(),
+					TxHash:            cachedTxMeta.GetMetadata().GetTxHash().Trytes(),
+					TrunkTransaction:  cachedTxMeta.GetMetadata().GetTrunkHash().Trytes(),
+					BranchTransaction: cachedTxMeta.GetMetadata().GetBranchHash().Trytes(),
 				},
 			)
 			return nil

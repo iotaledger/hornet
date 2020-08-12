@@ -55,16 +55,16 @@ func (bundle *Bundle) GetBundleHash() hornet.Hash {
 	return bundle.hash
 }
 
-func (bundle *Bundle) GetTrunk(forceRelease bool) hornet.Hash {
-	cachedHeadTx := bundle.GetHead()         // tx +1
-	defer cachedHeadTx.Release(forceRelease) // tx -1
-	return cachedHeadTx.GetTransaction().GetTrunkHash()
+func (bundle *Bundle) GetTrunkHash(forceRelease bool) hornet.Hash {
+	cachedHeadTxMeta := bundle.GetHeadMetadata() // tx +1
+	defer cachedHeadTxMeta.Release(forceRelease) // tx -1
+	return cachedHeadTxMeta.GetMetadata().GetTrunkHash()
 }
 
-func (bundle *Bundle) GetBranch(forceRelease bool) hornet.Hash {
-	cachedHeadTx := bundle.GetHead()         // tx +1
-	defer cachedHeadTx.Release(forceRelease) // tx -1
-	return cachedHeadTx.GetTransaction().GetBranchHash()
+func (bundle *Bundle) GetBranchHash(forceRelease bool) hornet.Hash {
+	cachedHeadTxMeta := bundle.GetHeadMetadata() // tx +1
+	defer cachedHeadTxMeta.Release(forceRelease) // tx -1
+	return cachedHeadTxMeta.GetMetadata().GetBranchHash()
 }
 
 func (bundle *Bundle) GetLedgerChanges() map[string]int64 {
@@ -77,6 +77,14 @@ func (bundle *Bundle) GetHead() *CachedTransaction {
 	}
 
 	return loadBundleTxIfExistsOrPanic(bundle.headTx, bundle.hash) // tx +1
+}
+
+func (bundle *Bundle) GetHeadMetadata() *CachedMetadata {
+	if len(bundle.headTx) == 0 {
+		panic("tail hash can never be empty")
+	}
+
+	return loadBundleTxMetaIfExistsOrPanic(bundle.headTx, bundle.hash) // tx +1
 }
 
 func (bundle *Bundle) GetTailHash() hornet.Hash {
@@ -93,6 +101,14 @@ func (bundle *Bundle) GetTail() *CachedTransaction {
 	}
 
 	return loadBundleTxIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
+}
+
+func (bundle *Bundle) GetTailMetadata() *CachedMetadata {
+	if len(bundle.tailTx) == 0 {
+		panic("tail hash can never be empty")
+	}
+
+	return loadBundleTxMetaIfExistsOrPanic(bundle.tailTx, bundle.hash) // tx +1
 }
 
 func (bundle *Bundle) GetTxHashes() hornet.Hashes {
@@ -132,9 +148,9 @@ func (bundle *Bundle) IsSolid() bool {
 	}
 
 	// Check tail tx
-	cachedTailTx := bundle.GetTail() // tx +1
-	tailSolid := cachedTailTx.GetMetadata().IsSolid()
-	cachedTailTx.Release(true) // tx -1
+	cachedTailTxMeta := bundle.GetTailMetadata() // tx +1
+	tailSolid := cachedTailTxMeta.GetMetadata().IsSolid()
+	cachedTailTxMeta.Release(true) // tx -1
 
 	if tailSolid {
 		bundle.setSolid(true)
@@ -179,9 +195,9 @@ func (bundle *Bundle) IsConfirmed() bool {
 	}
 
 	// Check tail tx
-	cachedTailTx := bundle.GetTail() // tx +1
-	defer cachedTailTx.Release(true) // tx -1
-	tailConfirmed := cachedTailTx.GetMetadata().IsConfirmed()
+	cachedTailTxMeta := bundle.GetTailMetadata() // tx +1
+	defer cachedTailTxMeta.Release(true)         // tx -1
+	tailConfirmed := cachedTailTxMeta.GetMetadata().IsConfirmed()
 
 	if tailConfirmed {
 		bundle.setConfirmed(true)
@@ -215,9 +231,9 @@ func (bundle *Bundle) IsConflicting() bool {
 	}
 
 	// Check tail tx
-	cachedTailTx := bundle.GetTail() // tx +1
-	defer cachedTailTx.Release(true) // tx -1
-	tailConflicting := cachedTailTx.GetMetadata().IsConflicting()
+	cachedTailTxMeta := bundle.GetTailMetadata() // tx +1
+	defer cachedTailTxMeta.Release(true)         // tx -1
+	tailConflicting := cachedTailTxMeta.GetMetadata().IsConflicting()
 
 	if tailConflicting {
 		bundle.setConflicting(true)
@@ -327,17 +343,17 @@ func (bundle *Bundle) validate() bool {
 			if SolidEntryPointsContain(approveeHash) {
 				continue
 			}
-			cachedApproveeTx := GetCachedTransactionOrNil(approveeHash) // tx +1
-			if cachedApproveeTx == nil {
+			cachedApproveeTxMeta := GetCachedTxMetadataOrNil(approveeHash) // tx +1
+			if cachedApproveeTxMeta == nil {
 				log.Panicf("Tx with hash %v not found", approveeHash.Trytes())
 			}
 
-			if !cachedApproveeTx.GetTransaction().IsTail() {
+			if !cachedApproveeTxMeta.GetMetadata().IsTail() {
 				validStrictSemantics = false
-				cachedApproveeTx.Release(true) // tx -1
+				cachedApproveeTxMeta.Release(true) // tx -1
 				break
 			}
-			cachedApproveeTx.Release(true) // tx -1
+			cachedApproveeTxMeta.Release(true) // tx -1
 		}
 	}
 
@@ -378,4 +394,12 @@ func loadBundleTxIfExistsOrPanic(txHash hornet.Hash, bundleHash hornet.Hash) *Ca
 		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash.Trytes(), txHash.Trytes())
 	}
 	return cachedTx
+}
+
+func loadBundleTxMetaIfExistsOrPanic(txHash hornet.Hash, bundleHash hornet.Hash) *CachedMetadata {
+	cachedTxMeta := GetCachedTxMetadataOrNil(txHash) // tx +1
+	if cachedTxMeta == nil {
+		log.Panicf("bundle %s has a reference to a non persisted transaction: %s", bundleHash.Trytes(), txHash.Trytes())
+	}
+	return cachedTxMeta
 }

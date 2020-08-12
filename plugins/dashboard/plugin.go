@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -175,16 +176,14 @@ func run(_ *node.Plugin) {
 	runSpammerMetricWorker()
 }
 
-// tx +1
-func getMilestoneTail(index milestone.Index) *tangle.CachedTransaction {
+func getMilestoneTailHash(index milestone.Index) hornet.Hash {
 	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
 	if cachedMs == nil {
 		return nil
 	}
-
 	defer cachedMs.Release(true) // bundle -1
 
-	return cachedMs.GetBundle().GetTail() // tx +1
+	return cachedMs.GetBundle().GetTailHash()
 }
 
 const (

@@ -105,16 +105,16 @@ func storeBundle(t *testing.T, bndl bundle.Bundle, expectMilestone bool) *tangle
 	var tailTx hornet.Hash
 	// Solidify tx if not a milestone
 	for _, hash := range hashes {
-		cachedTx := tangle.GetCachedTransactionOrNil(hash)
-		require.NotNil(t, cachedTx)
-		if cachedTx.GetTransaction().IsTail() {
-			tailTx = cachedTx.GetTransaction().GetTxHash()
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hash)
+		require.NotNil(t, cachedTxMeta)
+		if cachedTxMeta.GetMetadata().IsTail() {
+			tailTx = cachedTxMeta.GetMetadata().GetTxHash()
 		}
 		if !expectMilestone {
-			cachedTx.GetMetadata().SetSolid(true)
+			cachedTxMeta.GetMetadata().SetSolid(true)
 		}
 
-		cachedTx.Release()
+		cachedTxMeta.Release()
 	}
 
 	// Trigger bundle construction due to solid tail
@@ -301,7 +301,7 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 	ms := tangle.GetMilestoneOrNil(1)
 	require.NotNil(t, ms)
 
-	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(t, err)
@@ -341,7 +341,7 @@ func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bo
 	require.NotNil(t, ms)
 
 	var wfConf *whiteflag.Confirmation
-	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
 		wfConf = confirmation
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
@@ -464,12 +464,12 @@ func generateDotFileFromTangle(t *testing.T, conf *whiteflag.Confirmation) strin
 
 	bundleTxs := tangle.GetAllBundleTransactionHashes(100)
 	for _, hash := range bundleTxs {
-		cachedTx := tangle.GetCachedTransactionOrNil(hash)
-		if _, visited := visitedBundles[string(cachedTx.GetTransaction().GetBundleHash())]; visited == false {
-			bndls := tangle.GetBundlesOfTransactionOrNil(cachedTx.GetTransaction().GetTxHash(), false)
-			visitedBundles[string(cachedTx.GetTransaction().GetBundleHash())] = bndls
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hash)
+		if _, visited := visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())]; visited == false {
+			bndls := tangle.GetBundlesOfTransactionOrNil(cachedTxMeta.GetMetadata().GetTxHash(), false)
+			visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())] = bndls
 		}
-		cachedTx.Release(true)
+		cachedTxMeta.Release(true)
 	}
 
 	var milestones []string
@@ -488,9 +488,7 @@ func generateDotFileFromTangle(t *testing.T, conf *whiteflag.Confirmation) strin
 				dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortBundle, index, shortBundle)
 			}
 
-			bundleHead := bndl.GetBundle().GetHead()
-			//if singleBundle {
-			trunk := bndl.GetBundle().GetTrunk(true)
+			trunk := bndl.GetBundle().GetTrunkHash(true)
 			if tangle.SolidEntryPointsContain(trunk) {
 				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Trunk\" ];\n", shortBundle, shortenedHash(trunk))
 			} else {
@@ -499,7 +497,7 @@ func generateDotFileFromTangle(t *testing.T, conf *whiteflag.Confirmation) strin
 				trunkBundles.Release()
 			}
 
-			branch := bndl.GetBundle().GetBranch(true)
+			branch := bndl.GetBundle().GetBranchHash(true)
 			if tangle.SolidEntryPointsContain(branch) {
 				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Branch\" ];\n", shortBundle, shortenedHash(branch))
 			} else {
@@ -522,8 +520,6 @@ func generateDotFileFromTangle(t *testing.T, conf *whiteflag.Confirmation) strin
 					included = append(included, shortBundle)
 				}
 			}
-
-			bundleHead.Release()
 		}
 		bndls.Release()
 	}

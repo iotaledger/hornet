@@ -26,7 +26,7 @@ type ConfirmedMilestoneStats struct {
 
 // ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(tx *tangle.CachedTransaction, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 	defer cachedMsBundle.Release()
 	msBundle := cachedMsBundle.GetBundle()
 
@@ -63,9 +63,9 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	}
 
 	cachedMsTailTx := msBundle.GetTail()
+	defer cachedMsTailTx.Release(true)
 
-	cachedTxs := make(map[string]*tangle.CachedTransaction)
-	cachedTxs[string(cachedMsTailTx.GetTransaction().GetTxHash())] = cachedMsTailTx
+	cachedTxsMeta := make(map[string]*tangle.CachedMetadata)
 	cachedBundles := make(map[string]*tangle.CachedBundle)
 
 	defer func() {
@@ -77,21 +77,21 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 		}
 
 		// Release all txs at the end
-		for _, cachedTx := range cachedTxs {
+		for _, cachedTx := range cachedTxsMeta {
 			cachedTx.Release(true) // tx -1
 		}
 	}()
 
-	loadTx := func(txHash hornet.Hash) (*tangle.CachedTransaction, error) {
-		cachedTx, exists := cachedTxs[string(txHash)]
+	loadTxMeta := func(txHash hornet.Hash) (*tangle.CachedMetadata, error) {
+		cachedTxMeta, exists := cachedTxsMeta[string(txHash)]
 		if !exists {
-			cachedTx = tangle.GetCachedTransactionOrNil(txHash) // tx +1
-			if cachedTx == nil {
+			cachedTxMeta = tangle.GetCachedTxMetadataOrNil(txHash) // tx +1
+			if cachedTxMeta == nil {
 				return nil, fmt.Errorf("confirmMilestone: Transaction not found: %v", txHash.Trytes())
 			}
-			cachedTxs[string(txHash)] = cachedTx
+			cachedTxsMeta[string(txHash)] = cachedTxMeta
 		}
-		return cachedTx, nil
+		return cachedTxMeta, nil
 	}
 
 	loadBundle := func(txHash hornet.Hash) (*tangle.CachedBundle, error) {
@@ -107,14 +107,14 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	}
 
 	// load the bundle for the given tail tx and iterate over each tx in the bundle
-	forEachBundleTxWithTailTxHash := func(txHash hornet.Hash, do func(tx *tangle.CachedTransaction)) error {
+	forEachBundleTxMetaWithTailTxHash := func(txHash hornet.Hash, do func(tx *tangle.CachedMetadata)) error {
 		bundle, err := loadBundle(txHash)
 		if err != nil {
 			return err
 		}
 		bundleTxHashes := bundle.GetBundle().GetTxHashes()
 		for _, bundleTxHash := range bundleTxHashes {
-			cachedBundleTx, err := loadTx(bundleTxHash)
+			cachedBundleTx, err := loadTxMeta(bundleTxHash)
 			if err != nil {
 				return err
 			}
@@ -131,15 +131,15 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 
 	// confirm all txs of the included tails
 	for _, txHash := range mutations.TailsIncluded {
-		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
-			if !tx.GetMetadata().IsConfirmed() {
-				tx.GetMetadata().SetConfirmed(true, milestoneIndex)
-				tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+		if err := forEachBundleTxMetaWithTailTxHash(txHash, func(txMeta *tangle.CachedMetadata) {
+			if !txMeta.GetMetadata().IsConfirmed() {
+				txMeta.GetMetadata().SetConfirmed(true, milestoneIndex)
+				txMeta.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.TxsConfirmed++
 				conf.TxsValue++
 				metrics.SharedServerMetrics.ValueTransactions.Inc()
 				metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-				forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+				forEachConfirmedTx(txMeta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
 			return nil, err
@@ -148,15 +148,15 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 
 	// confirm all txs of the zero value tails
 	for _, txHash := range mutations.TailsExcludedZeroValue {
-		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
-			if !tx.GetMetadata().IsConfirmed() {
-				tx.GetMetadata().SetConfirmed(true, milestoneIndex)
-				tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+		if err := forEachBundleTxMetaWithTailTxHash(txHash, func(txMeta *tangle.CachedMetadata) {
+			if !txMeta.GetMetadata().IsConfirmed() {
+				txMeta.GetMetadata().SetConfirmed(true, milestoneIndex)
+				txMeta.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.TxsConfirmed++
 				conf.TxsZeroValue++
 				metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
 				metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-				forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+				forEachConfirmedTx(txMeta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
 			return nil, err
@@ -165,16 +165,16 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 
 	// confirm all conflicting txs of the conflicting tails
 	for _, txHash := range mutations.TailsExcludedConflicting {
-		if err := forEachBundleTxWithTailTxHash(txHash, func(tx *tangle.CachedTransaction) {
-			tx.GetMetadata().SetConflicting(true)
-			if !tx.GetMetadata().IsConfirmed() {
-				tx.GetMetadata().SetConfirmed(true, milestoneIndex)
-				tx.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+		if err := forEachBundleTxMetaWithTailTxHash(txHash, func(txMeta *tangle.CachedMetadata) {
+			txMeta.GetMetadata().SetConflicting(true)
+			if !txMeta.GetMetadata().IsConfirmed() {
+				txMeta.GetMetadata().SetConfirmed(true, milestoneIndex)
+				txMeta.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.TxsConfirmed++
 				conf.TxsConflicting++
 				metrics.SharedServerMetrics.ConflictingTransactions.Inc()
 				metrics.SharedServerMetrics.ConfirmedTransactions.Inc()
-				forEachConfirmedTx(tx, milestoneIndex, confirmationTime)
+				forEachConfirmedTx(txMeta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
 			return nil, err

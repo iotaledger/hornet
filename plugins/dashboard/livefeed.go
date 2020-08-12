@@ -31,9 +31,8 @@ func configureLiveFeed() {
 				hub.BroadcastMsg(&msg{MsgTypeTxValue, &tx{x.Hash, x.Value}})
 			}
 		case milestone.Index:
-			if cachedTailTx := getMilestoneTail(x); cachedTailTx != nil { // tx +1
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedTailTx.GetTransaction().Tx.Hash, x}})
-				cachedTailTx.Release(true) // tx -1
+			if msTailTxHash := getMilestoneTailHash(x); msTailTxHash != nil {
+				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
 			}
 		}
 		task.Return(nil)

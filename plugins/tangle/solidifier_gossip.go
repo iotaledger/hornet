@@ -12,41 +12,41 @@ const (
 )
 
 // Checks and updates the solid flag of a transaction and its approvers (future cone).
-func checkSolidityAndPropagate(cachedTx *tangle.CachedTransaction) {
+func checkSolidityAndPropagate(cachedTxMeta *tangle.CachedMetadata) {
 
-	txsToCheck := make(map[string]*tangle.CachedTransaction)
-	txsToCheck[string(cachedTx.GetTransaction().GetTxHash())] = cachedTx
+	txsMetaToCheck := make(map[string]*tangle.CachedMetadata)
+	txsMetaToCheck[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta
 
 	// Loop as long as new transactions are added in every loop cycle
-	for len(txsToCheck) != 0 {
-		for txHash, cachedTxToCheck := range txsToCheck {
-			delete(txsToCheck, txHash)
+	for len(txsMetaToCheck) != 0 {
+		for txHash, cachedTxMetaToCheck := range txsMetaToCheck {
+			delete(txsMetaToCheck, txHash)
 
-			_, newlySolid := checkSolidity(cachedTxToCheck.Retain())
+			_, newlySolid := checkSolidity(cachedTxMetaToCheck.Retain())
 			if newlySolid {
-				if int32(time.Now().Unix())-cachedTxToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
+				if int32(time.Now().Unix())-cachedTxMetaToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions and force release them
-					cachedTxToCheck.Release(true) // tx -1
+					cachedTxMetaToCheck.Release(true) // tx -1
 					continue
 				}
 
 				for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), true) {
-					cachedApproverTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
-					if cachedApproverTx == nil {
+					cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // tx +1
+					if cachedApproverTxMeta == nil {
 						continue
 					}
 
-					if _, found := txsToCheck[string(approverHash)]; found {
+					if _, found := txsMetaToCheck[string(approverHash)]; found {
 						// Do no force release here, otherwise cacheTime for new Tx could be ignored
-						cachedApproverTx.Release() // tx -1
+						cachedApproverTxMeta.Release() // tx -1
 						continue
 					}
 
-					txsToCheck[string(approverHash)] = cachedApproverTx
+					txsMetaToCheck[string(approverHash)] = cachedApproverTxMeta
 				}
 			}
 			// Do no force release here, otherwise cacheTime for new Tx could be ignored
-			cachedTxToCheck.Release() // tx -1
+			cachedTxMetaToCheck.Release() // tx -1
 		}
 	}
 }
