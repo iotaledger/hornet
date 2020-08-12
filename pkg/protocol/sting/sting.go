@@ -17,11 +17,11 @@ var (
 	ErrInvalidSourceLength = errors.New("invalid source byte slice")
 )
 
-// FeatureSet denotes the version bit for STING+Whiteflag support.
+// FeatureSet denotes the version bit for Chrysalis-Pt1 support.
 const FeatureSet = 1 << 2
 
-// FeatureSetName is the name of the STING feature set.
-const FeatureSetName = "STING+Whiteflag"
+// FeatureSetName is the name of the feature set.
+const FeatureSetName = "Chrysalis-Pt1"
 
 func init() {
 	if err := message.RegisterType(MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition); err != nil {
