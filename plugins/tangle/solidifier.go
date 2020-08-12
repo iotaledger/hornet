@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 
@@ -219,7 +220,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		log.Panic(err)
 	}
 
-	tc := time.Now()
+	tCollect := time.Now()
 
 	if len(txsToRequest) > 0 {
 		var txHashes hornet.Hashes
@@ -227,7 +228,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 			txHashes = append(txHashes, hornet.Hash(txHash))
 		}
 		gossip.RequestMultiple(txHashes, milestoneIndex, true)
-		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d), collect: %v", len(txHashes), tc.Sub(ts).Truncate(time.Millisecond))
+		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d), collect: %v", len(txHashes), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
 
@@ -241,6 +242,8 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 
 		markTransactionAsSolid(cachedTx.Retain())
 	}
+
+	tSolid := time.Now()
 
 	if tangle.IsNodeSyncedWithThreshold() {
 		// propagate solidity to the future cone (txs attached to the txs of this milestone)
@@ -269,7 +272,7 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTx *tangle.Cach
 		}
 	}
 
-	log.Infof("Solidifier finished: txs: %d, collect: %v, total: %v", txsChecked, tc.Sub(ts).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
+	log.Infof("Solidifier finished: txs: %d, collect: %v, solidity %v, propagation: %v, total: %v", txsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
 	return true, false
 }
 
@@ -427,6 +430,11 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
+
+	if daemon.IsStopped() {
+		// do not trigger the next solidification if the node was shut down
+		return
+	}
 
 	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
 }
