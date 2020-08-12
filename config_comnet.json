@@ -53,7 +53,6 @@
       "intervalUnsynced": 1000,
       "path": "snapshots/comnet/export.bin",
       "downloadURLs": [
-        "https://ls.tanglebay.org/comnet/export.bin",
         "https://ls.manapotion.io/comnet/export.bin"
       ]
     },
