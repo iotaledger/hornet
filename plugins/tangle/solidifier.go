@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 
@@ -429,6 +430,11 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
+
+	if daemon.IsStopped() {
+		// do not trigger the next solidification if the node was shut down
+		return
+	}
 
 	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
 }
