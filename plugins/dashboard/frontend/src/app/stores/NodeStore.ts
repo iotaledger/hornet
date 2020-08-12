@@ -493,7 +493,7 @@ export class NodeStore {
                 this.registerMainTopics();
             },
             () => this.reconnect(),
-            () => this.reconnect());
+            () => this.updateWebSocketConnected(false));
     }
 
     disconnect() {

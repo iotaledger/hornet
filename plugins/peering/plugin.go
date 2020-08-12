@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -177,4 +178,32 @@ func run(_ *node.Plugin) {
 		}
 	}, shutdown.PriorityPeerReconnecter)
 
+	// create a background worker that checks for staled autopeers every minute
+	daemon.BackgroundWorker("Peering StaleCheck", func(shutdownSignal <-chan struct{}) {
+
+		checkStaledPeers := func() {
+			peerIDsToRemove := make(map[string]struct{})
+
+			Manager().ForAllConnected(func(p *peer.Peer) bool {
+				staled, droppedPercentage := p.CheckStaledAutopeer(config.NodeConfig.GetInt(config.CfgNetAutopeeringMaxDroppedPacketsPercentage))
+				if !staled {
+					// peer is healthy
+					return true
+				}
+
+				// peer is connected via autopeering and is staled.
+				// it's better to drop the connection and free the slots for other peers.
+				peerIDsToRemove[p.ID] = struct{}{}
+
+				log.Infof("dropping autopeered neighbor %s / %s because %0.2f%% of the messages in the last minute were dropped", p.Autopeering.Address(), p.Autopeering.ID(), droppedPercentage)
+				return true
+			})
+
+			for peerIDToRemove := range peerIDsToRemove {
+				Manager().Remove(peerIDToRemove)
+			}
+		}
+
+		timeutil.Ticker(checkStaledPeers, 60*time.Second, shutdownSignal)
+	}, shutdown.PriorityPeerReconnecter)
 }

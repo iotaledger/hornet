@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc10] - 12.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - checkConsistency webapi call for compatibility reasons
+    - getTipInfo webapi call to signal if transactions need to be promoted or reattached
+    - Remove stale autopeers if dropped packages exceed a defined percentage of total packets
+
+### Changed
+
+    - Remove unused defaults from config.json
+
+### Fixed
+
+    - Dashboard misc page not shown if spammer activated
+    - Dashboard websocket reconnected too often
+    - Panic in URTS UpdateScores if the node was unsync for a longer time
+
 ## [0.5.0-rc9] - 11.08.2020
 
 **Breaking change:**

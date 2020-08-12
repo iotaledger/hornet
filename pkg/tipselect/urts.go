@@ -270,7 +270,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 		return nil, ErrNoTipsAvailable
 	}
 
-	// get a random number between 1 and the amount of tips
+	// get a random number between 0 and the amount of tips-1
 	randTip := utils.RandomInsecure(0, len(tipsMap)-1)
 
 	// iterate over the tipsMap and subtract each tip from randTip
@@ -456,7 +456,9 @@ func (ts *TipSelector) UpdateScores() int {
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
 	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
 	if cachedTx == nil {
-		panic(fmt.Errorf("%w: %v", tangle.ErrTransactionNotFound, txHash.Trytes()))
+		// we need to return lazy instead of panic here, because the transaction could have been pruned already
+		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
+		return ScoreLazy
 	}
 	defer cachedTx.Release(true)
 

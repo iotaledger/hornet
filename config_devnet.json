@@ -11,6 +11,8 @@
     "permitRemoteAccess": [
       "getNodeInfo",
       "getBalances",
+      "checkConsistency",
+      "getTipInfo",
       "getTransactionsToApprove",
       "getInclusionStates",
       "getNodeAPIConfiguration",
@@ -99,7 +101,8 @@
       "entryNodes": [
         "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637"
       ],
-      "seed": ""
+      "seed": "",
+      "maxDroppedPacketsPercentage": 30
     }
   },
   "tipsel": {
