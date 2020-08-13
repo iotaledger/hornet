@@ -161,20 +161,16 @@ func checkSolidity(cachedTxMeta *tangle.CachedMetadata) (solid bool, newlySolid 
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
-func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.CachedMetadata, abortSignal chan struct{}) (solid bool, aborted bool) {
+// all cachedTxMetas have to be released outside.
+func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.CachedMetadata, abortSignal chan struct{}) (solid bool, aborted bool) {
+	defer cachedMsTailTxMeta.Release(true)
 
 	ts := time.Now()
 
-	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
-	cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetTxHash())] = cachedMsTailTxMeta
-
-	defer func() {
-		// release all txs at the end
-		for _, cachedTx := range cachedTxMetas {
-			// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
-			cachedTx.Release(true) // tx -1
-		}
-	}()
+	if _, exists := cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetTxHash())]; !exists {
+		// release the transactions at the end to speed up calculation
+		cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetTxHash())] = cachedMsTailTxMeta.Retain()
+	}
 
 	txsChecked := 0
 	var txsToSolidify hornet.Hashes
@@ -186,6 +182,11 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.
 		// Caution: condition func is not in DFS order
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
 			defer cachedTxMeta.Release(true) // tx -1
+
+			if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
+				// release the tx metadata at the end to speed up calculation
+				cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
+			}
 
 			// if the tx is solid, there is no need to traverse its approvees
 			return !cachedTxMeta.GetMetadata().IsSolid(), nil
@@ -199,12 +200,6 @@ func solidQueueCheck(milestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.
 
 			// collect the txToSolidify in an ordered way
 			txsToSolidify = append(txsToSolidify, cachedTxMeta.GetMetadata().GetTxHash())
-
-			_, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]
-			if !exists {
-				// release the transactions at the end of the function to speed up solidification
-				cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
-			}
 
 			return nil
 		},
@@ -361,8 +356,18 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	signalChanMilestoneStopSolidification = make(chan struct{})
 	signalChanMilestoneStopSolidificationLock.Unlock()
 
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+
+	defer func() {
+		// release all txs at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
+			cachedTxMeta.Release(true) // tx -1
+		}
+	}()
+
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := solidQueueCheck(milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
+	if becameSolid, aborted := solidQueueCheck(cachedTxMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -391,7 +396,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		return
 	}
 
-	conf, err := whiteflag.ConfirmMilestone(cachedMsToSolidify.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {
+	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, cachedMsToSolidify.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {
 		Events.TransactionConfirmed.Trigger(txMeta, index, confTime)
 	}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)

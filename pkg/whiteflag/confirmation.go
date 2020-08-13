@@ -26,9 +26,26 @@ type ConfirmedMilestoneStats struct {
 
 // ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
-	defer cachedMsBundle.Release()
+// all cachedTxMetas have to be released outside.
+func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+	defer cachedMsBundle.Release(true)
 	msBundle := cachedMsBundle.GetBundle()
+
+	cachedBundles := make(map[string]*tangle.CachedBundle)
+
+	defer func() {
+		// All releases are forced since the cone is confirmed and not needed anymore
+
+		// Release all bundles at the end
+		for _, cachedBundle := range cachedBundles {
+			cachedBundle.Release(true) // bundle -1
+		}
+	}()
+
+	if _, exists := cachedBundles[string(cachedMsBundle.GetBundle().GetTailHash())]; !exists {
+		// release the bundles at the end to speed up calculation
+		cachedBundles[string(cachedMsBundle.GetBundle().GetTailHash())] = cachedMsBundle.Retain()
+	}
 
 	tangle.WriteLockLedger()
 	defer tangle.WriteUnlockLedger()
@@ -37,7 +54,7 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 
 	ts := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(tangle.GetMilestoneMerkleHashFunc(), msBundle.GetTailHash())
+	mutations, err := ComputeWhiteFlagMutations(cachedTxMetas, cachedBundles, tangle.GetMilestoneMerkleHashFunc(), msBundle.GetTailHash())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
@@ -65,31 +82,14 @@ func ConfirmMilestone(cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx fu
 	cachedMsTailTx := msBundle.GetTail()
 	defer cachedMsTailTx.Release(true)
 
-	cachedTxsMeta := make(map[string]*tangle.CachedMetadata)
-	cachedBundles := make(map[string]*tangle.CachedBundle)
-
-	defer func() {
-		// All releases are forced since the cone is confirmed and not needed anymore
-
-		// Release all bundles at the end
-		for _, cachedBundle := range cachedBundles {
-			cachedBundle.Release(true) // bundle -1
-		}
-
-		// Release all txs at the end
-		for _, cachedTx := range cachedTxsMeta {
-			cachedTx.Release(true) // tx -1
-		}
-	}()
-
 	loadTxMeta := func(txHash hornet.Hash) (*tangle.CachedMetadata, error) {
-		cachedTxMeta, exists := cachedTxsMeta[string(txHash)]
+		cachedTxMeta, exists := cachedTxMetas[string(txHash)]
 		if !exists {
 			cachedTxMeta = tangle.GetCachedTxMetadataOrNil(txHash) // tx +1
 			if cachedTxMeta == nil {
 				return nil, fmt.Errorf("confirmMilestone: Transaction not found: %v", txHash.Trytes())
 			}
-			cachedTxsMeta[string(txHash)] = cachedTxMeta
+			cachedTxMetas[string(txHash)] = cachedTxMeta
 		}
 		return cachedTxMeta, nil
 	}

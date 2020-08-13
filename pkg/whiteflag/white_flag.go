@@ -55,7 +55,8 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
+// all cachedTxMetas and cachedBundles have to be released outside.
+func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedBundle, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
@@ -70,16 +71,25 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
 		defer cachedTxMeta.Release(true) // tx -1
 
+		if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
+			// release the tx metadata at the end to speed up calculation
+			cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
+		}
+
 		if !cachedTxMeta.GetMetadata().IsTail() {
 			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
 		}
 
 		// load up bundle
-		cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash())
-		if cachedBundle == nil {
-			return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+		cachedBundle, exists := cachedBundles[string(cachedTxMeta.GetMetadata().GetTxHash())]
+		if !exists {
+			cachedBundle = tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
+			if cachedBundle == nil {
+				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			}
+			// release the bundles at the end to speed up calculation
+			cachedBundles[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedBundle
 		}
-		defer cachedBundle.Release(true)
 
 		// check validty and correct strict semantics
 		if !cachedBundle.GetBundle().IsValid() || !cachedBundle.GetBundle().ValidStrictSemantics() {

@@ -154,7 +154,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		}
 
 		if latestMilestoneFromDatabase != startIndex-1 {
-			return fmt.Errorf("previous milestone does not match latest milestone in database: %d != %d", startIndex-1, latestMilestoneFromDatabase)
+			return fmt.Errorf("previous milestone does not match latest milestone in database! previous: %d, database: %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
 		if startIndex == 1 {
@@ -195,7 +195,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 	}
 
 	if latestMilestoneFromDatabase != coo.state.LatestMilestoneIndex {
-		return fmt.Errorf("previous milestone does not match latest milestone in database: %d != %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
+		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
 	cachedBndl := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
@@ -211,8 +211,25 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedBundles := make(map[string]*tangle.CachedBundle)
+
+	defer func() {
+		// All releases are forced since the cone is confirmed and not needed anymore
+
+		// Release all bundles at the end
+		for _, cachedBundle := range cachedBundles {
+			cachedBundle.Release(true) // bundle -1
+		}
+
+		// Release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			cachedTxMeta.Release(true) // tx -1
+		}
+	}()
+
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedTxMetas, cachedBundles, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
 	if err != nil {
 		return err
 	}
