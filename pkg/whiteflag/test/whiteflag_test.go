@@ -301,7 +301,18 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 	ms := tangle.GetMilestoneOrNil(1)
 	require.NotNil(t, ms)
 
-	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+
+	defer func() {
+		// All releases are forced since the cone is confirmed and not needed anymore
+
+		// Release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			cachedTxMeta.Release(true) // tx -1
+		}
+	}()
+
+	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(t, err)
@@ -341,7 +352,19 @@ func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bo
 	require.NotNil(t, ms)
 
 	var wfConf *whiteflag.Confirmation
-	conf, err := whiteflag.ConfirmMilestone(ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+
+	defer func() {
+		// All releases are forced since the cone is confirmed and not needed anymore
+
+		// Release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			cachedTxMeta.Release(true) // tx -1
+		}
+	}()
+
+	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
 		wfConf = confirmation
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
