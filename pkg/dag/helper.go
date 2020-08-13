@@ -52,7 +52,7 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 		// called on solid entry points
 		func(approveeHash hornet.Hash) {
 			// Ignore solid entry points (snapshot milestone included)
-		}, true, false, false, nil)
+		}, forceRelease, false, false, nil)
 
 	return tails, err
 }
@@ -71,7 +71,7 @@ type OnSolidEntryPoint func(txHash hornet.Hash)
 
 // processStackApprovees checks if the current element in the stack must be processed or traversed.
 // first the trunk is traversed, then the branch.
-func processStackApprovees(stack *list.List, processed map[string]struct{}, checked map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
+func processStackApprovees(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedBundle, stack *list.List, processed map[string]struct{}, checked map[string]bool, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
 	select {
 	case <-abortSignal:
@@ -103,18 +103,20 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		}
 	}
 
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
-	if cachedTxMeta == nil {
-		// remove the transaction from the stack, trunk and branch are not traversed
-		processed[string(currentTxHash)] = struct{}{}
-		delete(checked, string(currentTxHash))
-		stack.Remove(ele)
+	cachedTxMeta, exists := cachedTxMetas[string(currentTxHash)]
+	if !exists {
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+		if cachedTxMeta == nil {
+			// remove the transaction from the stack, trunk and branch are not traversed
+			processed[string(currentTxHash)] = struct{}{}
+			delete(checked, string(currentTxHash))
+			stack.Remove(ele)
 
-		// stop processing the stack if the caller returns an error
-		return onMissingApprovee(currentTxHash)
+			// stop processing the stack if the caller returns an error
+			return onMissingApprovee(currentTxHash)
+		}
+		cachedTxMetas[string(currentTxHash)] = cachedTxMeta
 	}
-
-	defer cachedTxMeta.Release(forceRelease) // meta -1
 
 	traverse, checkedBefore := checked[string(currentTxHash)]
 	if !checkedBefore {
@@ -147,12 +149,15 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		branchHash = cachedTxMeta.GetMetadata().GetBranchHash()
 	} else {
 		// load up bundle to retrieve trunk and branch of the head tx
-		cachedBundle := tangle.GetCachedBundleOrNil(currentTxHash)
-		if cachedBundle == nil {
-			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), currentTxHash.Trytes())
+		cachedBundle, exists := cachedBundles[string(currentTxHash)]
+		if !exists {
+			cachedBundle := tangle.GetCachedBundleOrNil(currentTxHash)
+			if cachedBundle == nil {
+				return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), currentTxHash.Trytes())
+			}
+			cachedBundles[string(currentTxHash)] = cachedBundle
 		}
-		defer cachedBundle.Release(true)
-
+		
 		trunkHash = cachedBundle.GetBundle().GetTrunkHash(true)
 		branchHash = cachedBundle.GetBundle().GetBranchHash(true)
 	}
@@ -192,6 +197,21 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 // Caution: condition func is not in DFS order
 func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedBundles := make(map[string]*tangle.CachedBundle)
+
+	defer func() {
+		// release all bundles at the end
+		for _, cachedBundle := range cachedBundles {
+			cachedBundle.Release(forceRelease) // bundle -1
+		}
+
+		// release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			cachedTxMeta.Release(forceRelease) // meta -1
+		}
+	}()
+
 	stack := list.New()
 
 	// processed map with already processed transactions
@@ -202,7 +222,7 @@ func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.H
 
 	stack.PushFront(trunkTxHash)
 	for stack.Len() > 0 {
-		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
+		if err := processStackApprovees(cachedTxMetas, cachedBundles, stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
 			return err
 		}
 	}
@@ -214,7 +234,7 @@ func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.H
 	// if it is directly/indirectly approved by the trunk.
 	stack.PushFront(branchTxHash)
 	for stack.Len() > 0 {
-		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
+		if err := processStackApprovees(cachedTxMetas, cachedBundles, stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
 			return err
 		}
 	}
@@ -228,6 +248,21 @@ func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.H
 // Caution: condition func is not in DFS order
 func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedBundles := make(map[string]*tangle.CachedBundle)
+
+	defer func() {
+		// release all bundles at the end
+		for _, cachedBundle := range cachedBundles {
+			cachedBundle.Release(forceRelease) // bundle -1
+		}
+
+		// release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			cachedTxMeta.Release(forceRelease) // meta -1
+		}
+	}()
+
 	stack := list.New()
 
 	// processed map with already processed transactions
@@ -238,7 +273,7 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 	stack.PushFront(startTxHash)
 	for stack.Len() > 0 {
-		if err := processStackApprovees(stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, forceRelease, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
+		if err := processStackApprovees(cachedTxMetas, cachedBundles, stack, processed, checked, condition, consumer, onMissingApprovee, onSolidEntryPoint, traverseSolidEntryPoints, traverseTailsOnly, abortSignal); err != nil {
 			return err
 		}
 	}
@@ -248,7 +283,7 @@ func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Co
 
 // processStackApprovers checks if the current element in the stack must be processed and traversed.
 // current element gets consumed first, afterwards it's approvers get traversed in random order.
-func processStackApprovers(stack *list.List, discovered map[string]struct{}, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
+func processStackApprovers(cachedTxMetas map[string]*tangle.CachedMetadata, stack *list.List, discovered map[string]struct{}, condition Predicate, consumer Consumer, abortSignal <-chan struct{}) error {
 
 	select {
 	case <-abortSignal:
@@ -263,13 +298,15 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 	// remove the transaction from the stack
 	stack.Remove(ele)
 
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
-	if cachedTxMeta == nil {
-		// there was an error, stop processing the stack
-		return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
+	cachedTxMeta, exists := cachedTxMetas[string(currentTxHash)]
+	if !exists {
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+		if cachedTxMeta == nil {
+			// there was an error, stop processing the stack
+			return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
+		}
+		cachedTxMetas[string(currentTxHash)] = cachedTxMeta
 	}
-
-	defer cachedTxMeta.Release(forceRelease) // meta -1
 
 	// check condition to decide if tx should be consumed and traversed
 	traverse, err := condition(cachedTxMeta.Retain()) // tx + 1
@@ -289,7 +326,7 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 		return err
 	}
 
-	for _, approverHash := range tangle.GetApproverHashes(currentTxHash, forceRelease) {
+	for _, approverHash := range tangle.GetApproverHashes(currentTxHash, true) {
 		if _, approverDiscovered := discovered[string(approverHash)]; approverDiscovered {
 			// approver was already discovered
 			continue
@@ -308,6 +345,15 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 // It is unsorted BFS because the approvers are not ordered in the database.
 func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
 
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+
+	defer func() {
+		// release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			cachedTxMeta.Release(forceRelease) // meta -1
+		}
+	}()
+
 	stack := list.New()
 	stack.PushFront(startTxHash)
 
@@ -315,7 +361,7 @@ func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Co
 	discovered[string(startTxHash)] = struct{}{}
 
 	for stack.Len() > 0 {
-		if err := processStackApprovers(stack, discovered, condition, consumer, forceRelease, abortSignal); err != nil {
+		if err := processStackApprovers(cachedTxMetas, stack, discovered, condition, consumer, abortSignal); err != nil {
 			return err
 		}
 	}

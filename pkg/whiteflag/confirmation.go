@@ -36,7 +36,7 @@ func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsB
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
 
-		// Release all bundles at the end
+		// release all bundles at the end
 		for _, cachedBundle := range cachedBundles {
 			cachedBundle.Release(true) // bundle -1
 		}
