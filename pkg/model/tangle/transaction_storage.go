@@ -168,7 +168,7 @@ func GetCachedTransactionOrNil(txHash hornet.Hash) *CachedTransaction {
 		return nil
 	}
 
-	addTrunkBranchHashesToMetadata(cachedMeta.Retain())
+	addAdditionalTxInfoToMetadata(cachedMeta.Retain())
 
 	return &CachedTransaction{
 		tx:       cachedTx,
@@ -184,12 +184,12 @@ func GetCachedTxMetadataOrNil(txHash hornet.Hash) *CachedMetadata {
 		return nil
 	}
 
-	addTrunkBranchHashesToMetadata(cachedMeta.Retain())
+	addAdditionalTxInfoToMetadata(cachedMeta.Retain())
 
 	return &CachedMetadata{CachedObject: cachedMeta}
 }
 
-func addTrunkBranchHashesToMetadata(cachedMetadata objectstorage.CachedObject) {
+func addAdditionalTxInfoToMetadata(cachedMetadata objectstorage.CachedObject) {
 	cachedMetadata.Consume(func(metadataObject objectstorage.StorableObject) {
 		metadata := metadataObject.(*hornet.TransactionMetadata)
 
@@ -250,7 +250,7 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
 		cachedMeta = metadataStorage.Load(transaction.GetTxHash()) // meta +1
-		addTrunkBranchHashesToMetadata(cachedMeta.Retain())
+		addAdditionalTxInfoToMetadata(cachedMeta.Retain())
 	}
 
 	return &CachedTransaction{tx: cachedTxData, metadata: cachedMeta}, newlyAdded
