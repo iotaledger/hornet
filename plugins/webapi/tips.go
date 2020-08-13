@@ -53,7 +53,7 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // tx +1
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // meta +1
 	if cachedTxMeta == nil {
 		e.Error = "unknown tail transaction"
 		c.JSON(http.StatusBadRequest, e)
@@ -134,14 +134,14 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
 			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
 		} else {
-			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // tx +1
+			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // meta +1
 			if cachedApproveeTxMeta == nil {
 				e.Error = fmt.Sprintf("approvee transaction not found: %v", hornet.Hash(approveeHash).Trytes())
 				c.JSON(http.StatusBadRequest, e)
 				return
 			}
 
-			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // tx +1
+			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // meta +1
 			cachedApproveeTxMeta.Release(true)
 		}
 

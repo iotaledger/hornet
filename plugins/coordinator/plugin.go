@@ -301,7 +301,7 @@ func isBelowMaxDepth(cachedTailTxMeta *tangle.CachedMetadata) bool {
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTxMeta.Retain(), lsmi) // tx +1
+	_, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTxMeta.Retain(), lsmi) // meta +1
 
 	// if the OTRSI to LSMI delta is over belowMaxDepth, then the tip is invalid.
 	return (lsmi - ortsi) > belowMaxDepth

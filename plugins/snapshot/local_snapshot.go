@@ -43,7 +43,7 @@ var (
 func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, milestone.Index) {
 
 	for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // tx +1
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 		if cachedTxMeta == nil {
 			// Ignore this transaction since it doesn't exist anymore
 			log.Warnf(errors.Wrapf(ErrApproverTxNotFound, "tx hash: %v, approver hash: %v", txHash.Trytes(), approverHash.Trytes()).Error())
@@ -55,7 +55,7 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, m
 		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
 		confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
-		cachedTxMeta.Release(true) // tx -1
+		cachedTxMeta.Release(true) // meta -1
 		if confirmed && (at > targetIndex) {
 			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
@@ -100,7 +100,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				continue
 			}
 
-			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // tx +1
+			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
 			if cachedTxMeta == nil {
 				return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
@@ -108,7 +108,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
 				if at < milestoneIndex {
 					// Ignore Tx that were confirmed by older milestones
-					cachedTxMeta.Release(true) // tx -1
+					cachedTxMeta.Release(true) // meta -1
 					continue
 				}
 
@@ -119,12 +119,12 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				txsToTraverse[string(cachedTxMeta.GetMetadata().GetBranchHash())] = struct{}{}
 
 				// Do not force release, since it is loaded again
-				cachedTxMeta.Release() // tx -1
+				cachedTxMeta.Release() // meta -1
 
 			} else {
 				// Tx is not confirmed
 				if cachedTxMeta.GetMetadata().IsTail() {
-					cachedTxMeta.Release(true) // tx -1
+					cachedTxMeta.Release(true) // meta -1
 					return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Trytes())
 				}
 
@@ -133,7 +133,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
 				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), false, true)
 				if err != nil {
-					cachedTxMeta.Release(true) // tx -1
+					cachedTxMeta.Release(true) // meta -1
 					return nil, err
 				}
 
@@ -142,7 +142,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				}
 
 				// Ignore this transaction in the cone because it is not confirmed
-				cachedTxMeta.Release(true) // tx -1
+				cachedTxMeta.Release(true) // meta -1
 			}
 		}
 	}
@@ -195,8 +195,8 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		}
 
 		// Get all approvees of that milestone
-		msTailTxHash := cachedMs.GetBundle().GetTailHash() // tx +1
-		cachedMs.Release(true)                             // bundle -1
+		msTailTxHash := cachedMs.GetBundle().GetTailHash()
+		cachedMs.Release(true) // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
 

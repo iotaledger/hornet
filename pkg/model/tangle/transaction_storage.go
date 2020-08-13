@@ -161,10 +161,10 @@ func GetCachedTransactionOrNil(txHash hornet.Hash) *CachedTransaction {
 		return nil
 	}
 
-	cachedMeta := metadataStorage.Load(txHash) // tx +1
+	cachedMeta := metadataStorage.Load(txHash) // meta +1
 	if !cachedMeta.Exists() {
 		cachedTx.Release(true)   // tx -1
-		cachedMeta.Release(true) // tx -1
+		cachedMeta.Release(true) // meta -1
 		return nil
 	}
 
@@ -178,7 +178,7 @@ func GetCachedTransactionOrNil(txHash hornet.Hash) *CachedTransaction {
 
 // metadata +1
 func GetCachedTxMetadataOrNil(txHash hornet.Hash) *CachedMetadata {
-	cachedMeta := metadataStorage.Load(txHash) // tx +1
+	cachedMeta := metadataStorage.Load(txHash) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMeta.Release(true) // metadata -1
 		return nil

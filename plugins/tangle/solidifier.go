@@ -118,7 +118,7 @@ func checkSolidity(cachedTxMeta *tangle.CachedMetadata) (solid bool, newlySolid 
 	// Normal solidification could be part of a cone of old milestones while synching
 	// => no need to keep this in cache
 	// If future cone solidifier calls this, it has it's own Release with cacheTime anyway
-	defer cachedTxMeta.Release(true) // tx -1
+	defer cachedTxMeta.Release(true) // meta -1
 
 	if cachedTxMeta.GetMetadata().IsSolid() {
 		return true, false
@@ -137,7 +137,7 @@ func checkSolidity(cachedTxMeta *tangle.CachedMetadata) (solid bool, newlySolid 
 			continue
 		}
 
-		cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(approveeHash) // tx +1
+		cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(approveeHash) // meta +1
 		if cachedApproveeTxMeta == nil {
 			isSolid = false
 			break
@@ -145,10 +145,10 @@ func checkSolidity(cachedTxMeta *tangle.CachedMetadata) (solid bool, newlySolid 
 
 		if !cachedApproveeTxMeta.GetMetadata().IsSolid() {
 			isSolid = false
-			cachedApproveeTxMeta.Release(true) // tx -1
+			cachedApproveeTxMeta.Release(true) // meta -1
 			break
 		}
-		cachedApproveeTxMeta.Release(true) // tx -1
+		cachedApproveeTxMeta.Release(true) // meta -1
 	}
 
 	if isSolid {
@@ -180,8 +180,8 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 	if err := dag.TraverseApprovees(cachedMsTailTxMeta.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
 				// release the tx metadata at the end to speed up calculation
@@ -192,8 +192,8 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 			return !cachedTxMeta.GetMetadata().IsSolid(), nil
 		},
 		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			// mark the tx as checked
 			txsChecked++
@@ -250,7 +250,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 		// all solidified txs are newly solidified => propagate all
 		for _, txHash := range txsToSolidify {
 			for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
-				cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // tx +1
+				cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 				if cachedApproverTxMeta == nil {
 					continue
 				}
@@ -259,14 +259,14 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 					// Do not propagate already solid Txs
 
 					// Do no force release here, otherwise cacheTime for new Tx could be ignored
-					cachedApproverTxMeta.Release() // tx -1
+					cachedApproverTxMeta.Release() // meta -1
 					continue
 				}
 
 				checkSolidityAndPropagate(cachedApproverTxMeta.Retain()) // tx pass +1
 
 				// Do no force release here, otherwise cacheTime for new Tx could be ignored
-				cachedApproverTxMeta.Release() // tx -1
+				cachedApproverTxMeta.Release() // meta -1
 			}
 		}
 	}
@@ -359,10 +359,10 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
 
 	defer func() {
-		// release all txs at the end
+		// release all tx metadata at the end
 		for _, cachedTxMeta := range cachedTxMetas {
 			// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
-			cachedTxMeta.Release(true) // tx -1
+			cachedTxMeta.Release(true) // meta -1
 		}
 	}()
 

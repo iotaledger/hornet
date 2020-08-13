@@ -68,8 +68,8 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 
 	// traversal stops if no more transactions pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-		defer cachedTxMeta.Release(true) // tx -1
+	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+		defer cachedTxMeta.Release(true) // meta -1
 
 		if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
 			// release the tx metadata at the end to speed up calculation
@@ -101,8 +101,8 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 	}
 
 	// consumer
-	consumer := func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-		defer cachedTxMeta.Release(true) // tx -1
+	consumer := func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+		defer cachedTxMeta.Release(true) // meta -1
 
 		// load up bundle
 		cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash())

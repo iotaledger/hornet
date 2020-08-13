@@ -71,7 +71,7 @@ func run(_ *node.Plugin) {
 
 func configureEvents() {
 	onBundleSolid = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		cachedBndl.ConsumeBundle(func(bndl *tangle.Bundle) { // tx -1
+		cachedBndl.ConsumeBundle(func(bndl *tangle.Bundle) { // bundle -1
 			// do not add tips during syncing, because it is not needed at all
 			if !tangle.IsNodeSyncedWithThreshold() {
 				return

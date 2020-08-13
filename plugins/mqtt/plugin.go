@@ -119,7 +119,7 @@ func run(plugin *node.Plugin) {
 	onLatestMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedBndl.Release(true) // tx -1
+			cachedBndl.Release(true) // bundle -1
 			return
 		}
 
@@ -132,7 +132,7 @@ func run(plugin *node.Plugin) {
 	onSolidMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedBndl.Release(true) // tx -1
+			cachedBndl.Release(true) // bundle -1
 			return
 		}
 

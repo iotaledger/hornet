@@ -24,8 +24,8 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 	err := TraverseApprovees(startTxHash,
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			if skipStartTx && bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
 				// skip the start tx
@@ -41,8 +41,8 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 			return true, nil
 		},
 		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 			return nil
 		},
 		// called on missing approvees
@@ -103,7 +103,7 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		}
 	}
 
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // tx +1
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
 	if cachedTxMeta == nil {
 		// remove the transaction from the stack, trunk and branch are not traversed
 		processed[string(currentTxHash)] = struct{}{}
@@ -114,7 +114,7 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 		return onMissingApprovee(currentTxHash)
 	}
 
-	defer cachedTxMeta.Release(forceRelease) // tx -1
+	defer cachedTxMeta.Release(forceRelease) // meta -1
 
 	traverse, checkedBefore := checked[string(currentTxHash)]
 	if !checkedBefore {
@@ -177,7 +177,7 @@ func processStackApprovees(stack *list.List, processed map[string]struct{}, chec
 	stack.Remove(ele)
 
 	// consume the transaction
-	if err := consumer(cachedTxMeta.Retain()); err != nil { // tx +1
+	if err := consumer(cachedTxMeta.Retain()); err != nil { // meta +1
 		// there was an error, stop processing the stack
 		return err
 	}
@@ -269,7 +269,7 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 		return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
 	}
 
-	defer cachedTxMeta.Release(forceRelease) // tx -1
+	defer cachedTxMeta.Release(forceRelease) // meta -1
 
 	// check condition to decide if tx should be consumed and traversed
 	traverse, err := condition(cachedTxMeta.Retain()) // tx + 1
@@ -284,7 +284,7 @@ func processStackApprovers(stack *list.List, discovered map[string]struct{}, con
 	}
 
 	// consume the transaction
-	if err := consumer(cachedTxMeta.Retain()); err != nil { // tx +1
+	if err := consumer(cachedTxMeta.Retain()); err != nil { // meta +1
 		// there was an error, stop processing the stack
 		return err
 	}

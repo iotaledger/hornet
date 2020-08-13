@@ -454,7 +454,7 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this transaction
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // tx +1
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // meta +1
 	if cachedTxMeta == nil {
 		// we need to return lazy instead of panic here, because the transaction could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
@@ -462,7 +462,7 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 	}
 	defer cachedTxMeta.Release(true)
 
-	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // tx +1
+	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta +1
 
 	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
 	if (lsmi - ytrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
@@ -493,12 +493,12 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
 			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
 		} else {
-			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // tx +1
+			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // meta +1
 			if cachedApproveeTxMeta == nil {
 				panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
 			}
 
-			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // tx +1
+			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // meta +1
 			cachedApproveeTxMeta.Release(true)
 		}
 

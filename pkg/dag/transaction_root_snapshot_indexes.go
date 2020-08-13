@@ -22,7 +22,7 @@ func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi 
 
 // GetTransactionRootSnapshotIndexes searches the transaction root snapshot indexes for a given transaction.
 func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
-	defer cachedTxMeta.Release(true) // tx -1
+	defer cachedTxMeta.Release(true) // meta -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
 	// information about yrtsi and ortsi, return that info
@@ -58,8 +58,8 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 	if err := TraverseApprovees(cachedTxMeta.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			// first check if the tx was confirmed => update yrtsi and ortsi with the confirmation index
 			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
@@ -82,8 +82,8 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 			return true, nil
 		},
 		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
 				// skip the start transaction, so it doesn't get added to the outdatedTransactions
@@ -138,14 +138,14 @@ func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone
 
 		if err := TraverseApprovers(txHash,
 			// traversal stops if no more transactions pass the given condition
-			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-				defer cachedTxMeta.Release(true) // tx -1
+			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
 				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetTxHash())]
 				return !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-				defer cachedTxMeta.Release(true) // tx -1
+			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
 				traversed[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 
 				// updates the transaction root snapshot indexes of the outdated past cone for this transaction

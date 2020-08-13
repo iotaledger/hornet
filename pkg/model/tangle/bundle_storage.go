@@ -259,11 +259,11 @@ func GetBundlesOfTransactionOrNil(txHash hornet.Hash, forceRelease bool) CachedB
 
 	var cachedBndls CachedBundles
 
-	cachedTxMeta := GetCachedTxMetadataOrNil(txHash) // tx +1
+	cachedTxMeta := GetCachedTxMetadataOrNil(txHash) // meta +1
 	if cachedTxMeta == nil {
 		return nil
 	}
-	defer cachedTxMeta.Release(forceRelease) // tx -1
+	defer cachedTxMeta.Release(forceRelease) // meta -1
 
 	if cachedTxMeta.GetMetadata().IsTail() {
 		cachedBndl := GetCachedBundleOrNil(txHash) // bundle +1
@@ -438,21 +438,21 @@ func constructBundle(bndl *Bundle, cachedStartTxMeta *CachedMetadata) bool {
 
 		// check whether the trunk transaction is known to the transaction storage.
 		if !ContainsTransaction(cachedCurrentTxMeta.GetMetadata().GetTrunkHash()) {
-			cachedCurrentTxMeta.Release() // tx -1
+			cachedCurrentTxMeta.Release() // meta -1
 			return false
 		}
 
-		trunkTxMeta := loadBundleTxMetaIfExistsOrPanic(cachedCurrentTxMeta.GetMetadata().GetTrunkHash(), bndl.hash) // tx +1
+		trunkTxMeta := loadBundleTxMetaIfExistsOrPanic(cachedCurrentTxMeta.GetMetadata().GetTrunkHash(), bndl.hash) // meta +1
 
 		// check whether trunk is in bundle instance already
 		if _, trunkAlreadyInBundle := bndl.txs[string(cachedCurrentTxMeta.GetMetadata().GetTrunkHash())]; trunkAlreadyInBundle {
-			cachedCurrentTxMeta.Release() // tx -1
+			cachedCurrentTxMeta.Release() // meta -1
 			cachedCurrentTxMeta = trunkTxMeta
 			continue
 		}
 
 		if !bytes.Equal(trunkTxMeta.GetMetadata().GetBundleHash(), cachedStartTxMeta.GetMetadata().GetBundleHash()) {
-			trunkTxMeta.Release() // tx -1
+			trunkTxMeta.Release() // meta -1
 
 			// Tx has invalid structure, but is "complete"
 			break
@@ -468,11 +468,11 @@ func constructBundle(bndl *Bundle, cachedStartTxMeta *CachedMetadata) bool {
 
 		// modify and advance to perhaps complete the bundle
 		bndl.SetModified(true)
-		cachedCurrentTxMeta.Release() // tx -1
+		cachedCurrentTxMeta.Release() // meta -1
 		cachedCurrentTxMeta = trunkTxMeta
 	}
 
-	cachedCurrentTxMeta.Release() // tx -1
+	cachedCurrentTxMeta.Release() // meta -1
 	return true
 }
 

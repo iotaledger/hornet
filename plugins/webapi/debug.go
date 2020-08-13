@@ -73,7 +73,7 @@ func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]
 
 	txHash := confirmedTxHash
 	for len(path) > 0 {
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // tx +1
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // meta +1
 		if cachedTxMeta == nil {
 			return nil, fmt.Errorf("createConfirmedApproverResult: Transaction not found: %v", txHash.Trytes())
 		}
@@ -127,7 +127,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				return
 			}
 
-			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // tx +1
+			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
 			if cachedTxMeta == nil {
 				delete(txsToTraverse, txHash)
 				log.Warnf("searchConfirmedApprover: Transaction not found: %v", hornet.Hash(txHash).Trytes())
@@ -137,7 +137,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
 			isTailTx := cachedTxMeta.GetMetadata().IsTail()
 
-			cachedTxMeta.Release(true) // tx -1
+			cachedTxMeta.Release(true) // meta -1
 
 			if confirmed {
 				resultFound := false
@@ -178,14 +178,14 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			approverHashes := tangle.GetApproverHashes(hornet.Hash(txHash), true)
 			for _, approverHash := range approverHashes {
 
-				approverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // tx +1
+				approverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 				if approverTxMeta == nil {
 					log.Warnf("searchConfirmedApprover: Approver not found: %v", approverHash.Trytes())
 					continue
 				}
 
 				txsToTraverse[string(approverHash)] = append(txsToTraverse[txHash], bytes.Equal(approverTxMeta.GetMetadata().GetTrunkHash(), hornet.Hash(txHash)))
-				approverTxMeta.Release(true) // tx -1
+				approverTxMeta.Release(true) // meta -1
 			}
 
 			delete(txsToTraverse, txHash)
@@ -213,7 +213,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedStartTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TxHash)) // tx +1
+	cachedStartTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TxHash)) // meta +1
 	if cachedStartTxMeta == nil {
 		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
 		c.JSON(http.StatusBadRequest, e)
@@ -227,8 +227,8 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	dag.TraverseApprovees(cachedStartTxMeta.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
 				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
@@ -240,8 +240,8 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return true, nil
 		},
 		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-			defer cachedTxMeta.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			result.TanglePath = append(result.TanglePath,
 				&TransactionWithApprovers{

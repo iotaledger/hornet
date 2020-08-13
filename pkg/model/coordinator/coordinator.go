@@ -224,7 +224,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 
 		// Release all tx metadata at the end
 		for _, cachedTxMeta := range cachedTxMetas {
-			cachedTxMeta.Release(true) // tx -1
+			cachedTxMeta.Release(true) // meta -1
 		}
 	}()
 

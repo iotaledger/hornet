@@ -85,7 +85,7 @@ func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsB
 	loadTxMeta := func(txHash hornet.Hash) (*tangle.CachedMetadata, error) {
 		cachedTxMeta, exists := cachedTxMetas[string(txHash)]
 		if !exists {
-			cachedTxMeta = tangle.GetCachedTxMetadataOrNil(txHash) // tx +1
+			cachedTxMeta = tangle.GetCachedTxMetadataOrNil(txHash) // meta +1
 			if cachedTxMeta == nil {
 				return nil, fmt.Errorf("confirmMilestone: Transaction not found: %v", txHash.Trytes())
 			}

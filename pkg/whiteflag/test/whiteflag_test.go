@@ -308,7 +308,7 @@ func configureCoordinator(t *testing.T) *coordinator.Coordinator {
 
 		// Release all tx metadata at the end
 		for _, cachedTxMeta := range cachedTxMetas {
-			cachedTxMeta.Release(true) // tx -1
+			cachedTxMeta.Release(true) // meta -1
 		}
 	}()
 
@@ -360,7 +360,7 @@ func issueAndConfirmMilestoneOnTip(t *testing.T, tip hornet.Hash, printTangle bo
 
 		// Release all tx metadata at the end
 		for _, cachedTxMeta := range cachedTxMetas {
-			cachedTxMeta.Release(true) // tx -1
+			cachedTxMeta.Release(true) // meta -1
 		}
 	}()
 

@@ -26,19 +26,19 @@ func checkSolidityAndPropagate(cachedTxMeta *tangle.CachedMetadata) {
 			if newlySolid {
 				if int32(time.Now().Unix())-cachedTxMetaToCheck.GetMetadata().GetSolidificationTimestamp() > solidifierThresholdInSeconds {
 					// Skip older transactions and force release them
-					cachedTxMetaToCheck.Release(true) // tx -1
+					cachedTxMetaToCheck.Release(true) // meta -1
 					continue
 				}
 
 				for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), true) {
-					cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // tx +1
+					cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 					if cachedApproverTxMeta == nil {
 						continue
 					}
 
 					if _, found := txsMetaToCheck[string(approverHash)]; found {
 						// Do no force release here, otherwise cacheTime for new Tx could be ignored
-						cachedApproverTxMeta.Release() // tx -1
+						cachedApproverTxMeta.Release() // meta -1
 						continue
 					}
 
@@ -46,7 +46,7 @@ func checkSolidityAndPropagate(cachedTxMeta *tangle.CachedMetadata) {
 				}
 			}
 			// Do no force release here, otherwise cacheTime for new Tx could be ignored
-			cachedTxMetaToCheck.Release() // tx -1
+			cachedTxMetaToCheck.Release() // meta -1
 		}
 	}
 }

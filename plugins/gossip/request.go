@@ -177,8 +177,8 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Inde
 func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 	defer cachedMsBndl.Release() // bundle -1
 
-	cachedHeadTxMeta := cachedMsBndl.GetBundle().GetHeadMetadata() // tx +1
-	defer cachedHeadTxMeta.Release()                               // tx -1
+	cachedHeadTxMeta := cachedMsBndl.GetBundle().GetHeadMetadata() // meta +1
+	defer cachedHeadTxMeta.Release()                               // meta -1
 
 	msIndex := cachedMsBndl.GetBundle().GetMilestoneIndex()
 
@@ -213,14 +213,14 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 		dag.TraverseApprovees(msHash,
 			// traversal stops if no more transactions pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-				defer cachedTxMeta.Release(true) // tx -1
+			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
 				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetTxHash())]
 				return !cachedTxMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-				defer cachedTxMeta.Release(true) // tx -1
+			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
 				traversed[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 				return nil
 			},
