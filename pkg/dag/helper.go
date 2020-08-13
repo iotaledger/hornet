@@ -105,7 +105,7 @@ func processStackApprovees(cachedTxMetas map[string]*tangle.CachedMetadata, cach
 
 	cachedTxMeta, exists := cachedTxMetas[string(currentTxHash)]
 	if !exists {
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+		cachedTxMeta = tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
 		if cachedTxMeta == nil {
 			// remove the transaction from the stack, trunk and branch are not traversed
 			processed[string(currentTxHash)] = struct{}{}
@@ -151,13 +151,13 @@ func processStackApprovees(cachedTxMetas map[string]*tangle.CachedMetadata, cach
 		// load up bundle to retrieve trunk and branch of the head tx
 		cachedBundle, exists := cachedBundles[string(currentTxHash)]
 		if !exists {
-			cachedBundle := tangle.GetCachedBundleOrNil(currentTxHash)
+			cachedBundle = tangle.GetCachedBundleOrNil(currentTxHash)
 			if cachedBundle == nil {
 				return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), currentTxHash.Trytes())
 			}
 			cachedBundles[string(currentTxHash)] = cachedBundle
 		}
-		
+
 		trunkHash = cachedBundle.GetBundle().GetTrunkHash(true)
 		branchHash = cachedBundle.GetBundle().GetBranchHash(true)
 	}
@@ -300,7 +300,7 @@ func processStackApprovers(cachedTxMetas map[string]*tangle.CachedMetadata, stac
 
 	cachedTxMeta, exists := cachedTxMetas[string(currentTxHash)]
 	if !exists {
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+		cachedTxMeta = tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
 		if cachedTxMeta == nil {
 			// there was an error, stop processing the stack
 			return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
