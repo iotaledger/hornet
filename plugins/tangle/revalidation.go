@@ -123,7 +123,6 @@ func revalidateDatabase() error {
 	}
 
 	log.Info("flushing storages...")
-	time.Sleep(5 * time.Second) // ToDo: workaround for current deadlock in object storage
 	tangle.FlushStorages()
 	log.Info("flushing storages... done!")
 
