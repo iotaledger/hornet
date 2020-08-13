@@ -42,7 +42,7 @@ var (
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, milestone.Index) {
 
-	for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
+	for _, approverHash := range tangle.GetApproverHashes(txHash) {
 		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 		if cachedTxMeta == nil {
 			// Ignore this transaction since it doesn't exist anymore

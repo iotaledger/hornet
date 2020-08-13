@@ -326,7 +326,7 @@ func processStackApprovers(cachedTxMetas map[string]*tangle.CachedMetadata, stac
 		return err
 	}
 
-	for _, approverHash := range tangle.GetApproverHashes(currentTxHash, true) {
+	for _, approverHash := range tangle.GetApproverHashes(currentTxHash) {
 		if _, approverDiscovered := discovered[string(approverHash)]; approverDiscovered {
 			// approver was already discovered
 			continue

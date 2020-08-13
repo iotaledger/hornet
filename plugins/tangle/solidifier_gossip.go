@@ -30,7 +30,7 @@ func checkSolidityAndPropagate(cachedTxMeta *tangle.CachedMetadata) {
 					continue
 				}
 
-				for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash), true) {
+				for _, approverHash := range tangle.GetApproverHashes(hornet.Hash(txHash)) {
 					cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 					if cachedApproverTxMeta == nil {
 						continue

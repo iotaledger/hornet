@@ -120,7 +120,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetApproverHashes(hornet.HashFromHashTrytes(approveeHash), true, maxResults-len(txHashes)).Trytes()...)
+		txHashes = append(txHashes, tangle.GetApproverHashes(hornet.HashFromHashTrytes(approveeHash), maxResults-len(txHashes)).Trytes()...)
 	}
 
 	// Searching for transactions that contain the given tag

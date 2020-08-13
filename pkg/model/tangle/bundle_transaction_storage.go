@@ -250,7 +250,7 @@ func getTailApproversOfSameBundle(bundleHash hornet.Hash, txHash hornet.Hash, fo
 		for txHashToCheck := range txsToCheck {
 			delete(txsToCheck, txHashToCheck)
 
-			for _, approverHash := range GetApproverHashes(hornet.Hash(txHashToCheck), forceRelease) {
+			for _, approverHash := range GetApproverHashes(hornet.Hash(txHashToCheck)) {
 				cachedApproverTxMeta := GetCachedTxMetadataOrNil(approverHash) // meta +1
 				if cachedApproverTxMeta == nil {
 					continue
@@ -282,7 +282,7 @@ func getTailApproversOfSameBundle(bundleHash hornet.Hash, txHash hornet.Hash, fo
 // approversFromSameBundleExist returns whether there are other transactions in the same bundle, that approve this transaction
 func approversFromSameBundleExist(bundleHash hornet.Hash, txHash hornet.Hash, forceRelease bool) bool {
 
-	for _, approverHash := range GetApproverHashes(txHash, forceRelease) {
+	for _, approverHash := range GetApproverHashes(txHash) {
 		if ContainsBundleTransaction(bundleHash, approverHash, true) || ContainsBundleTransaction(bundleHash, approverHash, false) {
 			// Tx is used in another bundle instance => do not delete
 			return true

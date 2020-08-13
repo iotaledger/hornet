@@ -90,7 +90,7 @@ func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 	}
 
 	// Approvers
-	t.Approvers = tangle.GetApproverHashes(cachedTx.GetTransaction().GetTxHash(), true, MaxApproversResults).Trytes()
+	t.Approvers = tangle.GetApproverHashes(cachedTx.GetTransaction().GetTxHash(), MaxApproversResults).Trytes()
 
 	// compute mwm
 	trits, err := trinary.BytesToTrits(cachedTx.GetTransaction().GetTxHash())

@@ -249,7 +249,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 
 		// all solidified txs are newly solidified => propagate all
 		for _, txHash := range txsToSolidify {
-			for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
+			for _, approverHash := range tangle.GetApproverHashes(txHash) {
 				cachedApproverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 				if cachedApproverTxMeta == nil {
 					continue

@@ -175,7 +175,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				}
 			}
 
-			approverHashes := tangle.GetApproverHashes(hornet.Hash(txHash), true)
+			approverHashes := tangle.GetApproverHashes(hornet.Hash(txHash))
 			for _, approverHash := range approverHashes {
 
 				approverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
