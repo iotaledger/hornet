@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc13] - 14.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Fixed
+
+    - Fix TransactionConfirmed event
+
 ## [0.5.0-rc12] - 14.08.2020
 
 **Breaking change:**

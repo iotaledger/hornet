@@ -24,53 +24,61 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 		// tx topic
 		err := publishTx(tx.Tx)
 		if err != nil {
-			log.Error(err.Error())
+			log.Warn(err.Error())
 		}
 
 		// trytes topic
 		err = publishTxTrytes(tx.Tx)
 		if err != nil {
-			log.Error(err.Error())
+			log.Warn(err.Error())
 		}
 	})
 }
 
-func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, _ int64) {
+func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _ int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
 
-		if err := publishConfTx(tx.Tx, msIndex); err != nil {
-			log.Error(err.Error())
+		cachedTx := tangle.GetCachedTransactionOrNil(metadata.GetTxHash())
+		if cachedTx == nil {
+			log.Warnf("%w hash: %s", tangle.ErrTransactionNotFound, metadata.GetTxHash().Trytes())
+			return
 		}
 
-		if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
-			log.Error(err.Error())
-		}
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+			if err := publishConfTx(tx.Tx, msIndex); err != nil {
+				log.Warn(err.Error())
+			}
 
-		addresses := GetAddressTopics()
-		for _, addr := range addresses {
-			if strings.EqualFold(tx.Tx.Address, addr) {
-				err := publishConfTxForAddress(tx.Tx, msIndex)
-				if err != nil {
-					log.Error(err.Error())
+			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
+				log.Warn(err.Error())
+			}
+
+			addresses := GetAddressTopics()
+			for _, addr := range addresses {
+				if strings.EqualFold(tx.Tx.Address, addr) {
+					err := publishConfTxForAddress(tx.Tx, msIndex)
+					if err != nil {
+						log.Warn(err.Error())
+					}
 				}
 			}
-		}
+		})
 	})
 }
 
 func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 	err := publishLMI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash().Trytes())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	err = publishLM(cachedBndl.GetBundle())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	cachedBndl.Release(true) // bundle -1
 }
@@ -78,18 +86,18 @@ func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
 	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	err = publishLSM(cachedBndl.GetBundle())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	cachedBndl.Release(true) // bundle -1
 }
 
 func onSpentAddress(addr trinary.Hash) {
 	if err := publishSpentAddress(addr); err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 }
 
