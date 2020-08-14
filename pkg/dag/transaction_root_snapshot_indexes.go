@@ -149,7 +149,7 @@ func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone
 				traversed[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 
 				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
-				GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // tx pass +1
+				GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta pass +1
 
 				return nil
 			}, true, nil); err != nil {

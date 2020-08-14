@@ -69,7 +69,7 @@ func markTransactionAsSolid(cachedTxMeta *tangle.CachedMetadata) {
 	// update the solidity flags of this transaction
 	cachedTxMeta.GetMetadata().SetSolid(true)
 
-	Events.TransactionSolid.Trigger(cachedTxMeta.GetMetadata().GetTxHash()) // tx pass +1
+	Events.TransactionSolid.Trigger(cachedTxMeta.GetMetadata().GetTxHash())
 
 	if cachedTxMeta.GetMetadata().IsTail() {
 		cachedBndl := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
@@ -367,7 +367,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := solidQueueCheck(cachedTxMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // tx pass +1
+	if becameSolid, aborted := solidQueueCheck(cachedTxMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
