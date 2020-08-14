@@ -107,7 +107,7 @@ func (t *ApproversTraverser) processStackApprovers() error {
 	}
 
 	// check condition to decide if tx should be consumed and traversed
-	traverse, err := t.condition(cachedTxMeta.Retain()) // tx + 1
+	traverse, err := t.condition(cachedTxMeta.Retain()) // meta + 1
 	if err != nil {
 		// there was an error, stop processing the stack
 		return err

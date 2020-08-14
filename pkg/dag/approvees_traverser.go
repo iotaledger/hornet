@@ -193,7 +193,7 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 		var err error
 
 		// check condition to decide if tx should be consumed and traversed
-		traverse, err = t.condition(cachedTxMeta.Retain()) // tx + 1
+		traverse, err = t.condition(cachedTxMeta.Retain()) // meta + 1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
@@ -221,7 +221,7 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 		// load up bundle to retrieve trunk and branch of the head tx
 		cachedBundle, exists := t.cachedBundles[string(currentTxHash)]
 		if !exists {
-			cachedBundle = tangle.GetCachedBundleOrNil(currentTxHash)
+			cachedBundle = tangle.GetCachedBundleOrNil(currentTxHash) // bundle +1
 			if cachedBundle == nil {
 				return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), currentTxHash.Trytes())
 			}

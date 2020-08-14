@@ -66,6 +66,7 @@ func IsCorrectDatabaseVersion() bool {
 	return false
 }
 
+// UpdateDatabaseVersion tries to migrate the existing data to the new database version.
 func UpdateDatabaseVersion() bool {
 	value, err := healthStore.Get([]byte("dbVersion"))
 	if err != nil {

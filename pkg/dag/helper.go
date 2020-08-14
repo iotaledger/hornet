@@ -2,6 +2,7 @@ package dag
 
 import (
 	"bytes"
+
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
