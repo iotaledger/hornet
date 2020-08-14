@@ -69,7 +69,7 @@ func getPeerConfigDiff() (modified, added, removed []config.PeerConfig) {
 	currentPeers := Manager().PeerInfos()
 	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
-		log.Error(err)
+		log.Warn(err)
 		return
 	}
 

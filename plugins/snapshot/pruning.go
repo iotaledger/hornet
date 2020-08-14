@@ -74,7 +74,7 @@ func pruneMilestone(milestoneIndex milestone.Index) {
 
 	// state diffs
 	if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
-		log.Error(err)
+		log.Warn(err)
 	}
 
 	tangle.DeleteMilestone(milestoneIndex)

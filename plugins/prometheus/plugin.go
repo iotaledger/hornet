@@ -103,7 +103,7 @@ func run(plugin *node.Plugin) {
 		go func() {
 			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Error("Stopping Prometheus exporter due to an error ... done")
+				log.Warn("Stopping Prometheus exporter due to an error ... done")
 			}
 		}()
 
@@ -114,7 +114,7 @@ func run(plugin *node.Plugin) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			err := server.Shutdown(ctx)
 			if err != nil {
-				log.Error(err.Error())
+				log.Warn(err.Error())
 			}
 			cancel()
 		}
