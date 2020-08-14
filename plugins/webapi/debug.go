@@ -241,15 +241,17 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		},
 		// consumer
 		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-			defer cachedTxMeta.Release(true) // meta -1
+			cachedTxMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) { // meta -1
 
-			result.TanglePath = append(result.TanglePath,
-				&TransactionWithApprovers{
-					TxHash:            cachedTxMeta.GetMetadata().GetTxHash().Trytes(),
-					TrunkTransaction:  cachedTxMeta.GetMetadata().GetTrunkHash().Trytes(),
-					BranchTransaction: cachedTxMeta.GetMetadata().GetBranchHash().Trytes(),
-				},
-			)
+				result.TanglePath = append(result.TanglePath,
+					&TransactionWithApprovers{
+						TxHash:            metadata.GetTxHash().Trytes(),
+						TrunkTransaction:  metadata.GetTrunkHash().Trytes(),
+						BranchTransaction: metadata.GetBranchHash().Trytes(),
+					},
+				)
+			})
+
 			return nil
 		},
 		// called on missing approvees

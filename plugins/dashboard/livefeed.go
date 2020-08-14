@@ -44,7 +44,7 @@ func runLiveFeed() {
 	newTxRateLimiter := time.NewTicker(time.Second / 10)
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}

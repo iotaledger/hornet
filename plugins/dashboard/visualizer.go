@@ -67,7 +67,7 @@ func configureVisualizer() {
 func runVisualizer() {
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
+		cachedTx.ConsumeTransactionAndMetadata(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}

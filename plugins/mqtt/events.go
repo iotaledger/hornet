@@ -19,7 +19,7 @@ var (
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 
 		// tx topic
 		err := publishTx(tx.Tx)
@@ -37,7 +37,7 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, _ int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 		// conf_trytes topic
 		if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
 			log.Error(err.Error())

@@ -107,7 +107,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 			continue
 		}
 
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) { // tx -1
 			// Delete the reference in the approvees
 			tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
 			tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())

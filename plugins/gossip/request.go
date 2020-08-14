@@ -158,16 +158,16 @@ func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDisca
 // RequestApprovees enqueues requests for the approvees of the given transaction to the request queue, if the
 // given transaction is not a solid entry point and neither its approvees are and also not in the database.
 func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, preventDiscard ...bool) {
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
-		txHash := tx.GetTxHash()
+	cachedTx.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
+		txHash := metadata.GetTxHash()
 
 		if tangle.SolidEntryPointsContain(txHash) {
 			return
 		}
 
-		Request(tx.GetTrunkHash(), msIndex, preventDiscard...)
-		if !bytes.Equal(tx.GetTrunkHash(), tx.GetBranchHash()) {
-			Request(tx.GetBranchHash(), msIndex, preventDiscard...)
+		Request(metadata.GetTrunkHash(), msIndex, preventDiscard...)
+		if !bytes.Equal(metadata.GetTrunkHash(), metadata.GetBranchHash()) {
+			Request(metadata.GetBranchHash(), msIndex, preventDiscard...)
 		}
 	})
 }

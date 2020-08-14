@@ -96,12 +96,38 @@ func (c *CachedTransaction) Exists() bool {
 }
 
 // tx -1
-func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction, *hornet.TransactionMetadata)) {
+// meta -1
+func (c *CachedTransaction) ConsumeTransactionAndMetadata(consumer func(*hornet.Transaction, *hornet.TransactionMetadata)) {
 
 	c.tx.Consume(func(txObject objectstorage.StorableObject) {
 		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) {
 			consumer(txObject.(*hornet.Transaction), metadataObject.(*hornet.TransactionMetadata))
 		})
+	})
+}
+
+// tx -1
+// meta -1
+func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction)) {
+	defer c.metadata.Release(true)
+	c.tx.Consume(func(object objectstorage.StorableObject) {
+		consumer(object.(*hornet.Transaction))
+	})
+}
+
+// tx -1
+// meta -1
+func (c *CachedTransaction) ConsumeMetadata(consumer func(*hornet.TransactionMetadata)) {
+	defer c.tx.Release(true)
+	c.metadata.Consume(func(object objectstorage.StorableObject) {
+		consumer(object.(*hornet.TransactionMetadata))
+	})
+}
+
+// meta -1
+func (c *CachedMetadata) ConsumeMetadata(consumer func(*hornet.TransactionMetadata)) {
+	c.Consume(func(object objectstorage.StorableObject) {
+		consumer(object.(*hornet.TransactionMetadata))
 	})
 }
 
