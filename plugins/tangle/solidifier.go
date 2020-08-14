@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"time"
@@ -18,6 +17,10 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
+)
+
+const (
+	solidifierThreshold = 60 * time.Second
 )
 
 var (
@@ -112,52 +115,6 @@ func markTransactionAsSolid(cachedTxMeta *tangle.CachedMetadata) {
 	}
 }
 
-// checkSolidity checks if a single transaction is solid
-func checkSolidity(cachedTxMeta *tangle.CachedMetadata) (solid bool, newlySolid bool) {
-
-	// Normal solidification could be part of a cone of old milestones while synching
-	// => no need to keep this in cache
-	// If future cone solidifier calls this, it has it's own Release with cacheTime anyway
-	defer cachedTxMeta.Release(true) // meta -1
-
-	if cachedTxMeta.GetMetadata().IsSolid() {
-		return true, false
-	}
-
-	isSolid := true
-
-	approveeHashes := hornet.Hashes{cachedTxMeta.GetMetadata().GetTrunkHash()}
-	if !bytes.Equal(cachedTxMeta.GetMetadata().GetTrunkHash(), cachedTxMeta.GetMetadata().GetBranchHash()) {
-		approveeHashes = append(approveeHashes, cachedTxMeta.GetMetadata().GetBranchHash())
-	}
-
-	for _, approveeHash := range approveeHashes {
-		if tangle.SolidEntryPointsContain(approveeHash) {
-			// Ignore solid entry points (snapshot milestone included)
-			continue
-		}
-
-		cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(approveeHash) // meta +1
-		if cachedApproveeTxMeta == nil {
-			isSolid = false
-			break
-		}
-
-		if !cachedApproveeTxMeta.GetMetadata().IsSolid() {
-			isSolid = false
-			cachedApproveeTxMeta.Release(true) // meta -1
-			break
-		}
-		cachedApproveeTxMeta.Release(true) // meta -1
-	}
-
-	if isSolid {
-		markTransactionAsSolid(cachedTxMeta.Retain())
-	}
-
-	return isSolid, isSolid
-}
-
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
@@ -246,11 +203,33 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 
 	if tangle.IsNodeSyncedWithThreshold() {
 		// propagate solidity to the future cone (txs attached to the txs of this milestone)
-		solidifyFutureCone(cachedTxMetas, txsToSolidify, abortSignal)
+		solidifyFutureCone(cachedTxMetas, txsToSolidify, false, abortSignal)
 	}
 
 	log.Infof("Solidifier finished: txs: %d, collect: %v, solidity %v, propagation: %v, total: %v", txsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
 	return true, false
+}
+
+// solidifyFutureConeOfTx updates the solidity of the future cone (transactions approving the given transaction).
+// we have to walk the future cone, and update the solidity of all transactions by walking their past cone.
+// as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
+// walking the future cone of the same transactions multiple times.
+func solidifyFutureConeOfTx(cachedTxMeta *tangle.CachedMetadata) error {
+
+	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta
+
+	defer func() {
+		// release all tx metadata at the end
+		for _, cachedTxMeta := range cachedTxMetas {
+			// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
+			cachedTxMeta.Release(true) // meta -1
+		}
+	}()
+
+	txHashes := hornet.Hashes{cachedTxMeta.GetMetadata().GetTxHash()}
+
+	return solidifyFutureCone(cachedTxMetas, txHashes, true, nil)
 }
 
 // solidifyFutureCone updates the solidity of the future cone (transactions approving the given transactions).
@@ -258,7 +237,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same transactions multiple times.
 // all cachedTxMetas have to be released outside.
-func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashes hornet.Hashes, abortSignal chan struct{}) error {
+func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashes hornet.Hashes, gossipSolidify bool, abortSignal chan struct{}) error {
 	traversed := map[string]struct{}{}
 	nonSolidTxs := map[string]struct{}{}
 
@@ -293,6 +272,11 @@ func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashe
 					// mark the tx to have a non-solid cone
 					// this is used to reduce recursion
 					nonSolidTxs[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
+				}
+
+				if coneSolid && gossipSolidify && time.Since(time.Unix(int64(cachedTxMeta.GetMetadata().GetSolidificationTimestamp()), 0)) > solidifierThreshold {
+					// Skip older transactions in the gossip solidifier
+					return false, nil
 				}
 
 				// do not walk the future cone if the current past cone is already non-solid
