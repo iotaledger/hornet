@@ -26,6 +26,13 @@ func MarkDatabaseCorrupted() {
 	}
 }
 
+func MarkDatabaseTainted() {
+
+	if err := healthStore.Set([]byte("dbTainted"), []byte{}); err != nil {
+		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
+	}
+}
+
 func MarkDatabaseHealthy() {
 
 	if err := healthStore.Delete([]byte("dbCorrupted")); err != nil {
@@ -36,6 +43,15 @@ func MarkDatabaseHealthy() {
 func IsDatabaseCorrupted() bool {
 
 	contains, err := healthStore.Has([]byte("dbCorrupted"))
+	if err != nil {
+		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
+	}
+	return contains
+}
+
+func IsDatabaseTainted() bool {
+
+	contains, err := healthStore.Has([]byte("dbTainted"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
 	}

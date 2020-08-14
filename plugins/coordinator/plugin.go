@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -60,6 +61,8 @@ var (
 	onMilestoneConfirmed          *events.Closure
 	onIssuedCheckpointTransaction *events.Closure
 	onIssuedMilestone             *events.Closure
+
+	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
 )
 
 func configure(plugin *node.Plugin) {
@@ -78,6 +81,10 @@ func configure(plugin *node.Plugin) {
 }
 
 func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
+
+	if tangle.IsDatabaseTainted() {
+		return nil, ErrDatabaseTainted
+	}
 
 	seed, err := config.LoadHashFromEnvironment("COO_SEED")
 	if err != nil {
