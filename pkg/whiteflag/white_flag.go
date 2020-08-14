@@ -17,6 +17,9 @@ import (
 var (
 	// ErrMilestoneApprovedInvalidBundle is returned when a milestone approves an invalid bundle in its past cone.
 	ErrMilestoneApprovedInvalidBundle = errors.New("the milestone approved an invalid bundle")
+
+	// ErrIncludedTailsSumDoesntMatch is returned when the sum of the included tails a milestone approves does not match the referenced tails minus the excluded tails.
+	ErrIncludedTailsSumDoesntMatch = errors.New("the sum of the included tails doesn't match the referenced tails minus the excluded tails")
 )
 
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
@@ -180,16 +183,6 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		return nil
 	}
 
-	// called on missing approvees
-	onMissingApprovee := func(approveeHash hornet.Hash) error {
-		return fmt.Errorf("%w: transaction %s", tangle.ErrTransactionNotFound, approveeHash.Trytes())
-	}
-
-	// called on solid entry points
-	onSolidEntryPoint := func(txHash hornet.Hash) {
-		// Ignore solid entry points (snapshot milestone included)
-	}
-
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If trunk and branch of a bundle head transaction are both SEPs, are already processed or already confirmed,
 	// then the mutations from the transaction retrieved from the stack are accumulated to the given Confirmation struct's mutations.
@@ -199,8 +192,12 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		if err := dag.TraverseApprovees(trunkHash,
 			condition,
 			consumer,
-			onMissingApprovee,
-			onSolidEntryPoint,
+			// called on missing approvees
+			// return error on missing approvees
+			nil,
+			// called on solid entry points
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
 			true, false, true, nil); err != nil {
 			return nil, err
 		}
@@ -209,8 +206,12 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		if err := dag.TraverseApproveesTrunkBranch(trunkHash, branchHash[0],
 			condition,
 			consumer,
-			onMissingApprovee,
-			onSolidEntryPoint,
+			// called on missing approvees
+			// return error on missing approvees
+			nil,
+			// called on solid entry points
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
 			true, false, true, nil); err != nil {
 			return nil, err
 		}
@@ -218,6 +219,10 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 
 	// compute merkle tree root hash
 	wfConf.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConf.TailsIncluded)
+
+	if len(wfConf.TailsIncluded) != (len(wfConf.TailsReferenced) - len(wfConf.TailsExcludedConflicting) - len(wfConf.TailsExcludedZeroValue)) {
+		return nil, ErrIncludedTailsSumDoesntMatch
+	}
 
 	return wfConf, nil
 }

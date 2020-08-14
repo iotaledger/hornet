@@ -57,6 +57,10 @@ var (
 //
 func revalidateDatabase() error {
 
+	// mark the database as tainted forever.
+	// this is used to signal the coordinator plugin that it should never use a revalidated database.
+	tangle.MarkDatabaseTainted()
+
 	start := time.Now()
 
 	snapshotInfo := tangle.GetSnapshotInfo()

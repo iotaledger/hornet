@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-rc12] - 14.08.2020
+
+**Breaking change:**
+** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+
+### Added
+
+    - Add isHealthy to getNodeInfo
+    - Database tainted flag for coordinator
+    - Add additional security check in whiteflag
+
+### Changed
+
+    - Store binary trunk, branch, and bundle hashes in metadata to reduce load on IO
+    - Improve caching strategy in solidification and confirmation
+    - Improve caching in the dag helpers
+    - Reduce recursion in the future cone solidifier
+    - Disable autopeer stale check by default
+    - Update test pipeline to Go 1.15
+
+### Fixed
+
+    - Fix deadlock at object storage flush (revalidation and shutdown)
+    - Do not panic if snapshot creation is aborted
+    - Fix solid entry point indexes
+    - Fix spikes in conf.rate calculation
+
 ## [0.5.0-rc11] - 12.08.2020
 
 **Breaking change:**

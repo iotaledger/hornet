@@ -102,8 +102,8 @@ func (c *CachedTransaction) ConsumeTransactionAndMetadata(consumer func(*hornet.
 	c.tx.Consume(func(txObject objectstorage.StorableObject) {
 		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) {
 			consumer(txObject.(*hornet.Transaction), metadataObject.(*hornet.TransactionMetadata))
-		})
-	})
+		}, true)
+	}, true)
 }
 
 // tx -1
@@ -112,7 +112,7 @@ func (c *CachedTransaction) ConsumeTransaction(consumer func(*hornet.Transaction
 	defer c.metadata.Release(true)
 	c.tx.Consume(func(object objectstorage.StorableObject) {
 		consumer(object.(*hornet.Transaction))
-	})
+	}, true)
 }
 
 // tx -1
@@ -121,14 +121,14 @@ func (c *CachedTransaction) ConsumeMetadata(consumer func(*hornet.TransactionMet
 	defer c.tx.Release(true)
 	c.metadata.Consume(func(object objectstorage.StorableObject) {
 		consumer(object.(*hornet.TransactionMetadata))
-	})
+	}, true)
 }
 
 // meta -1
 func (c *CachedMetadata) ConsumeMetadata(consumer func(*hornet.TransactionMetadata)) {
 	c.Consume(func(object objectstorage.StorableObject) {
 		consumer(object.(*hornet.TransactionMetadata))
-	})
+	}, true)
 }
 
 // tx -1
@@ -232,9 +232,9 @@ func addAdditionalTxInfoToMetadata(cachedMetadata objectstorage.CachedObject) {
 			cachedTx.Consume(func(transactionObject objectstorage.StorableObject) {
 				tx := transactionObject.(*hornet.Transaction)
 				metadata.SetAdditionalTxInfo(tx.GetTrunkHash(), tx.GetBranchHash(), tx.GetBundleHash(), tx.IsHead(), tx.IsTail(), tx.IsValue())
-			})
+			}, true)
 		}
-	})
+	}, true)
 }
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.

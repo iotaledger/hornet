@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
+	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 func init() {
@@ -53,6 +54,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	result.LatestSolidSubtangleMilestoneIndex = smi
 	result.LatestSolidSubtangleMilestone = consts.NullHashTrytes
 	result.IsSynced = tangle.IsNodeSyncedWithThreshold()
+	result.Health = tangleplugin.IsNodeHealthy()
 
 	// Solid milestone hash
 	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1

@@ -162,7 +162,9 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 
 	// check if the transaction is a solid entry point
 	if tangle.SolidEntryPointsContain(currentTxHash) {
-		t.onSolidEntryPoint(currentTxHash)
+		if t.onSolidEntryPoint != nil {
+			t.onSolidEntryPoint(currentTxHash)
+		}
 
 		if !t.traverseSolidEntryPoints {
 			// remove the transaction from the stack, trunk and branch are not traversed
@@ -181,6 +183,11 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 			t.processed[string(currentTxHash)] = struct{}{}
 			delete(t.checked, string(currentTxHash))
 			t.stack.Remove(ele)
+
+			if t.onMissingApprovee == nil {
+				// stop processing the stack with an error
+				return fmt.Errorf("%w: transaction %s", tangle.ErrTransactionNotFound, currentTxHash.Trytes())
+			}
 
 			// stop processing the stack if the caller returns an error
 			return t.onMissingApprovee(currentTxHash)
@@ -251,10 +258,12 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 	delete(t.checked, string(currentTxHash))
 	t.stack.Remove(ele)
 
-	// consume the transaction
-	if err := t.consumer(cachedTxMeta.Retain()); err != nil { // meta +1
-		// there was an error, stop processing the stack
-		return err
+	if t.consumer != nil {
+		// consume the transaction
+		if err := t.consumer(cachedTxMeta.Retain()); err != nil { // meta +1
+			// there was an error, stop processing the stack
+			return err
+		}
 	}
 
 	return nil

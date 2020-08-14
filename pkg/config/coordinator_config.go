@@ -39,7 +39,7 @@ const (
 )
 
 func init() {
-	flag.String(CfgCoordinatorAddress, "EQSAUZXULTTYZCLNJNTXQTQHOMOFZERHTCGTXOLTVAHKSA9OGAZDEKECURBRIXIJWNPFCQIOVFVVXJVD9", "the address of the coordinator")
+	flag.String(CfgCoordinatorAddress, "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ", "the address of the coordinator")
 	flag.Int(CfgCoordinatorSecurityLevel, 2, "the security level used in coordinator signatures")
 	flag.Int(CfgCoordinatorMerkleTreeDepth, 23, "the depth of the Merkle tree which in turn determines the number of leaves (private keys) that the coordinator can use to sign a message.")
 	flag.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash. "+

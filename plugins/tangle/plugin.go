@@ -152,7 +152,7 @@ func configureEvents() {
 		defer cachedTx.Release(true) // tx -1
 
 		if tangle.IsNodeSyncedWithThreshold() {
-			checkSolidityAndPropagate(cachedTx.GetCachedMetadata()) // meta pass +1
+			solidifyFutureConeOfTx(cachedTx.GetCachedMetadata()) // meta pass +1
 		}
 	})
 }
