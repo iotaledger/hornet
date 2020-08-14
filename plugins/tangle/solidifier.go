@@ -421,17 +421,22 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	var ctpsMessage string
 	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetBundle().GetTail(), conf.Index); err == nil {
-		ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.TPS, metric.CTPS, metric.ConfirmationRate)
 		if tangle.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the TPS and conf.rate is wrong)
 			if firstSyncedMilestone == 0 {
 				firstSyncedMilestone = conf.Index
 			}
+		} else {
+			// reset the variable if unsynced
+			firstSyncedMilestone = 0
+		}
 
-			if conf.Index > firstSyncedMilestone+1 {
-				// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
-				Events.NewConfirmedMilestoneMetric.Trigger(metric)
-			}
+		if tangle.IsNodeSynced() && (conf.Index > firstSyncedMilestone+1) {
+			// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
+			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.TPS, metric.CTPS, metric.ConfirmationRate)
+			Events.NewConfirmedMilestoneMetric.Trigger(metric)
+		} else {
+			ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CTPS)
 		}
 	}
 
