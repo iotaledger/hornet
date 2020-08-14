@@ -12,21 +12,21 @@ import (
 // the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
 func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
 	for _, outdatedTxHash := range outdatedTransactions {
-		cachedTx := tangle.GetCachedTransactionOrNil(outdatedTxHash)
-		if cachedTx == nil {
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(outdatedTxHash)
+		if cachedTxMeta == nil {
 			panic(tangle.ErrTransactionNotFound)
 		}
-		GetTransactionRootSnapshotIndexes(cachedTx, lsmi)
+		GetTransactionRootSnapshotIndexes(cachedTxMeta, lsmi)
 	}
 }
 
 // GetTransactionRootSnapshotIndexes searches the transaction root snapshot indexes for a given transaction.
-func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
-	defer cachedTx.Release(true) // tx -1
+func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
+	defer cachedTxMeta.Release(true) // meta -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
 	// information about yrtsi and ortsi, return that info
-	yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
+	yrtsi, ortsi, rtsci := cachedTxMeta.GetMetadata().GetRootSnapshotIndexes()
 	if rtsci == lsmi {
 		return yrtsi, ortsi
 	}
@@ -49,31 +49,31 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 	// are no solid entry points and have no recent calculation index
 	var outdatedTransactions hornet.Hashes
 
-	startTxHash := cachedTx.GetMetadata().GetTxHash()
+	startTxHash := cachedTxMeta.GetMetadata().GetTxHash()
 
 	indexesValid := true
 
 	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
 	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
-	if err := TraverseApprovees(cachedTx.GetMetadata().GetTxHash(),
+	if err := TraverseApprovees(cachedTxMeta.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-			defer cachedTx.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
 			// first check if the tx was confirmed => update yrtsi and ortsi with the confirmation index
-			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
 				updateIndexes(at, at)
 				return false, nil
 			}
 
-			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
 				return true, nil
 			}
 
 			// if the tx was not confirmed yet, but already contains recent (calculation index matches LSMI) information
 			// about yrtsi and ortsi, propagate that info
-			yrtsi, ortsi, rtsci := cachedTx.GetMetadata().GetRootSnapshotIndexes()
+			yrtsi, ortsi, rtsci := cachedTxMeta.GetMetadata().GetRootSnapshotIndexes()
 			if rtsci == lsmi {
 				updateIndexes(yrtsi, ortsi)
 				return false, nil
@@ -82,15 +82,15 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 			return true, nil
 		},
 		// consumer
-		func(cachedTx *tangle.CachedTransaction) error { // tx +1
-			defer cachedTx.Release(true) // tx -1
+		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
 
-			if bytes.Equal(startTxHash, cachedTx.GetTransaction().GetTxHash()) {
+			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
 				// skip the start transaction, so it doesn't get added to the outdatedTransactions
 				return nil
 			}
 
-			outdatedTransactions = append(outdatedTransactions, cachedTx.GetTransaction().GetTxHash())
+			outdatedTransactions = append(outdatedTransactions, cachedTxMeta.GetMetadata().GetTxHash())
 			return nil
 		},
 		// called on missing approvees
@@ -119,7 +119,7 @@ func GetTransactionRootSnapshotIndexes(cachedTx *tangle.CachedTransaction, lsmi 
 	}
 
 	// set the new transaction root snapshot indexes in the metadata of the transaction
-	cachedTx.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
+	cachedTxMeta.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
 
 	return youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex
 }
@@ -138,18 +138,18 @@ func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone
 
 		if err := TraverseApprovers(txHash,
 			// traversal stops if no more transactions pass the given condition
-			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-				defer cachedTx.Release(true) // tx -1
-				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
+			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
+				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetTxHash())]
 				return !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTx *tangle.CachedTransaction) error { // tx +1
-				defer cachedTx.Release(true) // tx -1
-				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
+				traversed[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 
 				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
-				GetTransactionRootSnapshotIndexes(cachedTx.Retain(), lsmi) // tx pass +1
+				GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta pass +1
 
 				return nil
 			}, true, nil); err != nil {

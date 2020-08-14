@@ -250,20 +250,20 @@ func getTailApproversOfSameBundle(bundleHash hornet.Hash, txHash hornet.Hash, fo
 		for txHashToCheck := range txsToCheck {
 			delete(txsToCheck, txHashToCheck)
 
-			for _, approverHash := range GetApproverHashes(hornet.Hash(txHashToCheck), forceRelease) {
-				cachedApproverTx := GetCachedTransactionOrNil(approverHash) // tx +1
-				if cachedApproverTx == nil {
+			for _, approverHash := range GetApproverHashes(hornet.Hash(txHashToCheck)) {
+				cachedApproverTxMeta := GetCachedTxMetadataOrNil(approverHash) // meta +1
+				if cachedApproverTxMeta == nil {
 					continue
 				}
 
-				approverTx := cachedApproverTx.GetTransaction()
-				if !bytes.Equal(approverTx.GetBundleHash(), bundleHash) {
+				approverTxMeta := cachedApproverTxMeta.GetMetadata()
+				if !bytes.Equal(approverTxMeta.GetBundleHash(), bundleHash) {
 					// Not the same bundle => skip
-					cachedApproverTx.Release(forceRelease) // tx -1
+					cachedApproverTxMeta.Release(forceRelease) // meta -1
 					continue
 				}
 
-				if approverTx.IsTail() {
+				if approverTxMeta.IsTail() {
 					// TailTx of the bundle
 					tailTxHashes = append(tailTxHashes, approverHash)
 				} else {
@@ -271,7 +271,7 @@ func getTailApproversOfSameBundle(bundleHash hornet.Hash, txHash hornet.Hash, fo
 					txsToCheck[string(approverHash)] = struct{}{}
 				}
 
-				cachedApproverTx.Release(forceRelease) // tx -1
+				cachedApproverTxMeta.Release(forceRelease) // meta -1
 			}
 		}
 	}
@@ -282,7 +282,7 @@ func getTailApproversOfSameBundle(bundleHash hornet.Hash, txHash hornet.Hash, fo
 // approversFromSameBundleExist returns whether there are other transactions in the same bundle, that approve this transaction
 func approversFromSameBundleExist(bundleHash hornet.Hash, txHash hornet.Hash, forceRelease bool) bool {
 
-	for _, approverHash := range GetApproverHashes(txHash, forceRelease) {
+	for _, approverHash := range GetApproverHashes(txHash) {
 		if ContainsBundleTransaction(bundleHash, approverHash, true) || ContainsBundleTransaction(bundleHash, approverHash, false) {
 			// Tx is used in another bundle instance => do not delete
 			return true
@@ -294,69 +294,69 @@ func approversFromSameBundleExist(bundleHash hornet.Hash, txHash hornet.Hash, fo
 
 // RemoveTransactionFromBundle removes the transaction if non-tail and not associated to a bundle instance or
 // if tail, it removes all the transactions of the bundle from the storage that are not used in another bundle instance.
-func RemoveTransactionFromBundle(tx *hornet.Transaction) map[string]struct{} {
+func RemoveTransactionFromBundle(txMeta *hornet.TransactionMetadata) map[string]struct{} {
 
 	txsToRemove := make(map[string]struct{})
 
 	// check whether this transaction is a tail or respectively stored as a bundle tail
-	isTail := ContainsBundleTransaction(tx.GetBundleHash(), tx.GetTxHash(), true)
+	isTail := ContainsBundleTransaction(txMeta.GetBundleHash(), txMeta.GetTxHash(), true)
 	if !isTail {
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the storage
-		if approversFromSameBundleExist(tx.GetBundleHash(), tx.GetTxHash(), true) {
+		if approversFromSameBundleExist(txMeta.GetBundleHash(), txMeta.GetTxHash(), true) {
 			return txsToRemove
 		}
 
-		DeleteBundleTransaction(tx.GetBundleHash(), tx.GetTxHash(), false)
-		txsToRemove[string(tx.GetTxHash())] = struct{}{}
+		DeleteBundleTransaction(txMeta.GetBundleHash(), txMeta.GetTxHash(), false)
+		txsToRemove[string(txMeta.GetTxHash())] = struct{}{}
 		return txsToRemove
 	}
 
 	// Tx is a tail => remove all txs of this bundle that are not used in another bundle instance
 
 	// Tails can't be in another bundle instance => remove it
-	DeleteBundle(tx.GetTxHash())
-	DeleteBundleTransaction(tx.GetBundleHash(), tx.GetTxHash(), true)
-	txsToRemove[string(tx.GetTxHash())] = struct{}{}
+	DeleteBundle(txMeta.GetTxHash())
+	DeleteBundleTransaction(txMeta.GetBundleHash(), txMeta.GetTxHash(), true)
+	txsToRemove[string(txMeta.GetTxHash())] = struct{}{}
 
-	cachedCurrentTx := loadBundleTxIfExistsOrPanic(tx.GetTxHash(), tx.GetBundleHash()) // tx +1
+	cachedCurrentTxMeta := loadBundleTxMetaIfExistsOrPanic(txMeta.GetTxHash(), txMeta.GetBundleHash()) // meta +1
 
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-	for !cachedCurrentTx.GetTransaction().IsHead() && !bytes.Equal(cachedCurrentTx.GetTransaction().GetTxHash(), cachedCurrentTx.GetTransaction().GetTrunkHash()) {
+	for !cachedCurrentTxMeta.GetMetadata().IsHead() && !bytes.Equal(cachedCurrentTxMeta.GetMetadata().GetTxHash(), cachedCurrentTxMeta.GetMetadata().GetTrunkHash()) {
 
 		// check whether the trunk transaction is known to the bundle storage.
 		// this also ensures that the transaction has to be in the database
-		if !ContainsBundleTransaction(tx.GetBundleHash(), cachedCurrentTx.GetTransaction().GetTrunkHash(), false) {
+		if !ContainsBundleTransaction(txMeta.GetBundleHash(), cachedCurrentTxMeta.GetMetadata().GetTrunkHash(), false) {
 			// Tx may not exist if the bundle was not received completly
 			// Do not force release, since it is loaded again for pruning
-			cachedCurrentTx.Release() // tx -1
+			cachedCurrentTxMeta.Release() // meta -1
 			return txsToRemove
 		}
 
 		// Tx is not a tail => check if the tx is part of another bundle instance, otherwise remove the tx from the bucket
-		if approversFromSameBundleExist(tx.GetBundleHash(), cachedCurrentTx.GetTransaction().GetTrunkHash(), true) {
+		if approversFromSameBundleExist(txMeta.GetBundleHash(), cachedCurrentTxMeta.GetMetadata().GetTrunkHash(), true) {
 			// Do not force release, since it is loaded again for pruning
-			cachedCurrentTx.Release() // tx -1
+			cachedCurrentTxMeta.Release() // meta -1
 			return txsToRemove
 		}
 
-		DeleteBundleTransaction(tx.GetBundleHash(), cachedCurrentTx.GetTransaction().GetTrunkHash(), false)
-		txsToRemove[string(cachedCurrentTx.GetTransaction().GetTrunkHash())] = struct{}{}
+		DeleteBundleTransaction(txMeta.GetBundleHash(), cachedCurrentTxMeta.GetMetadata().GetTrunkHash(), false)
+		txsToRemove[string(cachedCurrentTxMeta.GetMetadata().GetTrunkHash())] = struct{}{}
 
-		cachedTx := GetCachedTransactionOrNil(cachedCurrentTx.GetTransaction().GetTrunkHash()) // tx +1
-		if cachedTx == nil {
+		cachedTxMeta := GetCachedTxMetadataOrNil(cachedCurrentTxMeta.GetMetadata().GetTrunkHash()) // meta +1
+		if cachedTxMeta == nil {
 			// Tx may not exist if the bundle was not received completly
 			// Do not force release, since it is loaded again for pruning
-			cachedCurrentTx.Release() // tx -1
+			cachedCurrentTxMeta.Release() // meta -1
 			return txsToRemove
 		}
 
 		// Do not force release, since it is loaded again for pruning
-		cachedCurrentTx.Release() // tx -1
-		cachedCurrentTx = cachedTx
+		cachedCurrentTxMeta.Release() // meta -1
+		cachedCurrentTxMeta = cachedTxMeta
 	}
 
 	// Do not force release, since it is loaded again for pruning
-	cachedCurrentTx.Release() // tx -1
+	cachedCurrentTxMeta.Release() // meta -1
 
 	return txsToRemove
 }

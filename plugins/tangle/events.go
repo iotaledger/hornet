@@ -20,7 +20,7 @@ var Events = pluginEvents{
 	ReceivedNewTransaction:        events.NewEvent(tangle.NewTransactionCaller),
 	ReceivedKnownTransaction:      events.NewEvent(tangle.TransactionCaller),
 	ProcessedTransaction:          events.NewEvent(tangle.TransactionHashCaller),
-	TransactionSolid:              events.NewEvent(tangle.TransactionCaller),
+	TransactionSolid:              events.NewEvent(tangle.TransactionHashCaller),
 	TransactionConfirmed:          events.NewEvent(tangle.TransactionConfirmedCaller),
 	TransactionStored:             events.NewEvent(tangle.TransactionCaller),
 	BundleSolid:                   events.NewEvent(tangle.BundleCaller),

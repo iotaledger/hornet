@@ -243,8 +243,8 @@ func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCo
 		return
 	}
 
-	trunkItem := s.trackedTails[string(bndl.GetTrunk(true))]
-	branchItem := s.trackedTails[string(bndl.GetBranch(true))]
+	trunkItem := s.trackedTails[string(bndl.GetTrunkHash(true))]
+	branchItem := s.trackedTails[string(bndl.GetBranchHash(true))]
 
 	// compute the referenced transactions
 	// all the known approvers in the HeaviestSelector are represented by a unique bit in a bitset.

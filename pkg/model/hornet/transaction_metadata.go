@@ -16,6 +16,9 @@ const (
 	TransactionMetadataSolid       = 0
 	TransactionMetadataConfirmed   = 1
 	TransactionMetadataConflicting = 2
+	TransactionMetadataIsHead      = 3
+	TransactionMetadataIsTail      = 4
+	TransactionMetadataIsValue     = 5
 )
 
 type TransactionMetadata struct {
@@ -41,6 +44,15 @@ type TransactionMetadata struct {
 
 	// rootSnapshotCalculationIndex is the solid index yrtsi and ortsi were calculated at
 	rootSnapshotCalculationIndex milestone.Index
+
+	// trunkHash is the trunk of the transaction
+	trunkHash Hash
+
+	// branchHash is the branch of the transaction
+	branchHash Hash
+
+	// bundleHash is the bundle of the transaction
+	bundleHash Hash
 }
 
 func NewTransactionMetadata(txHash Hash) *TransactionMetadata {
@@ -51,6 +63,39 @@ func NewTransactionMetadata(txHash Hash) *TransactionMetadata {
 
 func (m *TransactionMetadata) GetTxHash() Hash {
 	return m.txHash
+}
+
+func (m *TransactionMetadata) GetTrunkHash() Hash {
+	return m.trunkHash
+}
+
+func (m *TransactionMetadata) GetBranchHash() Hash {
+	return m.branchHash
+}
+
+func (m *TransactionMetadata) GetBundleHash() Hash {
+	return m.bundleHash
+}
+
+func (m *TransactionMetadata) IsTail() bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasFlag(TransactionMetadataIsTail)
+}
+
+func (m *TransactionMetadata) IsHead() bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasFlag(TransactionMetadataIsHead)
+}
+
+func (m *TransactionMetadata) IsValue() bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasFlag(TransactionMetadataIsValue)
 }
 
 func (m *TransactionMetadata) GetSolidificationTimestamp() int32 {
@@ -145,17 +190,14 @@ func (m *TransactionMetadata) GetRootSnapshotIndexes() (yrtsi milestone.Index, o
 	return m.youngestRootSnapshotIndex, m.oldestRootSnapshotIndex, m.rootSnapshotCalculationIndex
 }
 
-func (m *TransactionMetadata) Reset() {
+func (m *TransactionMetadata) SetAdditionalTxInfo(trunkHash Hash, branchHash Hash, bundleHash Hash, isHead bool, isTail bool, isValue bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	// Metadata
-	m.metadata = bitmask.BitMask(0)
-	m.solidificationTimestamp = 0
-	m.confirmationIndex = 0
-	m.youngestRootSnapshotIndex = 0
-	m.oldestRootSnapshotIndex = 0
-	m.rootSnapshotCalculationIndex = 0
+	m.trunkHash = trunkHash
+	m.branchHash = branchHash
+	m.bundleHash = bundleHash
+	m.metadata = m.metadata.ModifyFlag(TransactionMetadataIsHead, isHead).ModifyFlag(TransactionMetadataIsTail, isTail).ModifyFlag(TransactionMetadataIsValue, isValue)
 	m.SetModified(true)
 }
 
@@ -187,6 +229,9 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 		4 bytes uint32 youngestRootSnapshotIndex
 		4 bytes uint32 oldestRootSnapshotIndex
 		4 bytes uint32 rootSnapshotCalculationIndex
+		49 bytes hash trunk
+		49 bytes hash branch
+		49 bytes hash bundle
 	*/
 
 	value := make([]byte, 21)
@@ -196,6 +241,9 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 	binary.LittleEndian.PutUint32(value[9:], uint32(m.youngestRootSnapshotIndex))
 	binary.LittleEndian.PutUint32(value[13:], uint32(m.oldestRootSnapshotIndex))
 	binary.LittleEndian.PutUint32(value[17:], uint32(m.rootSnapshotCalculationIndex))
+	value = append(value, m.trunkHash...)
+	value = append(value, m.branchHash...)
+	value = append(value, m.bundleHash...)
 
 	return value
 }
@@ -211,6 +259,9 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumed
 		4 bytes uint32 youngestRootSnapshotIndex
 		4 bytes uint32 oldestRootSnapshotIndex
 		4 bytes uint32 rootSnapshotCalculationIndex
+		49 bytes hash trunk
+		49 bytes hash branch
+		49 bytes hash bundle
 	*/
 
 	m.metadata = bitmask.BitMask(data[0])
@@ -220,11 +271,16 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumed
 	m.oldestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[13:17]))
 	m.rootSnapshotCalculationIndex = 0
 
-	if len(data) == 21 {
+	if len(data) > 17 {
 		// ToDo: Remove at next DbVersion update
 		m.rootSnapshotCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[17:21]))
-		return 21, nil
+
+		if len(data) == 21+49+49+49 {
+			m.trunkHash = Hash(data[21 : 21+49])
+			m.branchHash = Hash(data[21+49 : 21+49+49])
+			m.bundleHash = Hash(data[21+49+49 : 21+49+49+49])
+		}
 	}
 
-	return 17, nil
+	return len(data), nil
 }

@@ -9,10 +9,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 const (
-	// printStatusInterval is the interval for printing revalidation status messages
+	// printStatusInterval is the interval for printing status messages
 	printStatusInterval = 2 * time.Second
 )
 
@@ -122,7 +123,6 @@ func revalidateDatabase() error {
 	}
 
 	log.Info("flushing storages...")
-	time.Sleep(5 * time.Second) // ToDo: workaround for current deadlock in object storage
 	tangle.FlushStorages()
 	log.Info("flushing storages... done!")
 
@@ -149,11 +149,12 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		milestonesCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d milestones", milestonesCounter)
 		}
 
@@ -171,18 +172,20 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(milestonesToDelete))
+	total := len(milestonesToDelete)
 	var deletionCounter int64
 	for msIndex := range milestonesToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting milestones...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteUnconfirmedTxs(msIndex)
@@ -193,7 +196,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		tangle.DeleteMilestone(msIndex)
 	}
 
-	log.Infof("deleting milestones...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -211,11 +214,12 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 		ledgerDiffsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
 		}
 
@@ -233,24 +237,26 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(ledgerDiffsToDelete))
+	total := len(ledgerDiffsToDelete)
 	var deletionCounter int64
 	for msIndex := range ledgerDiffsToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting ledger diffs...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting ledger diffs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteLedgerDiffForMilestone(msIndex)
 	}
 
-	log.Infof("deleting ledger diffs...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting ledger diffs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -269,11 +275,12 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d transactions", txsCounter)
 		}
 
@@ -305,24 +312,26 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(transactionsToDelete))
+	total := len(transactionsToDelete)
 	var deletionCounter int64
 	for txHash := range transactionsToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting transactions...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting transactions...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteTransaction(hornet.Hash(txHash))
 	}
 
-	log.Infof("deleting transactions...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -340,11 +349,12 @@ func cleanupTransactionMetadata() error {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d transaction metadata", metadataCounter)
 		}
 
@@ -361,24 +371,26 @@ func cleanupTransactionMetadata() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(metadataToDelete))
+	total := len(metadataToDelete)
 	var deletionCounter int64
 	for txHash := range metadataToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting transaction metadata...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting transaction metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteTransactionMetadata(hornet.Hash(txHash))
 	}
 
-	log.Infof("deleting transaction metadata...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting transaction metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -396,11 +408,12 @@ func cleanupBundles() error {
 		bundleCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d bundles", bundleCounter)
 		}
 
@@ -425,24 +438,26 @@ func cleanupBundles() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(bundlesToDelete))
+	total := len(bundlesToDelete)
 	var deletionCounter int64
 	for tailTxHash := range bundlesToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting bundles...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting bundles...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteBundle(hornet.Hash(tailTxHash))
 	}
 
-	log.Infof("deleting bundles...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting bundles...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -466,11 +481,12 @@ func cleanupBundleTransactions() error {
 		bundleTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d bundle transactions", bundleTxsCounter)
 		}
 
@@ -487,24 +503,26 @@ func cleanupBundleTransactions() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(bundleTxsToDelete))
+	total := len(bundleTxsToDelete)
 	var deletionCounter int64
 	for _, bundleTx := range bundleTxsToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting bundle transactions...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting bundle transactions...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteBundleTransaction(bundleTx.bundleHash, bundleTx.txHash, bundleTx.isTail)
 	}
 
-	log.Infof("deleting bundle transactions...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting bundle transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -527,11 +545,12 @@ func cleanupApprovers() error {
 		approverCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d approvers", approverCounter)
 		}
 
@@ -553,24 +572,26 @@ func cleanupApprovers() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(approversToDelete))
+	total := len(approversToDelete)
 	var deletionCounter int64
 	for _, approver := range approversToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting approvers...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting approvers...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteApprover(approver.txHash, approver.approverHash)
 	}
 
-	log.Infof("deleting approvers...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting approvers...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -593,11 +614,12 @@ func cleanupTags() error {
 		tagsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d tags", tagsCounter)
 		}
 
@@ -614,24 +636,26 @@ func cleanupTags() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(tagsToDelete))
+	total := len(tagsToDelete)
 	var deletionCounter int64
 	for _, tag := range tagsToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting tags...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting tags...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteTag(tag.tag, tag.txHash)
 	}
 
-	log.Infof("deleting tags...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting tags...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -654,11 +678,12 @@ func cleanupAddresses() error {
 		addressesCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d addresses", addressesCounter)
 		}
 
@@ -675,24 +700,26 @@ func cleanupAddresses() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(addressesToDelete))
+	total := len(addressesToDelete)
 	var deletionCounter int64
 	for _, addr := range addressesToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting addresses...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting addresses...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteAddress(addr.address, addr.txHash)
 	}
 
-	log.Infof("deleting addresses...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting addresses...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -710,11 +737,12 @@ func cleanupUnconfirmedTxs() error {
 		unconfirmedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return false
 			}
 
-			lastStatusTime = time.Now()
 			log.Infof("analyzed %d unconfirmed txs", unconfirmedTxsCounter)
 		}
 
@@ -728,24 +756,26 @@ func cleanupUnconfirmedTxs() error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := float32(len(unconfirmedMilestoneIndexes))
+	total := len(unconfirmedMilestoneIndexes)
 	var deletionCounter int64
 	for msIndex := range unconfirmedMilestoneIndexes {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
 			if daemon.IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
-			lastStatusTime = time.Now()
-			log.Infof("deleting unconfirmed txs...%d/%d (%0.2f%%)", deletionCounter, int(total), (float32(deletionCounter)/total)*100)
+			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+			log.Infof("deleting unconfirmed txs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteUnconfirmedTxs(msIndex)
 	}
 
-	log.Infof("deleting unconfirmed txs...%d/%d (100.00%%) done, took %v", int(total), int(total), time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting unconfirmed txs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

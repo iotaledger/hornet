@@ -87,17 +87,17 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	for txHashToCheck := range txsToCheckMap {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToCheck)) // tx +1
-		if cachedTx == nil {
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHashToCheck)) // tx +1
+		if cachedTxMeta == nil {
 			log.Warnf("pruneTransactions: Transaction not found: %s", txHashToCheck)
 			continue
 		}
 
-		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTx.GetTransaction()) {
+		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTxMeta.GetMetadata()) {
 			txsToDeleteMap[txToRemove] = struct{}{}
 		}
 		// since it gets loaded below again it doesn't make sense to force release here
-		cachedTx.Release() // tx -1
+		cachedTxMeta.Release() // tx -1
 	}
 
 	for txHashToDelete := range txsToDeleteMap {
@@ -107,17 +107,16 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 			continue
 		}
 
-		tx := cachedTx.GetTransaction()
-		cachedTx.Release(true) // tx -1
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) { // tx -1
+			// Delete the reference in the approvees
+			tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
+			tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())
 
-		// Delete the reference in the approvees
-		tangle.DeleteApprover(tx.GetTrunkHash(), cachedTx.GetTransaction().GetTxHash())
-		tangle.DeleteApprover(tx.GetBranchHash(), cachedTx.GetTransaction().GetTxHash())
-
-		tangle.DeleteTag(cachedTx.GetTransaction().GetTag(), cachedTx.GetTransaction().GetTxHash())
-		tangle.DeleteAddress(cachedTx.GetTransaction().GetAddress(), cachedTx.GetTransaction().GetTxHash())
-		tangle.DeleteApprovers(cachedTx.GetTransaction().GetTxHash())
-		tangle.DeleteTransaction(cachedTx.GetTransaction().GetTxHash())
+			tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
+			tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
+			tangle.DeleteApprovers(tx.GetTxHash())
+			tangle.DeleteTransaction(tx.GetTxHash())
+		})
 	}
 
 	return len(txsToDeleteMap)
@@ -207,9 +206,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		err := dag.TraverseApprovees(cachedMs.GetMilestone().Hash,
 			// traversal stops if no more transactions pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-				defer cachedTx.Release(true) // tx -1
-				if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
+				defer cachedTxMeta.Release(true) // tx -1
+				if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
 					if at < milestoneIndex {
 						// Ignore Tx that were confirmed by older milestones
 						return false, nil
@@ -218,9 +217,9 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 				return true, nil
 			},
 			// consumer
-			func(cachedTx *tangle.CachedTransaction) error { // tx +1
-				defer cachedTx.Release(true) // tx -1
-				txsToCheckMap[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+			func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
+				defer cachedTxMeta.Release(true) // tx -1
+				txsToCheckMap[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 				return nil
 			},
 			// called on missing approvees

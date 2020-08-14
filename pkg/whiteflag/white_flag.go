@@ -55,7 +55,8 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
+// all cachedTxMetas and cachedBundles have to be released outside.
+func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedBundle, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
@@ -67,19 +68,28 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 
 	// traversal stops if no more transactions pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-		defer cachedTx.Release(true) // tx -1
+	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+		defer cachedTxMeta.Release(true) // meta -1
 
-		if !cachedTx.GetTransaction().IsTail() {
-			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTx.GetTransaction().GetTxHash().Trytes())
+		if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
+			// release the tx metadata at the end to speed up calculation
+			cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
+		}
+
+		if !cachedTxMeta.GetMetadata().IsTail() {
+			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
 		}
 
 		// load up bundle
-		cachedBundle := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash())
-		if cachedBundle == nil {
-			return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetTxHash().Trytes())
+		cachedBundle, exists := cachedBundles[string(cachedTxMeta.GetMetadata().GetTxHash())]
+		if !exists {
+			cachedBundle = tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
+			if cachedBundle == nil {
+				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			}
+			// release the bundles at the end to speed up calculation
+			cachedBundles[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedBundle
 		}
-		defer cachedBundle.Release(true)
 
 		// check validty and correct strict semantics
 		if !cachedBundle.GetBundle().IsValid() || !cachedBundle.GetBundle().ValidStrictSemantics() {
@@ -87,17 +97,17 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 		}
 
 		// only traverse and process the transaction if it was not confirmed yet
-		return !cachedTx.GetMetadata().IsConfirmed(), nil
+		return !cachedTxMeta.GetMetadata().IsConfirmed(), nil
 	}
 
 	// consumer
-	consumer := func(cachedTx *tangle.CachedTransaction) error { // tx +1
-		defer cachedTx.Release(true) // tx -1
+	consumer := func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+		defer cachedTxMeta.Release(true) // meta -1
 
 		// load up bundle
-		cachedBundle := tangle.GetCachedBundleOrNil(cachedTx.GetTransaction().GetTxHash())
+		cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash())
 		if cachedBundle == nil {
-			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, cachedTx.GetTransaction().GetTxHash().Trytes())
+			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
 		}
 		defer cachedBundle.Release(true)
 
@@ -105,8 +115,8 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 		bundle := cachedBundle.GetBundle()
 		mutations := bundle.GetLedgerChanges()
 		if bundle.IsValueSpam() || len(mutations) == 0 {
-			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
-			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetTxHash())
+			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTxMeta.GetMetadata().GetTxHash())
 			return nil
 		}
 
@@ -146,15 +156,15 @@ func ComputeWhiteFlagMutations(merkleTreeHashFunc crypto.Hash, trunkHash hornet.
 			validMutations[addr] = validMutations[addr] + change
 		}
 
-		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTx.GetTransaction().GetTxHash())
+		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetTxHash())
 
 		if conflicting {
-			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTx.GetTransaction().GetTxHash())
+			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTxMeta.GetMetadata().GetTxHash())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTx.GetTransaction().GetTxHash())
+		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTxMeta.GetMetadata().GetTxHash())
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.

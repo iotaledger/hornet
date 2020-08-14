@@ -101,8 +101,7 @@
       "entryNodes": [
         "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637"
       ],
-      "seed": "",
-      "maxDroppedPacketsPercentage": 30
+      "seed": ""
     }
   },
   "tipsel": {

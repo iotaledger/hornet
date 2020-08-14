@@ -204,8 +204,8 @@ func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
 	// the approvees (trunk and branch) are the tail transactions this tip approves
 	// remove them from the tip pool
 	approveeTailTxHashes := map[string]struct{}{
-		string(bndl.GetTrunk(true)):  {},
-		string(bndl.GetBranch(true)): {},
+		string(bndl.GetTrunkHash(true)):  {},
+		string(bndl.GetBranchHash(true)): {},
 	}
 
 	checkTip := func(tipsMap map[string]*Tip, approveeTip *Tip, retentionRulesTipsLimit int, maxApprovers uint32, maxReferencedTipAgeSeconds time.Duration) bool {
@@ -454,15 +454,15 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this transaction
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
-	cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
-	if cachedTx == nil {
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // meta +1
+	if cachedTxMeta == nil {
 		// we need to return lazy instead of panic here, because the transaction could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
 		return ScoreLazy
 	}
-	defer cachedTx.Release(true)
+	defer cachedTxMeta.Release(true)
 
-	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTx.Retain(), lsmi) // tx +1
+	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta +1
 
 	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
 	if (lsmi - ytrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
@@ -476,14 +476,14 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 
 	cachedBundle := tangle.GetCachedBundleOrNil(txHash) // bundle +1
 	if cachedBundle == nil {
-		panic(fmt.Errorf("%w: bundle %s of tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTx.GetTransaction().Tx.Bundle, txHash.Trytes()))
+		panic(fmt.Errorf("%w: bundle %s of tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), txHash.Trytes()))
 	}
 	defer cachedBundle.Release(true)
 
 	// the approvees (trunk and branch) are the tail transactions this tip approves
 	approveeHashes := map[string]struct{}{
-		string(cachedBundle.GetBundle().GetTrunk(true)):  {},
-		string(cachedBundle.GetBundle().GetBranch(true)): {},
+		string(cachedBundle.GetBundle().GetTrunkHash(true)):  {},
+		string(cachedBundle.GetBundle().GetBranchHash(true)): {},
 	}
 
 	for approveeHash := range approveeHashes {
@@ -493,13 +493,13 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
 			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
 		} else {
-			cachedApproveeTx := tangle.GetCachedTransactionOrNil(hornet.Hash(approveeHash)) // tx +1
-			if cachedApproveeTx == nil {
+			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // meta +1
+			if cachedApproveeTxMeta == nil {
 				panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
 			}
 
-			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTx.Retain(), lsmi) // tx +1
-			cachedApproveeTx.Release(true)
+			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // meta +1
+			cachedApproveeTxMeta.Release(true)
 		}
 
 		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, the tip is semi-lazy

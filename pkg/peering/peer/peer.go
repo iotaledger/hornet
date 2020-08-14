@@ -136,6 +136,11 @@ func (p *Peer) IsInbound() bool {
 
 // CheckStaledAutopeer checks if the maximum percentage of dropped packages is exceeded.
 func (p *Peer) CheckStaledAutopeer(maxPercentage int) (bool, float32) {
+	if maxPercentage == 0 {
+		// check disabled
+		return false, 0
+	}
+
 	if p.Autopeering == nil {
 		// not connected via autopeering
 		return false, 0

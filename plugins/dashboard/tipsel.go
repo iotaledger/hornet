@@ -22,9 +22,8 @@ func configureTipSelMetric() {
 		case *tipselect.TipSelStats:
 			hub.BroadcastMsg(&msg{MsgTypeTipSelMetric, x})
 		case milestone.Index:
-			if cachedMsTailTx := getMilestoneTail(x); cachedMsTailTx != nil { // tx +1
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().Tx.Hash, x}})
-				cachedMsTailTx.Release(true) // tx -1
+			if msTailTxHash := getMilestoneTailHash(x); msTailTxHash != nil {
+				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
 			}
 		}
 		task.Return(nil)

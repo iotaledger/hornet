@@ -11,6 +11,12 @@ import (
 	"github.com/iotaledger/iota.go/merkle"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/utils"
+)
+
+const (
+	// printStatusInterval is the interval for printing status messages
+	printStatusInterval = 2 * time.Second
 )
 
 func merkleTreeCreate(args []string) error {
@@ -36,17 +42,18 @@ func merkleTreeCreate(args []string) error {
 	count := 1 << depth
 
 	ts := time.Now()
+	lastStatusTime := time.Now()
 
 	calculateAddressesStartCallback := func(count uint32) {
 		fmt.Printf("calculating %d addresses...\n", count)
 	}
 
 	calculateAddressesCallback := func(index uint32) {
-		if index%5000 == 0 && index != 0 {
-			ratio := float64(index) / float64(count)
-			total := time.Duration(float64(time.Since(ts)) / ratio)
-			duration := time.Until(ts.Add(total))
-			fmt.Printf("calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, ratio*100.0, duration.Truncate(time.Second))
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
+			percentage, remaining := utils.EstimateRemainingTime(ts, int64(index), int64(count))
+			fmt.Printf("calculated %d/%d (%0.2f%%) addresses. %v left...\n", index, count, percentage, remaining.Truncate(time.Second))
 		}
 	}
 

@@ -56,7 +56,7 @@ func configureApproversStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 }
 
 // approvers +-0
-func GetApproverHashes(txHash hornet.Hash, forceRelease bool, maxFind ...int) hornet.Hashes {
+func GetApproverHashes(txHash hornet.Hash, maxFind ...int) hornet.Hashes {
 	var approverHashes hornet.Hashes
 
 	i := 0

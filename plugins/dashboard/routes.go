@@ -165,9 +165,8 @@ func websocketRoute(ctx echo.Context) error {
 		case MsgTypeMs:
 			start := tangle.GetLatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
-				if cachedMsTailTx := getMilestoneTail(i); cachedMsTailTx != nil { // tx +1
-					client.Send(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().Tx.Hash, i}})
-					cachedMsTailTx.Release(true) // tx -1
+				if msTailTxHash := getMilestoneTailHash(i); msTailTxHash != nil {
+					client.Send(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), i}})
 				} else {
 					break
 				}

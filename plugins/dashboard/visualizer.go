@@ -67,7 +67,7 @@ func configureVisualizer() {
 func runVisualizer() {
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
+		cachedTx.ConsumeTransactionAndMetadata(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -89,20 +89,18 @@ func runVisualizer() {
 		})
 	})
 
-	onTransactionSolid := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
+	onTransactionSolid := events.NewClosure(func(txHash hornet.Hash) {
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
 
-			visualizerWorkerPool.TrySubmit(
-				&msg{
-					Type: MsgTypeSolidInfo,
-					Data: &metainfo{
-						ID: tx.Tx.Hash[:VisualizerIdLength],
-					},
-				}, false)
-		})
+		visualizerWorkerPool.TrySubmit(
+			&msg{
+				Type: MsgTypeSolidInfo,
+				Data: &metainfo{
+					ID: txHash.Trytes()[:VisualizerIdLength],
+				},
+			}, false)
 	})
 
 	onReceivedNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
