@@ -171,7 +171,7 @@ func (c *CachedBundle) ConsumeBundle(consumer func(*Bundle)) {
 
 	c.Consume(func(object objectstorage.StorableObject) {
 		consumer(object.(*Bundle))
-	})
+	}, true)
 }
 
 func (c *CachedBundle) GetBundle() *Bundle {
