@@ -86,8 +86,7 @@
         "12w9FrzMdDQ42aBgFrv1siHuJMhuZ4SMVHRFSS7Zb72W@entrynode.iotatoken.nl:14626",
         "DboTc1v61Xdyvggj8VRszy92ScUTLgfwZaHvXsU8zr7e@entrynode.tanglebay.org:14626"
       ],
-      "seed": "",
-      "maxDroppedPacketsPercentage": 30
+      "seed": ""
     }
   },
   "node": {
