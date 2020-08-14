@@ -40,7 +40,7 @@ var (
 )
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
-func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, milestone.Index) {
+func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 
 	for _, approverHash := range tangle.GetApproverHashes(txHash) {
 		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
@@ -59,11 +59,11 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, m
 		if confirmed && (at > targetIndex) {
 			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
-			return true, at
+			return true
 		}
 	}
 
-	return false, 0
+	return false
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
@@ -211,7 +211,7 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 			default:
 			}
 
-			if isEntryPoint, at := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
+			if isEntryPoint := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
 				// A solid entry point should only be a tail transaction, otherwise the whole bundle can't be reproduced with a snapshot file
 				tails, err := dag.FindAllTails(approvee, false, true)
 				if err != nil {
@@ -219,6 +219,18 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 				}
 
 				for tailHash := range tails {
+					cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(tailHash))
+					if cachedTxMeta == nil {
+						return nil, errors.Wrapf(ErrCritical, "metadata (%v) not found!", hornet.Hash(tailHash).Trytes())
+					}
+
+					confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
+					if !confirmed {
+						cachedTxMeta.Release(true)
+						return nil, errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", hornet.Hash(tailHash).Trytes())
+					}
+					cachedTxMeta.Release(true)
+
 					solidEntryPoints[tailHash] = at
 				}
 			}
