@@ -392,6 +392,9 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 
 	newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(targetIndex, abortSignal)
 	if err != nil {
+		if err == tangle.ErrOperationAborted {
+			return err
+		}
 		return errors.Wrap(ErrCritical, err.Error())
 	}
 

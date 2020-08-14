@@ -210,6 +210,9 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 
 	balances, ledgerMilestone, err := GetLedgerStateForLSMIWithoutLocking(abortSignal)
 	if err != nil {
+		if err == ErrOperationAborted {
+			return nil, 0, err
+		}
 		return nil, 0, fmt.Errorf("GetLedgerStateForLSMI failed! %v", err)
 	}
 
@@ -221,6 +224,9 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
 		diff, err := GetLedgerDiffForMilestoneWithoutLocking(milestoneIndex, abortSignal)
 		if err != nil {
+			if err == ErrOperationAborted {
+				return nil, 0, err
+			}
 			return nil, 0, fmt.Errorf("GetLedgerDiffForMilestone: %v", err)
 		}
 
