@@ -107,17 +107,16 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 			continue
 		}
 
-		tx := cachedTx.GetTransaction()
-		cachedTx.Release(true) // tx -1
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
+			// Delete the reference in the approvees
+			tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
+			tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())
 
-		// Delete the reference in the approvees
-		tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
-		tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())
-
-		tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
-		tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
-		tangle.DeleteApprovers(tx.GetTxHash())
-		tangle.DeleteTransaction(tx.GetTxHash())
+			tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
+			tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
+			tangle.DeleteApprovers(tx.GetTxHash())
+			tangle.DeleteTransaction(tx.GetTxHash())
+		})
 	}
 
 	return len(txsToDeleteMap)
