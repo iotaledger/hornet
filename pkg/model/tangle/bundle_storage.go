@@ -368,7 +368,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		bndl.headTx = cachedTx.GetTransaction().GetTxHash()
 	} else {
 		// lets try to complete the bundle by assigning txs into this bundle
-		if !constructBundle(bndl, cachedTx.GetCachedMetadata().Retain()) { // meta pass +1
+		if !constructBundle(bndl, cachedTx.GetCachedMetadata()) { // meta pass +1
 			if isSolidTail {
 				panic("Can't create bundle, but tailTx is solid")
 			}

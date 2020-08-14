@@ -66,8 +66,9 @@ func (c *CachedTransaction) GetTransaction() *hornet.Transaction {
 	return c.tx.Get().(*hornet.Transaction)
 }
 
+// meta +1
 func (c *CachedTransaction) GetCachedMetadata() *CachedMetadata {
-	return &CachedMetadata{c.metadata}
+	return &CachedMetadata{c.metadata.Retain()}
 }
 
 func (c *CachedTransaction) GetMetadata() *hornet.TransactionMetadata {
