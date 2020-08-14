@@ -158,6 +158,7 @@ type GetNodeInfoReturn struct {
 	LatestSolidSubtangleMilestone      trinary.Hash    `json:"latestSolidSubtangleMilestone"`
 	LatestSolidSubtangleMilestoneIndex milestone.Index `json:"latestSolidSubtangleMilestoneIndex"`
 	IsSynced                           bool            `json:"isSynced"`
+	Health                             bool            `json:"health"`
 	MilestoneStartIndex                milestone.Index `json:"milestoneStartIndex"`
 	LastSnapshottedMilestoneIndex      milestone.Index `json:"lastSnapshottedMilestoneIndex"`
 	Neighbors                          uint            `json:"neighbors"`
