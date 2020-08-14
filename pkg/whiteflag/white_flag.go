@@ -17,6 +17,9 @@ import (
 var (
 	// ErrMilestoneApprovedInvalidBundle is returned when a milestone approves an invalid bundle in its past cone.
 	ErrMilestoneApprovedInvalidBundle = errors.New("the milestone approved an invalid bundle")
+
+	// ErrIncludedTailsSumDoesntMatch is returned when the sum of the included tails a milestone approves does not match the referenced tails minus the excluded tails.
+	ErrIncludedTailsSumDoesntMatch = errors.New("the sum of the included tails doesn't match the referenced tails minus the excluded tails")
 )
 
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
@@ -218,6 +221,10 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 
 	// compute merkle tree root hash
 	wfConf.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConf.TailsIncluded)
+
+	if len(wfConf.TailsIncluded) != (len(wfConf.TailsReferenced) - len(wfConf.TailsExcludedConflicting) - len(wfConf.TailsExcludedZeroValue)) {
+		return nil, ErrIncludedTailsSumDoesntMatch
+	}
 
 	return wfConf, nil
 }
