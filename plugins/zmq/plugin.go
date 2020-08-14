@@ -58,7 +58,7 @@ func configure(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	confirmedTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onConfirmedTx(task.Param(0).(*tanglePackage.CachedTransaction), task.Param(1).(milestone.Index), task.Param(2).(int64)) // tx pass +1
+		onConfirmedTx(task.Param(0).(*tanglePackage.CachedMetadata), task.Param(1).(milestone.Index), task.Param(2).(int64)) // meta pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -97,19 +97,19 @@ func run(_ *node.Plugin) {
 		cachedTx.Release(true) // tx -1
 	})
 
-	onTransactionConfirmed := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, msIndex milestone.Index, confTime int64) {
+	onTransactionConfirmed := events.NewClosure(func(cachedMeta *tanglePackage.CachedMetadata, msIndex milestone.Index, confTime int64) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedTx.Release(true) // tx -1
+			cachedMeta.Release(true) // meta -1
 			return
 		}
 		// Avoid notifying for conflicting txs
-		if !cachedTx.GetMetadata().IsConflicting() {
-			if _, added := confirmedTxWorkerPool.TrySubmit(cachedTx, msIndex, confTime); added { // tx pass +1
-				return // Avoid tx -1 (done inside workerpool task)
+		if !cachedMeta.GetMetadata().IsConflicting() {
+			if _, added := confirmedTxWorkerPool.TrySubmit(cachedMeta, msIndex, confTime); added { // meta pass +1
+				return // Avoid meta -1 (done inside workerpool task)
 			}
 		}
-		cachedTx.Release(true) // tx -1
+		cachedMeta.Release(true) // meta -1
 	})
 
 	onLatestMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {

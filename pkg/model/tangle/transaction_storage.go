@@ -30,7 +30,7 @@ func NewTransactionCaller(handler interface{}, params ...interface{}) {
 }
 
 func TransactionConfirmedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedTx *CachedTransaction, msIndex milestone.Index, confTime int64))(params[0].(*CachedTransaction).Retain(), params[1].(milestone.Index), params[2].(int64))
+	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime int64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(int64))
 }
 
 // CachedTransaction contains two cached objects, one for transaction data and one for metadata.

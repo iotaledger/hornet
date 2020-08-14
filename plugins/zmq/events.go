@@ -35,27 +35,34 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, _ int64) {
+func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _ int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
 
-		if err := publishConfTx(tx.Tx, msIndex); err != nil {
-			log.Error(err.Error())
+		cachedTx := tangle.GetCachedTransactionOrNil(metadata.GetTxHash())
+		if cachedTx == nil {
+			return
 		}
 
-		if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
-			log.Error(err.Error())
-		}
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+			if err := publishConfTx(tx.Tx, msIndex); err != nil {
+				log.Error(err.Error())
+			}
 
-		addresses := GetAddressTopics()
-		for _, addr := range addresses {
-			if strings.EqualFold(tx.Tx.Address, addr) {
-				err := publishConfTxForAddress(tx.Tx, msIndex)
-				if err != nil {
-					log.Error(err.Error())
+			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
+				log.Error(err.Error())
+			}
+
+			addresses := GetAddressTopics()
+			for _, addr := range addresses {
+				if strings.EqualFold(tx.Tx.Address, addr) {
+					err := publishConfTxForAddress(tx.Tx, msIndex)
+					if err != nil {
+						log.Error(err.Error())
+					}
 				}
 			}
-		}
+		})
 	})
 }
 

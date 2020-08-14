@@ -35,18 +35,26 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 	})
 }
 
-func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, _ int64) {
+func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _ int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
-		// conf_trytes topic
-		if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
-			log.Error(err.Error())
+	cachedMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
+
+		cachedTx := tangle.GetCachedTransactionOrNil(metadata.GetTxHash())
+		if cachedTx == nil {
+			return
 		}
 
-		// sn topic
-		if err := publishConfTx(tx.Tx, msIndex); err != nil {
-			log.Error(err.Error())
-		}
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+			// conf_trytes topic
+			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
+				log.Error(err.Error())
+			}
+
+			// sn topic
+			if err := publishConfTx(tx.Tx, msIndex); err != nil {
+				log.Error(err.Error())
+			}
+		})
 	})
 }
 
