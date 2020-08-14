@@ -118,10 +118,12 @@ func (t *ApproversTraverser) processStackApprovers() error {
 		return nil
 	}
 
-	// consume the transaction
-	if err := t.consumer(cachedTxMeta.Retain()); err != nil { // meta +1
-		// there was an error, stop processing the stack
-		return err
+	if t.consumer != nil {
+		// consume the transaction
+		if err := t.consumer(cachedTxMeta.Retain()); err != nil { // meta +1
+			// there was an error, stop processing the stack
+			return err
+		}
 	}
 
 	for _, approverHash := range tangle.GetApproverHashes(currentTxHash) {

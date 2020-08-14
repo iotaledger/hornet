@@ -210,9 +210,9 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 			return nil
 		},
 		// called on solid entry points
-		func(approveeHash hornet.Hash) {
-			// Ignore solid entry points (snapshot milestone included)
-		}, true, false, false, abortSignal); err != nil {
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		true, false, false, abortSignal); err != nil {
 		if err == tangle.ErrOperationAborted {
 			return false, true
 		}
@@ -299,10 +299,9 @@ func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashe
 				return coneSolid, nil
 			},
 			// consumer
-			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-				defer cachedTxMeta.Release(true) // meta -1
-				return nil
-			}, true, abortSignal); err != nil {
+			// no need to consume here
+			nil,
+			true, abortSignal); err != nil {
 			return err
 		}
 	}
@@ -362,9 +361,9 @@ func solidifyPastCone(cachedTxMetas map[string]*tangle.CachedMetadata, nonSolidT
 			return tangle.ErrTransactionNotFound
 		},
 		// called on solid entry points
-		func(approveeHash hornet.Hash) {
-			// Ignore solid entry points (snapshot milestone included)
-		}, true, false, false, abortSignal); err != nil {
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		true, false, false, abortSignal); err != nil {
 		if err == tangle.ErrTransactionNotFound {
 			// a transaction was missing in the cone => the startTx is not solid
 			return false, nil

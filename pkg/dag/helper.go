@@ -44,13 +44,12 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 			return nil
 		},
 		// called on missing approvees
-		func(approveeHash hornet.Hash) error {
-			return errors.Wrapf(ErrFindAllTailsFailed, "transaction not found: %v", approveeHash.Trytes())
-		},
+		// return error on missing approvees
+		nil,
 		// called on solid entry points
-		func(approveeHash hornet.Hash) {
-			// Ignore solid entry points (snapshot milestone included)
-		}, forceRelease, false, false, nil)
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		forceRelease, false, false, nil)
 
 	return tails, err
 }

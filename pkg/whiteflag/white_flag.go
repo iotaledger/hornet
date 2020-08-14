@@ -183,16 +183,6 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		return nil
 	}
 
-	// called on missing approvees
-	onMissingApprovee := func(approveeHash hornet.Hash) error {
-		return fmt.Errorf("%w: transaction %s", tangle.ErrTransactionNotFound, approveeHash.Trytes())
-	}
-
-	// called on solid entry points
-	onSolidEntryPoint := func(txHash hornet.Hash) {
-		// Ignore solid entry points (snapshot milestone included)
-	}
-
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If trunk and branch of a bundle head transaction are both SEPs, are already processed or already confirmed,
 	// then the mutations from the transaction retrieved from the stack are accumulated to the given Confirmation struct's mutations.
@@ -202,8 +192,12 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		if err := dag.TraverseApprovees(trunkHash,
 			condition,
 			consumer,
-			onMissingApprovee,
-			onSolidEntryPoint,
+			// called on missing approvees
+			// return error on missing approvees
+			nil,
+			// called on solid entry points
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
 			true, false, true, nil); err != nil {
 			return nil, err
 		}
@@ -212,8 +206,12 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		if err := dag.TraverseApproveesTrunkBranch(trunkHash, branchHash[0],
 			condition,
 			consumer,
-			onMissingApprovee,
-			onSolidEntryPoint,
+			// called on missing approvees
+			// return error on missing approvees
+			nil,
+			// called on solid entry points
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
 			true, false, true, nil); err != nil {
 			return nil, err
 		}
