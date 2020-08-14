@@ -38,11 +38,6 @@ type ApproveesTraverser struct {
 func NewApproveesTraverser(condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) *ApproveesTraverser {
 
 	return &ApproveesTraverser{
-		cachedTxMetas:            make(map[string]*tangle.CachedMetadata),
-		cachedBundles:            make(map[string]*tangle.CachedBundle),
-		stack:                    list.New(),
-		processed:                make(map[string]struct{}),
-		checked:                  make(map[string]bool),
 		condition:                condition,
 		consumer:                 consumer,
 		onMissingApprovee:        onMissingApprovee,
@@ -69,6 +64,15 @@ func (t *ApproveesTraverser) cleanup(forceRelease bool) {
 	t.traverserLock.Unlock()
 }
 
+func (t *ApproveesTraverser) reset() {
+
+	t.cachedTxMetas = make(map[string]*tangle.CachedMetadata)
+	t.cachedBundles = make(map[string]*tangle.CachedBundle)
+	t.processed = make(map[string]struct{})
+	t.checked = make(map[string]bool)
+	t.stack = list.New()
+}
+
 // Traverse starts to traverse the approvees (past cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is a DFS with trunk / branch.
@@ -77,6 +81,9 @@ func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, forceRelease bool
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
+
+	// Prepare for a new traversal
+	t.reset()
 
 	defer t.cleanup(forceRelease)
 
@@ -99,6 +106,9 @@ func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, bra
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
+
+	// Prepare for a new traversal
+	t.reset()
 
 	defer t.cleanup(forceRelease)
 

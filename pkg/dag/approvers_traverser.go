@@ -30,12 +30,9 @@ type ApproversTraverser struct {
 func NewApproversTraverser(condition Predicate, consumer Consumer, abortSignal <-chan struct{}) *ApproversTraverser {
 
 	return &ApproversTraverser{
-		cachedTxMetas: make(map[string]*tangle.CachedMetadata),
-		stack:         list.New(),
-		discovered:    make(map[string]struct{}),
-		condition:     condition,
-		consumer:      consumer,
-		abortSignal:   abortSignal,
+		condition:   condition,
+		consumer:    consumer,
+		abortSignal: abortSignal,
 	}
 }
 
@@ -50,6 +47,13 @@ func (t *ApproversTraverser) cleanup(forceRelease bool) {
 	t.traverserLock.Unlock()
 }
 
+func (t *ApproversTraverser) reset() {
+
+	t.cachedTxMetas = make(map[string]*tangle.CachedMetadata)
+	t.discovered = make(map[string]struct{})
+	t.stack = list.New()
+}
+
 // Traverse starts to traverse the approvers (future cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is unsorted BFS because the approvers are not ordered in the database.
@@ -57,6 +61,9 @@ func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash, forceRelease bool
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
+
+	// Prepare for a new traversal
+	t.reset()
 
 	defer t.cleanup(forceRelease)
 
