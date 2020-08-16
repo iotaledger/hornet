@@ -1,11 +1,7 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [master, chrysalis, develop]
-  pull_request:
-    branches: [master, chrysalis, develop]
-  # Run this security check every day at 03:00 to find potential new vulnerabilities in the master branch
+  # Run this security check every day at 03:00 to find potential new vulnerabilities in the default branch
   schedule:
     - cron: "0 3 * * *"
 
