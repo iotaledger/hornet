@@ -52,16 +52,9 @@
       "intervalSynced": 50,
       "intervalUnsynced": 1000,
       "path": "snapshots/devnet/export.bin",
-      "downloadURL": "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
+      "downloadURLs": ["https://dbfiles.iota.org/devnet/hornet/latest-export.bin"]
     },
     "global": {
-      "path": "snapshotDevnet.txt",
-      "spentAddressesPaths": [
-        "previousEpochsSpentAddresses1.txt",
-        "previousEpochsSpentAddresses2.txt",
-        "previousEpochsSpentAddresses3.txt"
-      ],
-      "index": 1050000
     },
     "pruning": {
       "enabled": true,
@@ -78,7 +71,7 @@
     "mwm": 9,
     "stateFilePath": "coordinator.state",
     "merkleTreeFilePath": "coordinator.tree",
-    "intervalSeconds": 60,
+    "intervalSeconds": 30,
     "checkpoints": {
       "maxTrackedTails": 10000
     },
@@ -134,7 +127,7 @@
     ]
   },
   "warpsync": {
-    "advancementRange": 200
+    "advancementRange": 50
   },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
@@ -147,6 +140,28 @@
     "valueSpam": false,
     "workers": 0,
     "semiLazyTipsLimit": 30
+  },
+  "graph": {
+    "webRootPath": "IOTAtangle/webroot",
+    "domain": "",
+    "webSocket": {
+      "uri": ""
+    },
+    "bindAddress": "localhost:8083",
+    "networkName": "meets HORNET",
+    "explorerTxLink": "http://0.0.0.0:8081/explorer/tx/",
+    "explorerBundleLink": "http://0.0.0.0:8081/explorer/bundle/"
+  },
+  "monitor": {
+    "tangleMonitorPath": "tanglemonitor/frontend",
+    "domain": "",
+    "initialTransactions": 15000,
+    "remoteApiPort": 4433,
+    "webBindAddress": "localhost:4434",
+    "apiBindAddress": "localhost:4433",
+    "webSocket": {
+      "uri": ""
+    }
   },
   "mqtt": {
     "config": "mqtt_config.json"
