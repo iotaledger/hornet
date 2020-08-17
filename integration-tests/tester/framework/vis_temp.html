@@ -1,0 +1,85 @@
+{{define "vis"}}
+    <!doctype html>
+
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body, html {
+                height: 100%;
+            }
+        </style>
+        <title>Visualizer</title>
+        <meta name="description" content="Visualizer">
+        <meta name="author" content="HORNET Magician">
+
+    </head>
+
+    <body>
+
+    <div style="width:100%;height:100%;top:0;left:0" id="visualizer"/>
+    <div style="top: 0;left: 0;" id="stats">
+
+    </div>
+    <progress id="progressbar" style="width:100%" max="100"></progress>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vivagraphjs/0.12.0/vivagraph.min.js"
+            integrity="sha512-gkKEgYqs7I24YHETln6iLyd9Oy10s2Cyaev28dxbCQa3mV22SbdDsWrprpRL/DSAJERZiFiQcN+wnsxPKR6Trw=="
+            crossorigin="anonymous"></script>
+
+    <script>
+        const graph = Viva.Graph.graph();
+        const graphics = Viva.Graph.View.webglGraphics();
+        const layout = Viva.Graph.Layout.forceDirected(graph, {
+            springLength: 10,
+            springCoeff: 0.0001,
+            stableThreshold: 0.30,
+            gravity: -4,
+            dragCoeff: 0.03,
+            timeStep: 50,
+            theta: 0.8,
+        });
+        const visEle = document.getElementById('visualizer');
+        const renderer = Viva.Graph.View.renderer(graph, {
+            container: visEle, graphics, layout,
+        });
+        renderer.run();
+
+        let vertices = JSON.parse({{.Vertices}});
+        let i = 0;
+        let progEle = document.getElementById("progressbar");
+        let statsEle = document.getElementById("stats");
+        // we use an intervaled drawer as otherwise the browser will get stuck
+        // when drawing a large amount of vertices
+        let intervalID = setInterval(function () {
+            progEle.setAttribute("value", "" + ((i / vertices.length) * 100));
+            progEle.innerHTML = (i / vertices.length) * 100 + "%";
+            for (let j = 0; j < 200; j++) {
+                let vert = vertices[i];
+                i++;
+                statsEle.innerHTML = "Vertices " + i + " / " + vertices.length;
+                if (i === vertices.length) {
+                    clearInterval(intervalID);
+                    return;
+                }
+                let existing = graph.getNode(vert.id);
+                if (existing) {
+                    node = existing
+                } else {
+                    node = graph.addNode(vert.id, vert);
+                }
+                if (vert.parent1 && (!node.links || !node.links.some(link => link.toId === vert.parent1))) {
+                    graph.addLink(vert.id, vert.parent1);
+                }
+                if (vert.parent1 === vert.parent2) {
+                    return
+                }
+                if (vert.parent2 && (!node.links || !node.links.some(link => link.toId === vert.parent2))) {
+                    graph.addLink(vert.id, vert.parent2);
+                }
+            }
+        }, 0);
+    </script>
+    </body>
+    </html>
+{{end}}
