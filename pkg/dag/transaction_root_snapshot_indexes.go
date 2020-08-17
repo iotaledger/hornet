@@ -31,8 +31,6 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 		return yrtsi, ortsi
 	}
 
-	snapshotInfo := tangle.GetSnapshotInfo()
-
 	youngestTxRootSnapshotIndex = 0
 	oldestTxRootSnapshotIndex = 0
 
@@ -100,7 +98,9 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 		},
 		// called on solid entry points
 		func(txHash hornet.Hash) {
-			updateIndexes(snapshotInfo.EntryPointIndex, snapshotInfo.EntryPointIndex)
+			// if the approvee is a solid entry point, use the index of the solid entry point as ORTSI
+			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
+			updateIndexes(entryPointIndex, entryPointIndex)
 		}, true, false, false, nil); err != nil {
 		if err == tangle.ErrTransactionNotFound {
 			indexesValid = false
