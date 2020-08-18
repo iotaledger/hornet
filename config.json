@@ -34,7 +34,6 @@
   "dashboard": {
     "bindAddress": "localhost:8081",
     "theme": "default",
-    "dev": true,
     "basicAuth": {
       "enabled": false,
       "username": "",
