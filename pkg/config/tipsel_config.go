@@ -31,9 +31,9 @@ const (
 )
 
 func init() {
-	flag.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 2, "the maximum allowed delta "+
+	flag.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 8, "the maximum allowed delta "+
 		"value for the YTRSI of a given transaction in relation to the current LSMI")
-	flag.Int(CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, 7, "the maximum allowed delta "+
+	flag.Int(CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
 		"value between OTRSI of the approvees of a given transaction in relation to the current LSMI")
 	flag.Int(CfgTipSelBelowMaxDepth, 15, "threshold value which indicates that a transaction "+
 		"is not relevant in relation to the recent parts of the tangle")
