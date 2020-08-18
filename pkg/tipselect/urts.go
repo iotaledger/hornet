@@ -3,7 +3,6 @@ package tipselect
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.uber.org/atomic"
@@ -84,13 +83,13 @@ type Events struct {
 // TipSelector manages a list of tips and emits events for their removal and addition.
 type TipSelector struct {
 	// maxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value for the YTRSI of a given transaction in relation to the current LSMI.
+	// value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	maxDeltaTxYoungestRootSnapshotIndexToLSMI milestone.Index
-	// maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value between OTRSI of the approvees of a given transaction in relation to the current LSMI.
-	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI milestone.Index
-	// belowMaxDepth is a threshold value which indicates that a transaction
-	// is not relevant in relation to the recent parts of the tangle.
+	// maxDeltaTxOldestRootSnapshotIndexToLSMI is the maximum allowed delta
+	// value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+	maxDeltaTxOldestRootSnapshotIndexToLSMI milestone.Index
+	// belowMaxDepth is the maximum allowed delta
+	// value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
 	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
@@ -128,7 +127,7 @@ type TipSelector struct {
 
 // New creates a new tip-selector.
 func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
-	maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI int,
+	maxDeltaTxOldestRootSnapshotIndexToLSMI int,
 	belowMaxDepth int,
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeSecondsNonLazy time.Duration,
@@ -138,17 +137,17 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 	maxApproversSemiLazy uint32) *TipSelector {
 
 	return &TipSelector{
-		maxDeltaTxYoungestRootSnapshotIndexToLSMI:        milestone.Index(maxDeltaTxYoungestRootSnapshotIndexToLSMI),
-		maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI: milestone.Index(maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
-		belowMaxDepth:                      milestone.Index(belowMaxDepth),
-		retentionRulesTipsLimitNonLazy:     retentionRulesTipsLimitNonLazy,
-		maxReferencedTipAgeSecondsNonLazy:  maxReferencedTipAgeSecondsNonLazy,
-		maxApproversNonLazy:                maxApproversNonLazy,
-		retentionRulesTipsLimitSemiLazy:    retentionRulesTipsLimitSemiLazy,
-		maxReferencedTipAgeSecondsSemiLazy: maxReferencedTipAgeSecondsSemiLazy,
-		maxApproversSemiLazy:               maxApproversSemiLazy,
-		nonLazyTipsMap:                     make(map[string]*Tip),
-		semiLazyTipsMap:                    make(map[string]*Tip),
+		maxDeltaTxYoungestRootSnapshotIndexToLSMI: milestone.Index(maxDeltaTxYoungestRootSnapshotIndexToLSMI),
+		maxDeltaTxOldestRootSnapshotIndexToLSMI:   milestone.Index(maxDeltaTxOldestRootSnapshotIndexToLSMI),
+		belowMaxDepth:                             milestone.Index(belowMaxDepth),
+		retentionRulesTipsLimitNonLazy:            retentionRulesTipsLimitNonLazy,
+		maxReferencedTipAgeSecondsNonLazy:         maxReferencedTipAgeSecondsNonLazy,
+		maxApproversNonLazy:                       maxApproversNonLazy,
+		retentionRulesTipsLimitSemiLazy:           retentionRulesTipsLimitSemiLazy,
+		maxReferencedTipAgeSecondsSemiLazy:        maxReferencedTipAgeSecondsSemiLazy,
+		maxApproversSemiLazy:                      maxApproversSemiLazy,
+		nonLazyTipsMap:                            make(map[string]*Tip),
+		semiLazyTipsMap:                           make(map[string]*Tip),
 		Events: Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
@@ -474,38 +473,9 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 		return ScoreLazy
 	}
 
-	cachedBundle := tangle.GetCachedBundleOrNil(txHash) // bundle +1
-	if cachedBundle == nil {
-		panic(fmt.Errorf("%w: bundle %s of tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), txHash.Trytes()))
-	}
-	defer cachedBundle.Release(true)
-
-	// the approvees (trunk and branch) are the tail transactions this tip approves
-	approveeHashes := map[string]struct{}{
-		string(cachedBundle.GetBundle().GetTrunkHash(true)):  {},
-		string(cachedBundle.GetBundle().GetBranchHash(true)): {},
-	}
-
-	for approveeHash := range approveeHashes {
-		var approveeORTSI milestone.Index
-
-		if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
-			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
-			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
-		} else {
-			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // meta +1
-			if cachedApproveeTxMeta == nil {
-				panic(fmt.Sprintf("transaction not found: %v", hornet.Hash(approveeHash).Trytes()))
-			}
-
-			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // meta +1
-			cachedApproveeTxMeta.Release(true)
-		}
-
-		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, the tip is semi-lazy
-		if lsmi-approveeORTSI > ts.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI {
-			return ScoreSemiLazy
-		}
+	// if the OTRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy
+	if (lsmi - ortsi) > ts.maxDeltaTxOldestRootSnapshotIndexToLSMI {
+		return ScoreSemiLazy
 	}
 
 	return ScoreNonLazy

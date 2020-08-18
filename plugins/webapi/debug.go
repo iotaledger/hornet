@@ -222,8 +222,6 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	_, startTxConfirmedAt := cachedStartTxMeta.GetMetadata().GetConfirmed()
 	defer cachedStartTxMeta.Release(true)
 
-	snapshotInfo := tangle.GetSnapshotInfo()
-
 	dag.TraverseApprovees(cachedStartTxMeta.GetMetadata().GetTxHash(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
@@ -258,7 +256,8 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		func(approveeHash hornet.Hash) error { return nil },
 		// called on solid entry points
 		func(txHash hornet.Hash) {
-			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Trytes(), ConfirmedByMilestoneIndex: snapshotInfo.EntryPointIndex})
+			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
+			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Trytes(), ConfirmedByMilestoneIndex: entryPointIndex})
 		}, true, false, false, nil)
 
 	result.TanglePathLength = len(result.TanglePath)

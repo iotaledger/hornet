@@ -113,48 +113,15 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
-	if cachedBundle == nil {
-		e.Error = "unknown bundle"
-		c.JSON(http.StatusBadRequest, e)
+	// if the OTRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy and should be promoted
+	if (lsmi - ortsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI)) {
+		c.JSON(http.StatusOK, GetTipInfoReturn{
+			Confirmed:      false,
+			Conflicting:    false,
+			ShouldPromote:  true,
+			ShouldReattach: false,
+		})
 		return
-	}
-	defer cachedBundle.Release(true)
-
-	// the approvees (trunk and branch) are the tail transactions this tip approves
-	approveeHashes := map[string]struct{}{
-		string(cachedBundle.GetBundle().GetTrunkHash(true)):  {},
-		string(cachedBundle.GetBundle().GetBranchHash(true)): {},
-	}
-
-	for approveeHash := range approveeHashes {
-		var approveeORTSI milestone.Index
-
-		if tangle.SolidEntryPointsContain(hornet.Hash(approveeHash)) {
-			// if the approvee is an solid entry point, use the EntryPointIndex as ORTSI
-			approveeORTSI = tangle.GetSnapshotInfo().EntryPointIndex
-		} else {
-			cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(approveeHash)) // meta +1
-			if cachedApproveeTxMeta == nil {
-				e.Error = fmt.Sprintf("approvee transaction not found: %v", hornet.Hash(approveeHash).Trytes())
-				c.JSON(http.StatusBadRequest, e)
-				return
-			}
-
-			_, approveeORTSI = dag.GetTransactionRootSnapshotIndexes(cachedApproveeTxMeta.Retain(), lsmi) // meta +1
-			cachedApproveeTxMeta.Release(true)
-		}
-
-		// if the OTRSI to LSMI delta of the approvee is MaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, the tip is semi-lazy and should be promoted
-		if lsmi-approveeORTSI > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI)) {
-			c.JSON(http.StatusOK, GetTipInfoReturn{
-				Confirmed:      false,
-				Conflicting:    false,
-				ShouldPromote:  true,
-				ShouldReattach: false,
-			})
-			return
-		}
 	}
 
 	// tip is non-lazy, no need to promote or reattach

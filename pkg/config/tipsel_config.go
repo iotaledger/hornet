@@ -6,13 +6,13 @@ import (
 
 const (
 	// CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value for the YTRSI of a given transaction in relation to the current LSMI.
+	// value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxYoungestRootSnapshotIndexToLSMI"
-	// CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value between OTRSI of the approvees of a given transaction in relation to the current LSMI.
-	CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI"
-	// CfgTipSelBelowMaxDepth is a threshold value which indicates that a transaction
-	// is not relevant in relation to the recent parts of the tangle.
+	// CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI is the maximum allowed delta
+	// value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+	CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxOldestRootSnapshotIndexToLSMI"
+	// CfgTipSelBelowMaxDepth is the maximum allowed delta
+	// value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	CfgTipSelBelowMaxDepth = "tipsel.belowMaxDepth"
 	// the config group used for the non-lazy tip-pool
 	CfgTipSelNonLazy = "tipsel.nonLazy."
@@ -33,7 +33,7 @@ const (
 func init() {
 	flag.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 8, "the maximum allowed delta "+
 		"value for the YTRSI of a given transaction in relation to the current LSMI")
-	flag.Int(CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
+	flag.Int(CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
 		"value between OTRSI of the approvees of a given transaction in relation to the current LSMI")
 	flag.Int(CfgTipSelBelowMaxDepth, 15, "threshold value which indicates that a transaction "+
 		"is not relevant in relation to the recent parts of the tangle")
