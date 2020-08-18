@@ -2,280 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.5.0-rc13] - 14.08.2020
+## [0.5.0] - 19.08.2020
 
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+:warning: **Breaking change:** :warning:  
+Please update to this version as soon as the mainnet coordinator got upgraded.  
+Instructions on how to update to this version will be posted in due time.  
+The old HORNET versions won't be functional within the mainnet anymore!  
 
-### Fixed
+### Added 
 
-    - Fix TransactionConfirmed event
-
-## [0.5.0-rc12] - 14.08.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - Add isHealthy to getNodeInfo
-    - Database tainted flag for coordinator
-    - Add additional security check in whiteflag
-
-### Changed
-
-    - Store binary trunk, branch, and bundle hashes in metadata to reduce load on IO
-    - Improve caching strategy in solidification and confirmation
-    - Improve caching in the dag helpers
-    - Reduce recursion in the future cone solidifier
-    - Disable autopeer stale check by default
-    - Update test pipeline to Go 1.15
-
-### Fixed
-
-    - Fix deadlock at object storage flush (revalidation and shutdown)
-    - Do not panic if snapshot creation is aborted
-    - Fix solid entry point indexes
-    - Fix spikes in conf.rate calculation
-
-## [0.5.0-rc11] - 12.08.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
+    - White-Flag
+    - Conflicting badge to the transaction explorer
+    - Weighted uniform random tipselection 
+    - Adaptive heaviest branch tipselection
+    - conf_trytes (confirmed trytes) ZMQ topic 
+    - conf_trytes (confirmed trytes) MQTT topic
+    - Optional powsrv.io PoW support
+    - Neighbors count to heartbeat message
+    - LMI and neighbor counts to dashboard
+    - getTipInfo API call
 
 ### Changed
 
-    - Remove tanglebay snapshot source for comnet
+    - Return false for conflicting tx in the getInclusionStates web api call
+    - Request tx from all neighbors that could have the data
+    - Bump protocol feature set for whiteflag
+    - Reconnect websocket on failure
+    - Update to Go 1.15
 
 ### Fixed
 
-    - Fix deadlock in revalidation
-    - Fix possible deadlock at coordinator shutdown
-    - Fix panic in dashboard websocket handling
-
-## [0.5.0-rc10] - 12.08.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - checkConsistency webapi call for compatibility reasons
-    - getTipInfo webapi call to signal if transactions need to be promoted or reattached
-    - Remove stale autopeers if dropped packages exceed a defined percentage of total packets
-
-### Changed
-
-    - Remove unused defaults from config.json
-
-### Fixed
-
-    - Dashboard misc page not shown if spammer activated
-    - Dashboard websocket reconnected too often
-    - Panic in URTS UpdateScores if the node was unsync for a longer time
-
-## [0.5.0-rc9] - 11.08.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - Automatic dashboard websocket reconnect
-
-### Changed
-
-    - Reduced dashboard traffic by introducing subscriptions to topics
-
-### Fixed
-
-    - Websocket/dashboard deadlock
-    - Dashboard visualizer re-rendered to often
-    - Database revalidation
-
-## [0.5.0-rc8] - 07.08.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - Latest solid milestone and neighbor counts of every neighbor to dashboard
-    - powsrv.io support
-
-### Changed
-
-    - Breaking protocol version change due to whiteflag
-    - Heartbeat message was extended by neighbors count and latest solid milestone
-    - Requests are now sent if an unsynced neighbor may also have the data based on latest solid milestone
-
-### Fixed
-
-    - SupportedFeatureSets logic in handshake
-    - Milestone missing / Milestone updated panics
-    - Database revalidation
-    - Autopeered neighbors can now be added as static neighbors
-    - Hash conflicts in the visualizer
-    - Wrong CTPS calculation on bundle tail reattachments
-
-## [0.5.0-rc7] - 04.08.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Changed
-
-    - URTS now uses separate tip-pools for semi- and non-lazy to prevent below-max-depth attacks
-    - Coordinator now waits until the milestone is solid
-    - Definition of semi-lazy tips in URTS was changed
-    - Spammer now tries to reduce semi-lazy tips if certain threshold reached
-    - Use dag helper in whiteflag (#583)
-
-### Fixed
-
-    - Coordinator bootstrapping
-    - Peering configs now recognized via CLI
-    - Error reason for connection abort is now shown
-    - Deadlock in snapshotting and pruning
-    - Fix wrong approveeHashes in URTS calculateScore
-
-## [0.5.0-rc6] - 29.07.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - Added whiteflag test setup (#572)
-    - Add autopeering rule to drop neighbors with LSMI below our pruning index
+    - Missing byte to trytes conversion in some error messages
+    - Make code more testable
+    - Adding autopeered neighbors as static neighbors
+    - CTPS calculation
+    - Revalidation 
+    - Pruning
+    - High dashboard traffic
 
 ### Removed
 
-    - Unused RefsInvalidBundles cache
-
-### Fixed
-
-    - Visualizer: wrong color of some connections between transactions
-    - Index out of range in attachToTangle
-    - Do not drop autopeering and "acceptAny" peers on peering.json change
-
-## [0.5.0-rc5] - 28.07.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - "retentionRulesTipsLimit" parameter for URTS
-
-### Changed
-
-    - Do not leak go routines to check "maxReferencedTipAgeSeconds"
-
-### Fixed
-
-    - DFS walk in TraverseApprovees
-
-## [0.5.0-rc4] - 28.07.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Changed
-
-    - Use stack based DFS in TraverseApprovees
-    - Use stack based BFS in TraverseApprovers
-    - Do not update root transaction snapshot indexes if not synced
-    - Set higher default verticesLimit in visualizer
-    - Do not add tips to URTS if the node becomes unsync
-    - Update scores of the URTS tips
-
-### Fixed
-
-    - Fix solidifier
-    - Catch ErrOperationAborted of the solidifier
-    - Fix wrong scoreSum in URTS
-    - Fix nil pointer in removeMessageEventHandlers
-    - Panic if ErrTransactionNotFound in GetTransactionRootSnapshotIndexes
-
-## [0.5.0-rc3] - 26.07.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Fixed
-
-    - Panic in GetTransactionRootSnapshotIndexes if transaction not found
-
-## [0.5.0-rc2] - 26.07.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Changed
-
-    - Removed detaching events from Conn.Events temporarily
-
-## [0.5.0-rc1] - 26.07.2020
-
-**Breaking change:**
-** DO NOT USE IT ON MAINNET, IT WILL CRASH IMMEDIATELY AND IT WILL DESTROY YOUR DATABASE !!! **
-
-### Added
-
-    - Implements white-flag confirmation (#432)
-    - Weighted uniform random tipselection (#553)
-    - Added hornet.Hash utils (#564)
-    - Adaptive heaviest branch tipsel (#567)
-
-### Changed
-
-    - Make code more testable for Chrysalis (#563)
-
-### Fixed
-
-    - RandomInsecure range
-
-### Removed
-
-    - Remove graph and monitor plugin (#555)
-    - Remove legacy protocol support (#556)
-    - checkConsistency API call
-    - Depth from getTransactionsToApprove
-    - Genesis TX special case
+    - Unused defaults from config[_comnet, _devnet].json
+    - Graph plugin
+    - Monitor plugin
+    - Legacy gossip protocol
+    - Genesis tx special case
 
 ### Config file changes
 
-`config.json`
+Please use the new config.json and transfer values from your current config.json over to the new one, as a lot of keys have changed or got removed (instead of mutating your current one).
 
-```diff
- "permitRemoteAccess": [
--      "checkConsistency",
- ]
- "coordinator": {
-+    "checkpoints": {
-+      "maxTrackedTails": 10000
-+    },
-+    "tipsel": {
-+      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
-+      "maxHeaviestBranchTipsPerCheckpoint": 10,
-+      "randomTipsPerCheckpoint": 2,
-+      "heaviestBranchSelectionDeadlineMilliseconds": 100
-+    }
-  }
-  "tipsel": {
--    "belowMaxDepthTransactionLimit": 20000,
--    "maxDepth": 5
-+    "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
-+    "maxDeltaTxApproveesOldestRootSnapshotIndexToLSMI": 7,
-+    "belowMaxDepth": 15,
-+    "maxReferencedTipAgeSeconds": 3,
-+    "maxApprovers": 2
-  },
-  "spammer": {
--    "depth": 1,
-  },
-```
 
 ## [0.4.2] - 22.07.2020
 
