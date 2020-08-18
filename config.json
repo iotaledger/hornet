@@ -95,14 +95,6 @@
     "disablePlugins": [],
     "enablePlugins": []
   },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout"
-    ]
-  },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "message": "Spamming with HORNET tipselect",
