@@ -10,5 +10,5 @@ const (
 )
 
 func init() {
-	flag.Int(CfgWarpSyncAdvancementRange, 50, "the used advancement range per warpsync checkpoint")
+	flag.Int(CfgWarpSyncAdvancementRange, 200, "the used advancement range per warpsync checkpoint")
 }

@@ -117,15 +117,7 @@
     "showAliasInGetNodeInfo": false,
     "disablePlugins": [],
     "enablePlugins": []
-  },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout"
-    ]
-  },
+  },  
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "message": "Spamming with HORNET tipselect",
@@ -137,9 +129,6 @@
     "valueSpam": false,
     "workers": 0,
     "semiLazyTipsLimit": 30
-  },
-  "mqtt": {
-    "config": "mqtt_config.json"
   },
   "zmq": {
     "bindAddress": "localhost:5556"

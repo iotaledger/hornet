@@ -115,9 +115,6 @@
     "workers": 0,
     "semiLazyTipsLimit": 30
   },
-  "mqtt": {
-    "config": "mqtt_config.json"
-  },
   "zmq": {
     "bindAddress": "localhost:5556"
   },
