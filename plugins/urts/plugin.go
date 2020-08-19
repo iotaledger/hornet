@@ -33,7 +33,7 @@ func configure(plugin *node.Plugin) {
 
 	TipSelector = tipselect.New(
 		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI),
-		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxApproveesOldestRootSnapshotIndexToLSMI),
+		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth),
 
 		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
