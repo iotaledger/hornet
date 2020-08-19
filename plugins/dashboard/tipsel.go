@@ -3,12 +3,13 @@ package dashboard
 import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tipselection"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	tipselectionPlugin "github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/urts"
 )
 
 var tipSelMetricWorkerCount = 1
@@ -18,12 +19,11 @@ var tipSelMetricWorkerPool *workerpool.WorkerPool
 func configureTipSelMetric() {
 	tipSelMetricWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
-		case *tipselection.TipSelStats:
+		case *tipselect.TipSelStats:
 			hub.BroadcastMsg(&msg{MsgTypeTipSelMetric, x})
 		case milestone.Index:
-			if cachedMsTailTx := getMilestoneTail(x); cachedMsTailTx != nil { // tx +1
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{cachedMsTailTx.GetTransaction().Tx.Hash, x}})
-				cachedMsTailTx.Release(true) // tx -1
+			if msTailTxHash := getMilestoneTailHash(x); msTailTxHash != nil {
+				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
 			}
 		}
 		task.Return(nil)
@@ -32,16 +32,21 @@ func configureTipSelMetric() {
 
 func runTipSelMetricWorker() {
 
-	notifyTipSelPerformed := events.NewClosure(func(metrics *tipselection.TipSelStats) {
+	// check if URTS plugin is enabled
+	if node.IsSkipped(urts.PLUGIN) {
+		return
+	}
+
+	onTipSelPerformed := events.NewClosure(func(metrics *tipselect.TipSelStats) {
 		tipSelMetricWorkerPool.TrySubmit(metrics)
 	})
 
 	daemon.BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
-		tipselectionPlugin.Events.TipSelPerformed.Attach(notifyTipSelPerformed)
+		urts.TipSelector.Events.TipSelPerformed.Attach(onTipSelPerformed)
 		tipSelMetricWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[TipSelMetricUpdater] ...")
-		tipselectionPlugin.Events.TipSelPerformed.Detach(notifyTipSelPerformed)
+		urts.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)
 		tipSelMetricWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[TipSelMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)

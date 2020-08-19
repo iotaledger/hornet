@@ -43,8 +43,9 @@ type ExplorerTx struct {
 	AttachmentTimestampLowerBound int64          `json:"attachment_timestamp_lower_bound"`
 	AttachmentTimestampUpperBound int64          `json:"attachment_timestamp_upper_bound"`
 	Confirmed                     struct {
-		State     bool            `json:"state"`
-		Milestone milestone.Index `json:"milestone_index"`
+		State       bool            `json:"state"`
+		Conflicting bool            `json:"conflicting"`
+		Milestone   milestone.Index `json:"milestone_index"`
 	} `json:"confirmed"`
 	Approvers      []string        `json:"approvers"`
 	Solid          bool            `json:"solid"`
@@ -62,6 +63,7 @@ func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 
 	originTx := cachedTx.GetTransaction().Tx
 	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
+	conflicting := cachedTx.GetMetadata().IsConflicting()
 	t := &ExplorerTx{
 		Hash:                          originTx.Hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
@@ -80,14 +82,15 @@ func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 		AttachmentTimestampLowerBound: originTx.AttachmentTimestampLowerBound,
 		AttachmentTimestampUpperBound: originTx.AttachmentTimestampUpperBound,
 		Confirmed: struct {
-			State     bool            `json:"state"`
-			Milestone milestone.Index `json:"milestone_index"`
-		}{confirmed, by},
+			State       bool            `json:"state"`
+			Conflicting bool            `json:"conflicting"`
+			Milestone   milestone.Index `json:"milestone_index"`
+		}{confirmed, conflicting, by},
 		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
 
 	// Approvers
-	t.Approvers = tangle.GetApproverHashes(cachedTx.GetTransaction().GetTxHash(), true, MaxApproversResults).Trytes()
+	t.Approvers = tangle.GetApproverHashes(cachedTx.GetTransaction().GetTxHash(), MaxApproversResults).Trytes()
 
 	// compute mwm
 	trits, err := trinary.BytesToTrits(cachedTx.GetTransaction().GetTxHash())
@@ -305,7 +308,7 @@ func findTransaction(hash trinary.Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(hash)[:49])) // tx +1
+	cachedTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(hash)) // tx +1
 	if cachedTx == nil {
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
@@ -324,7 +327,7 @@ func findTag(tag trinary.Trytes) (*ExplorerTag, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid length: %s", tag)
 	}
 
-	txHashes := tangle.GetTagHashes(hornet.Hash(trinary.MustTrytesToBytes(tag)[:17]), true, MaxTagResults)
+	txHashes := tangle.GetTagHashes(hornet.HashFromTagTrytes(tag), true, MaxTagResults)
 	if len(txHashes) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "tag %s unknown", tag)
 	}
@@ -354,7 +357,7 @@ func findBundles(hash trinary.Hash) ([][]*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedBndls := tangle.GetBundles(hornet.Hash(trinary.MustTrytesToBytes(hash)[:49]), true, MaxBundleResults) // bundle +1
+	cachedBndls := tangle.GetBundles(hornet.HashFromHashTrytes(hash), true, MaxBundleResults) // bundle +1
 	if len(cachedBndls) == 0 {
 		return nil, errors.Wrapf(ErrNotFound, "bundle %s unknown", hash)
 	}
@@ -387,7 +390,7 @@ func findAddress(hash trinary.Hash, valueOnly bool) (*ExplorerAddress, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	addr := hornet.Hash(trinary.MustTrytesToBytes(hash)[:49])
+	addr := hornet.HashFromAddressTrytes(hash)
 
 	txHashes := tangle.GetTransactionHashesForAddress(addr, valueOnly, true, MaxTransactionsForAddressResults)
 

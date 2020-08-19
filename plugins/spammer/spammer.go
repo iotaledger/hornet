@@ -1,12 +1,12 @@
 package spammer
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
@@ -17,13 +17,13 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/plugins/pow"
+	"github.com/gohornet/hornet/plugins/urts"
 
 	"go.uber.org/atomic"
 )
 
 var (
-	_, powFunc       = pow.GetFastestProofOfWorkUnsyncImpl()
 	rateLimitChannel chan struct{}
 	txCount          = atomic.NewInt32(0)
 	seed             = utils.RandomTrytesInsecure(81)
@@ -45,7 +45,7 @@ func doSpam(shutdownSignal <-chan struct{}) {
 		return
 	}
 
-	if peering.Manager().ConnectedPeerCount() == 0 {
+	if checkPeersConnected && peering.Manager().ConnectedPeerCount() == 0 {
 		time.Sleep(time.Second)
 		return
 	}
@@ -63,16 +63,32 @@ func doSpam(shutdownSignal <-chan struct{}) {
 	}
 
 	timeStart := time.Now()
-	tips, _, err := tipselection.SelectTips(depth, nil)
+
+	tipselFunc := urts.TipSelector.SelectNonLazyTips
+	tag := tagSubstring
+
+	reduceSemiLazyTips := semiLazyTipsLimit != 0 && metrics.SharedServerMetrics.TipsSemiLazy.Load() > semiLazyTipsLimit
+	if reduceSemiLazyTips {
+		tipselFunc = urts.TipSelector.SelectSemiLazyTips
+		tag = tagSemiLazySubstring
+	}
+
+	tips, err := tipselFunc()
 	if err != nil {
 		return
 	}
+
+	if reduceSemiLazyTips && bytes.Equal(tips[0], tips[1]) {
+		// do not spam if the tip is equal since that would not reduce the semi lazy count
+		return
+	}
+
 	durationGTTA := time.Since(timeStart)
 
 	txCountValue := int(txCount.Add(int32(bundleSize)))
-	infoMsg := fmt.Sprintf("gTTA took %v (depth=%v)", durationGTTA.Truncate(time.Millisecond), depth)
+	infoMsg := fmt.Sprintf("gTTA took %v", durationGTTA.Truncate(time.Millisecond))
 
-	b, err := createBundle(txAddress, message, tagSubstring, bundleSize, valueSpam, txCountValue, infoMsg)
+	b, err := createBundle(txAddress, message, tag, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
 		return
 	}
@@ -132,7 +148,7 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, sh
 		default:
 		}
 
-		nonce, err := powFunc(trytes, mwm, 1)
+		nonce, err := pow.Handler().DoPoW(trytes, mwm, 1)
 		if err != nil {
 			return err
 		}

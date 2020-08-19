@@ -71,18 +71,40 @@ func runRequestWorkers() {
 
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
+					requested := false
 					manager.ForAllConnected(func(p *peer.Peer) bool {
 						if !p.Protocol.Supports(sting.FeatureSet) {
 							return true
 						}
 						// we only send a request message if the peer actually has the data
+						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
 						if !p.HasDataFor(r.MilestoneIndex) {
 							return true
 						}
 
 						helpers.SendTransactionRequest(p, r.Hash)
+						requested = true
 						return false
 					})
+
+					if !requested {
+						// We have no neighbor that has the data for sure,
+						// so we ask all neighbors that could have the data
+						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
+						manager.ForAllConnected(func(p *peer.Peer) bool {
+							if !p.Protocol.Supports(sting.FeatureSet) {
+								return true
+							}
+
+							// we only send a request message if the peer could have the data
+							if !p.CouldHaveDataFor(r.MilestoneIndex) {
+								return true
+							}
+
+							helpers.SendTransactionRequest(p, r.Hash)
+							return true
+						})
+					}
 				}
 			}
 		}
@@ -136,16 +158,16 @@ func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDisca
 // RequestApprovees enqueues requests for the approvees of the given transaction to the request queue, if the
 // given transaction is not a solid entry point and neither its approvees are and also not in the database.
 func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, preventDiscard ...bool) {
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
-		txHash := tx.GetTxHash()
+	cachedTx.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
+		txHash := metadata.GetTxHash()
 
 		if tangle.SolidEntryPointsContain(txHash) {
 			return
 		}
 
-		Request(tx.GetTrunkHash(), msIndex, preventDiscard...)
-		if !bytes.Equal(tx.GetTrunkHash(), tx.GetBranchHash()) {
-			Request(tx.GetBranchHash(), msIndex, preventDiscard...)
+		Request(metadata.GetTrunkHash(), msIndex, preventDiscard...)
+		if !bytes.Equal(metadata.GetTrunkHash(), metadata.GetBranchHash()) {
+			Request(metadata.GetBranchHash(), msIndex, preventDiscard...)
 		}
 	})
 }
@@ -155,15 +177,15 @@ func RequestApprovees(cachedTx *tangle.CachedTransaction, msIndex milestone.Inde
 func RequestMilestoneApprovees(cachedMsBndl *tangle.CachedBundle) bool {
 	defer cachedMsBndl.Release() // bundle -1
 
-	cachedHeadTx := cachedMsBndl.GetBundle().GetHead() // tx +1
-	defer cachedHeadTx.Release()                       // tx -1
+	cachedHeadTxMeta := cachedMsBndl.GetBundle().GetHeadMetadata() // meta +1
+	defer cachedHeadTxMeta.Release()                               // meta -1
 
 	msIndex := cachedMsBndl.GetBundle().GetMilestoneIndex()
 
-	tx := cachedHeadTx.GetTransaction()
-	enqueued := Request(tx.GetTrunkHash(), msIndex, true)
-	if !bytes.Equal(tx.GetTrunkHash(), tx.GetBranchHash()) {
-		enqueuedTwo := Request(tx.GetBranchHash(), msIndex, true)
+	txMeta := cachedHeadTxMeta.GetMetadata()
+	enqueued := Request(txMeta.GetTrunkHash(), msIndex, true)
+	if !bytes.Equal(txMeta.GetTrunkHash(), txMeta.GetBranchHash()) {
+		enqueuedTwo := Request(txMeta.GetBranchHash(), msIndex, true)
 		if !enqueued && enqueuedTwo {
 			enqueued = true
 		}
@@ -190,15 +212,16 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 
 		dag.TraverseApprovees(msHash,
 			// traversal stops if no more transactions pass the given condition
-			func(cachedTx *tangle.CachedTransaction) (bool, error) { // tx +1
-				defer cachedTx.Release(true) // tx -1
-				_, previouslyTraversed := traversed[string(cachedTx.GetTransaction().GetTxHash())]
-				return !cachedTx.GetMetadata().IsSolid() && !previouslyTraversed, nil
+			// Caution: condition func is not in DFS order
+			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
+				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetTxHash())]
+				return !cachedTxMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTx *tangle.CachedTransaction) error { // tx +1
-				defer cachedTx.Release(true) // tx -1
-				traversed[string(cachedTx.GetTransaction().GetTxHash())] = struct{}{}
+			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+				defer cachedTxMeta.Release(true) // meta -1
+				traversed[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 				return nil
 			},
 			// called on missing approvees
@@ -207,6 +230,8 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 				return nil
 			},
 			// called on solid entry points
-			func(txHash hornet.Hash) {}, true, false, nil)
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
+			true, false, false, nil)
 	}
 }

@@ -45,6 +45,6 @@ hornet.log
 
 # coordinator files
 layer*.csv
-coordinator.state
-coordinator.tree
+./coordinator.state
+./coordinator.tree
 hive.go/

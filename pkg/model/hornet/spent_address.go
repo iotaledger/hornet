@@ -1,6 +1,8 @@
 package hornet
 
 import (
+	"fmt"
+
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
@@ -23,7 +25,7 @@ func (sa *SpentAddress) GetAddress() Hash {
 // ObjectStorage interface
 
 func (sa *SpentAddress) Update(_ objectstorage.StorableObject) {
-	panic("SpentAddress should never be updated")
+	panic(fmt.Sprintf("SpentAddress should never be updated: %v", sa.address.Trytes()))
 }
 
 func (sa *SpentAddress) ObjectStorageKey() []byte {

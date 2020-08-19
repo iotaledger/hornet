@@ -38,7 +38,9 @@ func configure(plugin *node.Plugin) {
 	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath))
 
 	if !tangle.IsCorrectDatabaseVersion() {
-		log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
+		if !tangle.UpdateDatabaseVersion() {
+			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
+		}
 	}
 
 	daemon.BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {

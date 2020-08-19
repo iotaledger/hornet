@@ -2,6 +2,7 @@ package hornet
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -32,7 +33,7 @@ func (t *UnconfirmedTx) GetTxHash() Hash {
 // ObjectStorage interface
 
 func (t *UnconfirmedTx) Update(_ objectstorage.StorableObject) {
-	panic("UnconfirmedTx should never be updated")
+	panic(fmt.Sprintf("UnconfirmedTx should never be updated: %v", t.txHash.Trytes()))
 }
 
 func (t *UnconfirmedTx) ObjectStorageKey() []byte {

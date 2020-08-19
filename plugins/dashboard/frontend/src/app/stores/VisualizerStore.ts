@@ -10,6 +10,7 @@ export class Vertex {
     branch_id: string;
     is_solid: boolean;
     is_confirmed: boolean;
+    is_conflicting: boolean;
     is_milestone: boolean;
     is_tip: boolean;
     is_selected: boolean;
@@ -33,14 +34,15 @@ export class TipInfo {
 const vertexSizeSmall = 10;
 const vertexSizeMedium = 20;
 const vertexSizeBig = 30;
-const idLength = 5;
+const idLength = 7;
 
 // Solarized color palette
 export const colorSolid = "#268bd2";
 export const colorUnsolid = "#657b83";
 export const colorConfirmed = "#5ce000";
+export const colorConflicting = "#d17300";
 export const colorMilestone = "#dc322f";
-export const colorTip = "#cb4b16";
+export const colorTip = "#00d1a4";
 export const colorUnknown = "#b58900";
 export const colorHighlighted = "#d33682";
 export const colorSelected = "#fdf6e3";
@@ -49,19 +51,20 @@ export const colorLinkApprovers = "#ff5aaa";
 export const colorLinkApprovees = "#ffc306";
 
 export class VisualizerStore {
-    @observable vertices = new ObservableMap<string, Vertex>();
-    @observable verticesLimit = 1500;
-    @observable solid_count = 0;
-    @observable confirmed_count = 0;
-    @observable tips_count = 0;
+    vertices = new ObservableMap<string, Vertex>();
+    @observable verticesLimit = 5000;
+    solid_count = 0;
+    confirmed_count = 0;
+    conflicting_count = 0;
+    tips_count = 0;
     verticesIncomingOrder = [];
-    collect: boolean = false;
+    @observable collect: boolean = false;
     routerStore: RouterStore;
 
     // the currently selected vertex via hover
     @observable selected: Vertex;
-    @observable selected_approvers_count = 0;
-    @observable selected_approvees_count = 0;
+    selected_approvers_count = 0;
+    selected_approvees_count = 0;
     selected_via_click: boolean = false;
 
     // search
@@ -76,6 +79,11 @@ export class VisualizerStore {
 
     constructor(routerStore: RouterStore) {
         this.routerStore = routerStore;
+
+        this.registerHandlers()
+    }
+
+    registerHandlers = () => {
         registerHandler(WSMsgType.Vertex, this.addVertex);
         registerHandler(WSMsgType.SolidInfo, this.addSolidInfo);
         registerHandler(WSMsgType.ConfirmedInfo, this.addConfirmedInfo);
@@ -131,6 +139,9 @@ export class VisualizerStore {
             if (!existing.is_confirmed && vert.is_confirmed) {
                 this.confirmed_count++;
             }
+            if (!existing.is_conflicting && vert.is_conflicting) {
+                this.conflicting_count++;
+            }
             // update all infos since we might be dealing
             // with a vertex obj only created from missing trunk/branch
             existing.id = vert.id;
@@ -139,6 +150,7 @@ export class VisualizerStore {
             existing.branch_id = vert.branch_id;
             existing.is_solid = vert.is_solid;
             existing.is_confirmed = vert.is_confirmed;
+            existing.is_conflicting = vert.is_conflicting;
             existing.is_milestone = vert.is_milestone;
             existing.is_tip = vert.is_tip;
             existing.is_selected = vert.is_selected;
@@ -150,6 +162,9 @@ export class VisualizerStore {
             }
             if (vert.is_confirmed) {
                 this.confirmed_count++;
+            }
+            if (vert.is_conflicting) {
+                this.conflicting_count++;
             }
             this.verticesIncomingOrder.push(vert.id.substring(0,idLength));
             this.checkLimit();
@@ -189,15 +204,22 @@ export class VisualizerStore {
                 let approvee = this.vertices.get(node.id);
                 if (!approvee) return true;
 
-                if (!approvee.is_confirmed) {
+                if (!approvee.is_confirmed && !approvee.is_conflicting) {
                     // check if transaction is excluded
-                    if (confInfo.excluded_ids.indexOf(approvee.id.substring(0,idLength)) > -1) return false;
+                    if (confInfo.excluded_ids?.indexOf(approvee.id.substring(0,idLength)) > -1) {
+                        this.conflicting_count++;
+                        approvee.is_conflicting = true;
+                        this.updateNodeUI(approvee);
+                        return false;
+                    }
 
                     this.confirmed_count++;
                     approvee.is_confirmed = true;
                     this.updateNodeUI(approvee);
                     return false
                 }
+
+                // abort if node was confirmed or conflicting
                 return true;
             },
             false,
@@ -249,6 +271,9 @@ export class VisualizerStore {
             if (vert.is_confirmed) {
                 this.confirmed_count--;
             }
+            if (vert.is_conflicting) {
+                this.conflicting_count--;
+            }
             if (vert.is_tip) {
                 this.tips_count--;
             }
@@ -273,6 +298,9 @@ export class VisualizerStore {
             if (approvee.is_confirmed) {
                 this.confirmed_count--;
             }
+            if (approvee.is_conflicting) {
+                this.conflicting_count--;
+            }
             if (approvee.is_tip) {
                 this.tips_count--;
             }
@@ -291,19 +319,19 @@ export class VisualizerStore {
         } else {
             node = this.graph.addNode(vert.id.substring(0,idLength), vert);
         }
-        if (vert.trunk_id && (!node.links || !node.links.some(link => link.fromId === vert.trunk_id))) {
-            this.graph.addLink(vert.trunk_id, vert.id.substring(0,idLength));
+        if (vert.trunk_id && (!node.links || !node.links.some(link => link.toId === vert.trunk_id))) {
+            this.graph.addLink(vert.id.substring(0,idLength), vert.trunk_id);
         }
         if (vert.trunk_id === vert.branch_id) {
             return;
         }
-        if (vert.branch_id && (!node.links || !node.links.some(link => link.fromId === vert.branch_id))) {
-            this.graph.addLink(vert.branch_id, vert.id.substring(0,idLength));
+        if (vert.branch_id && (!node.links || !node.links.some(link => link.toId === vert.branch_id))) {
+            this.graph.addLink(vert.id.substring(0,idLength), vert.branch_id);
         }
     }
 
     isHighlighted = (vert: Vertex) => {
-        return ((this.searchFilter) && ((vert.id.indexOf(this.searchFilter) >= 0) || (vert.tag.indexOf(this.searchFilter) >= 0)))
+        return ((this.searchFilter) && ((vert.id?.indexOf(this.searchFilter) >= 0) || (vert.tag?.indexOf(this.searchFilter) >= 0)))
     }
 
     colorForVertexState = (vert: Vertex) => {
@@ -319,11 +347,14 @@ export class VisualizerStore {
         if (vert.is_milestone) {
             return colorMilestone;
         }
-        if (vert.is_confirmed) {
-            return colorConfirmed;
-        }
         if (vert.is_tip) {
             return colorTip;
+        }
+        if (vert.is_conflicting) {
+            return colorConflicting;
+        }
+        if (vert.is_confirmed) {
+            return colorConfirmed;
         }
         if (vert.is_solid) {
             return colorSolid;
@@ -355,6 +386,7 @@ export class VisualizerStore {
     }
 
     start = () => {
+
         this.collect = true;
         this.graph = Viva.Graph.graph();
 
@@ -404,6 +436,7 @@ export class VisualizerStore {
         this.selected = null;
         this.solid_count = 0;
         this.confirmed_count = 0;
+        this.conflicting_count = 0;
         this.tips_count = 0;
         this.vertices.clear();
     }
@@ -420,6 +453,10 @@ export class VisualizerStore {
         // mutate links
         let node = this.graph.getNode(vert.id.substring(0,idLength));
         this.updateNodeUI(vert);
+
+        // set -1 because starting node is also counted
+        this.selected_approvers_count = -1;
+        this.selected_approvees_count = -1;
 
         const seenForward = [];
         const seenBackwards = [];
@@ -533,7 +570,7 @@ export default VisualizerStore;
 // node is the starting node for the walk.
 // cb is called on every node. If true, the links of the node are skipped.
 // if up is true, the future cone is walked, otherwise past cone.
-// cbLinks is called on every link.
+// cbLinks is called on every walked link.
 // seenNodes is the array of walked nodes.
 function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) {
     seenNodes.push(node);
@@ -545,15 +582,22 @@ function dfsIterator(graph, node, cb, up, cbLinks: any = false, seenNodes = []) 
         if (cb(node)) continue;
 
         for (const link of node.links) {
-            if (cbLinks) cbLinks(link);
 
-            if (!up && link.toId === node.id.substring(0,idLength) && !seenNodes.includes(graph.getNode(link.fromId))) {
-                seenNodes.push(graph.getNode(link.fromId));
-                continue;
+            if (!up && link.fromId === node.id.substring(0,idLength)) {
+                if (cbLinks) cbLinks(link);
+
+                if (!seenNodes.includes(graph.getNode(link.toId))) {
+                    seenNodes.push(graph.getNode(link.toId));
+                    continue;
+                }
             }
 
-            if (up && link.fromId === node.id.substring(0,idLength) && !seenNodes.includes(graph.getNode(link.toId))) {
-                seenNodes.push(graph.getNode(link.toId));
+            if (up && link.toId === node.id.substring(0,idLength)) {
+                if (cbLinks) cbLinks(link);
+
+                if (!seenNodes.includes(graph.getNode(link.fromId))) {
+                    seenNodes.push(graph.getNode(link.fromId));
+                }
             }
         }
     }

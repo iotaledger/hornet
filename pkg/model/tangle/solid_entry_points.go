@@ -33,13 +33,6 @@ func WriteUnlockSolidEntryPoints() {
 	solidEntryPointsLock.Unlock()
 }
 
-func GetSolidEntryPointsHashes() hornet.Hashes {
-	ReadLockSolidEntryPoints()
-	defer ReadUnlockSolidEntryPoints()
-
-	return solidEntryPoints.Hashes()
-}
-
 func loadSolidEntryPoints() {
 	WriteLockSolidEntryPoints()
 	defer WriteUnlockSolidEntryPoints()

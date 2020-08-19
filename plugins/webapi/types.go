@@ -66,17 +66,10 @@ type BradcastTransactionsReturn struct {
 
 /////////////////// checkConsistency //////////////////////////////
 
-// CheckConsistency struct
-type CheckConsistency struct {
-	Command string         `mapstructure:"command"`
-	Tails   []trinary.Hash `mapstructure:"tails"`
-}
-
 // CheckConsistencyReturn struct
 type CheckConsistencyReturn struct {
-	State    bool   `json:"state"`
-	Info     string `json:"info,omitempty"`
-	Duration int    `json:"duration"`
+	State    bool `json:"state"`
+	Duration int  `json:"duration"`
 }
 
 //////////////////////// error ////////////////////////////////////
@@ -165,11 +158,12 @@ type GetNodeInfoReturn struct {
 	LatestSolidSubtangleMilestone      trinary.Hash    `json:"latestSolidSubtangleMilestone"`
 	LatestSolidSubtangleMilestoneIndex milestone.Index `json:"latestSolidSubtangleMilestoneIndex"`
 	IsSynced                           bool            `json:"isSynced"`
+	Health                             bool            `json:"isHealthy"`
 	MilestoneStartIndex                milestone.Index `json:"milestoneStartIndex"`
 	LastSnapshottedMilestoneIndex      milestone.Index `json:"lastSnapshottedMilestoneIndex"`
 	Neighbors                          uint            `json:"neighbors"`
 	Time                               int64           `json:"time"`
-	Tips                               uint16          `json:"tips"`
+	Tips                               uint32          `json:"tips"`
 	TransactionsToRequest              int             `json:"transactionsToRequest"`
 	Features                           []string        `json:"features"`
 	CoordinatorAddress                 trinary.Hash    `json:"coordinatorAddress"`
@@ -191,6 +185,23 @@ type GetNodeAPIConfigurationReturn struct {
 	MaxBodyLength       int             `json:"maxBodyLength"`
 	MilestoneStartIndex milestone.Index `json:"milestoneStartIndex"`
 	Duration            int             `json:"duration"`
+}
+
+///////////////// getTipInfo ////////////////////////
+
+// GetTipInfo struct
+type GetTipInfo struct {
+	Command         string       `mapstructure:"command"`
+	TailTransaction trinary.Hash `mapstructure:"tailTransaction"`
+}
+
+// GetTipInfoReturn struct
+type GetTipInfoReturn struct {
+	Confirmed      bool `json:"confirmed"`
+	Conflicting    bool `json:"conflicting"`
+	ShouldPromote  bool `json:"shouldPromote"`
+	ShouldReattach bool `json:"shouldReattach"`
+	Duration       int  `json:"duration"`
 }
 
 ///////////////// getTransactionsToApprove ////////////////////////

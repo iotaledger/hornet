@@ -23,6 +23,7 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 
 	if tangle.SetLatestMilestoneIndex(bundleMsIndex) {
 		Events.LatestMilestoneChanged.Trigger(cachedBndl) // bundle pass +1
+		Events.LatestMilestoneIndexChanged.Trigger(bundleMsIndex)
 	}
 	milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex, false)
 
@@ -35,7 +36,7 @@ func processValidMilestone(cachedBndl *tangle.CachedBundle) {
 		pruningIndex := tangle.GetSnapshotInfo().PruningIndex
 		if bundleMsIndex < pruningIndex {
 			// this should not happen. we didn't request it and it should be filtered because of timestamp
-			log.Panicf("Synced too far! Index: %d (%v), PruningIndex: %d", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash().Trytes(), pruningIndex)
+			log.Warnf("Synced too far back! Index: %d (%v), PruningIndex: %d", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash().Trytes(), pruningIndex)
 		}
 	}
 }

@@ -1,6 +1,6 @@
 import {action, computed, observable, ObservableMap} from 'mobx';
 import * as dateformat from 'dateformat';
-import {connectWebSocket, registerHandler, unregisterHandler, WSMsgType} from "app/misc/WS";
+import {connectWebSocket, registerHandler, registerTopic, unregisterTopic, WSMsgType} from "app/misc/WS";
 
 class TPSMetric {
     incoming: number;
@@ -11,13 +11,7 @@ class TPSMetric {
 
 class TipSelMetric {
     duration: number;
-    entry_point: string;
-    reference: string;
-    depth: number;
-    steps_taken: number;
-    steps_jumped: number;
-    evaluated: number;
-    global_below_max_depth_cache_hit_ratio: number;
+    lazy_tips: number;
     ts: string;
 }
 
@@ -59,7 +53,6 @@ class CacheMetrics {
     milestones: CacheMetric;
     transactions: CacheMetric;
     incoming_transaction_work_units: CacheMetric;
-    refs_invalid_bundle: CacheMetric;
     ts: string;
 }
 
@@ -190,9 +183,6 @@ class NeighborMetrics {
         let knownTx = Object.assign({}, chartSeriesOpts,
             series("Known Txs", 'rgba(53, 219, 175,1)', 'rgba(53, 219, 175,0.4)')
         );
-        let invalid = Object.assign({}, chartSeriesOpts,
-            series("Invalid Txs", 'rgba(219, 53, 53,1)', 'rgba(219, 53, 53,0.4)')
-        );
         let stale = Object.assign({}, chartSeriesOpts,
             series("Stale Txs", 'rgba(219, 150, 53,1)', 'rgba(219, 150, 53,0.4)')
         );
@@ -210,7 +200,6 @@ class NeighborMetrics {
             labels.push(metric.ts);
             newTx.data.push(metric.info.numberOfNewTransactions - prevMetric.info.numberOfNewTransactions);
             knownTx.data.push(metric.info.numberOfKnownTransactions - prevMetric.info.numberOfKnownTransactions);
-            invalid.data.push(metric.info.numberOfInvalidTransactions - prevMetric.info.numberOfInvalidTransactions);
             stale.data.push(metric.info.numberOfStaleTransactions - prevMetric.info.numberOfStaleTransactions);
             sent.data.push(metric.info.numberOfSentTransactions - prevMetric.info.numberOfSentTransactions);
             droppedSent.data.push(metric.info.numberOfDroppedSentPackets - prevMetric.info.numberOfDroppedSentPackets);
@@ -219,7 +208,7 @@ class NeighborMetrics {
         return {
             labels: labels,
             datasets: [
-                newTx, knownTx, invalid, stale, sent, droppedSent
+                newTx, knownTx, stale, sent, droppedSent
             ],
         };
     }
@@ -242,6 +231,9 @@ class NeighborMetric {
 class Heartbeat {
     solid_milestone_index: number;
     pruned_milestone_index: number;
+    latest_milestone_index: number;
+    connected_neighbors: number;
+    synced_neighbors: number;
 }
 
 class NeighborInfo {
@@ -251,8 +243,6 @@ class NeighborInfo {
     numberOfAllTransactions: number;
     numberOfNewTransactions: number;
     numberOfKnownTransactions: number;
-    numberOfInvalidTransactions: number;
-    numberOfInvalidRequests: number;
     numberOfStaleTransactions: number;
     numberOfReceivedTransactionReq: number;
     numberOfReceivedMilestoneReq: number;
@@ -332,6 +322,7 @@ const maxMetricsDataPoints = 900;
 
 export class NodeStore {
     @observable status: Status = new Status();
+    @observable websocket: WebSocket;
     @observable websocketConnected: boolean = false;
     @observable last_tps_metric: TPSMetric = new TPSMetric();
     @observable last_tip_sel_metric: TipSelMetric = new TipSelMetric();
@@ -351,41 +342,118 @@ export class NodeStore {
     @observable last_dbcleanup_event: DbCleanupEvent = new DbCleanupEvent();
     @observable last_spam_metric: SpamMetric = new SpamMetric();
     @observable last_avg_spam_metric: AvgSpamMetric = new AvgSpamMetric();
-    @observable collecting: boolean = true;
 
     constructor() {
         this.registerHandlers();
     }
 
     registerHandlers = () => {
+        // main
         registerHandler(WSMsgType.Status, this.updateStatus);
         registerHandler(WSMsgType.TPSMetrics, this.updateLastTPSMetric);
-        registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
-        registerHandler(WSMsgType.PeerMetric, this.updateNeighborMetrics);
         registerHandler(WSMsgType.ConfirmedMsMetrics, this.updateConfirmedMilestoneMetrics);
-        registerHandler(WSMsgType.DBSizeMetric, this.updateDatabaseSizeMetrics);
+
+        // neighbors
+        registerHandler(WSMsgType.PeerMetric, this.updateNeighborMetrics);
+
+        // misc
+        registerHandler(WSMsgType.TipSelMetric, this.updateLastTipSelMetric);
         registerHandler(WSMsgType.DBCleanup, this.updateDatabaseCleanupStatus);
+        registerHandler(WSMsgType.DBSizeMetric, this.updateDatabaseSizeMetrics);
         registerHandler(WSMsgType.SpamMetrics, this.updateSpamMetrics);
         registerHandler(WSMsgType.AvgSpamMetrics, this.updateAvgSpamMetrics);
-        this.updateCollecting(true);
     }
 
-    unregisterHandlers = () => {
-        unregisterHandler(WSMsgType.Status);
-        unregisterHandler(WSMsgType.TPSMetrics);
-        unregisterHandler(WSMsgType.TipSelMetric);
-        unregisterHandler(WSMsgType.PeerMetric);
-        unregisterHandler(WSMsgType.ConfirmedMsMetrics);
-        unregisterHandler(WSMsgType.DBSizeMetric);
-        unregisterHandler(WSMsgType.DBCleanup);
-        unregisterHandler(WSMsgType.SpamMetrics);
-        unregisterHandler(WSMsgType.AvgSpamMetrics);
-        this.updateCollecting(false);
+    registerWebsocketTopic = (msgType: WSMsgType) => {
+        if (!this.websocketConnected) {
+            return
+        }
+        registerTopic(this.websocket, msgType);
     }
 
-    @action
-    updateCollecting = (collecting: boolean) => {
-        this.collecting = collecting;
+    unregisterWebsocketTopic = (msgType: WSMsgType) => {
+        if (!this.websocketConnected) {
+            return
+        }
+        unregisterTopic(this.websocket, msgType);
+    }
+
+    registerMainTopics = () => {
+        // main
+        this.registerWebsocketTopic(WSMsgType.Status);
+        this.registerWebsocketTopic(WSMsgType.TPSMetrics);
+        this.registerWebsocketTopic(WSMsgType.ConfirmedMsMetrics);
+
+        // explorer
+        this.registerWebsocketTopic(WSMsgType.Ms);
+
+        // misc
+        this.registerWebsocketTopic(WSMsgType.DBSizeMetric);
+    }
+
+    unregisterMainTopics = () => {
+        // main
+        this.unregisterWebsocketTopic(WSMsgType.Status);
+        this.unregisterWebsocketTopic(WSMsgType.TPSMetrics);
+        this.unregisterWebsocketTopic(WSMsgType.ConfirmedMsMetrics);
+
+        // explorer
+        this.unregisterWebsocketTopic(WSMsgType.Ms);
+
+        // misc
+        this.unregisterWebsocketTopic(WSMsgType.DBSizeMetric);
+    }
+
+    registerNeighborTopics = () => {
+        this.registerWebsocketTopic(WSMsgType.PeerMetric);
+    }
+
+    unregisterNeighborTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.PeerMetric);
+    }
+
+    registerExplorerTopics = (valueOnly: boolean) => {
+        this.registerWebsocketTopic(WSMsgType.TxValue);
+        if (valueOnly) {
+            this.unregisterWebsocketTopic(WSMsgType.TxZeroValue);
+        } else {
+            this.registerWebsocketTopic(WSMsgType.TxZeroValue);
+        }
+    }
+
+    unregisterExplorerTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.TxValue);
+        this.unregisterWebsocketTopic(WSMsgType.TxZeroValue);
+    }
+
+    registerVisualizerTopics = () => {
+        this.registerWebsocketTopic(WSMsgType.Vertex);
+        this.registerWebsocketTopic(WSMsgType.SolidInfo);
+        this.registerWebsocketTopic(WSMsgType.ConfirmedInfo);
+        this.registerWebsocketTopic(WSMsgType.MilestoneInfo);
+        this.registerWebsocketTopic(WSMsgType.TipInfo);
+    }
+
+    unregisterVisualizerTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.Vertex);
+        this.unregisterWebsocketTopic(WSMsgType.SolidInfo);
+        this.unregisterWebsocketTopic(WSMsgType.ConfirmedInfo);
+        this.unregisterWebsocketTopic(WSMsgType.MilestoneInfo);
+        this.unregisterWebsocketTopic(WSMsgType.TipInfo);
+    }
+
+    registerMiscTopics = () => {
+        this.registerWebsocketTopic(WSMsgType.TipSelMetric);
+        this.registerWebsocketTopic(WSMsgType.DBCleanup);
+        this.registerWebsocketTopic(WSMsgType.SpamMetrics);
+        this.registerWebsocketTopic(WSMsgType.AvgSpamMetrics);
+    }
+
+    unregisterMiscTopics = () => {
+        this.unregisterWebsocketTopic(WSMsgType.TipSelMetric);
+        this.unregisterWebsocketTopic(WSMsgType.DBCleanup);
+        this.unregisterWebsocketTopic(WSMsgType.SpamMetrics);
+        this.unregisterWebsocketTopic(WSMsgType.AvgSpamMetrics);
     }
 
     @action
@@ -410,11 +478,27 @@ export class NodeStore {
         this.last_avg_spam_metric = new AvgSpamMetric();
     }
 
+    reconnect() {
+        this.updateWebSocketConnected(false);
+        setTimeout(() => {
+            this.connect();
+        }, 5000);
+    }
+
     connect() {
-        connectWebSocket(statusWebSocketPath,
-            () => this.updateWebSocketConnected(true),
-            () => this.updateWebSocketConnected(false),
-            () => this.updateWebSocketConnected(false))
+        var websocket = connectWebSocket(statusWebSocketPath,
+            () => {
+                this.websocket = websocket;
+                this.updateWebSocketConnected(true);
+                this.registerMainTopics();
+            },
+            () => this.reconnect(),
+            () => this.updateWebSocketConnected(false));
+    }
+
+    disconnect() {
+        this.unregisterMainTopics();
+        this.websocket.close();
     }
 
     @computed
@@ -611,58 +695,26 @@ export class NodeStore {
 
     @computed
     get tipSelSeries() {
-        let stepsTaken = Object.assign({}, chartSeriesOpts,
-            series("Steps Taken", 'rgba(14, 230, 183, 1)', 'rgba(14, 230, 183,0.4)')
-        );
-        let stepsJumped = Object.assign({}, chartSeriesOpts,
-            series("Steps Jumped", 'rgba(14, 230, 100,1)', 'rgba(14, 230, 100,0.4)')
-        );
         let duration = Object.assign({}, chartSeriesOpts,
             series("Duration", 'rgba(230, 201, 14,1)', 'rgba(230, 201, 14,0.4)')
         );
-        let depth = Object.assign({}, chartSeriesOpts,
-            series("Depth", 'rgba(230, 14, 147,1)', 'rgba(230, 14, 147,0.4)')
-        );
-        let evaluated = Object.assign({}, chartSeriesOpts,
-            series("Evaluated", 'rgba(230, 165, 14,1)', 'rgba(230, 165, 14,0.4)')
+        let lazyTips = Object.assign({}, chartSeriesOpts,
+            series("Lazy tips removed", 'rgba(230, 165, 14,1)', 'rgba(230, 165, 14,0.4)')
         );
 
         let labels = [];
         for (let i = 0; i < this.collected_tip_sel_metrics.length; i++) {
             let metric = this.collected_tip_sel_metrics[i];
             labels.push(metric.ts);
-            stepsTaken.data.push(metric.steps_taken);
-            stepsJumped.data.push(metric.steps_jumped);
             duration.data.push(Math.floor(metric.duration / 1000000));
-            depth.data.push(metric.depth);
-            evaluated.data.push(metric.evaluated);
+            lazyTips.data.push(metric.lazy_tips)
         }
 
         return {
             labels: labels,
-            datasets: [stepsTaken, stepsJumped, duration, depth, evaluated],
+            datasets: [duration, lazyTips],
         };
     }
-
-    @computed
-    get tipSelCacheSeries() {
-        let belowMaxDepthCacheHit = Object.assign({}, chartSeriesOpts,
-            series("Below Max Depth Cache Hit", 'rgba(42, 58, 122,1)', 'rgba(42, 58, 122,0.4)')
-        );
-
-        let labels = [];
-        for (let i = 0; i < this.collected_tip_sel_metrics.length; i++) {
-            let metric = this.collected_tip_sel_metrics[i];
-            labels.push(metric.ts);
-            belowMaxDepthCacheHit.data.push(metric.global_below_max_depth_cache_hit_ratio * 100);
-        }
-
-        return {
-            labels: labels,
-            datasets: [belowMaxDepthCacheHit],
-        };
-    }
-
 
     @computed
     get spamMetricsSeries() {
@@ -682,7 +734,7 @@ export class NodeStore {
             labels.push(metric.ts);
             durationGTTA.data.push(metric.gtta);
             durationPoW.data.push(metric.pow);
-            durationTotal.data.push(metric.gtta+metric.pow);
+            durationTotal.data.push(metric.gtta + metric.pow);
         }
 
         return {
@@ -822,9 +874,6 @@ export class NodeStore {
         let incomingTxsWorkUnits = Object.assign({}, chartSeriesOpts,
             series("Incoming Txs WorkUnits", 'rgba(219, 53, 219,1)', 'rgba(219, 53, 219,0.4)')
         );
-        let refsInvalidBundle = Object.assign({}, chartSeriesOpts,
-            series("Ref. Invalid Bundle (Tip-Sel)", 'rgba(219, 144, 53,1)', 'rgba(219, 144, 53,0.4)')
-        );
 
         let labels = [];
         for (let i = 0; i < this.collected_cache_metrics.length; i++) {
@@ -836,13 +885,12 @@ export class NodeStore {
             milestones.data.push(metric.milestones.size);
             txs.data.push(metric.transactions.size);
             incomingTxsWorkUnits.data.push(metric.incoming_transaction_work_units.size);
-            refsInvalidBundle.data.push(metric.refs_invalid_bundle.size);
         }
 
         return {
             labels: labels,
             datasets: [
-                reqQ, approvers, bundles, milestones, txs, incomingTxsWorkUnits, refsInvalidBundle
+                reqQ, approvers, bundles, milestones, txs, incomingTxsWorkUnits
             ],
         };
     }

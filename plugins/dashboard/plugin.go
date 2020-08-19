@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -72,7 +73,8 @@ func configure(plugin *node.Plugin) {
 			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
-		case *tangle.Bundle:
+		case milestone.Index:
+			// Milestone
 			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangleplugin.ConfirmedMilestoneMetric:
 			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
@@ -124,16 +126,19 @@ func run(_ *node.Plugin) {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	notifyStatus := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
+	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
 		wsSendWorkerPool.TrySubmit(tpsMetrics)
 	})
 
-	notifyNewMs := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		wsSendWorkerPool.TrySubmit(cachedBndl.GetBundle())
-		cachedBndl.Release(true) // bundle -1
+	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		wsSendWorkerPool.TrySubmit(msIndex)
 	})
 
-	notifyConfirmedMsMetrics := events.NewClosure(func(metric *tangleplugin.ConfirmedMilestoneMetric) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		wsSendWorkerPool.TrySubmit(msIndex)
+	})
+
+	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tangleplugin.ConfirmedMilestoneMetric) {
 		cachedMilestoneMetrics = append(cachedMilestoneMetrics, metric)
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
@@ -143,17 +148,17 @@ func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		metricsplugin.Events.TPSMetricsUpdated.Attach(notifyStatus)
-		tangleplugin.Events.SolidMilestoneChanged.Attach(notifyNewMs)
-		tangleplugin.Events.LatestMilestoneChanged.Attach(notifyNewMs)
-		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(notifyConfirmedMsMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
+		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		tangleplugin.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		wsSendWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		metricsplugin.Events.TPSMetricsUpdated.Detach(notifyStatus)
-		tangleplugin.Events.SolidMilestoneChanged.Detach(notifyNewMs)
-		tangleplugin.Events.LatestMilestoneChanged.Detach(notifyNewMs)
-		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(notifyConfirmedMsMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
+		tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		tangleplugin.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
 		wsSendWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[WSSend] ... done")
@@ -171,16 +176,14 @@ func run(_ *node.Plugin) {
 	runSpammerMetricWorker()
 }
 
-// tx +1
-func getMilestoneTail(index milestone.Index) *tangle.CachedTransaction {
+func getMilestoneTailHash(index milestone.Index) hornet.Hash {
 	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
 	if cachedMs == nil {
 		return nil
 	}
-
 	defer cachedMs.Release(true) // bundle -1
 
-	return cachedMs.GetBundle().GetTail() // tx +1
+	return cachedMs.GetBundle().GetTailHash()
 }
 
 const (
@@ -190,8 +193,10 @@ const (
 	MsgTypeTPSMetric
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
-	// MsgTypeTx is the type of the Tx message.
-	MsgTypeTx
+	// MsgTypeTx is the type of the zero value Tx message.
+	MsgTypeTxZeroValue
+	// MsgTypeTx is the type of the value Tx message.
+	MsgTypeTxValue
 	// MsgTypeMs is the type of the Ms message.
 	MsgTypeMs
 	// MsgTypePeerMetric is the type of the PeerMetric message.
@@ -310,7 +315,6 @@ type cachesmetric struct {
 	SpentAddresses               cache `json:"spent_addresses"`
 	Transactions                 cache `json:"transactions"`
 	IncomingTransactionWorkUnits cache `json:"incoming_transaction_work_units"`
-	RefsInvalidBundle            cache `json:"refs_invalid_bundle"`
 }
 
 type cache struct {
@@ -397,9 +401,6 @@ func currentNodeStatus() *nodestatus {
 		},
 		IncomingTransactionWorkUnits: cache{
 			Size: gossip.Processor().WorkUnitsSize(),
-		},
-		RefsInvalidBundle: cache{
-			Size: tangleplugin.GetRefsAnInvalidBundleStorageSize(),
 		},
 	}
 

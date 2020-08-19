@@ -13,7 +13,7 @@ import VisualizerStore from "app/stores/VisualizerStore";
 // prepare MobX stores
 const routerStore = new RouterStore();
 const nodeStore = new NodeStore();
-const explorerStore = new ExplorerStore(routerStore);
+const explorerStore = new ExplorerStore(nodeStore, routerStore);
 const visualizerStore = new VisualizerStore(routerStore);
 const stores = {
     "routerStore": routerStore,

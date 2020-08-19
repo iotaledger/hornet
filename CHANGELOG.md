@@ -2,7 +2,86 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.4.2] - 22.06.2020
+## [0.5.0] - 19.08.2020
+
+:warning: **Breaking change:** :warning:
+Please update to this version as soon as the mainnet coordinator got upgraded.
+Instructions on how to update to this version will be posted in due time.
+The old HORNET versions won't be functional within the mainnet anymore!
+
+### Added
+
+    - White-Flag confirmation
+    - Weighted uniform random tipselection for nodes
+    - Adaptive heaviest branch tipselection for coordinator
+    - Optional powsrv.io PoW support
+    - LMI and neighbor counts to dashboard
+    - getTipInfo API call
+    - "isHealthy" to getNodeInfo
+    - conf_trytes (confirmed trytes) ZMQ topic
+    - conf_trytes (confirmed trytes) MQTT topic
+    - Conflicting badge to the transaction explorer
+    - Add autopeering rule to drop neighbors with LSMI below our pruning index
+    - Automatic dashboard websocket reconnect
+    - Database tainted flag for coordinator
+
+### Changed
+
+    - Request tx from all neighbors that could have the data
+    - Bump protocol feature set for whiteflag (breaking protocol change)
+    - Reduced dashboard traffic by introducing subscriptions to topics
+    - Store binary trunk, branch, and bundle hashes in metadata to reduce load on IO
+    - Improve caching strategy in solidification and confirmation
+    - Improve caching in the dag helpers
+    - Reduce recursion in the future cone solidifier
+    - Use stack based DFS in TraverseApprovees
+    - Use stack based BFS in TraverseApprovers
+    - Return false for conflicting tx in the getInclusionStates web api call
+    - Coordinator now waits until the milestone is solid
+    - Set higher default verticesLimit in visualizer
+    - Update to Go 1.15
+
+### Removed
+
+    - Unused RefsInvalidBundles cache
+
+### Fixed
+
+    - Database revalidation
+    - Missing byte to trytes conversion in some error messages
+    - Make code more testable
+    - Adding autopeered neighbors as static neighbors
+    - CTPS calculation
+    - Spikes in conf.rate calculation
+    - Pruning
+    - Do not drop autopeering and "acceptAny" peers on peering.json change
+    - Index out of range in attachToTangle
+    - Deadlock in snapshotting and pruning
+    - Error reason for connection abort is now shown
+    - Peering configs now recognized via CLI
+    - Coordinator bootstrapping
+    - Milestone missing / Milestone updated panics
+    - Hash conflicts in the visualizer
+    - SupportedFeatureSets logic in handshake
+    - Websocket/dashboard deadlock
+    - Dashboard visualizer re-rendered to often
+    - Do not panic if snapshot creation is aborted
+    - Fix solid entry point indexes
+
+### Removed
+
+    - Unused defaults from config.json
+    - Graph plugin
+    - Monitor plugin
+    - Legacy gossip protocol
+    - Genesis tx special case
+
+### Config file changes
+
+Please use the new config.json and transfer values from your current config.json over to the new one, as a lot of keys have changed or got removed (instead of mutating your current one).
+
+
+## [0.4.2] - 22.07.2020
 
 ### Added
 

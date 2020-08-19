@@ -8,7 +8,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -49,16 +48,17 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, tx := range query.Transactions {
 		// get tx data
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(trinary.MustTrytesToBytes(tx[:81])[:49])) // tx +1
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(tx)) // meta +1
 
-		if cachedTx == nil {
+		if cachedTxMeta == nil {
 			// if tx is unknown, return false
 			inclusionStates = append(inclusionStates, false)
 			continue
 		}
-		// check if tx is set as confirmed
-		confirmed := cachedTx.GetMetadata().IsConfirmed()
-		cachedTx.Release(true) // tx -1
+		// check if tx is set as confirmed. Avoid passing true for conflicting tx to be backwards compatible
+		confirmed := cachedTxMeta.GetMetadata().IsConfirmed() && !cachedTxMeta.GetMetadata().IsConflicting()
+
+		cachedTxMeta.Release(true) // meta -1
 		inclusionStates = append(inclusionStates, confirmed)
 	}
 

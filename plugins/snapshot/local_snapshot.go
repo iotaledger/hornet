@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/daemon"
 
@@ -41,11 +40,11 @@ var (
 )
 
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
-func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, milestone.Index) {
+func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 
-	for _, approverHash := range tangle.GetApproverHashes(txHash, true) {
-		cachedTx := tangle.GetCachedTransactionOrNil(approverHash) // tx +1
-		if cachedTx == nil {
+	for _, approverHash := range tangle.GetApproverHashes(txHash) {
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
+		if cachedTxMeta == nil {
 			// Ignore this transaction since it doesn't exist anymore
 			log.Warnf(errors.Wrapf(ErrApproverTxNotFound, "tx hash: %v, approver hash: %v", txHash.Trytes(), approverHash.Trytes()).Error())
 			continue
@@ -55,29 +54,27 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) (bool, m
 		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
 		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
-		confirmed, at := cachedTx.GetMetadata().GetConfirmed()
-		cachedTx.Release(true) // tx -1
+		confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
+		cachedTxMeta.Release(true) // meta -1
 		if confirmed && (at > targetIndex) {
 			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
-			return true, at
+			return true
 		}
 	}
 
-	return false, 0
+	return false
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangle.CachedTransaction, abortSignal <-chan struct{}) (hornet.Hashes, error) {
-
-	defer cachedMsTailTx.Release(true) // tx -1
+func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.Hash, abortSignal <-chan struct{}) (hornet.Hashes, error) {
 
 	ts := time.Now()
 
 	txsToTraverse := make(map[string]struct{})
 	txsChecked := make(map[string]struct{})
 	var approvees hornet.Hashes
-	txsToTraverse[string(cachedMsTailTx.GetTransaction().GetTxHash())] = struct{}{}
+	txsToTraverse[string(msTailTxHash)] = struct{}{}
 
 	// Collect all tx by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -103,40 +100,40 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangl
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
+			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
+			if cachedTxMeta == nil {
 				return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
 
-			if confirmed, at := cachedTx.GetMetadata().GetConfirmed(); confirmed {
+			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
 				if at < milestoneIndex {
 					// Ignore Tx that were confirmed by older milestones
-					cachedTx.Release(true) // tx -1
+					cachedTxMeta.Release(true) // meta -1
 					continue
 				}
 
 				approvees = append(approvees, hornet.Hash(txHash))
 
 				// Traverse the approvee
-				txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
-				txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
+				txsToTraverse[string(cachedTxMeta.GetMetadata().GetTrunkHash())] = struct{}{}
+				txsToTraverse[string(cachedTxMeta.GetMetadata().GetBranchHash())] = struct{}{}
 
 				// Do not force release, since it is loaded again
-				cachedTx.Release() // tx -1
+				cachedTxMeta.Release() // meta -1
 
 			} else {
 				// Tx is not confirmed
-				if cachedTx.GetTransaction().IsTail() {
-					cachedTx.Release(true) // tx -1
+				if cachedTxMeta.GetMetadata().IsTail() {
+					cachedTxMeta.Release(true) // meta -1
 					return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Trytes())
 				}
 
 				// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
 				// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
 				// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
-				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), true)
+				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), false, true)
 				if err != nil {
-					cachedTx.Release(true) // tx -1
+					cachedTxMeta.Release(true) // meta -1
 					return nil, err
 				}
 
@@ -145,7 +142,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, cachedMsTailTx *tangl
 				}
 
 				// Ignore this transaction in the cone because it is not confirmed
-				cachedTx.Release(true) // tx -1
+				cachedTxMeta.Release(true) // meta -1
 			}
 		}
 	}
@@ -198,13 +195,10 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		}
 
 		// Get all approvees of that milestone
-		cachedMsTailTx := cachedMs.GetBundle().GetTail() // tx +1
-		cachedMs.Release(true)                           // bundle -1
+		msTailTxHash := cachedMs.GetBundle().GetTailHash()
+		cachedMs.Release(true) // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, cachedMsTailTx.Retain(), abortSignal)
-
-		// Do not force release, since it is loaded again
-		cachedMsTailTx.Release() // tx -1
+		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
 
 		if err != nil {
 			return nil, err
@@ -217,14 +211,26 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 			default:
 			}
 
-			if isEntryPoint, at := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
+			if isEntryPoint := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
 				// A solid entry point should only be a tail transaction, otherwise the whole bundle can't be reproduced with a snapshot file
-				tails, err := dag.FindAllTails(approvee, true)
+				tails, err := dag.FindAllTails(approvee, false, true)
 				if err != nil {
 					return nil, errors.Wrap(ErrCritical, err.Error())
 				}
 
 				for tailHash := range tails {
+					cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(tailHash))
+					if cachedTxMeta == nil {
+						return nil, errors.Wrapf(ErrCritical, "metadata (%v) not found!", hornet.Hash(tailHash).Trytes())
+					}
+
+					confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
+					if !confirmed {
+						cachedTxMeta.Release(true)
+						return nil, errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", hornet.Hash(tailHash).Trytes())
+					}
+					cachedTxMeta.Release(true)
+
 					solidEntryPoints[tailHash] = at
 				}
 			}
@@ -398,6 +404,9 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 
 	newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(targetIndex, abortSignal)
 	if err != nil {
+		if err == tangle.ErrOperationAborted {
+			return err
+		}
 		return errors.Wrap(ErrCritical, err.Error())
 	}
 
@@ -626,7 +635,7 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	coordinatorAddress := hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81])[:49])
+	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
 	tangle.SetSnapshotMilestone(coordinatorAddress, msHash, milestone.Index(msIndex), milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
 	tangle.SolidEntryPointsAdd(msHash, milestone.Index(msIndex))
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone.Index(msIndex))

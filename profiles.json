@@ -72,14 +72,6 @@
           "maxConsumersPerObject": 50,
           "maxConsumerHoldTimeSec": 30
         }
-      },
-      "refsInvalidBundle": {
-        "cacheTimeMs": 180000,
-        "leakDetection": {
-          "enabled": false,
-          "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
-        }
       }
     }
   },
@@ -151,14 +143,6 @@
       },
       "incomingTransactionFilter": {
         "cacheTimeMs": 1500,
-        "leakDetection": {
-          "enabled": true,
-          "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
-        }
-      },
-      "refsInvalidBundle": {
-        "cacheTimeMs": 180000,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,

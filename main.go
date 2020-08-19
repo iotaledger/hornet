@@ -12,17 +12,16 @@ import (
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
-	"github.com/gohornet/hornet/plugins/graph"
 	"github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/monitor"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
-	"github.com/gohornet/hornet/plugins/tipselection"
+	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/gohornet/hornet/plugins/webapi"
 	"github.com/gohornet/hornet/plugins/zmq"
@@ -46,18 +45,17 @@ func main() {
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		plugins = append(plugins, []*node.Plugin{
+			pow.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
 			peering.PLUGIN,
 			warpsync.PLUGIN,
-			tipselection.PLUGIN,
+			urts.PLUGIN,
 			metrics.PLUGIN,
 			snapshot.PLUGIN,
 			dashboard.PLUGIN,
 			zmq.PLUGIN,
 			mqtt.PLUGIN,
-			graph.PLUGIN,
-			monitor.PLUGIN,
 			spammer.PLUGIN,
 			coordinator.PLUGIN,
 			prometheus.PLUGIN,

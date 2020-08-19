@@ -58,7 +58,7 @@ export class Root extends React.Component<Props, any> {
                     <Navbar.Toggle aria-controls="main-navbar-nav" />
                     <Navbar.Collapse id="main-navbar-nav">
                         <Nav className="mr-auto">
-                            <LinkContainer to="/dashboard">
+                            <LinkContainer to="/dashboard" >
                                 <Nav.Link>Dashboard</Nav.Link>
                             </LinkContainer>
                             <LinkContainer to="/neighbors">
