@@ -166,9 +166,14 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                 <Badge variant="primary">Valid</Badge>
                                             :
                                             tx.confirmed.state ?
-                                                <Badge variant="success">
-                                                    Confirmed by Milestone {tx.confirmed.milestone_index}
-                                                </Badge>
+                                                tx.confirmed.conflicting ?
+                                                    <Badge variant="danger">
+                                                        Conflicting at Milestone {tx.confirmed.milestone_index}
+                                                    </Badge>
+                                                    :
+                                                    <Badge variant="success">
+                                                        Confirmed by Milestone {tx.confirmed.milestone_index}
+                                                    </Badge>
                                                 :
                                                 <Badge variant="light">Unconfirmed</Badge>
                                     }
@@ -196,7 +201,9 @@ export class ExplorerTransactionQueryResult extends React.Component<Props, any> 
                                                 {tx.tag}
                                             </Link>
                                         </ListGroup.Item>
-                                        <ListGroup.Item className={style.monospace}>Obsolete Tag: {tx.obsolete_tag}</ListGroup.Item>
+                                        <ListGroup.Item className={style.monospace}>
+                                            Obsolete Tag: {tx.obsolete_tag}
+                                        </ListGroup.Item>
                                     </ListGroup>
                                 </Col>
                                 <Col>

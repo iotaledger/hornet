@@ -5,15 +5,46 @@ import (
 )
 
 const (
-	// the max allowed depth to be used as the starting point for tip-selection
-	CfgTipSelMaxDepth = "tipsel.maxDepth"
-	// the limit defining the max amount of transactions to traverse in order to check
-	// whether a transaction references a transaction below max depth
-	CfgTipSelBelowMaxDepthTransactionLimit = "tipsel.belowMaxDepthTransactionLimit"
+	// CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
+	// value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+	CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxYoungestRootSnapshotIndexToLSMI"
+	// CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI is the maximum allowed delta
+	// value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+	CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxOldestRootSnapshotIndexToLSMI"
+	// CfgTipSelBelowMaxDepth is the maximum allowed delta
+	// value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+	CfgTipSelBelowMaxDepth = "tipsel.belowMaxDepth"
+	// the config group used for the non-lazy tip-pool
+	CfgTipSelNonLazy = "tipsel.nonLazy."
+	// the config group used for the semi-lazy tip-pool
+	CfgTipSelSemiLazy = "tipsel.semiLazy."
+	// CfgTipSelRetentionRulesTipsLimit is the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAgeSeconds"
+	// and "CfgTipSelMaxApprovers" are checked. if the amount of tips exceeds this limit,
+	// referenced tips get removed directly to reduce the amount of tips in the network.
+	CfgTipSelRetentionRulesTipsLimit = "retentionRulesTipsLimit"
+	// CfgTipSelMaxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
+	// after it was referenced by the first transaction.
+	CfgTipSelMaxReferencedTipAgeSeconds = "maxReferencedTipAgeSeconds"
+	// CfgTipSelMaxApprovers is the maximum amount of references by other transactions
+	// before the tip is removed from the tip pool.
+	CfgTipSelMaxApprovers = "maxApprovers"
 )
 
 func init() {
-	flag.Int(CfgTipSelMaxDepth, 3, "the max allowed depth to be used as the starting point for tip-selection")
-	flag.Int(CfgTipSelBelowMaxDepthTransactionLimit, 20000, "the limit defining the max amount of transactions to traverse in order to check "+
-		"whether a transaction references a transaction below max depth")
+	flag.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 8, "the maximum allowed delta "+
+		"value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy")
+	flag.Int(CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
+		"value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy")
+	flag.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
+		"value for the OTRSI of a given transaction in relation to the current LSMI before it gets lazy")
+	flag.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
+	flag.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+		"after it was referenced by the first transaction (non-lazy)")
+	flag.Int(CfgTipSelNonLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
+		"before the tip is removed from the tip pool (non-lazy)")
+	flag.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
+	flag.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+		"after it was referenced by the first transaction (semi-lazy)")
+	flag.Int(CfgTipSelSemiLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
+		"before the tip is removed from the tip pool (semi-lazy)")
 }

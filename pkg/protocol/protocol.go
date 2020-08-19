@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/willf/bitset"
+
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/protocol/handshake"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/protocol/tlv"
@@ -32,8 +33,8 @@ var (
 		[01101110, 01010001, 00010001] denotes that this node supports protocol versions 2, 3, 4, 6, 7, 9, 13, 15, 17 and 21.
 	*/
 
-	// supports protocol messages/feature sets: 2+1
-	SupportedFeatureSets = []byte{sting.FeatureSet | legacy.FeatureSet}
+	// supported protocol messages/feature sets
+	SupportedFeatureSets = bitset.From([]uint64{sting.FeatureSet})
 )
 
 var (
@@ -138,9 +139,6 @@ func (p *Protocol) SupportedFeatureSets() []string {
 	var features []string
 	if p.Supports(sting.FeatureSet) {
 		features = append(features, sting.FeatureSetName)
-	}
-	if p.Supports(legacy.FeatureSet) {
-		features = append(features, legacy.FeatureSetName)
 	}
 	return features
 }

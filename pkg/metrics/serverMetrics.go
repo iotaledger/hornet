@@ -18,6 +18,12 @@ type ServerMetrics struct {
 	KnownTransactions atomic.Uint32
 	// The number of confirmed transactions.
 	ConfirmedTransactions atomic.Uint32
+	// The number of value transactions.
+	ValueTransactions atomic.Uint32
+	// The number of zero value transactions.
+	ZeroValueTransactions atomic.Uint32
+	// The number of conflicting transactions.
+	ConflictingTransactions atomic.Uint32
 	// The number of received invalid transactions.
 	InvalidTransactions atomic.Uint32
 	// The number of received invalid requests (both transactions and milestones).
@@ -46,4 +52,8 @@ type ServerMetrics struct {
 	ValidatedBundles atomic.Uint32
 	// The number of seen spent addresses.
 	SeenSpentAddresses atomic.Uint32
+	// The number of non-lazy tips.
+	TipsNonLazy atomic.Uint32
+	// The number of semi-lazy tips.
+	TipsSemiLazy atomic.Uint32
 }

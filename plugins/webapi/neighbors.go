@@ -45,7 +45,7 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
-		log.Error(err)
+		log.Warn(err)
 	}
 
 	for _, uri := range query.Uris {
@@ -97,7 +97,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 
 	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
-		log.Error(err)
+		log.Warn(err)
 	}
 
 	for _, peer := range s.Neighbors {
@@ -158,7 +158,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	var configNeighbors []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configNeighbors); err != nil {
-		log.Error(err)
+		log.Warn(err)
 	}
 
 	peers := peering.Manager().PeerInfos()

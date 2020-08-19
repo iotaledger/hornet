@@ -52,7 +52,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 		case <-shutdownSignal:
 			return
 		case b := <-bc.c:
-			bc.manager.ForAllConnected(func(p *peer.Peer) (abort bool) {
+			bc.manager.ForAllConnected(func(p *peer.Peer) bool {
 				if _, excluded := b.ExcludePeers[p.ID]; excluded {
 					return true
 				}
@@ -63,14 +63,6 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 					return true
 				}
 
-				reqHashBytes := b.RequestedTxHash
-
-				// grab a requested transaction hash
-				if r := bc.reqQueue.Next(); r != nil {
-					reqHashBytes = r.Hash
-				}
-
-				helpers.SendTransactionAndRequest(p, b.TxData, reqHashBytes)
 				return true
 			})
 		}

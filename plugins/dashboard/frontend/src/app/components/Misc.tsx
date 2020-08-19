@@ -76,44 +76,6 @@ const reqLineChartOptions = Object.assign({
     }
 }, defaultChartOptions);
 
-const cacheLineChartOpts = Object.assign({}, {
-    scales: {
-        xAxes: [{
-            ticks: {
-                autoSkip: true,
-                maxTicksLimit: 8,
-                fontSize: 8,
-            },
-            showXLabels: 10,
-            gridLines: {
-                display: false
-            }
-        }],
-        yAxes: [{
-            gridLines: {
-                display: false
-            },
-            ticks: {
-                fontSize: 10,
-                maxTicksLimit: 4,
-                suggestedMin: 0,
-                beginAtZero: true,
-                suggestedMax: 100,
-                callback: function (value, index, values) {
-                    return `${value}%`;
-                }
-            },
-        }],
-    },
-    tooltips: {
-        callbacks: {
-            label: function (tooltipItem, data) {
-                return `Hit Rate: ${tooltipItem.value}%`;
-            }
-        }
-    }
-}, defaultChartOptions);
-
 const dbSizeLineChartOpts = Object.assign({}, {
     scales: {
         xAxes: [{
@@ -156,6 +118,37 @@ const dbSizeLineChartOpts = Object.assign({}, {
 @inject("nodeStore")
 @observer
 export class Misc extends React.Component<Props, any> {
+    updateInterval: any;
+
+    constructor(props: Readonly<Props>) {
+        super(props);
+        this.state = {
+            topicsRegistered: false,
+        };
+    }
+
+    componentDidMount(): void {
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
+        this.props.nodeStore.registerMiscTopics();
+    }
+
+    componentWillUnmount(): void {
+        clearInterval(this.updateInterval);
+        this.setState({topicsRegistered: false})
+        this.props.nodeStore.unregisterMiscTopics();
+    }
+
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerMiscTopics();
+            this.setState({topicsRegistered: true})
+        }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
+    }
+
     render() {
         return (
             <Container fluid>
@@ -168,10 +161,6 @@ export class Misc extends React.Component<Props, any> {
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.tipSelSeries}
                                           options={lineChartOptions}/>
-                                </div>
-                                <div className={style.hornetChart}>
-                                    <Line data={this.props.nodeStore.tipSelCacheSeries}
-                                          options={cacheLineChartOpts}/>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -192,6 +181,7 @@ export class Misc extends React.Component<Props, any> {
                                         <Line data={this.props.nodeStore.spamMetricsSeries}
                                             options={lineChartOptions}/>
                                     </div>
+                                    <If condition={this.props.nodeStore.avgSpamMetricsSeries.labels.length > 0}>
                                     <small>
                                         New TX: {this.props.nodeStore.last_avg_spam_metric.new.toFixed(3)},
                                         Avg. TPS: {this.props.nodeStore.last_avg_spam_metric.avg.toFixed(3)}
@@ -200,6 +190,7 @@ export class Misc extends React.Component<Props, any> {
                                         <Line data={this.props.nodeStore.avgSpamMetricsSeries}
                                             options={lineChartOptions}/>
                                     </div>
+                                    </If>
                                 </Card.Body>
                             </Card>
                         </Col>

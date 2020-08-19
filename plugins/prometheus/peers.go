@@ -11,8 +11,6 @@ var (
 	peersAllTransactions             *prometheus.GaugeVec
 	peersNewTransactions             *prometheus.GaugeVec
 	peersKnownTransactions           *prometheus.GaugeVec
-	peersInvalidTransactions         *prometheus.GaugeVec
-	peersInvalidRequests             *prometheus.GaugeVec
 	peersStaleTransactions           *prometheus.GaugeVec
 	peersReceivedTransactionRequests *prometheus.GaugeVec
 	peersReceivedMilestoneRequests   *prometheus.GaugeVec
@@ -44,20 +42,6 @@ func init() {
 		prometheus.GaugeOpts{
 			Name: "iota_peers_known_transactions",
 			Help: "Number of known transactions by peer.",
-		},
-		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
-	)
-	peersInvalidTransactions = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "iota_peers_invalid_transactions",
-			Help: "Number of invalid transactions by peer.",
-		},
-		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
-	)
-	peersInvalidRequests = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "iota_peers_invalid_requests",
-			Help: "Number of invalid requests by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
@@ -135,8 +119,6 @@ func init() {
 	registry.MustRegister(peersAllTransactions)
 	registry.MustRegister(peersNewTransactions)
 	registry.MustRegister(peersKnownTransactions)
-	registry.MustRegister(peersInvalidTransactions)
-	registry.MustRegister(peersInvalidRequests)
 	registry.MustRegister(peersStaleTransactions)
 	registry.MustRegister(peersReceivedTransactionRequests)
 	registry.MustRegister(peersReceivedMilestoneRequests)
@@ -155,8 +137,6 @@ func collectPeers() {
 	peersAllTransactions.Reset()
 	peersNewTransactions.Reset()
 	peersKnownTransactions.Reset()
-	peersInvalidTransactions.Reset()
-	peersInvalidRequests.Reset()
 	peersStaleTransactions.Reset()
 	peersReceivedTransactionRequests.Reset()
 	peersReceivedMilestoneRequests.Reset()
@@ -167,8 +147,6 @@ func collectPeers() {
 	peersSentHeartbeats.Reset()
 	peersDroppedSentPackets.Reset()
 	peersConnected.Reset()
-
-	peering.Manager().PeerInfos()
 
 	for _, peer := range peering.Manager().PeerInfos() {
 		address, port, _ := net.SplitHostPort(peer.Address)
@@ -184,8 +162,6 @@ func collectPeers() {
 		peersAllTransactions.With(labels).Set(float64(peer.NumberOfAllTransactions))
 		peersNewTransactions.With(labels).Set(float64(peer.NumberOfNewTransactions))
 		peersKnownTransactions.With(labels).Set(float64(peer.NumberOfKnownTransactions))
-		peersInvalidTransactions.With(labels).Set(float64(peer.NumberOfInvalidTransactions))
-		peersInvalidRequests.With(labels).Set(float64(peer.NumberOfInvalidRequests))
 		peersStaleTransactions.With(labels).Set(float64(peer.NumberOfStaleTransactions))
 		peersReceivedTransactionRequests.With(labels).Set(float64(peer.NumberOfReceivedTransactionReq))
 		peersReceivedMilestoneRequests.With(labels).Set(float64(peer.NumberOfReceivedMilestoneReq))

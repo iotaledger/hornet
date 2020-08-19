@@ -34,14 +34,11 @@ var (
 	features             []string
 	api                  *gin.Engine
 	webAPIBase           = ""
-	maxDepth             int
 	serverShutdownSignal <-chan struct{}
 )
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-
-	maxDepth = config.NodeConfig.GetInt(config.CfgTipSelMaxDepth)
 
 	// Release mode
 	gin.SetMode(gin.ReleaseMode)
@@ -190,7 +187,7 @@ func run(_ *node.Plugin) {
 		go func() {
 			log.Infof("You can now access the API using: http://%s", bindAddr)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Error("Stopping WebAPI server due to an error ... done")
+				log.Warn("Stopping WebAPI server due to an error ... done")
 			}
 		}()
 
@@ -201,7 +198,7 @@ func run(_ *node.Plugin) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			err := server.Shutdown(ctx)
 			if err != nil {
-				log.Error(err.Error())
+				log.Warn(err.Error())
 			}
 			cancel()
 		}

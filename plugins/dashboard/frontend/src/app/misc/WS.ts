@@ -1,8 +1,14 @@
+enum WSCommand {
+    Register,
+    Unregister
+}
+
 export enum WSMsgType {
     Status,
     TPSMetrics,
     TipSelMetric,
-    Tx,
+    TxZeroValue,
+    TxValue,
     Ms,
     PeerMetric,
     ConfirmedMsMetrics,
@@ -34,6 +40,22 @@ export function unregisterHandler(msgTypeID: number) {
     delete handlers[msgTypeID];
 }
 
+export function registerTopic(ws: WebSocket, msgTypeID: number) {
+    var arrayBuf = new ArrayBuffer(2);
+    var view = new Uint8Array(arrayBuf);
+    view[0] = WSCommand.Register;
+    view[1] = msgTypeID;
+    ws.send(arrayBuf);
+}
+
+export function unregisterTopic(ws: WebSocket, msgTypeID: number) {
+    var arrayBuf = new ArrayBuffer(2);
+    var view = new Uint8Array(arrayBuf);
+    view[0] = WSCommand.Unregister;
+    view[1] = msgTypeID;
+    ws.send(arrayBuf);
+}
+
 export function connectWebSocket(path: string, onOpen, onClose, onError) {
     let loc = window.location;
     let uri = 'ws:';
@@ -57,4 +79,6 @@ export function connectWebSocket(path: string, onOpen, onClose, onError) {
         }
         handler(msg.data);
     };
+
+    return ws
 }

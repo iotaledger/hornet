@@ -32,8 +32,6 @@ var (
 
 func configureTangleProcessor(_ *node.Plugin) {
 
-	configureGossipSolidifier()
-
 	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
 		processIncomingTx(task.Param(0).(*hornet.Transaction), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
 		task.Return(nil)
@@ -45,9 +43,6 @@ func configureTangleProcessor(_ *node.Plugin) {
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		if daemon.IsStopped() {
-			return
-		}
 		solidifyMilestone(task.Param(0).(milestone.Index), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
@@ -56,13 +51,11 @@ func configureTangleProcessor(_ *node.Plugin) {
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
-	runGossipSolidifier()
-
-	submitReceivedTxForProcessing := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
+	onTransactionProcessed := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
 		receiveTxWorkerPool.Submit(transaction, request, p)
 	})
 
-	updateMetrics := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
+	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
 		lastIncomingTPS = tpsMetrics.Incoming
 		lastNewTPS = tpsMetrics.New
 		lastOutgoingTPS = tpsMetrics.Outgoing
@@ -81,18 +74,18 @@ func runTangleProcessor(_ *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
-		metricsplugin.Events.TPSMetricsUpdated.Attach(updateMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
 		<-shutdownSignal
-		metricsplugin.Events.TPSMetricsUpdated.Detach(updateMetrics)
+		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
-		gossip.Processor().Events.TransactionProcessed.Attach(submitReceivedTxForProcessing)
+		gossip.Processor().Events.TransactionProcessed.Attach(onTransactionProcessed)
 		receiveTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
-		gossip.Processor().Events.TransactionProcessed.Detach(submitReceivedTxForProcessing)
+		gossip.Processor().Events.TransactionProcessed.Detach(onTransactionProcessed)
 		receiveTxWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
@@ -135,8 +128,6 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
 
-	Events.ProcessedTransaction.Trigger(incomingTx.GetTxHash())
-
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewTransactions.Inc()
 
@@ -164,6 +155,12 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 		}
 		Events.ReceivedKnownTransaction.Trigger(cachedTx)
 	}
+
+	// "ProcessedTransaction" event has to be fired after "ReceivedNewTransaction" event,
+	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
+	// with the transactions it issued itself because the transactions may be not solid yet and therefore their bundles
+	// are not created yet.
+	Events.ProcessedTransaction.Trigger(incomingTx.GetTxHash())
 
 	if request != nil {
 		// mark the received request as processed
@@ -195,7 +192,8 @@ func printStatus() {
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"TPS (in/new/out): %05d/%05d/%05d",
+				"TPS (in/new/out): %05d/%05d/%05d, "+
+				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			receiveTxWorkerPool.GetPendingQueueSize(),
@@ -203,5 +201,7 @@ func printStatus() {
 			tangle.GetLatestMilestoneIndex(),
 			lastIncomingTPS,
 			lastNewTPS,
-			lastOutgoingTPS))
+			lastOutgoingTPS,
+			metrics.SharedServerMetrics.TipsNonLazy.Load(),
+			metrics.SharedServerMetrics.TipsSemiLazy.Load()))
 }

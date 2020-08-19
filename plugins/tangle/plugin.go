@@ -12,10 +12,11 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
+
 	"github.com/iotaledger/iota.go/address"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -25,17 +26,18 @@ import (
 )
 
 var (
-	PLUGIN                        = node.NewPlugin("Tangle", node.Enabled, configure, run)
-	belowMaxDepthTransactionLimit int
-	log                           *logger.Logger
-	updateSyncedAtStartup         bool
+	PLUGIN                = node.NewPlugin("Tangle", node.Enabled, configure, run)
+	log                   *logger.Logger
+	updateSyncedAtStartup bool
 
 	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 
-	onSolidMilestoneChanged        *events.Closure
+	onSolidMilestoneIndexChanged   *events.Closure
 	onPruningMilestoneIndexChanged *events.Closure
+	onLatestMilestoneIndexChanged  *events.Closure
+	onReceivedNewTx                *events.Closure
 )
 
 func init() {
@@ -44,9 +46,6 @@ func init() {
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-
-	belowMaxDepthTransactionLimit = config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepthTransactionLimit)
-	configureRefsAnInvalidBundleStorage()
 
 	tangle.LoadInitialValuesFromDatabase()
 
@@ -65,9 +64,10 @@ func configure(plugin *node.Plugin) {
 	}
 
 	tangle.ConfigureMilestones(
-		hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))[:49]),
+		hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)),
 		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()
@@ -95,25 +95,23 @@ func run(plugin *node.Plugin) {
 	database.RunGarbageCollection()
 
 	daemon.BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
-		attachEvents()
+		attachHeartbeatEvents()
 		<-shutdownSignal
-		detachEvents()
+		detachHeartbeatEvents()
 	}, shutdown.PriorityHeartbeats)
+
+	daemon.BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
+		attachSolidifierGossipEvents()
+		<-shutdownSignal
+		detachSolidifierGossipEvents()
+	}, shutdown.PrioritySolidifierGossip)
 
 	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
-		tangle.ShutdownMilestoneStorage()
-		tangle.ShutdownBundleStorage()
-		tangle.ShutdownBundleTransactionsStorage()
-		tangle.ShutdownTransactionStorage()
-		tangle.ShutdownApproversStorage()
-		tangle.ShutdownTagsStorage()
-		tangle.ShutdownAddressStorage()
-		tangle.ShutdownUnconfirmedTxsStorage()
-		tangle.ShutdownSpentAddressesStorage()
+		tangle.ShutdownStorages()
 		log.Info("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase)
@@ -134,8 +132,7 @@ func run(plugin *node.Plugin) {
 }
 
 func configureEvents() {
-	onSolidMilestoneChanged = events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		defer cachedBndl.Release() // bundle -1
+	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new solid milestone index
 		gossip.BroadcastHeartbeat()
 	})
@@ -144,16 +141,40 @@ func configureEvents() {
 		// notify peers about our new pruning milestone index
 		gossip.BroadcastHeartbeat()
 	})
+
+	onLatestMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+		// notify peers about our new latest milestone index
+		gossip.BroadcastHeartbeat()
+	})
+
+	onReceivedNewTx = events.NewClosure(func(cachedTx *tangle.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		// Force release possible here, since processIncomingTx still holds a reference
+		defer cachedTx.Release(true) // tx -1
+
+		if tangle.IsNodeSyncedWithThreshold() {
+			solidifyFutureConeOfTx(cachedTx.GetCachedMetadata()) // meta pass +1
+		}
+	})
 }
 
-func attachEvents() {
-	Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+func attachHeartbeatEvents() {
+	Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 	Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
-func detachEvents() {
-	Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+func attachSolidifierGossipEvents() {
+	Events.ReceivedNewTransaction.Attach(onReceivedNewTx)
+}
+
+func detachHeartbeatEvents() {
+	Events.SolidMilestoneChanged.Detach(onSolidMilestoneIndexChanged)
 	Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+}
+
+func detachSolidifierGossipEvents() {
+	Events.ReceivedNewTransaction.Detach(onReceivedNewTx)
 }
 
 // SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup

@@ -8,7 +8,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
-	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -56,7 +55,7 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// State
-		result.States = append(result.States, tangle.WasAddressSpentFrom(hornet.Hash(trinary.MustTrytesToBytes(addr[:81])[:49])))
+		result.States = append(result.States, tangle.WasAddressSpentFrom(hornet.HashFromAddressTrytes(addr)))
 	}
 
 	c.JSON(http.StatusOK, result)

@@ -14,6 +14,7 @@ import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import {toInputUppercase} from "app/misc/Utils";
+import { If } from 'tsx-control-statements/components';
 
 interface Props {
     visualizerStore?: VisuStore.VisualizerStore;
@@ -24,14 +25,80 @@ interface Props {
 @inject("nodeStore")
 @observer
 export class Visualizer extends React.Component<Props, any> {
+    updateInterval: any;
+
+    constructor(props: Readonly<Props>) {
+        super(props);
+        this.state = {
+            tps_new: 0,
+            vertices_count: 0,
+            selected_approvers_count: 0,
+            selected_approvees_count: 0,
+            tips_count: 0,
+            solid_percentage: 0.0,
+            confirmed_percentage: 0.0,
+            conflicting_percentage: 0.0,
+            updateTicks: 0,
+            topicsRegistered: false,
+        };
+    }
 
     componentDidMount(): void {
         this.props.visualizerStore.start();
+        this.updateInterval = setInterval(() => this.updateTick(), 500);
+        this.props.nodeStore.registerVisualizerTopics();
     }
 
     componentWillUnmount(): void {
+        clearInterval(this.updateInterval);
+        this.setState({topicsRegistered: false})
+        this.props.nodeStore.unregisterVisualizerTopics();
         this.props.visualizerStore.stop();
-        this.props.nodeStore.registerHandlers();
+    }
+
+    shouldComponentUpdate(_nextProps, nextState) {
+        return this.state.updateTicks !== nextState.updateTicks;
+    }
+
+    updateTick = () => {
+        if (this.props.nodeStore.websocketConnected && !this.state.topicsRegistered) {
+            this.props.nodeStore.registerVisualizerTopics();
+            this.setState({topicsRegistered: true})
+        }
+
+        if (!this.props.nodeStore.websocketConnected && this.state.topicsRegistered) {
+            this.setState({topicsRegistered: false})
+        }
+
+        let {
+            vertices, selected_approvers_count, selected_approvees_count,
+            tips_count, solid_count, confirmed_count, conflicting_count
+        } = this.props.visualizerStore;
+
+        let {last_tps_metric} = this.props.nodeStore;
+
+        this.setState(state => ({
+            tps_new: last_tps_metric.new,
+            vertices_count: vertices.size,
+            selected_approvers_count: selected_approvers_count,
+            selected_approvees_count: selected_approvees_count,
+            tips_count: tips_count,
+            updateTicks: state.updateTicks + 1
+        }));
+
+        if (vertices.size == 0) {
+            this.setState(state => ({
+                solid_percentage: 0.0,
+                confirmed_percentage: 0.0,
+                conflicting_percentage: 0.0,
+            }));
+        } else {
+            this.setState(state => ({
+                solid_percentage: solid_count / vertices.size * 100,
+                confirmed_percentage: confirmed_count / vertices.size * 100,
+                conflicting_percentage: conflicting_count / vertices.size * 100,
+            }));
+        }
     }
 
     updateVerticesLimit = (e) => {
@@ -51,28 +118,8 @@ export class Visualizer extends React.Component<Props, any> {
         this.props.visualizerStore.searchAndHighlight();
     }
 
-    toggleBackgroundDataCollection = () => {
-        if (this.props.nodeStore.collecting) {
-            this.props.nodeStore.unregisterHandlers();
-            return;
-        }
-        this.props.nodeStore.registerHandlers();
-    }
-
     render() {
-        let {
-            vertices, solid_count, confirmed_count, selected,
-            selected_approvers_count, selected_approvees_count,
-            verticesLimit, tips_count, paused, search
-        } = this.props.visualizerStore;
-        let {last_tps_metric, collecting} = this.props.nodeStore;
-        let solid_percentage = 0.0;
-        let confirmed_percentage = 0.0;
-
-        if (vertices.size != 0) {
-            solid_percentage = solid_count / vertices.size*100
-            confirmed_percentage = confirmed_count / vertices.size*100
-        }
+        let {selected, verticesLimit, paused, search} = this.props.visualizerStore;
 
         return (
             <Container fluid>
@@ -92,8 +139,16 @@ export class Visualizer extends React.Component<Props, any> {
                                 Confirmed
                             </Badge>
                             {' '}
+                            <Badge pill style={{background: VisuStore.colorConflicting, color: "white"}}>
+                                Conflicting
+                            </Badge>
+                            {' '}
                             <Badge pill style={{background: VisuStore.colorMilestone, color: "white"}}>
                                 Milestone
+                            </Badge>
+                            {' '}
+                            <Badge pill style={{background: VisuStore.colorTip, color: "white"}}>
+                                Tip
                             </Badge>
                             {' '}
                             <Badge pill style={{background: VisuStore.colorUnknown, color: "white"}}>
@@ -104,18 +159,19 @@ export class Visualizer extends React.Component<Props, any> {
                                 Highlighted
                             </Badge>
                             <br/>
-                            Transactions: {vertices.size}, TPS: {last_tps_metric.new}, Tips: {tips_count}<br/>
-                            Confirmed/Unconfirmed: {confirmed_count}/{vertices.size - confirmed_count} ({confirmed_percentage.toFixed(2)}%)<br/>
-                            Solid/Unsolid: {solid_count}/{vertices.size - solid_count} ({solid_percentage.toFixed(2)}%)<br/>
-                            Selected: {selected ?
-                            <Link to={`/explorer/tx/${selected.id}`} target="_blank" rel='noopener noreferrer'>
-                                {selected.id.substr(0, 10)}
-                            </Link>
-                            : "-"}
-                            <br/>
-                            Approvers/Approvees: {selected ?
-                            <span>{selected_approvers_count}/{selected_approvees_count}</span>
-                            : '-/-'}
+                            Transactions: {this.state.vertices_count}, TPS: {this.state.tps_new}, Tips: {this.state.tips_count}<br/>
+                            Confirmed: {this.state.confirmed_percentage.toFixed(2)}%, Conflicting: {this.state.conflicting_percentage.toFixed(2)}%, Solid: {this.state.solid_percentage.toFixed(2)}%<br/>
+                            <If condition={!!selected}>
+                                Selected: {selected ?
+                                <Link to={`/explorer/tx/${selected.id}`} target="_blank" rel='noopener noreferrer'>
+                                    {selected.id.substr(0, 10)}
+                                </Link>
+                                : "-"}
+                                <br/>
+                                Approvers/Approvees: {selected ?
+                                <span>{this.state.selected_approvers_count}/{this.state.selected_approvees_count}</span>
+                                : '-/-'}
+                            </If>
                         </p>
                     </Col>
                     <Col xs={{span: 3, offset: 4}}>
@@ -142,22 +198,6 @@ export class Visualizer extends React.Component<Props, any> {
                                 aria-label="vertices-search" onKeyUp={this.searchAndHighlight}
                                 aria-describedby="vertices-search"
                             />
-                        </InputGroup>
-                        <InputGroup className="mr-1" size="sm">
-                            <OverlayTrigger
-                                trigger={['hover', 'focus']} placement="left" overlay={
-                                <Popover id="popover-basic">
-                                    <Popover.Content>
-                                        Ensures that only data needed for the visualizer is collected.
-                                    </Popover.Content>
-                                </Popover>}
-                            >
-                                <Button variant="outline-secondary" onClick={this.toggleBackgroundDataCollection}
-                                        size="sm">
-                                    {collecting ? "Stop Background Data Collection" : "Collect Background data"}
-                                </Button>
-                            </OverlayTrigger>
-                            <br/>
                         </InputGroup>
                         <InputGroup className="mr-1" size="sm">
                             <OverlayTrigger

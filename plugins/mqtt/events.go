@@ -19,44 +19,58 @@ var (
 
 func onNewTx(cachedTx *tangle.CachedTransaction) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
+	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 
 		// tx topic
 		err := publishTx(tx.Tx)
 		if err != nil {
-			log.Error(err.Error())
+			log.Warn(err.Error())
 		}
 
 		// trytes topic
 		err = publishTxTrytes(tx.Tx)
 		if err != nil {
-			log.Error(err.Error())
+			log.Warn(err.Error())
 		}
 	})
 }
 
-func onConfirmedTx(cachedTx *tangle.CachedTransaction, msIndex milestone.Index, _ int64) {
+func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _ int64) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) {
-		err := publishConfTx(tx.Tx, msIndex)
-		if err != nil {
-			log.Error(err.Error())
+	cachedMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
+
+		cachedTx := tangle.GetCachedTransactionOrNil(metadata.GetTxHash())
+		if cachedTx == nil {
+			log.Warnf("%w hash: %s", tangle.ErrTransactionNotFound, metadata.GetTxHash().Trytes())
+			return
 		}
+
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+			// conf_trytes topic
+			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
+				log.Warn(err.Error())
+			}
+
+			// sn topic
+			if err := publishConfTx(tx.Tx, msIndex); err != nil {
+				log.Warn(err.Error())
+			}
+		})
 	})
 }
 
 func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 	err := publishLMI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash().Trytes())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	err = publishLM(cachedBndl.GetBundle())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	cachedBndl.Release(true) // bundle -1
 }
@@ -64,18 +78,18 @@ func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
 func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
 	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	err = publishLSM(cachedBndl.GetBundle())
 	if err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 	cachedBndl.Release(true) // bundle -1
 }
 
 func onSpentAddress(addr trinary.Hash) {
 	if err := publishSpentAddress(addr); err != nil {
-		log.Error(err.Error())
+		log.Warn(err.Error())
 	}
 }
 
@@ -141,6 +155,22 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 		iotaTx.BranchTransaction, // Branch transaction hash
 		iotaTx.Bundle,            // Bundle hash
 		time.Now().UTC().Format(time.RFC3339)))
+}
+
+// Publish confirmed transaction trytes
+func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+
+	trytes, err := transaction.TransactionToTrytes(iotaTx)
+	if err != nil {
+		return err
+	}
+
+	return mqttBroker.Send(topicConfTrytes, fmt.Sprintf(`{"txHash":"%v","trytes":"%v","msIndex":%d,"timestamp":"%s"}`,
+		iotaTx.Hash, // Transaction hash
+		trytes,      // Transaction trytes
+		msIndex,     // Index of the milestone that confirmed the transaction
+		time.Now().UTC().Format(time.RFC3339),
+	))
 }
 
 // Publish transaction trytes of an tx that has recently been added to the ledger

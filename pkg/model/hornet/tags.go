@@ -1,6 +1,8 @@
 package hornet
 
 import (
+	"fmt"
+
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
@@ -28,7 +30,7 @@ func (t *Tag) GetTxHash() Hash {
 // ObjectStorage interface
 
 func (t *Tag) Update(_ objectstorage.StorableObject) {
-	panic("Tag should never be updated")
+	panic(fmt.Sprintf("Tag should never be updated: %v, TxHash: %v", t.tag.Trytes(), t.txHash.Trytes()))
 }
 
 func (t *Tag) ObjectStorageKey() []byte {

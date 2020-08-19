@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/trinary"
 )
@@ -77,7 +79,7 @@ func FetchConfig() error {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, false, !hasFlag(defaultPeeringConfigName))
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName))
 	if err != nil {
 		return err
 	}
@@ -133,15 +135,23 @@ func hasFlag(name string) bool {
 }
 
 // LoadHashFromEnvironment loads a hash from the given environment variable.
-func LoadHashFromEnvironment(name string) (trinary.Hash, error) {
-	viper.BindEnv(name)
-	hash := viper.GetString(name)
+func LoadHashFromEnvironment(name string, length ...int) (trinary.Hash, error) {
+
+	hash, exists := os.LookupEnv(name)
+	if !exists {
+		return "", fmt.Errorf("environment variable '%s' not set", name)
+	}
 
 	if len(hash) == 0 {
 		return "", fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	if !guards.IsTransactionHash(hash) {
+	hashLength := consts.HashTrytesSize
+	if len(length) > 0 {
+		hashLength = length[0]
+	}
+
+	if !guards.IsTrytesOfExactLength(hash, hashLength) {
 		return "", fmt.Errorf("environment variable '%s' contains an invalid hash", name)
 	}
 

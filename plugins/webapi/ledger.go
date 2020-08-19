@@ -124,44 +124,44 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				continue
 			}
 
-			cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHash)) // tx +1
-			if cachedTx == nil {
+			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
+			if cachedTxMeta == nil {
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
 
-			confirmed, at := cachedTx.GetMetadata().GetConfirmed()
+			confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
 			if confirmed {
 				if at != milestoneIndex {
 					// ignore all tx that were confirmed by another milestone
-					cachedTx.Release(true) // tx -1
+					cachedTxMeta.Release(true) // meta -1
 					continue
 				}
 			} else {
-				cachedTx.Release(true) // tx -1
+				cachedTxMeta.Release(true) // meta -1
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", hornet.Hash(txHash).Trytes())
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[string(cachedTx.GetTransaction().GetTrunkHash())] = struct{}{}
-			txsToTraverse[string(cachedTx.GetTransaction().GetBranchHash())] = struct{}{}
+			txsToTraverse[string(cachedTxMeta.GetMetadata().GetTrunkHash())] = struct{}{}
+			txsToTraverse[string(cachedTxMeta.GetMetadata().GetBranchHash())] = struct{}{}
 
-			if !cachedTx.GetTransaction().IsTail() {
-				cachedTx.Release(true) // tx -1
+			if !cachedTxMeta.GetMetadata().IsTail() {
+				cachedTxMeta.Release(true) // meta -1
 				continue
 			}
 
 			cachedBndl := tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
 			if cachedBndl == nil {
-				txBundle := cachedTx.GetTransaction().Tx.Bundle
-				cachedTx.Release(true) // tx -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle)
+				txBundle := cachedTxMeta.GetMetadata().GetBundleHash()
+				cachedTxMeta.Release(true) // meta -1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle.Trytes())
 			}
 
 			if !cachedBndl.GetBundle().IsValid() {
-				txBundle := cachedTx.GetTransaction().Tx.Bundle
-				cachedTx.Release(true)   // tx -1
-				cachedBndl.Release(true) // bundle -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", hornet.Hash(txHash).Trytes(), txBundle)
+				txBundle := cachedTxMeta.GetMetadata().GetBundleHash()
+				cachedTxMeta.Release(true) // meta -1
+				cachedBndl.Release(true)   // bundle -1
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", hornet.Hash(txHash).Trytes(), txBundle.Trytes())
 			}
 
 			if !cachedBndl.GetBundle().IsValueSpam() {
@@ -184,11 +184,11 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				}
 
 				cachedBundleHeadTx := cachedBndl.GetBundle().GetHead() // tx +1
-				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTx.GetTransaction().Tx.Bundle, TailTxHash: cachedBndl.GetBundle().GetTailHash().Trytes(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
+				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), TailTxHash: cachedBndl.GetBundle().GetTailHash().Trytes(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
 				cachedBundleHeadTx.Release(true) // tx -1
 			}
-			cachedTx.Release(true)   // tx -1
-			cachedBndl.Release(true) // bundle -1
+			cachedTxMeta.Release(true) // meta -1
+			cachedBndl.Release(true)   // bundle -1
 
 			// we only add the tail transaction to the txsToConfirm set, in order to not
 			// accidentally skip cones, in case the other transactions (non-tail) of the bundle do not

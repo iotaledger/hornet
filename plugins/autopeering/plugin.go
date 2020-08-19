@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/identity"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
@@ -27,13 +28,14 @@ var (
 	local *Local
 
 	// Closures
-	onDiscoveryPeerDiscovered  *events.Closure
-	onDiscoveryPeerDeleted     *events.Closure
-	onSelectionSaltUpdated     *events.Closure
-	onManagerPeerDisconnected  *events.Closure
-	onSelectionOutgoingPeering *events.Closure
-	onSelectionIncomingPeering *events.Closure
-	onSelectionDropped         *events.Closure
+	onDiscoveryPeerDiscovered    *events.Closure
+	onDiscoveryPeerDeleted       *events.Closure
+	onSelectionSaltUpdated       *events.Closure
+	onManagerPeerDisconnected    *events.Closure
+	onSelectionOutgoingPeering   *events.Closure
+	onSelectionIncomingPeering   *events.Closure
+	onSelectionDropped           *events.Closure
+	onAutopeeredPeerBecameStatic *events.Closure
 )
 
 func configure(p *node.Plugin) {
@@ -82,6 +84,7 @@ func configureEvents() {
 		log.Infof("removing: %s / %s", gossipAddr, p.Autopeering.ID())
 		Selection.RemoveNeighbor(p.Autopeering.ID())
 	})
+
 	onSelectionOutgoingPeering = events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return // ignore rejected peering
@@ -139,7 +142,10 @@ func configureEvents() {
 		})
 
 		if found == nil {
-			log.Warnf("didn't find autopeered peer %s for removal", ev.DroppedID)
+			// this can happen if we remove the peer in the manager manually.
+			// the peer gets removed from the manager first, and afterwards the event in the autopeering is fired.
+			// or if someone added the already connected autopeer manually, the autopeering gets overwritten.
+			log.Debugf("didn't find autopeered peer %s for removal", ev.DroppedID)
 			return
 		}
 
@@ -150,6 +156,10 @@ func configureEvents() {
 		}
 
 		log.Infof("disconnected autopeered peer %s", found.InitAddress.String())
+	})
+
+	onAutopeeredPeerBecameStatic = events.NewClosure(func(id identity.Identity) {
+		Selection.RemoveNeighbor(id.ID())
 	})
 }
 
@@ -165,6 +175,7 @@ func attachEvents() {
 
 	// notify the selection when a connection is closed or failed.
 	peering.Manager().Events.PeerDisconnected.Attach(onManagerPeerDisconnected)
+	peering.Manager().Events.AutopeeredPeerBecameStatic.Attach(onAutopeeredPeerBecameStatic)
 	Selection.Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
 	Selection.Events().IncomingPeering.Attach(onSelectionIncomingPeering)
 	Selection.Events().Dropped.Attach(onSelectionDropped)
@@ -181,6 +192,7 @@ func detachEvents() {
 	}
 
 	peering.Manager().Events.PeerDisconnected.Detach(onManagerPeerDisconnected)
+	peering.Manager().Events.AutopeeredPeerBecameStatic.Detach(onAutopeeredPeerBecameStatic)
 	Selection.Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
 	Selection.Events().IncomingPeering.Detach(onSelectionIncomingPeering)
 	Selection.Events().Dropped.Detach(onSelectionDropped)

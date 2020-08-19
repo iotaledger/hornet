@@ -35,15 +35,14 @@ func GetBundleStorageSize() int {
 	return bundleStorage.GetSize()
 }
 
-func configureBundleStorage(store kvstore.KVStore) {
-
-	opts := profile.LoadProfile().Caches.Bundles
+func configureBundleStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	bundleStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixBundles}),
 		bundleFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.StoreOnCreation(false),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -54,7 +53,7 @@ func configureBundleStorage(store kvstore.KVStore) {
 
 // ObjectStorage interface
 func (bundle *Bundle) Update(_ objectstorage.StorableObject) {
-	panic("Bundle should never be updated")
+	panic(fmt.Sprintf("Bundle should never be updated: %v, TxHash: %v", bundle.hash.Trytes(), bundle.tailTx.Trytes()))
 }
 
 func (bundle *Bundle) ObjectStorageKey() []byte {
@@ -172,7 +171,7 @@ func (c *CachedBundle) ConsumeBundle(consumer func(*Bundle)) {
 
 	c.Consume(func(object objectstorage.StorableObject) {
 		consumer(object.(*Bundle))
-	})
+	}, true)
 }
 
 func (c *CachedBundle) GetBundle() *Bundle {
@@ -187,6 +186,25 @@ func GetCachedBundleOrNil(tailTxHash hornet.Hash) *CachedBundle {
 		return nil
 	}
 	return &CachedBundle{CachedObject: cachedBundle}
+}
+
+// GetStoredBundleOrNil returns a bundle object without accessing the cache layer.
+func GetStoredBundleOrNil(tailTxHash hornet.Hash) *Bundle {
+	storedBundle := bundleStorage.LoadObjectFromStore(tailTxHash)
+	if storedBundle == nil {
+		return nil
+	}
+	return storedBundle.(*Bundle)
+}
+
+// BundleHashConsumer consumes the given tailTxHash during looping through all bundles in the persistence layer.
+type BundleHashConsumer func(txHash hornet.Hash) bool
+
+// ForEachBundleHash loops over all bundle hashes.
+func ForEachBundleHash(consumer BundleHashConsumer, skipCache bool) {
+	bundleStorage.ForEachKeyOnly(func(tailTxHash []byte) bool {
+		return consumer(tailTxHash)
+	}, skipCache)
 }
 
 // bundle +-0
@@ -241,13 +259,13 @@ func GetBundlesOfTransactionOrNil(txHash hornet.Hash, forceRelease bool) CachedB
 
 	var cachedBndls CachedBundles
 
-	cachedTx := GetCachedTransactionOrNil(txHash) // tx +1
-	if cachedTx == nil {
+	cachedTxMeta := GetCachedTxMetadataOrNil(txHash) // meta +1
+	if cachedTxMeta == nil {
 		return nil
 	}
-	defer cachedTx.Release(forceRelease) // tx -1
+	defer cachedTxMeta.Release(forceRelease) // meta -1
 
-	if cachedTx.GetTransaction().IsTail() {
+	if cachedTxMeta.GetMetadata().IsTail() {
 		cachedBndl := GetCachedBundleOrNil(txHash) // bundle +1
 		if cachedBndl == nil {
 			return nil
@@ -255,7 +273,7 @@ func GetBundlesOfTransactionOrNil(txHash hornet.Hash, forceRelease bool) CachedB
 		return append(cachedBndls, cachedBndl)
 	}
 
-	tailTxHashes := getTailApproversOfSameBundle(cachedTx.GetTransaction().GetBundleHash(), txHash, forceRelease)
+	tailTxHashes := getTailApproversOfSameBundle(cachedTxMeta.GetMetadata().GetBundleHash(), txHash, forceRelease)
 	for _, tailTxHash := range tailTxHashes {
 		cachedBndl := GetCachedBundleOrNil(tailTxHash) // bundle +1
 		if cachedBndl == nil {
@@ -350,7 +368,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		bndl.headTx = cachedTx.GetTransaction().GetTxHash()
 	} else {
 		// lets try to complete the bundle by assigning txs into this bundle
-		if !constructBundle(bndl, cachedTx.Retain()) { // tx pass +1
+		if !constructBundle(bndl, cachedTx.GetCachedMetadata()) { // meta pass +1
 			if isSolidTail {
 				panic("Can't create bundle, but tailTx is solid")
 			}
@@ -396,7 +414,7 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 		bndl := cachedBndl.GetBundle()
 		bndl.ApplySpentAddresses()
 
-		if bndl.IsValid() && bndl.IsMilestone() {
+		if bndl.IsValid() && bndl.ValidStrictSemantics() && bndl.IsMilestone() {
 			// Force release to store milestones without caching
 			//
 			// Milestone has to be stored after the bundle itself, otherwise there would be a race condition
@@ -411,50 +429,50 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 }
 
 // Remaps transactions into the given bundle by traversing from the given start transaction through the trunk.
-func constructBundle(bndl *Bundle, cachedStartTx *CachedTransaction) bool {
+func constructBundle(bndl *Bundle, cachedStartTxMeta *CachedMetadata) bool {
 
-	cachedCurrentTx := cachedStartTx
+	cachedCurrentTxMeta := cachedStartTxMeta
 
 	// iterate as long as the bundle isn't complete and prevent cyclic transactions (such as the genesis)
-	for !bytes.Equal(cachedCurrentTx.GetTransaction().GetTxHash(), cachedCurrentTx.GetTransaction().GetTrunkHash()) && !bndl.isComplete() && !cachedCurrentTx.GetTransaction().IsHead() {
+	for !bytes.Equal(cachedCurrentTxMeta.GetMetadata().GetTxHash(), cachedCurrentTxMeta.GetMetadata().GetTrunkHash()) && !bndl.isComplete() && !cachedCurrentTxMeta.GetMetadata().IsHead() {
 
 		// check whether the trunk transaction is known to the transaction storage.
-		if !ContainsTransaction(cachedCurrentTx.GetTransaction().GetTrunkHash()) {
-			cachedCurrentTx.Release() // tx -1
+		if !ContainsTransaction(cachedCurrentTxMeta.GetMetadata().GetTrunkHash()) {
+			cachedCurrentTxMeta.Release() // meta -1
 			return false
 		}
 
-		trunkTx := loadBundleTxIfExistsOrPanic(cachedCurrentTx.GetTransaction().GetTrunkHash(), bndl.hash) // tx +1
+		trunkTxMeta := loadBundleTxMetaIfExistsOrPanic(cachedCurrentTxMeta.GetMetadata().GetTrunkHash(), bndl.hash) // meta +1
 
 		// check whether trunk is in bundle instance already
-		if _, trunkAlreadyInBundle := bndl.txs[string(cachedCurrentTx.GetTransaction().GetTrunkHash())]; trunkAlreadyInBundle {
-			cachedCurrentTx.Release() // tx -1
-			cachedCurrentTx = trunkTx
+		if _, trunkAlreadyInBundle := bndl.txs[string(cachedCurrentTxMeta.GetMetadata().GetTrunkHash())]; trunkAlreadyInBundle {
+			cachedCurrentTxMeta.Release() // meta -1
+			cachedCurrentTxMeta = trunkTxMeta
 			continue
 		}
 
-		if !bytes.Equal(trunkTx.GetTransaction().GetBundleHash(), cachedStartTx.GetTransaction().GetBundleHash()) {
-			trunkTx.Release() // tx -1
+		if !bytes.Equal(trunkTxMeta.GetMetadata().GetBundleHash(), cachedStartTxMeta.GetMetadata().GetBundleHash()) {
+			trunkTxMeta.Release() // meta -1
 
 			// Tx has invalid structure, but is "complete"
 			break
 		}
 
 		// assign as head if last tx
-		if trunkTx.GetTransaction().IsHead() {
-			bndl.headTx = trunkTx.GetTransaction().GetTxHash()
+		if trunkTxMeta.GetMetadata().IsHead() {
+			bndl.headTx = trunkTxMeta.GetMetadata().GetTxHash()
 		}
 
 		// assign trunk tx to this bundle
-		bndl.txs[string(trunkTx.GetTransaction().GetTxHash())] = struct{}{}
+		bndl.txs[string(trunkTxMeta.GetMetadata().GetTxHash())] = struct{}{}
 
 		// modify and advance to perhaps complete the bundle
 		bndl.SetModified(true)
-		cachedCurrentTx.Release() // tx -1
-		cachedCurrentTx = trunkTx
+		cachedCurrentTxMeta.Release() // meta -1
+		cachedCurrentTxMeta = trunkTxMeta
 	}
 
-	cachedCurrentTx.Release() // tx -1
+	cachedCurrentTxMeta.Release() // meta -1
 	return true
 }
 

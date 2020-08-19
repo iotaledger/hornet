@@ -4,18 +4,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/legacy"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
-
-// SendTransactionAndRequest sends a transaction and request message to the given peer.
-func SendTransactionAndRequest(p *peer.Peer, txData []byte, reqTxHash hornet.Hash) {
-	if !p.Protocol.Supports(legacy.FeatureSet) {
-		return
-	}
-	txAndReqMsg, _ := legacy.NewTransactionAndRequestMessage(txData, reqTxHash)
-	p.EnqueueForSending(txAndReqMsg)
-}
 
 // SendTransaction sends a transaction message to the given peer.
 func SendTransaction(p *peer.Peer, txData []byte) {
@@ -27,12 +17,12 @@ func SendTransaction(p *peer.Peer, txData []byte) {
 }
 
 // SendHeartbeat sends a heartbeat message to the given peer.
-func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex milestone.Index) {
+func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
 	if !p.Protocol.Supports(sting.FeatureSet) {
 		return
 	}
 
-	heartbeatData, _ := sting.NewHeartbeatMessage(solidMsIndex, pruningMsIndex)
+	heartbeatData, _ := sting.NewHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
 	p.EnqueueForSending(heartbeatData)
 }
 

@@ -40,10 +40,10 @@ func (pub *Publisher) Shutdown() error {
 // Send sends a new list of messages.
 func (pub *Publisher) Send(topic string, messages []string) error {
 	if len(messages) == 0 || len(messages[0]) == 0 {
-		log.Error("Publisher: Invalid messages")
+		log.Warn("Publisher: Invalid messages")
 	}
 	if topic == "" {
-		log.Error("Publisher: No topic provided")
+		log.Warn("Publisher: No topic provided")
 	}
 
 	data := strings.Join(messages, " ")

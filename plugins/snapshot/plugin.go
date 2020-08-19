@@ -10,17 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -71,7 +66,6 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-	installGenesisTransaction()
 
 	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
@@ -93,12 +87,12 @@ func configure(plugin *node.Plugin) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		coordinatorAddress := hornet.Hash(trinary.MustTrytesToBytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81])[:49])
+		coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
 
 		// Check coordinator address in database
 		if !bytes.Equal(snapshotInfo.CoordinatorAddress, coordinatorAddress) {
 			if !*overwriteCooAddress {
-				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress.Trytes(), config.NodeConfig.GetString(config.CfgCoordinatorAddress)[:81]))
+				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress.Trytes(), config.NodeConfig.GetString(config.CfgCoordinatorAddress)))
 			}
 
 			// Overwrite old coordinator address
@@ -207,6 +201,7 @@ func run(_ *node.Plugin) {
 				if pruningEnabled {
 					if solidMilestoneIndex <= pruningDelay {
 						// Not enough history
+						localSnapshotLock.Unlock()
 						return
 					}
 
@@ -238,17 +233,4 @@ func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
 	defer localSnapshotLock.Unlock()
 
 	return pruneDatabase(targetIndex, nil)
-}
-
-func installGenesisTransaction() {
-	// ensure genesis transaction exists for legacy gossip
-	genesisTxTrits := make(trinary.Trits, consts.TransactionTrinarySize)
-	genesis, _ := transaction.ParseTransaction(genesisTxTrits, true)
-	genesis.Hash = consts.NullHashTrytes
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(genesisTxTrits))
-	genesisTx := hornet.NewTransactionFromTx(genesis, txBytesTruncated)
-
-	// ensure the bundle is also existent for the genesis tx
-	cachedTx, _ := tangle.AddTransactionToStorage(genesisTx, 0, false, false, true)
-	cachedTx.Release() // tx -1
 }
