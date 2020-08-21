@@ -198,7 +198,7 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			true, false, true, nil); err != nil {
+			false, true, nil); err != nil {
 			return nil, err
 		}
 	} else {
@@ -212,7 +212,7 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			true, false, true, nil); err != nil {
+			false, true, nil); err != nil {
 			return nil, err
 		}
 	}

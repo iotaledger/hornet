@@ -232,6 +232,6 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			true, false, false, nil)
+			false, false, nil)
 	}
 }

@@ -46,6 +46,7 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 			TransactionProcessed: events.NewEvent(TransactionProcessedCaller),
 			BroadcastTransaction: events.NewEvent(BroadcastCaller),
 		},
+		opts: *opts,
 	}
 	wuCacheOpts := opts.WorkUnitCacheOpts
 	proc.workUnits = objectstorage.New(
@@ -310,18 +311,18 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		return
 	}
 
-	// validate minimum weight magnitude requirement
-	if !transaction.HasValidNonce(tx, proc.opts.ValidMWM) {
-		wu.UpdateState(Invalid)
-		wu.punish()
-		return
-	}
-
 	// build Hornet representation of the transaction
 	hornetTx := hornet.NewTransactionFromTx(tx, wu.receivedTxBytes)
 
 	// mark the transaction as received
 	request := proc.requestQueue.Received(hornetTx.GetTxHash())
+
+	// validate minimum weight magnitude requirement
+	if request == nil && !transaction.HasValidNonce(tx, proc.opts.ValidMWM) {
+		wu.UpdateState(Invalid)
+		wu.punish()
+		return
+	}
 
 	timestampValid, broadcast := proc.ValidateTimestamp(hornetTx)
 
