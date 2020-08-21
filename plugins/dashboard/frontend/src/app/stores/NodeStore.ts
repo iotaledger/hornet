@@ -1007,10 +1007,10 @@ export class NodeStore {
         for (let i = 0; i < this.collected_dbsize_metrics.length; i++) {
             let metric: DbSizeMetric = this.collected_dbsize_metrics[i];
             labels.push(dateformat(new Date(metric.ts * 1000), "HH:MM:ss"));
-            tangle.data.push((metric.tangle / 1024 / 1024).toFixed(2));
-            snapshot.data.push((metric.snapshot / 1024 / 1024).toFixed(2));
-            spent.data.push((metric.spent / 1024 / 1024).toFixed(2));
-            total.data.push(((metric.tangle + metric.snapshot + metric.spent) / 1024 / 1024).toFixed(2));
+            tangle.data.push(metric.tangle);
+            snapshot.data.push(metric.snapshot);
+            spent.data.push(metric.spent);
+            total.data.push(metric.tangle + metric.snapshot + metric.spent);
         }
 
         return {

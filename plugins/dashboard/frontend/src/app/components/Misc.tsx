@@ -15,6 +15,11 @@ interface Props {
     nodeStore?: NodeStore;
 }
 
+// 1 MB in bytes
+const MB_TO_BYTES = 1024 * 1024;
+// 1 GB in bytes
+const GB_TO_BYTES = MB_TO_BYTES * 1024;
+
 const lineChartOptions = Object.assign({
     scales: {
         xAxes: [{
@@ -76,7 +81,7 @@ const reqLineChartOptions = Object.assign({
     }
 }, defaultChartOptions);
 
-const dbSizeLineChartOpts = Object.assign({}, {
+const dbSizeLineChartOptsMB = Object.assign({}, {
     scales: {
         xAxes: [{
             ticks: {
@@ -98,9 +103,8 @@ const dbSizeLineChartOpts = Object.assign({}, {
                 maxTicksLimit: 4,
                 suggestedMin: 0,
                 beginAtZero: true,
-                suggestedMax: 100,
                 callback: function (value, index, values) {
-                    return `${value} MB`;
+                    return `${(value / MB_TO_BYTES).toFixed(2)} MB`;
                 }
             },
         }],
@@ -109,11 +113,38 @@ const dbSizeLineChartOpts = Object.assign({}, {
         callbacks: {
             label: function (tooltipItem, data) {
                 let label = data.datasets[tooltipItem.datasetIndex].label;
-                return `${label}: ${tooltipItem.value} MB`;
+                return `${label}: ${(tooltipItem.value / MB_TO_BYTES).toFixed(2)} MB`;
             }
         }
     }
 }, defaultChartOptions);
+
+const dbSizeLineChartOptsGB = Object.assign({}, dbSizeLineChartOptsMB, {
+    scales: {
+        yAxes: [{
+            gridLines: {
+                display: false
+            },
+            ticks: {
+                fontSize: 10,
+                maxTicksLimit: 4,
+                suggestedMin: 0,
+                beginAtZero: true,
+                callback: function (value, index, values) {
+                    return `${(value / GB_TO_BYTES).toFixed(2)} GB`;
+                }
+            },
+        }],
+    },
+    tooltips: {
+        callbacks: {
+            label: function (tooltipItem, data) {
+                let label = data.datasets[tooltipItem.datasetIndex].label;
+                return `${label}: ${(tooltipItem.value / GB_TO_BYTES).toFixed(2)} GB`;
+            }
+        }
+    }
+});
 
 @inject("nodeStore")
 @observer
@@ -149,7 +180,24 @@ export class Misc extends React.Component<Props, any> {
         }
     }
 
+    useGB = (dbSize: number) => {
+        return dbSize > GB_TO_BYTES;
+    }
+
+    getDatabaseSize = () => {
+        const { tangle, snapshot, spent } = this.props.nodeStore.last_dbsize_metric;
+        const totalSize = tangle + snapshot + spent;
+
+        if (this.useGB(totalSize)) {
+            return `${(totalSize / GB_TO_BYTES).toFixed(2)} GB`;
+        }
+        return `${(totalSize / MB_TO_BYTES).toFixed(2)} MB`;
+    }
+
     render() {
+        const { tangle, snapshot, spent } = this.props.nodeStore.last_dbsize_metric;
+        const dbSize = tangle + snapshot + spent;
+
         return (
             <Container fluid>
                 <h3>Misc</h3>
@@ -261,7 +309,7 @@ export class Misc extends React.Component<Props, any> {
                                 <If condition={!!this.props.nodeStore.last_dbsize_metric.tangle}>
                                     <Container className={"d-flex justify-content-between align-items-center"}>
                                         <small>
-                                            Size: {((this.props.nodeStore.last_dbsize_metric.tangle + this.props.nodeStore.last_dbsize_metric.snapshot + this.props.nodeStore.last_dbsize_metric.spent) / 1024 / 1024).toFixed(2)} MB
+                                            Size: {this.getDatabaseSize()}
                                             <If condition={this.props.nodeStore.lastDatabaseCleanupDuration > 0}>
                                                 <br/>
                                                 {"Last GC: "} {this.props.nodeStore.lastDatabaseCleanupEnd} {". Took: "}{this.props.nodeStore.lastDatabaseCleanupDuration}{" seconds."}
@@ -275,7 +323,7 @@ export class Misc extends React.Component<Props, any> {
                                 </If>
                                 <div className={style.hornetChart}>
                                     <Line data={this.props.nodeStore.dbSizeSeries}
-                                          options={dbSizeLineChartOpts}/>
+                                        options={this.useGB(dbSize) ? dbSizeLineChartOptsGB : dbSizeLineChartOptsMB}/>
                                 </div>
                             </Card.Body>
                         </Card>
