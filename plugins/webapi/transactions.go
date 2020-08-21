@@ -79,14 +79,16 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	txHashes := []string{}
+	results := make(map[string]struct{})
 
+	// should return an error in a sane API but unfortunately we need to keep backwards compatibility
 	if len(query.Bundles) == 0 && len(query.Addresses) == 0 && len(query.Approvees) == 0 && len(query.Tags) == 0 {
 		c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: []string{}})
 		return
 	}
 
-	// Searching for transactions that contains the given bundle hash
+	// search txs by bundle hash
+	resultsByBundleHash := make(map[string]struct{})
 	for _, bdl := range query.Bundles {
 		if err := trinary.ValidTrytes(bdl); err != nil {
 			e.Error = fmt.Sprintf("Bundle hash invalid: %s", bdl)
@@ -94,10 +96,14 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetBundleTransactionHashes(hornet.HashFromHashTrytes(bdl), true, maxResults-len(txHashes)).Trytes()...)
+		for _, r := range tangle.GetBundleTransactionHashes(hornet.HashFromHashTrytes(bdl), true, maxResults-len(results)).Trytes() {
+			resultsByBundleHash[r] = struct{}{}
+			results[r] = struct{}{}
+		}
 	}
 
-	// Searching for transactions that contains the given address
+	// search txs by address
+	resultsByAddress := make(map[string]struct{})
 	for _, addr := range query.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
 			e.Error = fmt.Sprintf("address hash invalid: %s", addr)
@@ -109,10 +115,14 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			addr = addr[:81]
 		}
 
-		txHashes = append(txHashes, tangle.GetTransactionHashesForAddress(hornet.HashFromAddressTrytes(addr), query.ValueOnly, true, maxResults-len(txHashes)).Trytes()...)
+		for _, r := range tangle.GetTransactionHashesForAddress(hornet.HashFromAddressTrytes(addr), query.ValueOnly, true, maxResults-len(results)).Trytes() {
+			resultsByAddress[r] = struct{}{}
+			results[r] = struct{}{}
+		}
 	}
 
-	// Searching for all approvers of the given transactions
+	// search txs by approvees
+	resultsByApprovee := make(map[string]struct{})
 	for _, approveeHash := range query.Approvees {
 		if !guards.IsTransactionHash(approveeHash) {
 			e.Error = fmt.Sprintf("Aprovee hash invalid: %s", approveeHash)
@@ -120,10 +130,14 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetApproverHashes(hornet.HashFromHashTrytes(approveeHash), maxResults-len(txHashes)).Trytes()...)
+		for _, r := range tangle.GetApproverHashes(hornet.HashFromHashTrytes(approveeHash), maxResults-len(results)).Trytes() {
+			resultsByApprovee[r] = struct{}{}
+			results[r] = struct{}{}
+		}
 	}
 
-	// Searching for transactions that contain the given tag
+	// search txs by tags
+	resultsByTags := make(map[string]struct{})
 	for _, tag := range query.Tags {
 		if err := trinary.ValidTrytes(tag); err != nil {
 			e.Error = fmt.Sprintf("Tag invalid: %s", tag)
@@ -137,10 +151,47 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return
 		}
 
-		txHashes = append(txHashes, tangle.GetTagHashes(hornet.HashFromTagTrytes(tag), true, maxResults-len(txHashes)).Trytes()...)
+		for _, r := range tangle.GetTagHashes(hornet.HashFromTagTrytes(tag), true, maxResults-len(results)).Trytes() {
+			resultsByTags[r] = struct{}{}
+			results[r] = struct{}{}
+		}
+	}
+
+	// reduce result set to intersection of all result sets
+	if len(query.Bundles) > 0 {
+		mapIntersection(results, resultsByBundleHash)
+	}
+
+	if len(query.Addresses) > 0 {
+		mapIntersection(results, resultsByAddress)
+	}
+
+	if len(query.Tags) > 0 {
+		mapIntersection(results, resultsByTags)
+	}
+
+	if len(query.Approvees) > 0 {
+		mapIntersection(results, resultsByApprovee)
+	}
+
+	// convert to slice
+	var j int
+	txHashes := make([]string, len(results))
+	for r := range results {
+		txHashes[j] = r
+		j++
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})
+}
+
+// modifies a in-place to be the intersection of the keys of a and b.
+func mapIntersection(a map[string]struct{}, b map[string]struct{}) {
+	for aKey := range a {
+		if _, bHas := b[aKey]; !bHas {
+			delete(a, aKey)
+		}
+	}
 }
 
 // redirect to broadcastTransactions
