@@ -397,6 +397,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
 		} else {
 			// Milestone not solid yet and missing tx were requested
+			Events.MilestoneSolidificationFailed.Trigger(milestoneIndexToSolidify)
 			log.Infof("Milestone couldn't be solidified! %d", milestoneIndexToSolidify)
 		}
 		setSolidifierMilestoneIndex(0)

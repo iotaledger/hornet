@@ -14,7 +14,7 @@ func New(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteri
 	ws := &WarpSync{
 		Events: Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
-			TargetUpdated:     events.NewEvent(milestone.IndexCaller),
+			TargetUpdated:     events.NewEvent(TargetCaller),
 			Start:             events.NewEvent(SyncStartCaller),
 			Done:              events.NewEvent(SyncDoneCaller),
 		},
@@ -37,7 +37,11 @@ func SyncDoneCaller(handler interface{}, params ...interface{}) {
 }
 
 func CheckpointCaller(handler interface{}, params ...interface{}) {
-	handler.(func(newCheckpoint milestone.Index, oldCheckpoint milestone.Index, msRange int32))(params[0].(milestone.Index), params[1].(milestone.Index), params[2].(int32))
+	handler.(func(newCheckpoint milestone.Index, oldCheckpoint milestone.Index, msRange int32, target milestone.Index))(params[0].(milestone.Index), params[1].(milestone.Index), params[2].(int32), params[3].(milestone.Index))
+}
+
+func TargetCaller(handler interface{}, params ...interface{}) {
+	handler.(func(checkpoint milestone.Index, target milestone.Index))(params[0].(milestone.Index), params[1].(milestone.Index))
 }
 
 // Events holds WarpSync related events.
@@ -123,7 +127,7 @@ func (ws *WarpSync) UpdateCurrent(current milestone.Index) {
 
 	oldCheckpoint := ws.CurrentCheckpoint
 	if msRange := ws.advanceCheckpoint(); msRange != 0 {
-		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, msRange)
+		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, msRange, ws.TargetMs)
 	}
 }
 
@@ -148,11 +152,11 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 		oldCheckpoint := ws.CurrentCheckpoint
 		reqRange := ws.TargetMs - ws.CurrentCheckpoint
 		ws.CurrentCheckpoint = ws.TargetMs
-		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, int32(reqRange))
+		ws.Events.CheckpointUpdated.Trigger(ws.CurrentCheckpoint, oldCheckpoint, int32(reqRange), ws.TargetMs)
 	}
 
 	if ws.CurrentCheckpoint != 0 {
-		ws.Events.TargetUpdated.Trigger(ws.TargetMs)
+		ws.Events.TargetUpdated.Trigger(ws.CurrentCheckpoint, ws.TargetMs)
 		return
 	}
 
