@@ -73,125 +73,159 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		maxResults = query.MaxResults
 	}
 
-	if (len(query.Bundles) + len(query.Addresses) + len(query.Approvees) + len(query.Tags)) > maxResults {
-		e.Error = "Too many bundle, address, approvee or tag hashes. Max. allowed: " + strconv.Itoa(maxResults)
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
-	results := make(map[string]struct{})
-
 	// should return an error in a sane API but unfortunately we need to keep backwards compatibility
 	if len(query.Bundles) == 0 && len(query.Addresses) == 0 && len(query.Approvees) == 0 && len(query.Tags) == 0 {
 		c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: []string{}})
 		return
 	}
 
+	if (len(query.Bundles) + len(query.Addresses) + len(query.Approvees) + len(query.Tags)) > maxResults {
+		e.Error = "too many bundle, address, approvee or tag hashes. max. allowed: " + strconv.Itoa(maxResults)
+		c.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	var queryBundleHashes hornet.Hashes
+	var queryApproveeHashes hornet.Hashes
+	var queryAddressHashes hornet.Hashes
+	var queryTagHashes hornet.Hashes
+
+	// check all queries first
+	for _, bundleTrytes := range query.Bundles {
+		if err := trinary.ValidTrytes(bundleTrytes); err != nil {
+			e.Error = fmt.Sprintf("bundle hash invalid: %s", bundleTrytes)
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+		queryBundleHashes = append(queryBundleHashes, hornet.HashFromHashTrytes(bundleTrytes))
+	}
+
+	for _, approveeTrytes := range query.Approvees {
+		if !guards.IsTransactionHash(approveeTrytes) {
+			e.Error = fmt.Sprintf("aprovee hash invalid: %s", approveeTrytes)
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+		queryApproveeHashes = append(queryApproveeHashes, hornet.HashFromHashTrytes(approveeTrytes))
+	}
+
+	for _, addressTrytes := range query.Addresses {
+		if err := address.ValidAddress(addressTrytes); err != nil {
+			e.Error = fmt.Sprintf("address hash invalid: %s", addressTrytes)
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+		if len(addressTrytes) == 90 {
+			addressTrytes = addressTrytes[:81]
+		}
+		queryAddressHashes = append(queryAddressHashes, hornet.HashFromAddressTrytes(addressTrytes))
+	}
+
+	for _, tagTrytes := range query.Tags {
+		if err := trinary.ValidTrytes(tagTrytes); err != nil {
+			e.Error = fmt.Sprintf("tag invalid: %s", tagTrytes)
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+		if len(tagTrytes) != 27 {
+			e.Error = fmt.Sprintf("tag invalid length: %s", tagTrytes)
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
+		queryTagHashes = append(queryTagHashes, hornet.HashFromTagTrytes(tagTrytes))
+	}
+
+	results := make(map[string]struct{})
+	searchedBefore := false
+
 	// search txs by bundle hash
-	resultsByBundleHash := make(map[string]struct{})
-	for _, bdl := range query.Bundles {
-		if err := trinary.ValidTrytes(bdl); err != nil {
-			e.Error = fmt.Sprintf("Bundle hash invalid: %s", bdl)
-			c.JSON(http.StatusBadRequest, e)
-			return
+	for _, bundleHash := range queryBundleHashes {
+		for _, r := range tangle.GetBundleTransactionHashes(bundleHash, true, maxResults-len(results)) {
+			results[string(r)] = struct{}{}
 		}
+		searchedBefore = true
+	}
 
-		for _, r := range tangle.GetBundleTransactionHashes(hornet.HashFromHashTrytes(bdl), true, maxResults-len(results)).Trytes() {
-			resultsByBundleHash[r] = struct{}{}
-			results[r] = struct{}{}
+	if !searchedBefore {
+		// search txs by approvees
+		for _, approveeHash := range queryApproveeHashes {
+			for _, r := range tangle.GetApproverHashes(approveeHash, maxResults-len(results)) {
+				results[string(r)] = struct{}{}
+			}
+		}
+		searchedBefore = true
+	} else {
+		// check if results match at least one of the approvee search criterias
+		for txHash := range results {
+			contains := false
+			for _, approveeHash := range queryApproveeHashes {
+				if tangle.ContainsApprover(approveeHash, hornet.Hash(txHash)) {
+					contains = true
+					break
+				}
+			}
+			if !contains {
+				delete(results, txHash)
+			}
 		}
 	}
 
-	// search txs by address
-	resultsByAddress := make(map[string]struct{})
-	for _, addr := range query.Addresses {
-		if err := address.ValidAddress(addr); err != nil {
-			e.Error = fmt.Sprintf("address hash invalid: %s", addr)
-			c.JSON(http.StatusBadRequest, e)
-			return
+	if !searchedBefore {
+		// search txs by address
+		for _, addressHash := range queryAddressHashes {
+			for _, r := range tangle.GetTransactionHashesForAddress(addressHash, query.ValueOnly, true, maxResults-len(results)) {
+				results[string(r)] = struct{}{}
+			}
 		}
-
-		if len(addr) == 90 {
-			addr = addr[:81]
-		}
-
-		for _, r := range tangle.GetTransactionHashesForAddress(hornet.HashFromAddressTrytes(addr), query.ValueOnly, true, maxResults-len(results)).Trytes() {
-			resultsByAddress[r] = struct{}{}
-			results[r] = struct{}{}
-		}
-	}
-
-	// search txs by approvees
-	resultsByApprovee := make(map[string]struct{})
-	for _, approveeHash := range query.Approvees {
-		if !guards.IsTransactionHash(approveeHash) {
-			e.Error = fmt.Sprintf("Aprovee hash invalid: %s", approveeHash)
-			c.JSON(http.StatusBadRequest, e)
-			return
-		}
-
-		for _, r := range tangle.GetApproverHashes(hornet.HashFromHashTrytes(approveeHash), maxResults-len(results)).Trytes() {
-			resultsByApprovee[r] = struct{}{}
-			results[r] = struct{}{}
+		searchedBefore = true
+	} else {
+		// check if results match at least one of the address search criterias
+		for txHash := range results {
+			contains := false
+			for _, addressHash := range queryAddressHashes {
+				if tangle.ContainsAddress(addressHash, hornet.Hash(txHash), query.ValueOnly) {
+					contains = true
+					break
+				}
+			}
+			if !contains {
+				delete(results, txHash)
+			}
 		}
 	}
 
-	// search txs by tags
-	resultsByTags := make(map[string]struct{})
-	for _, tag := range query.Tags {
-		if err := trinary.ValidTrytes(tag); err != nil {
-			e.Error = fmt.Sprintf("Tag invalid: %s", tag)
-			c.JSON(http.StatusBadRequest, e)
-			return
+	if !searchedBefore {
+		// search txs by tags
+		for _, tagHash := range queryTagHashes {
+			for _, r := range tangle.GetTagHashes(tagHash, true, maxResults-len(results)) {
+				results[string(r)] = struct{}{}
+			}
 		}
-
-		if len(tag) != 27 {
-			e.Error = fmt.Sprintf("Tag invalid length: %s", tag)
-			c.JSON(http.StatusBadRequest, e)
-			return
+	} else {
+		// check if results match at least one of the tag search criterias
+		for txHash := range results {
+			contains := false
+			for _, tagHash := range queryTagHashes {
+				if tangle.ContainsTag(tagHash, hornet.Hash(txHash)) {
+					contains = true
+					break
+				}
+			}
+			if !contains {
+				delete(results, txHash)
+			}
 		}
-
-		for _, r := range tangle.GetTagHashes(hornet.HashFromTagTrytes(tag), true, maxResults-len(results)).Trytes() {
-			resultsByTags[r] = struct{}{}
-			results[r] = struct{}{}
-		}
-	}
-
-	// reduce result set to intersection of all result sets
-	if len(query.Bundles) > 0 {
-		mapIntersection(results, resultsByBundleHash)
-	}
-
-	if len(query.Addresses) > 0 {
-		mapIntersection(results, resultsByAddress)
-	}
-
-	if len(query.Tags) > 0 {
-		mapIntersection(results, resultsByTags)
-	}
-
-	if len(query.Approvees) > 0 {
-		mapIntersection(results, resultsByApprovee)
 	}
 
 	// convert to slice
 	var j int
 	txHashes := make([]string, len(results))
 	for r := range results {
-		txHashes[j] = r
+		txHashes[j] = hornet.Hash(r).Trytes()
 		j++
 	}
 
 	c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: txHashes})
-}
-
-// modifies a in-place to be the intersection of the keys of a and b.
-func mapIntersection(a map[string]struct{}, b map[string]struct{}) {
-	for aKey := range a {
-		if _, bHas := b[aKey]; !bHas {
-			delete(a, aKey)
-		}
-	}
 }
 
 // redirect to broadcastTransactions
