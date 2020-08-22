@@ -85,10 +85,10 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	var queryBundleHashes hornet.Hashes
-	var queryApproveeHashes hornet.Hashes
-	var queryAddressHashes hornet.Hashes
-	var queryTagHashes hornet.Hashes
+	queryBundleHashes := make(map[string]struct{})
+	queryApproveeHashes := make(map[string]struct{})
+	queryAddressHashes := make(map[string]struct{})
+	queryTagHashes := make(map[string]struct{})
 
 	// check all queries first
 	for _, bundleTrytes := range query.Bundles {
@@ -97,7 +97,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		queryBundleHashes = append(queryBundleHashes, hornet.HashFromHashTrytes(bundleTrytes))
+		queryBundleHashes[string(hornet.HashFromHashTrytes(bundleTrytes))] = struct{}{}
 	}
 
 	for _, approveeTrytes := range query.Approvees {
@@ -106,7 +106,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		queryApproveeHashes = append(queryApproveeHashes, hornet.HashFromHashTrytes(approveeTrytes))
+		queryApproveeHashes[string(hornet.HashFromHashTrytes(approveeTrytes))] = struct{}{}
 	}
 
 	for _, addressTrytes := range query.Addresses {
@@ -118,7 +118,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		if len(addressTrytes) == 90 {
 			addressTrytes = addressTrytes[:81]
 		}
-		queryAddressHashes = append(queryAddressHashes, hornet.HashFromAddressTrytes(addressTrytes))
+		queryAddressHashes[string(hornet.HashFromHashTrytes(addressTrytes))] = struct{}{}
 	}
 
 	for _, tagTrytes := range query.Tags {
@@ -132,15 +132,15 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		queryTagHashes = append(queryTagHashes, hornet.HashFromTagTrytes(tagTrytes))
+		queryTagHashes[string(hornet.HashFromTagTrytes(tagTrytes))] = struct{}{}
 	}
 
 	results := make(map[string]struct{})
 	searchedBefore := false
 
 	// search txs by bundle hash
-	for _, bundleHash := range queryBundleHashes {
-		for _, r := range tangle.GetBundleTransactionHashes(bundleHash, true, maxResults-len(results)) {
+	for bundleHash := range queryBundleHashes {
+		for _, r := range tangle.GetBundleTransactionHashes(hornet.Hash(bundleHash), true, maxResults-len(results)) {
 			results[string(r)] = struct{}{}
 		}
 		searchedBefore = true
@@ -148,8 +148,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	if !searchedBefore {
 		// search txs by approvees
-		for _, approveeHash := range queryApproveeHashes {
-			for _, r := range tangle.GetApproverHashes(approveeHash, maxResults-len(results)) {
+		for approveeHash := range queryApproveeHashes {
+			for _, r := range tangle.GetApproverHashes(hornet.Hash(approveeHash), maxResults-len(results)) {
 				results[string(r)] = struct{}{}
 			}
 		}
@@ -158,8 +158,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// check if results match at least one of the approvee search criterias
 		for txHash := range results {
 			contains := false
-			for _, approveeHash := range queryApproveeHashes {
-				if tangle.ContainsApprover(approveeHash, hornet.Hash(txHash)) {
+			for approveeHash := range queryApproveeHashes {
+				if tangle.ContainsApprover(hornet.Hash(approveeHash), hornet.Hash(txHash)) {
 					contains = true
 					break
 				}
@@ -172,8 +172,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	if !searchedBefore {
 		// search txs by address
-		for _, addressHash := range queryAddressHashes {
-			for _, r := range tangle.GetTransactionHashesForAddress(addressHash, query.ValueOnly, true, maxResults-len(results)) {
+		for addressHash := range queryAddressHashes {
+			for _, r := range tangle.GetTransactionHashesForAddress(hornet.Hash(addressHash), query.ValueOnly, true, maxResults-len(results)) {
 				results[string(r)] = struct{}{}
 			}
 		}
@@ -182,8 +182,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// check if results match at least one of the address search criterias
 		for txHash := range results {
 			contains := false
-			for _, addressHash := range queryAddressHashes {
-				if tangle.ContainsAddress(addressHash, hornet.Hash(txHash), query.ValueOnly) {
+			for addressHash := range queryAddressHashes {
+				if tangle.ContainsAddress(hornet.Hash(addressHash), hornet.Hash(txHash), query.ValueOnly) {
 					contains = true
 					break
 				}
@@ -196,8 +196,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	if !searchedBefore {
 		// search txs by tags
-		for _, tagHash := range queryTagHashes {
-			for _, r := range tangle.GetTagHashes(tagHash, true, maxResults-len(results)) {
+		for tagHash := range queryTagHashes {
+			for _, r := range tangle.GetTagHashes(hornet.Hash(tagHash), true, maxResults-len(results)) {
 				results[string(r)] = struct{}{}
 			}
 		}
@@ -205,8 +205,8 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// check if results match at least one of the tag search criterias
 		for txHash := range results {
 			contains := false
-			for _, tagHash := range queryTagHashes {
-				if tangle.ContainsTag(tagHash, hornet.Hash(txHash)) {
+			for tagHash := range queryTagHashes {
+				if tangle.ContainsTag(hornet.Hash(tagHash), hornet.Hash(txHash)) {
 					contains = true
 					break
 				}
