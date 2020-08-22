@@ -113,8 +113,7 @@
     "tpsRateLimit": 0.0,
     "bundleSize": 1,
     "valueSpam": false,
-    "workers": 0,
-    "semiLazyTipsLimit": 30
+    "workers": 0
   },
   "zmq": {
     "bindAddress": "localhost:5556"

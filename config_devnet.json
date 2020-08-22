@@ -104,12 +104,14 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 150
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 30
     }
   },
   "node": {
@@ -117,7 +119,7 @@
     "showAliasInGetNodeInfo": false,
     "disablePlugins": [],
     "enablePlugins": []
-  },  
+  },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "message": "Spamming with HORNET tipselect",
@@ -127,8 +129,7 @@
     "tpsRateLimit": 0.0,
     "bundleSize": 1,
     "valueSpam": false,
-    "workers": 0,
-    "semiLazyTipsLimit": 30
+    "workers": 0
   },
   "zmq": {
     "bindAddress": "localhost:5556"

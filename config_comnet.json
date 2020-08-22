@@ -111,12 +111,14 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 150
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 30
     }
   },
   "node": {
@@ -145,8 +147,7 @@
     "tpsRateLimit": 0.0,
     "bundleSize": 1,
     "valueSpam": false,
-    "workers": 0,
-    "semiLazyTipsLimit": 30
+    "workers": 0
   },
   "mqtt": {
     "config": "mqtt_config.json"
