@@ -184,8 +184,8 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 		for txHash := range txsToRequest {
 			txHashes = append(txHashes, hornet.Hash(txHash))
 		}
-		gossip.RequestMultiple(txHashes, milestoneIndex, true)
-		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d), collect: %v", len(txHashes), tCollect.Sub(ts).Truncate(time.Millisecond))
+		requested := gossip.RequestMultiple(txHashes, milestoneIndex, true)
+		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d/%d), collect: %v", requested, len(txHashes), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
 
