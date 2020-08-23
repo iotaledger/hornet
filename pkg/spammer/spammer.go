@@ -12,104 +12,110 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
-	"github.com/gohornet/hornet/plugins/pow"
-	"github.com/gohornet/hornet/plugins/urts"
 
 	"go.uber.org/atomic"
 )
 
-var (
-	rateLimitChannel chan struct{}
-	txCount          = atomic.NewInt32(0)
-	seed             = utils.RandomTrytesInsecure(81)
-	addrIndex        = atomic.NewInt32(0)
-)
+// SendBundleFunc is a function which sends a bundle to the network.
+type SendBundleFunc = func(b bundle.Bundle) error
 
-func doSpam(shutdownSignal <-chan struct{}) {
+// SpammerTipselFunc selects tips for the spammer.
+type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.Hashes, err error)
 
-	if rateLimit != 0 {
-		select {
-		case <-shutdownSignal:
-			return
-		case <-rateLimitChannel:
-		}
+// Spammer is used to issue transactions to the IOTA network to create load on the tangle.
+type Spammer struct {
+
+	// config options
+	txAddress            string
+	message              string
+	tagSubstring         string
+	tagSemiLazySubstring string
+	tipselFunc           SpammerTipselFunc
+	mwm                  int
+	powHandler           *pow.Handler
+	sendBundleFunc       SendBundleFunc
+
+	seed      trinary.Trytes
+	addrIndex *atomic.Uint64
+}
+
+// New creates a new spammer instance.
+func New(txAddress string, message string, tag string, tagSemiLazy string, tipselFunc SpammerTipselFunc, mwm int, powHandler *pow.Handler, sendBundleFunc SendBundleFunc) *Spammer {
+
+	tagSubstring := trinary.MustPad(tag, consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
+	tagSemiLazySubstring := tagSubstring
+	if tagSemiLazy != "" {
+		tagSemiLazySubstring = trinary.MustPad(tagSemiLazy, consts.TagTrinarySize/3)[:consts.TagTrinarySize/3]
 	}
 
-	if !tangle.IsNodeSyncedWithThreshold() {
-		time.Sleep(time.Second)
-		return
+	if len(tagSubstring) > 20 {
+		tagSubstring = string([]rune(tagSubstring)[:20])
+	}
+	if len(tagSemiLazySubstring) > 20 {
+		tagSemiLazySubstring = string([]rune(tagSemiLazySubstring)[:20])
 	}
 
-	if checkPeersConnected && peering.Manager().ConnectedPeerCount() == 0 {
-		time.Sleep(time.Second)
-		return
+	return &Spammer{
+		txAddress:            trinary.MustPad(txAddress, consts.AddressTrinarySize/3)[:consts.AddressTrinarySize/3],
+		message:              message,
+		tagSubstring:         tagSubstring,
+		tagSemiLazySubstring: tagSemiLazySubstring,
+		tipselFunc:           tipselFunc,
+		mwm:                  mwm,
+		powHandler:           powHandler,
+		sendBundleFunc:       sendBundleFunc,
+		seed:                 utils.RandomTrytesInsecure(81),
+		addrIndex:            atomic.NewUint64(0),
 	}
+}
 
-	if err := waitForLowerCPUUsage(shutdownSignal); err != nil {
-		if err != tangle.ErrOperationAborted {
-			log.Warn(err.Error())
-		}
-		return
-	}
+func (s *Spammer) DoSpam(bundleSize int, valueSpam bool, shutdownSignal <-chan struct{}) (time.Duration, time.Duration, error) {
 
-	if spammerStartTime.IsZero() {
-		// Set the start time for the metrics
-		spammerStartTime = time.Now()
-	}
+	tag := s.tagSubstring
 
 	timeStart := time.Now()
-	tag := tagSubstring
-
-	isSemiLazy, tips, err := urts.TipSelector.SelectSpammerTips()
+	isSemiLazy, tips, err := s.tipselFunc()
 	if err != nil {
-		return
+		return time.Duration(0), time.Duration(0), err
 	}
-
-	if isSemiLazy {
-		tag = tagSemiLazySubstring
-	}
-
 	durationGTTA := time.Since(timeStart)
 
-	txCountValue := int(txCount.Add(int32(bundleSize)))
+	if isSemiLazy {
+		tag = s.tagSemiLazySubstring
+	}
+
 	infoMsg := fmt.Sprintf("gTTA took %v", durationGTTA.Truncate(time.Millisecond))
 
-	b, err := createBundle(txAddress, message, tag, bundleSize, valueSpam, txCountValue, infoMsg)
+	var seedIndex uint64
+	if valueSpam {
+		seedIndex = s.addrIndex.Inc()
+	}
+
+	txCountValue := int(metrics.SharedServerMetrics.SentSpamTransactions.Load()) + bundleSize
+	b, err := createBundle(s.seed, seedIndex, s.txAddress, s.message, tag, bundleSize, valueSpam, txCountValue, infoMsg)
 	if err != nil {
-		return
+		return time.Duration(0), time.Duration(0), err
 	}
 
-	err = doPow(b, tips[0].Trytes(), tips[1].Trytes(), mwm, shutdownSignal)
+	timeStart = time.Now()
+	err = s.doPow(b, tips[0].Trytes(), tips[1].Trytes(), s.mwm, shutdownSignal)
 	if err != nil {
-		return
+		return time.Duration(0), time.Duration(0), err
+	}
+	durationPOW := time.Since(timeStart)
+
+	if err := s.sendBundleFunc(b); err != nil {
+		return time.Duration(0), time.Duration(0), err
 	}
 
-	durationPOW := time.Since(timeStart.Add(durationGTTA))
-
-	for _, t := range b {
-		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
-		txTrits, _ := transaction.TransactionToTrits(&tx)
-		if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
-			return
-		}
-		metrics.SharedServerMetrics.SentSpamTransactions.Inc()
-	}
-
-	Events.SpamPerformed.Trigger(&SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
+	return durationGTTA, durationPOW, nil
 }
 
-// transactionHash makes a transaction hash from the given transaction.
-func transactionHash(t *transaction.Transaction) trinary.Hash {
-	trits, _ := transaction.TransactionToTrits(t)
-	hashTrits := batchhasher.CURLP81.Hash(trits)
-	return trinary.MustTritsToTrytes(hashTrits)
-}
-
-func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, shutdownSignal <-chan struct{}) error {
+func (s *Spammer) doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, shutdownSignal <-chan struct{}) error {
 	var prev trinary.Hash
 
 	for i := len(b) - 1; i >= 0; i-- {
@@ -138,7 +144,7 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, sh
 		default:
 		}
 
-		nonce, err := pow.Handler().DoPoW(trytes, mwm, 1)
+		nonce, err := s.powHandler.DoPoW(trytes, mwm, 1)
 		if err != nil {
 			return err
 		}
@@ -150,4 +156,11 @@ func doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash, mwm int, sh
 		prev = b[i].Hash
 	}
 	return nil
+}
+
+// transactionHash makes a transaction hash from the given transaction.
+func transactionHash(t *transaction.Transaction) trinary.Hash {
+	trits, _ := transaction.TransactionToTrits(t)
+	hashTrits := batchhasher.CURLP81.Hash(trits)
+	return trinary.MustTritsToTrytes(hashTrits)
 }

@@ -14,9 +14,11 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-func integerToAscii(number int) string {
-	alphabet := "9ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	alphabet = "9ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
 
+func integerToAscii(number int) string {
 	result := ""
 	for index := 0; index < 7; index++ {
 		pos := number % 27
@@ -72,7 +74,7 @@ func finalizeInsecure(bundle bundle.Bundle) (bundle.Bundle, error) {
 	return bundle, nil
 }
 
-func createBundle(txAddress trinary.Hash, msg string, tagSubstring string, bundleSize int, valueSpam bool, txCount int, additionalMesssage ...string) (bundle.Bundle, error) {
+func createBundle(seed trinary.Trytes, seedIndex uint64, txAddress trinary.Hash, msg string, tagSubstring string, bundleSize int, valueSpam bool, txCount int, additionalMesssage ...string) (bundle.Bundle, error) {
 
 	tag, err := trinary.NewTrytes(tagSubstring + integerToAscii(txCount))
 	if err != nil {
@@ -95,8 +97,6 @@ func createBundle(txAddress trinary.Hash, msg string, tagSubstring string, bundl
 
 	var b bundle.Bundle
 
-	var seedIndex uint64
-
 	if !valueSpam {
 		for i := 0; i < bundleSize; i++ {
 			outEntry := bundle.BundleEntry{
@@ -110,8 +110,6 @@ func createBundle(txAddress trinary.Hash, msg string, tagSubstring string, bundl
 			b = bundle.AddEntry(b, outEntry)
 		}
 	} else {
-		seedIndex = uint64(addrIndex.Inc())
-
 		addresses, err := address.GenerateAddresses(seed, seedIndex, 1, consts.SecurityLevelLow, true)
 		if err != nil {
 			return nil, fmt.Errorf("address.GenerateAddresses: %v", err.Error())
