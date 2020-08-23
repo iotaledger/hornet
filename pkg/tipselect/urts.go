@@ -103,7 +103,7 @@ type TipSelector struct {
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxApproversNonLazy uint32
-	// spammerTipsThresholdNonLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable)
+	// spammerTipsThresholdNonLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = always)
 	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (non-lazy pool)
 	spammerTipsThresholdNonLazy int
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"

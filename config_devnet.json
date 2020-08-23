@@ -108,7 +108,7 @@
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAgeSeconds": 3,
       "maxApprovers": 2,
-      "spammerTipsThreshold": 150
+      "spammerTipsThreshold": 0
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
