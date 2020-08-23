@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1-rc1] - 24.08.2020
+
+### Added
+
+    - webapi route to control the spammer plugin
+    - getSpammerTips webapi call
+
+### Changed
+
+    - findTransaction now returns an intersection of the search criteria
+    - show database size in GB if size > 1 GB (dashboard)
+    - moved dashboard frontend code to [another git repo](https://github.com/iotaledger/node-dashboard)
+    - spammer doesn't start automatically at node startup
+    - getNodeInfo now returns the connected peers count
+
+### Fixed
+
+    - OOM bug in the future cone solidifier
+    - map concurrent write/read panic in websocket
+    - warpsync milestone requesting
+    - re-add logger settings to mainnet config file
+
+### Config file changes
+
+`config.json`
+
+```diff
+  "httpAPI": {
++    "permittedRoutes": [
++      "healthz"
++    ],
+  }
++  "logger": {
++    "level": "info",
++    "disableCaller": true,
++    "encoding": "console",
++    "outputPaths": [
++      "stdout"
++    ]
++  },
+  "spammer": {
+-    "semiLazyTipsLimit": 30
+  },
+```
+
 ## [0.5.0] - 19.08.2020
 
 :warning: **Breaking change:** :warning:
@@ -41,10 +86,6 @@ The old HORNET versions won't be functional within the mainnet anymore!
     - Set higher default verticesLimit in visualizer
     - Update to Go 1.15
 
-### Removed
-
-    - Unused RefsInvalidBundles cache
-
 ### Fixed
 
     - Database revalidation
@@ -75,11 +116,11 @@ The old HORNET versions won't be functional within the mainnet anymore!
     - Monitor plugin
     - Legacy gossip protocol
     - Genesis tx special case
+    - RefsInvalidBundles cache
 
 ### Config file changes
 
 Please use the new config.json and transfer values from your current config.json over to the new one, as a lot of keys have changed or got removed (instead of mutating your current one).
-
 
 ## [0.4.2] - 22.07.2020
 
