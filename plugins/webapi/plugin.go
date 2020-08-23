@@ -11,6 +11,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/plugins/spammer"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -90,7 +91,7 @@ func configure(plugin *node.Plugin) {
 	exclHealthCheckFromAuth := config.NodeConfig.GetBool(config.CfgWebAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {
 		// REST API route (health check)
-		restAPIRoute()
+		restHealthzRoute()
 	}
 
 	// set basic auth if enabled
@@ -148,12 +149,17 @@ func configure(plugin *node.Plugin) {
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		// WebAPI route
 		webAPIRoute()
+
+		// only handle spammer api calls if the spammer plugin is enabled
+		if !node.IsSkipped(spammer.PLUGIN) {
+			restSpammerRoute()
+		}
 	}
 
 	// Handle route with auth
 	if !exclHealthCheckFromAuth {
 		// REST API route (health check)
-		restAPIRoute()
+		restHealthzRoute()
 	}
 
 	// return error, if route is not there

@@ -44,7 +44,7 @@ func Manager() *peering.Manager {
 			log.Fatalf("couldn't initialize protocol: %s", err)
 		}
 
-		// load seed peers
+		// load initial config peers
 		var peers []*config.PeerConfig
 		if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &peers); err != nil {
 			panic(err)
