@@ -155,7 +155,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 		searchedBefore = true
 	} else {
-		// check if results match at least one of the approvee search criterias
+		// check if results match at least one of the approvee search criteria
 		for txHash := range results {
 			contains := false
 			for approveeHash := range queryApproveeHashes {
@@ -179,7 +179,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 		searchedBefore = true
 	} else {
-		// check if results match at least one of the address search criterias
+		// check if results match at least one of the address search criteria
 		for txHash := range results {
 			contains := false
 			for addressHash := range queryAddressHashes {
@@ -202,7 +202,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			}
 		}
 	} else {
-		// check if results match at least one of the tag search criterias
+		// check if results match at least one of the tag search criteria
 		for txHash := range results {
 			contains := false
 			for tagHash := range queryTagHashes {

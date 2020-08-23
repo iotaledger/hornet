@@ -114,6 +114,7 @@ func configureEvents() {
 func attachEvents() {
 	peeringplugin.Manager().Events.PeerConnected.Attach(onPeerConnected)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	tangleplugin.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
 	warpSync.Events.Start.Attach(onStart)
@@ -123,6 +124,7 @@ func attachEvents() {
 func detachEvents() {
 	peeringplugin.Manager().Events.PeerConnected.Detach(onPeerConnected)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	tangleplugin.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
 	warpSync.Events.Start.Detach(onStart)
