@@ -26,6 +26,6 @@ func TestCommon(t *testing.T) {
 
 	duration := 30 * time.Second
 
-	go assert.NoError(t, n.SpamZeroVal(duration, runtime.NumCPU(), 50))
+	go assert.NoError(t, n.SpamZeroVal(25*time.Second, runtime.NumCPU(), 50))
 	assert.NoError(t, n.Coordinator().GraphMetrics(duration))
 }

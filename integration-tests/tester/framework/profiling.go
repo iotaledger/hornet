@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/plugins/metrics"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gorilla/websocket"
+	"github.com/iotaledger/hive.go/websockethub"
 )
 
 const (
@@ -32,6 +33,17 @@ type Profiler struct {
 	// the name of the target of this profiler. used to determine the profile file names.
 	targetName string
 	http.Client
+}
+
+// registerWSTopics registers the given topics on the publisher.
+func registerWSTopics(wsConn *websocket.Conn, topics ...byte) error {
+	for _, b := range topics {
+		topicRegCmd := []byte{dashboard.WebsocketCmdRegister, b}
+		if err := wsConn.WriteMessage(websockethub.BinaryMessage, topicRegCmd); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // TakeCPUProfile takes a CPU profile for the given duration and then saves it to the log directory.
@@ -116,6 +128,11 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 
 	conn, _, err := websocket.DefaultDialer.Dial(n.websocketURI, nil)
 	if err != nil {
+		return err
+	}
+
+	if err := registerWSTopics(conn, dashboard.MsgTypeTPSMetric, dashboard.MsgTypeTipSelMetric, dashboard.MsgTypeConfirmedMsMetrics,
+		dashboard.MsgTypeDatabaseSizeMetric, dashboard.MsgTypeNodeStatus); err != nil {
 		return err
 	}
 
