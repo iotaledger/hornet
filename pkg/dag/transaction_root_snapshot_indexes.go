@@ -101,7 +101,7 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 			// if the approvee is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
 			updateIndexes(entryPointIndex, entryPointIndex)
-		}, true, false, false, nil); err != nil {
+		}, false, false, nil); err != nil {
 		if err == tangle.ErrTransactionNotFound {
 			indexesValid = false
 		} else {
@@ -152,7 +152,7 @@ func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone
 				GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta pass +1
 
 				return nil
-			}, true, nil); err != nil {
+			}, false, nil); err != nil {
 			panic(err)
 		}
 	}

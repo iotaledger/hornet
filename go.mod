@@ -49,8 +49,8 @@ require (
 	gitlab.com/powsrv.io/go/client v0.0.0-20200807151725-8bc5209c1820
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
-	golang.org/x/sys v0.0.0-20200817155316-9781c653f443 // indirect
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
+	golang.org/x/sys v0.0.0-20200821140526-fda516888d29 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/tools v0.0.0-20200330040139-fa3cc9eebcfe // indirect
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect

@@ -21,6 +21,7 @@ import (
 func init() {
 	addEndpoint("getTipInfo", getTipInfo, implementedAPIcalls)
 	addEndpoint("getTransactionsToApprove", getTransactionsToApprove, implementedAPIcalls)
+	addEndpoint("getSpammerTips", getSpammerTips, implementedAPIcalls)
 }
 
 func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -170,6 +171,31 @@ func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) 
 			return
 		}
 		c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: query.Reference})
+		return
+	}
+
+	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()})
+}
+
+func getSpammerTips(i interface{}, c *gin.Context, _ <-chan struct{}) {
+	e := ErrorReturn{}
+
+	// do not reply if URTS is disabled
+	if node.IsSkipped(urts.PLUGIN) {
+		e.Error = "tipselection plugin disabled in this node"
+		c.JSON(http.StatusServiceUnavailable, e)
+		return
+	}
+
+	_, tips, err := urts.TipSelector.SelectSpammerTips()
+	if err != nil {
+		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+			e.Error = err.Error()
+			c.JSON(http.StatusServiceUnavailable, e)
+			return
+		}
+		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+		c.JSON(http.StatusInternalServerError, e)
 		return
 	}
 

@@ -35,7 +35,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// Number of peers
-	result.Neighbors = uint(peering.Manager().PeerCount())
+	result.Neighbors = uint(peering.Manager().ConnectedPeerCount())
 
 	// Latest milestone index
 	lmi := tangle.GetLatestMilestoneIndex()

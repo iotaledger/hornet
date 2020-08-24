@@ -9,6 +9,8 @@ const (
 	CfgWebAPIBindAddress = "httpAPI.bindAddress"
 	// the allowed HTTP API calls which can be called from non whitelisted addresses
 	CfgWebAPIPermitRemoteAccess = "httpAPI.permitRemoteAccess"
+	// the allowed HTTP REST routes which can be called from non whitelisted addresses
+	CfgWebAPIPermittedRoutes = "httpAPI.permittedRoutes"
 	// the whitelist of addresses which are allowed to access the HTTP API
 	CfgWebAPIWhitelistedAddresses = "httpAPI.whitelistedAddresses"
 	// whether to allow the health check route anyways
@@ -46,6 +48,10 @@ func init() {
 			"storeTransactions",
 			"getTrytes",
 		}, "the allowed HTTP API calls which can be called from non whitelisted addresses")
+	flag.StringSlice(CfgWebAPIPermittedRoutes,
+		[]string{
+			"healthz",
+		}, "the allowed HTTP REST routes which can be called from non whitelisted addresses")
 	flag.StringSlice(CfgWebAPIWhitelistedAddresses, []string{}, "the whitelist of addresses which are allowed to access the HTTP API")
 	flag.Bool(CfgWebAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
 	flag.Bool(CfgWebAPIBasicAuthEnabled, false, "whether to use HTTP basic auth for the HTTP API")

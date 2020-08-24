@@ -76,7 +76,7 @@ func (t *ApproveesTraverser) reset() {
 // the traversal stops due to no more transactions passing the given condition.
 // It is a DFS with trunk / branch.
 // Caution: condition func is not in DFS order
-func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntryPoints bool, traverseTailsOnly bool, forceRelease bool) error {
+func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntryPoints bool, traverseTailsOnly bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -87,7 +87,7 @@ func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntr
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
 	t.traverseTailsOnly = traverseTailsOnly
 
-	defer t.cleanup(forceRelease)
+	defer t.cleanup(true)
 
 	t.stack.PushFront(startTxHash)
 	for t.stack.Len() > 0 {
@@ -104,7 +104,7 @@ func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntr
 // Afterwards it traverses the approvees (past cone) of the given branch transaction.
 // It is a DFS with trunk / branch.
 // Caution: condition func is not in DFS order
-func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, traverseSolidEntryPoints bool, traverseTailsOnly bool, forceRelease bool) error {
+func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, traverseSolidEntryPoints bool, traverseTailsOnly bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -115,7 +115,7 @@ func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, bra
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
 	t.traverseTailsOnly = traverseTailsOnly
 
-	defer t.cleanup(forceRelease)
+	defer t.cleanup(true)
 
 	t.stack.PushFront(trunkTxHash)
 	for t.stack.Len() > 0 {

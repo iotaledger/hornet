@@ -94,6 +94,14 @@ func GetTransactionHashesForAddress(address hornet.Hash, valueOnly bool, forceRe
 	return txHashes
 }
 
+// ContainsAddress returns if the given address exists in the cache/persistence layer.
+func ContainsAddress(address hornet.Hash, txHash hornet.Hash, valueOnly bool) bool {
+	if valueOnly {
+		return addressesStorage.Contains(databaseKeyPrefixForAddressTransaction(address, txHash, true))
+	}
+	return addressesStorage.Contains(databaseKeyPrefixForAddressTransaction(address, txHash, false)) || addressesStorage.Contains(databaseKeyPrefixForAddressTransaction(address, txHash, true))
+}
+
 // AddressConsumer consumes the given address during looping through all addresses in the persistence layer.
 type AddressConsumer func(address hornet.Hash, txHash hornet.Hash, isValue bool) bool
 

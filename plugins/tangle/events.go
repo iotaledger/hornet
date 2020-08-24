@@ -33,6 +33,7 @@ var Events = pluginEvents{
 	SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 	PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
 	NewConfirmedMilestoneMetric:   events.NewEvent(NewConfirmedMilestoneMetricCaller),
+	MilestoneSolidificationFailed: events.NewEvent(milestone.IndexCaller),
 }
 
 type pluginEvents struct {
@@ -52,4 +53,5 @@ type pluginEvents struct {
 	SnapshotMilestoneIndexChanged *events.Event
 	PruningMilestoneIndexChanged  *events.Event
 	NewConfirmedMilestoneMetric   *events.Event
+	MilestoneSolidificationFailed *events.Event
 }
