@@ -70,7 +70,9 @@ func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash) error {
 	defer t.cleanup(true)
 
 	t.stack.PushFront(startTxHash)
-	t.discovered[string(startTxHash)] = struct{}{}
+	if !t.walkAlreadyDiscovered {
+		t.discovered[string(startTxHash)] = struct{}{}
+	}
 
 	for t.stack.Len() > 0 {
 		if err := t.processStackApprovers(); err != nil {
@@ -134,10 +136,11 @@ func (t *ApproversTraverser) processStackApprovers() error {
 				// approver was already discovered
 				continue
 			}
+
+			t.discovered[string(approverHash)] = struct{}{}
 		}
 
 		// traverse the approver
-		t.discovered[string(approverHash)] = struct{}{}
 		t.stack.PushBack(approverHash)
 	}
 
