@@ -14,7 +14,7 @@ import (
 // This test exists merely as a sanity check to verify that nodes still can connect to each other and
 // are able to synchronize.
 func TestAutopeering(t *testing.T) {
-	n, err := f.CreateAutopeeredNetwork("autop", 4, 2)
+	n, err := f.CreateAutopeeredNetwork("test_autopeering", 4, 2)
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 

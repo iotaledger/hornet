@@ -14,7 +14,7 @@ import (
 // TestNetworkBenchmark boots up a statically peered network and then graphs TPS, CPU and memory profiles
 // while the network is sustaining a high inflow of transactions.
 func TestNetworkBenchmark(t *testing.T) {
-	n, err := f.CreateStaticNetwork("test_common", framework.DefaultStaticPeeringLayout)
+	n, err := f.CreateStaticNetwork("test_benchmark", framework.DefaultStaticPeeringLayout)
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 
@@ -22,9 +22,13 @@ func TestNetworkBenchmark(t *testing.T) {
 	defer syncCtxCancel()
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
-	duration := 30 * time.Second
+	benchmarkDuration := 30 * time.Second
 
-	go assert.NoError(t, n.SpamZeroVal(duration, runtime.NumCPU(), 50))
-	go assert.NoError(t, n.TakeCPUProfiles(30))
-	assert.NoError(t, n.Coordinator().GraphMetrics(duration))
+	go func() {
+		assert.NoError(t, n.SpamZeroVal(benchmarkDuration, runtime.NumCPU(), 50))
+	}()
+	go func() {
+		assert.NoError(t, n.TakeCPUProfiles(benchmarkDuration))
+	}()
+	assert.NoError(t, n.Coordinator().GraphMetrics(benchmarkDuration))
 }

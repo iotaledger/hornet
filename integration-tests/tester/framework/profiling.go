@@ -47,8 +47,8 @@ func registerWSTopics(wsConn *websocket.Conn, topics ...byte) error {
 }
 
 // TakeCPUProfile takes a CPU profile for the given duration and then saves it to the log directory.
-func (n *Profiler) TakeCPUProfile(durSec int) error {
-	profileBytes, err := n.query(fmt.Sprintf("/debug/pprof/profile?seconds=%d", durSec))
+func (n *Profiler) TakeCPUProfile(dur time.Duration) error {
+	profileBytes, err := n.query(fmt.Sprintf("/debug/pprof/profile?seconds=%d", dur.Truncate(time.Second)))
 	if err != nil {
 		return err
 	}

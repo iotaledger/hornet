@@ -203,8 +203,8 @@ func (n *Network) Coordinator() *Node {
 }
 
 // TakeCPUProfile takes a CPU profile on all nodes within the network.
-func (n *Network) TakeCPUProfiles(durSec int) error {
-	log.Printf("taking CPU profile (%d secs) on all nodes", durSec)
+func (n *Network) TakeCPUProfiles(dur time.Duration) error {
+	log.Printf("taking CPU profile (%v) on all nodes", dur)
 	var wg sync.WaitGroup
 	wg.Add(len(n.Nodes))
 	var profErr error
@@ -216,7 +216,7 @@ func (n *Network) TakeCPUProfiles(durSec int) error {
 				}
 			}()
 			defer wg.Done()
-			if err := node.TakeCPUProfile(durSec); err != nil {
+			if err := node.TakeCPUProfile(dur); err != nil {
 				profErr = err
 			}
 		}(n)
