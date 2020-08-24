@@ -95,7 +95,7 @@ func runVisualizer() {
 		}
 
 		visualizerWorkerPool.TrySubmit(
-			&msg{
+			&Msg{
 				Type: MsgTypeSolidInfo,
 				Data: &metainfo{
 					ID: txHash.Trytes()[:VisualizerIdLength],

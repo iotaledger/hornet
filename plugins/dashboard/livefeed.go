@@ -26,13 +26,13 @@ func configureLiveFeed() {
 		switch x := task.Param(0).(type) {
 		case *transaction.Transaction:
 			if x.Value == 0 {
-				hub.BroadcastMsg(&msg{MsgTypeTxZeroValue, &tx{x.Hash, x.Value}})
+				hub.BroadcastMsg(&Msg{MsgTypeTxZeroValue, &tx{x.Hash, x.Value}})
 			} else {
-				hub.BroadcastMsg(&msg{MsgTypeTxValue, &tx{x.Hash, x.Value}})
+				hub.BroadcastMsg(&Msg{MsgTypeTxValue, &tx{x.Hash, x.Value}})
 			}
 		case milestone.Index:
 			if msTailTxHash := getMilestoneTailHash(x); msTailTxHash != nil {
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
+				hub.BroadcastMsg(&Msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
 			}
 		}
 		task.Return(nil)

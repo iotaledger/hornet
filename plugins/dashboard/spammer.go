@@ -25,11 +25,11 @@ func configureSpammerMetric() {
 func runSpammerMetricWorker() {
 
 	onSpamPerformed := events.NewClosure(func(metrics *spammerPlugin.SpamStats) {
-		spammerMetricWorkerPool.TrySubmit(&msg{Type: MsgTypeSpamMetrics, Data: metrics})
+		spammerMetricWorkerPool.TrySubmit(&Msg{Type: MsgTypeSpamMetrics, Data: metrics})
 	})
 
 	onAvgSpamMetricsUpdated := events.NewClosure(func(metrics *spammerPlugin.AvgSpamMetrics) {
-		spammerMetricWorkerPool.TrySubmit(&msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
+		spammerMetricWorkerPool.TrySubmit(&Msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
 	})
 
 	daemon.BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {

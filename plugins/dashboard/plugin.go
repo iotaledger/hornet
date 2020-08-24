@@ -70,9 +70,9 @@ func configure(plugin *node.Plugin) {
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *metricsplugin.TPSMetrics:
-			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
+			hub.BroadcastMsg(&Msg{MsgTypeTPSMetric, x})
+			hub.BroadcastMsg(&Msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&Msg{MsgTypePeerMetric, peerMetrics()})
 		case milestone.Index:
 			// Milestone
 			hub.BroadcastMsg(&Msg{MsgTypeNodeStatus, currentNodeStatus()})

@@ -23,7 +23,7 @@ func configureTipSelMetric() {
 			hub.BroadcastMsg(&Msg{MsgTypeTipSelMetric, x})
 		case milestone.Index:
 			if msTailTxHash := getMilestoneTailHash(x); msTailTxHash != nil {
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
+				hub.BroadcastMsg(&Msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
 			}
 		}
 		task.Return(nil)
