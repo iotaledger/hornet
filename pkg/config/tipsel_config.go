@@ -28,6 +28,9 @@ const (
 	// CfgTipSelMaxApprovers is the maximum amount of references by other transactions
 	// before the tip is removed from the tip pool.
 	CfgTipSelMaxApprovers = "maxApprovers"
+	// CfgTipSelSpammerTipsThreshold is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable (semi-lazy), 0 = always (non-lazy))
+	// this is used to support the network if someone attacks the tangle by spamming a lot of tips
+	CfgTipSelSpammerTipsThreshold = "spammerTipsThreshold"
 )
 
 func init() {
@@ -42,9 +45,13 @@ func init() {
 		"after it was referenced by the first transaction (non-lazy)")
 	flag.Int(CfgTipSelNonLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
 		"before the tip is removed from the tip pool (non-lazy)")
+	flag.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
+		"the spammer tries to reduce these (0 = always)")
 	flag.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
 	flag.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first transaction (semi-lazy)")
 	flag.Int(CfgTipSelSemiLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
 		"before the tip is removed from the tip pool (semi-lazy)")
+	flag.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
+		"the spammer tries to reduce these (0 = disable)")
 }

@@ -103,6 +103,9 @@ type TipSelector struct {
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxApproversNonLazy uint32
+	// spammerTipsThresholdNonLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = always)
+	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (non-lazy pool)
+	spammerTipsThresholdNonLazy int
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
 	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (semi-lazy pool)
@@ -115,6 +118,9 @@ type TipSelector struct {
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
 	maxApproversSemiLazy uint32
+	// spammerTipsThresholdSemiLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable)
+	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (semi-lazy pool)
+	spammerTipsThresholdSemiLazy int
 	// nonLazyTipsMap contains only non-lazy tips.
 	nonLazyTipsMap map[string]*Tip
 	// semiLazyTipsMap contains only semi-lazy tips.
@@ -132,9 +138,11 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeSecondsNonLazy time.Duration,
 	maxApproversNonLazy uint32,
+	spammerTipsThresholdNonLazy int,
 	retentionRulesTipsLimitSemiLazy int,
 	maxReferencedTipAgeSecondsSemiLazy time.Duration,
-	maxApproversSemiLazy uint32) *TipSelector {
+	maxApproversSemiLazy uint32,
+	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
 		maxDeltaTxYoungestRootSnapshotIndexToLSMI: milestone.Index(maxDeltaTxYoungestRootSnapshotIndexToLSMI),
@@ -143,9 +151,11 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 		retentionRulesTipsLimitNonLazy:            retentionRulesTipsLimitNonLazy,
 		maxReferencedTipAgeSecondsNonLazy:         maxReferencedTipAgeSecondsNonLazy,
 		maxApproversNonLazy:                       maxApproversNonLazy,
+		spammerTipsThresholdNonLazy:               spammerTipsThresholdNonLazy,
 		retentionRulesTipsLimitSemiLazy:           retentionRulesTipsLimitSemiLazy,
 		maxReferencedTipAgeSecondsSemiLazy:        maxReferencedTipAgeSecondsSemiLazy,
 		maxApproversSemiLazy:                      maxApproversSemiLazy,
+		spammerTipsThresholdSemiLazy:              spammerTipsThresholdSemiLazy,
 		nonLazyTipsMap:                            make(map[string]*Tip),
 		semiLazyTipsMap:                           make(map[string]*Tip),
 		Events: Events{
@@ -346,6 +356,26 @@ func (ts *TipSelector) SelectSemiLazyTips() (hornet.Hashes, error) {
 // SelectNonLazyTips selects two non-lazy tips.
 func (ts *TipSelector) SelectNonLazyTips() (hornet.Hashes, error) {
 	return ts.selectTips(ts.nonLazyTipsMap)
+}
+
+func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.Hashes, err error) {
+	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
+		// threshold was defined and reached, return semi-lazy tips for the spammer
+		tips, err = ts.SelectSemiLazyTips()
+		if bytes.Equal(tips[0], tips[1]) {
+			// do not spam if the tip is equal since that would not reduce the semi lazy count
+			return false, nil, ErrNoTipsAvailable
+		}
+		return true, tips, err
+	}
+
+	if ts.spammerTipsThresholdNonLazy != 0 && len(ts.nonLazyTipsMap) < ts.spammerTipsThresholdNonLazy {
+		// if a threshold was defined and not reached, do not return tips for the spammer
+		return false, nil, ErrNoTipsAvailable
+	}
+
+	tips, err = ts.SelectNonLazyTips()
+	return false, tips, err
 }
 
 // CleanUpReferencedTips checks if tips were referenced before

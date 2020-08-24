@@ -187,7 +187,9 @@ func websocketRoute(ctx echo.Context) error {
 					return false
 				}
 
+				topicsLock.RLock()
 				_, registered := registeredTopics[msg.Type]
+				topicsLock.RUnlock()
 				return registered
 			}
 			client.ReceiveChan = make(chan *websockethub.WebsocketMsg, 100)

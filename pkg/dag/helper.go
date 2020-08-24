@@ -15,7 +15,7 @@ var (
 
 // FindAllTails searches all tail transactions the given startTxHash references.
 // If skipStartTx is true, the startTxHash will be ignored and traversed, even if it is a tail transaction.
-func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) (map[string]struct{}, error) {
+func FindAllTails(startTxHash hornet.Hash, skipStartTx bool) (map[string]struct{}, error) {
 
 	tails := make(map[string]struct{})
 
@@ -49,7 +49,7 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool, forceRelease bool) 
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		forceRelease, false, false, nil)
+		false, false, nil)
 
 	return tails, err
 }
@@ -71,27 +71,27 @@ type OnSolidEntryPoint func(txHash hornet.Hash)
 // Afterwards it traverses the approvees (past cone) of the given branch transaction.
 // It is a DFS with trunk / branch.
 // Caution: condition func is not in DFS order
-func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
+func TraverseApproveesTrunkBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
 	t := NewApproveesTraverser(condition, consumer, onMissingApprovee, onSolidEntryPoint, abortSignal)
-	return t.TraverseTrunkAndBranch(trunkTxHash, branchTxHash, traverseSolidEntryPoints, traverseTailsOnly, forceRelease)
+	return t.TraverseTrunkAndBranch(trunkTxHash, branchTxHash, traverseSolidEntryPoints, traverseTailsOnly)
 }
 
 // TraverseApprovees starts to traverse the approvees (past cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is a DFS with trunk / branch.
 // Caution: condition func is not in DFS order
-func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, forceRelease bool, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
+func TraverseApprovees(startTxHash hornet.Hash, condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, traverseTailsOnly bool, abortSignal <-chan struct{}) error {
 
 	t := NewApproveesTraverser(condition, consumer, onMissingApprovee, onSolidEntryPoint, abortSignal)
-	return t.Traverse(startTxHash, traverseSolidEntryPoints, traverseTailsOnly, forceRelease)
+	return t.Traverse(startTxHash, traverseSolidEntryPoints, traverseTailsOnly)
 }
 
 // TraverseApprovers starts to traverse the approvers (future cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is unsorted BFS because the approvers are not ordered in the database.
-func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Consumer, forceRelease bool, abortSignal <-chan struct{}) error {
+func TraverseApprovers(startTxHash hornet.Hash, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) error {
 
-	t := NewApproversTraverser(condition, consumer, abortSignal)
-	return t.Traverse(startTxHash, forceRelease)
+	t := NewApproversTraverser(condition, consumer, walkAlreadyDiscovered, abortSignal)
+	return t.Traverse(startTxHash)
 }

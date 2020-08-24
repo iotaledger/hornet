@@ -19,20 +19,22 @@ type ApproversTraverser struct {
 	// discovers map with already found transactions
 	discovered map[string]struct{}
 
-	condition   Predicate
-	consumer    Consumer
-	abortSignal <-chan struct{}
+	condition             Predicate
+	consumer              Consumer
+	walkAlreadyDiscovered bool
+	abortSignal           <-chan struct{}
 
 	traverserLock sync.Mutex
 }
 
 // NewApproversTraverser create a new traverser to traverse the approvers (future cone)
-func NewApproversTraverser(condition Predicate, consumer Consumer, abortSignal <-chan struct{}) *ApproversTraverser {
+func NewApproversTraverser(condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ApproversTraverser {
 
 	return &ApproversTraverser{
-		condition:   condition,
-		consumer:    consumer,
-		abortSignal: abortSignal,
+		condition:             condition,
+		consumer:              consumer,
+		walkAlreadyDiscovered: walkAlreadyDiscovered,
+		abortSignal:           abortSignal,
 	}
 }
 
@@ -57,7 +59,7 @@ func (t *ApproversTraverser) reset() {
 // Traverse starts to traverse the approvers (future cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
 // It is unsorted BFS because the approvers are not ordered in the database.
-func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash, forceRelease bool) error {
+func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -65,7 +67,7 @@ func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash, forceRelease bool
 	// Prepare for a new traversal
 	t.reset()
 
-	defer t.cleanup(forceRelease)
+	defer t.cleanup(true)
 
 	t.stack.PushFront(startTxHash)
 	t.discovered[string(startTxHash)] = struct{}{}
@@ -127,9 +129,11 @@ func (t *ApproversTraverser) processStackApprovers() error {
 	}
 
 	for _, approverHash := range tangle.GetApproverHashes(currentTxHash) {
-		if _, approverDiscovered := t.discovered[string(approverHash)]; approverDiscovered {
-			// approver was already discovered
-			continue
+		if !t.walkAlreadyDiscovered {
+			if _, approverDiscovered := t.discovered[string(approverHash)]; approverDiscovered {
+				// approver was already discovered
+				continue
+			}
 		}
 
 		// traverse the approver

@@ -73,6 +73,11 @@ func GetApproverHashes(txHash hornet.Hash, maxFind ...int) hornet.Hashes {
 	return approverHashes
 }
 
+// ContainsApprover returns if the given approver exists in the cache/persistence layer.
+func ContainsApprover(txHash hornet.Hash, approverHash hornet.Hash) bool {
+	return approversStorage.Contains(append(txHash, approverHash...))
+}
+
 // ApproverConsumer consumes the given approver during looping through all approvers in the persistence layer.
 type ApproverConsumer func(txHash hornet.Hash, approverHash hornet.Hash) bool
 

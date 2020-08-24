@@ -74,6 +74,11 @@ func GetTagHashes(txTag hornet.Hash, forceRelease bool, maxFind ...int) hornet.H
 	return tagHashes
 }
 
+// ContainsTag returns if the given tag exists in the cache/persistence layer.
+func ContainsTag(txTag hornet.Hash, txHash hornet.Hash) bool {
+	return tagsStorage.Contains(append(txTag, txHash...))
+}
+
 // TagConsumer consumes the given tag during looping through all tags in the persistence layer.
 type TagConsumer func(txTag hornet.Hash, txHash hornet.Hash) bool
 

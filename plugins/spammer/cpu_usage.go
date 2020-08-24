@@ -9,19 +9,17 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 
 	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-var (
+const (
 	cpuUsageSampleTime = 200 * time.Millisecond
 	cpuUsageSleepTime  = int(200 * time.Millisecond)
+)
 
-	cpuUsageLock   syncutils.RWMutex
-	cpuUsageResult float64
-	cpuUsageError  error
-
+var (
+	// ErrCPUPercentageUnknown is returned if the CPU usage couldn't be determined.
 	ErrCPUPercentageUnknown = errors.New("CPU percentage unknown")
 )
 
@@ -66,7 +64,7 @@ func cpuUsageGuessWithAdditionalWorker() (float64, error) {
 }
 
 // waitForLowerCPUUsage waits until the cpu usage drops below cpuMaxUsage.
-func waitForLowerCPUUsage(shutdownSignal <-chan struct{}) error {
+func waitForLowerCPUUsage(cpuMaxUsage float64, shutdownSignal <-chan struct{}) error {
 	if cpuMaxUsage == 0.0 {
 		return nil
 	}

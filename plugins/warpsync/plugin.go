@@ -25,12 +25,13 @@ var (
 	log      *logger.Logger
 	warpSync *warpsync.WarpSync
 
-	onPeerConnected              *events.Closure
-	onSolidMilestoneIndexChanged *events.Closure
-	onCheckpointUpdated          *events.Closure
-	onTargetUpdated              *events.Closure
-	onStart                      *events.Closure
-	onDone                       *events.Closure
+	onPeerConnected                 *events.Closure
+	onSolidMilestoneIndexChanged    *events.Closure
+	onMilestoneSolidificationFailed *events.Closure
+	onCheckpointUpdated             *events.Closure
+	onTargetUpdated                 *events.Closure
+	onStart                         *events.Closure
+	onDone                          *events.Closure
 )
 
 func configure(plugin *node.Plugin) {
@@ -62,12 +63,20 @@ func configureEvents() {
 		}))
 	})
 
-	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) { // bundle +1
+	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		warpSync.UpdateCurrent(msIndex)
 	})
 
-	onCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32) {
-		log.Infof("Checkpoint updated to milestone %d", nextCheckpoint)
+	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex milestone.Index) {
+		if warpSync.CurrentCheckpoint < msIndex {
+			// rerequest since milestone requests could have been lost
+			log.Infof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
+			gossip.BroadcastMilestoneRequests(warpSync.AdvancementRange, nil)
+		}
+	})
+
+	onCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32, target milestone.Index) {
+		log.Infof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
 		// prevent any requests in the queue above our next checkpoint
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
@@ -76,8 +85,8 @@ func configureEvents() {
 		gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees, oldCheckpoint)
 	})
 
-	onTargetUpdated = events.NewClosure(func(newTarget milestone.Index) {
-		log.Infof("Target updated to milestone %d", newTarget)
+	onTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
+		log.Infof("Target updated to milestone %d (checkpoint %d)", newTarget, checkpoint)
 	})
 
 	onStart = events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
@@ -105,6 +114,7 @@ func configureEvents() {
 func attachEvents() {
 	peeringplugin.Manager().Events.PeerConnected.Attach(onPeerConnected)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	tangleplugin.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
 	warpSync.Events.Start.Attach(onStart)
@@ -114,6 +124,7 @@ func attachEvents() {
 func detachEvents() {
 	peeringplugin.Manager().Events.PeerConnected.Detach(onPeerConnected)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	tangleplugin.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
 	warpSync.Events.Start.Detach(onStart)

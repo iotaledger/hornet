@@ -131,7 +131,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
 				// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
 				// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
-				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), false, true)
+				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), false)
 				if err != nil {
 					cachedTxMeta.Release(true) // meta -1
 					return nil, err
@@ -213,7 +213,7 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 
 			if isEntryPoint := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
 				// A solid entry point should only be a tail transaction, otherwise the whole bundle can't be reproduced with a snapshot file
-				tails, err := dag.FindAllTails(approvee, false, true)
+				tails, err := dag.FindAllTails(approvee, false)
 				if err != nil {
 					return nil, errors.Wrap(ErrCritical, err.Error())
 				}
