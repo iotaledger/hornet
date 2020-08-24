@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1-rc2] - 24.08.2020
+
+### Changed
+
+    - save memory in ApproversTraverser if walkAlreadyDiscovered is set
+
+### Fixed
+
+    - panic if spammer plugin is disabled
+
 ## [0.5.1-rc1] - 24.08.2020
 
 ### Added
