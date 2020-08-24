@@ -49,7 +49,10 @@ var (
 	spammerWaitGroup sync.WaitGroup
 
 	// events of the spammer
-	Events *spammer.SpammerEvents
+	Events = &spammer.SpammerEvents{
+		SpamPerformed:         events.NewEvent(spammer.SpamStatsCaller),
+		AvgSpamMetricsUpdated: events.NewEvent(spammer.AvgSpamMetricsCaller),
+	}
 
 	// ErrSpammerDisabled is returned if the spammer plugin is disabled.
 	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
@@ -57,11 +60,6 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-
-	Events = &spammer.SpammerEvents{
-		SpamPerformed:         events.NewEvent(spammer.SpamStatsCaller),
-		AvgSpamMetricsUpdated: events.NewEvent(spammer.AvgSpamMetricsCaller),
-	}
 
 	// do not enable the spammer if URTS is disabled
 	if node.IsSkipped(urts.PLUGIN) {
