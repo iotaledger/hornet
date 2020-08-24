@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -20,4 +21,10 @@ func TestNetworkBenchmark(t *testing.T) {
 	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer syncCtxCancel()
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
+
+	duration := 30 * time.Second
+
+	go assert.NoError(t, n.SpamZeroVal(duration, runtime.NumCPU(), 50))
+	go assert.NoError(t, n.TakeCPUProfiles(30))
+	assert.NoError(t, n.Coordinator().GraphMetrics(duration))
 }

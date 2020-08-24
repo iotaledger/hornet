@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"runtime"
 	"testing"
 	"time"
 
@@ -18,14 +17,7 @@ func TestCommon(t *testing.T) {
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 
-	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 20*time.Second)
+	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer syncCtxCancel()
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
-	assert.NoError(t, n.TakeCPUProfiles(5))
-	assert.NoError(t, n.TakeHeapSnapshots())
-
-	duration := 30 * time.Second
-
-	go assert.NoError(t, n.SpamZeroVal(25*time.Second, runtime.NumCPU(), 50))
-	assert.NoError(t, n.Coordinator().GraphMetrics(duration))
 }
