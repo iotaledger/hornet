@@ -109,6 +109,10 @@ func run(_ *node.Plugin) {
 		timeutil.Ticker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
 	}, shutdown.PrioritySpammer)
 
+	// automatically start the spammer on node startup if the flag is set
+	if config.NodeConfig.GetBool(config.CfgSpammerAutostart) {
+		Start(nil, nil, nil, nil)
+	}
 }
 
 // Start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.

@@ -23,6 +23,8 @@ const (
 	CfgSpammerValueSpam = "spammer.valueSpam"
 	// the amount of parallel running spammers
 	CfgSpammerWorkers = "spammer.workers"
+	// CfgSpammerAutostart automatically starts the spammer on node startup
+	CfgSpammerAutostart = "spammer.autostart"
 )
 
 func init() {
@@ -35,4 +37,5 @@ func init() {
 	flag.Int(CfgSpammerBundleSize, 1, "the size of the spam bundles")
 	flag.Bool(CfgSpammerValueSpam, false, "should be spammed with value bundles")
 	flag.Int(CfgSpammerWorkers, 1, "the amount of parallel running spammers")
+	flag.Bool(CfgSpammerAutostart, false, "automatically start the spammer on node startup")
 }
