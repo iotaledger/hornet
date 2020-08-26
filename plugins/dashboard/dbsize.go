@@ -63,15 +63,16 @@ func runDatabaseSizeCollector() {
 
 	onDatabaseCleanup := events.NewClosure(func(cleanup *database.DatabaseCleanup) {
 		lastDbCleanup = cleanup
-		wsSendWorkerPool.TrySubmit(cleanup)
+		hub.BroadcastMsg(&msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 
 	daemon.BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
 		database.Events.DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
+
 		timeutil.Ticker(func() {
 			dbSizeMetric := currentDatabaseSize()
-			wsSendWorkerPool.TrySubmit([]*dbSize{dbSizeMetric})
+			hub.BroadcastMsg(&msg{Type: MsgTypeDatabaseSizeMetric, Data: []*dbSize{dbSizeMetric}})
 		}, 1*time.Minute, shutdownSignal)
-		database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
 	}, shutdown.PriorityDashboard)
 }

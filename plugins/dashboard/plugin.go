@@ -14,7 +14,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
@@ -27,11 +26,54 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
-	databaseplugin "github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 	"github.com/gohornet/hornet/plugins/peering"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+)
+
+const (
+	// MsgTypeSyncStatus is the type of the SyncStatus message.
+	MsgTypeSyncStatus byte = iota
+	// MsgTypeNodeStatus is the type of the NodeStatus message.
+	MsgTypeNodeStatus
+	// MsgTypeTPSMetric is the type of the transactions per second (TPS) metric message.
+	MsgTypeTPSMetric
+	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
+	MsgTypeTipSelMetric
+	// MsgTypeTxZeroValue is the type of the zero value Tx message.
+	MsgTypeTxZeroValue
+	// MsgTypeTxValue is the type of the value Tx message.
+	MsgTypeTxValue
+	// MsgTypeMs is the type of the Ms message.
+	MsgTypeMs
+	// MsgTypePeerMetric is the type of the PeerMetric message.
+	MsgTypePeerMetric
+	// MsgTypeConfirmedMsMetrics is the type of the ConfirmedMsMetrics message.
+	MsgTypeConfirmedMsMetrics
+	// MsgTypeVertex is the type of the Vertex message for the visualizer.
+	MsgTypeVertex
+	// MsgTypeSolidInfo is the type of the SolidInfo message for the visualizer.
+	MsgTypeSolidInfo
+	// MsgTypeConfirmedInfo is the type of the ConfirmedInfo message for the visualizer.
+	MsgTypeConfirmedInfo
+	// MsgTypeMilestoneInfo is the type of the MilestoneInfo message for the visualizer.
+	MsgTypeMilestoneInfo
+	// MsgTypeTipInfo is the type of the TipInfo message for the visualizer.
+	MsgTypeTipInfo
+	// MsgTypeDatabaseSizeMetric is the type of the database Size message for the metrics.
+	MsgTypeDatabaseSizeMetric
+	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
+	MsgTypeDatabaseCleanupEvent
+	// MsgTypeSpamMetrics is the type of the SpamMetric message.
+	MsgTypeSpamMetrics
+	// MsgTypeAvgSpamMetrics is the type of the AvgSpamMetric message.
+	MsgTypeAvgSpamMetrics
+)
+
+const (
+	broadcastQueueSize    = 20000
+	clientSendChannelSize = 1000
 )
 
 var (
@@ -40,20 +82,12 @@ var (
 
 	nodeStartAt = time.Now()
 
-	wsSendWorkerPool      *workerpool.WorkerPool
 	webSocketWriteTimeout = time.Duration(3) * time.Second
 
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
 	cachedMilestoneMetrics []*tangleplugin.ConfirmedMilestoneMetric
-)
-
-const (
-	broadcastQueueSize    = 20000
-	clientSendChannelSize = 1000
-	wsSendWorkerCount     = 1
-	wsSendWorkerQueueSize = 250
 )
 
 func configure(plugin *node.Plugin) {
@@ -66,30 +100,6 @@ func configure(plugin *node.Plugin) {
 	}
 
 	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
-
-	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
-		switch x := task.Param(0).(type) {
-		case *metricsplugin.TPSMetrics:
-			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
-		case milestone.Index:
-			// Milestone
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-		case []*tangleplugin.ConfirmedMilestoneMetric:
-			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
-		case []*dbSize:
-			hub.BroadcastMsg(&msg{MsgTypeDatabaseSizeMetric, x})
-		case *databaseplugin.DatabaseCleanup:
-			hub.BroadcastMsg(&msg{MsgTypeDatabaseCleanupEvent, x})
-		}
-		task.Return(nil)
-	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
-
-	configureLiveFeed()
-	configureVisualizer()
-	configureTipSelMetric()
-	configureSpammerMetric()
 }
 
 func run(_ *node.Plugin) {
@@ -127,15 +137,17 @@ func run(_ *node.Plugin) {
 	go e.Start(bindAddr)
 
 	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
-		wsSendWorkerPool.TrySubmit(tpsMetrics)
+		hub.BroadcastMsg(&msg{Type: MsgTypeTPSMetric, Data: tpsMetrics})
+		hub.BroadcastMsg(&msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
+		hub.BroadcastMsg(&msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
 
 	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
-		wsSendWorkerPool.TrySubmit(msIndex)
+		hub.BroadcastMsg(&msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
-		wsSendWorkerPool.TrySubmit(msIndex)
+		hub.BroadcastMsg(&msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
 	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tangleplugin.ConfirmedMilestoneMetric) {
@@ -143,7 +155,7 @@ func run(_ *node.Plugin) {
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
 		}
-		wsSendWorkerPool.TrySubmit([]*tangleplugin.ConfirmedMilestoneMetric{metric})
+		hub.BroadcastMsg(&msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangleplugin.ConfirmedMilestoneMetric{metric}})
 	})
 
 	daemon.BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
@@ -152,7 +164,6 @@ func run(_ *node.Plugin) {
 		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		tangleplugin.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
-		wsSendWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
 		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
@@ -160,7 +171,6 @@ func run(_ *node.Plugin) {
 		tangleplugin.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
-		wsSendWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
 
@@ -186,61 +196,27 @@ func getMilestoneTailHash(index milestone.Index) hornet.Hash {
 	return cachedMs.GetBundle().GetTailHash()
 }
 
-const (
-	// MsgTypeNodeStatus is the type of the NodeStatus message.
-	MsgTypeNodeStatus byte = iota
-	// MsgTypeTPSMetric is the type of the transactions per second (TPS) metric message.
-	MsgTypeTPSMetric
-	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
-	MsgTypeTipSelMetric
-	// MsgTypeTx is the type of the zero value Tx message.
-	MsgTypeTxZeroValue
-	// MsgTypeTx is the type of the value Tx message.
-	MsgTypeTxValue
-	// MsgTypeMs is the type of the Ms message.
-	MsgTypeMs
-	// MsgTypePeerMetric is the type of the PeerMetric message.
-	MsgTypePeerMetric
-	// MsgTypeConfirmedMsMetrics is the type of the ConfirmedMsMetrics message.
-	MsgTypeConfirmedMsMetrics
-	// MsgTypeVertex is the type of the Vertex message for the visualizer.
-	MsgTypeVertex
-	// MsgTypeSolidInfo is the type of the SolidInfo message for the visualizer.
-	MsgTypeSolidInfo
-	// MsgTypeConfirmedInfo is the type of the ConfirmedInfo message for the visualizer.
-	MsgTypeConfirmedInfo
-	// MsgTypeMilestoneInfo is the type of the MilestoneInfo message for the visualizer.
-	MsgTypeMilestoneInfo
-	// MsgTypeTipInfo is the type of the TipInfo message for the visualizer.
-	MsgTypeTipInfo
-	// MsgTypeDatabaseSizeMetric is the type of the database Size message for the metrics.
-	MsgTypeDatabaseSizeMetric
-	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
-	MsgTypeDatabaseCleanupEvent
-	// MsgTypeSpamMetrics is the type of the SpamMetric message.
-	MsgTypeSpamMetrics
-	// MsgTypeAvgSpamMetrics is the type of the AvgSpamMetric message.
-	MsgTypeAvgSpamMetrics
-)
-
 type msg struct {
 	Type byte        `json:"type"`
 	Data interface{} `json:"data"`
 }
 
-type tx struct {
+type livefeedTransaction struct {
 	Hash  string `json:"hash"`
 	Value int64  `json:"value"`
 }
 
-type ms struct {
+type livefeedMilestone struct {
 	Hash  string          `json:"hash"`
 	Index milestone.Index `json:"index"`
 }
 
+type syncstatus struct {
+	LSMI milestone.Index `json:"lsmi"`
+	LMI  milestone.Index `json:"lmi"`
+}
+
 type nodestatus struct {
-	LSMI                   milestone.Index `json:"lsmi"`
-	LMI                    milestone.Index `json:"lmi"`
 	SnapshotIndex          milestone.Index `json:"snapshot_index"`
 	PruningIndex           milestone.Index `json:"pruning_index"`
 	IsHealthy              bool            `json:"is_healthy"`
@@ -346,6 +322,10 @@ func peerMetrics() []*peermetric {
 	return stats
 }
 
+func currentSyncStatus() *syncstatus {
+	return &syncstatus{LSMI: tangle.GetSolidMilestoneIndex(), LMI: tangle.GetLatestMilestoneIndex()}
+}
+
 func currentNodeStatus() *nodestatus {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -366,8 +346,6 @@ func currentNodeStatus() *nodestatus {
 	}
 	status.IsHealthy = tangleplugin.IsNodeHealthy()
 	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
-	status.LSMI = tangle.GetSolidMilestoneIndex()
-	status.LMI = tangle.GetLatestMilestoneIndex()
 
 	status.ConnectedPeersCount = peering.Manager().ConnectedPeerCount()
 
