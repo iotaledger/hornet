@@ -109,6 +109,10 @@ func run(_ *node.Plugin) {
 		timeutil.Ticker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
 	}, shutdown.PrioritySpammer)
 
+	// automatically start the spammer on node startup if the flag is set
+	if config.NodeConfig.GetBool(config.CfgSpammerAutostart) {
+		Start(nil, nil, nil, nil)
+	}
 }
 
 // Start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
@@ -116,10 +120,11 @@ func Start(tpsRateLimit *float64, cpuMaxUsage *float64, bundleSize *int, valueSp
 	if spammerInstance == nil {
 		return 0.0, 0.0, 0, false, ErrSpammerDisabled
 	}
-	Stop()
 
 	spammerLock.Lock()
 	defer spammerLock.Unlock()
+
+	stopWithoutLocking()
 
 	tpsRateLimitCfg := config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
 	cpuMaxUsageCfg := config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
@@ -293,6 +298,12 @@ func Stop() error {
 	spammerLock.Lock()
 	defer spammerLock.Unlock()
 
+	stopWithoutLocking()
+
+	return nil
+}
+
+func stopWithoutLocking() {
 	// increase the process ID to stop all running workers
 	processID.Inc()
 
@@ -306,8 +317,6 @@ func Stop() error {
 	for spammerAvgHeap.Len() > 0 {
 		spammerAvgHeap.Pop()
 	}
-
-	return nil
 }
 
 // measureSpammerMetrics measures the spammer metrics.

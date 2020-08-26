@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1-rc3] - 26.08.2020
+
+### Added
+
+    - autostart to the spammer config
+
+### Fixed
+
+    - deadlock in the spammer at stop
+    - bundle creation race condition in coordinator
+    - fix MQTT panic
+
 ## [0.5.1-rc2] - 24.08.2020
 
 ### Changed

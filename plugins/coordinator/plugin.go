@@ -63,6 +63,7 @@ var (
 	onIssuedMilestone             *events.Closure
 
 	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
+	ErrTailTxNotFound  = errors.New("tail transaction not found in bundle")
 )
 
 func configure(plugin *node.Plugin) {
@@ -245,44 +246,49 @@ func run(plugin *node.Plugin) {
 
 func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 
-	// collect all tx hashes of the bundle
+	// search the tail transaction hash of the bundle
 	txHashes := make(map[string]struct{})
 	for _, t := range b {
-		txHashes[string(hornet.HashFromHashTrytes(t.Hash))] = struct{}{}
+		if t.CurrentIndex == 0 {
+			txHashes[string(hornet.HashFromHashTrytes(t.Hash))] = struct{}{}
+			break
+		}
+	}
+
+	if len(txHashes) != 1 {
+		return ErrTailTxNotFound
 	}
 
 	txHashesLock := syncutils.Mutex{}
 
-	// wgBundleProcessed waits until all txs of the bundle were processed in the storage layer
+	// wgBundleProcessed waits until the bundle got solid
 	wgBundleProcessed := sync.WaitGroup{}
-	wgBundleProcessed.Add(len(txHashes))
+	wgBundleProcessed.Add(1)
 
-	if isMilestone {
-		// also wait for solid milestone changed event
-		wgBundleProcessed.Add(1)
-	}
-
-	onProcessedTransaction := events.NewClosure(func(txHash hornet.Hash) {
+	onTransactionSolid := events.NewClosure(func(txHash hornet.Hash) {
 		txHashesLock.Lock()
 		defer txHashesLock.Unlock()
 
 		if _, exists := txHashes[string(txHash)]; exists {
-			// tx of bundle was processed
+			// tail tx of bundle is solid
 			wgBundleProcessed.Done()
+
+			// we have to delete this transaction from the map because the event may be fired several times
 			delete(txHashes, string(txHash))
 		}
 	})
 
-	var onSolidMilestoneIndexChanged *events.Closure
+	tangleplugin.Events.TransactionSolid.Attach(onTransactionSolid)
+	defer tangleplugin.Events.TransactionSolid.Detach(onTransactionSolid)
+
 	if isMilestone {
-		onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+		// also wait for solid milestone changed event
+		wgBundleProcessed.Add(1)
+
+		onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 			wgBundleProcessed.Done()
 		})
-	}
 
-	tangleplugin.Events.ProcessedTransaction.Attach(onProcessedTransaction)
-	defer tangleplugin.Events.ProcessedTransaction.Detach(onProcessedTransaction)
-	if isMilestone {
 		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	}
@@ -295,7 +301,7 @@ func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 		}
 	}
 
-	// wait until all txs of the bundle are processed in the storage layer
+	// wait until the tail tx of the bundle is solid
 	// if it was a milestone, also wait until the solid milestone changed
 	wgBundleProcessed.Wait()
 
