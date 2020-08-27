@@ -2,49 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.5.1-rc3] - 26.08.2020
+## [0.5.1] - 27.08.2020
 
 ### Added
 
+    - getSpammerTips webapi call
+    - webapi route to control the spammer plugin
     - autostart to the spammer config
-
-### Fixed
-
-    - deadlock in the spammer at stop
-    - bundle creation race condition in coordinator
-    - fix MQTT panic
-
-## [0.5.1-rc2] - 24.08.2020
 
 ### Changed
 
     - save memory in ApproversTraverser if walkAlreadyDiscovered is set
-
-### Fixed
-
-    - panic if spammer plugin is disabled
-
-## [0.5.1-rc1] - 24.08.2020
-
-### Added
-
-    - webapi route to control the spammer plugin
-    - getSpammerTips webapi call
-
-### Changed
-
     - findTransaction now returns an intersection of the search criteria
     - show database size in GB if size > 1 GB (dashboard)
     - moved dashboard frontend code to [another git repo](https://github.com/iotaledger/node-dashboard)
     - spammer doesn't start automatically at node startup
     - getNodeInfo now returns the connected peers count
+    - re-add logger settings to mainnet config file
 
 ### Fixed
 
+    - warpsync milestone requesting
     - OOM bug in the future cone solidifier
     - map concurrent write/read panic in websocket
-    - warpsync milestone requesting
-    - re-add logger settings to mainnet config file
+    - bundle creation race condition in coordinator
+    - fix MQTT panic
 
 ### Config file changes
 
@@ -66,6 +48,7 @@ All notable changes to this project will be documented in this file.
 +  },
   "spammer": {
 -    "semiLazyTipsLimit": 30
++    "autostart": false
   },
 ```
 
