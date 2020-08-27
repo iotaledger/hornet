@@ -23,9 +23,8 @@ const (
 	CfgSpammerValueSpam = "spammer.valueSpam"
 	// the amount of parallel running spammers
 	CfgSpammerWorkers = "spammer.workers"
-	// the maximum amount of tips in the semi-lazy tip-pool before the spammer tries to reduce these (0 = disable)
-	// this is used to support the network if someone attacks the tangle by spamming almost lazy tips
-	CfgSpammerSemiLazyTipsLimit = "spammer.semiLazyTipsLimit"
+	// CfgSpammerAutostart automatically starts the spammer on node startup
+	CfgSpammerAutostart = "spammer.autostart"
 )
 
 func init() {
@@ -38,5 +37,5 @@ func init() {
 	flag.Int(CfgSpammerBundleSize, 1, "the size of the spam bundles")
 	flag.Bool(CfgSpammerValueSpam, false, "should be spammed with value bundles")
 	flag.Int(CfgSpammerWorkers, 1, "the amount of parallel running spammers")
-	flag.Int(CfgSpammerSemiLazyTipsLimit, 20, "the maximum amount of tips in the semi-lazy tip-pool before the spammer tries to reduce these (0 = disable)")
+	flag.Bool(CfgSpammerAutostart, false, "automatically start the spammer on node startup")
 }

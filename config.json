@@ -22,6 +22,9 @@
       "storeTransactions",
       "getTrytes"
     ],
+    "permittedRoutes": [
+      "healthz"
+    ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
@@ -96,6 +99,14 @@
     "disablePlugins": [],
     "enablePlugins": []
   },
+  "logger": {
+    "level": "info",
+    "disableCaller": true,
+    "encoding": "console",
+    "outputPaths": [
+      "stdout"
+    ]
+  },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "message": "Spamming with HORNET tipselect",
@@ -106,7 +117,7 @@
     "bundleSize": 1,
     "valueSpam": false,
     "workers": 0,
-    "semiLazyTipsLimit": 30
+    "autostart": false
   },
   "zmq": {
     "bindAddress": "localhost:5556"

@@ -149,10 +149,14 @@ func Request(hash hornet.Hash, msIndex milestone.Index, preventDiscard ...bool) 
 }
 
 // RequestMultiple works like Request but takes multiple transaction hashes.
-func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDiscard ...bool) {
+func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDiscard ...bool) int {
+	requested := 0
 	for _, hash := range hashes {
-		Request(hash, msIndex, preventDiscard...)
+		if Request(hash, msIndex, preventDiscard...) {
+			requested++
+		}
 	}
+	return requested
 }
 
 // RequestApprovees enqueues requests for the approvees of the given transaction to the request queue, if the
@@ -232,6 +236,6 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			true, false, false, nil)
+			false, false, nil)
 	}
 }

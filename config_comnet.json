@@ -22,6 +22,9 @@
       "storeTransactions",
       "getTrytes"
     ],
+    "permittedRoutes": [
+      "healthz"
+    ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
@@ -111,12 +114,14 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 0
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 30
     }
   },
   "node": {
@@ -146,7 +151,7 @@
     "bundleSize": 1,
     "valueSpam": false,
     "workers": 0,
-    "semiLazyTipsLimit": 30
+    "autostart": false
   },
   "mqtt": {
     "config": "mqtt_config.json"

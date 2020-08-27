@@ -11,6 +11,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/plugins/spammer"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -28,7 +29,8 @@ var (
 	log    *logger.Logger
 
 	server               *http.Server
-	permitedEndpoints    = make(map[string]string)
+	permitedEndpoints    = make(map[string]struct{})
+	permitedRESTroutes   = make(map[string]struct{})
 	whitelistedNetworks  []net.IPNet
 	implementedAPIcalls  = make(map[string]apiEndpoint)
 	features             []string
@@ -67,11 +69,18 @@ func configure(plugin *node.Plugin) {
 	api.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	// Load allowed remote access to specific HTTP API commands
-	pae := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermitRemoteAccess)
-	if len(pae) > 0 {
-		for _, endpoint := range pae {
-			ep := strings.ToLower(endpoint)
-			permitedEndpoints[ep] = ep
+	permittedAPIendpoints := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermitRemoteAccess)
+	if len(permittedAPIendpoints) > 0 {
+		for _, endpoint := range permittedAPIendpoints {
+			permitedEndpoints[strings.ToLower(endpoint)] = struct{}{}
+		}
+	}
+
+	// Load allowed remote access to specific HTTP REST routes
+	permittedRoutes := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermittedRoutes)
+	if len(permittedRoutes) > 0 {
+		for _, route := range permittedRoutes {
+			permitedRESTroutes[strings.ToLower(route)] = struct{}{}
 		}
 	}
 
@@ -86,11 +95,10 @@ func configure(plugin *node.Plugin) {
 		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
 
-	// Handle route without auth
 	exclHealthCheckFromAuth := config.NodeConfig.GetBool(config.CfgWebAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {
-		// REST API route (health check)
-		restAPIRoute()
+		// Handle route without auth
+		healthzRoute()
 	}
 
 	// set basic auth if enabled
@@ -145,20 +153,23 @@ func configure(plugin *node.Plugin) {
 		})
 	}
 
-	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
-		// WebAPI route
-		webAPIRoute()
+	if !exclHealthCheckFromAuth {
+		// Handle route with auth
+		healthzRoute()
 	}
 
-	// Handle route with auth
-	if !exclHealthCheckFromAuth {
-		// REST API route (health check)
-		restAPIRoute()
+	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
+		webAPIRoute()
+
+		// only handle spammer api calls if the spammer plugin is enabled
+		if !node.IsSkipped(spammer.PLUGIN) {
+			spammerRoute()
+		}
 	}
 
 	// return error, if route is not there
 	api.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 	})
 }
 

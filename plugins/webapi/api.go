@@ -8,13 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/tangle"
-)
-
-const (
-	healthzRoute = "healthz"
 )
 
 var (
@@ -24,6 +17,17 @@ var (
 	ErrInternalError = errors.New("internal error")
 )
 
+func networkWhitelisted(c *gin.Context) bool {
+	remoteHost, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
+	remoteAddress := net.ParseIP(remoteHost)
+	for _, whitelistedNet := range whitelistedNetworks {
+		if whitelistedNet.Contains(remoteAddress) {
+			return true
+		}
+	}
+	return false
+}
+
 func webAPIRoute() {
 	api.POST(webAPIBase, func(c *gin.Context) {
 
@@ -31,69 +35,32 @@ func webAPIRoute() {
 
 		err := c.ShouldBindJSON(&request)
 		if err != nil {
-			fmt.Println(err)
+			c.JSON(http.StatusBadRequest, ErrorReturn{Error: err.Error()})
+			return
 		}
 
-		// Get the command and check if it's implemented
-		originCommand := fmt.Sprint(request["command"])
-		cmd := strings.ToLower(originCommand)
+		originCmd, exists := request["command"]
+		if !exists {
+			c.JSON(http.StatusBadRequest, ErrorReturn{Error: "error parsing command"})
+			return
+		}
+		cmd := strings.ToLower(originCmd.(string))
 
+		// get the command and check if it's implemented
 		implementation, apiCallExists := implementedAPIcalls[cmd]
-
-		whitelisted := false
-		remoteHost, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
-		remoteAddress := net.ParseIP(remoteHost)
-		for _, whitelistedNet := range whitelistedNetworks {
-			if whitelistedNet.Contains(remoteAddress) {
-				whitelisted = true
-				break
-			}
+		if !apiCallExists {
+			c.JSON(http.StatusBadRequest, ErrorReturn{Error: fmt.Sprintf("command [%v] is unknown", originCmd)})
+			return
 		}
 
-		if !whitelisted {
-			// Check if command is permitted. If it's not permited and the request does not come from localhost, deny it.
-			_, permited := permitedEndpoints[cmd]
-			if apiCallExists && !permited {
-				e := ErrorReturn{
-					Error: fmt.Sprintf("Command [%v] is protected", originCommand),
-				}
-				c.JSON(http.StatusForbidden, e)
+		if !networkWhitelisted(c) {
+			// network is not whitelisted, check if the command is permitted, otherwise deny it.
+			if _, permited := permitedEndpoints[cmd]; !permited {
+				c.JSON(http.StatusForbidden, ErrorReturn{Error: fmt.Sprintf("command [%v] is protected", originCmd)})
 				return
 			}
 		}
 
-		if !apiCallExists {
-			e := ErrorReturn{
-				Error: fmt.Sprintf("Command [%v] is unknown", originCommand),
-			}
-			c.JSON(http.StatusBadRequest, e)
-			return
-		}
-
 		implementation(&request, c, serverShutdownSignal)
-	})
-}
-
-// health check
-func restAPIRoute() {
-
-	if config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
-		// autopeering entry node mode
-		// GET /healthz
-		api.GET(healthzRoute, func(c *gin.Context) {
-			c.Status(http.StatusOK)
-		})
-		return
-	}
-
-	// node mode
-	// GET /healthz
-	api.GET(healthzRoute, func(c *gin.Context) {
-		if !tangle.IsNodeHealthy() {
-			c.Status(http.StatusServiceUnavailable)
-			return
-		}
-
-		c.Status(http.StatusOK)
 	})
 }

@@ -6,7 +6,8 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/shutdown"
-	spammerPlugin "github.com/gohornet/hornet/plugins/spammer"
+	"github.com/gohornet/hornet/pkg/spammer"
+	spammerplugin "github.com/gohornet/hornet/plugins/spammer"
 )
 
 var (
@@ -24,22 +25,22 @@ func configureSpammerMetric() {
 
 func runSpammerMetricWorker() {
 
-	onSpamPerformed := events.NewClosure(func(metrics *spammerPlugin.SpamStats) {
+	onSpamPerformed := events.NewClosure(func(metrics *spammer.SpamStats) {
 		spammerMetricWorkerPool.TrySubmit(&msg{Type: MsgTypeSpamMetrics, Data: metrics})
 	})
 
-	onAvgSpamMetricsUpdated := events.NewClosure(func(metrics *spammerPlugin.AvgSpamMetrics) {
+	onAvgSpamMetricsUpdated := events.NewClosure(func(metrics *spammer.AvgSpamMetrics) {
 		spammerMetricWorkerPool.TrySubmit(&msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
 	})
 
 	daemon.BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
-		spammerPlugin.Events.SpamPerformed.Attach(onSpamPerformed)
-		spammerPlugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
+		spammerplugin.Events.SpamPerformed.Attach(onSpamPerformed)
+		spammerplugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
 		spammerMetricWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[SpammerMetricUpdater] ...")
-		spammerPlugin.Events.SpamPerformed.Detach(onSpamPerformed)
-		spammerPlugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
+		spammerplugin.Events.SpamPerformed.Detach(onSpamPerformed)
+		spammerplugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
 		spammerMetricWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[SpammerMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)

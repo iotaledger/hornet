@@ -227,7 +227,6 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			true,
 			// the pruning target index is also a solid entry point => traverse it anyways
 			milestoneIndex == targetIndex,
 			false,

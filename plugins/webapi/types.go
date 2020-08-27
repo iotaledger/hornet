@@ -79,6 +79,11 @@ type ErrorReturn struct {
 	Error string `json:"error"`
 }
 
+// ResultReturn struct
+type ResultReturn struct {
+	Message string `json:"message"`
+}
+
 /////////////////// findTransactions //////////////////////////////
 
 // FindTransactions struct

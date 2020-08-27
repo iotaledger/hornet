@@ -258,7 +258,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		func(txHash hornet.Hash) {
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
 			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Trytes(), ConfirmedByMilestoneIndex: entryPointIndex})
-		}, true, false, false, nil)
+		}, false, false, nil)
 
 	result.TanglePathLength = len(result.TanglePath)
 

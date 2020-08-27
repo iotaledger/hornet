@@ -22,6 +22,9 @@
       "storeTransactions",
       "getTrytes"
     ],
+    "permittedRoutes": [
+      "healthz"
+    ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
@@ -104,12 +107,14 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 0
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2
+      "maxApprovers": 2,
+      "spammerTipsThreshold": 30
     }
   },
   "node": {
@@ -117,7 +122,7 @@
     "showAliasInGetNodeInfo": false,
     "disablePlugins": [],
     "enablePlugins": []
-  },  
+  },
   "spammer": {
     "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
     "message": "Spamming with HORNET tipselect",
@@ -128,7 +133,7 @@
     "bundleSize": 1,
     "valueSpam": false,
     "workers": 0,
-    "semiLazyTipsLimit": 30
+    "autostart": false
   },
   "zmq": {
     "bindAddress": "localhost:5556"
