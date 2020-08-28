@@ -17,9 +17,9 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200817231853-1c598e8496d7
+	github.com/iotaledger/hive.go v0.0.0-20200828201052-1c7e7d68bc4d
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200622064951-7fa4854396b2
-	github.com/labstack/echo/v4 v4.1.16
+	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
@@ -36,8 +36,7 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6 // indirect
-	golang.org/x/text v0.3.3 // indirect
-	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
+	golang.org/x/sys v0.0.0-20200828194041-157a740278f4 // indirect
+	google.golang.org/genproto v0.0.0-20200828030656-73b5761be4c5 // indirect
 	google.golang.org/grpc v1.31.1 // indirect
 )

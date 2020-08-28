@@ -81,21 +81,21 @@ func (m *TransactionMetadata) IsTail() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataIsTail)
+	return m.metadata.HasBit(TransactionMetadataIsTail)
 }
 
 func (m *TransactionMetadata) IsHead() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataIsHead)
+	return m.metadata.HasBit(TransactionMetadataIsHead)
 }
 
 func (m *TransactionMetadata) IsValue() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataIsValue)
+	return m.metadata.HasBit(TransactionMetadataIsValue)
 }
 
 func (m *TransactionMetadata) GetSolidificationTimestamp() int32 {
@@ -109,20 +109,20 @@ func (m *TransactionMetadata) IsSolid() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataSolid)
+	return m.metadata.HasBit(TransactionMetadataSolid)
 }
 
 func (m *TransactionMetadata) SetSolid(solid bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	if solid != m.metadata.HasFlag(TransactionMetadataSolid) {
+	if solid != m.metadata.HasBit(TransactionMetadataSolid) {
 		if solid {
 			m.solidificationTimestamp = int32(time.Now().Unix())
 		} else {
 			m.solidificationTimestamp = 0
 		}
-		m.metadata = m.metadata.ModifyFlag(TransactionMetadataSolid, solid)
+		m.metadata = m.metadata.ModifyBit(TransactionMetadataSolid, solid)
 		m.SetModified(true)
 	}
 }
@@ -131,27 +131,27 @@ func (m *TransactionMetadata) IsConfirmed() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataConfirmed)
+	return m.metadata.HasBit(TransactionMetadataConfirmed)
 }
 
 func (m *TransactionMetadata) GetConfirmed() (bool, milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataConfirmed), m.confirmationIndex
+	return m.metadata.HasBit(TransactionMetadataConfirmed), m.confirmationIndex
 }
 
 func (m *TransactionMetadata) SetConfirmed(confirmed bool, confirmationIndex milestone.Index) {
 	m.Lock()
 	defer m.Unlock()
 
-	if confirmed != m.metadata.HasFlag(TransactionMetadataConfirmed) {
+	if confirmed != m.metadata.HasBit(TransactionMetadataConfirmed) {
 		if confirmed {
 			m.confirmationIndex = confirmationIndex
 		} else {
 			m.confirmationIndex = 0
 		}
-		m.metadata = m.metadata.ModifyFlag(TransactionMetadataConfirmed, confirmed)
+		m.metadata = m.metadata.ModifyBit(TransactionMetadataConfirmed, confirmed)
 		m.SetModified(true)
 	}
 }
@@ -160,15 +160,15 @@ func (m *TransactionMetadata) IsConflicting() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasFlag(TransactionMetadataConflicting)
+	return m.metadata.HasBit(TransactionMetadataConflicting)
 }
 
 func (m *TransactionMetadata) SetConflicting(conflicting bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	if conflicting != m.metadata.HasFlag(TransactionMetadataConflicting) {
-		m.metadata = m.metadata.ModifyFlag(TransactionMetadataConflicting, conflicting)
+	if conflicting != m.metadata.HasBit(TransactionMetadataConflicting) {
+		m.metadata = m.metadata.ModifyBit(TransactionMetadataConflicting, conflicting)
 		m.SetModified(true)
 	}
 }
@@ -197,7 +197,7 @@ func (m *TransactionMetadata) SetAdditionalTxInfo(trunkHash Hash, branchHash Has
 	m.trunkHash = trunkHash
 	m.branchHash = branchHash
 	m.bundleHash = bundleHash
-	m.metadata = m.metadata.ModifyFlag(TransactionMetadataIsHead, isHead).ModifyFlag(TransactionMetadataIsTail, isTail).ModifyFlag(TransactionMetadataIsValue, isValue)
+	m.metadata = m.metadata.ModifyBit(TransactionMetadataIsHead, isHead).ModifyBit(TransactionMetadataIsTail, isTail).ModifyBit(TransactionMetadataIsValue, isValue)
 	m.SetModified(true)
 }
 
