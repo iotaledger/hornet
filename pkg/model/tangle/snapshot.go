@@ -79,12 +79,12 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 }
 
 func (i *SnapshotInfo) IsSpentAddressesEnabled() bool {
-	return i.Metadata.HasFlag(SnapshotMetadataSpentAddressesEnabled)
+	return i.Metadata.HasBit(SnapshotMetadataSpentAddressesEnabled)
 }
 
 func (i *SnapshotInfo) SetSpentAddressesEnabled(enabled bool) {
-	if enabled != i.Metadata.HasFlag(SnapshotMetadataSpentAddressesEnabled) {
-		i.Metadata = i.Metadata.ModifyFlag(SnapshotMetadataSpentAddressesEnabled, enabled)
+	if enabled != i.Metadata.HasBit(SnapshotMetadataSpentAddressesEnabled) {
+		i.Metadata = i.Metadata.ModifyBit(SnapshotMetadataSpentAddressesEnabled, enabled)
 	}
 }
 
