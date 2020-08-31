@@ -205,7 +205,7 @@ func run(_ *node.Plugin) {
 					}
 
 					if err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
-						log.Debugf("pruning aborted: %w", err)
+						log.Debugf("pruning aborted: %v", err.Error())
 					}
 				}
 

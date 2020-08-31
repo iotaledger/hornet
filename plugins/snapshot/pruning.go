@@ -20,7 +20,7 @@ const (
 )
 
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
-func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
+func pruneUnconfirmedTransactions(targetIndex milestone.Index) (int, int) {
 
 	txsToCheckMap := make(map[string]struct{})
 
@@ -66,7 +66,7 @@ loopOverUnconfirmed:
 	txCount := pruneTransactions(txsToCheckMap)
 	tangle.DeleteUnconfirmedTxs(targetIndex)
 
-	return txCount
+	return txCount, len(txsToCheckMap)
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
@@ -192,7 +192,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
 		ts := time.Now()
-		txCount := pruneUnconfirmedTransactions(milestoneIndex)
+		txCountDeleted, txCountChecked := pruneUnconfirmedTransactions(milestoneIndex)
 
 		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
@@ -208,12 +208,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// Caution: condition func is not in DFS order
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
 				defer cachedTxMeta.Release(true) // tx -1
-				if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
-					if at < milestoneIndex {
-						// Ignore Tx that were confirmed by older milestones
-						return false, nil
-					}
-				}
+				// everything that was referenced by that milestone can be pruned (even transactions of older milestones)
 				return true, nil
 			},
 			// consumer
@@ -228,7 +223,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
-			milestoneIndex == targetIndex,
+			true,
 			false,
 			nil)
 
@@ -238,14 +233,15 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		txCount += pruneTransactions(txsToCheckMap)
+		txCountChecked += len(txsToCheckMap)
+		txCountDeleted += pruneTransactions(txsToCheckMap)
 
 		pruneMilestone(milestoneIndex)
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
 
-		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCount, len(txsToCheckMap))
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCountDeleted, txCountChecked)
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}
