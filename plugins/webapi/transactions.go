@@ -155,17 +155,20 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 		searchedBefore = true
 	} else {
-		// check if results match at least one of the approvee search criteria
-		for txHash := range results {
-			contains := false
-			for approveeHash := range queryApproveeHashes {
-				if tangle.ContainsApprover(hornet.Hash(approveeHash), hornet.Hash(txHash)) {
-					contains = true
-					break
+		// check if approvee search criteria was given
+		if len(queryApproveeHashes) > 0 {
+			// check if results match at least one of the approvee search criteria
+			for txHash := range results {
+				contains := false
+				for approveeHash := range queryApproveeHashes {
+					if tangle.ContainsApprover(hornet.Hash(approveeHash), hornet.Hash(txHash)) {
+						contains = true
+						break
+					}
 				}
-			}
-			if !contains {
-				delete(results, txHash)
+				if !contains {
+					delete(results, txHash)
+				}
 			}
 		}
 	}
@@ -179,17 +182,20 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 		searchedBefore = true
 	} else {
-		// check if results match at least one of the address search criteria
-		for txHash := range results {
-			contains := false
-			for addressHash := range queryAddressHashes {
-				if tangle.ContainsAddress(hornet.Hash(addressHash), hornet.Hash(txHash), query.ValueOnly) {
-					contains = true
-					break
+		// check if address search criteria was given
+		if len(queryAddressHashes) > 0 {
+			// check if results match at least one of the address search criteria
+			for txHash := range results {
+				contains := false
+				for addressHash := range queryAddressHashes {
+					if tangle.ContainsAddress(hornet.Hash(addressHash), hornet.Hash(txHash), query.ValueOnly) {
+						contains = true
+						break
+					}
 				}
-			}
-			if !contains {
-				delete(results, txHash)
+				if !contains {
+					delete(results, txHash)
+				}
 			}
 		}
 	}
@@ -202,17 +208,20 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			}
 		}
 	} else {
-		// check if results match at least one of the tag search criteria
-		for txHash := range results {
-			contains := false
-			for tagHash := range queryTagHashes {
-				if tangle.ContainsTag(hornet.Hash(tagHash), hornet.Hash(txHash)) {
-					contains = true
-					break
+		// check if tag search criteria was given
+		if len(queryTagHashes) > 0 {
+			// check if results match at least one of the tag search criteria
+			for txHash := range results {
+				contains := false
+				for tagHash := range queryTagHashes {
+					if tangle.ContainsTag(hornet.Hash(tagHash), hornet.Hash(txHash)) {
+						contains = true
+						break
+					}
 				}
-			}
-			if !contains {
-				delete(results, txHash)
+				if !contains {
+					delete(results, txHash)
+				}
 			}
 		}
 	}
