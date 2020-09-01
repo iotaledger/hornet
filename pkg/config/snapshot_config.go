@@ -46,6 +46,6 @@ func init() {
 	}, "paths to the spent addresses files")
 	flag.Int(CfgGlobalSnapshotIndex, 1050000, "milestone index of the global snapshot")
 	flag.Bool(CfgPruningEnabled, true, "whether to delete old transaction data from the database")
-	flag.Int(CfgPruningDelay, 40000, "amount of milestone transactions to keep in the database")
+	flag.Int(CfgPruningDelay, 60480, "amount of milestone transactions to keep in the database")
 	flag.Bool(CfgSpentAddressesEnabled, true, "enable support for wereAddressesSpentFrom (needed for Trinity, but local snapshots are much bigger)")
 }
