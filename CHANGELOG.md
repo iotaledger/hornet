@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2] - 01.09.2020
+
+### Fixed
+
+    - findTransactions was not working properly if not all search criteria were given
+
+### Config file changes
+
+`config.json`
+
+```diff
+  "snapshots": {
+    "pruning": {
+-      "delay": 15000
++      "delay": 60480
+    }
+  }
+```
+
 ## [0.5.1] - 27.08.2020
 
 ### Added
