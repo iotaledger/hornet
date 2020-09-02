@@ -1,0 +1,23 @@
+version: "3.5"
+
+services:
+  tester:
+    container_name: tester
+    image: golang:1.14.4
+    working_dir: /tmp/hornet/integration-tests/tester
+    command: /tmp/assets/entrypoint.sh
+    environment:
+      - TEST_NAME=${TEST_NAME}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../../:/tmp/hornet:rw
+      - ../logs:/tmp/logs
+      - ../assets:/tmp/assets
+      - hornet-testing-cache:/go
+      - hornet-testing-assets:/assets
+
+volumes:
+  hornet-testing-cache:
+    name: hornet-testing-cache
+  hornet-testing-assets:
+    name: hornet-testing-assets

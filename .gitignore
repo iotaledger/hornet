@@ -22,6 +22,8 @@ comnetdb/
 .DS_Store
 /hornet
 
+integration-tests/logs/*.log
+
 # snapshot dir
 snapshots/
 
@@ -42,9 +44,12 @@ snapshot/
 
 # log files
 hornet.log
+integration-tests/logs/*.html
+integration-tests/logs/*.profile
 
 # coordinator files
 layer*.csv
 ./coordinator.state
-./coordinator.tree
+coordinator.state
+
 hive.go/

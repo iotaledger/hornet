@@ -74,17 +74,17 @@ func FetchConfig() error {
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
 
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName))
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName), true)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,9 @@ func FetchConfig() error {
 
 func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
-	parameter.PrintConfig(PeeringConfig)
+	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
+	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
+	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
 	parameter.PrintConfig(ProfilesConfig)
 }
 

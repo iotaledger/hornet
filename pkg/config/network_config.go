@@ -25,6 +25,8 @@ const (
 	CfgPeeringMaxPeers = "maxPeers"
 	// set the URLs and IP addresses of peers
 	CfgPeers = "peers"
+	// sets a list of static peers, this is only used for CLI flags
+	CfgPeersList = "peerslist"
 
 	// list of autopeering entry nodes to use
 	CfgNetAutopeeringEntryNodes = "network.autopeering.entryNodes"
@@ -54,6 +56,7 @@ func init() {
 	// peering
 	flag.Bool(CfgPeeringAcceptAnyConnection, false, "enable inbound connections from unknown peers")
 	flag.Int(CfgPeeringMaxPeers, 5, "set the maximum number of peers")
+	flag.StringSlice(CfgPeersList, []string{}, "a list of peers to connect to")
 	PeeringConfig.SetDefault(CfgPeers, []PeerConfig{})
 
 	// autopeering

@@ -70,18 +70,18 @@ func configure(plugin *node.Plugin) {
 	wsSendWorkerPool = workerpool.New(func(task workerpool.Task) {
 		switch x := task.Param(0).(type) {
 		case *metricsplugin.TPSMetrics:
-			hub.BroadcastMsg(&msg{MsgTypeTPSMetric, x})
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
-			hub.BroadcastMsg(&msg{MsgTypePeerMetric, peerMetrics()})
+			hub.BroadcastMsg(&Msg{MsgTypeTPSMetric, x})
+			hub.BroadcastMsg(&Msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&Msg{MsgTypePeerMetric, peerMetrics()})
 		case milestone.Index:
 			// Milestone
-			hub.BroadcastMsg(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			hub.BroadcastMsg(&Msg{MsgTypeNodeStatus, currentNodeStatus()})
 		case []*tangleplugin.ConfirmedMilestoneMetric:
-			hub.BroadcastMsg(&msg{MsgTypeConfirmedMsMetrics, x})
-		case []*dbSize:
-			hub.BroadcastMsg(&msg{MsgTypeDatabaseSizeMetric, x})
+			hub.BroadcastMsg(&Msg{MsgTypeConfirmedMsMetrics, x})
+		case []*DBSizeMetric:
+			hub.BroadcastMsg(&Msg{MsgTypeDatabaseSizeMetric, x})
 		case *databaseplugin.DatabaseCleanup:
-			hub.BroadcastMsg(&msg{MsgTypeDatabaseCleanupEvent, x})
+			hub.BroadcastMsg(&Msg{MsgTypeDatabaseCleanupEvent, x})
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(wsSendWorkerCount), workerpool.QueueSize(wsSendWorkerQueueSize))
@@ -223,7 +223,8 @@ const (
 	MsgTypeAvgSpamMetrics
 )
 
-type msg struct {
+// Msg represents a websocket message.
+type Msg struct {
 	Type byte        `json:"type"`
 	Data interface{} `json:"data"`
 }
@@ -238,7 +239,8 @@ type ms struct {
 	Index milestone.Index `json:"index"`
 }
 
-type nodestatus struct {
+// NodeStatus represents the node status.
+type NodeStatus struct {
 	LSMI                   milestone.Index `json:"lsmi"`
 	LMI                    milestone.Index `json:"lmi"`
 	SnapshotIndex          milestone.Index `json:"snapshot_index"`
@@ -255,12 +257,13 @@ type nodestatus struct {
 	RequestQueuePending    int             `json:"request_queue_pending"`
 	RequestQueueProcessing int             `json:"request_queue_processing"`
 	RequestQueueAvgLatency int64           `json:"request_queue_avg_latency"`
-	ServerMetrics          *servermetrics  `json:"server_metrics"`
-	Mem                    *memmetrics     `json:"mem"`
-	Caches                 *cachesmetric   `json:"caches"`
+	ServerMetrics          *ServerMetrics  `json:"server_metrics"`
+	Mem                    *MemMetrics     `json:"mem"`
+	Caches                 *CachesMetric   `json:"caches"`
 }
 
-type servermetrics struct {
+// ServerMetrics are global metrics of the server.
+type ServerMetrics struct {
 	NumberOfAllTransactions        uint32 `json:"all_txs"`
 	NumberOfNewTransactions        uint32 `json:"new_txs"`
 	NumberOfKnownTransactions      uint32 `json:"known_txs"`
@@ -280,7 +283,8 @@ type servermetrics struct {
 	NumberOfSeenSpentAddr          uint32 `json:"spent_addr"`
 }
 
-type memmetrics struct {
+// MemMetrics represents memory metrics.
+type MemMetrics struct {
 	Sys          uint64 `json:"sys"`
 	HeapSys      uint64 `json:"heap_sys"`
 	HeapInuse    uint64 `json:"heap_inuse"`
@@ -307,17 +311,19 @@ type peermetric struct {
 	Connected        bool                  `json:"connected"`
 }
 
-type cachesmetric struct {
-	RequestQueue                 cache `json:"request_queue"`
-	Approvers                    cache `json:"approvers"`
-	Bundles                      cache `json:"bundles"`
-	Milestones                   cache `json:"milestones"`
-	SpentAddresses               cache `json:"spent_addresses"`
-	Transactions                 cache `json:"transactions"`
-	IncomingTransactionWorkUnits cache `json:"incoming_transaction_work_units"`
+// CachesMetric represents cache metrics.
+type CachesMetric struct {
+	RequestQueue                 Cache `json:"request_queue"`
+	Approvers                    Cache `json:"approvers"`
+	Bundles                      Cache `json:"bundles"`
+	Milestones                   Cache `json:"milestones"`
+	SpentAddresses               Cache `json:"spent_addresses"`
+	Transactions                 Cache `json:"transactions"`
+	IncomingTransactionWorkUnits Cache `json:"incoming_transaction_work_units"`
 }
 
-type cache struct {
+// Cache represents metrics about a cache.
+type Cache struct {
 	Size int `json:"size"`
 }
 
@@ -346,10 +352,10 @@ func peerMetrics() []*peermetric {
 	return stats
 }
 
-func currentNodeStatus() *nodestatus {
+func currentNodeStatus() *NodeStatus {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	status := &nodestatus{}
+	status := &NodeStatus{}
 
 	// node status
 	var requestedMilestone milestone.Index
@@ -383,29 +389,29 @@ func currentNodeStatus() *nodestatus {
 	status.RequestQueueAvgLatency = gossip.RequestQueue().AvgLatency()
 
 	// cache metrics
-	status.Caches = &cachesmetric{
-		Approvers: cache{
+	status.Caches = &CachesMetric{
+		Approvers: Cache{
 			Size: tangle.GetApproversStorageSize(),
 		},
-		RequestQueue: cache{
+		RequestQueue: Cache{
 			Size: queued + pending,
 		},
-		Bundles: cache{
+		Bundles: Cache{
 			Size: tangle.GetBundleStorageSize(),
 		},
-		Milestones: cache{
+		Milestones: Cache{
 			Size: tangle.GetMilestoneStorageSize(),
 		},
-		Transactions: cache{
+		Transactions: Cache{
 			Size: tangle.GetTransactionStorageSize(),
 		},
-		IncomingTransactionWorkUnits: cache{
+		IncomingTransactionWorkUnits: Cache{
 			Size: gossip.Processor().WorkUnitsSize(),
 		},
 	}
 
 	// server metrics
-	status.ServerMetrics = &servermetrics{
+	status.ServerMetrics = &ServerMetrics{
 		NumberOfAllTransactions:        metrics.SharedServerMetrics.Transactions.Load(),
 		NumberOfNewTransactions:        metrics.SharedServerMetrics.NewTransactions.Load(),
 		NumberOfKnownTransactions:      metrics.SharedServerMetrics.KnownTransactions.Load(),
@@ -426,7 +432,7 @@ func currentNodeStatus() *nodestatus {
 	}
 
 	// memory metrics
-	status.Mem = &memmetrics{
+	status.Mem = &MemMetrics{
 		Sys:          m.Sys,
 		HeapSys:      m.HeapSys,
 		HeapInuse:    m.HeapInuse,

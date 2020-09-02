@@ -151,22 +151,22 @@ func websocketRoute(ctx echo.Context) error {
 
 		switch topic {
 		case MsgTypeNodeStatus:
-			client.Send(&msg{MsgTypeNodeStatus, currentNodeStatus()})
+			client.Send(&Msg{MsgTypeNodeStatus, currentNodeStatus()})
 
 		case MsgTypeConfirmedMsMetrics:
-			client.Send(&msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
+			client.Send(&Msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
 
 		case MsgTypeDatabaseSizeMetric:
-			client.Send(&msg{MsgTypeDatabaseSizeMetric, cachedDbSizeMetrics})
+			client.Send(&Msg{MsgTypeDatabaseSizeMetric, cachedDbSizeMetrics})
 
 		case MsgTypeDatabaseCleanupEvent:
-			client.Send(&msg{MsgTypeDatabaseCleanupEvent, lastDbCleanup})
+			client.Send(&Msg{MsgTypeDatabaseCleanupEvent, lastDbCleanup})
 
 		case MsgTypeMs:
 			start := tangle.GetLatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
 				if msTailTxHash := getMilestoneTailHash(i); msTailTxHash != nil {
-					client.Send(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), i}})
+					client.Send(&Msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), i}})
 				} else {
 					break
 				}
@@ -182,7 +182,7 @@ func websocketRoute(ctx echo.Context) error {
 		// onCreate gets called when the client is created
 		func(client *websockethub.Client) {
 			client.FilterCallback = func(c *websockethub.Client, data interface{}) bool {
-				msg, ok := data.(*msg)
+				msg, ok := data.(*Msg)
 				if !ok {
 					return false
 				}

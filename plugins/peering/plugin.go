@@ -59,6 +59,10 @@ func Manager() *peering.Manager {
 			}
 		}
 
+		for _, p := range config.NodeConfig.GetStringSlice(config.CfgPeersList) {
+			peers = append(peers, &config.PeerConfig{ID: p})
+		}
+
 		// init peer manager
 		manager = peering.NewManager(peering.Options{
 			BindAddress: config.NodeConfig.GetString(config.CfgNetGossipBindAddress),

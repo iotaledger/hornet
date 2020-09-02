@@ -43,7 +43,7 @@ func configure(p *node.Plugin) {
 		InboundNeighborSize:        config.NodeConfig.GetInt(config.CfgNetAutopeeringInboundPeers),
 		OutboundNeighborSize:       config.NodeConfig.GetInt(config.CfgNetAutopeeringOutboundPeers),
 		SaltLifetime:               time.Duration(config.NodeConfig.GetInt(config.CfgNetAutopeeringSaltLifetime)) * time.Minute,
-		OutboundUpdateInterval:     30 * time.Second,
+		OutboundUpdateInterval:     5 * time.Second,
 		FullOutboundUpdateInterval: 30 * time.Second,
 	})
 	services.GossipServiceKey()
