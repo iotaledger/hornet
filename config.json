@@ -97,9 +97,7 @@
     "alias": "",
     "showAliasInGetNodeInfo": false,
     "disablePlugins": [],
-    "enablePlugins": [
-      "Coordinator"
-    ]
+    "enablePlugins": []
   },
   "logger": {
     "level": "info",
