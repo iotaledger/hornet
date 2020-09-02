@@ -144,5 +144,6 @@ func (p *Node) Spam(dur time.Duration, depth int, parallelism int, batchSize ...
 			}
 		}()
 	}
+	wg.Wait()
 	return spammed, nil
 }

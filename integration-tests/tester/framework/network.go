@@ -256,5 +256,6 @@ func (n *Network) SpamZeroVal(dur time.Duration, parallelism int, batchSize ...i
 			}
 		}(n)
 	}
+	wg.Wait()
 	return spamErr
 }
