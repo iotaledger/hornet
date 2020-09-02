@@ -67,7 +67,7 @@
     },
     "pruning": {
       "enabled": true,
-      "delay": 15000
+      "delay": 60480
     }
   },
   "spentAddresses": {
@@ -116,7 +116,8 @@
     "tpsRateLimit": 0.0,
     "bundleSize": 1,
     "valueSpam": false,
-    "workers": 0
+    "workers": 0,
+    "autostart": false
   },
   "zmq": {
     "bindAddress": "localhost:5556"

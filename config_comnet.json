@@ -150,7 +150,8 @@
     "tpsRateLimit": 0.0,
     "bundleSize": 1,
     "valueSpam": false,
-    "workers": 0
+    "workers": 0,
+    "autostart": false
   },
   "mqtt": {
     "config": "mqtt_config.json"

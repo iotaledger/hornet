@@ -11,7 +11,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200506085104-5ee50844ed64
-	github.com/fhmq/hmq v0.0.0-20200624071425-481a61c520fe
+	github.com/fhmq/hmq v0.0.0-20200826092422-b8bacb4c3d2c
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-contrib/gzip v0.0.2
 	github.com/gin-gonic/gin v1.6.3
@@ -50,10 +50,10 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/sys v0.0.0-20200821140526-fda516888d29 // indirect
+	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/tools v0.0.0-20200330040139-fa3cc9eebcfe // indirect
-	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect
-	google.golang.org/grpc v1.31.0 // indirect
+	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
+	google.golang.org/grpc v1.31.1 // indirect
 	gopkg.in/ini.v1 v1.51.1 // indirect
 )
