@@ -16,7 +16,7 @@ func spammerRoute() {
 
 		if !networkWhitelisted(c) {
 			// network is not whitelisted, check if the route is permitted, otherwise deny it.
-			if _, permited := permitedRESTroutes["spammer"]; !permited {
+			if _, permitted := permittedRESTroutes["spammer"]; !permitted {
 				c.JSON(http.StatusForbidden, ErrorReturn{Error: "route [spammer] is protected"})
 				return
 			}

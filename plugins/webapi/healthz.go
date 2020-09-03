@@ -14,7 +14,7 @@ func healthzRoute() {
 
 		if !networkWhitelisted(c) {
 			// network is not whitelisted, check if the route is permitted, otherwise deny it.
-			if _, permited := permitedRESTroutes["healthz"]; !permited {
+			if _, permitted := permittedRESTroutes["healthz"]; !permitted {
 				c.JSON(http.StatusForbidden, ErrorReturn{Error: "route [healthz] is protected"})
 				return
 			}
