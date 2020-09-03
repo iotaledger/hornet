@@ -199,7 +199,6 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		cachedMs.Release(true) // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
-
 		if err != nil {
 			return nil, err
 		}
