@@ -149,7 +149,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 	bundleTxs := tangle.GetAllBundleTransactionHashes(100)
 	for _, hash := range bundleTxs {
 		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hash)
-		if _, visited := visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())]; visited == false {
+		if _, visited := visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())]; !visited {
 			bndls := tangle.GetBundlesOfTransactionOrNil(cachedTxMeta.GetMetadata().GetTxHash(), false)
 			visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())] = bndls
 		}
