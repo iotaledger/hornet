@@ -1,7 +1,7 @@
 /usr/bin/systemctl daemon-reload >/dev/null 2>&1 ||:
 if [ $1 -ge 1 ]; then
-    /sbin/service hornet status  >/dev/null 2>&1 || exit 0
-    /sbin/service hornet upgrade >/dev/null 2>&1 || echo \
+    /bin/systemctl status  hornet.service >/dev/null 2>&1 || exit 0
+    /bin/systemctl try-restart hornet.service >/dev/null 2>&1 || echo \
         "Binary upgrade failed, please check hornet's log"
 fi
 rm -rf /var/lib/hornet/snapshots/* \
