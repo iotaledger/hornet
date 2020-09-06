@@ -64,7 +64,7 @@ type StaticNetwork struct {
 // ConnectNodes peers the nodes of the network according to the given layout with each other.
 func (n *StaticNetwork) ConnectNodes() error {
 	// await for all nodes to become online
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := n.AwaitOnline(ctx); err != nil {
 		return err

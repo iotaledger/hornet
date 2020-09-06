@@ -20,7 +20,7 @@ const (
 )
 
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
-func pruneUnconfirmedTransactions(targetIndex milestone.Index) (int, int) {
+func pruneUnconfirmedTransactions(targetIndex milestone.Index) (txCountDeleted int, txCountChecked int) {
 
 	txsToCheckMap := make(map[string]struct{})
 
@@ -63,10 +63,10 @@ loopOverUnconfirmed:
 		txsToCheckMap[string(txHash)] = struct{}{}
 	}
 
-	txCount := pruneTransactions(txsToCheckMap)
+	txCountDeleted = pruneTransactions(txsToCheckMap)
 	tangle.DeleteUnconfirmedTxs(targetIndex)
 
-	return txCount, len(txsToCheckMap)
+	return txCountDeleted, len(txsToCheckMap)
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone

@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -56,7 +57,17 @@ func ShowDotFile(t *testing.T, dotCommand string, outFilePath string) {
 
 	cmd.Wait()
 
-	if err := exec.Command("xdg-open", outFilePath).Start(); err != nil {
-		t.Fatal(err)
+	switch os := runtime.GOOS; os {
+	case "darwin":
+		if err := exec.Command("open", outFilePath).Start(); err != nil {
+			t.Fatal(err)
+		}
+	case "linux":
+		if err := exec.Command("xdg-open", outFilePath).Start(); err != nil {
+			t.Fatal(err)
+		}
+	default:
+		// freebsd, openbsd, plan9, windows...
+		t.Fatalf("OS %s not supported", os)
 	}
 }

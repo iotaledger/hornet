@@ -61,6 +61,13 @@ func HideConfigFlags() {
 	})
 }
 
+// ParseFlags defines and parses the command-line flags from os.Args[1:].
+func ParseFlags() {
+	flag.CommandLine.AddFlagSet(configFlagSet)
+	flag.CommandLine.AddFlagSet(peeringFlagSet)
+	flag.Parse()
+}
+
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
 //
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
