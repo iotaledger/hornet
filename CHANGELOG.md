@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3-rc1] - 07.09.2020
+
+### Added
+
+    - testsuite for easier test case creation
+    - ported integration test framework from goshimmer
+
+### Changed
+
+    - livefeed transactions are now filtered before they are rate limited (dashboard)
+    - reduce websocket traffic by adding new message for sync status (dashboard)
+    - config files can now be passed with file extension
+    - autopeers are now ignored in "maxPeers" check
+
+### Fixed
+
+    - pruning did not collect all transactions that were referenced by a milestone
+    - pruning routine was exited if there was not enough history at the beginning
+    - deadlock if a peer connected during shutdown
+    - rpm package upgrade command
+    - panic in websocket during connection establishment
+    - connection to peers never closed on error ("waiting" state in dashboard)
+    - incorrect alias of peers for incoming connections
+
 ## [0.5.2] - 01.09.2020
 
 ### Fixed
