@@ -124,7 +124,7 @@ type reconnectinfo struct {
 // Options defines options for the Manager.
 type Options struct {
 	ValidHandshake handshake.Handshake
-	// The max amount of connected peers.
+	// The max amount of connected peers (non-autopeering).
 	MaxConnected int
 	// Whether to allow connections from any peer.
 	AcceptAnyPeer bool
@@ -411,9 +411,18 @@ func (m *Manager) ConnectedAndSyncedPeerCount() (uint8, uint8) {
 
 // SlotsFilled checks whether all available peer slots are filled.
 func (m *Manager) SlotsFilled() bool {
-	m.RLock()
-	defer m.RUnlock()
-	return len(m.connected) >= m.Opts.MaxConnected
+	staticCount := 0
+
+	m.ForAllConnected(func(p *peer.Peer) bool {
+		if p.Autopeering != nil {
+			return true
+		}
+
+		staticCount++
+		return true
+	})
+
+	return staticCount >= m.Opts.MaxConnected
 }
 
 // SetupEventHandlers inits the event handlers for handshaking, the underlying connection and errors.

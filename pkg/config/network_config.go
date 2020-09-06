@@ -17,7 +17,7 @@ const (
 
 	// enable inbound connections from unknown peers
 	CfgPeeringAcceptAnyConnection = "acceptAnyConnection"
-	// set the maximum number of peers
+	// set the maximum number of peers (non-autopeering)
 	CfgPeeringMaxPeers = "maxPeers"
 	// set the URLs and IP addresses of peers
 	CfgPeers = "peers"
@@ -51,7 +51,7 @@ func init() {
 
 	// peering
 	peeringFlagSet.Bool(CfgPeeringAcceptAnyConnection, false, "enable inbound connections from unknown peers")
-	peeringFlagSet.Int(CfgPeeringMaxPeers, 5, "set the maximum number of peers")
+	peeringFlagSet.Int(CfgPeeringMaxPeers, 5, "set the maximum number of peers (non-autopeering)")
 	PeeringConfig.SetDefault(CfgPeers, []PeerConfig{})
 
 	// this is added to the configFlagSet on purpose, because it should not be added to the peering.json after neighbors changed
