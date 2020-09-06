@@ -426,6 +426,9 @@ func (m *Manager) SetupEventHandlers(p *peer.Peer) {
 			return
 		}
 		m.Events.Error.Trigger(err)
+		if closeErr := p.Conn.Close(); closeErr != nil {
+			m.Events.Error.Trigger(closeErr)
+		}
 	})
 
 	onProtocolError := events.NewClosure(func(err error) {
