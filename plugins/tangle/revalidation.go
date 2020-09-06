@@ -571,12 +571,12 @@ func cleanupApprovers() error {
 
 		// delete approver if transaction doesn't exist
 		if !tangle.TransactionExistsInStore(txHash) {
-			approversToDelete[string(txHash)] = &approver{txHash: txHash, approverHash: approverHash}
+			approversToDelete[string(txHash)+string(approverHash)] = &approver{txHash: txHash, approverHash: approverHash}
 		}
 
 		// delete approver if approver transaction doesn't exist
 		if !tangle.TransactionExistsInStore(approverHash) {
-			approversToDelete[string(txHash)] = &approver{txHash: txHash, approverHash: approverHash}
+			approversToDelete[string(txHash)+string(approverHash)] = &approver{txHash: txHash, approverHash: approverHash}
 		}
 
 		return true
