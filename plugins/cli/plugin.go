@@ -81,7 +81,7 @@ func configure(plugin *node.Plugin) {
 
 	checkLatestVersion()
 
-	if config.NodeConfig.GetString(profile.CfgUseProfile) == profile.AutoProfileName {
+	if config.NodeConfig.GetString(config.CfgProfileUseProfile) == config.AutoProfileName {
 		log.Infof("Profile mode 'auto', Using profile '%s'", profile.LoadProfile().Name)
 	} else {
 		log.Infof("Using profile '%s'", profile.LoadProfile().Name)

@@ -1,9 +1,5 @@
 package config
 
-import (
-	flag "github.com/spf13/pflag"
-)
-
 const (
 	// CfgNodeAlias set an alias to identify a node
 	CfgNodeAlias = "node.alias"
@@ -12,6 +8,6 @@ const (
 )
 
 func init() {
-	flag.String(CfgNodeAlias, "", "set an alias to identify a node")
-	flag.Bool(CfgNodeShowAliasInGetNodeInfo, false, "defines whether to show the alias in getNodeInfo")
+	configFlagSet.String(CfgNodeAlias, "", "set an alias to identify a node")
+	configFlagSet.Bool(CfgNodeShowAliasInGetNodeInfo, false, "defines whether to show the alias in getNodeInfo")
 }

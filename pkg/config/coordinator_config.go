@@ -1,9 +1,5 @@
 package config
 
-import (
-	flag "github.com/spf13/pflag"
-)
-
 const (
 	// the address of the coordinator
 	CfgCoordinatorAddress = "coordinator.address"
@@ -39,18 +35,18 @@ const (
 )
 
 func init() {
-	flag.String(CfgCoordinatorAddress, "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ", "the address of the coordinator")
-	flag.Int(CfgCoordinatorSecurityLevel, 2, "the security level used in coordinator signatures")
-	flag.Int(CfgCoordinatorMerkleTreeDepth, 24, "the depth of the Merkle tree which in turn determines the number of leaves (private keys) that the coordinator can use to sign a message.")
-	flag.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash. "+
+	configFlagSet.String(CfgCoordinatorAddress, "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ", "the address of the coordinator")
+	configFlagSet.Int(CfgCoordinatorSecurityLevel, 2, "the security level used in coordinator signatures")
+	configFlagSet.Int(CfgCoordinatorMerkleTreeDepth, 24, "the depth of the Merkle tree which in turn determines the number of leaves (private keys) that the coordinator can use to sign a message.")
+	configFlagSet.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash. "+
 		"increasing this number by 1 will result in proof of work that is 3 times as hard.")
-	flag.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
-	flag.String(CfgCoordinatorMerkleTreeFilePath, "coordinator.tree", "the path to the Merkle tree of the coordinator")
-	flag.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
-	flag.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
-	flag.Int(CfgCoordinatorCheckpointsMaxTrackedTails, 10000, "maximum amount of known bundle tails for milestone tipselection")
-	flag.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 20, "minimum threshold of unconfirmed transactions in the heaviest branch")
-	flag.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips")
-	flag.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint transactions with random tips")
-	flag.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
+	configFlagSet.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
+	configFlagSet.String(CfgCoordinatorMerkleTreeFilePath, "coordinator.tree", "the path to the Merkle tree of the coordinator")
+	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
+	configFlagSet.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
+	configFlagSet.Int(CfgCoordinatorCheckpointsMaxTrackedTails, 10000, "maximum amount of known bundle tails for milestone tipselection")
+	configFlagSet.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedTransactionsThreshold, 20, "minimum threshold of unconfirmed transactions in the heaviest branch")
+	configFlagSet.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint transactions with heaviest branch tips")
+	configFlagSet.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint transactions with random tips")
+	configFlagSet.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
 }

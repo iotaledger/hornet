@@ -21,6 +21,10 @@ var (
 	defaultPeeringConfigName  = "peering"
 	defaultProfilesConfigName = "profiles"
 
+	// FlagSets
+	configFlagSet  = flag.NewFlagSet("", flag.ContinueOnError)
+	peeringFlagSet = flag.NewFlagSet("", flag.ContinueOnError)
+
 	// flags
 	configName         = flag.StringP("config", "c", defaultConfigName, "Filename of the config file without the file extension")
 	peeringConfigName  = flag.StringP("peeringConfig", "n", defaultPeeringConfigName, "Filename of the peering config file without the file extension")
@@ -74,17 +78,17 @@ func FetchConfig() error {
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
 
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName), true)
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, configFlagSet, !hasFlag(defaultConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName), true)
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, peeringFlagSet, !hasFlag(defaultPeeringConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName), true)
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, nil, !hasFlag(defaultProfilesConfigName), true)
 	if err != nil {
 		return err
 	}
