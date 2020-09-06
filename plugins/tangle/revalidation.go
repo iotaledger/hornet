@@ -74,7 +74,7 @@ func revalidateDatabase() error {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	log.Infof("reverting database state back to local snapshot %d (this might take a while)... ", snapshotInfo.SnapshotIndex)
+	log.Infof("reverting database state back from %d to local snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
 	if err := cleanupMilestones(snapshotInfo); err != nil {
@@ -199,6 +199,9 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 
 		tangle.DeleteMilestone(msIndex)
 	}
+
+	tangle.FlushUnconfirmedTxsStorage()
+	tangle.FlushMilestoneStorage()
 
 	log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -335,6 +338,8 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 		tangle.DeleteTransaction(hornet.Hash(txHash))
 	}
 
+	tangle.FlushTransactionStorage()
+
 	log.Infof("deleting transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
@@ -393,6 +398,8 @@ func cleanupTransactionMetadata() error {
 
 		tangle.DeleteTransactionMetadata(hornet.Hash(txHash))
 	}
+
+	tangle.FlushTransactionStorage()
 
 	log.Infof("deleting transaction metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -461,6 +468,8 @@ func cleanupBundles() error {
 		tangle.DeleteBundle(hornet.Hash(tailTxHash))
 	}
 
+	tangle.FlushBundleStorage()
+
 	log.Infof("deleting bundles...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
@@ -525,6 +534,8 @@ func cleanupBundleTransactions() error {
 
 		tangle.DeleteBundleTransaction(bundleTx.bundleHash, bundleTx.txHash, bundleTx.isTail)
 	}
+
+	tangle.FlushBundleTransactionsStorage()
 
 	log.Infof("deleting bundle transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -595,6 +606,8 @@ func cleanupApprovers() error {
 		tangle.DeleteApprover(approver.txHash, approver.approverHash)
 	}
 
+	tangle.FlushApproversStorage()
+
 	log.Infof("deleting approvers...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
@@ -658,6 +671,8 @@ func cleanupTags() error {
 
 		tangle.DeleteTag(tag.tag, tag.txHash)
 	}
+
+	tangle.FlushTagsStorage()
 
 	log.Infof("deleting tags...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -723,6 +738,8 @@ func cleanupAddresses() error {
 		tangle.DeleteAddress(addr.address, addr.txHash)
 	}
 
+	tangle.FlushAddressStorage()
+
 	log.Infof("deleting addresses...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
@@ -778,6 +795,8 @@ func cleanupUnconfirmedTxs() error {
 
 		tangle.DeleteUnconfirmedTxs(msIndex)
 	}
+
+	tangle.FlushUnconfirmedTxsStorage()
 
 	log.Infof("deleting unconfirmed txs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
