@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3-rc2] - 08.09.2020
+
+### Changed
+
+    - Add write timeout to managed connection
+
+### Fixed
+
+    - race condition in autopeering shutdown
+
 ## [0.5.3-rc1] - 07.09.2020
 
 ### Added
