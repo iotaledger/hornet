@@ -164,24 +164,23 @@ func isSnapshottingOrPruning() bool {
 
 func run(_ *node.Plugin) {
 
-	notifyNewSolidMilestone := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
+	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		select {
-		case newSolidMilestoneSignal <- cachedBndl.GetBundle().GetMilestoneIndex():
+		case newSolidMilestoneSignal <- msIndex:
 		default:
 		}
-		cachedBndl.Release(true) // bundle -1
 	})
 
 	daemon.BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting LocalSnapshots ... done")
 
-		tanglePlugin.Events.SolidMilestoneChanged.Attach(notifyNewSolidMilestone)
+		tanglePlugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		defer tanglePlugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 
 		for {
 			select {
 			case <-shutdownSignal:
 				log.Info("Stopping LocalSnapshots...")
-				tanglePlugin.Events.SolidMilestoneChanged.Detach(notifyNewSolidMilestone)
 				log.Info("Stopping LocalSnapshots... done")
 				return
 
@@ -202,10 +201,12 @@ func run(_ *node.Plugin) {
 					if solidMilestoneIndex <= pruningDelay {
 						// Not enough history
 						localSnapshotLock.Unlock()
-						return
+						continue
 					}
 
-					pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal)
+					if err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
+						log.Debugf("pruning aborted: %v", err.Error())
+					}
 				}
 
 				localSnapshotLock.Unlock()

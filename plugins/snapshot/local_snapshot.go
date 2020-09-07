@@ -199,7 +199,6 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		cachedMs.Release(true) // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
-
 		if err != nil {
 			return nil, err
 		}
@@ -453,6 +452,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	if writeToDatabase {
 		// This has to be done before acquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
 		// In "solidifyMilestone" the LedgerLock is acquired, but by traversing the tangle, the SolidEntryPoint Lock is also acquired.
+		// ToDo: we should flush the caches here, just to be sure that all information before this local snapshot we stored in the persistence layer.
 		err = tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
 		if err != nil {
 			return errors.Wrap(ErrCritical, err.Error())

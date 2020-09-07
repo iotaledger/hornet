@@ -28,8 +28,6 @@ type TipSelectionFunc = func() (hornet.Hashes, error)
 type TipSelStats struct {
 	// The duration of the tip-selection for a single tip.
 	Duration time.Duration `json:"duration"`
-	// The amount of lazy tips found and removed during the tip-selection.
-	LazyTips int `json:"lazy_tips"`
 }
 
 // TipCaller is used to signal tip events.

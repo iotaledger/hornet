@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -30,7 +30,7 @@ var (
 	log                   *logger.Logger
 	updateSyncedAtStartup bool
 
-	syncedAtStartup = pflag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
+	syncedAtStartup = flag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 
@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	pflag.CommandLine.MarkHidden("syncedAtStartup")
+	flag.CommandLine.MarkHidden("syncedAtStartup")
 }
 
 func configure(plugin *node.Plugin) {

@@ -20,7 +20,7 @@ const (
 )
 
 // pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
-func pruneUnconfirmedTransactions(targetIndex milestone.Index) int {
+func pruneUnconfirmedTransactions(targetIndex milestone.Index) (txCountDeleted int, txCountChecked int) {
 
 	txsToCheckMap := make(map[string]struct{})
 
@@ -63,10 +63,10 @@ loopOverUnconfirmed:
 		txsToCheckMap[string(txHash)] = struct{}{}
 	}
 
-	txCount := pruneTransactions(txsToCheckMap)
+	txCountDeleted = pruneTransactions(txsToCheckMap)
 	tangle.DeleteUnconfirmedTxs(targetIndex)
 
-	return txCount
+	return txCountDeleted, len(txsToCheckMap)
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
@@ -137,7 +137,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	if snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1 {
 		// Not enough history
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d", SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1)
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1, targetIndex)
 	}
 
 	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
@@ -147,12 +147,12 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	if snapshotInfo.PruningIndex >= targetIndex {
 		// no pruning needed
-		return ErrNoPruningNeeded
+		return errors.Wrapf(ErrNoPruningNeeded, "pruning index: %d, target index: %d", snapshotInfo.PruningIndex, targetIndex)
 	}
 
 	if snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1 > targetIndex {
 		// we prune in "AdditionalPruningThreshold" steps to recalculate the solidEntryPoints
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d", snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1)
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1, targetIndex)
 	}
 
 	setIsPruning(true)
@@ -192,7 +192,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
 		ts := time.Now()
-		txCount := pruneUnconfirmedTransactions(milestoneIndex)
+		txCountDeleted, txCountChecked := pruneUnconfirmedTransactions(milestoneIndex)
 
 		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
@@ -208,12 +208,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// Caution: condition func is not in DFS order
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
 				defer cachedTxMeta.Release(true) // tx -1
-				if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
-					if at < milestoneIndex {
-						// Ignore Tx that were confirmed by older milestones
-						return false, nil
-					}
-				}
+				// everything that was referenced by that milestone can be pruned (even transactions of older milestones)
 				return true, nil
 			},
 			// consumer
@@ -228,7 +223,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
-			milestoneIndex == targetIndex,
+			true,
 			false,
 			nil)
 
@@ -238,14 +233,15 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		txCount += pruneTransactions(txsToCheckMap)
+		txCountChecked += len(txsToCheckMap)
+		txCountDeleted += pruneTransactions(txsToCheckMap)
 
 		pruneMilestone(milestoneIndex)
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
 
-		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCount, len(txsToCheckMap))
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCountDeleted, txCountChecked)
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}

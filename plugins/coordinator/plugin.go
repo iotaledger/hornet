@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -32,16 +32,16 @@ import (
 )
 
 func init() {
-	pflag.CommandLine.MarkHidden("cooBootstrap")
-	pflag.CommandLine.MarkHidden("cooStartIndex")
+	flag.CommandLine.MarkHidden("cooBootstrap")
+	flag.CommandLine.MarkHidden("cooStartIndex")
 }
 
 var (
 	PLUGIN = node.NewPlugin("Coordinator", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	bootstrap  = pflag.Bool("cooBootstrap", false, "bootstrap the network")
-	startIndex = pflag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
+	bootstrap  = flag.Bool("cooBootstrap", false, "bootstrap the network")
+	startIndex = flag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
 	maxTrackedTails int
 	belowMaxDepth   milestone.Index

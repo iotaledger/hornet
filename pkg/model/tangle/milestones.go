@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"fmt"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
@@ -243,14 +244,14 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		cachedTx := GetCachedTransactionOrNil(cachedSignatureTxs[secLvl-1].GetTransaction().GetTrunkHash()) // tx +1
 		if cachedTx == nil {
 			cachedSignatureTxs.Release() // tx -1
-			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash)
+			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash.Trytes())
 		}
 
 		if !IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
 			cachedTx.Release() // tx -1
 			// transaction is not issued by compass => no milestone
 			cachedSignatureTxs.Release() // tx -1
-			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
+			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash.Trytes())
 		}
 
 		cachedSignatureTxs = append(cachedSignatureTxs, cachedTx)
@@ -261,19 +262,19 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 
 	cachedSiblingsTx := GetCachedTransactionOrNil(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().GetTrunkHash()) // tx +1
 	if cachedSiblingsTx == nil {
-		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash)
+		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash.Trytes())
 	}
 	defer cachedSiblingsTx.Release() // tx -1
 
 	if !IsMaybeMilestoneTx(cachedSiblingsTx.Retain()) {
 		// transaction is not issued by compass => no milestone
-		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
+		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash.Trytes())
 	}
 
 	var fragments []trinary.Trytes
 	for _, signatureTx := range cachedSignatureTxs {
 		if signatureTx.GetTransaction().Tx.BranchTransaction != cachedSiblingsTx.GetTransaction().Tx.TrunkTransaction {
-			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", tailTxHash)
+			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", tailTxHash.Trytes())
 		}
 		fragments = append(fragments, signatureTx.GetTransaction().Tx.SignatureMessageFragment)
 	}
@@ -288,7 +289,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		if err != nil {
 			return false, errors.Wrap(ErrInvalidMilestone, err.Error())
 		}
-		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash)
+		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash.Trytes())
 	}
 
 	bndl.setMilestone(true)

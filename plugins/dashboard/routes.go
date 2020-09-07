@@ -150,23 +150,26 @@ func websocketRoute(ctx echo.Context) error {
 		initValuesSent[topic] = struct{}{}
 
 		switch topic {
+		case MsgTypeSyncStatus:
+			client.Send(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
+
 		case MsgTypeNodeStatus:
-			client.Send(&Msg{MsgTypeNodeStatus, currentNodeStatus()})
+			client.Send(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 
 		case MsgTypeConfirmedMsMetrics:
-			client.Send(&Msg{MsgTypeConfirmedMsMetrics, cachedMilestoneMetrics})
+			client.Send(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: cachedMilestoneMetrics})
 
 		case MsgTypeDatabaseSizeMetric:
-			client.Send(&Msg{MsgTypeDatabaseSizeMetric, cachedDbSizeMetrics})
+			client.Send(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: cachedDbSizeMetrics})
 
 		case MsgTypeDatabaseCleanupEvent:
-			client.Send(&Msg{MsgTypeDatabaseCleanupEvent, lastDbCleanup})
+			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDbCleanup})
 
 		case MsgTypeMs:
 			start := tangle.GetLatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
 				if msTailTxHash := getMilestoneTailHash(i); msTailTxHash != nil {
-					client.Send(&Msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), i}})
+					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{msTailTxHash.Trytes(), i}})
 				} else {
 					break
 				}

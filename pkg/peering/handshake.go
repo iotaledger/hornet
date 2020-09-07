@@ -51,11 +51,6 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 		return ErrManagerIsShutdown
 	}
 
-	// drop the connection if in the meantime the available peering slots were filled
-	if m.Opts.AcceptAnyPeer && m.SlotsFilled() {
-		return ErrPeeringSlotsFilled
-	}
-
 	// check whether same MWM is used
 	if handshakeMsg.MWM != m.Opts.ValidHandshake.MWM {
 		return errors.Wrapf(ErrNonMatchingMWM, "(%d instead of %d)", handshakeMsg.MWM, m.Opts.ValidHandshake.MWM)
@@ -91,6 +86,12 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 		if handshakeMsg.ServerSocketPort != expectedPort {
 			return errors.Wrapf(ErrNonMatchingSrvSocketPort, "expected %d as the server socket port but got %d", expectedPort, handshakeMsg.ServerSocketPort)
 		}
+	}
+
+	// drop the connection if it's not an autopeer and in the meantime
+	// the available peering slots were filled
+	if p.Autopeering == nil && m.SlotsFilled() {
+		return ErrPeeringSlotsFilled
 	}
 
 	// check whether the peer is already connected by checking each peer's IP addresses

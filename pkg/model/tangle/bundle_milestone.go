@@ -13,8 +13,8 @@ func (bundle *Bundle) setMilestone(milestone bool) {
 	bundle.Lock()
 	defer bundle.Unlock()
 
-	if milestone != bundle.metadata.HasFlag(MetadataIsMilestone) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataIsMilestone, milestone)
+	if milestone != bundle.metadata.HasBit(MetadataIsMilestone) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataIsMilestone, milestone)
 		bundle.SetModified(true)
 	}
 }
@@ -23,7 +23,7 @@ func (bundle *Bundle) IsMilestone() bool {
 	bundle.RLock()
 	defer bundle.RUnlock()
 
-	return bundle.metadata.HasFlag(MetadataIsMilestone)
+	return bundle.metadata.HasBit(MetadataIsMilestone)
 }
 
 func (bundle *Bundle) GetMilestoneIndex() milestone.Index {
