@@ -28,6 +28,7 @@ import (
 const (
 	isNeighborSyncedThreshold        = 2
 	updateNeighborsCountCooldownTime = time.Duration(2 * time.Second)
+	connectionWriteTimeout           = 5 * time.Second
 )
 
 var (
@@ -648,6 +649,7 @@ func (m *Manager) Listen() error {
 		// init peer
 		p := peer.NewInboundPeer(conn.Conn.RemoteAddr())
 		p.Conn = conn
+		p.Conn.SetWriteTimeout(connectionWriteTimeout)
 		p.Protocol = protocol.New(conn)
 		m.SetupEventHandlers(p)
 

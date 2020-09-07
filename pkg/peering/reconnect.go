@@ -121,6 +121,7 @@ func (m *Manager) connect(p *peer.Peer) error {
 	}
 
 	p.Conn = network.NewManagedConnection(conn)
+	p.Conn.SetWriteTimeout(connectionWriteTimeout)
 	p.Protocol = protocol.New(p.Conn)
 	return nil
 }
