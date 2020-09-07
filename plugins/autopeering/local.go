@@ -24,7 +24,7 @@ type Local struct {
 	peerDb    *peer.DB
 }
 
-func NewLocal() *Local {
+func newLocal() *Local {
 	log := logger.NewLogger("Local")
 
 	var peeringIP net.IP
@@ -101,7 +101,7 @@ func NewLocal() *Local {
 	}
 }
 
-func (l *Local) Close() error {
+func (l *Local) close() error {
 	l.peerDb.Close()
 	return l.boltDb.Close()
 }
