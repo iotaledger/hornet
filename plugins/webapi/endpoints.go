@@ -8,7 +8,7 @@ import (
 
 type apiEndpoint func(i interface{}, c *gin.Context, abortSignal <-chan struct{})
 
-func addEndpoint(enpointName string, implementation apiEndpoint, avaiableImplementions map[string]apiEndpoint) {
-	ep := strings.ToLower(enpointName)
-	avaiableImplementions[ep] = implementation
+func addEndpoint(endpointName string, implementation apiEndpoint, availableImplementions map[string]apiEndpoint) {
+	ep := strings.ToLower(endpointName)
+	availableImplementions[ep] = implementation
 }
