@@ -2,8 +2,10 @@ package tangle
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -28,6 +30,9 @@ var (
 	latestMilestoneLock   syncutils.RWMutex
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
+
+	waitForNodeSyncedChannelsLock syncutils.Mutex
+	waitForNodeSyncedChannels     []chan struct{}
 
 	coordinatorAddress                 hornet.Hash
 	coordinatorSecurityLevel           int
@@ -83,6 +88,46 @@ func IsNodeSyncedWithThreshold() bool {
 	return isNodeSyncedThreshold
 }
 
+// WaitForNodeSynced waits at most "timeout" duration for the node to become fully sync.
+// if it is not at least synced within threshold, it will return false immediately.
+// this is used to avoid small glitches of IsNodeSynced when the sync state is important,
+// but a new milestone came in lately.
+func WaitForNodeSynced(timeout time.Duration) bool {
+
+	if !isNodeSyncedThreshold {
+		// node is not even synced within threshold, and therefore it is unsync
+		return false
+	}
+
+	if isNodeSynced {
+		// node is synced, no need to wait
+		return true
+	}
+
+	// create a channel that gets closed if the node got synced
+	waitForNodeSyncedChannelsLock.Lock()
+	waitForNodeSyncedChan := make(chan struct{})
+	waitForNodeSyncedChannels = append(waitForNodeSyncedChannels, waitForNodeSyncedChan)
+	waitForNodeSyncedChannelsLock.Unlock()
+
+	// check again after the channel was created
+	if isNodeSynced {
+		// node is synced, no need to wait
+		return true
+	}
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
+	defer cancel()
+
+	// we wait either until the node got synced or we reached the deadline
+	select {
+	case <-waitForNodeSyncedChan:
+	case <-ctx.Done():
+	}
+
+	return isNodeSynced
+}
+
 // The node is synced if LMI != 0, LMI >= "recentSeenMilestones" from snapshot and LSMI == LMI.
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
@@ -93,6 +138,21 @@ func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	}
 
 	isNodeSynced = latestSolidIndex == latestIndex
+	if isNodeSynced {
+		// if the node is sync, signal all waiting routines at the end
+		defer func() {
+			waitForNodeSyncedChannelsLock.Lock()
+			defer waitForNodeSyncedChannelsLock.Unlock()
+
+			// signal all routines that are waiting
+			for _, channel := range waitForNodeSyncedChannels {
+				close(channel)
+			}
+
+			// create an empty slice for new signals
+			waitForNodeSyncedChannels = make([]chan struct{}, 0)
+		}()
+	}
 
 	// catch overflow
 	if latestIndex < isNodeSyncedWithinThreshold {

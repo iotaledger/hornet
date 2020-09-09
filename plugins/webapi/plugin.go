@@ -23,6 +23,10 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+const (
+	waitForNodeSyncedTimeout = 2000 * time.Millisecond
+)
+
 // PLUGIN WebAPI
 var (
 	PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
