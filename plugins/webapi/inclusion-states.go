@@ -35,14 +35,14 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	tangle.ReadLockLedger()
-	defer tangle.ReadUnlockLedger()
-
-	if !tangle.IsNodeSynced() {
+	if !tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		e.Error = ErrNodeNotSync.Error()
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
+
+	tangle.ReadLockLedger()
+	defer tangle.ReadUnlockLedger()
 
 	inclusionStates := []bool{}
 

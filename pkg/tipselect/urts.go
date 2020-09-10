@@ -360,10 +360,15 @@ func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.Hashes,
 	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
 		// threshold was defined and reached, return semi-lazy tips for the spammer
 		tips, err = ts.SelectSemiLazyTips()
+		if err != nil {
+			return false, nil, err
+		}
+
 		if bytes.Equal(tips[0], tips[1]) {
 			// do not spam if the tip is equal since that would not reduce the semi lazy count
 			return false, nil, ErrNoTipsAvailable
 		}
+
 		return true, tips, err
 	}
 
