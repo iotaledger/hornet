@@ -86,6 +86,8 @@ type Protocol struct {
 	conn io.ReadWriteCloser
 	// the handshake state, 2 == completed
 	handshakeState int32
+	// handshaked is set after the handshake is completed
+	handshaked bool
 	// the current receiving message
 	receivingMessage *message.Definition
 	// the buffer holding the receiving message data
@@ -171,7 +173,14 @@ func (p *Protocol) Start() {
 func (p *Protocol) Handshaked() {
 	if atomic.AddInt32(&p.handshakeState, 1) == 2 {
 		p.Events.HandshakeCompleted.Trigger()
+		p.handshaked = true
 	}
+}
+
+// IsHandshaked tells if the peer is handshaked.
+// it is set after the HandshakeCompleted event has been fired.
+func (p *Protocol) IsHandshaked() bool {
+	return p.handshaked
 }
 
 // Receive acts as an event handler for received data.

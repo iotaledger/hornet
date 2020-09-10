@@ -9,31 +9,25 @@ import (
 )
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.
-func BroadcastHeartbeat() {
+func BroadcastHeartbeat(filter func(p *peer.Peer) bool) {
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return
 	}
 
 	connected, synced := manager.ConnectedAndSyncedPeerCount()
-
 	heartbeatMsg, _ := sting.NewHeartbeatMessage(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
-	manager.ForAllConnected(func(p *peer.Peer) bool {
-		if !p.Protocol.Supports(sting.FeatureSet) {
-			return true
-		}
-		p.EnqueueForSending(heartbeatMsg)
-		return true
-	})
-}
 
-// BroadcastLatestMilestoneRequest broadcasts a milestone request for the latest milestone every connected peer who supports STING.
-func BroadcastLatestMilestoneRequest() {
 	manager.ForAllConnected(func(p *peer.Peer) bool {
 		if !p.Protocol.Supports(sting.FeatureSet) {
 			return true
 		}
-		helpers.SendLatestMilestoneRequest(p)
+
+		if filter != nil && !filter(p) {
+			return true
+		}
+
+		p.EnqueueForSending(heartbeatMsg)
 		return true
 	})
 }

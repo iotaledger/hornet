@@ -20,9 +20,17 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/peering"
+)
+
+const (
+	HeartbeatSentInterval   = 30 * time.Second
+	HeartbeatReceiveTimeout = 100 * time.Second
 )
 
 var (
@@ -94,9 +102,53 @@ func run(plugin *node.Plugin) {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	daemon.BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
+	daemon.BackgroundWorker("Tangle[Heartbeats]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()
-		<-shutdownSignal
+
+		checkHeartbeats := func() {
+			// send a new heartbeat message to every neighbor at least every HeartbeatSentInterval
+			gossip.BroadcastHeartbeat(func(p *peer.Peer) bool {
+				return time.Since(p.HeartbeatSentTime) > HeartbeatSentInterval
+			})
+
+			peerIDsToRemove := make(map[string]struct{})
+			peersToReconnect := make(map[string]*peer.Peer)
+
+			// check if peers are alive by checking whether we received heartbeats lately
+			peering.Manager().ForAllConnected(func(p *peer.Peer) bool {
+				if !p.Protocol.Supports(sting.FeatureSet) {
+					return true
+				}
+
+				if time.Since(p.HeartbeatReceivedTime) < HeartbeatReceiveTimeout {
+					return true
+				}
+
+				// peer is connected but doesn't seem to be alive
+				if p.Autopeering != nil {
+					// it's better to drop the connection to autopeered peers and free the slots for other peers
+					peerIDsToRemove[p.ID] = struct{}{}
+					log.Infof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.Address(), p.Autopeering.ID())
+					return true
+				}
+
+				// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
+				log.Infof("closing connection to neighbor %s because we didn't receive heartbeats anymore", p.ID)
+				peersToReconnect[p.ID] = p
+				return true
+			})
+
+			for peerIDToRemove := range peerIDsToRemove {
+				peering.Manager().Remove(peerIDToRemove)
+			}
+
+			for _, p := range peersToReconnect {
+				p.Conn.Close()
+			}
+
+		}
+		timeutil.Ticker(checkHeartbeats, 5*time.Second, shutdownSignal)
+
 		detachHeartbeatEvents()
 	}, shutdown.PriorityHeartbeats)
 
@@ -134,17 +186,17 @@ func run(plugin *node.Plugin) {
 func configureEvents() {
 	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new solid milestone index
-		gossip.BroadcastHeartbeat()
+		gossip.BroadcastHeartbeat(nil)
 	})
 
 	onPruningMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new pruning milestone index
-		gossip.BroadcastHeartbeat()
+		gossip.BroadcastHeartbeat(nil)
 	})
 
 	onLatestMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new latest milestone index
-		gossip.BroadcastHeartbeat()
+		gossip.BroadcastHeartbeat(nil)
 	})
 
 	onReceivedNewTx = events.NewClosure(func(cachedTx *tangle.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {

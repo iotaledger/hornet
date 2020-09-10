@@ -2,6 +2,7 @@ package peering
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
@@ -38,6 +39,9 @@ func (m *Manager) setupHandshakeEventHandlers(p *peer.Peer) {
 		if m.shutdown.Load() {
 			return
 		}
+
+		// first receive timestamp has to be set here, otherwise we could falsely drop the peer if the heartbeat is checked
+		p.HeartbeatReceivedTime = time.Now()
 
 		m.Events.PeerConnected.Trigger(p)
 	}))
