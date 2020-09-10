@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3-rc3] - 11.09.2020
+
+### Changed
+
+    - "tag"-Trytes are now padded in "findTransactions" webapi call
+    - added environment variables to /etc/default/hornet for easier node configuration
+    - heartbeats are now used to detect dead peers
+
+### Fixed
+
+    - "node is not synced" glitches in some webapi calls
+    - error not handled in SelectSpammerTips
+
 ## [0.5.3-rc2] - 08.09.2020
 
 ### Changed
