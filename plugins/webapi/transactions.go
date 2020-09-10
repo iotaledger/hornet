@@ -127,10 +127,13 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		if len(tagTrytes) != 27 {
+		if len(tagTrytes) > 27 {
 			e.Error = fmt.Sprintf("tag invalid length: %s", tagTrytes)
 			c.JSON(http.StatusBadRequest, e)
 			return
+		}
+		if len(tagTrytes) < 27 {
+			tagTrytes = trinary.MustPad(tagTrytes, 27)
 		}
 		queryTagHashes[string(hornet.HashFromTagTrytes(tagTrytes))] = struct{}{}
 	}
