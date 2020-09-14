@@ -2,30 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.5.3-rc3] - 11.09.2020
-
-### Changed
-
-    - "tag"-Trytes are now padded in "findTransactions" webapi call
-    - added environment variables to /etc/default/hornet for easier node configuration
-    - heartbeats are now used to detect dead peers
-
-### Fixed
-
-    - "node is not synced" glitches in some webapi calls
-    - error not handled in SelectSpammerTips
-
-## [0.5.3-rc2] - 08.09.2020
-
-### Changed
-
-    - Add write timeout to managed connection
-
-### Fixed
-
-    - race condition in autopeering shutdown
-
-## [0.5.3-rc1] - 07.09.2020
+## [0.5.3] - 14.09.2020
 
 ### Added
 
@@ -34,20 +11,27 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+    - added environment variables to /etc/default/hornet for easier node configuration
     - livefeed transactions are now filtered before they are rate limited (dashboard)
     - reduce websocket traffic by adding new message for sync status (dashboard)
     - config files can now be passed with file extension
     - autopeers are now ignored in "maxPeers" check
+    - "tag"-Trytes are now padded in "findTransactions" webapi call
+    - heartbeats are now used to detect dead peers
+    - add write timeout to managed connection
 
 ### Fixed
 
-    - pruning did not collect all transactions that were referenced by a milestone
-    - pruning routine was exited if there was not enough history at the beginning
-    - deadlock if a peer connected during shutdown
-    - rpm package upgrade command
-    - panic in websocket during connection establishment
     - connection to peers never closed on error ("waiting" state in dashboard)
     - incorrect alias of peers for incoming connections
+    - pruning did not collect all transactions that were referenced by a milestone
+    - deadlock if a peer connected during shutdown
+    - "node is not synced" glitches in some webapi calls
+    - race condition in autopeering shutdown
+    - error not handled in SelectSpammerTips
+    - pruning routine was exited if there was not enough history at the beginning
+    - rpm package upgrade command
+    - panic in websocket during connection establishment
 
 ## [0.5.2] - 01.09.2020
 
