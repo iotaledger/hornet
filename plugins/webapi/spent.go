@@ -33,7 +33,7 @@ func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	if !tangle.IsNodeSynced() {
+	if !tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		e.Error = ErrNodeNotSync.Error()
 		c.JSON(http.StatusBadRequest, e)
 		return

@@ -4,7 +4,6 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -20,12 +19,6 @@ import (
 
 const (
 	VisualizerIdLength = 7
-)
-
-var (
-	visualizerWorkerCount     = 1
-	visualizerWorkerQueueSize = 500
-	visualizerWorkerPool      *workerpool.WorkerPool
 )
 
 // vertex defines a vertex in a DAG.
@@ -57,13 +50,6 @@ type tipinfo struct {
 	IsTip bool   `json:"is_tip"`
 }
 
-func configureVisualizer() {
-	visualizerWorkerPool = workerpool.New(func(task workerpool.Task) {
-		hub.BroadcastMsg(task.Param(0), task.Param(1).(bool))
-		task.Return(nil)
-	}, workerpool.WorkerCount(visualizerWorkerCount), workerpool.QueueSize(visualizerWorkerQueueSize))
-}
-
 func runVisualizer() {
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
@@ -72,8 +58,8 @@ func runVisualizer() {
 				return
 			}
 
-			visualizerWorkerPool.TrySubmit(
-				&msg{
+			hub.BroadcastMsg(
+				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
 						ID:          tx.Tx.Hash,
@@ -85,7 +71,8 @@ func runVisualizer() {
 						IsMilestone: false,
 						IsTip:       false,
 					},
-				}, false)
+				},
+			)
 		})
 	})
 
@@ -94,13 +81,14 @@ func runVisualizer() {
 			return
 		}
 
-		visualizerWorkerPool.TrySubmit(
-			&msg{
+		hub.BroadcastMsg(
+			&Msg{
 				Type: MsgTypeSolidInfo,
 				Data: &metainfo{
 					ID: txHash.Trytes()[:VisualizerIdLength],
 				},
-			}, false)
+			},
+		)
 	})
 
 	onReceivedNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
@@ -110,13 +98,14 @@ func runVisualizer() {
 			}
 
 			for _, txHash := range bndl.GetTxHashes() {
-				visualizerWorkerPool.TrySubmit(
-					&msg{
+				hub.BroadcastMsg(
+					&Msg{
 						Type: MsgTypeMilestoneInfo,
 						Data: &metainfo{
 							ID: txHash.Trytes()[:VisualizerIdLength],
 						},
-					}, false)
+					},
+				)
 			}
 		})
 	})
@@ -127,13 +116,14 @@ func runVisualizer() {
 			return
 		}
 
-		visualizerWorkerPool.TrySubmit(
-			&msg{
+		hub.BroadcastMsg(
+			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
 					ID: txHash.Trytes()[:VisualizerIdLength],
 				},
-			}, false)
+			},
+		)
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
@@ -146,14 +136,15 @@ func runVisualizer() {
 			excludedIDs = append(excludedIDs, txHash.Trytes()[:VisualizerIdLength])
 		}
 
-		visualizerWorkerPool.TrySubmit(
-			&msg{
+		hub.BroadcastMsg(
+			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
 					ID:          confirmation.MilestoneHash.Trytes()[:VisualizerIdLength],
 					ExcludedIDs: excludedIDs,
 				},
-			}, false)
+			},
+		)
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
@@ -161,14 +152,15 @@ func runVisualizer() {
 			return
 		}
 
-		visualizerWorkerPool.TrySubmit(
-			&msg{
+		hub.BroadcastMsg(
+			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
 					ID:    tip.Hash.Trytes()[:VisualizerIdLength],
 					IsTip: true,
 				},
-			}, true)
+			},
+		)
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
@@ -176,14 +168,15 @@ func runVisualizer() {
 			return
 		}
 
-		visualizerWorkerPool.TrySubmit(
-			&msg{
+		hub.BroadcastMsg(
+			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
 					ID:    tip.Hash.Trytes()[:VisualizerIdLength],
 					IsTip: false,
 				},
-			}, true)
+			},
+		)
 	})
 
 	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
@@ -208,11 +201,9 @@ func runVisualizer() {
 			defer urts.TipSelector.Events.TipRemoved.Detach(onTipRemoved)
 		}
 
-		visualizerWorkerPool.Start()
 		<-shutdownSignal
 
 		log.Info("Stopping Dashboard[Visualizer] ...")
-		visualizerWorkerPool.StopAndWait()
 		log.Info("Stopping Dashboard[Visualizer] ... done")
 	}, shutdown.PriorityDashboard)
 }

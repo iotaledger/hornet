@@ -1,9 +1,5 @@
 package config
 
-import (
-	flag "github.com/spf13/pflag"
-)
-
 const (
 	// CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
 	// value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
@@ -34,24 +30,24 @@ const (
 )
 
 func init() {
-	flag.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 8, "the maximum allowed delta "+
+	configFlagSet.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 8, "the maximum allowed delta "+
 		"value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy")
-	flag.Int(CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
+	configFlagSet.Int(CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
 		"value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy")
-	flag.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
+	configFlagSet.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
 		"value for the OTRSI of a given transaction in relation to the current LSMI before it gets lazy")
-	flag.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
-	flag.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
+	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first transaction (non-lazy)")
-	flag.Int(CfgTipSelNonLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
+	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
 		"before the tip is removed from the tip pool (non-lazy)")
-	flag.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
+	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
 		"the spammer tries to reduce these (0 = always)")
-	flag.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
-	flag.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
+	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first transaction (semi-lazy)")
-	flag.Int(CfgTipSelSemiLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
+	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelMaxApprovers, 2, "the maximum amount of references by other transactions "+
 		"before the tip is removed from the tip pool (semi-lazy)")
-	flag.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
+	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
 		"the spammer tries to reduce these (0 = disable)")
 }

@@ -55,7 +55,7 @@ func webAPIRoute() {
 
 		if !networkWhitelisted(c) {
 			// network is not whitelisted, check if the command is permitted, otherwise deny it.
-			if _, permited := permitedEndpoints[cmd]; !permited {
+			if _, permitted := permittedEndpoints[cmd]; !permitted {
 				c.JSON(http.StatusForbidden, ErrorReturn{Error: fmt.Sprintf("command [%v] is protected", originCmd)})
 				return
 			}

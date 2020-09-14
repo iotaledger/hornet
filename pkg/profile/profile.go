@@ -7,21 +7,9 @@ import (
 	"sync"
 
 	"github.com/shirou/gopsutil/mem"
-	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/config"
 )
-
-const (
-	// AutoProfileName is the name of the automatic profile.
-	AutoProfileName = "auto"
-	// CfgUseProfile is the key to set the profile to use.
-	CfgUseProfile = "useProfile"
-)
-
-func init() {
-	flag.StringP(CfgUseProfile, "p", AutoProfileName, "Sets the profile with which the node runs")
-}
 
 var (
 	once    = sync.Once{}
@@ -34,8 +22,8 @@ var (
 // is set to 'auto' or the one specified in the config.
 func LoadProfile() *Profile {
 	once.Do(func() {
-		profileName := strings.ToLower(config.NodeConfig.GetString(CfgUseProfile))
-		if profileName == "auto" {
+		profileName := strings.ToLower(config.NodeConfig.GetString(config.CfgProfileUseProfile))
+		if profileName == config.AutoProfileName {
 			v, err := mem.VirtualMemory()
 			if err != nil {
 				panic(err)

@@ -1,6 +1,8 @@
 package gossip
 
 import (
+	"time"
+
 	"github.com/iotaledger/hive.go/events"
 
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -54,6 +56,7 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 		metrics.SharedServerMetrics.ReceivedHeartbeats.Inc()
 
 		p.LatestHeartbeat = sting.ParseHeartbeat(data)
+		p.HeartbeatReceivedTime = time.Now()
 
 		if p.Autopeering != nil && p.LatestHeartbeat.SolidMilestoneIndex < tangle.GetSnapshotInfo().PruningIndex {
 			// peer is connected via autopeering and its latest solid milestone index is below our pruning index.
@@ -70,6 +73,8 @@ func addSTINGMessageEventHandlers(p *peer.Peer) {
 		p.Metrics.SentPackets.Inc()
 		p.Metrics.SentHeartbeats.Inc()
 		metrics.SharedServerMetrics.SentHeartbeats.Inc()
+
+		p.HeartbeatSentTime = time.Now()
 	}))
 }
 

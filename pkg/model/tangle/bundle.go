@@ -133,15 +133,15 @@ func (bundle *Bundle) GetTransactions() CachedTransactions {
 }
 
 func (bundle *Bundle) setSolid(solid bool) {
-	if solid != bundle.metadata.HasFlag(MetadataSolid) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataSolid, solid)
+	if solid != bundle.metadata.HasBit(MetadataSolid) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataSolid, solid)
 		bundle.SetModified(true)
 	}
 }
 
 func (bundle *Bundle) IsSolid() bool {
 
-	solid := bundle.metadata.HasFlag(MetadataSolid)
+	solid := bundle.metadata.HasBit(MetadataSolid)
 
 	if solid {
 		return true
@@ -160,35 +160,35 @@ func (bundle *Bundle) IsSolid() bool {
 }
 
 func (bundle *Bundle) setValid(valid bool) {
-	if valid != bundle.metadata.HasFlag(MetadataValid) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataValid, valid)
+	if valid != bundle.metadata.HasBit(MetadataValid) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataValid, valid)
 	}
 }
 
 func (bundle *Bundle) IsValid() bool {
-	return bundle.metadata.HasFlag(MetadataValid)
+	return bundle.metadata.HasBit(MetadataValid)
 }
 
 func (bundle *Bundle) setValidStrictSemantics(valid bool) {
-	if valid != bundle.metadata.HasFlag(MetadataValidStrictSemantics) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataValidStrictSemantics, valid)
+	if valid != bundle.metadata.HasBit(MetadataValidStrictSemantics) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataValidStrictSemantics, valid)
 	}
 }
 
 func (bundle *Bundle) ValidStrictSemantics() bool {
-	return bundle.metadata.HasFlag(MetadataValidStrictSemantics)
+	return bundle.metadata.HasBit(MetadataValidStrictSemantics)
 }
 
 func (bundle *Bundle) setConfirmed(confirmed bool) {
-	if confirmed != bundle.metadata.HasFlag(MetadataConfirmed) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataConfirmed, confirmed)
+	if confirmed != bundle.metadata.HasBit(MetadataConfirmed) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataConfirmed, confirmed)
 		bundle.SetModified(true)
 	}
 }
 
 func (bundle *Bundle) IsConfirmed() bool {
 
-	confirmed := bundle.metadata.HasFlag(MetadataConfirmed)
+	confirmed := bundle.metadata.HasBit(MetadataConfirmed)
 
 	if confirmed {
 		return true
@@ -207,24 +207,24 @@ func (bundle *Bundle) IsConfirmed() bool {
 }
 
 func (bundle *Bundle) setValueSpam(valueSpam bool) {
-	if valueSpam != bundle.metadata.HasFlag(MetadataIsValueSpam) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataIsValueSpam, valueSpam)
+	if valueSpam != bundle.metadata.HasBit(MetadataIsValueSpam) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataIsValueSpam, valueSpam)
 	}
 }
 
 func (bundle *Bundle) IsValueSpam() bool {
-	return bundle.metadata.HasFlag(MetadataIsValueSpam)
+	return bundle.metadata.HasBit(MetadataIsValueSpam)
 }
 
 func (bundle *Bundle) setConflicting(conflicting bool) {
-	if conflicting != bundle.metadata.HasFlag(MetadataConflicting) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataConflicting, conflicting)
+	if conflicting != bundle.metadata.HasBit(MetadataConflicting) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataConflicting, conflicting)
 	}
 }
 
 func (bundle *Bundle) IsConflicting() bool {
 
-	conflicting := bundle.metadata.HasFlag(MetadataConflicting)
+	conflicting := bundle.metadata.HasBit(MetadataConflicting)
 
 	if conflicting {
 		return true
@@ -243,13 +243,13 @@ func (bundle *Bundle) IsConflicting() bool {
 }
 
 func (bundle *Bundle) SetInvalidPastCone(invalidPastCone bool) {
-	if invalidPastCone != bundle.metadata.HasFlag(MetadataInvalidPastCone) {
-		bundle.metadata = bundle.metadata.ModifyFlag(MetadataInvalidPastCone, invalidPastCone)
+	if invalidPastCone != bundle.metadata.HasBit(MetadataInvalidPastCone) {
+		bundle.metadata = bundle.metadata.ModifyBit(MetadataInvalidPastCone, invalidPastCone)
 	}
 }
 
 func (bundle *Bundle) IsInvalidPastCone() bool {
-	return bundle.metadata.HasFlag(MetadataInvalidPastCone)
+	return bundle.metadata.HasBit(MetadataInvalidPastCone)
 }
 
 func (bundle *Bundle) GetMetadata() byte {

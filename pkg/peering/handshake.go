@@ -2,6 +2,7 @@ package peering
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/iputils"
@@ -39,6 +40,9 @@ func (m *Manager) setupHandshakeEventHandlers(p *peer.Peer) {
 			return
 		}
 
+		// first receive timestamp has to be set here, otherwise we could falsely drop the peer if the heartbeat is checked
+		p.HeartbeatReceivedTime = time.Now()
+
 		m.Events.PeerConnected.Trigger(p)
 	}))
 }
@@ -49,11 +53,6 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 
 	if m.shutdown.Load() {
 		return ErrManagerIsShutdown
-	}
-
-	// drop the connection if in the meantime the available peering slots were filled
-	if m.Opts.AcceptAnyPeer && m.SlotsFilled() {
-		return ErrPeeringSlotsFilled
 	}
 
 	// check whether same MWM is used
@@ -91,6 +90,12 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 		if handshakeMsg.ServerSocketPort != expectedPort {
 			return errors.Wrapf(ErrNonMatchingSrvSocketPort, "expected %d as the server socket port but got %d", expectedPort, handshakeMsg.ServerSocketPort)
 		}
+	}
+
+	// drop the connection if it's not an autopeer and in the meantime
+	// the available peering slots were filled
+	if p.Autopeering == nil && m.SlotsFilled() {
+		return ErrPeeringSlotsFilled
 	}
 
 	// check whether the peer is already connected by checking each peer's IP addresses

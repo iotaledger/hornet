@@ -14,37 +14,31 @@
 # Project files
 .idea
 
-# Database directory
-mainnetdb/
-comnetdb/
+# IDE related files
+.vscode/
+
+# dist packages
+dist/
 
 # OSX related files
 .DS_Store
 /hornet
 
+# Database directory
+mainnetdb/
+comnetdb/
+devnetdb/
+alphanetdb/
+
 # snapshot dir
 snapshots/
 
-# snapshot files
-*export.bin
-*export_comnet.bin
-
-# template files
-*node_modules
-*build
-plugins/monitor/tanglemonitor
-
-# dist packages
-dist/
-
-# Snapshot directory (for docker running in main path)
-snapshot/
-
 # log files
 hornet.log
+integration-tests/logs/*.log
+integration-tests/logs/*.html
+integration-tests/logs/*.profile
 
 # coordinator files
-layer*.csv
-./coordinator.state
-./coordinator.tree
-hive.go/
+coordinator.tree
+coordinator.state

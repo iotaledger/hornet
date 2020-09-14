@@ -114,6 +114,10 @@ type Peer struct {
 	Duplicate bool
 	// The peer's latest heartbeat message.
 	LatestHeartbeat *sting.Heartbeat
+	// Time the last heartbeat was received.
+	HeartbeatReceivedTime time.Time
+	// Time the last heartbeat was sent.
+	HeartbeatSentTime time.Time
 	// Holds the autopeering info if this peer was added via autopeering.
 	Autopeering *peer.Peer
 	// A channel which contains messages to be sent to the given peer.
@@ -236,7 +240,7 @@ func (p *Peer) CouldHaveDataFor(index milestone.Index) bool {
 
 // Handshaked tells whether the peer was handshaked.
 func (p *Peer) Handshaked() bool {
-	return p.Protocol != nil && p.Protocol.FeatureSet != 0
+	return p.Protocol != nil && p.Protocol.IsHandshaked()
 }
 
 // NewID returns a peer ID which consists of the given IP address and server socket port number.

@@ -1,9 +1,5 @@
 package config
 
-import (
-	flag "github.com/spf13/pflag"
-)
-
 const (
 	// the bind address on which the Prometheus exporter listens on
 	CfgPrometheusBindAddress = "prometheus.bindAddress"
@@ -22,11 +18,11 @@ const (
 )
 
 func init() {
-	flag.String(CfgPrometheusBindAddress, "localhost:9311", "the bind address on which the Prometheus exporter listens on")
-	flag.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
-	flag.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
-	flag.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
-	flag.Bool(CfgPrometheusFileServiceDiscoveryEnabled, false, "whether the plugin should write a Prometheus 'file SD' file")
-	flag.String(CfgPrometheusFileServiceDiscoveryPath, "target.json", "the path where to write the 'file SD' file to")
-	flag.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9311", "the target to write into the 'file SD' file")
+	configFlagSet.String(CfgPrometheusBindAddress, "localhost:9311", "the bind address on which the Prometheus exporter listens on")
+	configFlagSet.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
+	configFlagSet.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
+	configFlagSet.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
+	configFlagSet.Bool(CfgPrometheusFileServiceDiscoveryEnabled, false, "whether the plugin should write a Prometheus 'file SD' file")
+	configFlagSet.String(CfgPrometheusFileServiceDiscoveryPath, "target.json", "the path where to write the 'file SD' file to")
+	configFlagSet.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9311", "the target to write into the 'file SD' file")
 }

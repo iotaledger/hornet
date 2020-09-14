@@ -57,9 +57,13 @@ func HideConfigFlags() {
 	config.HideConfigFlags()
 }
 
+// ParseFlags defines and parses the command-line flags from os.Args[1:].
+func ParseFlags() {
+	config.ParseFlags()
+}
+
 // PrintVersion prints out the HORNET version
 func PrintVersion() {
-	flag.Parse()
 	if *version {
 		fmt.Println(AppName + " " + AppVersion)
 		os.Exit(0)

@@ -121,6 +121,7 @@ func (m *Manager) connect(p *peer.Peer) error {
 	}
 
 	p.Conn = network.NewManagedConnection(conn)
+	p.Conn.SetWriteTimeout(connectionWriteTimeout)
 	p.Protocol = protocol.New(p.Conn)
 	return nil
 }
@@ -142,9 +143,14 @@ func (m *Manager) removeFromReconnectPool(p *peer.Peer) {
 
 		for ip := range reconnectInfo.CachedIPs.IPs {
 			if p.ID == peer.NewID(ip.String(), reconnectInfo.OriginAddr.Port) {
-				// auto. set domain if it is empty by using the reconnect pool's entry
+				// if the reconnect pool's entry can't be parsed, it must be the original domain name
 				if net.ParseIP(reconnectInfo.OriginAddr.Addr) == nil {
 					p.InitAddress.Addr = reconnectInfo.OriginAddr.Addr
+				}
+
+				// if the reconnect pool's entry isn't empty, it must be the origial alias
+				if p.InitAddress.Alias == "" && reconnectInfo.OriginAddr.Alias != "" {
+					p.InitAddress.Alias = reconnectInfo.OriginAddr.Alias
 				}
 
 				// make an union of what the reconnect pool entry had

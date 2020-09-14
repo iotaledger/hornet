@@ -21,6 +21,10 @@ var (
 	defaultPeeringConfigName  = "peering"
 	defaultProfilesConfigName = "profiles"
 
+	// FlagSets
+	configFlagSet  = flag.NewFlagSet("", flag.ContinueOnError)
+	peeringFlagSet = flag.NewFlagSet("", flag.ContinueOnError)
+
 	// flags
 	configName         = flag.StringP("config", "c", defaultConfigName, "Filename of the config file without the file extension")
 	peeringConfigName  = flag.StringP("peeringConfig", "n", defaultPeeringConfigName, "Filename of the peering config file without the file extension")
@@ -57,6 +61,13 @@ func HideConfigFlags() {
 	})
 }
 
+// ParseFlags defines and parses the command-line flags from os.Args[1:].
+func ParseFlags() {
+	flag.CommandLine.AddFlagSet(configFlagSet)
+	flag.CommandLine.AddFlagSet(peeringFlagSet)
+	flag.Parse()
+}
+
 // FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
 //
 // It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
@@ -74,17 +85,17 @@ func FetchConfig() error {
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
 
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, true, !hasFlag(defaultConfigName))
+	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, configFlagSet, !hasFlag(defaultConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, true, !hasFlag(defaultPeeringConfigName))
+	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, peeringFlagSet, !hasFlag(defaultPeeringConfigName), true)
 	if err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, false, !hasFlag(defaultProfilesConfigName))
+	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, nil, !hasFlag(defaultProfilesConfigName), true)
 	if err != nil {
 		return err
 	}
@@ -94,7 +105,9 @@ func FetchConfig() error {
 
 func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
-	parameter.PrintConfig(PeeringConfig)
+	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
+	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
+	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
 	parameter.PrintConfig(ProfilesConfig)
 }
 

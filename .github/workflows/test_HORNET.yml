@@ -28,4 +28,4 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 3
-          command: go test ./...
+          command: go test `go list ./... | grep -v integration-tests`

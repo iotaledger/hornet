@@ -28,8 +28,6 @@ type TipSelectionFunc = func() (hornet.Hashes, error)
 type TipSelStats struct {
 	// The duration of the tip-selection for a single tip.
 	Duration time.Duration `json:"duration"`
-	// The amount of lazy tips found and removed during the tip-selection.
-	LazyTips int `json:"lazy_tips"`
 }
 
 // TipCaller is used to signal tip events.
@@ -362,10 +360,15 @@ func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.Hashes,
 	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
 		// threshold was defined and reached, return semi-lazy tips for the spammer
 		tips, err = ts.SelectSemiLazyTips()
+		if err != nil {
+			return false, nil, err
+		}
+
 		if bytes.Equal(tips[0], tips[1]) {
 			// do not spam if the tip is equal since that would not reduce the semi lazy count
 			return false, nil, ErrNoTipsAvailable
 		}
+
 		return true, tips, err
 	}
 

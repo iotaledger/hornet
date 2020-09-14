@@ -23,14 +23,18 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+const (
+	waitForNodeSyncedTimeout = 2000 * time.Millisecond
+)
+
 // PLUGIN WebAPI
 var (
 	PLUGIN = node.NewPlugin("WebAPI", node.Enabled, configure, run)
 	log    *logger.Logger
 
 	server               *http.Server
-	permitedEndpoints    = make(map[string]struct{})
-	permitedRESTroutes   = make(map[string]struct{})
+	permittedEndpoints   = make(map[string]struct{})
+	permittedRESTroutes  = make(map[string]struct{})
 	whitelistedNetworks  []net.IPNet
 	implementedAPIcalls  = make(map[string]apiEndpoint)
 	features             []string
@@ -72,7 +76,7 @@ func configure(plugin *node.Plugin) {
 	permittedAPIendpoints := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermitRemoteAccess)
 	if len(permittedAPIendpoints) > 0 {
 		for _, endpoint := range permittedAPIendpoints {
-			permitedEndpoints[strings.ToLower(endpoint)] = struct{}{}
+			permittedEndpoints[strings.ToLower(endpoint)] = struct{}{}
 		}
 	}
 
@@ -80,7 +84,7 @@ func configure(plugin *node.Plugin) {
 	permittedRoutes := config.NodeConfig.GetStringSlice(config.CfgWebAPIPermittedRoutes)
 	if len(permittedRoutes) > 0 {
 		for _, route := range permittedRoutes {
-			permitedRESTroutes[strings.ToLower(route)] = struct{}{}
+			permittedRESTroutes[strings.ToLower(route)] = struct{}{}
 		}
 	}
 
@@ -178,7 +182,7 @@ func run(_ *node.Plugin) {
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		// Check for features
-		if _, ok := permitedEndpoints["attachtotangle"]; ok {
+		if _, ok := permittedEndpoints["attachtotangle"]; ok {
 			features = append(features, "RemotePOW")
 		}
 

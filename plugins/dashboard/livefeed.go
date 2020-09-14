@@ -5,8 +5,6 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -15,49 +13,37 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-var (
-	liveFeedWorkerCount     = 1
-	liveFeedWorkerQueueSize = 50
-	liveFeedWorkerPool      *workerpool.WorkerPool
-)
-
-func configureLiveFeed() {
-	liveFeedWorkerPool = workerpool.New(func(task workerpool.Task) {
-		switch x := task.Param(0).(type) {
-		case *transaction.Transaction:
-			if x.Value == 0 {
-				hub.BroadcastMsg(&msg{MsgTypeTxZeroValue, &tx{x.Hash, x.Value}})
-			} else {
-				hub.BroadcastMsg(&msg{MsgTypeTxValue, &tx{x.Hash, x.Value}})
-			}
-		case milestone.Index:
-			if msTailTxHash := getMilestoneTailHash(x); msTailTxHash != nil {
-				hub.BroadcastMsg(&msg{MsgTypeMs, &ms{msTailTxHash.Trytes(), x}})
-			}
-		}
-		task.Return(nil)
-	}, workerpool.WorkerCount(liveFeedWorkerCount), workerpool.QueueSize(liveFeedWorkerQueueSize))
-}
-
 func runLiveFeed() {
 
-	newTxRateLimiter := time.NewTicker(time.Second / 10)
+	newTxZeroValueRateLimiter := time.NewTicker(time.Second / 10)
+	newTxValueRateLimiter := time.NewTicker(time.Second / 20)
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
-			select {
-			case <-newTxRateLimiter.C:
-				liveFeedWorkerPool.TrySubmit(tx.Tx)
-			default:
+
+			if tx.Tx.Value == 0 {
+				select {
+				case <-newTxZeroValueRateLimiter.C:
+					hub.BroadcastMsg(&Msg{Type: MsgTypeTxZeroValue, Data: &LivefeedTransaction{Hash: tx.Tx.Hash, Value: tx.Tx.Value}})
+				default:
+				}
+			} else {
+				select {
+				case <-newTxValueRateLimiter.C:
+					hub.BroadcastMsg(&Msg{Type: MsgTypeTxValue, Data: &LivefeedTransaction{Hash: tx.Tx.Hash, Value: tx.Tx.Value}})
+				default:
+				}
 			}
 		})
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
-		liveFeedWorkerPool.TrySubmit(msIndex)
+		if msTailTxHash := getMilestoneTailHash(msIndex); msTailTxHash != nil {
+			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{Hash: msTailTxHash.Trytes(), Index: msIndex}})
+		}
 	})
 
 	daemon.BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
@@ -66,12 +52,11 @@ func runLiveFeed() {
 		tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		defer tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
-		liveFeedWorkerPool.Start()
 		<-shutdownSignal
 
 		log.Info("Stopping Dashboard[TxUpdater] ...")
-		newTxRateLimiter.Stop()
-		liveFeedWorkerPool.StopAndWait()
+		newTxZeroValueRateLimiter.Stop()
+		newTxValueRateLimiter.Stop()
 		log.Info("Stopping Dashboard[TxUpdater] ... done")
 	}, shutdown.PriorityDashboard)
 }

@@ -15,17 +15,18 @@ import (
 
 var (
 	lastDbCleanup       = &database.DatabaseCleanup{}
-	cachedDbSizeMetrics []*dbSize
+	cachedDbSizeMetrics []*DBSizeMetric
 )
 
-type dbSize struct {
+// DBSizeMetric represents database size metrics.
+type DBSizeMetric struct {
 	Tangle   int64
 	Snapshot int64
 	Spent    int64
 	Time     time.Time
 }
 
-func (s *dbSize) MarshalJSON() ([]byte, error) {
+func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 	size := struct {
 		Tangle   int64 `json:"tangle"`
 		Snapshot int64 `json:"snapshot"`
@@ -41,9 +42,9 @@ func (s *dbSize) MarshalJSON() ([]byte, error) {
 	return json.Marshal(size)
 }
 
-func currentDatabaseSize() *dbSize {
+func currentDatabaseSize() *DBSizeMetric {
 	tangle, snapshot, spent := tangle.GetDatabaseSizes()
-	newValue := &dbSize{
+	newValue := &DBSizeMetric{
 		Tangle:   tangle,
 		Snapshot: snapshot,
 		Spent:    spent,
@@ -63,15 +64,16 @@ func runDatabaseSizeCollector() {
 
 	onDatabaseCleanup := events.NewClosure(func(cleanup *database.DatabaseCleanup) {
 		lastDbCleanup = cleanup
-		wsSendWorkerPool.TrySubmit(cleanup)
+		hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 
 	daemon.BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
 		database.Events.DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
+
 		timeutil.Ticker(func() {
 			dbSizeMetric := currentDatabaseSize()
-			wsSendWorkerPool.TrySubmit([]*dbSize{dbSizeMetric})
+			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
 		}, 1*time.Minute, shutdownSignal)
-		database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
 	}, shutdown.PriorityDashboard)
 }

@@ -2,8 +2,11 @@ package tangle
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/consts"
@@ -27,6 +30,9 @@ var (
 	latestMilestoneLock   syncutils.RWMutex
 	isNodeSynced          bool
 	isNodeSyncedThreshold bool
+
+	waitForNodeSyncedChannelsLock syncutils.Mutex
+	waitForNodeSyncedChannels     []chan struct{}
 
 	coordinatorAddress                 hornet.Hash
 	coordinatorSecurityLevel           int
@@ -82,6 +88,46 @@ func IsNodeSyncedWithThreshold() bool {
 	return isNodeSyncedThreshold
 }
 
+// WaitForNodeSynced waits at most "timeout" duration for the node to become fully sync.
+// if it is not at least synced within threshold, it will return false immediately.
+// this is used to avoid small glitches of IsNodeSynced when the sync state is important,
+// but a new milestone came in lately.
+func WaitForNodeSynced(timeout time.Duration) bool {
+
+	if !isNodeSyncedThreshold {
+		// node is not even synced within threshold, and therefore it is unsync
+		return false
+	}
+
+	if isNodeSynced {
+		// node is synced, no need to wait
+		return true
+	}
+
+	// create a channel that gets closed if the node got synced
+	waitForNodeSyncedChannelsLock.Lock()
+	waitForNodeSyncedChan := make(chan struct{})
+	waitForNodeSyncedChannels = append(waitForNodeSyncedChannels, waitForNodeSyncedChan)
+	waitForNodeSyncedChannelsLock.Unlock()
+
+	// check again after the channel was created
+	if isNodeSynced {
+		// node is synced, no need to wait
+		return true
+	}
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
+	defer cancel()
+
+	// we wait either until the node got synced or we reached the deadline
+	select {
+	case <-waitForNodeSyncedChan:
+	case <-ctx.Done():
+	}
+
+	return isNodeSynced
+}
+
 // The node is synced if LMI != 0, LMI >= "recentSeenMilestones" from snapshot and LSMI == LMI.
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
@@ -92,6 +138,21 @@ func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	}
 
 	isNodeSynced = latestSolidIndex == latestIndex
+	if isNodeSynced {
+		// if the node is sync, signal all waiting routines at the end
+		defer func() {
+			waitForNodeSyncedChannelsLock.Lock()
+			defer waitForNodeSyncedChannelsLock.Unlock()
+
+			// signal all routines that are waiting
+			for _, channel := range waitForNodeSyncedChannels {
+				close(channel)
+			}
+
+			// create an empty slice for new signals
+			waitForNodeSyncedChannels = make([]chan struct{}, 0)
+		}()
+	}
 
 	// catch overflow
 	if latestIndex < isNodeSyncedWithinThreshold {
@@ -243,14 +304,14 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		cachedTx := GetCachedTransactionOrNil(cachedSignatureTxs[secLvl-1].GetTransaction().GetTrunkHash()) // tx +1
 		if cachedTx == nil {
 			cachedSignatureTxs.Release() // tx -1
-			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash)
+			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash.Trytes())
 		}
 
 		if !IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
 			cachedTx.Release() // tx -1
 			// transaction is not issued by compass => no milestone
 			cachedSignatureTxs.Release() // tx -1
-			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
+			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash.Trytes())
 		}
 
 		cachedSignatureTxs = append(cachedSignatureTxs, cachedTx)
@@ -261,19 +322,19 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 
 	cachedSiblingsTx := GetCachedTransactionOrNil(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().GetTrunkHash()) // tx +1
 	if cachedSiblingsTx == nil {
-		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash)
+		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash.Trytes())
 	}
 	defer cachedSiblingsTx.Release() // tx -1
 
 	if !IsMaybeMilestoneTx(cachedSiblingsTx.Retain()) {
 		// transaction is not issued by compass => no milestone
-		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash)
+		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash.Trytes())
 	}
 
 	var fragments []trinary.Trytes
 	for _, signatureTx := range cachedSignatureTxs {
 		if signatureTx.GetTransaction().Tx.BranchTransaction != cachedSiblingsTx.GetTransaction().Tx.TrunkTransaction {
-			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", tailTxHash)
+			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", tailTxHash.Trytes())
 		}
 		fragments = append(fragments, signatureTx.GetTransaction().Tx.SignatureMessageFragment)
 	}
@@ -288,7 +349,7 @@ func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
 		if err != nil {
 			return false, errors.Wrap(ErrInvalidMilestone, err.Error())
 		}
-		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash)
+		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash.Trytes())
 	}
 
 	bndl.setMilestone(true)

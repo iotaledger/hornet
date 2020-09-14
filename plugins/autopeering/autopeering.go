@@ -18,9 +18,11 @@ import (
 	"github.com/iotaledger/hive.go/identity"
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/netutil"
+	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/autopeering/services"
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/plugins/peering"
 )
 
 const (
@@ -28,18 +30,19 @@ const (
 )
 
 var (
-	// Discovery is the peer discovery protocol.
-	Discovery *discover.Protocol
-	// Selection is the peer selection protocol.
-	Selection *selection.Protocol
+	// discoveryProtocol is the peer discovery protocol.
+	discoveryProtocol *discover.Protocol
+	// selectionProtocol is the peer selection protocol.
+	selectionProtocol *selection.Protocol
 
 	// ID is the node's autopeering ID
 	ID string
 
+	// ErrParsingEntryNode is returned when parsing the entry node config entry failed.
 	ErrParsingEntryNode = errors.New("can't parse entry node")
 )
 
-func configureAP(local *Local) {
+func configureAutopeering(local *Local) {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
 		log.Warn(err)
@@ -49,31 +52,30 @@ func configureAP(local *Local) {
 	gossipServiceKeyHash.Write([]byte(services.GossipServiceKey()))
 	networkID := gossipServiceKeyHash.Sum32()
 
-	Discovery = discover.New(local.PeerLocal, protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
+	discoveryProtocol = discover.New(local.PeerLocal, protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
 
-	// enable peer selection only when gossip is enabled
-	Selection = selection.New(local.PeerLocal, Discovery, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
-}
+	// only enable peer selection when the peering plugin is enabled
+	if !node.IsSkipped(peering.PLUGIN) {
 
-// isValidPeer checks whether a peer is a valid peer.
-func isValidPeer(p *peer.Peer) bool {
-	// gossip must be supported
-	gossipService := p.Services().Get(services.GossipServiceKey())
-	if gossipService == nil {
-		return false
+		isValidPeer := func(p *peer.Peer) bool {
+			// gossip must be supported
+			gossipService := p.Services().Get(services.GossipServiceKey())
+			if gossipService == nil {
+				return false
+			}
+
+			// gossip service must be valid
+			if gossipService.Network() != "tcp" || !netutil.IsValidPort(gossipService.Port()) {
+				return false
+			}
+			return true
+		}
+
+		selectionProtocol = selection.New(local.PeerLocal, discoveryProtocol, selection.Logger(log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
 	}
-
-	// gossip service must be valid
-
-	if gossipService.Network() != "tcp" || !netutil.IsValidPort(gossipService.Port()) {
-		return false
-	}
-	return true
 }
 
 func start(local *Local, shutdownSignal <-chan struct{}) {
-	defer log.Info("Stopping Autopeering ... done")
-
 	log.Info("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
 	lPeer := local.PeerLocal
@@ -89,36 +91,42 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	if err != nil {
 		log.Fatalf("Error listening: %v", err)
 	}
-	defer conn.Close()
 
-	handlers := []server.Handler{Discovery}
-	if Selection != nil {
-		handlers = append(handlers, Selection)
+	handlers := []server.Handler{discoveryProtocol}
+	if selectionProtocol != nil {
+		handlers = append(handlers, selectionProtocol)
 	}
 
 	// start a server doing discovery and peering
 	srv := server.Serve(lPeer, conn, log.Named("srv"), handlers...)
-	defer srv.Close()
 
 	// start the discovery on that connection
-	Discovery.Start(srv)
-	defer Discovery.Close()
+	discoveryProtocol.Start(srv)
 
-	if Selection != nil {
+	if selectionProtocol != nil {
 		// start the peering on that connection
-		Selection.Start(srv)
-		defer Selection.Close()
+		selectionProtocol.Start(srv)
 	}
 
 	ID = lPeer.ID().String()
 	log.Infof("started: ID=%s Address=%s/%s PublicKey=%s", lPeer.ID(), localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
 
 	<-shutdownSignal
-	err = local.Close()
-	if err != nil {
+	log.Info("Stopping Autopeering ...")
+
+	if selectionProtocol != nil {
+		selectionProtocol.Close()
+	}
+	discoveryProtocol.Close()
+
+	// underlying connection is closed by the server
+	srv.Close()
+
+	if err := local.close(); err != nil {
 		log.Errorf("Error closing peer database: %v", err.Error())
 	}
-	log.Info("Stopping Autopeering ...")
+
+	log.Info("Stopping Autopeering ... done")
 }
 
 func parseEntryNode(entryNodeDefinition string) (entryNode *peer.Peer, err error) {
