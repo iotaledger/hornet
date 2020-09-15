@@ -186,7 +186,6 @@ func DefaultWebAPIConfig() WebAPIConfig {
 			"pruneDatabase",
 			"createSnapshotFile",
 			"getNodeAPIConfiguration",
-			"wereAddressesSpentFrom",
 			"broadcastTransactions",
 			"findTransactions",
 			"storeTransactions",
@@ -231,8 +230,6 @@ type SnapshotConfig struct {
 	GlobalSnapshotIndex int
 	// The path to the local snapshot file.
 	LocalSnapshotFilePath string
-	// The file paths to the epoch spent address files.
-	EpochSpentAddressesFilePath []string
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -240,7 +237,6 @@ func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", config.CfgSnapshotLoadType, snapshotConfig.LoadType),
 		fmt.Sprintf("--%s=%s", config.CfgGlobalSnapshotPath, snapshotConfig.GlobalSnapshotFilePath),
-		fmt.Sprintf("--%s=%s", config.CfgGlobalSnapshotSpentAddressesPaths, strings.Join(snapshotConfig.EpochSpentAddressesFilePath, ",")),
 		fmt.Sprintf("--%s=%d", config.CfgGlobalSnapshotIndex, snapshotConfig.GlobalSnapshotIndex),
 		fmt.Sprintf("--%s=%s", config.CfgLocalSnapshotsPath, snapshotConfig.LocalSnapshotFilePath),
 	}
@@ -253,9 +249,6 @@ func DefaultSnapshotConfig() SnapshotConfig {
 		GlobalSnapshotFilePath: "/assets/snapshot.csv",
 		GlobalSnapshotIndex:    0,
 		LocalSnapshotFilePath:  "",
-		EpochSpentAddressesFilePath: []string{
-			"/assets/previousEpochsSpentAddresses.txt",
-		},
 	}
 }
 

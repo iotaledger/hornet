@@ -16,7 +16,6 @@
       "getTransactionsToApprove",
       "getInclusionStates",
       "getNodeAPIConfiguration",
-      "wereAddressesSpentFrom",
       "broadcastTransactions",
       "findTransactions",
       "storeTransactions",
@@ -63,9 +62,6 @@
       "enabled": true,
       "delay": 60480
     }
-  },
-  "spentAddresses": {
-    "enabled": true
   },
   "coordinator": {
     "address": "GYISMBVRKSCEXXTUPBWTIHRCZIKIRPDYAHAYKMNTPZSCSDNADDWAEUNHKUERZCTVAYJCNFXGTNUH9OGTW",

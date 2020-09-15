@@ -261,20 +261,6 @@ type StoreTransactions struct {
 	Trytes  []trinary.Trytes `mapstructure:"trytes"`
 }
 
-/////////////////// wereAddressesSpentFrom ////////////////////////
-
-// WereAddressesSpentFrom struct
-type WereAddressesSpentFrom struct {
-	Command   string         `mapstructure:"wereAddressesSpentFrom"`
-	Addresses []trinary.Hash `mapstructure:"addresses"`
-}
-
-// WereAddressesSpentFromReturn struct
-type WereAddressesSpentFromReturn struct {
-	States   []bool `json:"states"`
-	Duration int    `json:"duration"`
-}
-
 /////////////////// getLedgerDiff ////////////////////////
 
 // GetLedgerDiff struct
@@ -447,17 +433,4 @@ type SearchEntryPointReturn struct {
 // SearchConfirmedApprover struct
 type TriggerSolidifier struct {
 	Command string `mapstructure:"command"`
-}
-
-/////////////////// getFundsOnSpentAddresses //////////////////////////////
-
-// GetFundsOnSpentAddressesReturn struct
-type GetFundsOnSpentAddressesReturn struct {
-	Command   string                `mapstructure:"command"`
-	Addresses []*AddressWithBalance `mapstructure:"addresses"`
-}
-
-type AddressWithBalance struct {
-	Address trinary.Hash `mapstructure:"address"`
-	Balance uint64       `mapstructure:"balance"`
 }

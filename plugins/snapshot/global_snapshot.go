@@ -18,39 +18,7 @@ import (
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
-func loadSpentAddresses(filePathSpent string) (int, error) {
-	log.Infof("Importing initial spent addresses from %v", filePathSpent)
-
-	spentAddressesCount := 0
-
-	spentFile, err := os.OpenFile(filePathSpent, os.O_RDONLY, 0666)
-	if err != nil {
-		return 0, err
-	}
-	defer spentFile.Close()
-
-	scanner := bufio.NewScanner(spentFile)
-	for scanner.Scan() {
-		addr := scanner.Text()
-
-		if err := address.ValidAddress(addr); err != nil {
-			return 0, err
-		}
-
-		if tangle.MarkAddressAsSpent(hornet.HashFromAddressTrytes(addr)) {
-			spentAddressesCount++
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return 0, err
-	}
-
-	log.Infof("Finished loading spent addresses from %v", filePathSpent)
-
-	return spentAddressesCount, nil
-}
-
-func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, snapshotIndex milestone.Index) error {
+func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone.Index) error {
 
 	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
 	if latestMilestoneFromDatabase > snapshotIndex {
@@ -119,20 +87,8 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %s", err)
 	}
 
-	spentAddressesSum := 0
-	if config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
-		for _, spent := range filePathsSpent {
-			spentAddressesCount, err := loadSpentAddresses(spent)
-			if err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "loadSpentAddresses: %v", err)
-			}
-			spentAddressesSum += spentAddressesCount
-		}
-	}
-
-	spentAddrEnabled := (spentAddressesSum != 0) || ((snapshotIndex == 0) && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled))
 	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
-	tangle.SetSnapshotMilestone(coordinatorAddress, hornet.NullHashBytes, snapshotIndex, snapshotIndex, snapshotIndex, 0, spentAddrEnabled)
+	tangle.SetSnapshotMilestone(coordinatorAddress, hornet.NullHashBytes, snapshotIndex, snapshotIndex, snapshotIndex, 0)
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(snapshotIndex)
 
 	// set the solid milestone index based on the snapshot milestone
@@ -145,8 +101,8 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 	return nil
 }
 
-func LoadGlobalSnapshot(filePathLedger string, filePathsSpent []string, snapshotIndex milestone.Index) error {
+func LoadGlobalSnapshot(filePathLedger string, snapshotIndex milestone.Index) error {
 
 	log.Infof("Loading global snapshot with index %v...", snapshotIndex)
-	return loadSnapshotFromTextfiles(filePathLedger, filePathsSpent, snapshotIndex)
+	return loadSnapshotFromTextfiles(filePathLedger, snapshotIndex)
 }

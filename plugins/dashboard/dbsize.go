@@ -22,7 +22,6 @@ var (
 type DBSizeMetric struct {
 	Tangle   int64
 	Snapshot int64
-	Spent    int64
 	Time     time.Time
 }
 
@@ -30,12 +29,10 @@ func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 	size := struct {
 		Tangle   int64 `json:"tangle"`
 		Snapshot int64 `json:"snapshot"`
-		Spent    int64 `json:"spent"`
 		Time     int64 `json:"ts"`
 	}{
 		Tangle:   s.Tangle,
 		Snapshot: s.Snapshot,
-		Spent:    s.Spent,
 		Time:     s.Time.Unix(),
 	}
 
@@ -43,11 +40,10 @@ func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 }
 
 func currentDatabaseSize() *DBSizeMetric {
-	tangle, snapshot, spent := tangle.GetDatabaseSizes()
+	tangle, snapshot := tangle.GetDatabaseSizes()
 	newValue := &DBSizeMetric{
 		Tangle:   tangle,
 		Snapshot: snapshot,
-		Spent:    spent,
 		Time:     time.Now(),
 	}
 	cachedDbSizeMetrics = append(cachedDbSizeMetrics, newValue)

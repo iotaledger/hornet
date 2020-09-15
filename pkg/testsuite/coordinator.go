@@ -58,7 +58,7 @@ func (te *TestEnvironment) configureCoordinator() {
 	te.coo.InitState(true, 0)
 
 	// save snapshot info
-	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.NullHashBytes, 0, 0, 0, time.Now().Unix(), false)
+	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.NullHashBytes, 0, 0, 0, time.Now().Unix())
 
 	// configure Milestones
 	tangle.ConfigureMilestones(hornet.HashFromAddressTrytes(cooAddress), int(cooSecLevel), merkleTreeDepth, merkleHashFunc)

@@ -23,7 +23,6 @@ var (
 	serverDroppedSentPackets          prometheus.Gauge
 	serverSentSpamTransactions        prometheus.Gauge
 	serverValidatedBundles            prometheus.Gauge
-	serverSeenSpentAddresses          prometheus.Gauge
 )
 
 func init() {
@@ -95,10 +94,6 @@ func init() {
 		Name: "iota_server_validated_bundles",
 		Help: "Number of validated bundles.",
 	})
-	serverSeenSpentAddresses = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_seen_spent_addresses",
-		Help: "Number of seen spent addresses.",
-	})
 
 	registry.MustRegister(serverAllTransactions)
 	registry.MustRegister(serverNewTransactions)
@@ -117,7 +112,6 @@ func init() {
 	registry.MustRegister(serverDroppedSentPackets)
 	registry.MustRegister(serverSentSpamTransactions)
 	registry.MustRegister(serverValidatedBundles)
-	registry.MustRegister(serverSeenSpentAddresses)
 
 	addCollect(collectServer)
 }
@@ -140,5 +134,4 @@ func collectServer() {
 	serverDroppedSentPackets.Set(float64(metrics.SharedServerMetrics.DroppedMessages.Load()))
 	serverSentSpamTransactions.Set(float64(metrics.SharedServerMetrics.SentSpamTransactions.Load()))
 	serverValidatedBundles.Set(float64(metrics.SharedServerMetrics.ValidatedBundles.Load()))
-	serverSeenSpentAddresses.Set(float64(metrics.SharedServerMetrics.SeenSpentAddresses.Load()))
 }
