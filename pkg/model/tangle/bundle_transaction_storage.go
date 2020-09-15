@@ -105,10 +105,6 @@ func (bt *BundleTransaction) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func (bt *BundleTransaction) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
-}
-
 // Cached Object
 type CachedBundleTransaction struct {
 	objectstorage.CachedObject

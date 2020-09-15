@@ -35,7 +35,3 @@ func (sa *SpentAddress) ObjectStorageKey() []byte {
 func (sa *SpentAddress) ObjectStorageValue() (_ []byte) {
 	return nil
 }
-
-func (sa *SpentAddress) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
-}

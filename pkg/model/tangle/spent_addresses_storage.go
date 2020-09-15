@@ -84,7 +84,7 @@ func MarkAddressAsSpent(address hornet.Hash) bool {
 // spentAddress +-0
 func MarkAddressAsSpentWithoutLocking(address hornet.Hash) bool {
 
-	spentAddress, _ := spentAddressFactory(address, nil)
+	spentAddress := hornet.NewSpentAddress(address[:49])
 
 	cachedSpentAddress, newlyAdded := spentAddressesStorage.StoreIfAbsent(spentAddress)
 	if cachedSpentAddress != nil {

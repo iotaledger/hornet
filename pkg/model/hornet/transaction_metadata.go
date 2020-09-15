@@ -248,7 +248,7 @@ func (m *TransactionMetadata) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
+func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (err error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -282,5 +282,5 @@ func (m *TransactionMetadata) UnmarshalObjectStorageValue(data []byte) (consumed
 		}
 	}
 
-	return len(data), nil
+	return nil
 }
