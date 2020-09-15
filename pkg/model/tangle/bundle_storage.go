@@ -418,7 +418,6 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 
 		cachedBndl := &CachedBundle{CachedObject: cachedObj}
 		bndl := cachedBndl.GetBundle()
-		bndl.ApplySpentAddresses()
 
 		if bndl.IsValid() && bndl.ValidStrictSemantics() && bndl.IsMilestone() {
 			// Force release to store milestones without caching

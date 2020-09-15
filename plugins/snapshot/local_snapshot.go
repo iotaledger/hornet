@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -26,7 +25,6 @@ import (
 )
 
 const (
-	SpentAddressesImportBatchSize       = 100000
 	SolidEntryPointCheckThresholdPast   = 50
 	SolidEntryPointCheckThresholdFuture = 50
 )
@@ -313,42 +311,13 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 	fileBufWriter := bufio.NewWriterSize(exportFile, 4096*2)
 
 	// write header, SEPs, seen milestones and ledger
-	// with a WRONG spent addresses count
 	if err := lsh.WriteToBuffer(fileBufWriter, abortSignal); err != nil {
 		return nil, err
 	}
 
-	// flush remains of header and content without spent addresses to file
+	// flush remains of header and content to file
 	if err := fileBufWriter.Flush(); err != nil {
 		return nil, err
-	}
-
-	if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() &&
-		config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
-
-		// stream spent addresses into the file
-		spentAddressesCount, err := tangle.StreamSpentAddressesToWriter(fileBufWriter, abortSignal)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := fileBufWriter.Flush(); err != nil {
-			return nil, err
-		}
-
-		if spentAddressesCount > 0 {
-			// seek to spent addresses count in the header:
-			// 1 (version) + 49 (ms hash) + 4 (ms index) + 8 (ms timestamp) +
-			// 4 (SEPs count) + 4 (seen ms count) + 4 (ledger entries) = 74
-			if _, err := exportFile.Seek(74, 0); err != nil {
-				return nil, err
-			}
-
-			// override 0 spent addresses count with actual count
-			if err := binary.Write(exportFile, binary.LittleEndian, spentAddressesCount); err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	// seek back to the beginning of the file
@@ -478,13 +447,12 @@ func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDa
 }
 
 type localSnapshotHeader struct {
-	msHash              hornet.Hash
-	msIndex             milestone.Index
-	msTimestamp         int64
-	solidEntryPoints    map[string]milestone.Index
-	seenMilestones      map[string]milestone.Index
-	balances            map[string]uint64
-	spentAddressesCount int32
+	msHash           hornet.Hash
+	msIndex          milestone.Index
+	msTimestamp      int64
+	solidEntryPoints map[string]milestone.Index
+	seenMilestones   map[string]milestone.Index
+	balances         map[string]uint64
 }
 
 func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan struct{}) error {
@@ -515,10 +483,6 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.balances))); err != nil {
-		return err
-	}
-
-	if err = binary.Write(buf, binary.LittleEndian, ls.spentAddressesCount); err != nil {
 		return err
 	}
 
@@ -609,7 +573,7 @@ func LoadSnapshotFromFile(filePath string) error {
 
 	var msIndex int32
 	var msTimestamp int64
-	var solidEntryPointsCount, seenMilestonesCount, ledgerEntriesCount, spentAddrsCount int32
+	var solidEntryPointsCount, seenMilestonesCount, ledgerEntriesCount int32
 
 	if err := binary.Read(file, binary.LittleEndian, &msIndex); err != nil {
 		return err
@@ -631,12 +595,8 @@ func LoadSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	if err := binary.Read(file, binary.LittleEndian, &spentAddrsCount); err != nil {
-		return err
-	}
-
 	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
-	tangle.SetSnapshotMilestone(coordinatorAddress, msHash, milestone.Index(msIndex), milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp, spentAddrsCount != 0 && config.NodeConfig.GetBool("spentAddresses.enabled"))
+	tangle.SetSnapshotMilestone(coordinatorAddress, msHash, milestone.Index(msIndex), milestone.Index(msIndex), milestone.Index(msIndex), msTimestamp)
 	tangle.SolidEntryPointsAdd(msHash, milestone.Index(msIndex))
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(milestone.Index(msIndex))
 
@@ -726,37 +686,6 @@ func LoadSnapshotFromFile(filePath string) error {
 	err = tangle.StoreLedgerBalancesInDatabase(ledgerState, milestone.Index(msIndex))
 	if err != nil {
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
-	}
-
-	if config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
-		log.Infof("importing %d spent addresses. this can take a while...", spentAddrsCount)
-
-		batchAmount := int(math.Ceil(float64(spentAddrsCount) / float64(SpentAddressesImportBatchSize)))
-		for i := 0; i < batchAmount; i++ {
-			if daemon.IsStopped() {
-				return ErrSnapshotImportWasAborted
-			}
-
-			batchStart := int32(i * SpentAddressesImportBatchSize)
-			batchEnd := batchStart + SpentAddressesImportBatchSize
-
-			if batchEnd > spentAddrsCount {
-				batchEnd = spentAddrsCount
-			}
-
-			for j := batchStart; j < batchEnd; j++ {
-
-				spentAddrBuf := make(hornet.Hash, 49)
-				err = binary.Read(file, binary.BigEndian, spentAddrBuf)
-				if err != nil {
-					return errors.Wrapf(ErrSnapshotImportFailed, "spentAddrs: %v", err)
-				}
-
-				tangle.MarkAddressAsSpentWithoutLocking(spentAddrBuf)
-			}
-
-			log.Infof("processed %d/%d spent addresses", batchEnd, spentAddrsCount)
-		}
 	}
 
 	// set the solid milestone index based on the snapshot milestone

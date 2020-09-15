@@ -139,10 +139,8 @@ type ExplorerTag struct {
 }
 
 type ExplorerAddress struct {
-	Balance      uint64        `json:"balance"`
-	Txs          []*ExplorerTx `json:"txs"`
-	Spent        bool          `json:"spent"`
-	SpentEnabled bool          `json:"spent_enabled"`
+	Balance uint64        `json:"balance"`
+	Txs     []*ExplorerTx `json:"txs"`
 }
 
 type SearchResult struct {
@@ -405,9 +403,7 @@ func findAddress(hash trinary.Hash, valueOnly bool) (*ExplorerAddress, error) {
 	}
 
 	return &ExplorerAddress{
-		Balance:      balance,
-		Txs:          txs,
-		Spent:        tangle.WasAddressSpentFrom(addr),
-		SpentEnabled: tangle.GetSnapshotInfo().IsSpentAddressesEnabled(),
+		Balance: balance,
+		Txs:     txs,
 	}, nil
 }

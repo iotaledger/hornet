@@ -16,6 +16,5 @@ const (
 	StorePrefixSnapshot                byte = 12
 	StorePrefixSnapshotLedger          byte = 13
 	StorePrefixUnconfirmedTransactions byte = 14
-	StorePrefixSpentAddresses          byte = 15
-	StorePrefixAutopeering             byte = 16
+	StorePrefixAutopeering             byte = 15
 )

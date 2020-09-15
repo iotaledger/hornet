@@ -118,9 +118,7 @@ func configure(plugin *node.Plugin) {
 	switch snapshotTypeToLoad {
 	case "global":
 		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
-			err = LoadGlobalSnapshot(path,
-				config.NodeConfig.GetStringSlice(config.CfgGlobalSnapshotSpentAddressesPaths),
-				milestone.Index(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
+			err = LoadGlobalSnapshot(path, milestone.Index(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
 		}
 	case "local":
 		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {

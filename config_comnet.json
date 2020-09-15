@@ -16,7 +16,6 @@
       "getTransactionsToApprove",
       "getInclusionStates",
       "getNodeAPIConfiguration",
-      "wereAddressesSpentFrom",
       "broadcastTransactions",
       "findTransactions",
       "storeTransactions",
@@ -61,16 +60,12 @@
     },
     "global": {
       "path": "snapshot.csv",
-      "spentAddressesPaths": [],
       "index": 0
     },
     "pruning": {
       "enabled": true,
       "delay": 1000
     }
-  },
-  "spentAddresses": {
-    "enabled": true
   },
   "coordinator": {
     "address": "UOMFQOULWQLXQQHFMFRQQTRDKDHVMRFFEGZ9LDU9TFZZ9CHDLZSIAHA9MXNSLYOERCHDUVDFEEZAEOBEW",

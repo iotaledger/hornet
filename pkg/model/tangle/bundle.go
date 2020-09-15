@@ -11,7 +11,6 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
@@ -256,20 +255,6 @@ func (bundle *Bundle) GetMetadata() byte {
 	bundle.RLock()
 	defer bundle.RUnlock()
 	return byte(bundle.metadata)
-}
-
-func (bundle *Bundle) ApplySpentAddresses() {
-	if !bundle.IsValueSpam() {
-		spentAddressesEnabled := GetSnapshotInfo().IsSpentAddressesEnabled()
-		for addr, change := range bundle.GetLedgerChanges() {
-			if change < 0 {
-				if spentAddressesEnabled && MarkAddressAsSpent(hornet.Hash(addr)) {
-					metrics.SharedServerMetrics.SeenSpentAddresses.Inc()
-				}
-				Events.AddressSpent.Trigger(hornet.Hash(addr).Trytes())
-			}
-		}
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////

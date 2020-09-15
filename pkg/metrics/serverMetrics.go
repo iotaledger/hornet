@@ -50,8 +50,6 @@ type ServerMetrics struct {
 	SentSpamTransactions atomic.Uint32
 	// The number of validated bundles.
 	ValidatedBundles atomic.Uint32
-	// The number of seen spent addresses.
-	SeenSpentAddresses atomic.Uint32
 	// The number of non-lazy tips.
 	TipsNonLazy atomic.Uint32
 	// The number of semi-lazy tips.

@@ -19,7 +19,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -184,10 +183,6 @@ func run(_ *node.Plugin) {
 		// Check for features
 		if _, ok := permittedEndpoints["attachtotangle"]; ok {
 			features = append(features, "RemotePOW")
-		}
-
-		if tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
-			features = append(features, "WereAddressesSpentFrom")
 		}
 	}
 

@@ -136,7 +136,6 @@ func (te *TestEnvironment) configureStorages(store kvstore.KVStore) {
 	tangle.ConfigureStorages(
 		store.WithRealm([]byte("tangle")),
 		store.WithRealm([]byte("snapshot")),
-		store.WithRealm([]byte("spent")),
 		profile.Profile2GB.Caches,
 	)
 

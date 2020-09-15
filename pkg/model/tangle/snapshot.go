@@ -14,10 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-const (
-	SnapshotMetadataSpentAddressesEnabled = 0
-)
-
 var (
 	snapshot                             *SnapshotInfo
 	mutex                                syncutils.RWMutex
@@ -48,8 +44,7 @@ func loadSnapshotInfo() {
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v
-	SpentAddressesEnabled: %v`, info.CoordinatorAddress.Trytes(), info.SnapshotIndex, info.Hash.Trytes(), info.EntryPointIndex, info.PruningIndex, time.Unix(info.Timestamp, 0).Truncate(time.Second), info.IsSpentAddressesEnabled()))
+	Timestamp: %v`, info.CoordinatorAddress.Trytes(), info.SnapshotIndex, info.Hash.Trytes(), info.EntryPointIndex, info.PruningIndex, time.Unix(info.Timestamp, 0).Truncate(time.Second)))
 	}
 }
 
@@ -76,16 +71,6 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 		Timestamp:          timestamp,
 		Metadata:           metadata,
 	}, nil
-}
-
-func (i *SnapshotInfo) IsSpentAddressesEnabled() bool {
-	return i.Metadata.HasBit(SnapshotMetadataSpentAddressesEnabled)
-}
-
-func (i *SnapshotInfo) SetSpentAddressesEnabled(enabled bool) {
-	if enabled != i.Metadata.HasBit(SnapshotMetadataSpentAddressesEnabled) {
-		i.Metadata = i.Metadata.ModifyBit(SnapshotMetadataSpentAddressesEnabled, enabled)
-	}
 }
 
 func (i *SnapshotInfo) GetBytes() []byte {
@@ -115,15 +100,14 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorAddress hornet.Hash, milestoneHash hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64, spentAddressesEnabled bool) {
+func SetSnapshotMilestone(coordinatorAddress hornet.Hash, milestoneHash hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	CooAddr: %v
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v
-	SpentAddressesEnabled: %v`, coordinatorAddress.Trytes(), snapshotIndex, milestoneHash.Trytes(), entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second), spentAddressesEnabled))
+	Timestamp: %v`, coordinatorAddress.Trytes(), snapshotIndex, milestoneHash.Trytes(), entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second)))
 
 	sn := &SnapshotInfo{
 		CoordinatorAddress: coordinatorAddress,
@@ -134,7 +118,6 @@ func SetSnapshotMilestone(coordinatorAddress hornet.Hash, milestoneHash hornet.H
 		Timestamp:          timestamp,
 		Metadata:           bitmask.BitMask(0),
 	}
-	sn.SetSpentAddressesEnabled(spentAddressesEnabled)
 
 	SetSnapshotInfo(sn)
 }
