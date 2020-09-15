@@ -192,8 +192,7 @@ func (proc *Processor) WorkUnitsSize() int {
 func (proc *Processor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
-			cachedWorkUnit, _, _ := workUnitFactory(receivedTxBytes)
-			return cachedWorkUnit
+			return newWorkUnit(receivedTxBytes)
 		}),
 	}
 }

@@ -30,10 +30,10 @@ func (c *CachedUnconfirmedTx) GetUnconfirmedTx() *hornet.UnconfirmedTx {
 	return c.Get().(*hornet.UnconfirmedTx)
 }
 
-func unconfirmedTxFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func unconfirmedTxFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 
 	unconfirmedTx := hornet.NewUnconfirmedTx(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:53])
-	return unconfirmedTx, 53, nil
+	return unconfirmedTx, nil
 }
 
 func GetUnconfirmedTxStorageSize() int {

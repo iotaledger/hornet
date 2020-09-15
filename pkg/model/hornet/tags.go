@@ -40,7 +40,3 @@ func (t *Tag) ObjectStorageKey() []byte {
 func (t *Tag) ObjectStorageValue() (_ []byte) {
 	return nil
 }
-
-func (t *Tag) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
-}

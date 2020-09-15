@@ -42,9 +42,9 @@ func databaseKeyPrefixForAddressTransaction(address hornet.Hash, txHash hornet.H
 	return append(result, txHash...)
 }
 
-func addressFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func addressFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	address := hornet.NewAddress(key[:49], key[50:99], key[49] == hornet.AddressTxIsValue)
-	return address, 99, nil
+	return address, nil
 }
 
 func GetAddressesStorageSize() int {

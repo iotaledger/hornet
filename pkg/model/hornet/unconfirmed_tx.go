@@ -45,7 +45,3 @@ func (t *UnconfirmedTx) ObjectStorageKey() []byte {
 func (t *UnconfirmedTx) ObjectStorageValue() (_ []byte) {
 	return nil
 }
-
-func (t *UnconfirmedTx) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
-}

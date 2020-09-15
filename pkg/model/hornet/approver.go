@@ -40,7 +40,3 @@ func (a *Approver) ObjectStorageKey() []byte {
 func (a *Approver) ObjectStorageValue() (_ []byte) {
 	return nil
 }
-
-func (a *Approver) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
-}

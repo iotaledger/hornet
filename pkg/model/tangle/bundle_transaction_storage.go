@@ -34,7 +34,7 @@ func databaseKeyForBundleTransaction(bundleHash hornet.Hash, txHash hornet.Hash,
 	return append(result, txHash...)
 }
 
-func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func bundleTransactionFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	bundleTx := &BundleTransaction{
 		BundleHash: make([]byte, 49),
 		IsTail:     key[49] == BundleTxIsTail,
@@ -43,7 +43,7 @@ func bundleTransactionFactory(key []byte) (objectstorage.StorableObject, int, er
 	copy(bundleTx.BundleHash, key[:49])
 	copy(bundleTx.TxHash, key[50:])
 
-	return bundleTx, 99, nil
+	return bundleTx, nil
 }
 
 func GetBundleTransactionsStorageSize() int {
@@ -103,10 +103,6 @@ func (bt *BundleTransaction) ObjectStorageKey() []byte {
 
 func (bt *BundleTransaction) ObjectStorageValue() (_ []byte) {
 	return nil
-}
-
-func (bt *BundleTransaction) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
 }
 
 // Cached Object
