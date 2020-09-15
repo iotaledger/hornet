@@ -18,8 +18,9 @@ var (
 	enabledPlugins  []string
 	disabledPlugins []string
 
-	version = flag.BoolP("version", "v", false, "Prints the HORNET version")
-	help    = flag.BoolP("help", "h", false, "Prints the HORNET help")
+	version  = flag.BoolP("version", "v", false, "Prints the HORNET version")
+	help     = flag.BoolP("help", "h", false, "Prints the HORNET help (--full for all parameters)")
+	helpFull = flag.Bool("full", false, "Prints full HORNET help (only in combination with -h)")
 )
 
 func AddPluginStatus(name string, status int) {
@@ -77,7 +78,11 @@ func PrintVersion() {
 		fmt.Println(AppName + " " + AppVersion)
 		os.Exit(0)
 	}
+
 	if *help {
+		if !*helpFull {
+			HideConfigFlags()
+		}
 		flag.Usage()
 		os.Exit(0)
 	}
