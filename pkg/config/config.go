@@ -90,6 +90,7 @@ func FetchConfig() error {
 	ProfilesConfig.SetEnvKeyReplacer(dotReplacer)
 
 	// ensure that envs are read in too
+	viper.AutomaticEnv()
 	NodeConfig.AutomaticEnv()
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
