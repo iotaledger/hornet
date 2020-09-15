@@ -118,7 +118,6 @@ func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
 	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
 	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
-	//parameter.PrintConfig(ProfilesConfig)
 }
 
 func AllowPeeringConfigHotReload() {
