@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -45,8 +44,6 @@ func init() {
 	}
 
 	node.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
-
-	flag.Usage = printUsage
 }
 
 func parseParameters() {

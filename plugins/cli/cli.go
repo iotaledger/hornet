@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -50,6 +49,16 @@ func ParseConfig() {
 
 func PrintConfig() {
 	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
+
+	enablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins)
+	disablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins)
+
+	if len(enablePlugins) > 0 {
+		fmt.Printf("\nThe following plugins are enabled: %s\n", getList(enablePlugins))
+	}
+	if len(disablePlugins) > 0 {
+		fmt.Printf("\nThe following plugins are disabled: %s\n", getList(disablePlugins))
+	}
 }
 
 // HideConfigFlags hides all non essential flags from the help/usage text.
@@ -72,21 +81,4 @@ func PrintVersion() {
 		flag.Usage()
 		os.Exit(0)
 	}
-}
-
-func printUsage() {
-	fmt.Fprintf(
-		os.Stderr,
-		"\n"+
-			"HORNET\n\n"+
-			"  A lightweight modular IOTA node.\n\n"+
-			"Usage:\n\n"+
-			"  %s [OPTIONS]\n\n"+
-			"Options:\n",
-		filepath.Base(os.Args[0]),
-	)
-	flag.PrintDefaults()
-
-	fmt.Fprintf(os.Stderr, "\nThe following plugins are enabled: %s\n", getList(config.NodeConfig.GetStringSlice(node.CFG_ENABLE_PLUGINS)))
-	fmt.Fprintf(os.Stderr, "\nThe following plugins are disabled: %s\n", getList(config.NodeConfig.GetStringSlice(node.CFG_DISABLE_PLUGINS)))
 }
