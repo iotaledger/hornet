@@ -50,10 +50,10 @@ func init() {
 }
 
 func parseParameters() {
-	for _, pluginName := range config.NodeConfig.GetStringSlice(node.CFG_DISABLE_PLUGINS) {
+	for _, pluginName := range config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins) {
 		node.DisabledPlugins[strings.ToLower(pluginName)] = true
 	}
-	for _, pluginName := range config.NodeConfig.GetStringSlice(node.CFG_ENABLE_PLUGINS) {
+	for _, pluginName := range config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins) {
 		node.EnabledPlugins[strings.ToLower(pluginName)] = true
 	}
 }
