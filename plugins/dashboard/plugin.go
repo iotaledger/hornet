@@ -259,7 +259,6 @@ type ServerMetrics struct {
 	NumberOfDroppedSentPackets     uint32 `json:"dropped_sent_packets"`
 	NumberOfSentSpamTxsCount       uint32 `json:"sent_spam_txs"`
 	NumberOfValidatedBundles       uint32 `json:"validated_bundles"`
-	NumberOfSeenSpentAddr          uint32 `json:"spent_addr"`
 }
 
 // MemMetrics represents memory metrics.
@@ -297,7 +296,6 @@ type CachesMetric struct {
 	Approvers                    Cache `json:"approvers"`
 	Bundles                      Cache `json:"bundles"`
 	Milestones                   Cache `json:"milestones"`
-	SpentAddresses               Cache `json:"spent_addresses"`
 	Transactions                 Cache `json:"transactions"`
 	IncomingTransactionWorkUnits Cache `json:"incoming_transaction_work_units"`
 }
@@ -410,7 +408,6 @@ func currentNodeStatus() *NodeStatus {
 		NumberOfDroppedSentPackets:     metrics.SharedServerMetrics.DroppedMessages.Load(),
 		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.SentSpamTransactions.Load(),
 		NumberOfValidatedBundles:       metrics.SharedServerMetrics.ValidatedBundles.Load(),
-		NumberOfSeenSpentAddr:          metrics.SharedServerMetrics.SeenSpentAddresses.Load(),
 	}
 
 	// memory metrics

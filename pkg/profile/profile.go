@@ -144,14 +144,6 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		SpentAddresses: CacheOpts{
-			CacheTimeMs: 0,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
 	},
 }
 
@@ -223,14 +215,6 @@ var Profile4GB = &Profile{
 		},
 		IncomingTransactionFilter: CacheOpts{
 			CacheTimeMs: 5000,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		SpentAddresses: CacheOpts{
-			CacheTimeMs: 0,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -314,14 +298,6 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		SpentAddresses: CacheOpts{
-			CacheTimeMs: 0,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
 	},
 }
 
@@ -399,14 +375,6 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		SpentAddresses: CacheOpts{
-			CacheTimeMs: 0,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
 	},
 }
 
@@ -425,7 +393,6 @@ type Caches struct {
 	Transactions              CacheOpts `mapstructure:"transactions"`
 	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`
 	UnconfirmedTx             CacheOpts `mapstructure:"unconfirmedTx"`
-	SpentAddresses            CacheOpts `mapstructure:"spentAddresses"`
 }
 
 type CacheOpts struct {

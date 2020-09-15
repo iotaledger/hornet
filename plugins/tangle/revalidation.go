@@ -47,7 +47,6 @@ var (
 //			- Address							=> will be removed and added again if missing by receiving the tx
 //			- UnconfirmedTx 					=> will be removed at pruning anyway
 //			- Milestone							=> will be removed and added again by receiving the tx
-//			- SpentAddresses					=> will be removed and added again if missing by receiving the tx
 //
 // Database:
 // 		- LedgerState

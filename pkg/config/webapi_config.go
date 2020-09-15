@@ -38,7 +38,6 @@ func init() {
 			"getTransactionsToApprove",
 			"getInclusionStates",
 			"getNodeAPIConfiguration",
-			"wereAddressesSpentFrom",
 			"broadcastTransactions",
 			"findTransactions",
 			"storeTransactions",

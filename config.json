@@ -16,7 +16,6 @@
       "getTransactionsToApprove",
       "getInclusionStates",
       "getNodeAPIConfiguration",
-      "wereAddressesSpentFrom",
       "broadcastTransactions",
       "findTransactions",
       "storeTransactions",
@@ -58,20 +57,12 @@
     },
     "global": {
       "path": "snapshotMainnet.txt",
-      "spentAddressesPaths": [
-        "previousEpochsSpentAddresses1.txt",
-        "previousEpochsSpentAddresses2.txt",
-        "previousEpochsSpentAddresses3.txt"
-      ],
       "index": 1050000
     },
     "pruning": {
       "enabled": true,
       "delay": 60480
     }
-  },
-  "spentAddresses": {
-    "enabled": true
   },
   "network": {
     "preferIPv6": false,

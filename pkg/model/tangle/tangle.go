@@ -14,16 +14,14 @@ import (
 )
 
 const (
-	TangleDbFilename         = "tangle.db"
-	SnapshotDbFilename       = "snapshot.db"
-	SpentAddressesDbFilename = "spent.db"
+	TangleDbFilename   = "tangle.db"
+	SnapshotDbFilename = "snapshot.db"
 )
 
 var (
 	dbDir      string
 	tangleDb   *bbolt.DB
 	snapshotDb *bbolt.DB
-	spentDb    *bbolt.DB
 
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
@@ -49,13 +47,10 @@ func ConfigureDatabases(directory string) {
 	snapshotDb = boltDB(directory, SnapshotDbFilename)
 	snapshotStore := bolt.New(snapshotDb)
 
-	spentDb = boltDB(directory, SpentAddressesDbFilename)
-	spentStore := bolt.New(spentDb)
-
-	ConfigureStorages(tangleStore, snapshotStore, spentStore, profile.LoadProfile().Caches)
+	ConfigureStorages(tangleStore, snapshotStore, profile.LoadProfile().Caches)
 }
 
-func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStore, spentStore kvstore.KVStore, caches profile.Caches) {
+func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStore, caches profile.Caches) {
 
 	configureHealthStore(tangleStore)
 	configureTransactionStorage(tangleStore, caches.Transactions)
@@ -69,8 +64,6 @@ func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStor
 	configureLedgerStore(tangleStore)
 
 	configureSnapshotStore(snapshotStore)
-
-	configureSpentAddressesStorage(spentStore, caches.SpentAddresses)
 }
 
 func FlushStorages() {
@@ -82,7 +75,6 @@ func FlushStorages() {
 	FlushTagsStorage()
 	FlushAddressStorage()
 	FlushUnconfirmedTxsStorage()
-	FlushSpentAddressesStorage()
 }
 
 func ShutdownStorages() {
@@ -95,7 +87,6 @@ func ShutdownStorages() {
 	ShutdownTagsStorage()
 	ShutdownAddressStorage()
 	ShutdownUnconfirmedTxsStorage()
-	ShutdownSpentAddressesStorage()
 }
 
 func LoadInitialValuesFromDatabase() {
@@ -121,13 +112,6 @@ func CloseDatabases() error {
 		return err
 	}
 
-	if err := spentDb.Sync(); err != nil {
-		return err
-	}
-
-	if err := spentDb.Close(); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -142,7 +126,7 @@ func CleanupDatabases() error {
 }
 
 // GetDatabaseSizes returns the size of the different databases.
-func GetDatabaseSizes() (tangle int64, snapshot int64, spent int64) {
+func GetDatabaseSizes() (tangle int64, snapshot int64) {
 
 	if tangleDbFile, err := os.Stat(path.Join(dbDir, TangleDbFilename)); err == nil {
 		tangle = tangleDbFile.Size()
@@ -150,10 +134,6 @@ func GetDatabaseSizes() (tangle int64, snapshot int64, spent int64) {
 
 	if snapshotDbFile, err := os.Stat(path.Join(dbDir, SnapshotDbFilename)); err == nil {
 		snapshot = snapshotDbFile.Size()
-	}
-
-	if spentDbFile, err := os.Stat(path.Join(dbDir, SpentAddressesDbFilename)); err == nil {
-		spent = spentDbFile.Size()
 	}
 
 	return
