@@ -137,14 +137,14 @@ func (c *CachedTransaction) Release(force ...bool) {
 	c.metadata.Release(force...)
 }
 
-func transactionFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func transactionFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	tx := hornet.NewTransaction(key[:49])
-	return tx, 49, nil
+	return tx, nil
 }
 
-func metadataFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func metadataFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	tx := hornet.NewTransactionMetadata(key[:49])
-	return tx, 49, nil
+	return tx, nil
 }
 
 func GetTransactionStorageSize() int {
@@ -265,7 +265,7 @@ func StoreTransactionIfAbsent(transaction *hornet.Transaction) (cachedTx *Cached
 	cachedTxData := txStorage.ComputeIfAbsent(transaction.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // tx +1
 		newlyAdded = true
 
-		metadata, _, _ := metadataFactory(transaction.GetTxHash())
+		metadata, _ := metadataFactory(transaction.GetTxHash(), nil)
 		metadata.(*hornet.TransactionMetadata).SetAdditionalTxInfo(transaction.GetTrunkHash(), transaction.GetBranchHash(), transaction.GetBundleHash(), transaction.IsHead(), transaction.IsTail(), transaction.IsValue())
 		cachedMeta = metadataStorage.Store(metadata) // meta +1
 

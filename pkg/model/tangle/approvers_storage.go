@@ -28,9 +28,9 @@ func (c *CachedApprover) GetApprover() *hornet.Approver {
 	return c.Get().(*hornet.Approver)
 }
 
-func approversFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func approversFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	approver := hornet.NewApprover(key[:49], key[49:98])
-	return approver, 98, nil
+	return approver, nil
 }
 
 func GetApproversStorageSize() int {

@@ -21,13 +21,13 @@ const (
 )
 
 // defines the factory function for WorkUnits.
-func workUnitFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func workUnitFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	req := &WorkUnit{
 		receivedTxBytes: make([]byte, len(key)),
 		receivedFrom:    make([]*peer.Peer, 0),
 	}
 	copy(req.receivedTxBytes, key)
-	return req, len(key), nil
+	return req, nil
 }
 
 // CachedWorkUnit represents a cached WorkUnit.

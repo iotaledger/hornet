@@ -27,10 +27,10 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 	return milestone.Index(binary.LittleEndian.Uint32(key))
 }
 
-func milestoneFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index: milestoneIndexFromDatabaseKey(key),
-	}, 4, nil
+	}, nil
 }
 
 func GetMilestoneStorageSize() int {

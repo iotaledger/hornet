@@ -24,11 +24,11 @@ func databaseKeyForBundle(tailTxHash hornet.Hash) []byte {
 	return tailTxHash
 }
 
-func bundleFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func bundleFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Bundle{
 		tailTx: key[:49],
 		txs:    make(map[string]struct{}),
-	}, 49, nil
+	}, nil
 }
 
 func GetBundleStorageSize() int {
