@@ -12,7 +12,7 @@ import (
 
 type ApproveesTraverser struct {
 	cachedTxMetas map[string]*tangle.CachedMetadata
-	cachedBundles map[string]*tangle.CachedBundle
+	cachedBundles map[string]*tangle.CachedMessage
 
 	// stack holding the ordered tx to process
 	stack *list.List
@@ -66,7 +66,7 @@ func (t *ApproveesTraverser) cleanup(forceRelease bool) {
 func (t *ApproveesTraverser) reset() {
 
 	t.cachedTxMetas = make(map[string]*tangle.CachedMetadata)
-	t.cachedBundles = make(map[string]*tangle.CachedBundle)
+	t.cachedBundles = make(map[string]*tangle.CachedMessage)
 	t.processed = make(map[string]struct{})
 	t.checked = make(map[string]bool)
 	t.stack = list.New()
@@ -177,7 +177,7 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 
 	cachedTxMeta, exists := t.cachedTxMetas[string(currentTxHash)]
 	if !exists {
-		cachedTxMeta = tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+		cachedTxMeta = tangle.GetCachedMessageMetadataOrNil(currentTxHash) // meta +1
 		if cachedTxMeta == nil {
 			// remove the transaction from the stack, trunk and branch are not traversed
 			t.processed[string(currentTxHash)] = struct{}{}
@@ -186,7 +186,7 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 
 			if t.onMissingApprovee == nil {
 				// stop processing the stack with an error
-				return fmt.Errorf("%w: transaction %s", tangle.ErrTransactionNotFound, currentTxHash.Trytes())
+				return fmt.Errorf("%w: transaction %s", tangle.ErrMessageNotFound, currentTxHash.Hex())
 			}
 
 			// stop processing the stack if the caller returns an error
@@ -222,21 +222,21 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 	var trunkHash, branchHash hornet.Hash
 
 	if !t.traverseTailsOnly {
-		trunkHash = cachedTxMeta.GetMetadata().GetTrunkHash()
-		branchHash = cachedTxMeta.GetMetadata().GetBranchHash()
+		trunkHash = cachedTxMeta.GetMetadata().GetParent1MessageID()
+		branchHash = cachedTxMeta.GetMetadata().GetParent2MessageID()
 	} else {
 		// load up bundle to retrieve trunk and branch of the head tx
 		cachedBundle, exists := t.cachedBundles[string(currentTxHash)]
 		if !exists {
-			cachedBundle = tangle.GetCachedBundleOrNil(currentTxHash) // bundle +1
+			cachedBundle = tangle.GetCachedMessageOrNil(currentTxHash) // bundle +1
 			if cachedBundle == nil {
-				return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), currentTxHash.Trytes())
+				return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Hex(), currentTxHash.Hex())
 			}
 			t.cachedBundles[string(currentTxHash)] = cachedBundle
 		}
 
-		trunkHash = cachedBundle.GetBundle().GetTrunkHash(true)
-		branchHash = cachedBundle.GetBundle().GetBranchHash(true)
+		trunkHash = cachedBundle.GetMessage().GetTrunkHash(true)
+		branchHash = cachedBundle.GetMessage().GetBranchHash(true)
 	}
 
 	approveeHashes := hornet.Hashes{trunkHash}

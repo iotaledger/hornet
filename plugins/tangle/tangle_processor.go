@@ -41,7 +41,7 @@ func configureTangleProcessor(_ *node.Plugin) {
 	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
 
 	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processValidMilestone(task.Param(0).(*tangle.CachedBundle)) // bundle pass +1
+		processValidMilestone(task.Param(0).(*tangle.CachedMilestone)) // bundle pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -66,11 +66,11 @@ func runTangleProcessor(_ *node.Plugin) {
 		lastOutgoingTPS = tpsMetrics.Outgoing
 	})
 
-	onReceivedValidMilestone := events.NewClosure(func(cachedBndl *tangle.CachedBundle) {
-		_, added := processValidMilestoneWorkerPool.Submit(cachedBndl) // bundle pass +1
+	onReceivedValidMilestone := events.NewClosure(func(cachedMilestone *tangle.CachedMilestone) {
+		_, added := processValidMilestoneWorkerPool.Submit(cachedMilestone) // bundle pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
-			cachedBndl.Release() // bundle -1
+			cachedMilestone.Release() // bundle -1
 		}
 	})
 
@@ -138,7 +138,7 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(incomingTx, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // tx +1
+	cachedTx, alreadyAdded := tangle.AddMessageToStorage(incomingTx, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // tx +1
 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1

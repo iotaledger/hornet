@@ -155,7 +155,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 		return err
 	}
 
-	//hashTrits := batchhasher.CURLP81.Hash(txTrits)
+	//hashTrits := batchhasher.CURLP81.MessageID(txTrits)
 	hashTrits := []int8{}
 	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
 
@@ -236,7 +236,7 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 		return
 	}
 
-	cachedTxs := cachedReqMs.GetBundle().GetTransactions() // txs +1
+	cachedTxs := cachedReqMs.GetMessage().GetTransactions() // txs +1
 	for _, cachedTxToSend := range cachedTxs {
 		transactionMsg, _ := sting.NewTransactionMessage(cachedTxToSend.GetTransaction().RawBytes)
 		p.EnqueueForSending(transactionMsg)
@@ -251,14 +251,14 @@ func (proc *Processor) processTransactionRequest(p *peer.Peer, data []byte) {
 		return
 	}
 
-	cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(data)) // tx +1
+	cachedTx := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // tx +1
 	if cachedTx == nil {
 		// can't reply if we don't have the requested transaction
 		return
 	}
 	defer cachedTx.Release()
 
-	transactionMsg, _ := sting.NewTransactionMessage(cachedTx.GetTransaction().RawBytes)
+	transactionMsg, _ := sting.NewTransactionMessage(cachedTx.GetMessage().RawBytes)
 	p.EnqueueForSending(transactionMsg)
 }
 
@@ -307,7 +307,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 			return
 		}
 
-		if tangle.ContainsTransaction(wu.tx.GetTxHash()) {
+		if tangle.ContainsMessage(wu.tx.GetTxHash()) {
 			metrics.SharedServerMetrics.KnownTransactions.Inc()
 			p.Metrics.KnownTransactions.Inc()
 			return
@@ -367,7 +367,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	}
 
 	// check the existence of the transaction before broadcasting it
-	containsTx := tangle.ContainsTransaction(hornetTx.GetTxHash())
+	containsTx := tangle.ContainsMessage(hornetTx.GetTxHash())
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, request, p)
 

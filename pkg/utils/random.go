@@ -24,7 +24,7 @@ func RandomInsecure(min int, max int) int {
 	return seededRand.Intn(max+1-min) + min
 }
 
-// RandomTrytesInsecure returns random Trytes with the given length.
+// RandomTrytesInsecure returns random Hex with the given length.
 // the result is not cryptographically secure.
 // DO NOT USE this function to generate a seed.
 func RandomTrytesInsecure(length int) trinary.Trytes {

@@ -29,8 +29,8 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
-		Index: milestoneIndexFromDatabaseKey(key),
-		Hash:  hornet.Hash(data[:49]),
+		Index:     milestoneIndexFromDatabaseKey(key),
+		MessageID: hornet.Hash(data[:49]),
 	}, nil
 }
 
@@ -58,14 +58,14 @@ func configureMilestoneStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 type Milestone struct {
 	objectstorage.StorableObjectFlags
 
-	Index milestone.Index
-	Hash  hornet.Hash
+	Index     milestone.Index
+	MessageID hornet.Hash
 }
 
 // ObjectStorage interface
 
 func (ms *Milestone) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.Hash.Trytes(), ms.Index))
+	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.MessageID.Hex(), ms.Index))
 }
 
 func (ms *Milestone) ObjectStorageKey() []byte {
@@ -74,14 +74,19 @@ func (ms *Milestone) ObjectStorageKey() []byte {
 
 func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
-		49 byte transaction hash
+		32 byte message ID
 	*/
-	return ms.Hash
+	return ms.MessageID
 }
 
 // Cached Object
 type CachedMilestone struct {
 	objectstorage.CachedObject
+}
+
+// milestone +1
+func (c *CachedMilestone) Retain() *CachedMilestone {
+	return &CachedMilestone{c.CachedObject.Retain()}
 }
 
 func (c *CachedMilestone) GetMilestone() *Milestone {
@@ -130,20 +135,14 @@ func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 }
 
 // milestone +1
-func StoreMilestone(bndl *Bundle) *CachedMilestone {
-
-	if bndl.IsMilestone() {
-
-		milestone := &Milestone{
-			Index: bndl.GetMilestoneIndex(),
-			Hash:  bndl.GetMilestoneHash(),
-		}
-
-		// milestones should never exist in the database already, even with an unclean database
-		return &CachedMilestone{CachedObject: milestoneStorage.Store(milestone)}
+func storeMilestone(index milestone.Index, messageID hornet.Hash) *CachedMilestone {
+	milestone := &Milestone{
+		Index:     index,
+		MessageID: messageID,
 	}
 
-	panic("Bundle is not a milestone")
+	// milestones should never exist in the database already, even with an unclean database
+	return &CachedMilestone{CachedObject: milestoneStorage.Store(milestone)}
 }
 
 // +-0

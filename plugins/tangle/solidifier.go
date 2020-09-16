@@ -66,40 +66,40 @@ func markTransactionAsSolid(cachedTxMeta *tangle.CachedMetadata) {
 
 	// Construct the complete bundle if the tail got solid (before setting solid flag => otherwise not threadsafe)
 	if cachedTxMeta.GetMetadata().IsTail() {
-		cachedTx := tangle.GetCachedTransactionOrNil(cachedTxMeta.GetMetadata().GetTxHash())
+		cachedTx := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID())
 		if cachedTx == nil {
-			log.Panicf("markTransactionAsSolid: Transaction not found: %v", cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			log.Panicf("markTransactionAsSolid: Transaction not found: %v", cachedTxMeta.GetMetadata().GetMessageID().Hex())
 		}
-		tangle.OnTailTransactionSolid(cachedTx) // tx pass +1
+		tangle.OnMessageSolid(cachedTx) // tx pass +1
 	}
 
 	// update the solidity flags of this transaction
 	cachedTxMeta.GetMetadata().SetSolid(true)
 
-	Events.TransactionSolid.Trigger(cachedTxMeta.GetMetadata().GetTxHash())
+	Events.TransactionSolid.Trigger(cachedTxMeta.GetMetadata().GetMessageID())
 
 	if cachedTxMeta.GetMetadata().IsTail() {
-		cachedBndl := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
+		cachedBndl := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID()) // bundle +1
 		if cachedBndl == nil {
 			// bundle must be created here
-			log.Panicf("markTransactionAsSolid: Bundle not found: %v", cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			log.Panicf("markTransactionAsSolid: Message not found: %v", cachedTxMeta.GetMetadata().GetMessageID().Hex())
 		}
 		defer cachedBndl.Release(true) // bundle -1
 
 		// search all referenced tails of this bundle
-		approveeTailTxHashes, err := dag.FindAllTails(cachedBndl.GetBundle().GetTailHash(), true)
+		approveeTailTxHashes, err := dag.FindAllTails(cachedBndl.GetMessage().GetTailHash(), true)
 		if err != nil {
 			log.Panic(err)
 		}
 
 		invalid := false
 		for approveeTailTxHash := range approveeTailTxHashes {
-			cachedApproveeBndl := tangle.GetCachedBundleOrNil(hornet.Hash(approveeTailTxHash)) // bundle +1
+			cachedApproveeBndl := tangle.GetCachedMessageOrNil(hornet.Hash(approveeTailTxHash)) // bundle +1
 			if cachedApproveeBndl == nil {
 				// bundle must be created here
-				log.Panicf("BundleSolid: TxHash: %v, approvee bundle not found: TailTxHash: %v", cachedTxMeta.GetMetadata().GetTxHash().Trytes(), hornet.Hash(approveeTailTxHash).Trytes())
+				log.Panicf("BundleSolid: TxHash: %v, approvee bundle not found: TailTxHash: %v", cachedTxMeta.GetMetadata().GetMessageID().Hex(), hornet.Hash(approveeTailTxHash).Hex())
 			}
-			bndl := cachedApproveeBndl.GetBundle() // bundle -1
+			bndl := cachedApproveeBndl.GetMessage() // bundle -1
 			cachedApproveeBndl.Release(true)
 
 			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
@@ -110,7 +110,7 @@ func markTransactionAsSolid(cachedTxMeta *tangle.CachedMetadata) {
 		}
 
 		if invalid {
-			cachedBndl.GetBundle().SetInvalidPastCone(true)
+			cachedBndl.GetMessage().SetInvalidPastCone(true)
 		}
 
 		Events.BundleSolid.Trigger(cachedBndl) // bundle pass +1
@@ -126,9 +126,9 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 
 	ts := time.Now()
 
-	if _, exists := cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetTxHash())]; !exists {
+	if _, exists := cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetMessageID())]; !exists {
 		// release the transactions at the end to speed up calculation
-		cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetTxHash())] = cachedMsTailTxMeta.Retain()
+		cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetMessageID())] = cachedMsTailTxMeta.Retain()
 	}
 
 	txsChecked := 0
@@ -136,15 +136,15 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 	txsToRequest := make(map[string]struct{})
 
 	// collect all tx to solidify by traversing the tangle
-	if err := dag.TraverseApprovees(cachedMsTailTxMeta.GetMetadata().GetTxHash(),
+	if err := dag.TraverseApprovees(cachedMsTailTxMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedTxMeta.Release(true) // meta -1
 
-			if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
+			if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())]; !exists {
 				// release the tx metadata at the end to speed up calculation
-				cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
+				cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta.Retain()
 			}
 
 			// if the tx is solid, there is no need to traverse its approvees
@@ -158,7 +158,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 			txsChecked++
 
 			// collect the txToSolidify in an ordered way
-			txsToSolidify = append(txsToSolidify, cachedTxMeta.GetMetadata().GetTxHash())
+			txsToSolidify = append(txsToSolidify, cachedTxMeta.GetMetadata().GetMessageID())
 
 			return nil
 		},
@@ -195,7 +195,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 	for _, txHash := range txsToSolidify {
 		cachedTxMeta, exists := cachedTxMetas[string(txHash)]
 		if !exists {
-			log.Panicf("solidQueueCheck: Tx not found: %v", txHash.Trytes())
+			log.Panicf("solidQueueCheck: Tx not found: %v", txHash.Hex())
 		}
 
 		markTransactionAsSolid(cachedTxMeta.Retain())
@@ -217,7 +217,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 func solidifyFutureConeOfTx(cachedTxMeta *tangle.CachedMetadata) error {
 
 	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
-	cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta
+	cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta
 
 	defer func() {
 		// release all tx metadata at the end
@@ -227,7 +227,7 @@ func solidifyFutureConeOfTx(cachedTxMeta *tangle.CachedMetadata) error {
 		}
 	}()
 
-	txHashes := hornet.Hashes{cachedTxMeta.GetMetadata().GetTxHash()}
+	txHashes := hornet.Hashes{cachedTxMeta.GetMetadata().GetMessageID()}
 
 	return solidifyFutureCone(cachedTxMetas, txHashes, nil)
 }
@@ -246,20 +246,20 @@ func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashe
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedTxMeta.Release(true) // meta -1
 
-				if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
+				if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())]; !exists {
 					// release the tx metadata at the end to speed up calculation
-					cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
+					cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta.Retain()
 				}
 
-				if cachedTxMeta.GetMetadata().IsSolid() && !bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
+				if cachedTxMeta.GetMetadata().IsSolid() && !bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetMessageID()) {
 					// do not walk the future cone if the current transaction is already solid, except it was the startTx
 					return false, nil
 				}
 
 				// check if current transaction is solid by checking the solidity of its approvees
-				approveeHashes := hornet.Hashes{cachedTxMeta.GetMetadata().GetTrunkHash()}
-				if !bytes.Equal(cachedTxMeta.GetMetadata().GetTrunkHash(), cachedTxMeta.GetMetadata().GetBranchHash()) {
-					approveeHashes = append(approveeHashes, cachedTxMeta.GetMetadata().GetBranchHash())
+				approveeHashes := hornet.Hashes{cachedTxMeta.GetMetadata().GetParent1MessageID()}
+				if !bytes.Equal(cachedTxMeta.GetMetadata().GetParent1MessageID(), cachedTxMeta.GetMetadata().GetParent2MessageID()) {
+					approveeHashes = append(approveeHashes, cachedTxMeta.GetMetadata().GetParent2MessageID())
 				}
 
 				for _, approveeHash := range approveeHashes {
@@ -268,7 +268,7 @@ func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashe
 						continue
 					}
 
-					cachedApproveeTxMeta := tangle.GetCachedTxMetadataOrNil(approveeHash) // meta +1
+					cachedApproveeTxMeta := tangle.GetCachedMessageMetadataOrNil(approveeHash) // meta +1
 					if cachedApproveeTxMeta == nil {
 						// approvee is missing => transaction is not solid
 						// do not walk the future cone if the current transaction is not solid
@@ -374,7 +374,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	// Release shouldn't be forced, to cache the latest milestones
 	defer cachedMsToSolidify.Release() // bundle -1
 
-	milestoneIndexToSolidify := cachedMsToSolidify.GetBundle().GetMilestoneIndex()
+	milestoneIndexToSolidify := cachedMsToSolidify.GetMessage().GetMilestoneIndex()
 	setSolidifierMilestoneIndex(milestoneIndexToSolidify)
 
 	signalChanMilestoneStopSolidificationLock.Lock()
@@ -392,7 +392,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := solidQueueCheck(cachedTxMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
+	if becameSolid, aborted := solidQueueCheck(cachedTxMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetMessage().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -410,19 +410,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
-		cachedClosestNextMsIndex := cachedClosestNextMs.GetBundle().GetMilestoneIndex()
-
-		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
-			log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, cachedClosestNextMsIndex)
-
-			// no Milestones found in between => search an older milestone in the solid cone
-			if found, err := searchMissingMilestone(currentSolidIndex, cachedClosestNextMsIndex, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !found { // meta pass +1
-				if err != nil {
-					// no milestones found => this should not happen!
-					log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
-				}
-				log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
-			}
+		if cachedClosestNextMs.GetMessage().GetMilestoneIndex() == milestoneIndexToSolidify {
+			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetMessage().GetMilestoneIndex())
 		}
 		cachedClosestNextMs.Release() // bundle -1
 
@@ -457,7 +446,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	)
 
 	var ctpsMessage string
-	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetBundle().GetTail(), conf.Index); err == nil {
+	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetMessage().GetTail(), conf.Index); err == nil {
 		if tangle.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the TPS and conf.rate is wrong)
 			if firstSyncedMilestone == 0 {
@@ -490,93 +479,9 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
 }
 
-func searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.CachedMetadata, abortSignal chan struct{}) (found bool, err error) {
+func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedMessage, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
 
-	defer cachedMsTailTxMeta.Release() // meta -1
-
-	var milestoneFound bool
-
-	ts := time.Now()
-
-	// search milestones in the cone that are not persisted in the DB yet by traversing the tangle
-	if err := dag.TraverseApprovees(cachedMsTailTxMeta.GetMetadata().GetTxHash(),
-		// traversal stops if no more transactions pass the given condition
-		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-			defer cachedTxMeta.Release(true) // meta -1
-
-			// if the tx is confirmed by an older milestone, there is no need to traverse its approvees
-			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed && (at <= solidMilestoneIndex) {
-				return false, nil
-			}
-
-			return true, nil
-		},
-		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-			defer cachedTxMeta.Release(true) // meta -1
-
-			cachedTx := tangle.GetCachedTransactionOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // tx +1
-			if cachedTx == nil {
-				return fmt.Errorf("%w hash: %s", tangle.ErrTransactionNotFound, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
-			}
-			defer cachedTx.Release(true) // tx -1
-
-			if tangle.IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
-				// this tx could belong to a milestone
-				// => load bundle, and start the milestone check
-				cachedBndl := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
-				if cachedBndl == nil {
-					// bundle must be created here
-					return fmt.Errorf("searchMissingMilestone: bundle not found: %s, TxHash: %s", cachedTx.GetTransaction().Tx.Bundle, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
-				}
-				defer cachedBndl.Release(true) // bundle -1
-
-				isMilestone, err := tangle.CheckIfMilestone(cachedBndl.GetBundle())
-				if err != nil {
-					log.Infof("searchMissingMilestone: Milestone check failed: %s", err)
-				}
-
-				if isMilestone {
-					msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
-					if (msIndex > solidMilestoneIndex) && (msIndex < startMilestoneIndex) {
-						// milestone found!
-						if cachedBndl.GetBundle().IsValid() && cachedBndl.GetBundle().ValidStrictSemantics() && cachedBndl.GetBundle().IsMilestone() {
-							// Force release to store milestones without caching
-							tangle.StoreMilestone(cachedBndl.GetBundle()).Release(true) // milestone +-0
-
-							processValidMilestone(cachedBndl.Retain()) // bundle pass +1
-							return ErrMissingMilestoneFound            // we return this as an error to stop the traverser
-						}
-					}
-				}
-			}
-
-			return nil
-		},
-		// called on missing approvees
-		// return error on missing approvees
-		nil,
-		// called on solid entry points
-		// Ignore solid entry points (snapshot milestone included)
-		nil,
-		false, true, abortSignal); err != nil {
-		if err == tangle.ErrOperationAborted {
-			return false, nil
-		} else if err == ErrMissingMilestoneFound {
-			milestoneFound = true
-		} else {
-			return false, err
-		}
-	}
-
-	log.Infof("searchMissingMilestone finished, found: %v, total: %v", milestoneFound, time.Since(ts))
-	return milestoneFound, nil
-}
-
-func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
-
-	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetTransaction().GetTimestamp(), 0)
+	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetMessage().GetTimestamp(), 0)
 	cachedMsTailTx.Release()
 
 	oldMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
@@ -585,13 +490,13 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, miles
 	}
 	defer oldMilestone.Release(true) // milestone -1
 
-	oldMilestoneTailTx := tangle.GetCachedTransactionOrNil(oldMilestone.GetMilestone().Hash)
+	oldMilestoneTailTx := tangle.GetCachedMessageOrNil(oldMilestone.GetMilestone().MessageID)
 	if oldMilestoneTailTx == nil {
 		return nil, ErrMilestoneNotFound
 	}
 	defer oldMilestoneTailTx.Release(true)
 
-	oldMilestoneTimestamp := time.Unix(oldMilestoneTailTx.GetTransaction().GetTimestamp(), 0)
+	oldMilestoneTimestamp := time.Unix(oldMilestoneTailTx.GetMessage().GetTimestamp(), 0)
 	timeDiff := newMilestoneTimestamp.Sub(oldMilestoneTimestamp).Seconds()
 	if timeDiff == 0 {
 		return nil, ErrDivisionByZero

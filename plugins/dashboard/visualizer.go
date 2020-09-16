@@ -52,8 +52,8 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeTransactionAndMetadata(func(tx *hornet.Transaction, metadata *hornet.TransactionMetadata) { // tx -1
+	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedTx.ConsumeMessageAndMetadata(func(tx *hornet.Transaction, metadata *hornet.MessageMetadata) { // tx -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -85,14 +85,14 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeSolidInfo,
 				Data: &metainfo{
-					ID: txHash.Trytes()[:VisualizerIdLength],
+					ID: txHash.Hex()[:VisualizerIdLength],
 				},
 			},
 		)
 	})
 
-	onReceivedNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
-		cachedBndl.ConsumeBundle(func(bndl *tanglePackage.Bundle) { // bundle -1
+	onReceivedNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedMessage) {
+		cachedBndl.ConsumeMessage(func(bndl *tanglePackage.Message) { // bundle -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -102,7 +102,7 @@ func runVisualizer() {
 					&Msg{
 						Type: MsgTypeMilestoneInfo,
 						Data: &metainfo{
-							ID: txHash.Trytes()[:VisualizerIdLength],
+							ID: txHash.Hex()[:VisualizerIdLength],
 						},
 					},
 				)
@@ -120,7 +120,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: txHash.Trytes()[:VisualizerIdLength],
+					ID: txHash.Hex()[:VisualizerIdLength],
 				},
 			},
 		)
@@ -133,14 +133,14 @@ func runVisualizer() {
 
 		var excludedIDs []string
 		for _, txHash := range confirmation.Mutations.TailsExcludedConflicting {
-			excludedIDs = append(excludedIDs, txHash.Trytes()[:VisualizerIdLength])
+			excludedIDs = append(excludedIDs, txHash.Hex()[:VisualizerIdLength])
 		}
 
 		hub.BroadcastMsg(
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneHash.Trytes()[:VisualizerIdLength],
+					ID:          confirmation.MilestoneHash.Hex()[:VisualizerIdLength],
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -156,7 +156,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.Hash.Trytes()[:VisualizerIdLength],
+					ID:    tip.Hash.Hex()[:VisualizerIdLength],
 					IsTip: true,
 				},
 			},
@@ -172,7 +172,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.Hash.Trytes()[:VisualizerIdLength],
+					ID:    tip.Hash.Hex()[:VisualizerIdLength],
 					IsTip: false,
 				},
 			},

@@ -157,7 +157,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		if !searchedBefore {
 			// search txs by approvees
 			for approveeHash := range queryApproveeHashes {
-				for _, r := range tangle.GetApproverHashes(hornet.Hash(approveeHash), maxResults-len(results)) {
+				for _, r := range tangle.GetChildrenMessageIDs(hornet.Hash(approveeHash), maxResults-len(results)) {
 					results[string(r)] = struct{}{}
 				}
 			}
@@ -167,7 +167,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			for txHash := range results {
 				contains := false
 				for approveeHash := range queryApproveeHashes {
-					if tangle.ContainsApprover(hornet.Hash(approveeHash), hornet.Hash(txHash)) {
+					if tangle.ContainsChild(hornet.Hash(approveeHash), hornet.Hash(txHash)) {
 						contains = true
 						break
 					}
@@ -236,7 +236,7 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	var j int
 	txHashes := make([]string, len(results))
 	for r := range results {
-		txHashes[j] = hornet.Hash(r).Trytes()
+		txHashes[j] = hornet.Hash(r).Hex()
 		j++
 	}
 

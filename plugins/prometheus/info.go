@@ -94,9 +94,9 @@ func collectInfo() {
 	// Latest milestone hash
 	cachedLatestMs := tangle.GetMilestoneOrNil(lmi)
 	if cachedLatestMs != nil {
-		cachedMsTailTxMeta := cachedLatestMs.GetBundle().GetTailMetadata()
+		cachedMsTailTxMeta := cachedLatestMs.GetMessage().GetTailMetadata()
 		infoMilestone.Reset()
-		infoMilestone.WithLabelValues(cachedMsTailTxMeta.GetMetadata().GetTxHash().Trytes(), strconv.Itoa(int(lmi))).Set(1)
+		infoMilestone.WithLabelValues(cachedMsTailTxMeta.GetMetadata().GetMessageID().Hex(), strconv.Itoa(int(lmi))).Set(1)
 		cachedMsTailTxMeta.Release()
 		cachedLatestMs.Release()
 	}
@@ -110,9 +110,9 @@ func collectInfo() {
 	// Solid milestone hash
 	cachedSolidMs := tangle.GetMilestoneOrNil(smi)
 	if cachedSolidMs != nil {
-		cachedMsTailTxMeta := cachedSolidMs.GetBundle().GetTailMetadata()
+		cachedMsTailTxMeta := cachedSolidMs.GetMessage().GetTailMetadata()
 		infoSolidMilestone.Reset()
-		infoSolidMilestone.WithLabelValues(cachedMsTailTxMeta.GetMetadata().GetTxHash().Trytes(), strconv.Itoa(int(smi))).Set(1)
+		infoSolidMilestone.WithLabelValues(cachedMsTailTxMeta.GetMetadata().GetMessageID().Hex(), strconv.Itoa(int(smi))).Set(1)
 		cachedMsTailTxMeta.Release()
 		cachedSolidMs.Release()
 	}

@@ -40,11 +40,11 @@ var (
 // isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 
-	for _, approverHash := range tangle.GetApproverHashes(txHash) {
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
+	for _, approverHash := range tangle.GetChildrenMessageIDs(txHash) {
+		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(approverHash) // meta +1
 		if cachedTxMeta == nil {
 			// Ignore this transaction since it doesn't exist anymore
-			log.Warnf(errors.Wrapf(ErrApproverTxNotFound, "tx hash: %v, approver hash: %v", txHash.Trytes(), approverHash.Trytes()).Error())
+			log.Warnf(errors.Wrapf(ErrApproverTxNotFound, "tx hash: %v, approver hash: %v", txHash.Hex(), approverHash.Hex()).Error())
 			continue
 		}
 
@@ -98,9 +98,9 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				continue
 			}
 
-			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
+			cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHash)) // meta +1
 			if cachedTxMeta == nil {
-				return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Trytes())
+				return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Hex())
 			}
 
 			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
@@ -113,8 +113,8 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				approvees = append(approvees, hornet.Hash(txHash))
 
 				// Traverse the approvee
-				txsToTraverse[string(cachedTxMeta.GetMetadata().GetTrunkHash())] = struct{}{}
-				txsToTraverse[string(cachedTxMeta.GetMetadata().GetBranchHash())] = struct{}{}
+				txsToTraverse[string(cachedTxMeta.GetMetadata().GetParent1MessageID())] = struct{}{}
+				txsToTraverse[string(cachedTxMeta.GetMetadata().GetParent2MessageID())] = struct{}{}
 
 				// Do not force release, since it is loaded again
 				cachedTxMeta.Release() // meta -1
@@ -123,7 +123,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 				// Tx is not confirmed
 				if cachedTxMeta.GetMetadata().IsTail() {
 					cachedTxMeta.Release(true) // meta -1
-					return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Trytes())
+					return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Hex())
 				}
 
 				// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
@@ -193,7 +193,7 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		}
 
 		// Get all approvees of that milestone
-		msTailTxHash := cachedMs.GetBundle().GetTailHash()
+		msTailTxHash := cachedMs.GetMessage().GetTailHash()
 		cachedMs.Release(true) // bundle -1
 
 		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
@@ -216,15 +216,15 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 				}
 
 				for tailHash := range tails {
-					cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(tailHash))
+					cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(tailHash))
 					if cachedTxMeta == nil {
-						return nil, errors.Wrapf(ErrCritical, "metadata (%v) not found!", hornet.Hash(tailHash).Trytes())
+						return nil, errors.Wrapf(ErrCritical, "metadata (%v) not found!", hornet.Hash(tailHash).Hex())
 					}
 
 					confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
 					if !confirmed {
 						cachedTxMeta.Release(true)
-						return nil, errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", hornet.Hash(tailHash).Trytes())
+						return nil, errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", hornet.Hash(tailHash).Hex())
 					}
 					cachedTxMeta.Release(true)
 
@@ -253,7 +253,7 @@ func getSeenMilestones(targetIndex milestone.Index, abortSignal <-chan struct{})
 		if cachedMs == nil {
 			continue
 		}
-		seenMilestones[string(cachedMs.GetBundle().GetTailHash())] = milestoneIndex
+		seenMilestones[string(cachedMs.GetMessage().GetTailHash())] = milestoneIndex
 		cachedMs.Release(true) // bundle -1
 	}
 	return seenMilestones, nil
@@ -392,11 +392,11 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		return err
 	}
 
-	cachedTargetMsTail := cachedTargetMs.GetBundle().GetTail() // tx +1
-	defer cachedTargetMsTail.Release(true)                     // tx -1
+	cachedTargetMsTail := cachedTargetMs.GetMessage().GetTail() // tx +1
+	defer cachedTargetMsTail.Release(true)                      // tx -1
 
 	lsh := &localSnapshotHeader{
-		msHash:           cachedTargetMs.GetBundle().GetTailHash(),
+		msHash:           cachedTargetMs.GetMessage().GetTailHash(),
 		msIndex:          targetIndex,
 		msTimestamp:      cachedTargetMsTail.GetTransaction().GetTimestamp(),
 		solidEntryPoints: newSolidEntryPoints,
@@ -427,7 +427,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 			return errors.Wrap(ErrCritical, err.Error())
 		}
 
-		snapshotInfo.Hash = cachedTargetMs.GetBundle().GetMilestoneHash()
+		snapshotInfo.MilestoneMessageID = cachedTargetMs.GetMessage().GetMilestoneHash()
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = cachedTargetMsTail.GetTransaction().GetTimestamp()
 		tangle.SetSnapshotInfo(snapshotInfo)

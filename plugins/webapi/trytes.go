@@ -51,14 +51,14 @@ func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, hash := range query.Hashes {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(hash)) // tx +1
+		cachedTx := tangle.GetCachedMessageOrNil(hornet.HashFromHashTrytes(hash)) // tx +1
 
 		if cachedTx == nil {
 			trytes = append(trytes, strings.Repeat("9", 2673))
 			continue
 		}
 
-		tx, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
+		tx, err := transaction.TransactionToTrytes(cachedTx.GetMessage().Tx)
 		if err != nil {
 			e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 			c.JSON(http.StatusInternalServerError, e)

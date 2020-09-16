@@ -124,7 +124,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Calculate the transaction hash with the batched hasher
-		//hashTrits := batchhasher.CURLP81.Hash(txTrits)
+		//hashTrits := batchhasher.CURLP81.MessageID(txTrits)
 		hashTrits := []int8{}
 		txs[i].Hash = trinary.MustTritsToTrytes(hashTrits)
 

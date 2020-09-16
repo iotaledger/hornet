@@ -14,18 +14,18 @@ import (
 // ShortenedHash returns a shortened trinary hash for the given hash.
 // this is used for the dot file.
 func ShortenedHash(hash hornet.Hash) string {
-	trytes := hash.Trytes()
+	trytes := hash.Hex()
 	return trytes[0:4] + "..." + trytes[77:81]
 }
 
 // ShortenedTag returns a shortened tag or milestone index for the given bundle.
 // this is used for the dot file.
-func ShortenedTag(bundle *tangle.CachedBundle) string {
-	if bundle.GetBundle().IsMilestone() {
-		return fmt.Sprintf("%d", bundle.GetBundle().GetMilestoneIndex())
+func ShortenedTag(bundle *tangle.CachedMessage) string {
+	if bundle.GetMessage().IsMilestone() {
+		return fmt.Sprintf("%d", bundle.GetMessage().GetMilestoneIndex())
 	}
 
-	tail := bundle.GetBundle().GetTail()
+	tail := bundle.GetMessage().GetTail()
 	defer tail.Release(true)
 
 	tag := tail.GetTransaction().Tx.Tag

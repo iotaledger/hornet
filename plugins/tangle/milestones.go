@@ -13,30 +13,30 @@ var (
 	processValidMilestoneWorkerPool  *workerpool.WorkerPool
 )
 
-func processValidMilestone(cachedBndl *tangle.CachedBundle) {
-	defer cachedBndl.Release() // bundle -1
+func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
+	defer cachedMilestone.Release() // bundle -1
 
-	Events.ReceivedNewMilestone.Trigger(cachedBndl) // bundle pass +1
+	Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 
 	solidMsIndex := tangle.GetSolidMilestoneIndex()
-	bundleMsIndex := cachedBndl.GetBundle().GetMilestoneIndex()
+	msIndex := cachedMilestone.GetMilestone().Index
 
-	if tangle.SetLatestMilestoneIndex(bundleMsIndex) {
-		Events.LatestMilestoneChanged.Trigger(cachedBndl) // bundle pass +1
-		Events.LatestMilestoneIndexChanged.Trigger(bundleMsIndex)
+	if tangle.SetLatestMilestoneIndex(msIndex) {
+		Events.LatestMilestoneChanged.Trigger(cachedMilestone) // milestone pass +1
+		Events.LatestMilestoneIndexChanged.Trigger(msIndex)
 	}
-	milestoneSolidifierWorkerPool.TrySubmit(bundleMsIndex, false)
+	milestoneSolidifierWorkerPool.TrySubmit(msIndex, false)
 
-	if bundleMsIndex > solidMsIndex {
-		log.Infof("Valid milestone detected! Index: %d, Hash: %v", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash().Trytes())
+	if msIndex > solidMsIndex {
+		log.Infof("Valid milestone detected! Index: %d, MilestoneMessageID: %v", msIndex, cachedMilestone.GetMilestone().MessageID.Hex())
 
 		// request trunk and branch
-		gossip.RequestMilestoneApprovees(cachedBndl.Retain()) // bundle pass +1
+		gossip.RequestMilestoneApprovees(cachedMilestone.Retain()) // milestone pass +1
 	} else {
 		pruningIndex := tangle.GetSnapshotInfo().PruningIndex
-		if bundleMsIndex < pruningIndex {
+		if msIndex < pruningIndex {
 			// this should not happen. we didn't request it and it should be filtered because of timestamp
-			log.Warnf("Synced too far back! Index: %d (%v), PruningIndex: %d", bundleMsIndex, cachedBndl.GetBundle().GetMilestoneHash().Trytes(), pruningIndex)
+			log.Warnf("Synced too far back! Index: %d (%v), PruningIndex: %d", msIndex, cachedMilestone.GetMilestone().MessageID.Hex(), pruningIndex)
 		}
 	}
 }

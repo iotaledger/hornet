@@ -18,9 +18,9 @@ var (
 	prevLMI milestone.Index = 0
 )
 
-func onNewTx(cachedTx *tangle.CachedTransaction) {
+func onNewTx(cachedTx *tangle.CachedMessage) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
 		// tx topic
 		err := publishTx(tx.Tx)
 		if err != nil {
@@ -37,15 +37,15 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _ int64) {
 
-	cachedMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
+	cachedMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(metadata.GetTxHash())
+		cachedTx := tangle.GetCachedMessageOrNil(metadata.GetMessageID())
 		if cachedTx == nil {
-			log.Warnf("%w hash: %s", tangle.ErrTransactionNotFound, metadata.GetTxHash().Trytes())
+			log.Warnf("%w hash: %s", tangle.ErrMessageNotFound, metadata.GetMessageID().Hex())
 			return
 		}
 
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
 			if err := publishConfTx(tx.Tx, msIndex); err != nil {
 				log.Warn(err.Error())
 			}
@@ -67,32 +67,32 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 	})
 }
 
-func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
-	err := publishLMI(cachedBndl.GetBundle().GetMilestoneIndex())
+func onNewLatestMilestone(cachedMilestone *tangle.CachedMilestone) {
+	err := publishLMI(cachedMilestone.GetMilestone().Index)
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash().Trytes())
+	err = publishLMHS(cachedMilestone.GetMilestone().MessageID.Hex())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLM(cachedBndl.GetBundle())
+	err = publishLM(cachedMilestone.GetMilestone())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	cachedBndl.Release(true) // bundle -1
+	cachedMilestone.Release(true) // bundle -1
 }
 
-func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
-	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
+func onNewSolidMilestone(cachedMilestone *tangle.CachedMilestone) {
+	err := publishLMSI(cachedMilestone.GetMilestone().Index)
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLSM(cachedBndl.GetBundle())
+	err = publishLSM(cachedMilestone.GetMilestone())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	cachedBndl.Release(true) // bundle -1
+	cachedMilestone.Release(true) // bundle -1
 }
 
 func onSpentAddress(addr trinary.Hash) {
@@ -139,20 +139,20 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish latest milestone
-func publishLM(bndl *tangle.Bundle) error {
+func publishLM(ms *tangle.Milestone) error {
 	messages := []string{
-		strconv.FormatUint(uint64(bndl.GetMilestoneIndex()), 10),
-		bndl.GetMilestoneHash().Trytes(),
+		strconv.FormatUint(uint64(ms.Index), 10),
+		ms.MessageID.Hex(),
 	}
 
 	return publisher.Send(topicLM, messages)
 }
 
 // Publish latest solid subtangle milestone
-func publishLSM(bndl *tangle.Bundle) error {
+func publishLSM(ms *tangle.Milestone) error {
 	messages := []string{
-		strconv.FormatUint(uint64(bndl.GetMilestoneIndex()), 10),
-		bndl.GetMilestoneHash().Trytes(),
+		strconv.FormatUint(uint64(ms.Index), 10),
+		ms.MessageID.Hex(),
 	}
 
 	return publisher.Send(topicLSM, messages)
@@ -167,7 +167,7 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 		iotaTx.Address,                        // Address
 		iotaTx.TrunkTransaction,               // Trunk transaction hash
 		iotaTx.BranchTransaction,              // Branch transaction hash
-		iotaTx.Bundle,                         // Bundle hash
+		iotaTx.Bundle,                         // Message hash
 	}
 
 	return publisher.Send(topicSN, messages)
@@ -217,7 +217,7 @@ func publishTx(iotaTx *transaction.Transaction) error {
 		strconv.FormatInt(int64(iotaTx.Timestamp), 10),    // Timestamp
 		strconv.FormatInt(int64(iotaTx.CurrentIndex), 10), // Index of the transaction in the bundle
 		strconv.FormatInt(int64(iotaTx.LastIndex), 10),    // Last transaction index of the bundle
-		iotaTx.Bundle,                            // Bundle hash
+		iotaTx.Bundle,                            // Message hash
 		iotaTx.TrunkTransaction,                  // Trunk transaction hash
 		iotaTx.BranchTransaction,                 // Branch transaction hash
 		strconv.FormatInt(time.Now().Unix(), 10), // Unix timestamp for when the transaction was received

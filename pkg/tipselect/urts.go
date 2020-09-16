@@ -60,7 +60,7 @@ var (
 type Tip struct {
 	// Score is the score of the tip.
 	Score Score
-	// Hash is the transaction hash of the tip.
+	// MilestoneMessageID is the transaction hash of the tip.
 	Hash hornet.Hash
 	// TimeFirstApprover is the timestamp the tip was referenced for the first time by another transaction.
 	TimeFirstApprover time.Time
@@ -165,7 +165,7 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 }
 
 // AddTip adds the given tailTxHash as a tip.
-func (ts *TipSelector) AddTip(bndl *tangle.Bundle) {
+func (ts *TipSelector) AddTip(bndl *tangle.Message) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
@@ -486,7 +486,7 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this transaction
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // meta +1
+	cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
 	if cachedTxMeta == nil {
 		// we need to return lazy instead of panic here, because the transaction could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.

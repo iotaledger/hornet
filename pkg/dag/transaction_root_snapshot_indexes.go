@@ -12,9 +12,9 @@ import (
 // the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
 func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
 	for _, outdatedTxHash := range outdatedTransactions {
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(outdatedTxHash)
+		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(outdatedTxHash)
 		if cachedTxMeta == nil {
-			panic(tangle.ErrTransactionNotFound)
+			panic(tangle.ErrMessageNotFound)
 		}
 		GetTransactionRootSnapshotIndexes(cachedTxMeta, lsmi)
 	}
@@ -47,13 +47,13 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 	// are no solid entry points and have no recent calculation index
 	var outdatedTransactions hornet.Hashes
 
-	startTxHash := cachedTxMeta.GetMetadata().GetTxHash()
+	startTxHash := cachedTxMeta.GetMetadata().GetMessageID()
 
 	indexesValid := true
 
 	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
 	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
-	if err := TraverseApprovees(cachedTxMeta.GetMetadata().GetTxHash(),
+	if err := TraverseApprovees(cachedTxMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
@@ -65,7 +65,7 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 				return false, nil
 			}
 
-			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
+			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetMessageID()) {
 				return true, nil
 			}
 
@@ -83,18 +83,18 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
 			defer cachedTxMeta.Release(true) // meta -1
 
-			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
+			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetMessageID()) {
 				// skip the start transaction, so it doesn't get added to the outdatedTransactions
 				return nil
 			}
 
-			outdatedTransactions = append(outdatedTransactions, cachedTxMeta.GetMetadata().GetTxHash())
+			outdatedTransactions = append(outdatedTransactions, cachedTxMeta.GetMetadata().GetMessageID())
 			return nil
 		},
 		// called on missing approvees
 		func(approveeHash hornet.Hash) error {
 			// since this is also called for the future cone, there may be missing approvees
-			return tangle.ErrTransactionNotFound
+			return tangle.ErrMessageNotFound
 		},
 		// called on solid entry points
 		func(txHash hornet.Hash) {
@@ -102,7 +102,7 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
 			updateIndexes(entryPointIndex, entryPointIndex)
 		}, false, false, nil); err != nil {
-		if err == tangle.ErrTransactionNotFound {
+		if err == tangle.ErrMessageNotFound {
 			indexesValid = false
 		} else {
 			panic(err)
@@ -140,13 +140,13 @@ func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone
 			// traversal stops if no more transactions pass the given condition
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedTxMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetTxHash())]
+				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetMessageID())]
 				return !previouslyTraversed, nil
 			},
 			// consumer
 			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
 				defer cachedTxMeta.Release(true) // meta -1
-				traversed[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
+				traversed[string(cachedTxMeta.GetMetadata().GetMessageID())] = struct{}{}
 
 				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
 				GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta pass +1

@@ -85,7 +85,7 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 	// calculate the transaction hash with the batched hasher if not given
 	skipHashCalc := len(txHash) > 0
 	if !skipHashCalc {
-		//hashTrits := batchhasher.CURLP81.Hash(txDataTrits)
+		//hashTrits := batchhasher.CURLP81.MessageID(txDataTrits)
 		hashTrits := []int8{}
 		txHash = []trinary.Hash{trinary.MustTritsToTrytes(hashTrits)}
 	}

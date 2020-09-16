@@ -31,7 +31,7 @@ func IsNodeHealthy() bool {
 		return false
 	}
 
-	cachedMsTailTx := cachedLatestMs.GetBundle().GetTail() // tx +1
+	cachedMsTailTx := cachedLatestMs.GetMessage().GetTail() // tx +1
 	milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
 	cachedMsTailTx.Release(true) // tx -1
 	cachedLatestMs.Release(true) // bundle -1

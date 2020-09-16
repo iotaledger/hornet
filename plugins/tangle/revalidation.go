@@ -39,13 +39,13 @@ var (
 //			- TxRaw (synced)					=> will be removed and added again by requesting the tx at solidification
 //			- TxMetadata (synced)				=> will be removed and added again if missing by receiving the tx (if not => reset)
 //			- BundleTransaction (synced)		=> will be removed and added again if missing by receiving the tx
-//			- Bundle (always)					=> will be removed and added again if missing by receiving the tx
-//			- Approver (synced)					=> will be removed and added again if missing by receiving the tx
+//			- Message (always)					=> will be removed and added again if missing by receiving the tx
+//			- Child (synced)					=> will be removed and added again if missing by receiving the tx
 //
 // 		Stored without caching:
 //			- Tag								=> will be removed and added again if missing by receiving the tx
 //			- Address							=> will be removed and added again if missing by receiving the tx
-//			- UnconfirmedTx 					=> will be removed at pruning anyway
+//			- UnconfirmedMessage 					=> will be removed at pruning anyway
 //			- Milestone							=> will be removed and added again by receiving the tx
 //
 // Database:
@@ -191,7 +191,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 			log.Infof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteUnconfirmedTxs(msIndex)
+		tangle.DeleteUnconfirmedMessages(msIndex)
 		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 			panic(err)
 		}
@@ -199,7 +199,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		tangle.DeleteMilestone(msIndex)
 	}
 
-	tangle.FlushUnconfirmedTxsStorage()
+	tangle.FlushUnconfirmedMessagesStorage()
 	tangle.FlushMilestoneStorage()
 
 	log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
@@ -277,7 +277,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	tangle.ForEachTransactionHash(func(txHash hornet.Hash) bool {
+	tangle.ForEachMessageID(func(txHash hornet.Hash) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -334,10 +334,10 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 			log.Infof("deleting transactions...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteTransaction(hornet.Hash(txHash))
+		tangle.DeleteMessage(hornet.Hash(txHash))
 	}
 
-	tangle.FlushTransactionStorage()
+	tangle.FlushMessagesStorage()
 
 	log.Infof("deleting transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -353,7 +353,7 @@ func cleanupTransactionMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	tangle.ForEachTransactionMetadataHash(func(txHash hornet.Hash) bool {
+	tangle.ForEachMessageMetadataMessageID(func(txHash hornet.Hash) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -367,7 +367,7 @@ func cleanupTransactionMetadata() error {
 		}
 
 		// delete metadata if transaction doesn't exist
-		if !tangle.TransactionExistsInStore(txHash) {
+		if !tangle.MessageExistsInStore(txHash) {
 			metadataToDelete[string(txHash)] = struct{}{}
 		}
 
@@ -395,10 +395,10 @@ func cleanupTransactionMetadata() error {
 			log.Infof("deleting transaction metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteTransactionMetadata(hornet.Hash(txHash))
+		tangle.DeleteMessageMetadata(hornet.Hash(txHash))
 	}
 
-	tangle.FlushTransactionStorage()
+	tangle.FlushMessagesStorage()
 
 	log.Infof("deleting transaction metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -427,14 +427,14 @@ func cleanupBundles() error {
 			log.Infof("analyzed %d bundles", bundleCounter)
 		}
 
-		bundle := tangle.GetStoredBundleOrNil(tailTxHash)
+		bundle := tangle.GetStoredMessageOrNil(tailTxHash)
 		if bundle == nil {
 			return true
 		}
 
 		for _, txHash := range bundle.GetTxHashes() {
 			// delete bundle if a single transaction of the bundle doesn't exist
-			if !tangle.TransactionExistsInStore(txHash) {
+			if !tangle.MessageExistsInStore(txHash) {
 				bundlesToDelete[string(tailTxHash)] = struct{}{}
 				return true
 			}
@@ -464,10 +464,10 @@ func cleanupBundles() error {
 			log.Infof("deleting bundles...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteBundle(hornet.Hash(tailTxHash))
+		tangle.DeleteMessage(hornet.Hash(tailTxHash))
 	}
 
-	tangle.FlushBundleStorage()
+	tangle.FlushMessagesStorage()
 
 	log.Infof("deleting bundles...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -503,7 +503,7 @@ func cleanupBundleTransactions() error {
 		}
 
 		// delete bundle transaction if transaction doesn't exist
-		if !tangle.TransactionExistsInStore(txHash) {
+		if !tangle.MessageExistsInStore(txHash) {
 			bundleTxsToDelete[string(txHash)] = &bundleTransaction{bundleHash: bundleHash, txHash: txHash, isTail: isTail}
 		}
 
@@ -555,7 +555,7 @@ func cleanupApprovers() error {
 
 	lastStatusTime := time.Now()
 	var approverCounter int64
-	tangle.ForEachApprover(func(txHash hornet.Hash, approverHash hornet.Hash) bool {
+	tangle.ForEachChild(func(txHash hornet.Hash, approverHash hornet.Hash) bool {
 		approverCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -569,12 +569,12 @@ func cleanupApprovers() error {
 		}
 
 		// delete approver if transaction doesn't exist
-		if !tangle.TransactionExistsInStore(txHash) {
+		if !tangle.MessageExistsInStore(txHash) {
 			approversToDelete[string(txHash)+string(approverHash)] = &approver{txHash: txHash, approverHash: approverHash}
 		}
 
 		// delete approver if approver transaction doesn't exist
-		if !tangle.TransactionExistsInStore(approverHash) {
+		if !tangle.MessageExistsInStore(approverHash) {
 			approversToDelete[string(txHash)+string(approverHash)] = &approver{txHash: txHash, approverHash: approverHash}
 		}
 
@@ -602,10 +602,10 @@ func cleanupApprovers() error {
 			log.Infof("deleting approvers...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteApprover(approver.txHash, approver.approverHash)
+		tangle.DeleteChild(approver.txHash, approver.approverHash)
 	}
 
-	tangle.FlushApproversStorage()
+	tangle.FlushChildrenStorage()
 
 	log.Infof("deleting approvers...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -640,7 +640,7 @@ func cleanupTags() error {
 		}
 
 		// delete tag if transaction doesn't exist
-		if !tangle.TransactionExistsInStore(txHash) {
+		if !tangle.MessageExistsInStore(txHash) {
 			tagsToDelete[string(txHash)] = &tag{tag: txTag, txHash: txHash}
 		}
 
@@ -706,7 +706,7 @@ func cleanupAddresses() error {
 		}
 
 		// delete address if transaction doesn't exist
-		if !tangle.TransactionExistsInStore(txHash) {
+		if !tangle.MessageExistsInStore(txHash) {
 			addressesToDelete[string(txHash)] = &address{address: addressHash, txHash: txHash}
 		}
 
@@ -753,7 +753,7 @@ func cleanupUnconfirmedTxs() error {
 
 	lastStatusTime := time.Now()
 	var unconfirmedTxsCounter int64
-	tangle.ForEachUnconfirmedTx(func(msIndex milestone.Index, txHash hornet.Hash) bool {
+	tangle.ForEachUnconfirmedMessage(func(msIndex milestone.Index, txHash hornet.Hash) bool {
 		unconfirmedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -792,10 +792,10 @@ func cleanupUnconfirmedTxs() error {
 			log.Infof("deleting unconfirmed txs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteUnconfirmedTxs(msIndex)
+		tangle.DeleteUnconfirmedMessages(msIndex)
 	}
 
-	tangle.FlushUnconfirmedTxsStorage()
+	tangle.FlushUnconfirmedMessagesStorage()
 
 	log.Infof("deleting unconfirmed txs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 

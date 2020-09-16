@@ -90,13 +90,13 @@ func configure(plugin *node.Plugin) {
 		coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
 
 		// Check coordinator address in database
-		if !bytes.Equal(snapshotInfo.CoordinatorAddress, coordinatorAddress) {
+		if !bytes.Equal(snapshotInfo.CoordinatorPublicKey, coordinatorAddress) {
 			if !*overwriteCooAddress {
-				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorAddress.Trytes(), config.NodeConfig.GetString(config.CfgCoordinatorAddress)))
+				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorPublicKey.Hex(), config.NodeConfig.GetString(config.CfgCoordinatorAddress)))
 			}
 
 			// Overwrite old coordinator address
-			snapshotInfo.CoordinatorAddress = coordinatorAddress
+			snapshotInfo.CoordinatorPublicKey = coordinatorAddress
 			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 

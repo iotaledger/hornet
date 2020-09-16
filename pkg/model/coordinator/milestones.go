@@ -24,7 +24,7 @@ func tagForIndex(index milestone.Index) trinary.Trytes {
 	return trinary.IntToTrytes(int64(index), 27)
 }
 
-// randomTrytesWithRandomLengthPadded creates Trytes with random length in the range from min to length and pads it with 9's
+// randomTrytesWithRandomLengthPadded creates Hex with random length in the range from min to length and pads it with 9's
 func randomTrytesWithRandomLengthPadded(min int, length int) trinary.Trytes {
 	return trinary.MustPad(utils.RandomTrytesInsecure(utils.RandomInsecure(0, length)), length)
 }
@@ -34,25 +34,25 @@ func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, po
 
 	tag := randomTrytesWithRandomLengthPadded(5, consts.TagTrinarySize/3)
 
-	b := bundle.Bundle{
-		transaction.Transaction{
-			SignatureMessageFragment:      randomTrytesWithRandomLengthPadded(100, consts.SignatureMessageFragmentTrinarySize/3),
-			Address:                       utils.RandomTrytesInsecure(consts.AddressTrinarySize / 3),
-			Value:                         0,
-			ObsoleteTag:                   tag,
-			Timestamp:                     uint64(time.Now().Unix()),
-			CurrentIndex:                  0,
-			LastIndex:                     0,
-			Bundle:                        consts.NullHashTrytes,
-			TrunkTransaction:              trunkHash.Trytes(),
-			BranchTransaction:             branchHash.Trytes(),
-			Tag:                           tag,
-			AttachmentTimestamp:           0,
-			AttachmentTimestampLowerBound: consts.LowerBoundAttachmentTimestamp,
-			AttachmentTimestampUpperBound: consts.UpperBoundAttachmentTimestamp,
-			Nonce:                         consts.NullTagTrytes,
-		},
-	}
+	tx := &transaction.Transaction{}
+	tx.SignatureMessageFragment = randomTrytesWithRandomLengthPadded(100, consts.SignatureMessageFragmentTrinarySize/3)
+	tx.Address = utils.RandomTrytesInsecure(consts.AddressTrinarySize / 3)
+	tx.Value = 0
+	tx.ObsoleteTag = tag
+	tx.Timestamp = uint64(time.Now().Unix())
+	tx.CurrentIndex = 0
+	tx.LastIndex = 0
+	tx.Bundle = consts.NullHashTrytes
+	tx.TrunkTransaction = trunkHash.Hex()
+	tx.BranchTransaction = branchHash.Hex()
+	tx.Tag = tag
+	tx.AttachmentTimestamp = 0
+	tx.AttachmentTimestampLowerBound = consts.LowerBoundAttachmentTimestamp
+	tx.AttachmentTimestampUpperBound = consts.UpperBoundAttachmentTimestamp
+	tx.Nonce = consts.NullTagTrytes
+
+	var err error
+	b := Bundle{tx}
 
 	// finalize bundle by adding the bundle hash
 	b, err := bundle.FinalizeInsecure(b)
@@ -99,8 +99,8 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	txSiblings.ObsoleteTag = tag
 	txSiblings.Value = 0
 	txSiblings.Bundle = consts.NullHashTrytes
-	txSiblings.TrunkTransaction = trunkHash.Trytes()
-	txSiblings.BranchTransaction = branchHash.Trytes()
+	txSiblings.TrunkTransaction = trunkHash.Hex()
+	txSiblings.BranchTransaction = branchHash.Hex()
 	txSiblings.Tag = tag
 	txSiblings.Nonce = consts.NullTagTrytes
 
@@ -117,7 +117,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 		tx.Value = 0
 		tx.Bundle = consts.NullHashTrytes
 		tx.TrunkTransaction = consts.NullHashTrytes
-		tx.BranchTransaction = trunkHash.Trytes()
+		tx.BranchTransaction = trunkHash.Hex()
 		tx.Tag = tag
 		tx.Nonce = consts.NullTagTrytes
 	}
@@ -186,7 +186,7 @@ func doPow(tx *transaction.Transaction, mwm int, powHandler *pow.Handler) error 
 // transactionHash makes a transaction hash from the given transaction.
 func transactionHash(t *transaction.Transaction) trinary.Hash {
 	//trits, _ := transaction.TransactionToTrits(t)
-	//hashTrits := batchhasher.CURLP81.Hash(trits)
+	//hashTrits := batchhasher.CURLP81.MessageID(trits)
 	hashTrits := []int8{}
 	return trinary.MustTritsToTrytes(hashTrits)
 }

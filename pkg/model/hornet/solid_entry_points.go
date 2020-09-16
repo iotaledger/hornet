@@ -76,9 +76,9 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 	var err error
 
-	solidEntryPointsCount := len(solidEntryPointsBytes) / (49 + 4)
+	solidEntryPointsCount := len(solidEntryPointsBytes) / (32 + 4)
 	for i := 0; i < solidEntryPointsCount; i++ {
-		hashBuf := make([]byte, 49)
+		hashBuf := make([]byte, 32)
 		var msIndex uint32
 
 		err = binary.Read(bytesReader, binary.BigEndian, hashBuf)
@@ -99,10 +99,10 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 func (s *SolidEntryPoints) GetBytes() []byte {
 
-	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(49+4)))
+	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 
 	for hash, msIndex := range s.entryPointsMap {
-		err := binary.Write(buf, binary.BigEndian, []byte(hash)[:49])
+		err := binary.Write(buf, binary.BigEndian, []byte(hash)[:32])
 		if err != nil {
 			return nil
 		}

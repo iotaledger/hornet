@@ -18,8 +18,8 @@ func runLiveFeed() {
 	newTxZeroValueRateLimiter := time.NewTicker(time.Second / 10)
 	newTxValueRateLimiter := time.NewTicker(time.Second / 20)
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -42,7 +42,7 @@ func runLiveFeed() {
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		if msTailTxHash := getMilestoneTailHash(msIndex); msTailTxHash != nil {
-			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{Hash: msTailTxHash.Trytes(), Index: msIndex}})
+			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{Hash: msTailTxHash.Hex(), Index: msIndex}})
 		}
 	})
 
