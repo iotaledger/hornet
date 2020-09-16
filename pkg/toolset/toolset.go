@@ -11,7 +11,6 @@ var (
 		"pwdhash": hashPasswordAndSalt,
 		"seedgen": seedGen,
 		"list":    listTools,
-		"merkle":  merkleTreeCreate,
 	}
 )
 
@@ -57,7 +56,6 @@ func HandleTools() {
 func listTools(args []string) error {
 	fmt.Println("pwdhash: generates a sha265 sum from your password and salt")
 	fmt.Println("seedgen: generates an autopeering seed")
-	fmt.Println("merkle: generates a Merkle tree for coordinator plugin")
 
 	return nil
 }
