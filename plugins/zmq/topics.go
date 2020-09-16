@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	zmq "github.com/go-zeromq/zmq4"
-	"github.com/iotaledger/iota.go/address"
+	"github.com/muxxer/iota.go/address"
 )
 
 // Topic names

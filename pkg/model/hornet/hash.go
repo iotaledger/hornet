@@ -3,9 +3,7 @@ package hornet
 import (
 	"fmt"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/encoding/t5b1"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/trinary"
 )
 
 var (

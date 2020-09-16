@@ -12,10 +12,10 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/merkle"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"

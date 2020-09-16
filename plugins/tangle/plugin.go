@@ -13,7 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/iotaledger/iota.go/address"
+	"github.com/muxxer/iota.go/address"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"

@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/encoding/b1t6"
-	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/bundle"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/kerl"
+	"github.com/muxxer/iota.go/merkle"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -184,8 +184,29 @@ func doPow(tx *transaction.Transaction, mwm int, powHandler *pow.Handler) error 
 }
 
 // transactionHash makes a transaction hash from the given transaction.
-func transactionHash(t *transaction.Transaction) (trinary.Hash, error) {
-	trits, err := transaction.TransactionToTrits(t)
+func transactionHash(t *transaction.Transaction) trinary.Hash {
+	//trits, _ := transaction.TransactionToTrits(t)
+	//hashTrits := batchhasher.CURLP81.Hash(trits)
+	hashTrits := []int8{}
+	return trinary.MustTritsToTrytes(hashTrits)
+}
+
+// finalizeInsecure sets the bundle hash for all transactions in the bundle.
+// we do not care about the M-Bug since we use a fixed version of the ISS.
+func finalizeInsecure(bundle Bundle) (Bundle, error) {
+
+	k := kerl.NewKerl()
+
+	for _, tx := range bundle {
+		txTrits, err := transaction.TransactionToTrits(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		k.Absorb(txTrits[consts.AddressTrinaryOffset:consts.BundleTrinaryOffset]) // Address + Value + ObsoleteTag + Timestamp + CurrentIndex + LastIndex
+	}
+
+	bundleHashTrits, err := k.Squeeze(consts.HashTrinarySize)
 	if err != nil {
 		return "", err
 	}

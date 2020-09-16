@@ -13,8 +13,8 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/transaction"
+	"github.com/muxxer/iota.go/bundle"
+	"github.com/muxxer/iota.go/transaction"
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/config"

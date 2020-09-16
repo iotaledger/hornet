@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/iotaledger/iota.go/transaction"
+	"github.com/muxxer/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/iotaledger/hive.go/objectstorage"

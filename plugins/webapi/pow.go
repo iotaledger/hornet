@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/plugins/curl"
@@ -116,7 +116,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		log.Debugf("PoW method: \"%s\", MWM: %d, took %v", pow.Handler().GetPoWType(), mwm, time.Since(ts).Truncate(time.Millisecond))
 
 		// Convert tx to trits
-		txTrits, err := transaction.TransactionToTrits(&txs[i])
+		//txTrits, err := transaction.TransactionToTrits(&txs[i])
 		if err != nil {
 			e.Error = err.Error()
 			c.JSON(http.StatusInternalServerError, e)
@@ -124,13 +124,8 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Calculate the transaction hash with the batched hasher
-		hashTrits, err := curl.Hasher().Hash(txTrits)
-		if err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
-		}
-
+		//hashTrits := batchhasher.CURLP81.Hash(txTrits)
+		hashTrits := []int8{}
 		txs[i].Hash = trinary.MustTritsToTrytes(hashTrits)
 
 		prev = txs[i].Hash

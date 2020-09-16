@@ -7,11 +7,11 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/math"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/guards"
+	"github.com/muxxer/iota.go/math"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/config"
@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	workerCount         = curl.Hasher().BatchSize() * curl.Hasher().WorkerCount()
+	workerCount         = 64
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
 
 	invalidMilestoneHashes = map[string]struct{}{
@@ -153,10 +153,8 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 		return err
 	}
 
-	hashTrits, err := curl.Hasher().Hash(txTrits)
-	if err != nil {
-		return err
-	}
+	//hashTrits := batchhasher.CURLP81.Hash(txTrits)
+	hashTrits := []int8{}
 	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
 
 	if tx.Value != 0 {

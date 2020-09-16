@@ -6,7 +6,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/iotaledger/iota.go/consts"
+	"github.com/muxxer/iota.go/consts"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

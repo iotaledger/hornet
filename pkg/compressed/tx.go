@@ -3,13 +3,10 @@ package compressed
 import (
 	"fmt"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/encoding/t5b1"
-	"github.com/iotaledger/iota.go/math"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
-
-	"github.com/gohornet/hornet/plugins/curl"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/math"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 )
 
 const (
@@ -88,10 +85,8 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 	// calculate the transaction hash with the batched hasher if not given
 	skipHashCalc := len(txHash) > 0
 	if !skipHashCalc {
-		hashTrits, err := curl.Hasher().Hash(txDataTrits)
-		if err != nil {
-			return nil, err
-		}
+		//hashTrits := batchhasher.CURLP81.Hash(txDataTrits)
+		hashTrits := []int8{}
 		txHash = []trinary.Hash{trinary.MustTritsToTrytes(hashTrits)}
 	}
 

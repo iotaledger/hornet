@@ -5,8 +5,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/trinary"
 )
 
 var (

@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/consts"
+	"github.com/muxxer/iota.go/bundle"
+	"github.com/muxxer/iota.go/consts"
 
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"

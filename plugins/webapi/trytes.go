@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/transaction"
+	"github.com/muxxer/iota.go/guards"
+	"github.com/muxxer/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
