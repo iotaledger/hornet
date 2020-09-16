@@ -58,8 +58,7 @@ loopOverUnconfirmed:
 			}
 		}
 
-		// do not force release, since it is loaded again
-		cachedTx.Release() // tx -1
+		cachedTx.Release(true) // tx -1
 		txsToCheckMap[string(txHash)] = struct{}{}
 	}
 
@@ -87,17 +86,17 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	for txHashToCheck := range txsToCheckMap {
 
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHashToCheck)) // tx +1
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHashToCheck)) // meta +1
 		if cachedTxMeta == nil {
-			log.Warnf("pruneTransactions: Transaction not found: %s", txHashToCheck)
+			log.Warnf("pruneTransactions: Transaction not found: %s", hornet.Hash(txHashToCheck).Trytes())
 			continue
 		}
 
 		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTxMeta.GetMetadata()) {
 			txsToDeleteMap[txToRemove] = struct{}{}
 		}
-		// since it gets loaded below again it doesn't make sense to force release here
-		cachedTxMeta.Release() // tx -1
+		// metadata can be force release, since we work with transaction objects at deletion
+		cachedTxMeta.Release(true) // tx -1
 	}
 
 	for txHashToDelete := range txsToDeleteMap {
