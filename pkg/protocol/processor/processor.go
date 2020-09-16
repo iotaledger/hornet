@@ -13,6 +13,8 @@ import (
 	"github.com/muxxer/iota.go/transaction"
 	"github.com/muxxer/iota.go/trinary"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -301,6 +303,9 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 
 	wu.UpdateState(Hashing)
 	wu.processingLock.Unlock()
+
+	msg := &iotago.Message{}
+	_, err := msg.Deserialize(wu.receivedTxBytes, iotago.DeSeriModePerformValidation)
 
 	// this blocks until the transaction was also hashed
 	tx, err := compressed.TransactionFromCompressedBytes(wu.receivedTxBytes)
