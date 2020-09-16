@@ -115,7 +115,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
 	)
 	var dbSizeXAxis []string
-	var dbSizeTangle, dbSizeSnapshot []int64
+	var dbSizeTotal []int64
 
 	// tip selection
 	tipSelChart := charts.NewLine()
@@ -197,8 +197,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 			}
 			dbSizeMetric := dbSizeMetrics[len(dbSizeMetrics)-1]
 			dbSizeXAxis = append(tpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
-			dbSizeTangle = append(dbSizeTangle, dbSizeMetric.Tangle/byteMBDivider)
-			dbSizeSnapshot = append(dbSizeTangle, dbSizeMetric.Snapshot/byteMBDivider)
+			dbSizeTotal = append(dbSizeTotal, dbSizeMetric.Total/byteMBDivider)
 
 		case dashboard.MsgTypeNodeStatus:
 			nodeStatus := &dashboard.NodeStatus{
@@ -232,8 +231,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 	issuanceRateChart.AddXAxis(confIssXAxis).
 		AddYAxis("Issuance Delta", issuanceInterval)
 
-	dbSizeChart.AddXAxis(dbSizeXAxis).AddYAxis("Tangle", dbSizeTangle).
-		AddYAxis("Snapshot", dbSizeSnapshot)
+	dbSizeChart.AddXAxis(dbSizeXAxis).AddYAxis("Total", dbSizeTotal)
 
 	memChart.AddXAxis(memChartXAxis).
 		AddYAxis("Sys", memSys).
