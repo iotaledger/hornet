@@ -19,6 +19,23 @@ type Message struct {
 	message *iotago.Message
 }
 
+func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Message, error) {
+	msg := &iotago.Message{}
+	if _, err := msg.Deserialize(data, deSeriMode); err != nil {
+		return nil, err
+	}
+
+	hash, err := msg.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Message{
+		messageID: hash[:],
+		message:   msg,
+	}, nil
+}
+
 func (msg *Message) GetMessageID() hornet.Hash {
 	return msg.messageID
 }
