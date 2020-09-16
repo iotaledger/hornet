@@ -21,9 +21,6 @@ const (
 var (
 	dbDir string
 
-	tangleRealm   = kvstore.Realm([]byte("t"))
-	snapshotRealm = kvstore.Realm([]byte("s"))
-
 	pebbleInstance *pebbleDB.DB
 
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
@@ -87,28 +84,22 @@ func ConfigureDatabases(directory string) {
 
 	pebbleInstance = getPebbleDB(directory, false)
 
-	kvstoreInstance := pebble.New(pebbleInstance)
-
-	tangleStore := kvstoreInstance.WithRealm(tangleRealm)
-	snapshotStore := kvstoreInstance.WithRealm(snapshotRealm)
-
-	ConfigureStorages(tangleStore, snapshotStore, profile.LoadProfile().Caches)
+	ConfigureStorages(pebble.New(pebbleInstance), profile.LoadProfile().Caches)
 }
 
-func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStore, caches profile.Caches) {
+func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 
-	configureHealthStore(tangleStore)
-	configureTransactionStorage(tangleStore, caches.Transactions)
-	configureBundleTransactionsStorage(tangleStore, caches.BundleTransactions)
-	configureBundleStorage(tangleStore, caches.Bundles)
-	configureApproversStorage(tangleStore, caches.Approvers)
-	configureTagsStorage(tangleStore, caches.Tags)
-	configureAddressesStorage(tangleStore, caches.Addresses)
-	configureMilestoneStorage(tangleStore, caches.Milestones)
-	configureUnconfirmedTxStorage(tangleStore, caches.UnconfirmedTx)
-	configureLedgerStore(tangleStore)
-
-	configureSnapshotStore(snapshotStore)
+	configureHealthStore(store)
+	configureTransactionStorage(store, caches.Transactions)
+	configureBundleTransactionsStorage(store, caches.BundleTransactions)
+	configureBundleStorage(store, caches.Bundles)
+	configureApproversStorage(store, caches.Approvers)
+	configureTagsStorage(store, caches.Tags)
+	configureAddressesStorage(store, caches.Addresses)
+	configureMilestoneStorage(store, caches.Milestones)
+	configureUnconfirmedTxStorage(store, caches.UnconfirmedTx)
+	configureLedgerStore(store)
+	configureSnapshotStore(store)
 }
 
 func FlushStorages() {

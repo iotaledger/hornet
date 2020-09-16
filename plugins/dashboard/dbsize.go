@@ -27,11 +27,11 @@ type DBSizeMetric struct {
 
 func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 	size := struct {
-		Tangle int64 `json:"total"`
-		Time   int64 `json:"ts"`
+		Total int64 `json:"total"`
+		Time  int64 `json:"ts"`
 	}{
-		Tangle: s.Total,
-		Time:   s.Time.Unix(),
+		Total: s.Total,
+		Time:  s.Time.Unix(),
 	}
 
 	return json.Marshal(size)

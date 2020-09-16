@@ -133,11 +133,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 // configureStorages initializes the storage layer.
 func (te *TestEnvironment) configureStorages(store kvstore.KVStore) {
 
-	tangle.ConfigureStorages(
-		store.WithRealm([]byte("tangle")),
-		store.WithRealm([]byte("snapshot")),
-		profile.Profile2GB.Caches,
-	)
+	tangle.ConfigureStorages(store, profile.Profile2GB.Caches)
 
 	setupTangleOnce.Do(func() {
 		tangle.LoadInitialValuesFromDatabase()
