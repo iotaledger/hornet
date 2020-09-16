@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/trinary"
 )
 
 func tryteToTryteValue(t byte) int8 {

@@ -14,9 +14,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 )
 
 const (

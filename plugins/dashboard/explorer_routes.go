@@ -9,9 +9,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/guards"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/guards"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"

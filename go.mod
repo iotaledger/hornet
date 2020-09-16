@@ -24,13 +24,13 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200916100300-cbf1a0c809ce
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200729151348-3ce576f7cd9e
+	github.com/iotaledger/hive.go v0.0.0-20200916211606-91bd423186fa
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
+	github.com/muxxer/iota.go v1.0.0-beta.11.0.20200916213055-851daf436c69
 	github.com/onsi/ginkgo v1.14.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
@@ -46,13 +46,10 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.11
-	gitlab.com/powsrv.io/go/client v0.0.0-20200807151725-8bc5209c1820
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.7.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/sys v0.0.0-20200915084602-288bc346aa39 // indirect
 	golang.org/x/tools v0.0.0-20200915031644-64986481280e // indirect
-	google.golang.org/genproto v0.0.0-20200914193844-75d14daec038 // indirect
-	google.golang.org/grpc v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
 )

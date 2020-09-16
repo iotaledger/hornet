@@ -5,13 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iotaledger/hive.go/batchhasher"
-	"github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/transaction"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/bundle"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/kerl"
+	"github.com/muxxer/iota.go/merkle"
+	"github.com/muxxer/iota.go/transaction"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -194,8 +193,9 @@ func doPow(tx *transaction.Transaction, mwm int, powHandler *pow.Handler) error 
 
 // transactionHash makes a transaction hash from the given transaction.
 func transactionHash(t *transaction.Transaction) trinary.Hash {
-	trits, _ := transaction.TransactionToTrits(t)
-	hashTrits := batchhasher.CURLP81.Hash(trits)
+	//trits, _ := transaction.TransactionToTrits(t)
+	//hashTrits := batchhasher.CURLP81.Hash(trits)
+	hashTrits := []int8{}
 	return trinary.MustTritsToTrytes(hashTrits)
 }
 

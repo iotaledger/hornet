@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/iota.go/consts"
+	"github.com/muxxer/iota.go/consts"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"

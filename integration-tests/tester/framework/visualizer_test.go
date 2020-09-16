@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 )
 

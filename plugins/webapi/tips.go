@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/iota.go/guards"
 	"github.com/mitchellh/mapstructure"
+	"github.com/muxxer/iota.go/guards"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"

@@ -13,8 +13,8 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/transaction"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"

@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	iotagobundle "github.com/iotaledger/iota.go/bundle"
+	iotagobundle "github.com/muxxer/iota.go/bundle"
 
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/objectstorage"

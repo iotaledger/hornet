@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/mitchellh/mapstructure"
+	"github.com/muxxer/iota.go/trinary"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"

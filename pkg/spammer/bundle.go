@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/iota.go/address"
-	"github.com/iotaledger/iota.go/bundle"
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/converter"
-	"github.com/iotaledger/iota.go/kerl"
-	"github.com/iotaledger/iota.go/signing"
-	"github.com/iotaledger/iota.go/signing/key"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/address"
+	"github.com/muxxer/iota.go/bundle"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/kerl"
+	"github.com/muxxer/iota.go/signing"
+	"github.com/muxxer/iota.go/signing/key"
+	"github.com/muxxer/iota.go/trinary"
 )
 
 const (
@@ -88,10 +87,13 @@ func createBundle(seed trinary.Trytes, seedIndex uint64, txAddress trinary.Hash,
 		messageString = fmt.Sprintf("%v\n%v", messageString, additionalMesssage[0])
 	}
 
-	message, err := converter.ASCIIToTrytes(messageString)
-	if err != nil {
-		return nil, fmt.Errorf("ASCIIToTrytes: %v", err.Error())
-	}
+	/*
+		message, err := converter.ASCIIToTrytes(messageString)
+		if err != nil {
+			return nil, fmt.Errorf("ASCIIToTrytes: %v", err.Error())
+		}
+	*/
+	message := "ABC"
 
 	timestamp := uint64(now.UnixNano() / int64(time.Second))
 

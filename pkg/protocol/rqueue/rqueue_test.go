@@ -6,7 +6,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 )
 

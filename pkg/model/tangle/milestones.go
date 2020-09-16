@@ -9,9 +9,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/trinary"
+	"github.com/muxxer/iota.go/consts"
+	"github.com/muxxer/iota.go/merkle"
+	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/syncutils"
 
