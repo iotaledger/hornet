@@ -236,38 +236,25 @@ func MessageExistsInStore(messageID hornet.Hash) bool {
 }
 
 // msg +1
-func StoreMessageIfAbsent(message *iotago.Message) (cachedMsg *CachedMessage, newlyAdded bool) {
+func StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdded bool) {
 
 	// Store msg + metadata atomically in the same callback
 	var cachedMeta objectstorage.CachedObject
 
-	hash, err := message.Hash()
-	if err != nil {
-		//TODO: check where to do this better
-		panic(err)
-	}
-
-	messageID := hash[:]
-
-	msg := &Message{
-		messageID: messageID,
-		message:   message,
-	}
-
-	cachedTxData := messagesStorage.ComputeIfAbsent(msg.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
+	cachedTxData := messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
 		newlyAdded = true
 
-		metadata := hornet.NewMessageMetadata(messageID, message.Parent1[:], message.Parent2[:])
+		metadata := hornet.NewMessageMetadata(message.GetMessageID(), message.GetParent1MessageID(), message.GetParent2MessageID())
 		cachedMeta = metadataStorage.Store(metadata) // meta +1
 
-		msg.Persist()
-		msg.SetModified()
-		return msg
+		message.Persist()
+		message.SetModified()
+		return message
 	})
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedMeta = metadataStorage.Load(messageID) // meta +1
+		cachedMeta = metadataStorage.Load(message.GetMessageID()) // meta +1
 	}
 
 	return &CachedMessage{msg: cachedTxData, metadata: cachedMeta}, newlyAdded
@@ -313,7 +300,7 @@ func FlushMessagesStorage() {
 }
 
 // msg +1
-func AddMessageToStorage(message *iotago.Message, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool, reapply bool) (cachedMessage *CachedMessage, alreadyAdded bool) {
+func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool, reapply bool) (cachedMessage *CachedMessage, alreadyAdded bool) {
 
 	cachedMessage, isNew := StoreMessageIfAbsent(message) // msg +1
 	if !isNew && !reapply {

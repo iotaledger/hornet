@@ -252,11 +252,11 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMessage {
 	}
 }
 
-func CheckIfMilestone(msg *iotago.Message) (ms *iotago.MilestonePayload, err error) {
+func CheckIfMilestone(msg *Message) (ms *iotago.MilestonePayload, err error) {
 
-	switch ms := msg.Payload.(type) {
+	switch ms := msg.GetMessage().Payload.(type) {
 	case *iotago.MilestonePayload:
-		if err := ms.VerifySignature(msg, coordinatorPublicKey); err != nil {
+		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
 			return ms, err
 		}
 	default:
