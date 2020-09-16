@@ -45,7 +45,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Latest milestone hash
 	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
 	if cachedLatestMs != nil {
-		result.LatestMilestone = cachedLatestMs.GetBundle().GetMilestoneHash().Trytes()
+		result.LatestMilestone = cachedLatestMs.GetMessage().GetMilestoneHash().Trytes()
 		cachedLatestMs.Release(true) // bundle -1
 	}
 
@@ -59,7 +59,7 @@ func getNodeInfo(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Solid milestone hash
 	cachedSolidMs := tangle.GetMilestoneOrNil(smi) // bundle +1
 	if cachedSolidMs != nil {
-		result.LatestSolidSubtangleMilestone = cachedSolidMs.GetBundle().GetMilestoneHash().Trytes()
+		result.LatestSolidSubtangleMilestone = cachedSolidMs.GetMessage().GetMilestoneHash().Trytes()
 		cachedSolidMs.Release(true) // bundle -1
 	}
 

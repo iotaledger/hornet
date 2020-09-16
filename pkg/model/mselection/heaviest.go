@@ -234,7 +234,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 // OnNewSolidBundle adds a new bundle to be processed by s.
 // The bundle must be solid and OnNewSolidBundle must be called in the order of solidification.
 // The bundle must also not be below max depth.
-func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Bundle) (trackedTailsCount int) {
+func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Message) (trackedTailsCount int) {
 	s.Lock()
 	defer s.Unlock()
 

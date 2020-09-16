@@ -193,7 +193,7 @@ func getMilestoneTailHash(index milestone.Index) hornet.Hash {
 	}
 	defer cachedMs.Release(true) // bundle -1
 
-	return cachedMs.GetBundle().GetTailHash()
+	return cachedMs.GetMessage().GetTailHash()
 }
 
 // Msg represents a websocket message.

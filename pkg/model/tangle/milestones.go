@@ -1,21 +1,17 @@
 package tangle
 
 import (
-	"bytes"
 	"context"
 	"crypto"
+	"crypto/ed25519"
 	"fmt"
+	iotago "github.com/iotaledger/iota.go"
 	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/merkle"
-	"github.com/muxxer/iota.go/trinary"
-
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -34,21 +30,19 @@ var (
 	waitForNodeSyncedChannelsLock syncutils.Mutex
 	waitForNodeSyncedChannels     []chan struct{}
 
-	coordinatorAddress                 hornet.Hash
-	coordinatorSecurityLevel           int
-	coordinatorMerkleTreeDepth         uint64
+	coordinatorPublicKey               ed25519.PublicKey
 	coordinatorMilestoneMerkleHashFunc crypto.Hash
-	maxMilestoneIndex                  milestone.Index
 
 	ErrInvalidMilestone = errors.New("invalid milestone")
 )
 
-func ConfigureMilestones(cooAddr hornet.Hash, cooSecLvl int, cooMerkleTreeDepth uint64, cooMilestoneMerkleHashFunc crypto.Hash) {
-	coordinatorAddress = cooAddr
-	coordinatorSecurityLevel = cooSecLvl
-	coordinatorMerkleTreeDepth = cooMerkleTreeDepth
+func MilestoneCaller(handler interface{}, params ...interface{}) {
+	handler.(func(cachedMsg *CachedMilestone))(params[0].(*CachedMilestone).Retain())
+}
+
+func ConfigureMilestones(cooPublicKey ed25519.PublicKey, cooMilestoneMerkleHashFunc crypto.Hash) {
+	coordinatorPublicKey = cooPublicKey
 	coordinatorMilestoneMerkleHashFunc = cooMilestoneMerkleHashFunc
-	maxMilestoneIndex = 1 << coordinatorMerkleTreeDepth
 }
 
 func GetMilestoneMerkleHashFunc() crypto.Hash {
@@ -65,9 +59,9 @@ func ResetMilestoneIndexes() {
 	latestMilestoneIndex = 0
 }
 
-// GetMilestoneOrNil returns the CachedBundle of a milestone index or nil if it doesn't exist.
+// GetMilestoneOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
 // bundle +1
-func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
+func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
 	cachedMs := GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 	if cachedMs == nil {
@@ -75,7 +69,7 @@ func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedBundle {
 	}
 	defer cachedMs.Release(true) // milestone -1
 
-	return GetCachedBundleOrNil(cachedMs.GetMilestone().Hash)
+	return GetCachedMessageOrNil(cachedMs.GetMilestone().MessageID)
 }
 
 // IsNodeSynced returns whether the node is synced.
@@ -232,7 +226,7 @@ func GetLatestMilestoneIndex() milestone.Index {
 }
 
 // bundle +1
-func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
+func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMessage {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
@@ -258,115 +252,16 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedBundle {
 	}
 }
 
-func CheckIfMilestone(bndl *Bundle) (result bool, err error) {
+func CheckIfMilestone(msg *iotago.Message) (ms *iotago.MilestonePayload, err error) {
 
-	if len(bndl.txs) != (coordinatorSecurityLevel + 1) {
-		// wrong amount of txs in bundle
-		return false, nil
-	}
-
-	cachedTailTx := bndl.GetTail() // tx +1
-
-	if !IsMaybeMilestone(cachedTailTx.Retain()) { // tx pass +1
-		cachedTailTx.Release() // tx -1
-		// transaction is not issued by compass => no milestone
-		return false, nil
-	}
-
-	tailTxHash := cachedTailTx.GetTransaction().GetTxHash()
-
-	// check the structure of the milestone
-	milestoneIndex := bndl.GetMilestoneIndex()
-	if milestoneIndex <= GetSolidMilestoneIndex() {
-		// Milestone older than solid milestone
-		cachedTailTx.Release() // tx -1
-		return false, nil
-	}
-
-	if milestoneIndex >= maxMilestoneIndex {
-		cachedTailTx.Release() // tx -1
-		return false, nil
-	}
-
-	// Check if milestone was already processed
-	cachedMs := GetMilestoneOrNil(milestoneIndex) // bundle +1
-	if cachedMs != nil {
-		cachedTailTx.Release() // tx -1
-		cachedMs.Release()     // bundle -1
-		// it could be issued again since several transactions of the same bundle were processed in parallel
-		return false, nil
-	}
-
-	cachedSignatureTxs := CachedTransactions{}
-	cachedSignatureTxs = append(cachedSignatureTxs, cachedTailTx)
-
-	for secLvl := 1; secLvl < coordinatorSecurityLevel; secLvl++ {
-		cachedTx := GetCachedTransactionOrNil(cachedSignatureTxs[secLvl-1].GetTransaction().GetTrunkHash()) // tx +1
-		if cachedTx == nil {
-			cachedSignatureTxs.Release() // tx -1
-			return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash.Trytes())
+	switch ms := msg.Payload.(type) {
+	case *iotago.MilestonePayload:
+		if err := ms.VerifySignature(msg, coordinatorPublicKey); err != nil {
+			return ms, err
 		}
-
-		if !IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
-			cachedTx.Release() // tx -1
-			// transaction is not issued by compass => no milestone
-			cachedSignatureTxs.Release() // tx -1
-			return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash.Trytes())
-		}
-
-		cachedSignatureTxs = append(cachedSignatureTxs, cachedTx)
-		// tx will be released with cachedSignatureTxs
+	default:
+		return nil, nil
 	}
 
-	defer cachedSignatureTxs.Release() // tx -1
-
-	cachedSiblingsTx := GetCachedTransactionOrNil(cachedSignatureTxs[coordinatorSecurityLevel-1].GetTransaction().GetTrunkHash()) // tx +1
-	if cachedSiblingsTx == nil {
-		return false, errors.Wrapf(ErrInvalidMilestone, "Bundle too small for valid milestone, Hash: %v", tailTxHash.Trytes())
-	}
-	defer cachedSiblingsTx.Release() // tx -1
-
-	if !IsMaybeMilestoneTx(cachedSiblingsTx.Retain()) {
-		// transaction is not issued by compass => no milestone
-		return false, errors.Wrapf(ErrInvalidMilestone, "Transaction was not issued by compass, Hash: %v", tailTxHash.Trytes())
-	}
-
-	var fragments []trinary.Trytes
-	for _, signatureTx := range cachedSignatureTxs {
-		if signatureTx.GetTransaction().Tx.BranchTransaction != cachedSiblingsTx.GetTransaction().Tx.TrunkTransaction {
-			return false, errors.Wrapf(ErrInvalidMilestone, "Structure is wrong, Hash: %v", tailTxHash.Trytes())
-		}
-		fragments = append(fragments, signatureTx.GetTransaction().Tx.SignatureMessageFragment)
-	}
-
-	var path []trinary.Trytes
-	for i := 0; i < int(coordinatorMerkleTreeDepth); i++ {
-		path = append(path, cachedSiblingsTx.GetTransaction().Tx.SignatureMessageFragment[i*consts.HashTrytesSize:(i+1)*consts.HashTrytesSize])
-	}
-
-	// verify milestone signature
-	if valid, err := merkle.ValidateSignatureFragments(coordinatorAddress.Trytes(), uint32(milestoneIndex), path, fragments, cachedSiblingsTx.GetTransaction().Tx.Hash); !valid {
-		if err != nil {
-			return false, errors.Wrap(ErrInvalidMilestone, err.Error())
-		}
-		return false, errors.Wrapf(ErrInvalidMilestone, "Signature was not valid, Hash: %v", tailTxHash.Trytes())
-	}
-
-	bndl.setMilestone(true)
-
-	return true, nil
-}
-
-// Checks if the the tx could be part of a milestone.
-func IsMaybeMilestone(cachedTx *CachedTransaction) bool {
-	value := (cachedTx.GetTransaction().Tx.Value == 0) && (bytes.Equal(cachedTx.GetTransaction().GetAddress(), coordinatorAddress))
-	cachedTx.Release(true) // tx -1
-	return value
-}
-
-// Checks if the the tx could be part of a milestone.
-func IsMaybeMilestoneTx(cachedTx *CachedTransaction) bool {
-	value := (cachedTx.GetTransaction().Tx.Value == 0) && (bytes.Equal(cachedTx.GetTransaction().GetAddress(), coordinatorAddress) || bytes.Equal(cachedTx.GetTransaction().GetAddress(), hornet.NullHashBytes))
-	cachedTx.Release(true) // tx -1
-	return value
+	return nil, nil
 }

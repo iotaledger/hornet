@@ -48,7 +48,7 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, tx := range query.Transactions {
 		// get tx data
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(tx)) // meta +1
+		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(tx)) // meta +1
 
 		if cachedTxMeta == nil {
 			// if tx is unknown, return false

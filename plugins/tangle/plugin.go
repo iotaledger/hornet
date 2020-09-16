@@ -199,7 +199,7 @@ func configureEvents() {
 		gossip.BroadcastHeartbeat(nil)
 	})
 
-	onReceivedNewTx = events.NewClosure(func(cachedTx *tangle.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTx = events.NewClosure(func(cachedTx *tangle.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		// Force release possible here, since processIncomingTx still holds a reference
 		defer cachedTx.Release(true) // tx -1
 

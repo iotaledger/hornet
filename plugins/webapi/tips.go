@@ -54,7 +54,7 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // meta +1
+	cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // meta +1
 	if cachedTxMeta == nil {
 		e.Error = "unknown tail transaction"
 		c.JSON(http.StatusBadRequest, e)
@@ -170,11 +170,11 @@ func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) 
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: query.Reference})
+		c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Hex(), BranchTransaction: query.Reference})
 		return
 	}
 
-	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()})
+	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Hex(), BranchTransaction: tips[1].Hex()})
 }
 
 func getSpammerTips(i interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -199,5 +199,5 @@ func getSpammerTips(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()})
+	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Hex(), BranchTransaction: tips[1].Hex()})
 }

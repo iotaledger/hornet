@@ -35,10 +35,10 @@ type TestEnvironment struct {
 	testState *testing.T
 
 	// Milestones are the created milestones by the coordinator during the test.
-	Milestones tangle.CachedBundles
+	Milestones tangle.CachedMessages
 
 	// cachedBundles is used to cleanup all bundles at the end of a test.
-	cachedBundles tangle.CachedBundles
+	cachedBundles tangle.CachedMessages
 
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
@@ -80,8 +80,8 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 
 	te := &TestEnvironment{
 		testState:              testState,
-		Milestones:             make(tangle.CachedBundles, 0),
-		cachedBundles:          make(tangle.CachedBundles, 0),
+		Milestones:             make(tangle.CachedMessages, 0),
+		cachedBundles:          make(tangle.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		powHandler:             pow.New(nil, "", 30*time.Second),
 		lastMilestoneHash:      hornet.NullHashBytes,

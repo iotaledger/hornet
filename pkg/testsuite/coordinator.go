@@ -43,7 +43,7 @@ func (te *TestEnvironment) configureCoordinator() {
 		ms := te.StoreBundle(bndl, true) // no need to release, since we store all the bundles for later cleanup
 
 		if isMilestone {
-			tangle.SetLatestMilestoneIndex(ms.GetBundle().GetMilestoneIndex())
+			tangle.SetLatestMilestoneIndex(ms.GetMessage().GetMilestoneIndex())
 		}
 
 		return nil

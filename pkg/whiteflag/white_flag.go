@@ -59,7 +59,7 @@ type WhiteFlagMutations struct {
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedTxMetas and cachedBundles have to be released outside.
-func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedBundle, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
@@ -74,29 +74,29 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 		defer cachedTxMeta.Release(true) // meta -1
 
-		if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())]; !exists {
+		if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())]; !exists {
 			// release the tx metadata at the end to speed up calculation
-			cachedTxMetas[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedTxMeta.Retain()
+			cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta.Retain()
 		}
 
 		if !cachedTxMeta.GetMetadata().IsTail() {
-			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTxMeta.GetMetadata().GetMessageID().Hex())
 		}
 
 		// load up bundle
-		cachedBundle, exists := cachedBundles[string(cachedTxMeta.GetMetadata().GetTxHash())]
+		cachedBundle, exists := cachedBundles[string(cachedTxMeta.GetMetadata().GetMessageID())]
 		if !exists {
-			cachedBundle = tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
+			cachedBundle = tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID()) // bundle +1
 			if cachedBundle == nil {
-				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Hex(), cachedTxMeta.GetMetadata().GetMessageID().Hex())
 			}
 			// release the bundles at the end to speed up calculation
-			cachedBundles[string(cachedTxMeta.GetMetadata().GetTxHash())] = cachedBundle
+			cachedBundles[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedBundle
 		}
 
 		// check validty and correct strict semantics
-		if !cachedBundle.GetBundle().IsValid() || !cachedBundle.GetBundle().ValidStrictSemantics() {
-			return false, fmt.Errorf("%w: bundle %s is invalid", ErrMilestoneApprovedInvalidBundle, cachedBundle.GetBundle().GetBundleHash().Trytes())
+		if !cachedBundle.GetMessage().IsValid() || !cachedBundle.GetMessage().ValidStrictSemantics() {
+			return false, fmt.Errorf("%w: bundle %s is invalid", ErrMilestoneApprovedInvalidBundle, cachedBundle.GetMessage().GetMessageID().Hex())
 		}
 
 		// only traverse and process the transaction if it was not confirmed yet
@@ -108,18 +108,18 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 		defer cachedTxMeta.Release(true) // meta -1
 
 		// load up bundle
-		cachedBundle := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash())
+		cachedBundle := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID())
 		if cachedBundle == nil {
-			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Hex(), cachedTxMeta.GetMetadata().GetMessageID().Hex())
 		}
 		defer cachedBundle.Release(true)
 
 		// exclude zero or spam value bundles
-		bundle := cachedBundle.GetBundle()
+		bundle := cachedBundle.GetMessage()
 		mutations := bundle.GetLedgerChanges()
 		if bundle.IsValueSpam() || len(mutations) == 0 {
-			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetTxHash())
-			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTxMeta.GetMetadata().GetTxHash())
+			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetMessageID())
+			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTxMeta.GetMetadata().GetMessageID())
 			return nil
 		}
 
@@ -159,15 +159,15 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 			validMutations[addr] = validMutations[addr] + change
 		}
 
-		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetTxHash())
+		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetMessageID())
 
 		if conflicting {
-			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTxMeta.GetMetadata().GetTxHash())
+			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTxMeta.GetMetadata().GetMessageID())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTxMeta.GetMetadata().GetTxHash())
+		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTxMeta.GetMetadata().GetMessageID())
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.

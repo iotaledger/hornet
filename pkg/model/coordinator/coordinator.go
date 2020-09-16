@@ -25,7 +25,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
-// Bundle represents grouped together transactions forming a transfer.
+// Message represents grouped together transactions forming a transfer.
 type Bundle = []*transaction.Transaction
 
 // SendBundleFunc is a function which sends a bundle to the network.
@@ -70,10 +70,10 @@ type Coordinator struct {
 	Events *CoordinatorEvents
 }
 
-// MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.Hash hashing functions.
+// MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.MilestoneMessageID hashing functions.
 // Also verifies that the available function is available or else panics.
 func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
-	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead
+	//TODO: golang 1.15 will include a String() method to get the string from the crypto.MilestoneMessageID, so we could iterate over them instead
 	var hashFunc crypto.Hash
 	switch strings.ToLower(name) {
 	case "blake2b-512":
@@ -169,7 +169,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			if cachedBndl == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneHash = cachedBndl.GetBundle().GetTailHash()
+			latestMilestoneHash = cachedBndl.GetMessage().GetTailHash()
 			cachedBndl.Release()
 		}
 
@@ -212,7 +212,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
 	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
-	cachedBundles := make(map[string]*tangle.CachedBundle)
+	cachedBundles := make(map[string]*tangle.CachedMessage)
 
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore

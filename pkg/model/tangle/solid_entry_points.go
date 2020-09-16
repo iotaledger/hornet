@@ -49,32 +49,32 @@ func loadSolidEntryPoints() {
 	}
 }
 
-func SolidEntryPointsContain(txHash hornet.Hash) bool {
+func SolidEntryPointsContain(messageID hornet.Hash) bool {
 	ReadLockSolidEntryPoints()
 	defer ReadUnlockSolidEntryPoints()
 
 	if solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	return solidEntryPoints.Contains(txHash)
+	return solidEntryPoints.Contains(messageID)
 }
 
-func SolidEntryPointsIndex(txHash hornet.Hash) (milestone.Index, bool) {
+func SolidEntryPointsIndex(messageID hornet.Hash) (milestone.Index, bool) {
 	ReadLockSolidEntryPoints()
 	defer ReadUnlockSolidEntryPoints()
 
 	if solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	return solidEntryPoints.Index(txHash)
+	return solidEntryPoints.Index(messageID)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
-func SolidEntryPointsAdd(txHash hornet.Hash, milestoneIndex milestone.Index) {
+func SolidEntryPointsAdd(messageID hornet.Hash, milestoneIndex milestone.Index) {
 	if solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	solidEntryPoints.Add(txHash, milestoneIndex)
+	solidEntryPoints.Add(messageID, milestoneIndex)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function

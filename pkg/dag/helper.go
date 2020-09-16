@@ -25,14 +25,14 @@ func FindAllTails(startTxHash hornet.Hash, skipStartTx bool) (map[string]struct{
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedTxMeta.Release(true) // meta -1
 
-			if skipStartTx && bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetTxHash()) {
+			if skipStartTx && bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetMessageID()) {
 				// skip the start tx
 				return true, nil
 			}
 
 			if cachedTxMeta.GetMetadata().IsTail() {
 				// transaction is a tail, do not traverse further
-				tails[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
+				tails[string(cachedTxMeta.GetMetadata().GetMessageID())] = struct{}{}
 				return false, nil
 			}
 

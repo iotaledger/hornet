@@ -76,7 +76,7 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// The index of the milestone that confirmed the most recent balance
-	result.MilestoneIndex = cachedLatestSolidMs.GetBundle().GetMilestoneIndex()
-	result.References = []string{cachedLatestSolidMs.GetBundle().GetMilestoneHash().Trytes()}
+	result.MilestoneIndex = cachedLatestSolidMs.GetMessage().GetMilestoneIndex()
+	result.References = []string{cachedLatestSolidMs.GetMessage().GetMilestoneHash().Trytes()}
 	c.JSON(http.StatusOK, result)
 }

@@ -100,7 +100,7 @@ func (s *Spammer) DoSpam(bundleSize int, valueSpam bool, shutdownSignal <-chan s
 	}
 
 	timeStart = time.Now()
-	err = s.doPow(b, tips[0].Trytes(), tips[1].Trytes(), s.mwm, shutdownSignal)
+	err = s.doPow(b, tips[0].Hex(), tips[1].Hex(), s.mwm, shutdownSignal)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
@@ -159,7 +159,7 @@ func (s *Spammer) doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash
 // transactionHash makes a transaction hash from the given transaction.
 func transactionHash(t *transaction.Transaction) trinary.Hash {
 	//trits, _ := transaction.TransactionToTrits(t)
-	//hashTrits := batchhasher.CURLP81.Hash(trits)
+	//hashTrits := batchhasher.CURLP81.MessageID(trits)
 	hashTrits := []int8{}
 	return trinary.MustTritsToTrytes(hashTrits)
 }

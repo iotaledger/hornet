@@ -26,12 +26,12 @@ func pruneUnconfirmedTransactions(targetIndex milestone.Index) (txCountDeleted i
 
 	// Check if tx is still unconfirmed
 loopOverUnconfirmed:
-	for _, txHash := range tangle.GetUnconfirmedTxHashes(targetIndex, true) {
+	for _, txHash := range tangle.GetUnconfirmedMessageIDs(targetIndex, true) {
 		if _, exists := txsToCheckMap[string(txHash)]; exists {
 			continue
 		}
 
-		cachedTx := tangle.GetCachedTransactionOrNil(txHash) // tx +1
+		cachedTx := tangle.GetCachedMessageOrNil(txHash) // tx +1
 		if cachedTx == nil {
 			// transaction was already deleted or marked for deletion
 			continue
@@ -47,7 +47,7 @@ loopOverUnconfirmed:
 			bundles := tangle.GetBundlesOfTransactionOrNil(txHash, true) // bundles +1
 			if bundles != nil && len(bundles) > 0 {
 				for _, bndl := range bundles {
-					if bndl.GetBundle().IsMilestone() {
+					if bndl.GetMessage().IsMilestone() {
 						cachedTx.Release(true) // tx -1
 						bundles.Release(true)  // bundles -1
 						// Do not prune unconfirmed tx that are part of a milestone
@@ -63,7 +63,7 @@ loopOverUnconfirmed:
 	}
 
 	txCountDeleted = pruneTransactions(txsToCheckMap)
-	tangle.DeleteUnconfirmedTxs(targetIndex)
+	tangle.DeleteUnconfirmedMessages(targetIndex)
 
 	return txCountDeleted, len(txsToCheckMap)
 }
@@ -86,7 +86,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	for txHashToCheck := range txsToCheckMap {
 
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHashToCheck)) // meta +1
+		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHashToCheck)) // meta +1
 		if cachedTxMeta == nil {
 			log.Warnf("pruneTransactions: Transaction not found: %s", hornet.Hash(txHashToCheck).Trytes())
 			continue
@@ -101,20 +101,20 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	for txHashToDelete := range txsToDeleteMap {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToDelete)) // tx +1
+		cachedTx := tangle.GetCachedMessageOrNil(hornet.Hash(txHashToDelete)) // tx +1
 		if cachedTx == nil {
 			continue
 		}
 
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) { // tx -1
+		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) { // tx -1
 			// Delete the reference in the approvees
-			tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
-			tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())
+			tangle.DeleteChild(tx.GetTrunkHash(), tx.GetTxHash())
+			tangle.DeleteChild(tx.GetBranchHash(), tx.GetTxHash())
 
 			tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
 			tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
-			tangle.DeleteApprovers(tx.GetTxHash())
-			tangle.DeleteTransaction(tx.GetTxHash())
+			tangle.DeleteChildren(tx.GetTxHash())
+			tangle.DeleteMessage(tx.GetTxHash())
 		})
 	}
 
@@ -202,7 +202,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		txsToCheckMap := make(map[string]struct{})
 
-		err := dag.TraverseApprovees(cachedMs.GetMilestone().Hash,
+		err := dag.TraverseApprovees(cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more transactions pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
@@ -213,7 +213,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// consumer
 			func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
 				defer cachedTxMeta.Release(true) // tx -1
-				txsToCheckMap[string(cachedTxMeta.GetMetadata().GetTxHash())] = struct{}{}
+				txsToCheckMap[string(cachedTxMeta.GetMetadata().GetMessageID())] = struct{}{}
 				return nil
 			},
 			// called on missing approvees

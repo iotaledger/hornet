@@ -5,7 +5,7 @@ import (
 )
 
 var Events = packageEvents{
-	ReceivedValidMilestone:   events.NewEvent(BundleCaller),
+	ReceivedValidMilestone:   events.NewEvent(MilestoneCaller),
 	ReceivedInvalidMilestone: events.NewEvent(events.ErrorCaller),
 	AddressSpent:             events.NewEvent(events.StringCaller),
 }

@@ -50,7 +50,7 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	newTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewTx(task.Param(0).(*tanglePackage.CachedTransaction)) // tx pass +1
+		onNewTx(task.Param(0).(*tanglePackage.CachedMessage)) // tx pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newTxWorkerCount), workerpool.QueueSize(newTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -60,12 +60,12 @@ func configure(plugin *node.Plugin) {
 	}, workerpool.WorkerCount(confirmedTxWorkerCount), workerpool.QueueSize(confirmedTxWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewLatestMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
+		onNewLatestMilestone(task.Param(0).(*tanglePackage.CachedMessage)) // bundle pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newLatestMilestoneWorkerCount), workerpool.QueueSize(newLatestMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewSolidMilestone(task.Param(0).(*tanglePackage.CachedBundle)) // bundle pass +1
+		onNewSolidMilestone(task.Param(0).(*tanglePackage.CachedMessage)) // bundle pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(newSolidMilestoneWorkerCount), workerpool.QueueSize(newSolidMilestoneWorkerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -86,7 +86,7 @@ func run(plugin *node.Plugin) {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.config.Port)
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglePackage.CachedTransaction, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglePackage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSyncedWithThreshold() {
 				cachedTx.Release(true) // tx -1
@@ -116,7 +116,7 @@ func run(plugin *node.Plugin) {
 		cachedMeta.Release(true) // meta -1
 	})
 
-	onLatestMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
+	onLatestMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedMessage) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedBndl.Release(true) // bundle -1
@@ -129,7 +129,7 @@ func run(plugin *node.Plugin) {
 		cachedBndl.Release(true) // bundle -1
 	})
 
-	onSolidMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedBundle) {
+	onSolidMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedMessage) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedBndl.Release(true) // bundle -1

@@ -102,10 +102,10 @@ func (t *ApproversTraverser) processStackApprovers() error {
 
 	cachedTxMeta, exists := t.cachedTxMetas[string(currentTxHash)]
 	if !exists {
-		cachedTxMeta = tangle.GetCachedTxMetadataOrNil(currentTxHash) // meta +1
+		cachedTxMeta = tangle.GetCachedMessageMetadataOrNil(currentTxHash) // meta +1
 		if cachedTxMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(tangle.ErrTransactionNotFound, "hash: %s", currentTxHash.Trytes())
+			return errors.Wrapf(tangle.ErrMessageNotFound, "hash: %s", currentTxHash.Hex())
 		}
 		t.cachedTxMetas[string(currentTxHash)] = cachedTxMeta
 	}
@@ -130,7 +130,7 @@ func (t *ApproversTraverser) processStackApprovers() error {
 		}
 	}
 
-	for _, approverHash := range tangle.GetApproverHashes(currentTxHash) {
+	for _, approverHash := range tangle.GetChildrenMessageIDs(currentTxHash) {
 		if !t.walkAlreadyDiscovered {
 			if _, approverDiscovered := t.discovered[string(approverHash)]; approverDiscovered {
 				// approver was already discovered

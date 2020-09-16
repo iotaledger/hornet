@@ -47,7 +47,7 @@ func getLedgerDiff(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
 
 	diffTrytes := make(map[trinary.Trytes]int64)
 	for address, balance := range diff {
-		diffTrytes[hornet.Hash(address).Trytes()] = balance
+		diffTrytes[hornet.Hash(address).Hex()] = balance
 	}
 
 	c.JSON(http.StatusOK, GetLedgerDiffReturn{Diff: diffTrytes, MilestoneIndex: query.MilestoneIndex})
@@ -80,7 +80,7 @@ func getLedgerDiffExt(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	ledgerChangesTrytes := make(map[trinary.Trytes]int64)
 	for address, balance := range ledgerChanges {
-		ledgerChangesTrytes[hornet.Hash(address).Trytes()] = balance
+		ledgerChangesTrytes[hornet.Hash(address).Hex()] = balance
 	}
 
 	result := GetLedgerDiffExtReturn{}
@@ -103,7 +103,7 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 	txsToTraverse := make(map[string]struct{})
 	totalLedgerChanges = make(map[string]int64)
 
-	txsToTraverse[string(cachedReqMs.GetBundle().GetTailHash())] = struct{}{}
+	txsToTraverse[string(cachedReqMs.GetMessage().GetTailHash())] = struct{}{}
 
 	cachedReqMs.Release(true) // bundle -1
 
@@ -124,9 +124,9 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				continue
 			}
 
-			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
+			cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHash)) // meta +1
 			if cachedTxMeta == nil {
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", hornet.Hash(txHash).Trytes())
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not found: %v", hornet.Hash(txHash).Hex())
 			}
 
 			confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
@@ -138,43 +138,43 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 				}
 			} else {
 				cachedTxMeta.Release(true) // meta -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", hornet.Hash(txHash).Trytes())
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Transaction not confirmed yet: %v", hornet.Hash(txHash).Hex())
 			}
 
 			// Mark the approvees to be traversed
-			txsToTraverse[string(cachedTxMeta.GetMetadata().GetTrunkHash())] = struct{}{}
-			txsToTraverse[string(cachedTxMeta.GetMetadata().GetBranchHash())] = struct{}{}
+			txsToTraverse[string(cachedTxMeta.GetMetadata().GetParent1MessageID())] = struct{}{}
+			txsToTraverse[string(cachedTxMeta.GetMetadata().GetParent2MessageID())] = struct{}{}
 
 			if !cachedTxMeta.GetMetadata().IsTail() {
 				cachedTxMeta.Release(true) // meta -1
 				continue
 			}
 
-			cachedBndl := tangle.GetCachedBundleOrNil(hornet.Hash(txHash)) // bundle +1
+			cachedBndl := tangle.GetCachedMessageOrNil(hornet.Hash(txHash)) // bundle +1
 			if cachedBndl == nil {
 				txBundle := cachedTxMeta.GetMetadata().GetBundleHash()
 				cachedTxMeta.Release(true) // meta -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle.Trytes())
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Message not found: %v", hornet.Hash(txHash).Hex(), txBundle.Hex())
 			}
 
-			if !cachedBndl.GetBundle().IsValid() {
+			if !cachedBndl.GetMessage().IsValid() {
 				txBundle := cachedTxMeta.GetMetadata().GetBundleHash()
 				cachedTxMeta.Release(true) // meta -1
 				cachedBndl.Release(true)   // bundle -1
-				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Bundle not valid: %v", hornet.Hash(txHash).Trytes(), txBundle.Trytes())
+				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, Message not valid: %v", hornet.Hash(txHash).Hex(), txBundle.Hex())
 			}
 
-			if !cachedBndl.GetBundle().IsValueSpam() {
-				ledgerChanges := cachedBndl.GetBundle().GetLedgerChanges()
+			if !cachedBndl.GetMessage().IsValueSpam() {
+				ledgerChanges := cachedBndl.GetMessage().GetLedgerChanges()
 
 				var txsWithValue []*TxWithValue
 
-				cachedTxs := cachedBndl.GetBundle().GetTransactions() // tx +1
+				cachedTxs := cachedBndl.GetMessage().GetTransactions() // tx +1
 				for _, cachedTx := range cachedTxs {
 					// hornetTx is being retained during the loop, so safe to use the pointer here
 					hornetTx := cachedTx.GetTransaction()
 					if hornetTx.Tx.Value != 0 {
-						confirmedTxWithValue = append(confirmedTxWithValue, &TxHashWithValue{TxHash: hornetTx.Tx.Hash, TailTxHash: cachedBndl.GetBundle().GetTailHash().Trytes(), BundleHash: hornetTx.Tx.Bundle, Address: hornetTx.Tx.Address, Value: hornetTx.Tx.Value})
+						confirmedTxWithValue = append(confirmedTxWithValue, &TxHashWithValue{TxHash: hornetTx.Tx.Hash, TailTxHash: cachedBndl.GetMessage().GetTailHash().Hex(), BundleHash: hornetTx.Tx.Bundle, Address: hornetTx.Tx.Address, Value: hornetTx.Tx.Value})
 					}
 					txsWithValue = append(txsWithValue, &TxWithValue{TxHash: hornetTx.Tx.Hash, Address: hornetTx.Tx.Address, Index: hornetTx.Tx.CurrentIndex, Value: hornetTx.Tx.Value})
 				}
@@ -183,8 +183,8 @@ func getMilestoneStateDiff(milestoneIndex milestone.Index) (confirmedTxWithValue
 					totalLedgerChanges[address] += change
 				}
 
-				cachedBundleHeadTx := cachedBndl.GetBundle().GetHead() // tx +1
-				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTxMeta.GetMetadata().GetBundleHash().Trytes(), TailTxHash: cachedBndl.GetBundle().GetTailHash().Trytes(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
+				cachedBundleHeadTx := cachedBndl.GetMessage().GetHead() // tx +1
+				confirmedBundlesWithValue = append(confirmedBundlesWithValue, &BundleWithValue{BundleHash: cachedTxMeta.GetMetadata().GetBundleHash().Hex(), TailTxHash: cachedBndl.GetMessage().GetTailHash().Hex(), Txs: txsWithValue, LastIndex: cachedBundleHeadTx.GetTransaction().Tx.CurrentIndex})
 				cachedBundleHeadTx.Release(true) // tx -1
 			}
 			cachedTxMeta.Release(true) // meta -1
@@ -221,7 +221,7 @@ func getLedgerState(i interface{}, c *gin.Context, abortSignal <-chan struct{}) 
 
 	balancesTrytes := make(map[trinary.Trytes]uint64)
 	for address, balance := range balances {
-		balancesTrytes[hornet.Hash(address).Trytes()] = balance
+		balancesTrytes[hornet.Hash(address).Hex()] = balance
 	}
 
 	c.JSON(http.StatusOK, GetLedgerStateReturn{Balances: balancesTrytes, MilestoneIndex: index})

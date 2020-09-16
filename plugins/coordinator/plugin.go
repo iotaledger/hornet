@@ -330,8 +330,8 @@ func GetEvents() *coordinator.CoordinatorEvents {
 
 func configureEvents() {
 	// pass all new solid bundles to the selector
-	onBundleSolid = events.NewClosure(func(cachedBundle *tangle.CachedBundle) {
-		cachedBundle.ConsumeBundle(func(bndl *tangle.Bundle) { // bundle -1
+	onBundleSolid = events.NewClosure(func(cachedBundle *tangle.CachedMessage) {
+		cachedBundle.ConsumeMessage(func(bndl *tangle.Message) { // bundle -1
 
 			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
 				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
@@ -372,11 +372,11 @@ func configureEvents() {
 	})
 
 	onIssuedCheckpointTransaction = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
-		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
+		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Hex())
 	})
 
 	onIssuedMilestone = events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
-		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
+		log.Infof("milestone issued (%d): %v", index, tailTxHash.Hex())
 	})
 }
 

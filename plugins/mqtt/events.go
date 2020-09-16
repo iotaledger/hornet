@@ -17,9 +17,9 @@ var (
 	prevLMI milestone.Index = 0
 )
 
-func onNewTx(cachedTx *tangle.CachedTransaction) {
+func onNewTx(cachedTx *tangle.CachedMessage) {
 
-	cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
 
 		// tx topic
 		err := publishTx(tx.Tx)
@@ -37,15 +37,15 @@ func onNewTx(cachedTx *tangle.CachedTransaction) {
 
 func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _ int64) {
 
-	cachedMeta.ConsumeMetadata(func(metadata *hornet.TransactionMetadata) {
+	cachedMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
 
-		cachedTx := tangle.GetCachedTransactionOrNil(metadata.GetTxHash())
+		cachedTx := tangle.GetCachedMessageOrNil(metadata.GetMessageID())
 		if cachedTx == nil {
-			log.Warnf("%w hash: %s", tangle.ErrTransactionNotFound, metadata.GetTxHash().Trytes())
+			log.Warnf("%w hash: %s", tangle.ErrMessageNotFound, metadata.GetMessageID().Hex())
 			return
 		}
 
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) {
+		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
 			// conf_trytes topic
 			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
 				log.Warn(err.Error())
@@ -59,28 +59,28 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 	})
 }
 
-func onNewLatestMilestone(cachedBndl *tangle.CachedBundle) {
-	err := publishLMI(cachedBndl.GetBundle().GetMilestoneIndex())
+func onNewLatestMilestone(cachedBndl *tangle.CachedMessage) {
+	err := publishLMI(cachedBndl.GetMessage().GetMilestoneIndex())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLMHS(cachedBndl.GetBundle().GetMilestoneHash().Trytes())
+	err = publishLMHS(cachedBndl.GetMessage().GetMilestoneHash().Trytes())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLM(cachedBndl.GetBundle())
+	err = publishLM(cachedBndl.GetMessage())
 	if err != nil {
 		log.Warn(err.Error())
 	}
 	cachedBndl.Release(true) // bundle -1
 }
 
-func onNewSolidMilestone(cachedBndl *tangle.CachedBundle) {
-	err := publishLMSI(cachedBndl.GetBundle().GetMilestoneIndex())
+func onNewSolidMilestone(cachedBndl *tangle.CachedMessage) {
+	err := publishLMSI(cachedBndl.GetMessage().GetMilestoneIndex())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLSM(cachedBndl.GetBundle())
+	err = publishLSM(cachedBndl.GetMessage())
 	if err != nil {
 		log.Warn(err.Error())
 	}
@@ -129,7 +129,7 @@ func publishLMHS(solidMilestoneHash trinary.Hash) error {
 }
 
 // Publish latest milestone
-func publishLM(bndl *tangle.Bundle) error {
+func publishLM(bndl *tangle.Message) error {
 	return mqttBroker.Send(topicLM, fmt.Sprintf(`{"index":%d,"hash":"%v","timestamp":"%s"}`,
 		bndl.GetMilestoneIndex(),         // Milestone transaction index
 		bndl.GetMilestoneHash().Trytes(), // Milestone transaction hash
@@ -137,7 +137,7 @@ func publishLM(bndl *tangle.Bundle) error {
 }
 
 // Publish latest solid subtangle milestone
-func publishLSM(bndl *tangle.Bundle) error {
+func publishLSM(bndl *tangle.Message) error {
 	return mqttBroker.Send(topicLSM, fmt.Sprintf(`{"index":%d,"hash":"%v","timestamp":"%s"}`,
 		bndl.GetMilestoneIndex(),         // Solid milestone transaction index
 		bndl.GetMilestoneHash().Trytes(), // Solid milestone transaction hash
@@ -153,7 +153,7 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 		iotaTx.Address,           // Address
 		iotaTx.TrunkTransaction,  // Trunk transaction hash
 		iotaTx.BranchTransaction, // Branch transaction hash
-		iotaTx.Bundle,            // Bundle hash
+		iotaTx.Bundle,            // Message hash
 		time.Now().UTC().Format(time.RFC3339)))
 }
 
@@ -199,7 +199,7 @@ func publishTx(iotaTx *transaction.Transaction) error {
 		iotaTx.Timestamp,         // Timestamp
 		iotaTx.CurrentIndex,      // Index of the transaction in the bundle
 		iotaTx.LastIndex,         // Last transaction index of the bundle
-		iotaTx.Bundle,            // Bundle hash
+		iotaTx.Bundle,            // Message hash
 		iotaTx.TrunkTransaction,  // Trunk transaction hash
 		iotaTx.BranchTransaction, // Branch transaction hash
 		time.Now().Unix(),        // Unix timestamp for when the transaction was received

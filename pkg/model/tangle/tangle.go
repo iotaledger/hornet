@@ -90,39 +90,28 @@ func ConfigureDatabases(directory string) {
 func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 
 	configureHealthStore(store)
-	configureTransactionStorage(store, caches.Transactions)
-	configureBundleTransactionsStorage(store, caches.BundleTransactions)
-	configureBundleStorage(store, caches.Bundles)
+	configureMessageStorage(store, caches.Transactions)
 	configureApproversStorage(store, caches.Approvers)
-	configureTagsStorage(store, caches.Tags)
-	configureAddressesStorage(store, caches.Addresses)
 	configureMilestoneStorage(store, caches.Milestones)
-	configureUnconfirmedTxStorage(store, caches.UnconfirmedTx)
-	configureLedgerStore(store)
+	configureUnconfirmedMessageStorage(store, caches.UnconfirmedTx)
 	configureSnapshotStore(store)
 }
 
 func FlushStorages() {
 	FlushMilestoneStorage()
-	FlushBundleStorage()
-	FlushBundleTransactionsStorage()
-	FlushTransactionStorage()
-	FlushApproversStorage()
-	FlushTagsStorage()
-	FlushAddressStorage()
-	FlushUnconfirmedTxsStorage()
+	FlushMessagesStorage()
+	FlushMessagesStorage()
+	FlushChildrenStorage()
+	FlushUnconfirmedMessagesStorage()
 }
 
 func ShutdownStorages() {
 
 	ShutdownMilestoneStorage()
-	ShutdownBundleStorage()
-	ShutdownBundleTransactionsStorage()
-	ShutdownTransactionStorage()
-	ShutdownApproversStorage()
-	ShutdownTagsStorage()
-	ShutdownAddressStorage()
-	ShutdownUnconfirmedTxsStorage()
+	ShutdownMessagesStorage()
+	ShutdownMessagesStorage()
+	ShutdownChildrenStorage()
+	ShutdownUnconfirmedMessagesStorage()
 }
 
 func LoadInitialValuesFromDatabase() {
