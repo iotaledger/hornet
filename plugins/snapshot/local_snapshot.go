@@ -142,14 +142,14 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		default:
 		}
 
-		cachedMs := tangle.GetMilestoneOrNil(milestoneIndex) // bundle +1
+		cachedMs := tangle.GetMilestoneOrNil(milestoneIndex) // message +1
 		if cachedMs == nil {
 			return nil, errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
 		// Get all parents of that milestone
 		msTailTxHash := cachedMs.GetMessage().GetTailHash()
-		cachedMs.Release(true) // bundle -1
+		cachedMs.Release(true) // message -1
 
 		parents, err := getMilestoneParents(milestoneIndex, msTailTxHash, abortSignal)
 		if err != nil {
@@ -204,12 +204,12 @@ func getSeenMilestones(targetIndex milestone.Index, abortSignal <-chan struct{})
 		default:
 		}
 
-		cachedMs := tangle.GetMilestoneOrNil(milestoneIndex) // bundle +1
+		cachedMs := tangle.GetMilestoneOrNil(milestoneIndex) // message +1
 		if cachedMs == nil {
 			continue
 		}
 		seenMilestones[string(cachedMs.GetMessage().GetTailHash())] = milestoneIndex
-		cachedMs.Release(true) // bundle -1
+		cachedMs.Release(true) // message -1
 	}
 	return seenMilestones, nil
 }
@@ -319,11 +319,11 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	setIsSnapshotting(true)
 	defer setIsSnapshotting(false)
 
-	cachedTargetMs := tangle.GetMilestoneOrNil(targetIndex) // bundle +1
+	cachedTargetMs := tangle.GetMilestoneOrNil(targetIndex) // message +1
 	if cachedTargetMs == nil {
 		return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
-	defer cachedTargetMs.Release(true) // bundle -1
+	defer cachedTargetMs.Release(true) // message -1
 
 	newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(targetIndex, abortSignal)
 	if err != nil {

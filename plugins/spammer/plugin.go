@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/muxxer/iota.go/bundle"
 	"github.com/muxxer/iota.go/transaction"
 	"go.uber.org/atomic"
 
@@ -73,7 +72,7 @@ func configure(plugin *node.Plugin) {
 	cpuUsageUpdater()
 
 	// helper function to send the bundle to the network
-	sendBundle := func(b bundle.Bundle) error {
+	sendBundle := func(b tangle.Message) error {
 		for _, t := range b {
 			tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 			txTrits, _ := transaction.TransactionToTrits(&tx)
@@ -116,9 +115,9 @@ func run(_ *node.Plugin) {
 }
 
 // Start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
-func Start(tpsRateLimit *float64, cpuMaxUsage *float64, bundleSize *int, valueSpam *bool) (float64, float64, int, bool, error) {
+func Start(tpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error) {
 	if spammerInstance == nil {
-		return 0.0, 0.0, 0, false, ErrSpammerDisabled
+		return 0.0, 0.0, ErrSpammerDisabled
 	}
 
 	spammerLock.Lock()
@@ -128,8 +127,6 @@ func Start(tpsRateLimit *float64, cpuMaxUsage *float64, bundleSize *int, valueSp
 
 	tpsRateLimitCfg := config.NodeConfig.GetFloat64(config.CfgSpammerTPSRateLimit)
 	cpuMaxUsageCfg := config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
-	bundleSizeCfg := config.NodeConfig.GetInt(config.CfgSpammerBundleSize)
-	valueSpamCfg := config.NodeConfig.GetBool(config.CfgSpammerValueSpam)
 	spammerWorkerCount := config.NodeConfig.GetInt(config.CfgSpammerWorkers)
 	checkPeersConnected := node.IsSkipped(coordinator.PLUGIN)
 
@@ -151,23 +148,6 @@ func Start(tpsRateLimit *float64, cpuMaxUsage *float64, bundleSize *int, valueSp
 		cpuMaxUsageCfg = 0.0
 	}
 
-	if bundleSize != nil {
-		bundleSizeCfg = *bundleSize
-	}
-
-	if valueSpam != nil {
-		valueSpamCfg = *valueSpam
-	}
-
-	if bundleSizeCfg < 1 {
-		bundleSizeCfg = 1
-	}
-
-	if valueSpamCfg && bundleSizeCfg < 2 {
-		// minimum size for a value tx with SecurityLevelLow
-		bundleSizeCfg = 2
-	}
-
 	if spammerWorkerCount >= runtime.NumCPU() || spammerWorkerCount == 0 {
 		spammerWorkerCount = runtime.NumCPU() - 1
 	}
@@ -175,12 +155,12 @@ func Start(tpsRateLimit *float64, cpuMaxUsage *float64, bundleSize *int, valueSp
 		spammerWorkerCount = 1
 	}
 
-	startSpammerWorkers(tpsRateLimitCfg, cpuMaxUsageCfg, bundleSizeCfg, valueSpamCfg, spammerWorkerCount, checkPeersConnected)
+	startSpammerWorkers(tpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount, checkPeersConnected)
 
-	return tpsRateLimitCfg, cpuMaxUsageCfg, bundleSizeCfg, valueSpamCfg, nil
+	return tpsRateLimitCfg, cpuMaxUsageCfg, nil
 }
 
-func startSpammerWorkers(tpsRateLimit float64, cpuMaxUsage float64, bundleSize int, valueSpam bool, spammerWorkerCount int, checkPeersConnected bool) {
+func startSpammerWorkers(tpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int, checkPeersConnected bool) {
 
 	var rateLimitChannel chan struct{} = nil
 	var rateLimitAbortSignal chan struct{} = nil
@@ -273,7 +253,7 @@ func startSpammerWorkers(tpsRateLimit float64, cpuMaxUsage float64, bundleSize i
 						spammerStartTime = time.Now()
 					}
 
-					durationGTTA, durationPOW, err := spammerInstance.DoSpam(bundleSize, valueSpam, shutdownSignal)
+					durationGTTA, durationPOW, err := spammerInstance.DoSpam(shutdownSignal)
 					if err != nil {
 						continue
 					}

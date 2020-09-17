@@ -20,7 +20,7 @@ var (
 
 func onNewTx(cachedTx *tangle.CachedMessage) {
 
-	cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeMessage(func(msg *tangle.Message) {
 		// tx topic
 		err := publishTx(tx.Tx)
 		if err != nil {
@@ -45,7 +45,7 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 			return
 		}
 
-		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
+		cachedTx.ConsumeMessage(func(msg *tangle.Message) {
 			if err := publishConfTx(tx.Tx, msIndex); err != nil {
 				log.Warn(err.Error())
 			}
@@ -80,7 +80,7 @@ func onNewLatestMilestone(cachedMilestone *tangle.CachedMilestone) {
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	cachedMilestone.Release(true) // bundle -1
+	cachedMilestone.Release(true) // message -1
 }
 
 func onNewSolidMilestone(cachedMilestone *tangle.CachedMilestone) {
@@ -92,7 +92,7 @@ func onNewSolidMilestone(cachedMilestone *tangle.CachedMilestone) {
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	cachedMilestone.Release(true) // bundle -1
+	cachedMilestone.Release(true) // message -1
 }
 
 func onSpentAddress(addr trinary.Hash) {

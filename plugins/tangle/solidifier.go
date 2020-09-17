@@ -318,14 +318,14 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}
 
 	// Always traverse the oldest non-solid milestone, either it gets solid, or something is missing that should be requested.
-	cachedMsToSolidify := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
+	cachedMsToSolidify := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // message +1
 	if cachedMsToSolidify == nil {
 		// No newer milestone available
 		return
 	}
 
 	// Release shouldn't be forced, to cache the latest milestones
-	defer cachedMsToSolidify.Release() // bundle -1
+	defer cachedMsToSolidify.Release() // message -1
 
 	milestoneIndexToSolidify := cachedMsToSolidify.GetMessage().GetMilestoneIndex()
 	setSolidifierMilestoneIndex(milestoneIndexToSolidify)
@@ -362,11 +362,11 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
-		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
+		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // message +1
 		if cachedClosestNextMs.GetMessage().GetMilestoneIndex() == milestoneIndexToSolidify {
 			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetMessage().GetMilestoneIndex())
 		}
-		cachedClosestNextMs.Release() // bundle -1
+		cachedClosestNextMs.Release() // message -1
 
 		// rerun to solidify the older one
 		setSolidifierMilestoneIndex(0)

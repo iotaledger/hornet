@@ -187,11 +187,11 @@ func run(_ *node.Plugin) {
 }
 
 func getMilestoneTailHash(index milestone.Index) hornet.Hash {
-	cachedMs := tangle.GetMilestoneOrNil(index) // bundle +1
+	cachedMs := tangle.GetMilestoneOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
-	defer cachedMs.Release(true) // bundle -1
+	defer cachedMs.Release(true) // message -1
 
 	return cachedMs.GetMessage().GetTailHash()
 }

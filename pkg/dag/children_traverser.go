@@ -56,7 +56,7 @@ func (t *ChildrenTraverser) reset() {
 	t.stack = list.New()
 }
 
-// Traverse starts to traverse the children (future cone) of the given start transaction until
+// Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more transactions passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
 func (t *ChildrenTraverser) Traverse(startTxHash hornet.Hash) error {
@@ -97,7 +97,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	ele := t.stack.Front()
 	currentTxHash := ele.Value.(hornet.Hash)
 
-	// remove the transaction from the stack
+	// remove the message from the stack
 	t.stack.Remove(ele)
 
 	cachedMsgMeta, exists := t.cachedMsgMetas[string(currentTxHash)]
@@ -118,12 +118,12 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	}
 
 	if !traverse {
-		// transaction will not get consumed and children are not traversed
+		// message will not get consumed and children are not traversed
 		return nil
 	}
 
 	if t.consumer != nil {
-		// consume the transaction
+		// consume the message
 		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta +1
 			// there was an error, stop processing the stack
 			return err

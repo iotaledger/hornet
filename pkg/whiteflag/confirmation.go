@@ -39,7 +39,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 
 		// release all bundles at the end
 		for _, cachedMsg := range cachedMessages {
-			cachedMsg.Release(true) // bundle -1
+			cachedMsg.Release(true) // message -1
 		}
 	}()
 
@@ -115,7 +115,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 
 	confirmationTime := ms.Timestamp
 
-	// confirm all txs of the included tails
+	// confirm all included messages
 	for _, messageID := range mutations.MessagesIncluded {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
@@ -132,7 +132,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 		}
 	}
 
-	// confirm all messages of the zero value tx
+	// confirm all excluded messages with zero value
 	for _, messageID := range mutations.MessagesExcludedZeroValue {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
@@ -149,7 +149,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 		}
 	}
 
-	// confirm all conflicting messages of the conflicting tails
+	// confirm all conflicting messages
 	for _, messageID := range mutations.MessagesExcludedConflicting {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			meta.GetMetadata().SetConflicting(true)

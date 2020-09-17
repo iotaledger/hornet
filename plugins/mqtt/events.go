@@ -19,7 +19,7 @@ var (
 
 func onNewTx(cachedTx *tangle.CachedMessage) {
 
-	cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
+	cachedTx.ConsumeMessage(func(msg *tangle.Message) {
 
 		// tx topic
 		err := publishTx(tx.Tx)
@@ -45,7 +45,7 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 			return
 		}
 
-		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) {
+		cachedTx.ConsumeMessage(func(msg *tangle.Message) {
 			// conf_trytes topic
 			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
 				log.Warn(err.Error())
@@ -59,32 +59,32 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 	})
 }
 
-func onNewLatestMilestone(cachedBndl *tangle.CachedMessage) {
-	err := publishLMI(cachedBndl.GetMessage().GetMilestoneIndex())
+func onNewLatestMilestone(cachedMessage *tangle.CachedMessage) {
+	err := publishLMI(cachedMessage.GetMessage().GetMilestoneIndex())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLMHS(cachedBndl.GetMessage().GetMilestoneHash().Trytes())
+	err = publishLMHS(cachedMessage.GetMessage().GetMilestoneHash().Trytes())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLM(cachedBndl.GetMessage())
+	err = publishLM(cachedMessage.GetMessage())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	cachedBndl.Release(true) // bundle -1
+	cachedMessage.Release(true) // message -1
 }
 
-func onNewSolidMilestone(cachedBndl *tangle.CachedMessage) {
-	err := publishLMSI(cachedBndl.GetMessage().GetMilestoneIndex())
+func onNewSolidMilestone(cachedMessage *tangle.CachedMessage) {
+	err := publishLMSI(cachedMessage.GetMessage().GetMilestoneIndex())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	err = publishLSM(cachedBndl.GetMessage())
+	err = publishLSM(cachedMessage.GetMessage())
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	cachedBndl.Release(true) // bundle -1
+	cachedMessage.Release(true) // message -1
 }
 
 func onSpentAddress(addr trinary.Hash) {

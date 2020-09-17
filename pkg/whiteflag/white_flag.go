@@ -55,7 +55,7 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-// all cachedMsgMetas and cachedBundles have to be released outside.
+// all cachedMsgMetas and cachedMessages have to be released outside.
 func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parentMessageID ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncluded:            make(hornet.Hashes, 0),
@@ -79,7 +79,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		// load up bundle
 		cachedMessage, exists := cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())]
 		if !exists {
-			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // bundle +1
+			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
 				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 			}

@@ -25,19 +25,17 @@ func spammerRoute() {
 		switch strings.ToLower(c.Query("cmd")) {
 		case "start":
 			var err error
-			var tpsRateLimit *float64 = nil
+			var mpsRateLimit *float64 = nil
 			var cpuMaxUsage *float64 = nil
-			var bundleSize *int = nil
-			var valueSpam *bool = nil
 
-			tpsRateLimitQuery := c.Query("tpsRateLimit")
-			if tpsRateLimitQuery != "" {
-				tpsRateLimitParsed, err := strconv.ParseFloat(tpsRateLimitQuery, 64)
-				if err != nil || tpsRateLimitParsed < 0.0 {
-					c.JSON(http.StatusBadRequest, ErrorReturn{Error: fmt.Errorf("parsing tpsRateLimit failed: %w", err).Error()})
+			mpsRateLimitQuery := c.Query("mpsRateLimit")
+			if mpsRateLimitQuery != "" {
+				mpsRateLimitParsed, err := strconv.ParseFloat(mpsRateLimitQuery, 64)
+				if err != nil || mpsRateLimitParsed < 0.0 {
+					c.JSON(http.StatusBadRequest, ErrorReturn{Error: fmt.Errorf("parsing mpsRateLimit failed: %w", err).Error()})
 					return
 				}
-				tpsRateLimit = &tpsRateLimitParsed
+				mpsRateLimit = &mpsRateLimitParsed
 			}
 
 			cpuMaxUsageQuery := c.Query("cpuMaxUsage")
@@ -50,33 +48,13 @@ func spammerRoute() {
 				cpuMaxUsage = &cpuMaxUsageParsed
 			}
 
-			bundleSizeQuery := c.Query("bundleSize")
-			if bundleSizeQuery != "" {
-				bundleSizeParsed, err := strconv.Atoi(bundleSizeQuery)
-				if err != nil || bundleSizeParsed < 1 {
-					c.JSON(http.StatusBadRequest, ErrorReturn{Error: fmt.Errorf("parsing bundleSize failed: %w", err).Error()})
-					return
-				}
-				bundleSize = &bundleSizeParsed
-			}
-
-			valueSpamQuery := c.Query("valueSpam")
-			if valueSpamQuery != "" {
-				valueSpamParsed, err := strconv.ParseBool(valueSpamQuery)
-				if err != nil {
-					c.JSON(http.StatusBadRequest, ErrorReturn{Error: fmt.Errorf("parsing valueSpam failed: %w", err).Error()})
-					return
-				}
-				valueSpam = &valueSpamParsed
-			}
-
-			usedTpsRateLimit, usedCPUMaxUsage, usedBundleSize, usedValueSpam, err := spammer.Start(tpsRateLimit, cpuMaxUsage, bundleSize, valueSpam)
+			usedMpsRateLimit, usedCPUMaxUsage, err := spammer.Start(mpsRateLimit, cpuMaxUsage)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, ErrorReturn{Error: fmt.Errorf("starting spammer failed: %w", err).Error()})
 				return
 			}
 
-			c.JSON(http.StatusOK, ResultReturn{Message: fmt.Sprintf("started spamming (TPS Limit: %0.2f, CPU Limit: %0.2f%%, BundleSize: %d, ValueSpam: %t)", usedTpsRateLimit, usedCPUMaxUsage*100.0, usedBundleSize, usedValueSpam)})
+			c.JSON(http.StatusOK, ResultReturn{Message: fmt.Sprintf("started spamming (MPS Limit: %0.2f, CPU Limit: %0.2f%%)", usedMpsRateLimit, usedCPUMaxUsage*100.0)})
 			return
 
 		case "stop":

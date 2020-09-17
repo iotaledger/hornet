@@ -106,7 +106,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 			continue
 		}
 
-		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) { // tx -1
+		cachedTx.ConsumeMessage(func(msg *tangle.Message) { // tx -1
 			// Delete the reference in the parents
 			tangle.DeleteChild(tx.GetTrunkHash(), tx.GetMessageID())
 			tangle.DeleteChild(tx.GetBranchHash(), tx.GetMessageID())

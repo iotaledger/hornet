@@ -53,7 +53,7 @@ type tipinfo struct {
 func runVisualizer() {
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeMessageAndMetadata(func(tx *hornet.Transaction, metadata *hornet.MessageMetadata) { // tx -1
+		cachedTx.ConsumeMessageAndMetadata(func(msg *tangle.Message, metadata *hornet.MessageMetadata) { // tx -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -91,8 +91,8 @@ func runVisualizer() {
 		)
 	})
 
-	onReceivedNewMilestone := events.NewClosure(func(cachedBndl *tanglePackage.CachedMessage) {
-		cachedBndl.ConsumeMessage(func(bndl *tanglePackage.Message) { // bundle -1
+	onReceivedNewMilestone := events.NewClosure(func(cachedMessage *tanglePackage.CachedMessage) {
+		cachedMessage.ConsumeMessage(func(bndl *tanglePackage.Message) { // message -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}

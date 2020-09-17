@@ -169,7 +169,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 
 // VerifyAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
-func (proc *Processor) VerifyAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
+func (proc *Processor) VerifyAndEmit(msg *tangle.Message) error {
 	//msgBytes := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	//hornetTx := hornet.NewTransactionFromTx(tx, msgBytes)
 
@@ -211,19 +211,19 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 		msIndex = tangle.GetLatestMilestoneIndex()
 	}
 
-	cachedReqMs := tangle.GetMilestoneOrNil(msIndex) // bundle +1
+	cachedReqMs := tangle.GetMilestoneOrNil(msIndex) // message +1
 	if cachedReqMs == nil {
 		// can't reply if we don't have the wanted milestone
 		return
 	}
 
-	cachedTxs := cachedReqMs.GetMessage().GetTransactions() // txs +1
+	cachedTxs := cachedReqMs.GetMessage().GetTransactions() // msgs +1
 	for _, cachedTxToSend := range cachedTxs {
 		transactionMsg, _ := sting.NewTransactionMessage(cachedTxToSend.GetTransaction().RawBytes)
 		p.EnqueueForSending(transactionMsg)
 	}
-	cachedTxs.Release(true)   // txs -1
-	cachedReqMs.Release(true) // bundle -1
+	cachedTxs.Release(true)   // msgs -1
+	cachedReqMs.Release(true) // message -1
 }
 
 // processes the given transaction request by parsing it and then replying to the peer with it.

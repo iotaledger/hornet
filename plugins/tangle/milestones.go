@@ -14,7 +14,7 @@ var (
 )
 
 func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
-	defer cachedMilestone.Release() // bundle -1
+	defer cachedMilestone.Release() // message -1
 
 	Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 
