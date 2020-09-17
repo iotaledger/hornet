@@ -19,6 +19,19 @@ type Message struct {
 	message *iotago.Message
 }
 
+func NewMessage(iotaMsg *iotago.Message) (*Message, error) {
+
+	hash, err := iotaMsg.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Message{
+		messageID: hash[:],
+		message:   iotaMsg,
+	}, nil
+}
+
 func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Message, error) {
 	msg := &iotago.Message{}
 	if _, err := msg.Deserialize(data, deSeriMode); err != nil {
