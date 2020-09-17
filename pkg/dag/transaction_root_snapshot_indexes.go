@@ -12,11 +12,11 @@ import (
 // the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
 func UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs hornet.Hashes, lsmi milestone.Index) {
 	for _, outdatedTxHash := range outdatedMessageIDs {
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(outdatedTxHash)
-		if cachedTxMeta == nil {
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(outdatedTxHash)
+		if cachedMsgMeta == nil {
 			panic(tangle.ErrMessageNotFound)
 		}
-		GetTransactionRootSnapshotIndexes(cachedTxMeta, lsmi)
+		GetTransactionRootSnapshotIndexes(cachedMsgMeta, lsmi)
 	}
 }
 
@@ -91,14 +91,12 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 			outdatedMessageIDs = append(outdatedMessageIDs, cachedMetadata.GetMetadata().GetMessageID())
 			return nil
 		},
-		// called on missing approvees
-		func(approveeHash hornet.Hash) error {
-			// since this is also called for the future cone, there may be missing approvees
-			return tangle.ErrMessageNotFound
-		},
+		// called on missing parents
+		// return error on missing parents
+		nil,
 		// called on solid entry points
 		func(txHash hornet.Hash) {
-			// if the approvee is a solid entry point, use the index of the solid entry point as ORTSI
+			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
 			updateIndexes(entryPointIndex, entryPointIndex)
 		}, false, nil); err != nil {
@@ -138,18 +136,18 @@ func UpdateMessageRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone.Ind
 
 		if err := TraverseChildren(txHash,
 			// traversal stops if no more transactions pass the given condition
-			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-				defer cachedTxMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetMessageID())]
+			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
+				_, previouslyTraversed := traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())]
 				return !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-				defer cachedTxMeta.Release(true) // meta -1
-				traversed[string(cachedTxMeta.GetMetadata().GetMessageID())] = struct{}{}
+			func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
+				traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
 
 				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
-				GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta pass +1
+				GetTransactionRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi) // meta pass +1
 
 				return nil
 			}, false, nil); err != nil {

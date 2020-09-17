@@ -48,17 +48,17 @@ func getInclusionStates(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	for _, tx := range query.Transactions {
 		// get tx data
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(tx)) // meta +1
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(tx)) // meta +1
 
-		if cachedTxMeta == nil {
+		if cachedMsgMeta == nil {
 			// if tx is unknown, return false
 			inclusionStates = append(inclusionStates, false)
 			continue
 		}
 		// check if tx is set as confirmed. Avoid passing true for conflicting tx to be backwards compatible
-		confirmed := cachedTxMeta.GetMetadata().IsConfirmed() && !cachedTxMeta.GetMetadata().IsConflicting()
+		confirmed := cachedMsgMeta.GetMetadata().IsConfirmed() && !cachedMsgMeta.GetMetadata().IsConflicting()
 
-		cachedTxMeta.Release(true) // meta -1
+		cachedMsgMeta.Release(true) // meta -1
 		inclusionStates = append(inclusionStates, confirmed)
 	}
 

@@ -34,17 +34,17 @@ var (
 
 	ErrCritical                 = errors.New("critical error")
 	ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
-	ErrApproverTxNotFound       = errors.New("approver transaction not found")
+	ErrChildTxNotFound          = errors.New("child transaction not found")
 )
 
-// isSolidEntryPoint checks whether any direct approver of the given transaction was confirmed by a milestone which is above the target milestone.
+// isSolidEntryPoint checks whether any direct child of the given transaction was confirmed by a milestone which is above the target milestone.
 func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 
-	for _, approverHash := range tangle.GetChildrenMessageIDs(txHash) {
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(approverHash) // meta +1
-		if cachedTxMeta == nil {
+	for _, childHash := range tangle.GetChildrenMessageIDs(txHash) {
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(childHash) // meta +1
+		if cachedMsgMeta == nil {
 			// Ignore this transaction since it doesn't exist anymore
-			log.Warnf(errors.Wrapf(ErrApproverTxNotFound, "tx hash: %v, approver hash: %v", txHash.Hex(), approverHash.Hex()).Error())
+			log.Warnf(errors.Wrapf(ErrChildTxNotFound, "tx hash: %v, child hash: %v", txHash.Hex(), childHash.Hex()).Error())
 			continue
 		}
 
@@ -52,8 +52,8 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 		//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
 		//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old tx as valid tips, which is not the case anymore.
 
-		confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
-		cachedTxMeta.Release(true) // meta -1
+		confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
+		cachedMsgMeta.Release(true) // meta -1
 		if confirmed && (at > targetIndex) {
 			// confirmed by a later milestone than targetIndex => solidEntryPoint
 
@@ -64,89 +64,44 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 	return false
 }
 
-// getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.Hash, abortSignal <-chan struct{}) (hornet.Hashes, error) {
+// getMilestoneParents traverses a milestone and collects all messages that were confirmed by that milestone or newer
+func getMilestoneParents(milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal <-chan struct{}) (hornet.Hashes, error) {
+
+	var parents hornet.Hashes
 
 	ts := time.Now()
 
-	txsToTraverse := make(map[string]struct{})
-	txsChecked := make(map[string]struct{})
-	var approvees hornet.Hashes
-	txsToTraverse[string(msTailTxHash)] = struct{}{}
-
-	// Collect all tx by traversing the tangle
-	// Loop as long as new messages are added in every loop cycle
-	for len(txsToTraverse) != 0 {
-
-		for txHash := range txsToTraverse {
-			delete(txsToTraverse, txHash)
-
-			select {
-			case <-abortSignal:
-				return nil, ErrSnapshotCreationWasAborted
-			default:
-			}
-
-			if _, checked := txsChecked[txHash]; checked {
-				// Tx was already checked => ignore
-				continue
-			}
-			txsChecked[txHash] = struct{}{}
-
-			if tangle.SolidEntryPointsContain(hornet.Hash(txHash)) {
-				// Ignore solid entry points (snapshot milestone included)
-				continue
-			}
-
-			cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHash)) // meta +1
-			if cachedTxMeta == nil {
-				return nil, errors.Wrapf(ErrCritical, "transaction not found: %v", hornet.Hash(txHash).Hex())
-			}
-
-			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
-				if at < milestoneIndex {
-					// Ignore Tx that were confirmed by older milestones
-					cachedTxMeta.Release(true) // meta -1
-					continue
-				}
-
-				approvees = append(approvees, hornet.Hash(txHash))
-
-				// Traverse the approvee
-				txsToTraverse[string(cachedTxMeta.GetMetadata().GetParent1MessageID())] = struct{}{}
-				txsToTraverse[string(cachedTxMeta.GetMetadata().GetParent2MessageID())] = struct{}{}
-
-				// Do not force release, since it is loaded again
-				cachedTxMeta.Release() // meta -1
-
-			} else {
-				// Tx is not confirmed
-				if cachedTxMeta.GetMetadata().IsTail() {
-					cachedTxMeta.Release(true) // meta -1
-					return nil, errors.Wrapf(ErrCritical, "transaction not confirmed: %v", hornet.Hash(txHash).Hex())
-				}
-
-				// Search all referenced tails of this Tx (needed for correct SolidEntryPoint calculation).
-				// This non-tail tx was not confirmed by the milestone, and could be referenced by the future cone.
-				// Thats why we have to search all tail txs that get referenced by this incomplete bundle, to mark them as SEPs.
-				tailTxs, err := dag.FindAllTails(hornet.Hash(txHash), false)
-				if err != nil {
-					cachedTxMeta.Release(true) // meta -1
-					return nil, err
-				}
-
-				for tailTx := range tailTxs {
-					txsToTraverse[tailTx] = struct{}{}
-				}
-
-				// Ignore this transaction in the cone because it is not confirmed
-				cachedTxMeta.Release(true) // meta -1
-			}
+	if err := dag.TraverseParents(milestoneMessageID,
+		// traversal stops if no more messages pass the given condition
+		// Caution: condition func is not in DFS order
+		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // tx +1
+			defer cachedMsgMeta.Release(true) // tx -1
+			// collect all msg that were confirmed by that milestone or newer
+			confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
+			return (confirmed && at >= milestoneIndex), nil
+		},
+		// consumer
+		func(cachedMsgMeta *tangle.CachedMetadata) error { // tx +1
+			defer cachedMsgMeta.Release(true) // tx -1
+			parents = append(parents, cachedMsgMeta.GetMetadata().GetMessageID())
+			return nil
+		},
+		// called on missing parents
+		// return error on missing parents
+		nil,
+		// called on solid entry points
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		// the pruning target index is also a solid entry point => traverse it anyways
+		true,
+		abortSignal); err != nil {
+		if err == tangle.ErrOperationAborted {
+			return nil, ErrSnapshotCreationWasAborted
 		}
 	}
 
-	log.Debugf("milestone walked (%d): approvees: %v, collect: %v", milestoneIndex, len(approvees), time.Since(ts))
-	return approvees, nil
+	log.Debugf("milestone walked (%d): parents: %v, collect: %v", milestoneIndex, len(parents), time.Since(ts))
+	return parents, nil
 }
 
 func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
@@ -192,41 +147,41 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 			return nil, errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
-		// Get all approvees of that milestone
+		// Get all parents of that milestone
 		msTailTxHash := cachedMs.GetMessage().GetTailHash()
 		cachedMs.Release(true) // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
+		parents, err := getMilestoneParents(milestoneIndex, msTailTxHash, abortSignal)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, approvee := range approvees {
+		for _, parent := range parents {
 			select {
 			case <-abortSignal:
 				return nil, ErrSnapshotCreationWasAborted
 			default:
 			}
 
-			if isEntryPoint := isSolidEntryPoint(approvee, targetIndex); isEntryPoint {
+			if isEntryPoint := isSolidEntryPoint(parent, targetIndex); isEntryPoint {
 				// A solid entry point should only be a tail transaction, otherwise the whole bundle can't be reproduced with a snapshot file
-				tails, err := dag.FindAllTails(approvee, false)
+				tails, err := dag.FindAllTails(parent, false)
 				if err != nil {
 					return nil, errors.Wrap(ErrCritical, err.Error())
 				}
 
 				for tailHash := range tails {
-					cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(tailHash))
-					if cachedTxMeta == nil {
+					cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(tailHash))
+					if cachedMsgMeta == nil {
 						return nil, errors.Wrapf(ErrCritical, "metadata (%v) not found!", hornet.Hash(tailHash).Hex())
 					}
 
-					confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
+					confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
 					if !confirmed {
-						cachedTxMeta.Release(true)
+						cachedMsgMeta.Release(true)
 						return nil, errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", hornet.Hash(tailHash).Hex())
 					}
-					cachedTxMeta.Release(true)
+					cachedMsgMeta.Release(true)
 
 					solidEntryPoints[tailHash] = at
 				}

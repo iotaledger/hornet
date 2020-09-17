@@ -370,7 +370,7 @@ func currentNodeStatus() *NodeStatus {
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: tangle.GetApproversStorageSize(),
+			Size: tangle.GetChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,

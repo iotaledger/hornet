@@ -10,8 +10,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-type ApproversTraverser struct {
-	cachedTxMetas map[string]*tangle.CachedMetadata
+type ChildrenTraverser struct {
+	cachedMsgMetas map[string]*tangle.CachedMetadata
 
 	// stack holding the ordered tx to process
 	stack *list.List
@@ -27,10 +27,10 @@ type ApproversTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewChildrenTraverser create a new traverser to traverse the approvers (future cone)
-func NewChildrenTraverser(condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ApproversTraverser {
+// NewChildrenTraverser create a new traverser to traverse the children (future cone)
+func NewChildrenTraverser(condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
 
-	return &ApproversTraverser{
+	return &ChildrenTraverser{
 		condition:             condition,
 		consumer:              consumer,
 		walkAlreadyDiscovered: walkAlreadyDiscovered,
@@ -38,28 +38,28 @@ func NewChildrenTraverser(condition Predicate, consumer Consumer, walkAlreadyDis
 	}
 }
 
-func (t *ApproversTraverser) cleanup(forceRelease bool) {
+func (t *ChildrenTraverser) cleanup(forceRelease bool) {
 
 	// release all tx metadata at the end
-	for _, cachedTxMeta := range t.cachedTxMetas {
-		cachedTxMeta.Release(forceRelease) // meta -1
+	for _, cachedMsgMeta := range t.cachedMsgMetas {
+		cachedMsgMeta.Release(forceRelease) // meta -1
 	}
 
 	// Release lock after cleanup so the traverser can be reused
 	t.traverserLock.Unlock()
 }
 
-func (t *ApproversTraverser) reset() {
+func (t *ChildrenTraverser) reset() {
 
-	t.cachedTxMetas = make(map[string]*tangle.CachedMetadata)
+	t.cachedMsgMetas = make(map[string]*tangle.CachedMetadata)
 	t.discovered = make(map[string]struct{})
 	t.stack = list.New()
 }
 
-// Traverse starts to traverse the approvers (future cone) of the given start transaction until
+// Traverse starts to traverse the children (future cone) of the given start transaction until
 // the traversal stops due to no more transactions passing the given condition.
-// It is unsorted BFS because the approvers are not ordered in the database.
-func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash) error {
+// It is unsorted BFS because the children are not ordered in the database.
+func (t *ChildrenTraverser) Traverse(startTxHash hornet.Hash) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -75,7 +75,7 @@ func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash) error {
 	}
 
 	for t.stack.Len() > 0 {
-		if err := t.processStackApprovers(); err != nil {
+		if err := t.processStackChildren(); err != nil {
 			return err
 		}
 	}
@@ -83,9 +83,9 @@ func (t *ApproversTraverser) Traverse(startTxHash hornet.Hash) error {
 	return nil
 }
 
-// processStackApprovers checks if the current element in the stack must be processed and traversed.
-// current element gets consumed first, afterwards it's approvers get traversed in random order.
-func (t *ApproversTraverser) processStackApprovers() error {
+// processStackChildren checks if the current element in the stack must be processed and traversed.
+// current element gets consumed first, afterwards it's children get traversed in random order.
+func (t *ChildrenTraverser) processStackChildren() error {
 
 	select {
 	case <-t.abortSignal:
@@ -100,48 +100,48 @@ func (t *ApproversTraverser) processStackApprovers() error {
 	// remove the transaction from the stack
 	t.stack.Remove(ele)
 
-	cachedTxMeta, exists := t.cachedTxMetas[string(currentTxHash)]
+	cachedMsgMeta, exists := t.cachedMsgMetas[string(currentTxHash)]
 	if !exists {
-		cachedTxMeta = tangle.GetCachedMessageMetadataOrNil(currentTxHash) // meta +1
-		if cachedTxMeta == nil {
+		cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(currentTxHash) // meta +1
+		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
 			return errors.Wrapf(tangle.ErrMessageNotFound, "hash: %s", currentTxHash.Hex())
 		}
-		t.cachedTxMetas[string(currentTxHash)] = cachedTxMeta
+		t.cachedMsgMetas[string(currentTxHash)] = cachedMsgMeta
 	}
 
 	// check condition to decide if tx should be consumed and traversed
-	traverse, err := t.condition(cachedTxMeta.Retain()) // meta + 1
+	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta + 1
 	if err != nil {
 		// there was an error, stop processing the stack
 		return err
 	}
 
 	if !traverse {
-		// transaction will not get consumed and approvers are not traversed
+		// transaction will not get consumed and children are not traversed
 		return nil
 	}
 
 	if t.consumer != nil {
 		// consume the transaction
-		if err := t.consumer(cachedTxMeta.Retain()); err != nil { // meta +1
+		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta +1
 			// there was an error, stop processing the stack
 			return err
 		}
 	}
 
-	for _, approverHash := range tangle.GetChildrenMessageIDs(currentTxHash) {
+	for _, childHash := range tangle.GetChildrenMessageIDs(currentTxHash) {
 		if !t.walkAlreadyDiscovered {
-			if _, approverDiscovered := t.discovered[string(approverHash)]; approverDiscovered {
-				// approver was already discovered
+			if _, childDiscovered := t.discovered[string(childHash)]; childDiscovered {
+				// child was already discovered
 				continue
 			}
 
-			t.discovered[string(approverHash)] = struct{}{}
+			t.discovered[string(childHash)] = struct{}{}
 		}
 
-		// traverse the approver
-		t.stack.PushBack(approverHash)
+		// traverse the child
+		t.stack.PushBack(childHash)
 	}
 
 	return nil

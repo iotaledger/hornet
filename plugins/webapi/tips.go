@@ -54,30 +54,30 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // meta +1
-	if cachedTxMeta == nil {
+	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // meta +1
+	if cachedMsgMeta == nil {
 		e.Error = "unknown tail transaction"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
-	defer cachedTxMeta.Release(true)
+	defer cachedMsgMeta.Release(true)
 
-	if !cachedTxMeta.GetMetadata().IsTail() {
+	if !cachedMsgMeta.GetMetadata().IsTail() {
 		e.Error = "transaction is not a tail"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	if !cachedTxMeta.GetMetadata().IsSolid() {
+	if !cachedMsgMeta.GetMetadata().IsSolid() {
 		e.Error = "transaction is not solid"
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
-	conflicting := cachedTxMeta.GetMetadata().IsConflicting()
+	conflicting := cachedMsgMeta.GetMetadata().IsConflicting()
 
 	// check if tx is set as confirmed. Avoid passing true for conflicting tx to be backwards compatible
-	confirmed := cachedTxMeta.GetMetadata().IsConfirmed() && !conflicting
+	confirmed := cachedMsgMeta.GetMetadata().IsConfirmed() && !conflicting
 
 	if confirmed || conflicting {
 		c.JSON(http.StatusOK, GetTipInfoReturn{
@@ -90,7 +90,7 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	lsmi := tangle.GetSolidMilestoneIndex()
-	ymrsi, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi)
+	ymrsi, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi)
 
 	// if the OMRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 	if (lsmi - omrsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth)) {

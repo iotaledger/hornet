@@ -182,20 +182,20 @@ func run(plugin *node.Plugin) {
 
 	daemon.BackgroundWorker("MQTT[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[NewTxWorker] ... done")
-		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTransaction)
 		newTxWorkerPool.Start()
 		<-shutdownSignal
-		tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTransaction)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[NewTxWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("MQTT[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT[ConfirmedTxWorker] ... done")
-		tangle.Events.TransactionConfirmed.Attach(onTransactionConfirmed)
+		tangle.Events.MessageConfirmed.Attach(onTransactionConfirmed)
 		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
-		tangle.Events.TransactionConfirmed.Detach(onTransactionConfirmed)
+		tangle.Events.MessageConfirmed.Detach(onTransactionConfirmed)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping MQTT[ConfirmedTxWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)

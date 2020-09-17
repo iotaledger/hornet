@@ -387,7 +387,7 @@ type Caches struct {
 	Addresses                 CacheOpts `mapstructure:"addresses"`
 	Bundles                   CacheOpts `mapstructure:"bundles"`
 	BundleTransactions        CacheOpts `mapstructure:"bundleTransactions"`
-	Children                 CacheOpts `mapstructure:"approvers"`
+	Children                  CacheOpts `mapstructure:"children"`
 	Tags                      CacheOpts `mapstructure:"tags"`
 	Milestones                CacheOpts `mapstructure:"milestones"`
 	Transactions              CacheOpts `mapstructure:"transactions"`

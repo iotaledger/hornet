@@ -105,8 +105,8 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all approvers where the tx doesn't exist in the database anymore.
-	if err := cleanupApprovers(); err != nil {
+	// deletes all children where the tx doesn't exist in the database anymore.
+	if err := cleanupChildren(); err != nil {
 		return err
 	}
 
@@ -541,22 +541,22 @@ func cleanupBundleTransactions() error {
 	return nil
 }
 
-// deletes all approvers where the tx doesn't exist in the database anymore.
-func cleanupApprovers() error {
+// deletes all children where the tx doesn't exist in the database anymore.
+func cleanupChildren() error {
 
-	type approver struct {
-		txHash       hornet.Hash
-		approverHash hornet.Hash
+	type child struct {
+		txHash    hornet.Hash
+		childHash hornet.Hash
 	}
 
 	start := time.Now()
 
-	approversToDelete := make(map[string]*approver)
+	childrenToDelete := make(map[string]*child)
 
 	lastStatusTime := time.Now()
-	var approverCounter int64
-	tangle.ForEachChild(func(txHash hornet.Hash, approverHash hornet.Hash) bool {
-		approverCounter++
+	var childCounter int64
+	tangle.ForEachChild(func(txHash hornet.Hash, childHash hornet.Hash) bool {
+		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
@@ -565,30 +565,30 @@ func cleanupApprovers() error {
 				return false
 			}
 
-			log.Infof("analyzed %d approvers", approverCounter)
+			log.Infof("analyzed %d children", childCounter)
 		}
 
-		// delete approver if transaction doesn't exist
+		// delete child if transaction doesn't exist
 		if !tangle.MessageExistsInStore(txHash) {
-			approversToDelete[string(txHash)+string(approverHash)] = &approver{txHash: txHash, approverHash: approverHash}
+			childrenToDelete[string(txHash)+string(childHash)] = &child{txHash: txHash, childHash: childHash}
 		}
 
-		// delete approver if approver transaction doesn't exist
-		if !tangle.MessageExistsInStore(approverHash) {
-			approversToDelete[string(txHash)+string(approverHash)] = &approver{txHash: txHash, approverHash: approverHash}
+		// delete child if child transaction doesn't exist
+		if !tangle.MessageExistsInStore(childHash) {
+			childrenToDelete[string(txHash)+string(childHash)] = &child{txHash: txHash, childHash: childHash}
 		}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d approvers", approverCounter)
+	log.Infof("analyzed %d children", childCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	total := len(approversToDelete)
+	total := len(childrenToDelete)
 	var deletionCounter int64
-	for _, approver := range approversToDelete {
+	for _, child := range childrenToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -599,15 +599,15 @@ func cleanupApprovers() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting approvers...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			log.Infof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteChild(approver.txHash, approver.approverHash)
+		tangle.DeleteChild(child.txHash, child.childHash)
 	}
 
 	tangle.FlushChildrenStorage()
 
-	log.Infof("deleting approvers...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

@@ -74,19 +74,19 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	// should return an error in a sane API but unfortunately we need to keep backwards compatibility
-	if len(query.Bundles) == 0 && len(query.Addresses) == 0 && len(query.Approvees) == 0 && len(query.Tags) == 0 {
+	if len(query.Bundles) == 0 && len(query.Addresses) == 0 && len(query.Parents) == 0 && len(query.Tags) == 0 {
 		c.JSON(http.StatusOK, FindTransactionsReturn{Hashes: []string{}})
 		return
 	}
 
-	if (len(query.Bundles) + len(query.Addresses) + len(query.Approvees) + len(query.Tags)) > maxResults {
-		e.Error = "too many bundle, address, approvee or tag hashes. max. allowed: " + strconv.Itoa(maxResults)
+	if (len(query.Bundles) + len(query.Addresses) + len(query.Parents) + len(query.Tags)) > maxResults {
+		e.Error = "too many bundle, address, parent or tag hashes. max. allowed: " + strconv.Itoa(maxResults)
 		c.JSON(http.StatusBadRequest, e)
 		return
 	}
 
 	queryBundleHashes := make(map[string]struct{})
-	queryApproveeHashes := make(map[string]struct{})
+	queryParentHashes := make(map[string]struct{})
 	queryAddressHashes := make(map[string]struct{})
 	queryTagHashes := make(map[string]struct{})
 
@@ -100,13 +100,13 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		queryBundleHashes[string(hornet.HashFromHashTrytes(bundleTrytes))] = struct{}{}
 	}
 
-	for _, approveeTrytes := range query.Approvees {
-		if !guards.IsTransactionHash(approveeTrytes) {
-			e.Error = fmt.Sprintf("aprovee hash invalid: %s", approveeTrytes)
+	for _, parentTrytes := range query.Parents {
+		if !guards.IsTransactionHash(parentTrytes) {
+			e.Error = fmt.Sprintf("aprovee hash invalid: %s", parentTrytes)
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
-		queryApproveeHashes[string(hornet.HashFromHashTrytes(approveeTrytes))] = struct{}{}
+		queryParentHashes[string(hornet.HashFromHashTrytes(parentTrytes))] = struct{}{}
 	}
 
 	for _, addressTrytes := range query.Addresses {
@@ -152,22 +152,22 @@ func findTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		searchedBefore = true
 	}
 
-	// check if approvee search criteria was given
-	if len(queryApproveeHashes) > 0 {
+	// check if parent search criteria was given
+	if len(queryParentHashes) > 0 {
 		if !searchedBefore {
-			// search txs by approvees
-			for approveeHash := range queryApproveeHashes {
-				for _, r := range tangle.GetChildrenMessageIDs(hornet.Hash(approveeHash), maxResults-len(results)) {
+			// search txs by parents
+			for parentHash := range queryParentHashes {
+				for _, r := range tangle.GetChildrenMessageIDs(hornet.Hash(parentHash), maxResults-len(results)) {
 					results[string(r)] = struct{}{}
 				}
 			}
 			searchedBefore = true
 		} else {
-			// check if results match at least one of the approvee search criteria
+			// check if results match at least one of the parent search criteria
 			for txHash := range results {
 				contains := false
-				for approveeHash := range queryApproveeHashes {
-					if tangle.ContainsChild(hornet.Hash(approveeHash), hornet.Hash(txHash)) {
+				for parentHash := range queryParentHashes {
+					if tangle.ContainsChild(hornet.Hash(parentHash), hornet.Hash(txHash)) {
 						contains = true
 						break
 					}

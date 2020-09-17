@@ -20,7 +20,7 @@ import (
 
 const (
 	MaxTransactionsForAddressResults = 100
-	MaxApproversResults              = 100
+	MaxChildrenResults               = 100
 	MaxTagResults                    = 100
 	MaxBundleResults                 = 100
 )
@@ -47,7 +47,7 @@ type ExplorerTx struct {
 		Conflicting bool            `json:"conflicting"`
 		Milestone   milestone.Index `json:"milestone_index"`
 	} `json:"confirmed"`
-	Children      []string        `json:"children"`
+	Children       []string        `json:"children"`
 	Solid          bool            `json:"solid"`
 	MWM            int             `json:"mwm"`
 	Previous       trinary.Hash    `json:"previous"`
@@ -90,7 +90,7 @@ func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
 	}
 
 	// Children
-	t.Children = tangle.GetChildrenMessageIDs(cachedTx.GetMessage().GetMessageID(), MaxApproversResults).Hex()
+	t.Children = tangle.GetChildrenMessageIDs(cachedTx.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
 	trits, err := trinary.BytesToTrits(cachedTx.GetMessage().GetMessageID())

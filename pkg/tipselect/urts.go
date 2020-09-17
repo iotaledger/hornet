@@ -62,10 +62,10 @@ type Tip struct {
 	Score Score
 	// Hash is the transaction hash of the tip.
 	Hash hornet.Hash
-	// TimeFirstApprover is the timestamp the tip was referenced for the first time by another transaction.
-	TimeFirstApprover time.Time
-	// ApproversCount is the amount the tip was referenced by other transactions.
-	ApproversCount *atomic.Uint32
+	// TimeFirstChild is the timestamp the tip was referenced for the first time by another transaction.
+	TimeFirstChild time.Time
+	// ChildrenCount is the amount the tip was referenced by other transactions.
+	ChildrenCount *atomic.Uint32
 }
 
 // Events represents events happening on the tip-selector.
@@ -90,32 +90,32 @@ type TipSelector struct {
 	// value between OMRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
-	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
+	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (non-lazy pool)
 	retentionRulesTipsLimitNonLazy int
 	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first transaction.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxReferencedTipAgeSecondsNonLazy time.Duration
-	// maxApprovers is the maximum amount of references by other transactions
+	// maxChildren is the maximum amount of references by other transactions
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
-	maxApproversNonLazy uint32
+	maxChildrenNonLazy uint32
 	// spammerTipsThresholdNonLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = always)
 	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (non-lazy pool)
 	spammerTipsThresholdNonLazy int
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
-	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
+	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (semi-lazy pool)
 	retentionRulesTipsLimitSemiLazy int
 	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first transaction.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
 	maxReferencedTipAgeSecondsSemiLazy time.Duration
-	// maxApprovers is the maximum amount of references by other transactions
+	// maxChildren is the maximum amount of references by other transactions
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
-	maxApproversSemiLazy uint32
+	maxChildrenSemiLazy uint32
 	// spammerTipsThresholdSemiLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable)
 	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (semi-lazy pool)
 	spammerTipsThresholdSemiLazy int
@@ -135,11 +135,11 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 	belowMaxDepth int,
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeSecondsNonLazy time.Duration,
-	maxApproversNonLazy uint32,
+	maxChildrenNonLazy uint32,
 	spammerTipsThresholdNonLazy int,
 	retentionRulesTipsLimitSemiLazy int,
 	maxReferencedTipAgeSecondsSemiLazy time.Duration,
-	maxApproversSemiLazy uint32,
+	maxChildrenSemiLazy uint32,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
@@ -148,11 +148,11 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 		belowMaxDepth:                             milestone.Index(belowMaxDepth),
 		retentionRulesTipsLimitNonLazy:            retentionRulesTipsLimitNonLazy,
 		maxReferencedTipAgeSecondsNonLazy:         maxReferencedTipAgeSecondsNonLazy,
-		maxApproversNonLazy:                       maxApproversNonLazy,
+		maxChildrenNonLazy:                        maxChildrenNonLazy,
 		spammerTipsThresholdNonLazy:               spammerTipsThresholdNonLazy,
 		retentionRulesTipsLimitSemiLazy:           retentionRulesTipsLimitSemiLazy,
 		maxReferencedTipAgeSecondsSemiLazy:        maxReferencedTipAgeSecondsSemiLazy,
-		maxApproversSemiLazy:                      maxApproversSemiLazy,
+		maxChildrenSemiLazy:                       maxChildrenSemiLazy,
 		spammerTipsThresholdSemiLazy:              spammerTipsThresholdSemiLazy,
 		nonLazyTipsMap:                            make(map[string]*Tip),
 		semiLazyTipsMap:                           make(map[string]*Tip),
@@ -191,10 +191,10 @@ func (ts *TipSelector) AddTip(message *tangle.Message) {
 	}
 
 	tip := &Tip{
-		Score:             score,
-		Hash:              messageID,
-		TimeFirstApprover: time.Time{},
-		ApproversCount:    atomic.NewUint32(0),
+		Score:          score,
+		Hash:           messageID,
+		TimeFirstChild: time.Time{},
+		ChildrenCount:  atomic.NewUint32(0),
 	}
 
 	switch tip.Score {
@@ -208,22 +208,22 @@ func (ts *TipSelector) AddTip(message *tangle.Message) {
 
 	ts.Events.TipAdded.Trigger(tip)
 
-	// the approvees (trunk and branch) are the tail transactions this tip approves
+	// the parents (trunk and branch) are the tail transactions this tip approves
 	// remove them from the tip pool
-	approveeTailTxHashes := map[string]struct{}{
+	parentTailTxHashes := map[string]struct{}{
 		string(message.GetParent1MessageID()): {},
 		string(message.GetParent2MessageID()): {},
 	}
 
-	checkTip := func(tipsMap map[string]*Tip, approveeTip *Tip, retentionRulesTipsLimit int, maxApprovers uint32, maxReferencedTipAgeSeconds time.Duration) bool {
+	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAgeSeconds time.Duration) bool {
 		// if the amount of known tips is above the limit, remove the tip directly
 		if len(tipsMap) > retentionRulesTipsLimit {
-			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(approveeTip.Hash))
+			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(parentTip.Hash))
 		}
 
-		// check if the maximum amount of approvers for this tip is reached
-		if approveeTip.ApproversCount.Add(1) >= maxApprovers {
-			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(approveeTip.Hash))
+		// check if the maximum amount of children for this tip is reached
+		if parentTip.ChildrenCount.Add(1) >= maxChildren {
+			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(parentTip.Hash))
 		}
 
 		if maxReferencedTipAgeSeconds == time.Duration(0) {
@@ -232,26 +232,26 @@ func (ts *TipSelector) AddTip(message *tangle.Message) {
 		}
 
 		// check if the tip was referenced by another transaction before
-		if approveeTip.TimeFirstApprover.IsZero() {
+		if parentTip.TimeFirstChild.IsZero() {
 			// mark the tip as referenced
-			approveeTip.TimeFirstApprover = time.Now()
+			parentTip.TimeFirstChild = time.Now()
 		}
 
 		return false
 	}
 
-	for approveeTailTxHash := range approveeTailTxHashes {
+	for parentTailTxHash := range parentTailTxHashes {
 		// we have to separate between the pools, to prevent semi-lazy tips from emptying the non-lazy pool
 		switch tip.Score {
 		case ScoreNonLazy:
-			if approveeTip, exists := ts.nonLazyTipsMap[approveeTailTxHash]; exists {
-				if checkTip(ts.nonLazyTipsMap, approveeTip, ts.retentionRulesTipsLimitNonLazy, ts.maxApproversNonLazy, ts.maxReferencedTipAgeSecondsNonLazy) {
+			if parentTip, exists := ts.nonLazyTipsMap[parentTailTxHash]; exists {
+				if checkTip(ts.nonLazyTipsMap, parentTip, ts.retentionRulesTipsLimitNonLazy, ts.maxChildrenNonLazy, ts.maxReferencedTipAgeSecondsNonLazy) {
 					metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
 				}
 			}
 		case ScoreSemiLazy:
-			if approveeTip, exists := ts.semiLazyTipsMap[approveeTailTxHash]; exists {
-				if checkTip(ts.semiLazyTipsMap, approveeTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxApproversSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy) {
+			if parentTip, exists := ts.semiLazyTipsMap[parentTailTxHash]; exists {
+				if checkTip(ts.semiLazyTipsMap, parentTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxChildrenSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy) {
 					metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
 				}
 			}
@@ -389,13 +389,13 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	defer ts.tipsLock.Unlock()
 
 	checkTip := func(tipsMap map[string]*Tip, tip *Tip, maxReferencedTipAgeSeconds time.Duration) bool {
-		if tip.TimeFirstApprover.IsZero() {
+		if tip.TimeFirstChild.IsZero() {
 			// not referenced by another transaction
 			return false
 		}
 
 		// check if the tip reached its maximum age
-		if time.Since(tip.TimeFirstApprover) < maxReferencedTipAgeSeconds {
+		if time.Since(tip.TimeFirstChild) < maxReferencedTipAgeSeconds {
 			return false
 		}
 
@@ -486,15 +486,15 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this transaction
 func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
-	cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
-	if cachedTxMeta == nil {
+	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
+	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the transaction could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
 		return ScoreLazy
 	}
-	defer cachedTxMeta.Release(true)
+	defer cachedMsgMeta.Release(true)
 
-	ymrsi, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta +1
+	ymrsi, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi) // meta +1
 
 	// if the LSMI to YMRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
 	if (lsmi - ymrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {

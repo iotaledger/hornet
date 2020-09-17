@@ -21,7 +21,7 @@ import (
 
 func init() {
 	addEndpoint("getRequests", getRequests, implementedAPIcalls)
-	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
+	addEndpoint("searchConfirmedChild", searchConfirmedChild, implementedAPIcalls)
 	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
 	addEndpoint("triggerSolidifier", triggerSolidifier, implementedAPIcalls)
 }
@@ -66,15 +66,15 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	c.JSON(http.StatusOK, GetRequestsReturn{Requests: debugReqs})
 }
 
-func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]*ApproverStruct, error) {
+func createConfirmedChildResult(confirmedTxHash hornet.Hash, path []bool) ([]*ChildStruct, error) {
 
-	tanglePath := make([]*ApproverStruct, 0)
+	tanglePath := make([]*ChildStruct, 0)
 
 	txHash := confirmedTxHash
 	for len(path) > 0 {
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
-		if cachedTxMeta == nil {
-			return nil, fmt.Errorf("createConfirmedApproverResult: Transaction not found: %v", txHash.Hex())
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
+		if cachedMsgMeta == nil {
+			return nil, fmt.Errorf("createConfirmedChildResult: Transaction not found: %v", txHash.Hex())
 		}
 
 		isTrunk := path[len(path)-1]
@@ -82,23 +82,23 @@ func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]
 
 		var nextTxHash hornet.Hash
 		if isTrunk {
-			nextTxHash = cachedTxMeta.GetMetadata().GetParent1MessageID()
+			nextTxHash = cachedMsgMeta.GetMetadata().GetParent1MessageID()
 		} else {
-			nextTxHash = cachedTxMeta.GetMetadata().GetParent2MessageID()
+			nextTxHash = cachedMsgMeta.GetMetadata().GetParent2MessageID()
 		}
-		cachedTxMeta.Release(true)
+		cachedMsgMeta.Release(true)
 
-		tanglePath = append(tanglePath, &ApproverStruct{TxHash: nextTxHash.Hex(), ReferencedByTrunk: isTrunk})
+		tanglePath = append(tanglePath, &ChildStruct{TxHash: nextTxHash.Hex(), ReferencedByTrunk: isTrunk})
 		txHash = nextTxHash
 	}
 
 	return tanglePath, nil
 }
 
-func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
+func searchConfirmedChild(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	e := ErrorReturn{}
-	query := &SearchConfirmedApprover{}
-	result := SearchConfirmedApproverReturn{}
+	query := &SearchConfirmedChild{}
+	result := SearchConfirmedChildReturn{}
 
 	if err := mapstructure.Decode(i, query); err != nil {
 		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
@@ -126,17 +126,17 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				return
 			}
 
-			cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHash)) // meta +1
-			if cachedTxMeta == nil {
+			cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHash)) // meta +1
+			if cachedMsgMeta == nil {
 				delete(txsToTraverse, txHash)
-				log.Warnf("searchConfirmedApprover: Transaction not found: %v", hornet.Hash(txHash).Hex())
+				log.Warnf("searchConfirmedChild: Transaction not found: %v", hornet.Hash(txHash).Hex())
 				continue
 			}
 
-			confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed()
-			isTailTx := cachedTxMeta.GetMetadata().IsTail()
+			confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
+			isTailTx := cachedMsgMeta.GetMetadata().IsTail()
 
-			cachedTxMeta.Release(true) // meta -1
+			cachedMsgMeta.Release(true) // meta -1
 
 			if confirmed {
 				resultFound := false
@@ -157,7 +157,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				}
 
 				if resultFound {
-					approversResult, err := createConfirmedApproverResult(hornet.Hash(txHash), txsToTraverse[txHash])
+					childrenResult, err := createConfirmedChildResult(hornet.Hash(txHash), txsToTraverse[txHash])
 					if err != nil {
 						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
 						c.JSON(http.StatusInternalServerError, e)
@@ -166,32 +166,32 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 					result.ConfirmedTxHash = hornet.Hash(txHash).Hex()
 					result.ConfirmedByMilestoneIndex = at
-					result.TanglePath = approversResult
-					result.TanglePathLength = len(approversResult)
+					result.TanglePath = childrenResult
+					result.TanglePathLength = len(childrenResult)
 
 					c.JSON(http.StatusOK, result)
 					return
 				}
 			}
 
-			approverHashes := tangle.GetChildrenMessageIDs(hornet.Hash(txHash))
-			for _, approverHash := range approverHashes {
+			childHashes := tangle.GetChildrenMessageIDs(hornet.Hash(txHash))
+			for _, childHash := range childHashes {
 
-				approverTxMeta := tangle.GetCachedMessageMetadataOrNil(approverHash) // meta +1
-				if approverTxMeta == nil {
-					log.Warnf("searchConfirmedApprover: Child not found: %v", approverHash.Hex())
+				childTxMeta := tangle.GetCachedMessageMetadataOrNil(childHash) // meta +1
+				if childTxMeta == nil {
+					log.Warnf("searchConfirmedChild: Child not found: %v", childHash.Hex())
 					continue
 				}
 
-				txsToTraverse[string(approverHash)] = append(txsToTraverse[txHash], bytes.Equal(approverTxMeta.GetMetadata().GetParent1MessageID(), hornet.Hash(txHash)))
-				approverTxMeta.Release(true) // meta -1
+				txsToTraverse[string(childHash)] = append(txsToTraverse[txHash], bytes.Equal(childTxMeta.GetMetadata().GetParent1MessageID(), hornet.Hash(txHash)))
+				childTxMeta.Release(true) // meta -1
 			}
 
 			delete(txsToTraverse, txHash)
 		}
 	}
 
-	e.Error = fmt.Sprintf("No confirmed approver found: %s", query.TxHash)
+	e.Error = fmt.Sprintf("No confirmed child found: %s", query.TxHash)
 	c.JSON(http.StatusInternalServerError, e)
 }
 
@@ -224,12 +224,12 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	dag.TraverseParents(cachedStartTxMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-			defer cachedTxMeta.Release(true) // meta -1
+		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedMsgMeta.Release(true) // meta -1
 
-			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
+			if confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed(); confirmed {
 				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
-					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedTxMeta.GetMetadata().GetMessageID().Hex(), ConfirmedByMilestoneIndex: at})
+					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedMsgMeta.GetMetadata().GetMessageID().Hex(), ConfirmedByMilestoneIndex: at})
 					return false, nil
 				}
 			}
@@ -237,11 +237,11 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			return true, nil
 		},
 		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-			cachedTxMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // meta -1
+		func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
+			cachedMsgMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // meta -1
 
 				result.TanglePath = append(result.TanglePath,
-					&TransactionWithApprovers{
+					&TransactionWithChildren{
 						TxHash:            metadata.GetMessageID().Hex(),
 						TrunkTransaction:  metadata.GetParent1MessageID().Hex(),
 						BranchTransaction: metadata.GetParent2MessageID().Hex(),
@@ -251,18 +251,18 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 			return nil
 		},
-		// called on missing approvees
-		func(approveeHash hornet.Hash) error { return nil },
+		// called on missing parents
+		func(parentHash hornet.Hash) error { return nil },
 		// called on solid entry points
 		func(txHash hornet.Hash) {
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
 			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Hex(), ConfirmedByMilestoneIndex: entryPointIndex})
-		}, false, false, nil)
+		}, false, nil)
 
 	result.TanglePathLength = len(result.TanglePath)
 
 	if len(result.EntryPoints) == 0 {
-		e.Error = fmt.Sprintf("No confirmed approvee found: %s", query.TxHash)
+		e.Error = fmt.Sprintf("No confirmed parent found: %s", query.TxHash)
 		c.JSON(http.StatusInternalServerError, e)
 		return
 	}

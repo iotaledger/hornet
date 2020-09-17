@@ -159,9 +159,9 @@ func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDisca
 	return requested
 }
 
-// RequestApprovees enqueues requests for the approvees of the given transaction to the request queue, if the
-// given transaction is not a solid entry point and neither its approvees are and also not in the database.
-func RequestApprovees(cachedTx *tangle.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
+// RequestParents enqueues requests for the parents of the given transaction to the request queue, if the
+// given transaction is not a solid entry point and neither its parents are and also not in the database.
+func RequestParents(cachedTx *tangle.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
 	cachedTx.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
 		txHash := metadata.GetMessageID()
 
@@ -176,9 +176,9 @@ func RequestApprovees(cachedTx *tangle.CachedMessage, msIndex milestone.Index, p
 	})
 }
 
-// RequestMilestoneApprovees enqueues requests for the approvees of the given milestone bundle to the request queue,
-// if the approvees are not solid entry points and not already in the database.
-func RequestMilestoneApprovees(cachedMs *tangle.CachedMilestone) bool {
+// RequestMilestoneParents enqueues requests for the parents of the given milestone bundle to the request queue,
+// if the parents are not solid entry points and not already in the database.
+func RequestMilestoneParents(cachedMs *tangle.CachedMilestone) bool {
 	defer cachedMs.Release() // bundle -1
 
 	cachedHeadTxMeta := cachedMs.GetMessage().GetHeadMetadata() // meta +1
@@ -198,11 +198,11 @@ func RequestMilestoneApprovees(cachedMs *tangle.CachedMilestone) bool {
 	return enqueued
 }
 
-// MemoizedRequestMissingMilestoneApprovees returns a function which traverses the approvees
-// of a given milestone and requests each missing approvee. As a special property, invocations
+// MemoizedRequestMissingMilestoneParents returns a function which traverses the parents
+// of a given milestone and requests each missing parent. As a special property, invocations
 // of the yielded function share the same 'already traversed' set to circumvent requesting
-// the same approvees multiple times.
-func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms milestone.Index) {
+// the same parents multiple times.
+func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms milestone.Index) {
 	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
 
@@ -217,25 +217,25 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 		dag.TraverseParents(msHash,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-				defer cachedTxMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[string(cachedTxMeta.GetMetadata().GetMessageID())]
-				return !cachedTxMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
+			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
+				_, previouslyTraversed := traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())]
+				return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-				defer cachedTxMeta.Release(true) // meta -1
-				traversed[string(cachedTxMeta.GetMetadata().GetMessageID())] = struct{}{}
+			func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
+				traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
 				return nil
 			},
-			// called on missing approvees
-			func(approveeHash hornet.Hash) error {
-				Request(approveeHash, ms, preventDiscard...)
+			// called on missing parents
+			func(parentHash hornet.Hash) error {
+				Request(parentHash, ms, preventDiscard...)
 				return nil
 			},
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			false, false, nil)
+			false, nil)
 	}
 }

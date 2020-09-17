@@ -15,7 +15,6 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -171,8 +170,8 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 // VerifyAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
 func (proc *Processor) VerifyAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
-	msgBytes := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransactionFromTx(tx, msgBytes)
+	//msgBytes := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	//hornetTx := hornet.NewTransactionFromTx(tx, msgBytes)
 
 	proc.Events.MessageProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
 	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{

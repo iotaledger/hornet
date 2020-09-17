@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// AdditionalPruningThreshold is needed, because the messages in the getMilestoneApprovees call in getSolidEntryPoints
+	// AdditionalPruningThreshold is needed, because the messages in the getMilestoneParents call in getSolidEntryPoints
 	// can reference older messages as well
 	AdditionalPruningThreshold = 50
 )
@@ -79,24 +79,24 @@ func pruneMilestone(milestoneIndex milestone.Index) {
 	tangle.DeleteMilestone(milestoneIndex)
 }
 
-// pruneTransactions prunes the approvers, bundles, bundle txs, addresses, tags and transaction metadata from the database
+// pruneTransactions prunes the children, bundles, bundle txs, addresses, tags and transaction metadata from the database
 func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 	txsToDeleteMap := make(map[string]struct{})
 
 	for txHashToCheck := range txsToCheckMap {
 
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHashToCheck)) // meta +1
-		if cachedTxMeta == nil {
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHashToCheck)) // meta +1
+		if cachedMsgMeta == nil {
 			log.Warnf("pruneTransactions: Transaction not found: %s", hornet.Hash(txHashToCheck).Trytes())
 			continue
 		}
 
-		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTxMeta.GetMetadata()) {
+		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedMsgMeta.GetMetadata()) {
 			txsToDeleteMap[txToRemove] = struct{}{}
 		}
 		// metadata can be force release, since we work with transaction objects at deletion
-		cachedTxMeta.Release(true) // tx -1
+		cachedMsgMeta.Release(true) // tx -1
 	}
 
 	for txHashToDelete := range txsToDeleteMap {
@@ -107,7 +107,7 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 		}
 
 		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) { // tx -1
-			// Delete the reference in the approvees
+			// Delete the reference in the parents
 			tangle.DeleteChild(tx.GetTrunkHash(), tx.GetMessageID())
 			tangle.DeleteChild(tx.GetBranchHash(), tx.GetMessageID())
 
@@ -191,7 +191,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
 		ts := time.Now()
-		txCountDeleted, txCountChecked := pruneUnconfirmedTransactions(milestoneIndex)
+		txCountDeleted, msgCountChecked := pruneUnconfirmedTransactions(milestoneIndex)
 
 		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
@@ -200,30 +200,29 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		txsToCheckMap := make(map[string]struct{})
+		msgsToCheckMap := make(map[string]struct{})
 
 		err := dag.TraverseParents(cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-				defer cachedTxMeta.Release(true) // tx -1
+			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // tx +1
+				defer cachedMsgMeta.Release(true) // tx -1
 				// everything that was referenced by that milestone can be pruned (even messages of older milestones)
 				return true, nil
 			},
 			// consumer
-			func(cachedTxMeta *tangle.CachedMetadata) error { // tx +1
-				defer cachedTxMeta.Release(true) // tx -1
-				txsToCheckMap[string(cachedTxMeta.GetMetadata().GetMessageID())] = struct{}{}
+			func(cachedMsgMeta *tangle.CachedMetadata) error { // tx +1
+				defer cachedMsgMeta.Release(true) // tx -1
+				msgsToCheckMap[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
 				return nil
 			},
-			// called on missing approvees
-			func(approveeHash hornet.Hash) error { return nil },
+			// called on missing parents
+			func(parentHash hornet.Hash) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
 			true,
-			false,
 			nil)
 
 		cachedMs.Release(true) // milestone -1
@@ -232,15 +231,15 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		txCountChecked += len(txsToCheckMap)
-		txCountDeleted += pruneTransactions(txsToCheckMap)
+		msgCountChecked += len(msgsToCheckMap)
+		txCountDeleted += pruneTransactions(msgsToCheckMap)
 
 		pruneMilestone(milestoneIndex)
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
 
-		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, txCountChecked)
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}

@@ -145,8 +145,8 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 	// as a special case, while we are warp syncing and within the last checkpoint range,
 	// new target milestones need to shift the checkpoint to the new target, in order
 	// to fire an 'updated checkpoint event'/respectively updating the request queue filter.
-	// since we will request missing approvees for the new target, it will still solidify
-	// even though we discarded requests for a short period of time approvees when the
+	// since we will request missing parents for the new target, it will still solidify
+	// even though we discarded requests for a short period of time parents when the
 	// request filter wasn't yet updated.
 	if ws.TargetMs != 0 && ws.CurrentCheckpoint+milestone.Index(ws.AdvancementRange) > ws.TargetMs {
 		oldCheckpoint := ws.CurrentCheckpoint
