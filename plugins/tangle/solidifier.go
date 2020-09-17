@@ -61,74 +61,27 @@ func TriggerSolidifier() {
 	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 }
 
-func markTransactionAsSolid(cachedTxMeta *tangle.CachedMetadata) {
-	defer cachedTxMeta.Release(true)
-
-	// Construct the complete bundle if the tail got solid (before setting solid flag => otherwise not threadsafe)
-	if cachedTxMeta.GetMetadata().IsTail() {
-		cachedTx := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID())
-		if cachedTx == nil {
-			log.Panicf("markTransactionAsSolid: Transaction not found: %v", cachedTxMeta.GetMetadata().GetMessageID().Hex())
-		}
-		tangle.OnMessageSolid(cachedTx) // tx pass +1
-	}
+func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
+	defer cachedMetadata.Release(true)
 
 	// update the solidity flags of this transaction
-	cachedTxMeta.GetMetadata().SetSolid(true)
+	cachedMetadata.GetMetadata().SetSolid(true)
 
-	Events.MessageSolid.Trigger(cachedTxMeta.GetMetadata().GetMessageID())
-
-	if cachedTxMeta.GetMetadata().IsTail() {
-		cachedBndl := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID()) // bundle +1
-		if cachedBndl == nil {
-			// bundle must be created here
-			log.Panicf("markTransactionAsSolid: Message not found: %v", cachedTxMeta.GetMetadata().GetMessageID().Hex())
-		}
-		defer cachedBndl.Release(true) // bundle -1
-
-		// search all referenced tails of this bundle
-		approveeTailTxHashes, err := dag.FindAllTails(cachedBndl.GetMessage().GetTailHash(), true)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		invalid := false
-		for approveeTailTxHash := range approveeTailTxHashes {
-			cachedApproveeBndl := tangle.GetCachedMessageOrNil(hornet.Hash(approveeTailTxHash)) // bundle +1
-			if cachedApproveeBndl == nil {
-				// bundle must be created here
-				log.Panicf("BundleSolid: TxHash: %v, approvee bundle not found: TailTxHash: %v", cachedTxMeta.GetMetadata().GetMessageID().Hex(), hornet.Hash(approveeTailTxHash).Hex())
-			}
-			bndl := cachedApproveeBndl.GetMessage() // bundle -1
-			cachedApproveeBndl.Release(true)
-
-			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
-				// bundle has an invalid past cone
-				invalid = true
-				break
-			}
-		}
-
-		if invalid {
-			cachedBndl.GetMessage().SetInvalidPastCone(true)
-		}
-
-		Events.BundleSolid.Trigger(cachedBndl) // bundle pass +1
-	}
+	Events.MessageSolid.Trigger(cachedMetadata.GetMetadata().GetMessageID())
 }
 
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing tx are requested
 // Can be aborted with abortSignal
 // all cachedTxMetas have to be released outside.
-func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.CachedMetadata, abortSignal chan struct{}) (solid bool, aborted bool) {
-	defer cachedMsTailTxMeta.Release(true)
+func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, cachedMetadata *tangle.CachedMetadata, abortSignal chan struct{}) (solid bool, aborted bool) {
+	defer cachedMetadata.Release(true)
 
 	ts := time.Now()
 
-	if _, exists := cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetMessageID())]; !exists {
+	if _, exists := cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())]; !exists {
 		// release the transactions at the end to speed up calculation
-		cachedTxMetas[string(cachedMsTailTxMeta.GetMetadata().GetMessageID())] = cachedMsTailTxMeta.Retain()
+		cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMetadata.Retain()
 	}
 
 	txsChecked := 0
@@ -136,15 +89,15 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 	txsToRequest := make(map[string]struct{})
 
 	// collect all tx to solidify by traversing the tangle
-	if err := dag.TraverseParents(cachedMsTailTxMeta.GetMetadata().GetMessageID(),
+	if err := dag.TraverseParents(cachedMetadata.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedTxMeta.Release(true) // meta -1
 
-			if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())]; !exists {
+			if _, exists := cachedMessageMetas[string(cachedTxMeta.GetMetadata().GetMessageID())]; !exists {
 				// release the tx metadata at the end to speed up calculation
-				cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta.Retain()
+				cachedMessageMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta.Retain()
 			}
 
 			// if the tx is solid, there is no need to traverse its approvees
@@ -171,7 +124,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false, false, abortSignal); err != nil {
+		false, abortSignal); err != nil {
 		if err == tangle.ErrOperationAborted {
 			return false, true
 		}
@@ -193,19 +146,19 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 	// no transactions to request => the whole cone is solid
 	// we mark all transactions as solid in order from oldest to latest (needed for the tip pool)
 	for _, txHash := range txsToSolidify {
-		cachedTxMeta, exists := cachedTxMetas[string(txHash)]
+		cachedTxMeta, exists := cachedMessageMetas[string(txHash)]
 		if !exists {
 			log.Panicf("solidQueueCheck: Tx not found: %v", txHash.Hex())
 		}
 
-		markTransactionAsSolid(cachedTxMeta.Retain())
+		markMessageAsSolid(cachedTxMeta.Retain())
 	}
 
 	tSolid := time.Now()
 
 	if tangle.IsNodeSyncedWithThreshold() {
 		// propagate solidity to the future cone (txs attached to the txs of this milestone)
-		solidifyFutureCone(cachedTxMetas, txsToSolidify, abortSignal)
+		solidifyFutureCone(cachedMessageMetas, txsToSolidify, abortSignal)
 	}
 
 	log.Infof("Solidifier finished: txs: %d, collect: %v, solidity %v, propagation: %v, total: %v", txsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
@@ -285,7 +238,7 @@ func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashe
 				}
 
 				// mark current transaction as solid
-				markTransactionAsSolid(cachedTxMeta.Retain())
+				markMessageAsSolid(cachedTxMeta.Retain())
 
 				// walk the future cone since the transaction got newly solid
 				return true, nil
