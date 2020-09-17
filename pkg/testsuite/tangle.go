@@ -36,7 +36,7 @@ func (te *TestEnvironment) storeTransaction(tx *transaction.Transaction) *tangle
 }
 
 // StoreBundle adds all transactions of the bundle to the storage layer and solidifies them.
-func (te *TestEnvironment) StoreBundle(bndl bundle.Bundle, isMilestone bool) *tangle.CachedMessage {
+func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *tangle.CachedMessage {
 
 	var tailTx hornet.Hash
 	var hashes hornet.Hashes

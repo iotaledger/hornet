@@ -12,7 +12,6 @@ var (
 	serverConfirmedTransactions       prometheus.Gauge
 	serverInvalidTransactions         prometheus.Gauge
 	serverInvalidRequests             prometheus.Gauge
-	serverStaleTransactions           prometheus.Gauge
 	serverReceivedTransactionRequests prometheus.Gauge
 	serverReceivedMilestoneRequests   prometheus.Gauge
 	serverReceivedHeartbeats          prometheus.Gauge
@@ -49,10 +48,6 @@ func init() {
 	serverInvalidRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_invalid_requests",
 		Help: "Number of invalid requests.",
-	})
-	serverStaleTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_stale_transactions",
-		Help: "Number of stale transactions.",
 	})
 	serverReceivedTransactionRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_received_transaction_requests",
@@ -101,7 +96,6 @@ func init() {
 	registry.MustRegister(serverConfirmedTransactions)
 	registry.MustRegister(serverInvalidTransactions)
 	registry.MustRegister(serverInvalidRequests)
-	registry.MustRegister(serverStaleTransactions)
 	registry.MustRegister(serverReceivedTransactionRequests)
 	registry.MustRegister(serverReceivedMilestoneRequests)
 	registry.MustRegister(serverReceivedHeartbeats)
@@ -123,7 +117,6 @@ func collectServer() {
 	serverConfirmedTransactions.Set(float64(metrics.SharedServerMetrics.ConfirmedMessages.Load()))
 	serverInvalidTransactions.Set(float64(metrics.SharedServerMetrics.InvalidTransactions.Load()))
 	serverInvalidRequests.Set(float64(metrics.SharedServerMetrics.InvalidRequests.Load()))
-	serverStaleTransactions.Set(float64(metrics.SharedServerMetrics.StaleTransactions.Load()))
 	serverReceivedTransactionRequests.Set(float64(metrics.SharedServerMetrics.ReceivedTransactionRequests.Load()))
 	serverReceivedMilestoneRequests.Set(float64(metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load()))
 	serverReceivedHeartbeats.Set(float64(metrics.SharedServerMetrics.ReceivedHeartbeats.Load()))

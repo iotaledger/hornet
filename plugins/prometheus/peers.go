@@ -11,7 +11,6 @@ var (
 	peersAllTransactions             *prometheus.GaugeVec
 	peersNewTransactions             *prometheus.GaugeVec
 	peersKnownTransactions           *prometheus.GaugeVec
-	peersStaleTransactions           *prometheus.GaugeVec
 	peersReceivedTransactionRequests *prometheus.GaugeVec
 	peersReceivedMilestoneRequests   *prometheus.GaugeVec
 	peersReceivedHeartbeats          *prometheus.GaugeVec
@@ -42,13 +41,6 @@ func init() {
 		prometheus.GaugeOpts{
 			Name: "iota_peers_known_transactions",
 			Help: "Number of known transactions by peer.",
-		},
-		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
-	)
-	peersStaleTransactions = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "iota_peers_stale_transactions",
-			Help: "Number of stale transactions by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
@@ -119,7 +111,6 @@ func init() {
 	registry.MustRegister(peersAllTransactions)
 	registry.MustRegister(peersNewTransactions)
 	registry.MustRegister(peersKnownTransactions)
-	registry.MustRegister(peersStaleTransactions)
 	registry.MustRegister(peersReceivedTransactionRequests)
 	registry.MustRegister(peersReceivedMilestoneRequests)
 	registry.MustRegister(peersReceivedHeartbeats)
@@ -137,7 +128,6 @@ func collectPeers() {
 	peersAllTransactions.Reset()
 	peersNewTransactions.Reset()
 	peersKnownTransactions.Reset()
-	peersStaleTransactions.Reset()
 	peersReceivedTransactionRequests.Reset()
 	peersReceivedMilestoneRequests.Reset()
 	peersReceivedHeartbeats.Reset()
@@ -162,7 +152,6 @@ func collectPeers() {
 		peersAllTransactions.With(labels).Set(float64(peer.NumberOfAllTransactions))
 		peersNewTransactions.With(labels).Set(float64(peer.NumberOfNewTransactions))
 		peersKnownTransactions.With(labels).Set(float64(peer.NumberOfKnownTransactions))
-		peersStaleTransactions.With(labels).Set(float64(peer.NumberOfStaleTransactions))
 		peersReceivedTransactionRequests.With(labels).Set(float64(peer.NumberOfReceivedTransactionReq))
 		peersReceivedMilestoneRequests.With(labels).Set(float64(peer.NumberOfReceivedMilestoneReq))
 		peersReceivedHeartbeats.With(labels).Set(float64(peer.NumberOfReceivedHeartbeats))

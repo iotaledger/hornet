@@ -198,7 +198,6 @@ func (p *Peer) Info() *Info {
 		NumberOfAllTransactions:        p.Metrics.ReceivedTransactions.Load(),
 		NumberOfNewTransactions:        p.Metrics.NewTransactions.Load(),
 		NumberOfKnownTransactions:      p.Metrics.KnownTransactions.Load(),
-		NumberOfStaleTransactions:      p.Metrics.StaleTransactions.Load(),
 		NumberOfReceivedTransactionReq: p.Metrics.ReceivedTransactionRequests.Load(),
 		NumberOfReceivedMilestoneReq:   p.Metrics.ReceivedMilestoneRequests.Load(),
 		NumberOfReceivedHeartbeats:     p.Metrics.ReceivedHeartbeats.Load(),
@@ -257,8 +256,6 @@ type Metrics struct {
 	NewTransactions atomic.Uint32
 	// The number of received transactions which are already known.
 	KnownTransactions atomic.Uint32
-	// The number of received transactions of which their timestamp is stale.
-	StaleTransactions atomic.Uint32
 	// The number of received transactions.
 	ReceivedTransactions atomic.Uint32
 	// The number of received transaction requests.
@@ -293,7 +290,6 @@ type Info struct {
 	NumberOfAllTransactions        uint32 `json:"numberOfAllTransactions"`
 	NumberOfNewTransactions        uint32 `json:"numberOfNewTransactions"`
 	NumberOfKnownTransactions      uint32 `json:"numberOfKnownTransactions"`
-	NumberOfStaleTransactions      uint32 `json:"numberOfStaleTransactions"`
 	NumberOfReceivedTransactionReq uint32 `json:"numberOfReceivedTransactionReq"`
 	NumberOfReceivedMilestoneReq   uint32 `json:"numberOfReceivedMilestoneReq"`
 	NumberOfReceivedHeartbeats     uint32 `json:"numberOfReceivedHeartbeats"`

@@ -14,7 +14,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/transaction"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -128,7 +127,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		powHandler,
-		sendBundle,
+		sendMessage,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
@@ -260,66 +259,53 @@ func run(plugin *node.Plugin) {
 
 }
 
-func sendBundle(b bundle.Bundle, isMilestone bool) error {
+func sendMessage(msg *tangle.Message, isMilestone bool) error {
+
+	msgIDLock := syncutils.Mutex{}
 
 	// search the tail transaction hash of the bundle
-	txHashes := make(map[string]struct{})
-	for i := range b {
-		if b[i].CurrentIndex == 0 {
-			txHashes[string(hornet.HashFromHashTrytes(b[i].Hash))] = struct{}{}
-			break
-		}
-	}
+	msgIDs := make(map[string]struct{})
+	msgIDs[string(msg.GetMessageID())] = struct{}{}
 
-	if len(txHashes) != 1 {
-		return ErrTailTxNotFound
-	}
+	// wgMessageProcessed waits until the message got solid
+	wgMessageProcessed := sync.WaitGroup{}
+	wgMessageProcessed.Add(1)
 
-	txHashesLock := syncutils.Mutex{}
+	onMessageSolid := events.NewClosure(func(msgID hornet.Hash) {
+		msgIDLock.Lock()
+		defer msgIDLock.Unlock()
 
-	// wgBundleProcessed waits until the bundle got solid
-	wgBundleProcessed := sync.WaitGroup{}
-	wgBundleProcessed.Add(1)
+		if _, exists := msgIDs[string(msgID)]; exists {
+			// message is solid
+			wgMessageProcessed.Done()
 
-	onTransactionSolid := events.NewClosure(func(txHash hornet.Hash) {
-		txHashesLock.Lock()
-		defer txHashesLock.Unlock()
-
-		if _, exists := txHashes[string(txHash)]; exists {
-			// tail tx of bundle is solid
-			wgBundleProcessed.Done()
-
-			// we have to delete this transaction from the map because the event may be fired several times
-			delete(txHashes, string(txHash))
+			// we have to delete this message from the map because the event may be fired several times
+			delete(msgIDs, string(msgID))
 		}
 	})
 
-	tangleplugin.Events.TransactionSolid.Attach(onTransactionSolid)
-	defer tangleplugin.Events.TransactionSolid.Detach(onTransactionSolid)
+	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
+	defer tangleplugin.Events.MessageSolid.Detach(onMessageSolid)
 
 	if isMilestone {
 		// also wait for solid milestone changed event
-		wgBundleProcessed.Add(1)
+		wgMessageProcessed.Add(1)
 
 		onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
-			wgBundleProcessed.Done()
+			wgMessageProcessed.Done()
 		})
 
 		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	}
 
-	for i := range b {
-		tx := &b[i]
-		txTrits, _ := transaction.TransactionToTrits(tx)
-		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
-			return err
-		}
+	if err := gossip.Processor().VerifyAndEmit(msg); err != nil {
+		return err
 	}
 
-	// wait until the tail tx of the bundle is solid
+	// wait until the message is solid
 	// if it was a milestone, also wait until the solid milestone changed
-	wgBundleProcessed.Wait()
+	wgMessageProcessed.Wait()
 
 	return nil
 }

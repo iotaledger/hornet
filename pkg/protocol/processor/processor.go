@@ -37,15 +37,6 @@ const (
 var (
 	workerCount         = 64
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
-
-	invalidMilestoneHashes = map[string]struct{}{
-		string(hornet.HashFromHashTrytes("HBXSPG9ISUFPIRLFWEXGEXKEDRXZQMXYQMGHPPHCUNVRHQMRHVEVZIGLZVLAZ9ALHMTYZZBXRHLVA9999")): {},
-		string(hornet.HashFromHashTrytes("QXKJWQBYTQWQWOAOSQ9EAOCKXCZPLJFTMJBUYZYJVNECV9FTKTSPNCPFEHWBZBWXUMLXKIXQBTNO99999")): {},
-		string(hornet.HashFromHashTrytes("J9RDJWAEUXMXDUNLPIPXTSQYHZTKWNCTJFKWNZOJOHXLXTEEJFZGUSYNZVWYBZMXMKQPCGKBAZVZA9999")): {},
-		string(hornet.HashFromHashTrytes("PANOKVXNOGIOHEIDLCYFJOUVXWAUR9FSYVRWGAXZJHPFKCMBOXCZAKQLZN9QEX9LQLFWNUADM9OV99999")): {},
-		string(hornet.HashFromHashTrytes("9LICXLMXACLWTQUTURTNFQQPGCKJMVNVWZNGVMSOWZJTLFDCNELENMUFT9HBGLTQORJNOHOVHOISA9999")): {},
-		string(hornet.HashFromHashTrytes("YTKLUHCTUQVJILTKNUWDYCOGSPPAWXAHRHJEIV9XZTNCCDOSRJFSWHLK9WQGOCVRAAMJFOYAVBJYZ9999")): {},
-	}
 )
 
 // New creates a new processor which parses messages.
@@ -54,8 +45,8 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 		pm:           peerManager,
 		requestQueue: requestQueue,
 		Events: Events{
-			TransactionProcessed: events.NewEvent(TransactionProcessedCaller),
-			BroadcastTransaction: events.NewEvent(BroadcastCaller),
+			MessageProcessed: events.NewEvent(MessageProcessedCaller),
+			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},
 		opts: *opts,
 	}
@@ -93,8 +84,8 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 	return proc
 }
 
-func TransactionProcessedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(tx *hornet.Transaction, request *rqueue.Request, p *peer.Peer))(params[0].(*hornet.Transaction), params[1].(*rqueue.Request), params[2].(*peer.Peer))
+func MessageProcessedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(msg *tangle.Message, request *rqueue.Request, p *peer.Peer))(params[0].(*tangle.Message), params[1].(*rqueue.Request), params[2].(*peer.Peer))
 }
 
 func BroadcastCaller(handler interface{}, params ...interface{}) {
@@ -104,9 +95,9 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 // Events are the events fired by the Processor.
 type Events struct {
 	// Fired when a transaction was fully processed.
-	TransactionProcessed *events.Event
+	MessageProcessed *events.Event
 	// Fired when a transaction is meant to be broadcasted.
-	BroadcastTransaction *events.Event
+	BroadcastMessage *events.Event
 }
 
 // Processor processes submitted messages in parallel and fires appropriate completion events.
@@ -174,27 +165,18 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 		return consts.ErrInvalidTransactionHash
 	}
 
-	return proc.CompressAndEmit(tx, txTrits)
+	return proc.VerifyAndEmit(tx, txTrits)
 }
 
-// CompressAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
+// VerifyAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
-func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
-	txBytesTruncated := compressed.TruncateTxTrits(txTrits)
-	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
+func (proc *Processor) VerifyAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
+	msgBytes := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	hornetTx := hornet.NewTransactionFromTx(tx, msgBytes)
 
-	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {
-		return ErrInvalidTimestamp
-	}
-
-	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(hornetTx.GetTxHash())]; isInvalidMilestoneTx {
-		// do not accept the invalid milestone transactions
-		return consts.ErrInvalidTransactionHash
-	}
-
-	proc.Events.TransactionProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
-	proc.Events.BroadcastTransaction.Trigger(&bqueue.Broadcast{
-		TxData:          txBytesTruncated,
+	proc.Events.MessageProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
+	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{
+		MsgData:         msgBytes,
 		RequestedTxHash: hornetTx.GetTxHash(),
 	})
 	return nil
@@ -295,19 +277,12 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		wu.processingLock.Unlock()
 
 		// emit an event to say that a transaction was fully processed
-		if request := proc.requestQueue.Received(wu.tx.GetTxHash()); request != nil {
-			proc.Events.TransactionProcessed.Trigger(wu.tx, request, p)
-			wu.wasStale = false
+		if request := proc.requestQueue.Received(wu.msg.GetMessageID()); request != nil {
+			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
 			return
 		}
 
-		if wu.wasStale {
-			metrics.SharedServerMetrics.StaleTransactions.Inc()
-			p.Metrics.StaleTransactions.Inc()
-			return
-		}
-
-		if tangle.ContainsMessage(wu.tx.GetTxHash()) {
+		if tangle.ContainsMessage(wu.msg.GetMessageID()) {
 			metrics.SharedServerMetrics.KnownTransactions.Inc()
 			p.Metrics.KnownTransactions.Inc()
 			return
@@ -319,35 +294,30 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	wu.UpdateState(Hashing)
 	wu.processingLock.Unlock()
 
-	msg := &iotago.Message{}
-	_, err := msg.Deserialize(wu.receivedTxBytes, iotago.DeSeriModePerformValidation)
-
-	// this blocks until the transaction was also hashed
-	tx, err := compressed.TransactionFromCompressedBytes(wu.receivedTxBytes)
+	// build Hornet representation of the message
+	msg, err := tangle.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish()
 		return
 	}
 
-	// build Hornet representation of the transaction
-	hornetTx := hornet.NewTransactionFromTx(tx, wu.receivedTxBytes)
+	// mark the message as received
+	request := proc.requestQueue.Received(msg.GetMessageID())
 
-	// mark the transaction as received
-	request := proc.requestQueue.Received(hornetTx.GetTxHash())
-
-	// validate minimum weight magnitude requirement
-	if request == nil && !transaction.HasValidNonce(tx, proc.opts.ValidMWM) {
-		wu.UpdateState(Invalid)
-		wu.punish()
-		return
-	}
-
-	timestampValid, broadcast := proc.ValidateTimestamp(hornetTx)
+	/*
+		// ToDo:
+		// validate minimum weight magnitude requirement
+		if request == nil && !transaction.HasValidNonce(tx, proc.opts.ValidMWM) {
+			wu.UpdateState(Invalid)
+			wu.punish()
+			return
+		}
+	*/
 
 	wu.dataLock.Lock()
-	wu.receivedTxHash = hornetTx.GetTxHash()
-	wu.tx = hornetTx
+	wu.receivedMsgID = msg.GetMessageID()
+	wu.msg = msg
 	wu.dataLock.Unlock()
 
 	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(wu.receivedTxHash)]; isInvalidMilestoneTx {
@@ -359,43 +329,17 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 
 	wu.UpdateState(Hashed)
 
-	// mark the WorkUnit as containing a stale transaction but
-	if request == nil && !timestampValid {
-		wu.wasStale = true
-		wu.stale()
-		return
-	}
+	// check the existence of the message before broadcasting it
+	containsTx := tangle.ContainsMessage(msg.GetMessageID())
 
-	// check the existence of the transaction before broadcasting it
-	containsTx := tangle.ContainsMessage(hornetTx.GetTxHash())
-
-	proc.Events.TransactionProcessed.Trigger(hornetTx, request, p)
+	proc.Events.MessageProcessed.Trigger(msg, request, p)
 
 	// increase the known transaction count for all other peers
 	wu.increaseKnownTxCount(p)
 
-	// broadcast the transaction if it wasn't requested and the timestamp is
-	// within what we consider a sensible delta from now
-	if request == nil && broadcast && !containsTx {
-		proc.Events.BroadcastTransaction.Trigger(wu.broadcast())
+	// ToDo: broadcast on solidification
+	// broadcast the transaction if it wasn't requested and not known yet
+	if request == nil && !containsTx {
+		proc.Events.BroadcastMessage.Trigger(wu.broadcast())
 	}
-}
-
-// checks whether the given transaction's timestamp is valid.
-// the timestamp is automatically valid if the transaction is a solid entry point.
-// the timestamp should be in the range of +/- 10 minutes to current time.
-func (proc *Processor) ValidateTimestamp(hornetTx *hornet.Transaction) (valid, broadcast bool) {
-	snapshotTimestamp := tangle.GetSnapshotInfo().Timestamp
-	txTimestamp := hornetTx.GetTimestamp()
-
-	pastTime := time.Now().Add(-10 * time.Minute).Unix()
-	futureTime := time.Now().Add(10 * time.Minute).Unix()
-
-	// we need to accept all txs since the snapshot timestamp for synchronization
-	if txTimestamp >= snapshotTimestamp && txTimestamp < futureTime {
-		return true, txTimestamp >= pastTime
-	}
-
-	// ignore invalid timestamps for solid entry points
-	return tangle.SolidEntryPointsContain(hornetTx.GetTxHash()), false
 }

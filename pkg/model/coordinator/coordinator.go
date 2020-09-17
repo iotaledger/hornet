@@ -2,11 +2,13 @@ package coordinator
 
 import (
 	"crypto"
-	"errors"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"crypto/ed25519"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 
@@ -14,7 +16,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/muxxer/iota.go/consts"
 	"github.com/muxxer/iota.go/merkle"
-	"github.com/muxxer/iota.go/transaction"
 	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -24,15 +25,12 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
-// Message represents grouped together transactions forming a transfer.
-type Bundle = []*transaction.Transaction
-
-// SendBundleFunc is a function which sends a bundle to the network.
-type SendBundleFunc = func(b bundle.Bundle, isMilestone bool) error
-
 // BackPressureFunc is a function which tells the Coordinator
 // to stop issuing milestones and checkpoints under high load.
 type BackPressureFunc func() bool
+
+// SendMessageFunc is a function which sends a message to the network.
+type SendMessageFunc = func(msg *tangle.Message, isMilestone bool) error
 
 var (
 	// ErrNoTipsGiven is returned when no tips were given to issue a checkpoint.
@@ -56,14 +54,14 @@ type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
 	// config options
-	seed                    trinary.Hash
+	privateKey              ed25519.PrivateKey
 	securityLvl             consts.SecurityLevel
 	merkleTreeDepth         int
 	minWeightMagnitude      int
 	stateFilePath           string
 	milestoneIntervalSec    int
 	powHandler              *pow.Handler
-	sendBundleFunc          SendBundleFunc
+	sendMesssageFunc        SendMessageFunc
 	milestoneMerkleHashFunc crypto.Hash
 	backpressureFuncs       []BackPressureFunc
 
@@ -101,16 +99,26 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendBundleFunc SendBundleFunc, milestoneMerkleHashFunc crypto.Hash) *Coordinator {
+func New(seed string, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
+	// ToDo
+	seedBytes, err := hex.DecodeString(seed)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(seedBytes) != 32 {
+		return nil, errors.New("wrong seed length")
+	}
+
 	result := &Coordinator{
-		seed:                    seed,
+		privateKey:              seedBytes,
 		securityLvl:             securityLvl,
 		merkleTreeDepth:         merkleTreeDepth,
 		minWeightMagnitude:      minWeightMagnitude,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
 		powHandler:              powHandler,
-		sendBundleFunc:          sendBundleFunc,
+		sendMesssageFunc:        sendMessageFunc,
 		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
 		Events: &CoordinatorEvents{
 			IssuedCheckpointTransaction: events.NewEvent(CheckpointCaller),
@@ -118,7 +126,7 @@ func New(seed trinary.Hash, securityLvl consts.SecurityLevel, merkleTreeDepth in
 		},
 	}
 
-	return result
+	return result, nil
 }
 
 // InitMerkleTree loads the Merkle tree file and checks the coordinator address.
@@ -240,13 +248,13 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 		return fmt.Errorf("failed to compute muations: %w", err)
 	}
 
-	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powHandler)
+	b, err := createMilestone(coo.privateKey, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create: %w", err)
 	}
 
-	if err := coo.sendBundleFunc(b, true); err != nil {
-		return fmt.Errorf("failed to send: %w", err)
+	if err := coo.sendMesssageFunc(b, true); err != nil {
+		return err
 	}
 
 	txHashes := make(hornet.Hashes, 0, len(b))
@@ -323,8 +331,8 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 			return nil, fmt.Errorf("failed to create: %w", err)
 		}
 
-		if err := coo.sendBundleFunc(b, false); err != nil {
-			return nil, fmt.Errorf("failed to send: %w", err)
+		if err := coo.sendMesssageFunc(b, false); err != nil {
+			return nil, err
 		}
 
 		lastCheckpointHash = hornet.HashFromHashTrytes(b[0].Hash)

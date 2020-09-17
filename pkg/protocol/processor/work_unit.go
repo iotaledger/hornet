@@ -6,6 +6,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
 	"github.com/gohornet/hornet/plugins/peering"
@@ -23,10 +24,10 @@ const (
 // newWorkUnit creates a new WorkUnit and initializes values by unmarshalling key.
 func newWorkUnit(key []byte) *WorkUnit {
 	wu := &WorkUnit{
-		receivedTxBytes: make([]byte, len(key)),
-		receivedFrom:    make([]*peer.Peer, 0),
+		receivedMsgBytes: make([]byte, len(key)),
+		receivedFrom:     make([]*peer.Peer, 0),
 	}
-	copy(wu.receivedTxBytes, key)
+	copy(wu.receivedMsgBytes, key)
 	return wu
 }
 
@@ -45,19 +46,18 @@ func (c *CachedWorkUnit) WorkUnit() *WorkUnit {
 	return c.Get().(*WorkUnit)
 }
 
-// WorkUnit defines the work around processing a received transaction and its
+// WorkUnit defines the work around processing a received message and its
 // associated requests from peers. There is at most one WorkUnit active per same
-// transaction bytes.
+// message bytes.
 type WorkUnit struct {
 	objectstorage.StorableObjectFlags
 	processingLock syncutils.Mutex
 
 	// data
-	dataLock        syncutils.RWMutex
-	receivedTxBytes []byte
-	receivedTxHash  hornet.Hash
-	tx              *hornet.Transaction
-	wasStale        bool
+	dataLock         syncutils.RWMutex
+	receivedMsgBytes []byte
+	receivedMsgID    hornet.Hash
+	msg              *tangle.Message
 
 	// status
 	stateLock syncutils.RWMutex
@@ -73,7 +73,7 @@ func (wu *WorkUnit) Update(_ objectstorage.StorableObject) {
 }
 
 func (wu *WorkUnit) ObjectStorageKey() []byte {
-	return wu.receivedTxBytes
+	return wu.receivedMsgBytes
 }
 
 func (wu *WorkUnit) ObjectStorageValue() []byte {
@@ -118,17 +118,6 @@ func (wu *WorkUnit) punish() {
 	}
 }
 
-// increases the stale transaction metric of all peers
-// which sent the given underlying transaction of this WorkUnit.
-func (wu *WorkUnit) stale() {
-	wu.receivedFromLock.Lock()
-	defer wu.receivedFromLock.Unlock()
-	for _, p := range wu.receivedFrom {
-		metrics.SharedServerMetrics.StaleTransactions.Inc()
-		p.Metrics.StaleTransactions.Inc()
-	}
-}
-
 // builds a Broadcast where all peers which are associated with this WorkUnit are excluded from.
 func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 	wu.receivedFromLock.Lock()
@@ -138,8 +127,8 @@ func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 		exclude[p.ID] = struct{}{}
 	}
 	return &bqueue.Broadcast{
-		TxData:          wu.receivedTxBytes,
-		RequestedTxHash: wu.receivedTxHash,
+		MsgData:         wu.receivedMsgBytes,
+		RequestedTxHash: wu.receivedMsgID,
 		ExcludePeers:    exclude,
 	}
 }

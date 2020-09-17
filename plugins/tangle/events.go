@@ -20,7 +20,7 @@ var Events = pluginEvents{
 	ReceivedNewTransaction:        events.NewEvent(tangle.NewMessageCaller),
 	ReceivedKnownTransaction:      events.NewEvent(tangle.MessageCaller),
 	ProcessedTransaction:          events.NewEvent(tangle.MessageIDCaller),
-	TransactionSolid:              events.NewEvent(tangle.MessageIDCaller),
+	MessageSolid:                  events.NewEvent(tangle.MessageIDCaller),
 	TransactionConfirmed:          events.NewEvent(tangle.MessageConfirmedCaller),
 	TransactionStored:             events.NewEvent(tangle.MessageCaller),
 	BundleSolid:                   events.NewEvent(tangle.MessageCaller),
@@ -40,7 +40,7 @@ type pluginEvents struct {
 	ReceivedNewTransaction        *events.Event
 	ReceivedKnownTransaction      *events.Event
 	ProcessedTransaction          *events.Event
-	TransactionSolid              *events.Event
+	MessageSolid                  *events.Event
 	TransactionConfirmed          *events.Event
 	TransactionStored             *events.Event
 	BundleSolid                   *events.Event

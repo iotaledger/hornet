@@ -248,7 +248,6 @@ type ServerMetrics struct {
 	NumberOfKnownTransactions      uint32 `json:"known_txs"`
 	NumberOfInvalidTransactions    uint32 `json:"invalid_txs"`
 	NumberOfInvalidRequests        uint32 `json:"invalid_req"`
-	NumberOfStaleTransactions      uint32 `json:"stale_txs"`
 	NumberOfReceivedTransactionReq uint32 `json:"rec_tx_req"`
 	NumberOfReceivedMilestoneReq   uint32 `json:"rec_ms_req"`
 	NumberOfReceivedHeartbeats     uint32 `json:"rec_heartbeat"`
@@ -397,7 +396,6 @@ func currentNodeStatus() *NodeStatus {
 		NumberOfKnownTransactions:      metrics.SharedServerMetrics.KnownTransactions.Load(),
 		NumberOfInvalidTransactions:    metrics.SharedServerMetrics.InvalidTransactions.Load(),
 		NumberOfInvalidRequests:        metrics.SharedServerMetrics.InvalidRequests.Load(),
-		NumberOfStaleTransactions:      metrics.SharedServerMetrics.StaleTransactions.Load(),
 		NumberOfReceivedTransactionReq: metrics.SharedServerMetrics.ReceivedTransactionRequests.Load(),
 		NumberOfReceivedMilestoneReq:   metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),
 		NumberOfReceivedHeartbeats:     metrics.SharedServerMetrics.ReceivedHeartbeats.Load(),

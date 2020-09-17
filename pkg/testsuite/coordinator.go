@@ -32,15 +32,17 @@ const (
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator() {
 
-	storeBundleFunc := func(b bundle.Bundle, isMilestone bool) error {
-		var bndl = make(bundle.Bundle, 0, len(b))
+	storeMessageFunc := func(msg *tangle.Message, isMilestone bool) error {
+		var bndl = make(bundle.Bundle, 0)
 
 		// insert it the reverse way
 		for i := len(b) - 1; i >= 0; i-- {
 			bndl = append(bndl, b[i])
 		}
 
-		ms := te.StoreBundle(bndl, true) // no need to release, since we store all the bundles for later cleanup
+		cachedMessage := te.StoreMessage(msg, true) // no need to release, since we store all the bundles for later cleanup
+
+		ms := te.StoreBundle(bndl, true)
 
 		if isMilestone {
 			tangle.SetLatestMilestoneIndex(ms.GetMessage().GetMilestoneIndex())
@@ -49,7 +51,7 @@ func (te *TestEnvironment) configureCoordinator() {
 		return nil
 	}
 
-	te.coo = coordinator.New(cooSeed, cooSecLevel, merkleTreeDepth, mwm, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeBundleFunc, merkleHashFunc)
+	te.coo = coordinator.New(cooSeed, cooSecLevel, merkleTreeDepth, mwm, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc, merkleHashFunc)
 	require.NotNil(te.testState, te.coo)
 
 	err := te.coo.InitMerkleTree(fmt.Sprintf("%s/pkg/testsuite/assets/coordinator.tree", searchProjectRootFolder()), cooAddress)
