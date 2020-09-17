@@ -2,18 +2,12 @@ package config
 
 const (
 	// the address of the coordinator
-	CfgCoordinatorAddress = "coordinator.address"
-	// the security level used in coordinator signatures
-	CfgCoordinatorSecurityLevel = "coordinator.securityLevel"
-	// the depth of the Merkle tree which in turn determines the number of leaves (private keys) that the coordinator can use to sign a message.
-	CfgCoordinatorMerkleTreeDepth = "coordinator.merkleTreeDepth"
+	CfgCoordinatorPublicKey = "coordinator.publicKey"
 	// the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash.
 	// increasing this number by 1 will result in proof of work that is 3 times as hard.
 	CfgCoordinatorMWM = "coordinator.mwm"
 	// the path to the state file of the coordinator
 	CfgCoordinatorStateFilePath = "coordinator.stateFilePath"
-	// the path to the Merkle tree of the coordinator
-	CfgCoordinatorMerkleTreeFilePath = "coordinator.merkleTreeFilePath"
 	// the interval milestones are issued
 	CfgCoordinatorIntervalSeconds = "coordinator.intervalSeconds"
 	// the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)
@@ -35,13 +29,10 @@ const (
 )
 
 func init() {
-	configFlagSet.String(CfgCoordinatorAddress, "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ", "the address of the coordinator")
-	configFlagSet.Int(CfgCoordinatorSecurityLevel, 2, "the security level used in coordinator signatures")
-	configFlagSet.Int(CfgCoordinatorMerkleTreeDepth, 24, "the depth of the Merkle tree which in turn determines the number of leaves (private keys) that the coordinator can use to sign a message.")
+	configFlagSet.String(CfgCoordinatorPublicKey, "fc13f5dab468cd9c5acc7d1f72b3953239a3e2d4aca2297d798a4d0af19650fc7cfa6137dabed69d4c019e8b14def301724c5f88cdfbbd290d040472c032461c", "the ed25519 public key of the coordinator in hex representation")
 	configFlagSet.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the number of trailing 0s that must appear in the end of a transaction hash. "+
 		"increasing this number by 1 will result in proof of work that is 3 times as hard.")
 	configFlagSet.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
-	configFlagSet.String(CfgCoordinatorMerkleTreeFilePath, "coordinator.tree", "the path to the Merkle tree of the coordinator")
 	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
 	configFlagSet.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
 	configFlagSet.Int(CfgCoordinatorCheckpointsMaxTrackedTails, 10000, "maximum amount of known bundle tails for milestone tipselection")

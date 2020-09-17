@@ -10,9 +10,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-type ApproveesTraverser struct {
-	cachedTxMetas map[string]*tangle.CachedMetadata
-	cachedBundles map[string]*tangle.CachedMessage
+type ParentTraverser struct {
+	cachedMessageMetas map[string]*tangle.CachedMetadata
+	cachedMessages     map[string]*tangle.CachedMessage
 
 	// stack holding the ordered tx to process
 	stack *list.List
@@ -25,58 +25,57 @@ type ApproveesTraverser struct {
 
 	condition         Predicate
 	consumer          Consumer
-	onMissingApprovee OnMissingApprovee
+	onMissingParent   OnMissingParent
 	onSolidEntryPoint OnSolidEntryPoint
 	abortSignal       <-chan struct{}
 
 	traverseSolidEntryPoints bool
-	traverseTailsOnly        bool
 
 	traverserLock sync.Mutex
 }
 
-// NewApproveesTraverser create a new traverser to traverse the approvees (past cone)
-func NewApproveesTraverser(condition Predicate, consumer Consumer, onMissingApprovee OnMissingApprovee, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ApproveesTraverser {
+// NewParentTraverser create a new traverser to traverse the approvees (past cone)
+func NewParentTraverser(condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
 
-	return &ApproveesTraverser{
+	return &ParentTraverser{
 		condition:         condition,
 		consumer:          consumer,
-		onMissingApprovee: onMissingApprovee,
+		onMissingParent:   onMissingParent,
 		onSolidEntryPoint: onSolidEntryPoint,
 		abortSignal:       abortSignal,
 	}
 }
 
-func (t *ApproveesTraverser) cleanup(forceRelease bool) {
+func (t *ParentTraverser) cleanup(forceRelease bool) {
 
 	// release all bundles at the end
-	for _, cachedBundle := range t.cachedBundles {
-		cachedBundle.Release(forceRelease) // bundle -1
+	for _, cachedMsg := range t.cachedMessages {
+		cachedMsg.Release(forceRelease) // bundle -1
 	}
 
 	// release all tx metadata at the end
-	for _, cachedTxMeta := range t.cachedTxMetas {
-		cachedTxMeta.Release(forceRelease) // meta -1
+	for _, cachedMetadata := range t.cachedMessageMetas {
+		cachedMetadata.Release(forceRelease) // meta -1
 	}
 
 	// Release lock after cleanup so the traverser can be reused
 	t.traverserLock.Unlock()
 }
 
-func (t *ApproveesTraverser) reset() {
+func (t *ParentTraverser) reset() {
 
-	t.cachedTxMetas = make(map[string]*tangle.CachedMetadata)
-	t.cachedBundles = make(map[string]*tangle.CachedMessage)
+	t.cachedMessageMetas = make(map[string]*tangle.CachedMetadata)
+	t.cachedMessages = make(map[string]*tangle.CachedMessage)
 	t.processed = make(map[string]struct{})
 	t.checked = make(map[string]bool)
 	t.stack = list.New()
 }
 
-// Traverse starts to traverse the approvees (past cone) of the given start transaction until
-// the traversal stops due to no more transactions passing the given condition.
+// Traverse starts to traverse the parents (past cone) of the given start message until
+// the traversal stops due to no more messages passing the given condition.
 // It is a DFS with trunk / branch.
 // Caution: condition func is not in DFS order
-func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntryPoints bool, traverseTailsOnly bool) error {
+func (t *ParentTraverser) Traverse(startMessageID hornet.Hash, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -85,13 +84,12 @@ func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntr
 	t.reset()
 
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
-	t.traverseTailsOnly = traverseTailsOnly
 
 	defer t.cleanup(true)
 
-	t.stack.PushFront(startTxHash)
+	t.stack.PushFront(startMessageID)
 	for t.stack.Len() > 0 {
-		if err := t.processStackApprovees(); err != nil {
+		if err := t.processStackParents(); err != nil {
 			return err
 		}
 	}
@@ -99,12 +97,12 @@ func (t *ApproveesTraverser) Traverse(startTxHash hornet.Hash, traverseSolidEntr
 	return nil
 }
 
-// TraverseTrunkAndBranch starts to traverse the approvees (past cone) of the given trunk transaction until
+// TraverseParent1AndParent2 starts to traverse the parents (past cone) of the given parent1 until
 // the traversal stops due to no more transactions passing the given condition.
-// Afterwards it traverses the approvees (past cone) of the given branch transaction.
-// It is a DFS with trunk / branch.
+// Afterwards it traverses the parents (past cone) of the given parent2.
+// It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
-func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, branchTxHash hornet.Hash, traverseSolidEntryPoints bool, traverseTailsOnly bool) error {
+func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -113,13 +111,12 @@ func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, bra
 	t.reset()
 
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
-	t.traverseTailsOnly = traverseTailsOnly
 
 	defer t.cleanup(true)
 
-	t.stack.PushFront(trunkTxHash)
+	t.stack.PushFront(parent1MessageID)
 	for t.stack.Len() > 0 {
-		if err := t.processStackApprovees(); err != nil {
+		if err := t.processStackParents(); err != nil {
 			return err
 		}
 	}
@@ -129,9 +126,9 @@ func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, bra
 	// however, we only need to do it if the branch wasn't processed yet.
 	// the referenced branch transaction could for example already be processed
 	// if it is directly/indirectly approved by the trunk.
-	t.stack.PushFront(branchTxHash)
+	t.stack.PushFront(parent2MessageID)
 	for t.stack.Len() > 0 {
-		if err := t.processStackApprovees(); err != nil {
+		if err := t.processStackParents(); err != nil {
 			return err
 		}
 	}
@@ -139,9 +136,9 @@ func (t *ApproveesTraverser) TraverseTrunkAndBranch(trunkTxHash hornet.Hash, bra
 	return nil
 }
 
-// processStackApprovees checks if the current element in the stack must be processed or traversed.
-// first the trunk is traversed, then the branch.
-func (t *ApproveesTraverser) processStackApprovees() error {
+// processStackParents checks if the current element in the stack must be processed or traversed.
+// first the parent1 is traversed, then the parent2.
+func (t *ParentTraverser) processStackParents() error {
 
 	select {
 	case <-t.abortSignal:
@@ -151,9 +148,9 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 
 	// load candidate tx
 	ele := t.stack.Front()
-	currentTxHash := ele.Value.(hornet.Hash)
+	currentMessageID := ele.Value.(hornet.Hash)
 
-	if _, wasProcessed := t.processed[string(currentTxHash)]; wasProcessed {
+	if _, wasProcessed := t.processed[string(currentMessageID)]; wasProcessed {
 		// transaction was already processed
 		// remove the transaction from the stack
 		t.stack.Remove(ele)
@@ -161,106 +158,89 @@ func (t *ApproveesTraverser) processStackApprovees() error {
 	}
 
 	// check if the transaction is a solid entry point
-	if tangle.SolidEntryPointsContain(currentTxHash) {
+	if tangle.SolidEntryPointsContain(currentMessageID) {
 		if t.onSolidEntryPoint != nil {
-			t.onSolidEntryPoint(currentTxHash)
+			t.onSolidEntryPoint(currentMessageID)
 		}
 
 		if !t.traverseSolidEntryPoints {
 			// remove the transaction from the stack, trunk and branch are not traversed
-			t.processed[string(currentTxHash)] = struct{}{}
-			delete(t.checked, string(currentTxHash))
+			t.processed[string(currentMessageID)] = struct{}{}
+			delete(t.checked, string(currentMessageID))
 			t.stack.Remove(ele)
 			return nil
 		}
 	}
 
-	cachedTxMeta, exists := t.cachedTxMetas[string(currentTxHash)]
+	cachedMetadata, exists := t.cachedMessageMetas[string(currentMessageID)]
 	if !exists {
-		cachedTxMeta = tangle.GetCachedMessageMetadataOrNil(currentTxHash) // meta +1
-		if cachedTxMeta == nil {
+		cachedMetadata = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
+		if cachedMetadata == nil {
 			// remove the transaction from the stack, trunk and branch are not traversed
-			t.processed[string(currentTxHash)] = struct{}{}
-			delete(t.checked, string(currentTxHash))
+			t.processed[string(currentMessageID)] = struct{}{}
+			delete(t.checked, string(currentMessageID))
 			t.stack.Remove(ele)
 
-			if t.onMissingApprovee == nil {
+			if t.onMissingParent == nil {
 				// stop processing the stack with an error
-				return fmt.Errorf("%w: transaction %s", tangle.ErrMessageNotFound, currentTxHash.Hex())
+				return fmt.Errorf("%w: message %s", tangle.ErrMessageNotFound, currentMessageID.Hex())
 			}
 
 			// stop processing the stack if the caller returns an error
-			return t.onMissingApprovee(currentTxHash)
+			return t.onMissingParent(currentMessageID)
 		}
-		t.cachedTxMetas[string(currentTxHash)] = cachedTxMeta
+		t.cachedMessageMetas[string(currentMessageID)] = cachedMetadata
 	}
 
-	traverse, checkedBefore := t.checked[string(currentTxHash)]
+	traverse, checkedBefore := t.checked[string(currentMessageID)]
 	if !checkedBefore {
 		var err error
 
 		// check condition to decide if tx should be consumed and traversed
-		traverse, err = t.condition(cachedTxMeta.Retain()) // meta + 1
+		traverse, err = t.condition(cachedMetadata.Retain()) // meta + 1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
 		}
 
 		// mark the transaction as checked and remember the result of the traverse condition
-		t.checked[string(currentTxHash)] = traverse
+		t.checked[string(currentMessageID)] = traverse
 	}
 
 	if !traverse {
-		// remove the transaction from the stack, trunk and branch are not traversed
-		// transaction will not get consumed
-		t.processed[string(currentTxHash)] = struct{}{}
-		delete(t.checked, string(currentTxHash))
+		// remove the message from the stack, parent1 and parent2 are not traversed
+		// parent will not get consumed
+		t.processed[string(currentMessageID)] = struct{}{}
+		delete(t.checked, string(currentMessageID))
 		t.stack.Remove(ele)
 		return nil
 	}
 
-	var trunkHash, branchHash hornet.Hash
+	parent1MessageID := cachedMetadata.GetMetadata().GetParent1MessageID()
+	parent2MessageID := cachedMetadata.GetMetadata().GetParent2MessageID()
 
-	if !t.traverseTailsOnly {
-		trunkHash = cachedTxMeta.GetMetadata().GetParent1MessageID()
-		branchHash = cachedTxMeta.GetMetadata().GetParent2MessageID()
-	} else {
-		// load up bundle to retrieve trunk and branch of the head tx
-		cachedBundle, exists := t.cachedBundles[string(currentTxHash)]
-		if !exists {
-			cachedBundle = tangle.GetCachedMessageOrNil(currentTxHash) // bundle +1
-			if cachedBundle == nil {
-				return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Hex(), currentTxHash.Hex())
-			}
-			t.cachedBundles[string(currentTxHash)] = cachedBundle
-		}
-
-		trunkHash = cachedBundle.GetMessage().GetTrunkHash(true)
-		branchHash = cachedBundle.GetMessage().GetBranchHash(true)
+	parentMessageIDs := hornet.Hashes{parent1MessageID}
+	if !bytes.Equal(parent1MessageID, parent2MessageID) {
+		parentMessageIDs = append(parentMessageIDs, parent2MessageID)
 	}
 
-	approveeHashes := hornet.Hashes{trunkHash}
-	if !bytes.Equal(trunkHash, branchHash) {
-		approveeHashes = append(approveeHashes, branchHash)
-	}
-
-	for _, approveeHash := range approveeHashes {
-		if _, approveeProcessed := t.processed[string(approveeHash)]; !approveeProcessed {
-			// approvee was not processed yet
-			// traverse this transaction
-			t.stack.PushFront(approveeHash)
+	for _, parentMessageID := range parentMessageIDs {
+		if _, parentProcessed := t.processed[string(parentMessageID)]; !parentProcessed {
+			// parent was not processed yet
+			// traverse this message
+			t.stack.PushFront(parentMessageID)
 			return nil
 		}
 	}
 
-	// remove the transaction from the stack
-	t.processed[string(currentTxHash)] = struct{}{}
-	delete(t.checked, string(currentTxHash))
+	// remove the message from the stack
+	t.processed[string(currentMessageID)] = struct{}{}
+	delete(t.checked, string(currentMessageID))
 	t.stack.Remove(ele)
 
 	if t.consumer != nil {
-		// consume the transaction
-		if err := t.consumer(cachedTxMeta.Retain()); err != nil { // meta +1
+		// consume the message
+		if err := t.consumer(cachedMetadata.Retain()); err != nil { // meta +1
 			// there was an error, stop processing the stack
 			return err
 		}

@@ -87,7 +87,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone.In
 		return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %s", err)
 	}
 
-	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
+	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
 	tangle.SetSnapshotMilestone(coordinatorAddress, hornet.NullHashBytes, snapshotIndex, snapshotIndex, snapshotIndex, 0)
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(snapshotIndex)
 

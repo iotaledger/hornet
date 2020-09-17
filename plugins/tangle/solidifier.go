@@ -135,7 +135,7 @@ func solidQueueCheck(cachedTxMetas map[string]*tangle.CachedMetadata, milestoneI
 	txsToRequest := make(map[string]struct{})
 
 	// collect all tx to solidify by traversing the tangle
-	if err := dag.TraverseApprovees(cachedMsTailTxMeta.GetMetadata().GetMessageID(),
+	if err := dag.TraverseParents(cachedMsTailTxMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
@@ -240,7 +240,7 @@ func solidifyFutureCone(cachedTxMetas map[string]*tangle.CachedMetadata, txHashe
 
 		startTxHash := txHash
 
-		if err := dag.TraverseApprovers(txHash,
+		if err := dag.TraverseChildren(txHash,
 			// traversal stops if no more transactions pass the given condition
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedTxMeta.Release(true) // meta -1
@@ -436,10 +436,10 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
 		conf.Index,
-		conf.TxsConfirmed,
-		conf.TxsValue,
-		conf.TxsZeroValue,
-		conf.TxsConflicting,
+		conf.MessagesConfirmed,
+		conf.MessagesValue,
+		conf.MessagesZeroValue,
+		conf.MessagesConflicting,
 		conf.Collecting.Truncate(time.Millisecond),
 		conf.Total.Truncate(time.Millisecond),
 	)
@@ -505,7 +505,7 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedMessage, milestone
 	newTxDiff := utils.GetUint32Diff(newNewTxCount, oldNewTxCount)
 	oldNewTxCount = newNewTxCount
 
-	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedTransactions.Load()
+	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedMessages.Load()
 	confirmedTxDiff := utils.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
 	oldConfirmedTxCount = newConfirmedTxCount
 

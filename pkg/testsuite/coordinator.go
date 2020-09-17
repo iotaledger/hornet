@@ -87,7 +87,7 @@ func (te *TestEnvironment) configureCoordinator() {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
-	require.Equal(te.testState, 3, conf.TxsConfirmed)
+	require.Equal(te.testState, 3, conf.MessagesConfirmed)
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.

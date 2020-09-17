@@ -122,7 +122,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
-	if err := coo.InitMerkleTree(config.NodeConfig.GetString(config.CfgCoordinatorMerkleTreeFilePath), config.NodeConfig.GetString(config.CfgCoordinatorAddress)); err != nil {
+	if err := coo.InitMerkleTree(config.NodeConfig.GetString(config.CfgCoordinatorMerkleTreeFilePath), config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)); err != nil {
 		return nil, err
 	}
 
@@ -344,7 +344,7 @@ func configureEvents() {
 			}
 
 			// add tips to the heaviest branch selector
-			if trackedTailsCount := selector.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
+			if trackedTailsCount := selector.OnNewSolidMessage(bndl); trackedTailsCount >= maxTrackedTails {
 				log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
 
 				// issue next checkpoint
@@ -366,7 +366,7 @@ func configureEvents() {
 		}
 
 		// propagate new transaction root snapshot indexes to the future cone for URTS
-		dag.UpdateTransactionRootSnapshotIndexes(confirmation.Mutations.TailsReferenced, confirmation.MilestoneIndex)
+		dag.UpdateTransactionRootSnapshotIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
 		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})

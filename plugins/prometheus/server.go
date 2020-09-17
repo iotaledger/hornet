@@ -120,7 +120,7 @@ func collectServer() {
 	serverAllTransactions.Set(float64(metrics.SharedServerMetrics.Transactions.Load()))
 	serverNewTransactions.Set(float64(metrics.SharedServerMetrics.NewTransactions.Load()))
 	serverKnownTransactions.Set(float64(metrics.SharedServerMetrics.KnownTransactions.Load()))
-	serverConfirmedTransactions.Set(float64(metrics.SharedServerMetrics.ConfirmedTransactions.Load()))
+	serverConfirmedTransactions.Set(float64(metrics.SharedServerMetrics.ConfirmedMessages.Load()))
 	serverInvalidTransactions.Set(float64(metrics.SharedServerMetrics.InvalidTransactions.Load()))
 	serverInvalidRequests.Set(float64(metrics.SharedServerMetrics.InvalidRequests.Load()))
 	serverStaleTransactions.Set(float64(metrics.SharedServerMetrics.StaleTransactions.Load()))

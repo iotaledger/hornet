@@ -214,7 +214,7 @@ func MemoizedRequestMissingMilestoneApprovees(preventDiscard ...bool) func(ms mi
 		msHash := cachedMs.GetMilestone().MessageID
 		cachedMs.Release(true) // bundle -1
 
-		dag.TraverseApprovees(msHash,
+		dag.TraverseParents(msHash,
 			// traversal stops if no more transactions pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1

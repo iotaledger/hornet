@@ -136,8 +136,8 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		if conf == nil {
 			return -1
 		}
-		for i := 0; i < len(conf.Mutations.TailsReferenced)-1; i++ {
-			if bytes.Equal(conf.Mutations.TailsReferenced[i], hash) {
+		for i := 0; i < len(conf.Mutations.MessagesReferenced)-1; i++ {
+			if bytes.Equal(conf.Mutations.MessagesReferenced[i], hash) {
 				return i
 			}
 		}

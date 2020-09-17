@@ -279,7 +279,7 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMWM, cooConfig.MWM),
-		fmt.Sprintf("--%s=%s", config.CfgCoordinatorAddress, cooConfig.Address),
+		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKey, cooConfig.Address),
 		fmt.Sprintf("--%s=%s", config.CfgCoordinatorMerkleTreeFilePath, cooConfig.MerkleTreeFilePath),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorSecurityLevel, cooConfig.SecurityLevel),
