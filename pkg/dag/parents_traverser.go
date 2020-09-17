@@ -50,7 +50,7 @@ func (t *ParentTraverser) cleanup(forceRelease bool) {
 
 	// release all bundles at the end
 	for _, cachedMsg := range t.cachedMessages {
-		cachedMsg.Release(forceRelease) // bundle -1
+		cachedMsg.Release(forceRelease) // message -1
 	}
 
 	// release all tx metadata at the end
@@ -124,7 +124,7 @@ func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID hornet.Hash
 	// since we first feed the stack the trunk,
 	// we need to make sure that we also examine the branch path.
 	// however, we only need to do it if the branch wasn't processed yet.
-	// the referenced branch transaction could for example already be processed
+	// the referenced branch message could for example already be processed
 	// if it is directly/indirectly approved by the trunk.
 	t.stack.PushFront(parent2MessageID)
 	for t.stack.Len() > 0 {
@@ -151,20 +151,20 @@ func (t *ParentTraverser) processStackParents() error {
 	currentMessageID := ele.Value.(hornet.Hash)
 
 	if _, wasProcessed := t.processed[string(currentMessageID)]; wasProcessed {
-		// transaction was already processed
-		// remove the transaction from the stack
+		// message was already processed
+		// remove the message from the stack
 		t.stack.Remove(ele)
 		return nil
 	}
 
-	// check if the transaction is a solid entry point
+	// check if the message is a solid entry point
 	if tangle.SolidEntryPointsContain(currentMessageID) {
 		if t.onSolidEntryPoint != nil {
 			t.onSolidEntryPoint(currentMessageID)
 		}
 
 		if !t.traverseSolidEntryPoints {
-			// remove the transaction from the stack, trunk and branch are not traversed
+			// remove the message from the stack, trunk and branch are not traversed
 			t.processed[string(currentMessageID)] = struct{}{}
 			delete(t.checked, string(currentMessageID))
 			t.stack.Remove(ele)
@@ -176,7 +176,7 @@ func (t *ParentTraverser) processStackParents() error {
 	if !exists {
 		cachedMetadata = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMetadata == nil {
-			// remove the transaction from the stack, trunk and branch are not traversed
+			// remove the message from the stack, trunk and branch are not traversed
 			t.processed[string(currentMessageID)] = struct{}{}
 			delete(t.checked, string(currentMessageID))
 			t.stack.Remove(ele)
@@ -203,7 +203,7 @@ func (t *ParentTraverser) processStackParents() error {
 			return err
 		}
 
-		// mark the transaction as checked and remember the result of the traverse condition
+		// mark the message as checked and remember the result of the traverse condition
 		t.checked[string(currentMessageID)] = traverse
 	}
 

@@ -37,8 +37,8 @@ type TestEnvironment struct {
 	// Milestones are the created milestones by the coordinator during the test.
 	Milestones tangle.CachedMessages
 
-	// cachedBundles is used to cleanup all bundles at the end of a test.
-	cachedBundles tangle.CachedMessages
+	// cachedMessages is used to cleanup all bundles at the end of a test.
+	cachedMessages tangle.CachedMessages
 
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
@@ -81,7 +81,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	te := &TestEnvironment{
 		testState:              testState,
 		Milestones:             make(tangle.CachedMessages, 0),
-		cachedBundles:          make(tangle.CachedMessages, 0),
+		cachedMessages:         make(tangle.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		powHandler:             pow.New(nil, "", 30*time.Second),
 		lastMilestoneHash:      hornet.NullHashBytes,
@@ -142,8 +142,8 @@ func (te *TestEnvironment) configureStorages(store kvstore.KVStore) {
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
 func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
-	te.cachedBundles.Release()
-	te.cachedBundles = nil
+	te.cachedMessages.Release()
+	te.cachedMessages = nil
 
 	// this should not hang, i.e. all objects should be released
 	tangle.ShutdownStorages()

@@ -26,7 +26,7 @@ func IsNodeHealthy() bool {
 	// Latest milestone timestamp
 	var milestoneTimestamp int64
 	lmi := tangle.GetLatestMilestoneIndex()
-	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // bundle +1
+	cachedLatestMs := tangle.GetMilestoneOrNil(lmi) // message +1
 	if cachedLatestMs == nil {
 		return false
 	}
@@ -34,7 +34,7 @@ func IsNodeHealthy() bool {
 	cachedMsTailTx := cachedLatestMs.GetMessage().GetTail() // tx +1
 	milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
 	cachedMsTailTx.Release(true) // tx -1
-	cachedLatestMs.Release(true) // bundle -1
+	cachedLatestMs.Release(true) // message -1
 
 	// Check whether the milestone is older than 5 minutes
 	timeMs := time.Unix(milestoneTimestamp, 0)

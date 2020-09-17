@@ -30,13 +30,13 @@ type ServerMetrics struct {
 	InvalidRequests atomic.Uint32
 	// The number of received milestone requests.
 	ReceivedMilestoneRequests atomic.Uint32
-	// The number of received transaction requests.
+	// The number of received message requests.
 	ReceivedTransactionRequests atomic.Uint32
 	// The number of received heartbeats.
 	ReceivedHeartbeats atomic.Uint32
 	// The number of sent transactions.
 	SentTransactions atomic.Uint32
-	// The number of sent transaction requests.
+	// The number of sent message requests.
 	SentTransactionRequests atomic.Uint32
 	// The number of sent milestone requests.
 	SentMilestoneRequests atomic.Uint32

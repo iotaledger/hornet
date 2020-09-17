@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/muxxer/iota.go/bundle"
 	"github.com/muxxer/iota.go/consts"
 
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -33,7 +32,7 @@ const (
 func (te *TestEnvironment) configureCoordinator() {
 
 	storeMessageFunc := func(msg *tangle.Message, isMilestone bool) error {
-		var bndl = make(bundle.Bundle, 0)
+		var bndl = make(tangle.Message, 0)
 
 		// insert it the reverse way
 		for i := len(b) - 1; i >= 0; i-- {
@@ -131,7 +130,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.Hash, create
 	require.Equal(te.testState, currentIndex+1, confStats.Index)
 	te.VerifyLSMI(confStats.Index)
 
-	te.cachedBundles = append(te.cachedBundles, ms)
+	te.cachedMessages = append(te.cachedMessages, ms)
 
 	te.AssertTotalSupplyStillValid()
 

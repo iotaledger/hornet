@@ -17,7 +17,7 @@ const (
 	CfgGlobalSnapshotPath = "snapshots.global.path"
 	// milestone index of the global snapshot
 	CfgGlobalSnapshotIndex = "snapshots.global.index"
-	// whether to delete old transaction data from the database
+	// whether to delete old message data from the database
 	CfgPruningEnabled = "snapshots.pruning.enabled"
 	// amount of milestone cones to keep in the database
 	CfgPruningDelay = "snapshots.pruning.delay"
@@ -32,6 +32,6 @@ func init() {
 	configFlagSet.StringSlice(CfgLocalSnapshotsDownloadURLs, []string{}, "URLs to load the local snapshot file from. Provide multiple URLs as fall back sources")
 	configFlagSet.String(CfgGlobalSnapshotPath, "snapshotMainnet.txt", "path to the global snapshot file containing the ledger state")
 	configFlagSet.Int(CfgGlobalSnapshotIndex, 1050000, "milestone index of the global snapshot")
-	configFlagSet.Bool(CfgPruningEnabled, true, "whether to delete old transaction data from the database")
+	configFlagSet.Bool(CfgPruningEnabled, true, "whether to delete old message data from the database")
 	configFlagSet.Int(CfgPruningDelay, 60480, "amount of milestone cones to keep in the database")
 }

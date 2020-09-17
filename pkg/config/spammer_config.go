@@ -3,9 +3,9 @@ package config
 const (
 	// the message to embed within the spam transactions
 	CfgSpammerMessage = "spammer.message"
-	// the tag of the transaction
+	// the tag of the message
 	CfgSpammerTag = "spammer.tag"
-	// the tag of the transaction if the semi-lazy pool is used (uses "tag" if empty)
+	// the tag of the message if the semi-lazy pool is used (uses "tag" if empty)
 	CfgSpammerTagSemiLazy = "spammer.tagSemiLazy"
 	// workers remains idle for a while when cpu usage gets over this limit (0 = disable)
 	CfgSpammerCPUMaxUsage = "spammer.cpuMaxUsage"
@@ -19,8 +19,8 @@ const (
 
 func init() {
 	configFlagSet.String(CfgSpammerMessage, "Spamming with HORNET tipselect", "the message to embed within the spam transactions")
-	configFlagSet.String(CfgSpammerTag, "HORNET99SPAMMER999999999999", "the tag of the transaction")
-	configFlagSet.String(CfgSpammerTagSemiLazy, "", "the tag of the transaction if the semi-lazy pool is used (uses \"tag\" if empty)")
+	configFlagSet.String(CfgSpammerTag, "HORNET99SPAMMER999999999999", "the tag of the message")
+	configFlagSet.String(CfgSpammerTagSemiLazy, "", "the tag of the message if the semi-lazy pool is used (uses \"tag\" if empty)")
 	configFlagSet.Float64(CfgSpammerCPUMaxUsage, 0.50, "workers remains idle for a while when cpu usage gets over this limit (0 = disable)")
 	configFlagSet.Float64(CfgSpammerTPSRateLimit, 0.10, "the rate limit for the spammer (0 = no limit)")
 	configFlagSet.Int(CfgSpammerWorkers, 1, "the amount of parallel running spammers")

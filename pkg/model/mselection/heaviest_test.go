@@ -116,7 +116,7 @@ func TestHeaviestSelector_Concurrent(t *testing.T) {
 func BenchmarkHeaviestSelector_OnNewSolidTransaction(b *testing.B) {
 	hps := New()
 	hashes := []hornet.Hash{hornet.NullHashBytes}
-	data := make([]*tangle.Bundle, numBenchmarkTxs)
+	data := make([]*tangle.Message, numBenchmarkTxs)
 	for i := 0; i < numBenchmarkTxs; i++ {
 		data[i] = newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
 		hashes = append(hashes, data[i].GetTailHash())
@@ -146,8 +146,8 @@ func BenchmarkHeaviestSelector_SelectTips(b *testing.B) {
 	}
 }
 
-func newTestBundle(idx int, trunk, branch hornet.Hash) *tangle.Bundle {
-	bndl := tangle.Bundle{
+func newTestBundle(idx int, trunk, branch hornet.Hash) *tangle.Message {
+	bndl := tangle.Message{
 
 	}
 	tx := &transaction.Transaction{

@@ -32,7 +32,7 @@ func createCheckpoint(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash
 	return msg, nil
 }
 
-// createMilestone creates a signed milestone bundle.
+// createMilestone creates a signed milestone message.
 func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, securityLvl consts.SecurityLevel, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
 
 	pubKey := privateKey.Public().(ed25519.PublicKey)
@@ -63,7 +63,7 @@ func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, secur
 	return msg, nil
 }
 
-// doPow calculates the transaction nonce and the hash.
+// doPow calculates the message nonce and the hash.
 func doPow(msg *tangle.Message, mwm int, powHandler *pow.Handler) error {
 
 	msg.GetMessage().Nonce = 0

@@ -90,8 +90,8 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all transaction metadata where the tx doesn't exist in the database anymore.
-	if err := cleanupTransactionMetadata(); err != nil {
+	// deletes all transaction metadata where the msg doesn't exist in the database anymore.
+	if err := cleanupMessageMetadata(); err != nil {
 		return err
 	}
 
@@ -100,28 +100,28 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all bundles messages where the tx doesn't exist in the database anymore.
+	// deletes all bundles messages where the msg doesn't exist in the database anymore.
 	if err := cleanupBundleTransactions(); err != nil {
 		return err
 	}
 
-	// deletes all children where the tx doesn't exist in the database anymore.
+	// deletes all children where the msg doesn't exist in the database anymore.
 	if err := cleanupChildren(); err != nil {
 		return err
 	}
 
-	// deletes all tags where the tx doesn't exist in the database anymore.
+	// deletes all tags where the msg doesn't exist in the database anymore.
 	if err := cleanupTags(); err != nil {
 		return err
 	}
 
-	// deletes all addresses where the tx doesn't exist in the database anymore.
+	// deletes all addresses where the msg doesn't exist in the database anymore.
 	if err := cleanupAddresses(); err != nil {
 		return err
 	}
 
 	// deletes all unconfirmed txs that are left in the database (we do not need them since we deleted all unconfirmed txs).
-	if err := cleanupUnconfirmedTxs(); err != nil {
+	if err := cleanupUnconfirmedMsgs(); err != nil {
 		return err
 	}
 
@@ -344,8 +344,8 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 	return nil
 }
 
-// deletes all transaction metadata where the tx doesn't exist in the database anymore.
-func cleanupTransactionMetadata() error {
+// deletes all message metadata where the msg doesn't exist in the database anymore.
+func cleanupMessageMetadata() error {
 
 	start := time.Now()
 
@@ -405,143 +405,7 @@ func cleanupTransactionMetadata() error {
 	return nil
 }
 
-// deletes all bundles where a single tx of the bundle doesn't exist in the database anymore.
-func cleanupBundles() error {
-
-	start := time.Now()
-
-	bundlesToDelete := make(map[string]struct{})
-
-	var bundleCounter int64
-	lastStatusTime := time.Now()
-	tangle.ForEachBundleHash(func(tailTxHash hornet.Hash) bool {
-		bundleCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return false
-			}
-
-			log.Infof("analyzed %d bundles", bundleCounter)
-		}
-
-		bundle := tangle.GetStoredMessageOrNil(tailTxHash)
-		if bundle == nil {
-			return true
-		}
-
-		for _, txHash := range bundle.GetTxHashes() {
-			// delete bundle if a single transaction of the bundle doesn't exist
-			if !tangle.MessageExistsInStore(txHash) {
-				bundlesToDelete[string(tailTxHash)] = struct{}{}
-				return true
-			}
-		}
-
-		return true
-	}, true)
-	log.Infof("analyzed %d bundles", bundleCounter)
-
-	if daemon.IsStopped() {
-		return tangle.ErrOperationAborted
-	}
-
-	total := len(bundlesToDelete)
-	var deletionCounter int64
-	for tailTxHash := range bundlesToDelete {
-		deletionCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return tangle.ErrOperationAborted
-			}
-
-			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting bundles...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
-		}
-
-		tangle.DeleteMessage(hornet.Hash(tailTxHash))
-	}
-
-	tangle.FlushMessagesStorage()
-
-	log.Infof("deleting bundles...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
-
-	return nil
-}
-
-// deletes all bundles messages where the tx doesn't exist in the database anymore.
-func cleanupBundleTransactions() error {
-
-	type bundleTransaction struct {
-		bundleHash hornet.Hash
-		isTail     bool
-		txHash     hornet.Hash
-	}
-
-	start := time.Now()
-
-	bundleTxsToDelete := make(map[string]*bundleTransaction)
-
-	lastStatusTime := time.Now()
-	var bundleTxsCounter int64
-	tangle.ForEachBundleTransaction(func(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool {
-		bundleTxsCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return false
-			}
-
-			log.Infof("analyzed %d bundle messages", bundleTxsCounter)
-		}
-
-		// delete bundle transaction if transaction doesn't exist
-		if !tangle.MessageExistsInStore(txHash) {
-			bundleTxsToDelete[string(txHash)] = &bundleTransaction{bundleHash: bundleHash, txHash: txHash, isTail: isTail}
-		}
-
-		return true
-	}, true)
-	log.Infof("analyzed %d bundle messages", bundleTxsCounter)
-
-	if daemon.IsStopped() {
-		return tangle.ErrOperationAborted
-	}
-
-	total := len(bundleTxsToDelete)
-	var deletionCounter int64
-	for _, bundleTx := range bundleTxsToDelete {
-		deletionCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return tangle.ErrOperationAborted
-			}
-
-			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting bundle messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
-		}
-
-		tangle.DeleteBundleTransaction(bundleTx.bundleHash, bundleTx.txHash, bundleTx.isTail)
-	}
-
-	tangle.FlushBundleTransactionsStorage()
-
-	log.Infof("deleting bundle messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
-
-	return nil
-}
-
-// deletes all children where the tx doesn't exist in the database anymore.
+// deletes all children where the msg doesn't exist in the database anymore.
 func cleanupChildren() error {
 
 	type child struct {
@@ -612,73 +476,7 @@ func cleanupChildren() error {
 	return nil
 }
 
-// deletes all tags where the tx doesn't exist in the database anymore.
-func cleanupTags() error {
-
-	type tag struct {
-		tag    hornet.Hash
-		txHash hornet.Hash
-	}
-
-	start := time.Now()
-
-	tagsToDelete := make(map[string]*tag)
-
-	lastStatusTime := time.Now()
-	var tagsCounter int64
-	tangle.ForEachTag(func(txTag hornet.Hash, txHash hornet.Hash) bool {
-		tagsCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return false
-			}
-
-			log.Infof("analyzed %d tags", tagsCounter)
-		}
-
-		// delete tag if transaction doesn't exist
-		if !tangle.MessageExistsInStore(txHash) {
-			tagsToDelete[string(txHash)] = &tag{tag: txTag, txHash: txHash}
-		}
-
-		return true
-	}, true)
-	log.Infof("analyzed %d tags", tagsCounter)
-
-	if daemon.IsStopped() {
-		return tangle.ErrOperationAborted
-	}
-
-	total := len(tagsToDelete)
-	var deletionCounter int64
-	for _, tag := range tagsToDelete {
-		deletionCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return tangle.ErrOperationAborted
-			}
-
-			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting tags...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
-		}
-
-		tangle.DeleteTag(tag.tag, tag.txHash)
-	}
-
-	tangle.FlushTagsStorage()
-
-	log.Infof("deleting tags...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
-
-	return nil
-}
-
-// deletes all addresses where the tx doesn't exist in the database anymore.
+// deletes all addresses where the msg doesn't exist in the database anymore.
 func cleanupAddresses() error {
 
 	type address struct {
@@ -744,8 +542,8 @@ func cleanupAddresses() error {
 	return nil
 }
 
-// deletes all unconfirmed txs that are left in the database (we do not need them since we deleted all unconfirmed txs).
-func cleanupUnconfirmedTxs() error {
+// deletes all unconfirmed msgs that are left in the database (we do not need them since we deleted all unconfirmed msgs).
+func cleanupUnconfirmedMsgs() error {
 
 	start := time.Now()
 

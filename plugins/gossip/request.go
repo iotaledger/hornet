@@ -179,7 +179,7 @@ func RequestParents(cachedTx *tangle.CachedMessage, msIndex milestone.Index, pre
 // RequestMilestoneParents enqueues requests for the parents of the given milestone bundle to the request queue,
 // if the parents are not solid entry points and not already in the database.
 func RequestMilestoneParents(cachedMs *tangle.CachedMilestone) bool {
-	defer cachedMs.Release() // bundle -1
+	defer cachedMs.Release() // message -1
 
 	cachedHeadTxMeta := cachedMs.GetMessage().GetHeadMetadata() // meta +1
 	defer cachedHeadTxMeta.Release()                            // meta -1
@@ -212,7 +212,7 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 		}
 
 		msHash := cachedMs.GetMilestone().MessageID
-		cachedMs.Release(true) // bundle -1
+		cachedMs.Release(true) // message -1
 
 		dag.TraverseParents(msHash,
 			// traversal stops if no more messages pass the given condition

@@ -3,7 +3,6 @@ package coordinator
 import (
 	"crypto"
 	"fmt"
-	"hex"
 	"os"
 	"strings"
 	"time"
@@ -37,7 +36,7 @@ var (
 
 // CoordinatorEvents are the events issued by the coordinator.
 type CoordinatorEvents struct {
-	// Fired when a checkpoint transaction is issued.
+	// Fired when a checkpoint message is issued.
 	IssuedCheckpointTransaction *events.Event
 	// Fired when a milestone is issued.
 	IssuedMilestone *events.Event
@@ -159,12 +158,12 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		latestMilestoneHash := hornet.NullHashBytes
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
-			cachedBndl := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
-			if cachedBndl == nil {
+			cachedMilestoneMsg := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
+			if cachedMilestoneMsg == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneHash = cachedBndl.GetMessage().GetTailHash()
-			cachedBndl.Release()
+			latestMilestoneHash = cachedMilestoneMsg.GetMessage().GetTailHash()
+			cachedMilestoneMsg.Release()
 		}
 
 		// create a new coordinator state to bootstrap the network
@@ -192,11 +191,11 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedBndl := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
-	if cachedBndl == nil {
+	cachedMilestoneMsg := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
+	if cachedMilestoneMsg == nil {
 		return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 	}
-	cachedBndl.Release()
+	cachedMilestoneMsg.Release()
 
 	coo.bootstrapped = true
 	return nil
@@ -206,14 +205,14 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
-	cachedBundles := make(map[string]*tangle.CachedMessage)
+	cachedMessages := make(map[string]*tangle.CachedMessage)
 
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
 
 		// release all bundles at the end
-		for _, cachedBundle := range cachedBundles {
-			cachedBundle.Release(true) // bundle -1
+		for _, cachedMessage := range cachedMessages {
+			cachedMessage.Release(true) // message -1
 		}
 
 		// Release all tx metadata at the end
@@ -223,7 +222,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 	}()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedMsgMetas, cachedBundles, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
 	if err != nil {
 		return err
 	}

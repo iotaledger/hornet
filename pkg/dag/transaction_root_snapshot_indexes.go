@@ -8,7 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-// UpdateOutdatedRootSnapshotIndexes updates the transaction root snapshot indexes of the given transactions.
+// UpdateOutdatedRootSnapshotIndexes updates the message root snapshot indexes of the given transactions.
 // the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
 func UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs hornet.Hashes, lsmi milestone.Index) {
 	for _, outdatedTxHash := range outdatedMessageIDs {
@@ -20,7 +20,7 @@ func UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs hornet.Hashes, lsmi mi
 	}
 }
 
-// GetTransactionRootSnapshotIndexes searches the transaction root snapshot indexes for a given transaction.
+// GetTransactionRootSnapshotIndexes searches the message root snapshot indexes for a given message.
 func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
 	defer cachedMessageMetadata.Release(true) // meta -1
 
@@ -84,7 +84,7 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 			defer cachedMetadata.Release(true) // meta -1
 
 			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
-				// skip the start transaction, so it doesn't get added to the outdatedMessageIDs
+				// skip the start message, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
 
@@ -107,7 +107,7 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 		}
 	}
 
-	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest.
+	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest msgs to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
 	UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs, lsmi)
 
@@ -116,15 +116,15 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 		return 0, 0
 	}
 
-	// set the new transaction root snapshot indexes in the metadata of the transaction
+	// set the new message root snapshot indexes in the metadata of the message
 	cachedMessageMetadata.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
 
 	return youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex
 }
 
-// UpdateMessageRootSnapshotIndexes updates the transaction root snapshot
+// UpdateMessageRootSnapshotIndexes updates the message root snapshot
 // indexes of the future cone of all given transactions.
-// all the transactions of the newly confirmed cone already have updated transaction root snapshot indexes.
+// all the transactions of the newly confirmed cone already have updated message root snapshot indexes.
 // we have to walk the future cone, and update the past cone of all transactions that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same transactions multiple times.
@@ -146,7 +146,7 @@ func UpdateMessageRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone.Ind
 				defer cachedMsgMeta.Release(true) // meta -1
 				traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
 
-				// updates the transaction root snapshot indexes of the outdated past cone for this transaction
+				// updates the message root snapshot indexes of the outdated past cone for this message
 				GetTransactionRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi) // meta pass +1
 
 				return nil

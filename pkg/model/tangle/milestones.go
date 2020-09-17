@@ -5,8 +5,9 @@ import (
 	"crypto"
 	"crypto/ed25519"
 	"fmt"
-	iotago "github.com/iotaledger/iota.go"
 	"time"
+
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/pkg/errors"
 
@@ -60,7 +61,7 @@ func ResetMilestoneIndexes() {
 }
 
 // GetMilestoneOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
-// bundle +1
+// message +1
 func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
 	cachedMs := GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
@@ -225,7 +226,7 @@ func GetLatestMilestoneIndex() milestone.Index {
 	return latestMilestoneIndex
 }
 
-// bundle +1
+// message +1
 func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMessage {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
@@ -245,7 +246,7 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMessage {
 			return nil
 		}
 
-		cachedMs := GetMilestoneOrNil(index) // bundle +1
+		cachedMs := GetMilestoneOrNil(index) // message +1
 		if cachedMs != nil {
 			return cachedMs
 		}

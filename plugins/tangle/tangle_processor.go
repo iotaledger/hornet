@@ -64,7 +64,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		_, added := processValidMilestoneWorkerPool.Submit(cachedMilestone) // bundle pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
-			cachedMilestone.Release() // bundle -1
+			cachedMilestone.Release() // message -1
 		}
 	})
 

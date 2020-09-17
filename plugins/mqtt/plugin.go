@@ -116,30 +116,30 @@ func run(plugin *node.Plugin) {
 		cachedMeta.Release(true) // meta -1
 	})
 
-	onLatestMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedMessage) {
+	onLatestMilestoneChanged := events.NewClosure(func(cachedMessage *tanglePackage.CachedMessage) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedBndl.Release(true) // bundle -1
+			cachedMessage.Release(true) // message -1
 			return
 		}
 
-		if _, added := newLatestMilestoneWorkerPool.TrySubmit(cachedBndl); added { // bundle pass +1
-			return // Avoid bundle -1 (done inside workerpool task)
+		if _, added := newLatestMilestoneWorkerPool.TrySubmit(cachedMessage); added { // bundle pass +1
+			return // Avoid message -1 (done inside workerpool task)
 		}
-		cachedBndl.Release(true) // bundle -1
+		cachedMessage.Release(true) // message -1
 	})
 
-	onSolidMilestoneChanged := events.NewClosure(func(cachedBndl *tanglePackage.CachedMessage) {
+	onSolidMilestoneChanged := events.NewClosure(func(cachedMessage *tanglePackage.CachedMessage) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedBndl.Release(true) // bundle -1
+			cachedMessage.Release(true) // message -1
 			return
 		}
 
-		if _, added := newSolidMilestoneWorkerPool.TrySubmit(cachedBndl); added { // bundle pass +1
-			return // Avoid bundle -1 (done inside workerpool task)
+		if _, added := newSolidMilestoneWorkerPool.TrySubmit(cachedMessage); added { // bundle pass +1
+			return // Avoid message -1 (done inside workerpool task)
 		}
-		cachedBndl.Release(true) // bundle -1
+		cachedMessage.Release(true) // message -1
 	})
 
 	onAddressSpent := events.NewClosure(func(addr trinary.Hash) {

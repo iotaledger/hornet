@@ -1,19 +1,10 @@
 package webapi
 
 import (
-	"bytes"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/mitchellh/mapstructure"
-
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/muxxer/iota.go/guards"
-
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
@@ -21,8 +12,6 @@ import (
 
 func init() {
 	addEndpoint("getRequests", getRequests, implementedAPIcalls)
-	addEndpoint("searchConfirmedChild", searchConfirmedChild, implementedAPIcalls)
-	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
 	addEndpoint("triggerSolidifier", triggerSolidifier, implementedAPIcalls)
 }
 
@@ -64,209 +53,6 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 	c.JSON(http.StatusOK, GetRequestsReturn{Requests: debugReqs})
-}
-
-func createConfirmedChildResult(confirmedTxHash hornet.Hash, path []bool) ([]*ChildStruct, error) {
-
-	tanglePath := make([]*ChildStruct, 0)
-
-	txHash := confirmedTxHash
-	for len(path) > 0 {
-		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
-		if cachedMsgMeta == nil {
-			return nil, fmt.Errorf("createConfirmedChildResult: Transaction not found: %v", txHash.Hex())
-		}
-
-		isTrunk := path[len(path)-1]
-		path = path[:len(path)-1]
-
-		var nextTxHash hornet.Hash
-		if isTrunk {
-			nextTxHash = cachedMsgMeta.GetMetadata().GetParent1MessageID()
-		} else {
-			nextTxHash = cachedMsgMeta.GetMetadata().GetParent2MessageID()
-		}
-		cachedMsgMeta.Release(true)
-
-		tanglePath = append(tanglePath, &ChildStruct{TxHash: nextTxHash.Hex(), ReferencedByTrunk: isTrunk})
-		txHash = nextTxHash
-	}
-
-	return tanglePath, nil
-}
-
-func searchConfirmedChild(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &SearchConfirmedChild{}
-	result := SearchConfirmedChildReturn{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	if !guards.IsTransactionHash(query.TxHash) {
-		e.Error = fmt.Sprintf("Invalid hash supplied: %s", query.TxHash)
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
-	txsToTraverse := make(map[string][]bool)
-	txsToTraverse[string(hornet.HashFromHashTrytes(query.TxHash))] = make([]bool, 0)
-
-	// Collect all tx to check by traversing the tangle
-	// Loop as long as new transactions are added in every loop cycle
-	for len(txsToTraverse) != 0 {
-		for txHash := range txsToTraverse {
-
-			if daemon.IsStopped() {
-				e.Error = "operation aborted"
-				c.JSON(http.StatusInternalServerError, e)
-				return
-			}
-
-			cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hornet.Hash(txHash)) // meta +1
-			if cachedMsgMeta == nil {
-				delete(txsToTraverse, txHash)
-				log.Warnf("searchConfirmedChild: Transaction not found: %v", hornet.Hash(txHash).Hex())
-				continue
-			}
-
-			confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
-			isTailTx := cachedMsgMeta.GetMetadata().IsTail()
-
-			cachedMsgMeta.Release(true) // meta -1
-
-			if confirmed {
-				resultFound := false
-
-				if query.SearchMilestone {
-					if isTailTx {
-						// Check if the bundle is a milestone, otherwise go on
-						cachedBndl := tangle.GetCachedMessageOrNil(hornet.Hash(txHash))
-						if cachedBndl != nil {
-							if cachedBndl.GetMessage().IsMilestone() {
-								resultFound = true
-							}
-							cachedBndl.Release(true)
-						}
-					}
-				} else {
-					resultFound = true
-				}
-
-				if resultFound {
-					childrenResult, err := createConfirmedChildResult(hornet.Hash(txHash), txsToTraverse[txHash])
-					if err != nil {
-						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-						c.JSON(http.StatusInternalServerError, e)
-						return
-					}
-
-					result.ConfirmedTxHash = hornet.Hash(txHash).Hex()
-					result.ConfirmedByMilestoneIndex = at
-					result.TanglePath = childrenResult
-					result.TanglePathLength = len(childrenResult)
-
-					c.JSON(http.StatusOK, result)
-					return
-				}
-			}
-
-			childHashes := tangle.GetChildrenMessageIDs(hornet.Hash(txHash))
-			for _, childHash := range childHashes {
-
-				childTxMeta := tangle.GetCachedMessageMetadataOrNil(childHash) // meta +1
-				if childTxMeta == nil {
-					log.Warnf("searchConfirmedChild: Child not found: %v", childHash.Hex())
-					continue
-				}
-
-				txsToTraverse[string(childHash)] = append(txsToTraverse[txHash], bytes.Equal(childTxMeta.GetMetadata().GetParent1MessageID(), hornet.Hash(txHash)))
-				childTxMeta.Release(true) // meta -1
-			}
-
-			delete(txsToTraverse, txHash)
-		}
-	}
-
-	e.Error = fmt.Sprintf("No confirmed child found: %s", query.TxHash)
-	c.JSON(http.StatusInternalServerError, e)
-}
-
-func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &SearchEntryPoint{}
-	result := &SearchEntryPointReturn{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
-	if !guards.IsTransactionHash(query.TxHash) {
-		e.Error = fmt.Sprintf("Invalid hash supplied: %s", query.TxHash)
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-
-	cachedStartTxMeta := tangle.GetCachedMessageMetadataOrNil(hornet.HashFromHashTrytes(query.TxHash)) // meta +1
-	if cachedStartTxMeta == nil {
-		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
-	_, startTxConfirmedAt := cachedStartTxMeta.GetMetadata().GetConfirmed()
-	defer cachedStartTxMeta.Release(true)
-
-	dag.TraverseParents(cachedStartTxMeta.GetMetadata().GetMessageID(),
-		// traversal stops if no more transactions pass the given condition
-		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
-
-			if confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed(); confirmed {
-				if (startTxConfirmedAt == 0) || (at < startTxConfirmedAt) {
-					result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: cachedMsgMeta.GetMetadata().GetMessageID().Hex(), ConfirmedByMilestoneIndex: at})
-					return false, nil
-				}
-			}
-
-			return true, nil
-		},
-		// consumer
-		func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
-			cachedMsgMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // meta -1
-
-				result.TanglePath = append(result.TanglePath,
-					&TransactionWithChildren{
-						TxHash:            metadata.GetMessageID().Hex(),
-						TrunkTransaction:  metadata.GetParent1MessageID().Hex(),
-						BranchTransaction: metadata.GetParent2MessageID().Hex(),
-					},
-				)
-			})
-
-			return nil
-		},
-		// called on missing parents
-		func(parentHash hornet.Hash) error { return nil },
-		// called on solid entry points
-		func(txHash hornet.Hash) {
-			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
-			result.EntryPoints = append(result.EntryPoints, &EntryPoint{TxHash: txHash.Hex(), ConfirmedByMilestoneIndex: entryPointIndex})
-		}, false, nil)
-
-	result.TanglePathLength = len(result.TanglePath)
-
-	if len(result.EntryPoints) == 0 {
-		e.Error = fmt.Sprintf("No confirmed parent found: %s", query.TxHash)
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-	c.JSON(http.StatusOK, result)
 }
 
 func triggerSolidifier(i interface{}, c *gin.Context, _ <-chan struct{}) {

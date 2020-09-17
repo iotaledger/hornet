@@ -16,6 +16,7 @@ import (
 	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -30,7 +31,7 @@ func GenerateAddress(t *testing.T, seed trinary.Trytes, index uint64) hornet.Has
 // ZeroValueTx creates a zero value transaction to a random address with the given tag.
 func ZeroValueTx(t *testing.T, tag trinary.Trytes) []trinary.Trytes {
 
-	var b bundle.Bundle
+	var b tangle.Message
 	entry := bundle.BundleEntry{
 		Address:                   trinary.MustPad(utils.RandomTrytesInsecure(consts.AddressTrinarySize/3), consts.AddressTrinarySize/3),
 		Value:                     0,

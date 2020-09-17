@@ -74,18 +74,18 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 		cachedTx.Release(true)
 	}
 
-	cachedBundle := tangle.GetCachedMessageOrNil(tailTx)
-	require.NotNil(te.testState, cachedBundle)
-	require.True(te.testState, cachedBundle.GetMessage().IsValid())
-	require.True(te.testState, cachedBundle.GetMessage().ValidStrictSemantics())
+	cachedMessage := tangle.GetCachedMessageOrNil(tailTx)
+	require.NotNil(te.testState, cachedMessage)
+	require.True(te.testState, cachedMessage.GetMessage().IsValid())
+	require.True(te.testState, cachedMessage.GetMessage().ValidStrictSemantics())
 
 	// Verify the bundle is solid if it is no milestone
 	if !isMilestone {
-		require.True(te.testState, cachedBundle.GetMessage().IsSolid())
+		require.True(te.testState, cachedMessage.GetMessage().IsSolid())
 	}
 
-	te.cachedBundles = append(te.cachedBundles, cachedBundle)
-	return cachedBundle
+	te.cachedMessages = append(te.cachedMessages, cachedMessage)
+	return cachedMessage
 }
 
 // AttachAndStoreBundle attaches the given bundle to the given trunk and branch and does the "Proof of Work" and stores it.

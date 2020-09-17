@@ -317,27 +317,25 @@ func GetEvents() *coordinator.CoordinatorEvents {
 
 func configureEvents() {
 	// pass all new solid messages to the selector
-	onMessageSolid = events.NewClosure(func(cachedMessage *tangle.CachedMessage) {
+	onMessageSolid = events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
+		defer cachedMsgMeta.Release(true)
 
-		cachedMessage.ConsumeMetadata(func(msgMeta *hornet.MessageMetadata) { // message -1
+		if isBelowMaxDepth(cachedMsgMeta.Retain()) {
+			// ignore tips that are below max depth
+			return
+		}
 
-			if isBelowMaxDepth(msgMeta.GetMetadata()) {
-				// ignore tips that are below max depth
-				return
+		// add tips to the heaviest branch selector
+		if trackedMessagesCount := selector.OnNewSolidMessage(cachedMsgMeta.GetMetadata()); trackedMessagesCount >= maxTrackedMessages {
+			log.Debugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
+
+			// issue next checkpoint
+			select {
+			case nextCheckpointSignal <- struct{}{}:
+			default:
+				// do not block if already another signal is waiting
 			}
-
-			// add tips to the heaviest branch selector
-			if trackedTailsCount := selector.OnNewSolidMessage(msgMeta); trackedTailsCount >= maxTrackedMessages {
-				log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
-
-				// issue next checkpoint
-				select {
-				case nextCheckpointSignal <- struct{}{}:
-				default:
-					// do not block if already another signal is waiting
-				}
-			}
-		})
+		}
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
