@@ -3,8 +3,8 @@ package pow
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/muxxer/iota.go/pow"
-	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -146,7 +146,16 @@ func (h *Handler) GetPoWType() string {
 
 // DoPoW calculates the PoW
 // Either with the fastest available local PoW function or with the help of powsrv.io (optional, POWSRV_API_KEY env var must be available)
-func (h *Handler) DoPoW(trytes trinary.Trytes, mwm int, parallelism ...int) (nonce string, err error) {
+func (h *Handler) DoPoW(msg *tangle.Message, mwm int, shutdownSignal <-chan struct{}, parallelism ...int) (err error) {
+
+	select {
+	case <-shutdownSignal:
+		return tangle.ErrOperationAborted
+	default:
+	}
+
+	// ToDo:
+	return nil
 
 	if h.connectPowsrv() {
 		// connected to powsrv.io

@@ -292,7 +292,7 @@ type PeerMetric struct {
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
 	RequestQueue                 Cache `json:"request_queue"`
-	Approvers                    Cache `json:"approvers"`
+	Children                     Cache `json:"children"`
 	Bundles                      Cache `json:"bundles"`
 	Milestones                   Cache `json:"milestones"`
 	Transactions                 Cache `json:"transactions"`
@@ -369,7 +369,7 @@ func currentNodeStatus() *NodeStatus {
 
 	// cache metrics
 	status.Caches = &CachesMetric{
-		Approvers: Cache{
+		Children: Cache{
 			Size: tangle.GetApproversStorageSize(),
 		},
 		RequestQueue: Cache{

@@ -79,7 +79,7 @@
       "maxTrackedTails": 10000
     },
     "tipsel": {
-      "minHeaviestBranchUnconfirmedTransactionsThreshold": 20,
+      "minHeaviestBranchUnconfirmedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100

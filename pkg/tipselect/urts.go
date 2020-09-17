@@ -60,7 +60,7 @@ var (
 type Tip struct {
 	// Score is the score of the tip.
 	Score Score
-	// MilestoneMessageID is the transaction hash of the tip.
+	// Hash is the transaction hash of the tip.
 	Hash hornet.Hash
 	// TimeFirstApprover is the timestamp the tip was referenced for the first time by another transaction.
 	TimeFirstApprover time.Time
@@ -81,13 +81,13 @@ type Events struct {
 // TipSelector manages a list of tips and emits events for their removal and addition.
 type TipSelector struct {
 	// maxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+	// value for the YMRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	maxDeltaTxYoungestRootSnapshotIndexToLSMI milestone.Index
 	// maxDeltaTxOldestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+	// value between OMRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
 	maxDeltaTxOldestRootSnapshotIndexToLSMI milestone.Index
 	// belowMaxDepth is the maximum allowed delta
-	// value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+	// value between OMRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
 	// and "maxApprovers" are checked. if the amount of tips exceeds this limit,
@@ -494,20 +494,20 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 	}
 	defer cachedTxMeta.Release(true)
 
-	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta +1
+	ymrsi, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi) // meta +1
 
-	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
-	if (lsmi - ytrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
+	// if the LSMI to YMRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
+	if (lsmi - ymrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
 		return ScoreLazy
 	}
 
-	// if the OTRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
-	if (lsmi - ortsi) > ts.belowMaxDepth {
+	// if the OMRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
+	if (lsmi - omrsi) > ts.belowMaxDepth {
 		return ScoreLazy
 	}
 
-	// if the OTRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy
-	if (lsmi - ortsi) > ts.maxDeltaTxOldestRootSnapshotIndexToLSMI {
+	// if the OMRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy
+	if (lsmi - omrsi) > ts.maxDeltaTxOldestRootSnapshotIndexToLSMI {
 		return ScoreSemiLazy
 	}
 

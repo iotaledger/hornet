@@ -66,7 +66,7 @@ func init() {
 	})
 	infoTransactionsToRequest = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_info_transactions_to_request",
-		Help: "Number of transactions to request.",
+		Help: "Number of messages to request.",
 	})
 
 	infoApp.WithLabelValues(cli.AppName, cli.AppVersion).Set(1)

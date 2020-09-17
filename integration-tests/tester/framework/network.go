@@ -242,9 +242,9 @@ func (n *Network) TakeHeapSnapshots() error {
 	return profErr
 }
 
-// SpamZeroVal starts spamming zero value transactions on all nodes for the given duration.
+// SpamZeroVal starts spamming zero value messages on all nodes for the given duration.
 func (n *Network) SpamZeroVal(dur time.Duration, parallelism int, batchSize ...int) error {
-	log.Printf("spamming zero value transactions on all nodes")
+	log.Printf("spamming zero value messages on all nodes")
 	var wg sync.WaitGroup
 	wg.Add(len(n.Nodes))
 	var spamErr error

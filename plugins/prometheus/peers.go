@@ -26,21 +26,21 @@ func init() {
 	peersAllTransactions = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_all_transactions",
-			Help: "Number of all transactions by peer.",
+			Help: "Number of all messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
 	peersNewTransactions = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_new_transactions",
-			Help: "Number of new transactions by peer.",
+			Help: "Number of new messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
 	peersKnownTransactions = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_known_transactions",
-			Help: "Number of known transactions by peer.",
+			Help: "Number of known messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
@@ -68,7 +68,7 @@ func init() {
 	peersSentTransactions = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_sent_transactions",
-			Help: "Number of sent transactions by peer.",
+			Help: "Number of sent messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)

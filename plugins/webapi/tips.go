@@ -90,10 +90,10 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	}
 
 	lsmi := tangle.GetSolidMilestoneIndex()
-	ytrsi, ortsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi)
+	ymrsi, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedTxMeta.Retain(), lsmi)
 
-	// if the OTRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
-	if (lsmi - ortsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth)) {
+	// if the OMRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
+	if (lsmi - omrsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth)) {
 		c.JSON(http.StatusOK, GetTipInfoReturn{
 			Confirmed:      false,
 			Conflicting:    false,
@@ -103,8 +103,8 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy and should be promoted
-	if (lsmi - ytrsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI)) {
+	// if the LSMI to YMRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy and should be promoted
+	if (lsmi - ymrsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI)) {
 		c.JSON(http.StatusOK, GetTipInfoReturn{
 			Confirmed:      false,
 			Conflicting:    false,
@@ -114,8 +114,8 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		return
 	}
 
-	// if the OTRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy and should be promoted
-	if (lsmi - ortsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI)) {
+	// if the OMRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy and should be promoted
+	if (lsmi - omrsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI)) {
 		c.JSON(http.StatusOK, GetTipInfoReturn{
 			Confirmed:      false,
 			Conflicting:    false,

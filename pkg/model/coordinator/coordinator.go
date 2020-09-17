@@ -2,8 +2,8 @@ package coordinator
 
 import (
 	"crypto"
-	"encoding/hex"
 	"fmt"
+	"hex"
 	"os"
 	"strings"
 	"time"
@@ -14,14 +14,12 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/merkle"
-	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
@@ -55,8 +53,6 @@ type Coordinator struct {
 
 	// config options
 	privateKey              ed25519.PrivateKey
-	securityLvl             consts.SecurityLevel
-	merkleTreeDepth         int
 	minWeightMagnitude      int
 	stateFilePath           string
 	milestoneIntervalSec    int
@@ -67,18 +63,19 @@ type Coordinator struct {
 
 	// internal state
 	state        *State
-	merkleTree   *merkle.MerkleTree
 	bootstrapped bool
 
 	// events of the coordinator
 	Events *CoordinatorEvents
 }
 
-// MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.MilestoneMessageID hashing functions.
+// MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.Hash hashing functions.
 // Also verifies that the available function is available or else panics.
 func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
-	//TODO: golang 1.15 will include a String() method to get the string from the crypto.MilestoneMessageID, so we could iterate over them instead
+	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead
 	var hashFunc crypto.Hash
+
+	hashFunc.String()
 	switch strings.ToLower(name) {
 	case "blake2b-512":
 		hashFunc = crypto.BLAKE2b_512
@@ -99,21 +96,14 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(seed string, securityLvl consts.SecurityLevel, merkleTreeDepth int, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
-	// ToDo
-	seedBytes, err := hex.DecodeString(seed)
-	if err != nil {
-		return nil, err
-	}
+func New(privateKey ed25519.PrivateKey, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
-	if len(seedBytes) != 32 {
-		return nil, errors.New("wrong seed length")
+	if len(privateKey) != ed25519.PrivateKeySize {
+		return nil, errors.New("wrong private key length")
 	}
 
 	result := &Coordinator{
-		privateKey:              seedBytes,
-		securityLvl:             securityLvl,
-		merkleTreeDepth:         merkleTreeDepth,
+		privateKey:              privateKey,
 		minWeightMagnitude:      minWeightMagnitude,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
@@ -129,21 +119,16 @@ func New(seed string, securityLvl consts.SecurityLevel, merkleTreeDepth int, min
 	return result, nil
 }
 
-// InitMerkleTree loads the Merkle tree file and checks the coordinator address.
-func (coo *Coordinator) InitMerkleTree(filePath string, cooAddress trinary.Hash) error {
+// CheckPublicKey checks if the public coordinator key fits to the private key.
+func (coo *Coordinator) CheckPublicKey(key string) error {
 
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("Merkle tree file not found: %v", filePath)
-	}
-
-	var err error
-	coo.merkleTree, err = merkle.LoadMerkleTreeFile(filePath)
+	publicKey, err := utils.ParseEd25519PublicKeyFromString(key)
 	if err != nil {
 		return err
 	}
 
-	if cooAddress != coo.merkleTree.Root {
-		return fmt.Errorf("coordinator address does not match Merkle tree root: %v != %v", cooAddress, coo.merkleTree.Root)
+	if publicKey.Equal(coo.privateKey.Public()) {
+		return errors.New("COO public key does not match the public key derived from the private key: %s != %s", hex.EncodeString(publicKey), hex.EncodeString(coo.privateKey.Public()))
 	}
 
 	return nil

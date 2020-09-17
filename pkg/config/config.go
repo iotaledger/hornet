@@ -1,18 +1,18 @@
 package config
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/gohornet/hornet/pkg/utils"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/parameter"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/guards"
-	"github.com/muxxer/iota.go/trinary"
 )
 
 var (
@@ -156,26 +156,23 @@ func hasFlag(name string) bool {
 	return has
 }
 
-// LoadHashFromEnvironment loads a hash from the given environment variable.
-func LoadHashFromEnvironment(name string, length ...int) (trinary.Hash, error) {
+// LoadEd25519PrivateKeyFromEnvironment loads an ed25519 private key from the given environment variable.
+func LoadEd25519PrivateKeyFromEnvironment(name string) (ed25519.PrivateKey, error) {
 
-	hash, exists := os.LookupEnv(name)
+	key, exists := os.LookupEnv(name)
 	if !exists {
-		return "", fmt.Errorf("environment variable '%s' not set", name)
+		return nil, fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	if len(hash) == 0 {
-		return "", fmt.Errorf("environment variable '%s' not set", name)
+	if len(key) == 0 {
+		return nil, fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	hashLength := consts.HashTrytesSize
-	if len(length) > 0 {
-		hashLength = length[0]
+	privateKey, err := utils.ParseEd25519PrivateKeyFromString(key)
+	if err != nil {
+		return nil, fmt.Errorf("environment variable '%s' contains an invalid private key", name)
+
 	}
 
-	if !guards.IsTrytesOfExactLength(hash, hashLength) {
-		return "", fmt.Errorf("environment variable '%s' contains an invalid hash", name)
-	}
-
-	return hash, nil
+	return privateKey, nil
 }

@@ -177,7 +177,7 @@ func (proc *Processor) VerifyAndEmit(tx *transaction.Transaction, txTrits trinar
 	proc.Events.MessageProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
 	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{
 		MsgData:         msgBytes,
-		RequestedTxHash: hornetTx.GetTxHash(),
+		RequestedTxHash: hornetTx.GetMessageID(),
 	})
 	return nil
 }

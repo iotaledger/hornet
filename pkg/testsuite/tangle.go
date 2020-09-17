@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/muxxer/iota.go/bundle"
 	"github.com/muxxer/iota.go/pow"
 	"github.com/muxxer/iota.go/transaction"
 	"github.com/muxxer/iota.go/trinary"
@@ -35,18 +34,18 @@ func (te *TestEnvironment) storeTransaction(tx *transaction.Transaction) *tangle
 	return cachedTx
 }
 
-// StoreBundle adds all transactions of the bundle to the storage layer and solidifies them.
+// StoreBundle adds all messages of the bundle to the storage layer and solidifies them.
 func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *tangle.CachedMessage {
 
 	var tailTx hornet.Hash
 	var hashes hornet.Hashes
 
-	// Store all transactions in the database
+	// Store all messages in the database
 	for i := 0; i < len(bndl); i++ {
 		cachedTx := te.storeTransaction(&bndl[i])
 		require.NotNil(te.testState, cachedTx)
 
-		hashes = append(hashes, cachedTx.GetMessage().GetTxHash())
+		hashes = append(hashes, cachedTx.GetMessage().GetMessageID())
 		cachedTx.Release(true)
 	}
 

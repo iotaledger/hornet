@@ -46,7 +46,7 @@ func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 	hps := New()
 
-	var lastHash = [2]hornet.MilestoneMessageID{}
+	var lastHash = [2]hornet.Hash{}
 	for i := 0; i < 2; i++ {
 		lastHash[i] = hornet.NullHashBytes
 		for j := 1; j <= numTestTxs; j++ {
@@ -87,7 +87,7 @@ func TestHeaviestSelector_SelectTipsCancel(t *testing.T) {
 
 func TestHeaviestSelector_Concurrent(t *testing.T) {
 	hps := New()
-	hashes := []hornet.MilestoneMessageID{hornet.NullHashBytes}
+	hashes := []hornet.Hash{hornet.NullHashBytes}
 	for i := 0; i < 1000; i++ {
 		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
 		hps.OnNewSolidMessage(bndl)
@@ -115,7 +115,7 @@ func TestHeaviestSelector_Concurrent(t *testing.T) {
 
 func BenchmarkHeaviestSelector_OnNewSolidTransaction(b *testing.B) {
 	hps := New()
-	hashes := []hornet.MilestoneMessageID{hornet.NullHashBytes}
+	hashes := []hornet.Hash{hornet.NullHashBytes}
 	data := make([]*tangle.Bundle, numBenchmarkTxs)
 	for i := 0; i < numBenchmarkTxs; i++ {
 		data[i] = newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
@@ -133,7 +133,7 @@ func BenchmarkHeaviestSelector_OnNewSolidTransaction(b *testing.B) {
 
 func BenchmarkHeaviestSelector_SelectTips(b *testing.B) {
 	hps := New()
-	hashes := []hornet.MilestoneMessageID{hornet.NullHashBytes}
+	hashes := []hornet.Hash{hornet.NullHashBytes}
 	for i := 0; i < numBenchmarkTxs; i++ {
 		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
 		hps.OnNewSolidMessage(bndl)
@@ -146,12 +146,12 @@ func BenchmarkHeaviestSelector_SelectTips(b *testing.B) {
 	}
 }
 
-func newTestBundle(idx int, trunk, branch hornet.MilestoneMessageID) *tangle.Bundle {
+func newTestBundle(idx int, trunk, branch hornet.Hash) *tangle.Bundle {
 	bndl := tangle.Bundle{
 
 	}
 	tx := &transaction.Transaction{
-		MilestoneMessageID:              trinary.IntToTrytes(int64(idx), consts.HashTrytesSize),
+		Hash:              trinary.IntToTrytes(int64(idx), consts.HashTrytesSize),
 		Value:             0,
 		Timestamp:         uint64(idx),
 		TrunkTransaction:  trunk.Hex(),

@@ -169,11 +169,11 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the transactions it issued itself because the transactions may be not solid yet and therefore their bundles
 	// are not created yet.
-	Events.ProcessedTransaction.Trigger(incomingMsg.GetTxHash())
+	Events.ProcessedTransaction.Trigger(incomingMsg.GetMessageID())
 
 	if request != nil {
 		// mark the received request as processed
-		gossip.RequestQueue().Processed(incomingMsg.GetTxHash())
+		gossip.RequestQueue().Processed(incomingMsg.GetMessageID())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when

@@ -127,7 +127,7 @@ type Peer struct {
 	Disconnected bool
 	// Events happening on the peer.
 	Events Events
-	// The last amount of sent transactions at the last autopeer stale check
+	// The last amount of sent messages at the last autopeer stale check
 	staledAutopeerCheckLastSentPackets uint32
 	// The last amount of dropped packets at the last autopeer stale check
 	staledAutopeerCheckLastDroppedPackets uint32
@@ -252,11 +252,11 @@ func NewID(ip string, port uint16) string {
 
 // Metrics defines a set of metrics regarding a peer.
 type Metrics struct {
-	// The number of received transactions which are new.
+	// The number of received messages which are new.
 	NewTransactions atomic.Uint32
-	// The number of received transactions which are already known.
+	// The number of received messages which are already known.
 	KnownTransactions atomic.Uint32
-	// The number of received transactions.
+	// The number of received messages.
 	ReceivedTransactions atomic.Uint32
 	// The number of received transaction requests.
 	ReceivedTransactionRequests atomic.Uint32
@@ -266,7 +266,7 @@ type Metrics struct {
 	ReceivedHeartbeats atomic.Uint32
 	// The number of sent packets.
 	SentPackets atomic.Uint32
-	// The number of sent transactions.
+	// The number of sent messages.
 	SentTransactions atomic.Uint32
 	// The number of sent transaction requests.
 	SentTransactionRequests atomic.Uint32
