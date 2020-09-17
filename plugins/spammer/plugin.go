@@ -77,7 +77,7 @@ func configure(plugin *node.Plugin) {
 		for _, t := range b {
 			tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
 			txTrits, _ := transaction.TransactionToTrits(&tx)
-			if err := gossip.Processor().CompressAndEmit(&tx, txTrits); err != nil {
+			if err := gossip.Processor().VerifyAndEmit(&tx, txTrits); err != nil {
 				return err
 			}
 			metrics.SharedServerMetrics.SentSpamTransactions.Inc()

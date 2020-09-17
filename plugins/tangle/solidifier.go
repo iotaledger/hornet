@@ -75,7 +75,7 @@ func markTransactionAsSolid(cachedTxMeta *tangle.CachedMetadata) {
 	// update the solidity flags of this transaction
 	cachedTxMeta.GetMetadata().SetSolid(true)
 
-	Events.TransactionSolid.Trigger(cachedTxMeta.GetMetadata().GetMessageID())
+	Events.MessageSolid.Trigger(cachedTxMeta.GetMetadata().GetMessageID())
 
 	if cachedTxMeta.GetMetadata().IsTail() {
 		cachedBndl := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID()) // bundle +1

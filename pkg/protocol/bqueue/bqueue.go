@@ -12,7 +12,7 @@ import (
 // Broadcast defines a transaction and requested transaction hash which should be broadcasted.
 type Broadcast struct {
 	// The byte encoded transaction data to broadcast.
-	TxData []byte
+	MsgData []byte
 	// The requested transaction hash.
 	RequestedTxHash hornet.Hash
 	// The IDs of the peers to exclude from broadcasting.
@@ -59,7 +59,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 
 				// just send the transaction when the peer supports STING
 				if p.Protocol.Supports(sting.FeatureSet) {
-					helpers.SendTransaction(p, b.TxData)
+					helpers.SendTransaction(p, b.MsgData)
 					return true
 				}
 

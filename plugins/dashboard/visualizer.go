@@ -182,8 +182,8 @@ func runVisualizer() {
 	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
 		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
 		defer tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
-		tangle.Events.TransactionSolid.Attach(onTransactionSolid)
-		defer tangle.Events.TransactionSolid.Detach(onTransactionSolid)
+		tangle.Events.MessageSolid.Attach(onTransactionSolid)
+		defer tangle.Events.MessageSolid.Detach(onTransactionSolid)
 		tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
 		defer tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
 		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {

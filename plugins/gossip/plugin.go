@@ -126,9 +126,9 @@ func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
-		msgProcessor.Events.BroadcastTransaction.Attach(onBroadcastTransaction)
+		msgProcessor.Events.BroadcastMessage.Attach(onBroadcastTransaction)
 		msgProcessor.Run(shutdownSignal)
-		msgProcessor.Events.BroadcastTransaction.Detach(onBroadcastTransaction)
+		msgProcessor.Events.BroadcastMessage.Detach(onBroadcastTransaction)
 		log.Info("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 

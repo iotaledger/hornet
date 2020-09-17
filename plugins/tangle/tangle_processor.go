@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
@@ -21,21 +20,21 @@ import (
 )
 
 var (
-	receiveTxWorkerCount = 2 * runtime.NumCPU()
-	receiveTxQueueSize   = 10000
-	receiveTxWorkerPool  *workerpool.WorkerPool
+	receiveMsgWorkerCount = 2 * runtime.NumCPU()
+	receiveMsgQueueSize   = 10000
+	receiveMsgWorkerPool  *workerpool.WorkerPool
 
-	lastIncomingTPS uint32
-	lastNewTPS      uint32
-	lastOutgoingTPS uint32
+	lastIncomingMPS uint32
+	lastNewMPS      uint32
+	lastOutgoingMPS uint32
 )
 
 func configureTangleProcessor(_ *node.Plugin) {
 
-	receiveTxWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(task.Param(0).(*hornet.Transaction), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
+	receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
+		processIncomingTx(task.Param(0).(*tangle.Message), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
 		task.Return(nil)
-	}, workerpool.WorkerCount(receiveTxWorkerCount), workerpool.QueueSize(receiveTxQueueSize))
+	}, workerpool.WorkerCount(receiveMsgWorkerCount), workerpool.QueueSize(receiveMsgQueueSize))
 
 	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		processValidMilestone(task.Param(0).(*tangle.CachedMilestone)) // bundle pass +1
@@ -51,14 +50,14 @@ func configureTangleProcessor(_ *node.Plugin) {
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
-	onTransactionProcessed := events.NewClosure(func(transaction *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
-		receiveTxWorkerPool.Submit(transaction, request, p)
+	onMsgProcessed := events.NewClosure(func(message *tangle.Message, request *rqueue.Request, p *peer.Peer) {
+		receiveMsgWorkerPool.Submit(message, request, p)
 	})
 
 	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
-		lastIncomingTPS = tpsMetrics.Incoming
-		lastNewTPS = tpsMetrics.New
-		lastOutgoingTPS = tpsMetrics.Outgoing
+		lastIncomingMPS = tpsMetrics.Incoming
+		lastNewMPS = tpsMetrics.New
+		lastOutgoingMPS = tpsMetrics.Outgoing
 	})
 
 	onReceivedValidMilestone := events.NewClosure(func(cachedMilestone *tangle.CachedMilestone) {
@@ -81,12 +80,12 @@ func runTangleProcessor(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
-		gossip.Processor().Events.TransactionProcessed.Attach(onTransactionProcessed)
-		receiveTxWorkerPool.Start()
+		gossip.Processor().Events.MessageProcessed.Attach(onMsgProcessed)
+		receiveMsgWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
-		gossip.Processor().Events.TransactionProcessed.Detach(onTransactionProcessed)
-		receiveTxWorkerPool.StopAndWait()
+		gossip.Processor().Events.MessageProcessed.Detach(onMsgProcessed)
+		receiveMsgWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
 
@@ -114,16 +113,16 @@ func runTangleProcessor(_ *node.Plugin) {
 }
 
 func IsReceiveTxWorkerPoolBusy() bool {
-	return receiveTxWorkerPool.GetPendingQueueSize() > (receiveTxQueueSize / 2)
+	return receiveMsgWorkerPool.GetPendingQueueSize() > (receiveMsgQueueSize / 2)
 }
 
-func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, p *peer.Peer) {
+func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *peer.Peer) {
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	cachedTx, alreadyAdded := tangle.AddMessageToStorage(incomingTx, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // tx +1
+	cachedTx, alreadyAdded := tangle.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // tx +1
 
 	// Release shouldn't be forced, to cache the latest transactions
 	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
@@ -160,11 +159,11 @@ func processIncomingTx(incomingTx *hornet.Transaction, request *rqueue.Request, 
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the transactions it issued itself because the transactions may be not solid yet and therefore their bundles
 	// are not created yet.
-	Events.ProcessedTransaction.Trigger(incomingTx.GetTxHash())
+	Events.ProcessedTransaction.Trigger(incomingMsg.GetTxHash())
 
 	if request != nil {
 		// mark the received request as processed
-		gossip.RequestQueue().Processed(incomingTx.GetTxHash())
+		gossip.RequestQueue().Processed(incomingMsg.GetTxHash())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
@@ -196,12 +195,12 @@ func printStatus() {
 				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
-			receiveTxWorkerPool.GetPendingQueueSize(),
+			receiveMsgWorkerPool.GetPendingQueueSize(),
 			tangle.GetSolidMilestoneIndex(),
 			tangle.GetLatestMilestoneIndex(),
-			lastIncomingTPS,
-			lastNewTPS,
-			lastOutgoingTPS,
+			lastIncomingMPS,
+			lastNewMPS,
+			lastOutgoingMPS,
 			metrics.SharedServerMetrics.TipsNonLazy.Load(),
 			metrics.SharedServerMetrics.TipsSemiLazy.Load()))
 }

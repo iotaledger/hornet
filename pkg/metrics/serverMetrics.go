@@ -28,8 +28,6 @@ type ServerMetrics struct {
 	InvalidTransactions atomic.Uint32
 	// The number of received invalid requests (both transactions and milestones).
 	InvalidRequests atomic.Uint32
-	// The number of received transactions of which their timestamp is stale.
-	StaleTransactions atomic.Uint32
 	// The number of received milestone requests.
 	ReceivedMilestoneRequests atomic.Uint32
 	// The number of received transaction requests.
