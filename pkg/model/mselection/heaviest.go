@@ -12,7 +12,6 @@ import (
 	"github.com/muxxer/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -247,9 +246,9 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *hornet.MessageMetadata) (t
 	branchItem := s.trackedMessages[string(msgMeta.GetParent2MessageID())]
 
 	// compute the referenced transactions
-	// all the known approvers in the HeaviestSelector are represented by a unique bit in a bitset.
-	// if a new approver is added, we expand the bitset by 1 bit and store the Union of the bitsets
-	// of trunk and branch for this approver, to know which parts of the cone are referenced by this approver.
+	// all the known children in the HeaviestSelector are represented by a unique bit in a bitset.
+	// if a new child is added, we expand the bitset by 1 bit and store the Union of the bitsets
+	// of trunk and branch for this child, to know which parts of the cone are referenced by this child.
 	idx := uint(len(s.trackedMessages))
 	it := &bundleTail{hash: msgMeta.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
 	if trunkItem != nil {

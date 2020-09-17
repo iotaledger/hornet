@@ -38,12 +38,12 @@ func configure(plugin *node.Plugin) {
 
 		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
 		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
-		config.NodeConfig.GetUint32(config.CfgTipSelNonLazy+config.CfgTipSelMaxApprovers),
+		config.NodeConfig.GetUint32(config.CfgTipSelNonLazy+config.CfgTipSelMaxChildren),
 		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelSpammerTipsThreshold),
 
 		config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
 		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
-		config.NodeConfig.GetUint32(config.CfgTipSelSemiLazy+config.CfgTipSelMaxApprovers),
+		config.NodeConfig.GetUint32(config.CfgTipSelSemiLazy+config.CfgTipSelMaxChildren),
 		config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelSpammerTipsThreshold),
 	)
 

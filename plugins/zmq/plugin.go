@@ -168,22 +168,22 @@ func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("ZMQ[NewTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZMQ[NewTxWorker] ... done")
-		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTransaction)
 		newTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping ZMQ[NewTxWorker] ...")
-		tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTransaction)
 		newTxWorkerPool.StopAndWait()
 		log.Info("Stopping ZMQ[NewTxWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
 	daemon.BackgroundWorker("ZMQ[ConfirmedTxWorker]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting ZMQ[ConfirmedTxWorker] ... done")
-		tangle.Events.TransactionConfirmed.Attach(onTransactionConfirmed)
+		tangle.Events.MessageConfirmed.Attach(onTransactionConfirmed)
 		confirmedTxWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping ZMQ[ConfirmedTxWorker] ...")
-		tangle.Events.TransactionConfirmed.Detach(onTransactionConfirmed)
+		tangle.Events.MessageConfirmed.Detach(onTransactionConfirmed)
 		confirmedTxWorkerPool.StopAndWait()
 		log.Info("Stopping ZMQ[ConfirmedTxWorker] ... done")
 	}, shutdown.PriorityMetricsPublishers)

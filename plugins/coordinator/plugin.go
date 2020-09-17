@@ -255,10 +255,11 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 	wgMessageProcessed := sync.WaitGroup{}
 	wgMessageProcessed.Add(1)
 
-	onMessageSolid := events.NewClosure(func(msgID hornet.Hash) {
+	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
 		msgIDLock.Lock()
 		defer msgIDLock.Unlock()
 
+		msgID := cachedMsgMeta.GetMetadata().GetMessageID()
 		if _, exists := msgIDs[string(msgID)]; exists {
 			// message is solid
 			wgMessageProcessed.Done()
@@ -363,14 +364,14 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	tangleplugin.Events.BundleSolid.Attach(onBundleSolid)
+	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
 	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 	coo.Events.IssuedCheckpointTransaction.Attach(onIssuedCheckpoint)
 	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 
 func detachEvents() {
-	tangleplugin.Events.BundleSolid.Detach(onBundleSolid)
+	tangleplugin.Events.MessageSolid.Detach(onMessageSolid)
 	tangleplugin.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 	coo.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }

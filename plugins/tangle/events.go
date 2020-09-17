@@ -17,13 +17,12 @@ func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
 }
 
 var Events = pluginEvents{
-	ReceivedNewTransaction:        events.NewEvent(tangle.NewMessageCaller),
-	ReceivedKnownTransaction:      events.NewEvent(tangle.MessageCaller),
-	ProcessedTransaction:          events.NewEvent(tangle.MessageIDCaller),
-	MessageSolid:                  events.NewEvent(tangle.MessageIDCaller),
-	TransactionConfirmed:          events.NewEvent(tangle.MessageConfirmedCaller),
-	TransactionStored:             events.NewEvent(tangle.MessageCaller),
-	BundleSolid:                   events.NewEvent(tangle.MessageCaller),
+	ReceivedNewMessage:            events.NewEvent(tangle.NewMessageCaller),
+	ReceivedKnownMessage:          events.NewEvent(tangle.MessageCaller),
+	ProcessedMessage:              events.NewEvent(tangle.MessageIDCaller),
+	MessageSolid:                  events.NewEvent(tangle.MessageCaller),
+	MessageConfirmed:              events.NewEvent(tangle.MessageConfirmedCaller),
+	MessageStored:                 events.NewEvent(tangle.MessageCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.MilestoneCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.MilestoneCaller),
 	LatestMilestoneIndexChanged:   events.NewEvent(milestone.IndexCaller),
@@ -37,13 +36,12 @@ var Events = pluginEvents{
 }
 
 type pluginEvents struct {
-	ReceivedNewTransaction        *events.Event
-	ReceivedKnownTransaction      *events.Event
-	ProcessedTransaction          *events.Event
+	ReceivedNewMessage            *events.Event
+	ReceivedKnownMessage          *events.Event
+	ProcessedMessage              *events.Event
 	MessageSolid                  *events.Event
-	TransactionConfirmed          *events.Event
-	TransactionStored             *events.Event
-	BundleSolid                   *events.Event
+	MessageConfirmed              *events.Event
+	MessageStored                 *events.Event
 	ReceivedNewMilestone          *events.Event
 	LatestMilestoneChanged        *events.Event
 	LatestMilestoneIndexChanged   *events.Event

@@ -180,8 +180,8 @@ func runVisualizer() {
 	})
 
 	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
-		defer tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTransaction)
+		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTransaction)
 		tangle.Events.MessageSolid.Attach(onTransactionSolid)
 		defer tangle.Events.MessageSolid.Detach(onTransactionSolid)
 		tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)

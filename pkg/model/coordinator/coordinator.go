@@ -205,7 +205,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
 
-	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 	cachedBundles := make(map[string]*tangle.CachedMessage)
 
 	defer func() {
@@ -217,13 +217,13 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 		}
 
 		// Release all tx metadata at the end
-		for _, cachedTxMeta := range cachedTxMetas {
-			cachedTxMeta.Release(true) // meta -1
+		for _, cachedMsgMeta := range cachedMsgMetas {
+			cachedMsgMeta.Release(true) // meta -1
 		}
 	}()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedTxMetas, cachedBundles, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedMsgMetas, cachedBundles, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
 	if err != nil {
 		return err
 	}

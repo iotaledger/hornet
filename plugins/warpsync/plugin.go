@@ -81,8 +81,8 @@ func configureEvents() {
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		requestMissingMilestoneApprovees := gossip.MemoizedRequestMissingMilestoneApprovees()
-		gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees, oldCheckpoint)
+		requestMissingMilestoneParents := gossip.MemoizedRequestMissingMilestoneParents()
+		gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents, oldCheckpoint)
 	})
 
 	onTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
@@ -94,8 +94,8 @@ func configureEvents() {
 		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		requestMissingMilestoneApprovees := gossip.MemoizedRequestMissingMilestoneApprovees()
-		msRequested := gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneApprovees)
+		requestMissingMilestoneParents := gossip.MemoizedRequestMissingMilestoneParents()
+		msRequested := gossip.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.

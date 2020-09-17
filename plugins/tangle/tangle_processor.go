@@ -134,32 +134,32 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 			p.Metrics.NewTransactions.Inc()
 		}
 
-		// since we only add the approvees if there was a source request, we only
-		// request them for transactions which should be part of milestone cones
+		// since we only add the parents if there was a source request, we only
+		// request them for messages which should be part of milestone cones
 		if request != nil {
-			// add this newly received transaction's approvees to the request queue
-			gossip.RequestApprovees(cachedTx.Retain(), request.MilestoneIndex, true)
+			// add this newly received message's parents to the request queue
+			gossip.RequestParents(cachedTx.Retain(), request.MilestoneIndex, true)
 		}
 
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = solidMilestoneIndex
 		}
-		Events.ReceivedNewTransaction.Trigger(cachedTx, latestMilestoneIndex, solidMilestoneIndex)
+		Events.ReceivedNewMessage.Trigger(cachedTx, latestMilestoneIndex, solidMilestoneIndex)
 
 	} else {
 		metrics.SharedServerMetrics.KnownTransactions.Inc()
 		if p != nil {
 			p.Metrics.KnownTransactions.Inc()
 		}
-		Events.ReceivedKnownTransaction.Trigger(cachedTx)
+		Events.ReceivedKnownMessage.Trigger(cachedTx)
 	}
 
 	// "ProcessedTransaction" event has to be fired after "ReceivedNewTransaction" event,
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the transactions it issued itself because the transactions may be not solid yet and therefore their bundles
 	// are not created yet.
-	Events.ProcessedTransaction.Trigger(incomingMsg.GetMessageID())
+	Events.ProcessedMessage.Trigger(incomingMsg.GetMessageID())
 
 	if request != nil {
 		// mark the received request as processed

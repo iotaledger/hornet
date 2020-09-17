@@ -55,7 +55,7 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the tail transaction hashes
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-// all cachedTxMetas and cachedBundles have to be released outside.
+// all cachedMsgMetas and cachedBundles have to be released outside.
 func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parentMessageID ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncluded:            make(hornet.Hashes, 0),
@@ -180,8 +180,8 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		if err := dag.TraverseParents(parent1MessageID,
 			condition,
 			consumer,
-			// called on missing approvees
-			// return error on missing approvees
+			// called on missing parents
+			// return error on missing parents
 			nil,
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
@@ -194,8 +194,8 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		if err := dag.TraverseParent1AndParent2(parent1MessageID, parentMessageID[0],
 			condition,
 			consumer,
-			// called on missing approvees
-			// return error on missing approvees
+			// called on missing parents
+			// return error on missing parents
 			nil,
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)

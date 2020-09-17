@@ -2,7 +2,6 @@ package config
 
 import (
 	"crypto/ed25519"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"

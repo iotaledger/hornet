@@ -31,7 +31,7 @@ func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
 		log.Infof("Valid milestone detected! Index: %d, MilestoneMessageID: %v", msIndex, cachedMilestone.GetMilestone().MessageID.Hex())
 
 		// request trunk and branch
-		gossip.RequestMilestoneApprovees(cachedMilestone.Retain()) // milestone pass +1
+		gossip.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else {
 		pruningIndex := tangle.GetSnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {

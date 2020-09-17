@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"time"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -26,7 +27,7 @@ type ConfirmedMilestoneStats struct {
 
 // ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
-// all cachedTxMetas have to be released outside.
+// all cachedMsgMetas have to be released outside.
 func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessage *tangle.CachedMessage, forEachConfirmedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 	defer cachedMessage.Release(true)
 	message := cachedMessage.GetMessage()
@@ -87,15 +88,15 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 	//defer cachedMsTailTx.Release(true)
 
 	loadMessageMetadata := func(messageID hornet.Hash) (*tangle.CachedMetadata, error) {
-		cachedTxMeta, exists := cachedMessageMetas[string(messageID)]
+		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
 		if !exists {
-			cachedTxMeta = tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
-			if cachedTxMeta == nil {
+			cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+			if cachedMsgMeta == nil {
 				return nil, fmt.Errorf("confirmMilestone: Message not found: %v", messageID.Hex())
 			}
-			cachedMessageMetas[string(messageID)] = cachedTxMeta
+			cachedMessageMetas[string(messageID)] = cachedMsgMeta
 		}
-		return cachedTxMeta, nil
+		return cachedMsgMeta, nil
 	}
 
 	// load the message for the given id

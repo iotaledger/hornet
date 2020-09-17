@@ -18,9 +18,9 @@ type CachedChild struct {
 
 type CachedChildren []*CachedChild
 
-func (cachedApprovers CachedChildren) Release(force ...bool) {
-	for _, cachedApprover := range cachedApprovers {
-		cachedApprover.Release(force...)
+func (cachedChildren CachedChildren) Release(force ...bool) {
+	for _, cachedChild := range cachedChildren {
+		cachedChild.Release(force...)
 	}
 }
 
@@ -33,7 +33,7 @@ func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	return child, nil
 }
 
-func GetApproversStorageSize() int {
+func GetChildrenStorageSize() int {
 	return childrenStorage.GetSize()
 }
 
@@ -73,15 +73,15 @@ func GetChildrenMessageIDs(messageID hornet.Hash, maxFind ...int) hornet.Hashes 
 	return childrenMessageIDs
 }
 
-// ContainsChild returns if the given approver exists in the cache/persistence layer.
+// ContainsChild returns if the given child exists in the cache/persistence layer.
 func ContainsChild(messageID hornet.Hash, childMessageID hornet.Hash) bool {
 	return childrenStorage.Contains(append(messageID, childMessageID...))
 }
 
-// ChildConsumer consumes the given approver during looping through all approvers in the persistence layer.
+// ChildConsumer consumes the given child during looping through all children in the persistence layer.
 type ChildConsumer func(messageID hornet.Hash, childMessageID hornet.Hash) bool
 
-// ForEachChild loops over all approvers.
+// ForEachChild loops over all children.
 func ForEachChild(consumer ChildConsumer, skipCache bool) {
 	childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(key[:32], key[32:64])
@@ -96,8 +96,8 @@ func StoreChild(parentMessageID hornet.Hash, childMessageID hornet.Hash) *Cached
 
 // child +-0
 func DeleteChild(messageID hornet.Hash, childMessageID hornet.Hash) {
-	approver := hornet.NewChild(messageID, childMessageID)
-	childrenStorage.Delete(approver.ObjectStorageKey())
+	child := hornet.NewChild(messageID, childMessageID)
+	childrenStorage.Delete(child.ObjectStorageKey())
 }
 
 // child +-0

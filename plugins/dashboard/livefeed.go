@@ -47,8 +47,8 @@ func runLiveFeed() {
 	})
 
 	daemon.BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewTransaction.Attach(onReceivedNewTransaction)
-		defer tangle.Events.ReceivedNewTransaction.Detach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTransaction)
+		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTransaction)
 		tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		defer tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 

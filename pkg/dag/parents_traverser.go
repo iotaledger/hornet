@@ -34,7 +34,7 @@ type ParentTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewParentTraverser create a new traverser to traverse the approvees (past cone)
+// NewParentTraverser create a new traverser to traverse the parents (past cone)
 func NewParentTraverser(condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
 
 	return &ParentTraverser{

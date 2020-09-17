@@ -10,7 +10,6 @@ import (
 	"github.com/muxxer/iota.go/transaction"
 	"github.com/muxxer/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -24,8 +23,8 @@ func (te *TestEnvironment) storeTransaction(tx *transaction.Transaction) *tangle
 	txTrits, err := transaction.TransactionToTrits(tx)
 	require.NoError(te.testState, err)
 
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
+	//txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	//hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	cachedTx, alreadyAdded := tangle.AddMessageToStorage(hornetTx, tangle.GetLatestMilestoneIndex(), false, true, true)
 	require.NotNil(te.testState, cachedTx)
@@ -51,18 +50,18 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 
 	// Solidify tx if not a milestone
 	for _, hash := range hashes {
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hash)
-		require.NotNil(te.testState, cachedTxMeta)
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hash)
+		require.NotNil(te.testState, cachedMsgMeta)
 
-		if cachedTxMeta.GetMetadata().IsTail() {
-			tailTx = cachedTxMeta.GetMetadata().GetMessageID()
+		if cachedMsgMeta.GetMetadata().IsTail() {
+			tailTx = cachedMsgMeta.GetMetadata().GetMessageID()
 		}
 
 		if !isMilestone {
-			cachedTxMeta.GetMetadata().SetSolid(true)
+			cachedMsgMeta.GetMetadata().SetSolid(true)
 		}
 
-		cachedTxMeta.Release(true)
+		cachedMsgMeta.Release(true)
 	}
 
 	// Trigger bundle construction due to solid tail
@@ -71,7 +70,7 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 		require.NotNil(te.testState, cachedTx)
 		require.True(te.testState, cachedTx.GetMetadata().IsSolid())
 
-		tangle.OnMessageSolid(cachedTx.Retain())
+		//tangle.OnMessageSolid(cachedTx.Retain())
 		cachedTx.Release(true)
 	}
 
@@ -147,12 +146,12 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 	bundleTxs := tangle.GetAllBundleTransactionHashes(100)
 	for _, hash := range bundleTxs {
-		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(hash)
-		if _, visited := visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())]; !visited {
-			bndls := tangle.GetBundlesOfTransactionOrNil(cachedTxMeta.GetMetadata().GetMessageID(), false)
-			visitedBundles[string(cachedTxMeta.GetMetadata().GetBundleHash())] = bndls
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hash)
+		if _, visited := visitedBundles[string(cachedMsgMeta.GetMetadata().GetBundleHash())]; !visited {
+			bndls := tangle.GetBundlesOfTransactionOrNil(cachedMsgMeta.GetMetadata().GetMessageID(), false)
+			visitedBundles[string(cachedMsgMeta.GetMetadata().GetBundleHash())] = bndls
 		}
-		cachedTxMeta.Release(true)
+		cachedMsgMeta.Release(true)
 	}
 
 	var milestones []string

@@ -74,18 +74,18 @@ func (te *TestEnvironment) configureCoordinator() {
 	require.NotNil(te.testState, ms)
 	defer ms.Release(true)
 
-	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 
 	defer func() {
 		// all releases are forced since the cone is confirmed and not needed anymore
 
 		// release all tx metadata at the end
-		for _, cachedTxMeta := range cachedTxMetas {
-			cachedTxMeta.Release(true) // meta -1
+		for _, cachedMsgMeta := range cachedMsgMetas {
+			cachedMsgMeta.Release(true) // meta -1
 		}
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
@@ -110,19 +110,19 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.Hash, create
 	ms := tangle.GetMilestoneOrNil(milestoneIndex)
 	require.NotNil(te.testState, ms)
 
-	cachedTxMetas := make(map[string]*tangle.CachedMetadata)
+	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
 
 		// Release all tx metadata at the end
-		for _, cachedTxMeta := range cachedTxMetas {
-			cachedTxMeta.Release(true) // meta -1
+		for _, cachedMsgMeta := range cachedMsgMetas {
+			cachedMsgMeta.Release(true) // meta -1
 		}
 	}()
 
 	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	confStats, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
 		wfConf = confirmation
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})

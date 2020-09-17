@@ -216,7 +216,7 @@ func attachHeartbeatEvents() {
 }
 
 func attachSolidifierGossipEvents() {
-	Events.ReceivedNewTransaction.Attach(onReceivedNewTx)
+	Events.ReceivedNewMessage.Attach(onReceivedNewTx)
 }
 
 func detachHeartbeatEvents() {
@@ -226,7 +226,7 @@ func detachHeartbeatEvents() {
 }
 
 func detachSolidifierGossipEvents() {
-	Events.ReceivedNewTransaction.Detach(onReceivedNewTx)
+	Events.ReceivedNewMessage.Detach(onReceivedNewTx)
 }
 
 // SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup

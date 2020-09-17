@@ -92,7 +92,7 @@ type FindTransactions struct {
 	Bundles    []trinary.Hash `mapstructure:"bundles"`
 	Addresses  []trinary.Hash `mapstructure:"addresses"`
 	Tags       []trinary.Hash `mapstructure:"tags"`
-	Approvees  []trinary.Hash `mapstructure:"approvees"`
+	Parents    []trinary.Hash `mapstructure:"approvees"`
 	MaxResults int            `mapstructure:"maxresults"`
 	ValueOnly  bool           `json:"valueOnly"`
 }
@@ -378,27 +378,27 @@ type DebugRequest struct {
 	MilestoneIndex   milestone.Index `json:"milestoneIndex"`
 }
 
-///////////////// searchConfirmedApprover /////////////////////////
+///////////////// searchConfirmedChild /////////////////////////
 
-// SearchConfirmedApprover struct
-type SearchConfirmedApprover struct {
+// SearchConfirmedChild struct
+type SearchConfirmedChild struct {
 	Command         string       `mapstructure:"command"`
 	TxHash          trinary.Hash `mapstructure:"txHash"`
 	SearchMilestone bool         `mapstructure:"searchMilestone"`
 }
 
-// ApproverStruct struct
-type ApproverStruct struct {
+// ChildStruct struct
+type ChildStruct struct {
 	TxHash            trinary.Hash `mapstructure:"txHash"`
 	ReferencedByTrunk bool         `mapstructure:"referencedByTrunk"`
 }
 
-// SearchConfirmedApproverReturn struct
-type SearchConfirmedApproverReturn struct {
-	ConfirmedTxHash           trinary.Hash      `json:"confirmedTxHash"`
-	ConfirmedByMilestoneIndex milestone.Index   `json:"confirmedByMilestoneIndex"`
-	TanglePath                []*ApproverStruct `json:"tanglePath"`
-	TanglePathLength          int               `json:"tanglePathLength"`
+// SearchConfirmedChildReturn struct
+type SearchConfirmedChildReturn struct {
+	ConfirmedTxHash           trinary.Hash    `json:"confirmedTxHash"`
+	ConfirmedByMilestoneIndex milestone.Index `json:"confirmedByMilestoneIndex"`
+	TanglePath                []*ChildStruct  `json:"tanglePath"`
+	TanglePathLength          int             `json:"tanglePathLength"`
 }
 
 ///////////////// searchEntryPoint /////////////////////////
@@ -415,7 +415,7 @@ type EntryPoint struct {
 	ConfirmedByMilestoneIndex milestone.Index `json:"confirmedByMilestoneIndex"`
 }
 
-type TransactionWithApprovers struct {
+type TransactionWithChildren struct {
 	TxHash            trinary.Hash `json:"txHash"`
 	TrunkTransaction  trinary.Hash `json:"trunkTransaction"`
 	BranchTransaction trinary.Hash `json:"branchTransaction"`
@@ -423,14 +423,14 @@ type TransactionWithApprovers struct {
 
 // SearchEntryPointReturn struct
 type SearchEntryPointReturn struct {
-	TanglePath       []*TransactionWithApprovers `json:"tanglePath"`
-	EntryPoints      []*EntryPoint               `json:"entryPoints"`
-	TanglePathLength int                         `json:"tanglePathLength"`
+	TanglePath       []*TransactionWithChildren `json:"tanglePath"`
+	EntryPoints      []*EntryPoint              `json:"entryPoints"`
+	TanglePathLength int                        `json:"tanglePathLength"`
 }
 
 ///////////////// triggerSolidifier /////////////////////////
 
-// SearchConfirmedApprover struct
+// SearchConfirmedChild struct
 type TriggerSolidifier struct {
 	Command string `mapstructure:"command"`
 }
