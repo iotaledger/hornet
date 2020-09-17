@@ -47,7 +47,7 @@ type ExplorerTx struct {
 		Conflicting bool            `json:"conflicting"`
 		Milestone   milestone.Index `json:"milestone_index"`
 	} `json:"confirmed"`
-	Approvers      []string        `json:"approvers"`
+	Children      []string        `json:"children"`
 	Solid          bool            `json:"solid"`
 	MWM            int             `json:"mwm"`
 	Previous       trinary.Hash    `json:"previous"`
@@ -89,11 +89,11 @@ func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
 		Solid: cachedTx.GetMetadata().IsSolid(),
 	}
 
-	// Approvers
-	t.Approvers = tangle.GetChildrenMessageIDs(cachedTx.GetMessage().GetTxHash(), MaxApproversResults).Hex()
+	// Children
+	t.Children = tangle.GetChildrenMessageIDs(cachedTx.GetMessage().GetMessageID(), MaxApproversResults).Hex()
 
 	// compute mwm
-	trits, err := trinary.BytesToTrits(cachedTx.GetMessage().GetTxHash())
+	trits, err := trinary.BytesToTrits(cachedTx.GetMessage().GetMessageID())
 	if err != nil {
 		return nil, err
 	}
@@ -110,9 +110,9 @@ func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
 	// get previous/next hash
 	var cachedBndl *tangle.CachedMessage
 	if cachedTx.GetMessage().IsTail() {
-		cachedBndl = tangle.GetCachedMessageOrNil(cachedTx.GetMessage().GetTxHash()) // bundle +1
+		cachedBndl = tangle.GetCachedMessageOrNil(cachedTx.GetMessage().GetMessageID()) // bundle +1
 	} else {
-		cachedBndls := tangle.GetBundlesOfTransactionOrNil(cachedTx.GetMessage().GetTxHash(), true) // bundle +1
+		cachedBndls := tangle.GetBundlesOfTransactionOrNil(cachedTx.GetMessage().GetMessageID(), true) // bundle +1
 		if cachedBndls != nil {
 			cachedBndl = cachedBndls[0]
 

@@ -29,7 +29,7 @@ var (
 // If the node crashes, it is not guaranteed that all data in the cache was already persisted to the disk.
 // Thats why we flag the database as corrupted.
 //
-// This function tries to restore a clean database state by deleting all existing transactions
+// This function tries to restore a clean database state by deleting all existing messages
 // since last local snapshot, deleting all ledger states and changes, loading valid snapshot ledger state.
 //
 // This way HORNET should be able to re-solidify the existing tangle in the database.
@@ -85,7 +85,7 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// clean up transactions which are above the local snapshot
+	// clean up messages which are above the local snapshot
 	if err := cleanupTransactions(snapshotInfo); err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all bundles transactions where the tx doesn't exist in the database anymore.
+	// deletes all bundles messages where the tx doesn't exist in the database anymore.
 	if err := cleanupBundleTransactions(); err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 	return nil
 }
 
-// deletes all transactions which are not confirmed, not solid or
+// deletes all messages which are not confirmed, not solid or
 // their confirmation milestone is newer than the last local snapshot's milestone.
 func cleanupTransactions(info *tangle.SnapshotInfo) error {
 
@@ -287,7 +287,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 				return false
 			}
 
-			log.Infof("analyzed %d transactions", txsCounter)
+			log.Infof("analyzed %d messages", txsCounter)
 		}
 
 		storedTxMeta := tangle.GetStoredMetadataOrNil(txHash)
@@ -312,7 +312,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 
 		return true
 	}, true)
-	log.Infof("analyzed %d transactions", txsCounter)
+	log.Infof("analyzed %d messages", txsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
@@ -331,7 +331,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting transactions...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			log.Infof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteMessage(hornet.Hash(txHash))
@@ -339,7 +339,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 
 	tangle.FlushMessagesStorage()
 
-	log.Infof("deleting transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -474,7 +474,7 @@ func cleanupBundles() error {
 	return nil
 }
 
-// deletes all bundles transactions where the tx doesn't exist in the database anymore.
+// deletes all bundles messages where the tx doesn't exist in the database anymore.
 func cleanupBundleTransactions() error {
 
 	type bundleTransaction struct {
@@ -499,7 +499,7 @@ func cleanupBundleTransactions() error {
 				return false
 			}
 
-			log.Infof("analyzed %d bundle transactions", bundleTxsCounter)
+			log.Infof("analyzed %d bundle messages", bundleTxsCounter)
 		}
 
 		// delete bundle transaction if transaction doesn't exist
@@ -509,7 +509,7 @@ func cleanupBundleTransactions() error {
 
 		return true
 	}, true)
-	log.Infof("analyzed %d bundle transactions", bundleTxsCounter)
+	log.Infof("analyzed %d bundle messages", bundleTxsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
@@ -528,7 +528,7 @@ func cleanupBundleTransactions() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting bundle transactions...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			log.Infof("deleting bundle messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteBundleTransaction(bundleTx.bundleHash, bundleTx.txHash, bundleTx.isTail)
@@ -536,7 +536,7 @@ func cleanupBundleTransactions() error {
 
 	tangle.FlushBundleTransactionsStorage()
 
-	log.Infof("deleting bundle transactions...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting bundle messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

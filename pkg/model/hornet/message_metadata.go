@@ -39,7 +39,7 @@ type MessageMetadata struct {
 	// oldestRootSnapshotIndex is the lowest confirmed index of the past cone of this transaction
 	oldestRootSnapshotIndex milestone.Index
 
-	// rootSnapshotCalculationIndex is the solid index yrtsi and ortsi were calculated at
+	// rootSnapshotCalculationIndex is the solid index ymrsi and omrsi were calculated at
 	rootSnapshotCalculationIndex milestone.Index
 
 	// parent1MessageID is the parent1 (trunk) of the message
@@ -144,17 +144,17 @@ func (m *MessageMetadata) SetConflicting(conflicting bool) {
 	}
 }
 
-func (m *MessageMetadata) SetRootSnapshotIndexes(yrtsi milestone.Index, ortsi milestone.Index, rtsci milestone.Index) {
+func (m *MessageMetadata) SetRootSnapshotIndexes(ymrsi milestone.Index, omrsi milestone.Index, rtsci milestone.Index) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.youngestRootSnapshotIndex = yrtsi
-	m.oldestRootSnapshotIndex = ortsi
+	m.youngestRootSnapshotIndex = ymrsi
+	m.oldestRootSnapshotIndex = omrsi
 	m.rootSnapshotCalculationIndex = rtsci
 	m.SetModified(true)
 }
 
-func (m *MessageMetadata) GetRootSnapshotIndexes() (yrtsi milestone.Index, ortsi milestone.Index, rtsci milestone.Index) {
+func (m *MessageMetadata) GetRootSnapshotIndexes() (ymrsi milestone.Index, omrsi milestone.Index, rtsci milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 

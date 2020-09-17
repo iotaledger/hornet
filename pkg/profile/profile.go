@@ -80,7 +80,7 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Approvers: CacheOpts{
+		Children: CacheOpts{
 			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -157,7 +157,7 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Approvers: CacheOpts{
+		Children: CacheOpts{
 			CacheTimeMs: 15000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -234,7 +234,7 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Approvers: CacheOpts{
+		Children: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -311,7 +311,7 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Approvers: CacheOpts{
+		Children: CacheOpts{
 			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -387,7 +387,7 @@ type Caches struct {
 	Addresses                 CacheOpts `mapstructure:"addresses"`
 	Bundles                   CacheOpts `mapstructure:"bundles"`
 	BundleTransactions        CacheOpts `mapstructure:"bundleTransactions"`
-	Approvers                 CacheOpts `mapstructure:"approvers"`
+	Children                 CacheOpts `mapstructure:"approvers"`
 	Tags                      CacheOpts `mapstructure:"tags"`
 	Milestones                CacheOpts `mapstructure:"milestones"`
 	Transactions              CacheOpts `mapstructure:"transactions"`

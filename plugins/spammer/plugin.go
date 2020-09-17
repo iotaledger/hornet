@@ -277,7 +277,7 @@ func startSpammerWorkers(tpsRateLimit float64, cpuMaxUsage float64, bundleSize i
 					if err != nil {
 						continue
 					}
-					Events.SpamPerformed.Trigger(&spammer.SpamStats{GTTA: float32(durationGTTA.Seconds()), POW: float32(durationPOW.Seconds())})
+					Events.SpamPerformed.Trigger(&spammer.SpamStats{Tipselection: float32(durationGTTA.Seconds()), ProofOfWork: float32(durationPOW.Seconds())})
 				}
 			}
 
@@ -340,7 +340,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		New:              new,
-		AveragePerSecond: spammerAvgHeap.GetAveragePerSecond(timeDiff),
+		NewMessages:              new,
+		AverageMessagesPerSecond: spammerAvgHeap.GetAveragePerSecond(timeDiff),
 	})
 }

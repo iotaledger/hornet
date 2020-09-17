@@ -25,10 +25,10 @@ var (
 type HeaviestSelector struct {
 	sync.Mutex
 
-	minHeaviestBranchUnconfirmedTransactionsThreshold int
-	maxHeaviestBranchTipsPerCheckpoint                int
-	randomTipsPerCheckpoint                           int
-	heaviestBranchSelectionDeadline                   time.Duration
+	minHeaviestBranchUnconfirmedMessagesThreshold int
+	maxHeaviestBranchTipsPerCheckpoint            int
+	randomTipsPerCheckpoint                       int
+	heaviestBranchSelectionDeadline               time.Duration
 
 	trackedMessages map[string]*bundleTail // map of all tracked bundle transaction tails
 	tips            *list.List             // list of available tips
@@ -89,12 +89,12 @@ func (il *bundleTailList) removeTip(tip *bundleTail) {
 }
 
 // New creates a new HeaviestSelector instance.
-func New(minHeaviestBranchUnconfirmedTransactionsThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
+func New(minHeaviestBranchUnconfirmedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
 	s := &HeaviestSelector{
-		minHeaviestBranchUnconfirmedTransactionsThreshold: minHeaviestBranchUnconfirmedTransactionsThreshold,
-		maxHeaviestBranchTipsPerCheckpoint:                maxHeaviestBranchTipsPerCheckpoint,
-		randomTipsPerCheckpoint:                           randomTipsPerCheckpoint,
-		heaviestBranchSelectionDeadline:                   heaviestBranchSelectionDeadline,
+		minHeaviestBranchUnconfirmedMessagesThreshold: minHeaviestBranchUnconfirmedMessagesThreshold,
+		maxHeaviestBranchTipsPerCheckpoint:            maxHeaviestBranchTipsPerCheckpoint,
+		randomTipsPerCheckpoint:                       randomTipsPerCheckpoint,
+		heaviestBranchSelectionDeadline:               heaviestBranchSelectionDeadline,
 	}
 	s.reset()
 	return s
@@ -162,7 +162,7 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if
 // the current best tip is not below "UnconfirmedTransactionsThreshold" before.
 // a minimum amount of selected tips can be enforced, even if none of the heaviest branches matches the
-// "minHeaviestBranchUnconfirmedTransactionsThreshold" criteria.
+// "minHeaviestBranchUnconfirmedMessagesThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
 // the selection is cancelled after a fixed deadline. in this case, it returns the current collected tips.
@@ -200,7 +200,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 			break
 		}
 
-		if (len(result) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedTransactionsThreshold)) || deadlineExceeded) {
+		if (len(result) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedMessagesThreshold)) || deadlineExceeded) {
 			// minimum amount of tips reached and the heaviest tips do not confirm enough transactions or the deadline was exceeded
 			// => no need to collect more
 			break
@@ -234,24 +234,24 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 // OnNewSolidMessage adds a new bundle to be processed by s.
 // The bundle must be solid and OnNewSolidMessage must be called in the order of solidification.
 // The bundle must also not be below max depth.
-func (s *HeaviestSelector) OnNewSolidMessage(msg *tangle.Message) (trackedTailsCount int) {
+func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *hornet.MessageMetadata) (trackedTailsCount int) {
 	s.Lock()
 	defer s.Unlock()
 
 	// filter duplicate transaction
-	if _, contains := s.trackedMessages[string(msg.GetMessageID())]; contains {
+	if _, contains := s.trackedMessages[string(msgMeta.GetMessageID())]; contains {
 		return
 	}
 
-	trunkItem := s.trackedMessages[string(msg.GetParent1MessageID())]
-	branchItem := s.trackedMessages[string(msg.GetParent2MessageID())]
+	trunkItem := s.trackedMessages[string(msgMeta.GetParent1MessageID())]
+	branchItem := s.trackedMessages[string(msgMeta.GetParent2MessageID())]
 
 	// compute the referenced transactions
 	// all the known approvers in the HeaviestSelector are represented by a unique bit in a bitset.
 	// if a new approver is added, we expand the bitset by 1 bit and store the Union of the bitsets
 	// of trunk and branch for this approver, to know which parts of the cone are referenced by this approver.
 	idx := uint(len(s.trackedMessages))
-	it := &bundleTail{hash: msg.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
+	it := &bundleTail{hash: msgMeta.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
 	if trunkItem != nil {
 		it.refs.InPlaceUnion(trunkItem.refs)
 	}
@@ -265,7 +265,7 @@ func (s *HeaviestSelector) OnNewSolidMessage(msg *tangle.Message) (trackedTailsC
 	s.removeTip(branchItem)
 	it.tip = s.tips.PushBack(it)
 
-	return s.GetTrackedTailsCount()
+	return s.GetTrackedMessagesCount()
 }
 
 // removeTip removes the tip item from s.
@@ -290,7 +290,7 @@ func (s *HeaviestSelector) tipsToList() *bundleTailList {
 	return &bundleTailList{tails: result}
 }
 
-// GetTrackedTailsCount returns the amount of known bundle tails.
-func (s *HeaviestSelector) GetTrackedTailsCount() (trackedTails int) {
+// GetTrackedMessagesCount returns the amount of known messages.
+func (s *HeaviestSelector) GetTrackedMessagesCount() (trackedTails int) {
 	return len(s.trackedMessages)
 }

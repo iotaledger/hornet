@@ -5,10 +5,15 @@ import (
 	"fmt"
 )
 
-// MilestoneMessageID is the binary representation of a MilestoneMessageID.
+var (
+	// NullMessageID is the ID of the genesis transaction.
+	NullMessageID = [32]byte{}
+)
+
+// Hash is the binary representation of a Hash.
 type Hash []byte
 
-// Hex converts the binary MilestoneMessageID to its hex string representation.
+// Hex converts the binary Hash to its hex string representation.
 func (h Hash) Hex() string {
 	if len(h) == 32 {
 		return hex.EncodeToString(h)
@@ -17,7 +22,7 @@ func (h Hash) Hex() string {
 	panic(fmt.Sprintf("Unknown hash length (%d)", len(h)))
 }
 
-// ID converts the binary MilestoneMessageID to an array representation.
+// ID converts the binary Hash to an array representation.
 func (h Hash) ID() (id [32]byte) {
 	if len(h) == 32 {
 		copy(id[:], h[:32])
@@ -26,7 +31,7 @@ func (h Hash) ID() (id [32]byte) {
 	panic(fmt.Sprintf("Unknown hash length (%d)", len(h)))
 }
 
-// Hashes is a slice of MilestoneMessageID.
+// Hashes is a slice of Hash.
 type Hashes []Hash
 
 // Hex converts the binary Hashes to their hex string representation.

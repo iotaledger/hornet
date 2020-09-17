@@ -27,23 +27,23 @@ var (
 func init() {
 	serverAllTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_all_transactions",
-		Help: "Number of all transactions.",
+		Help: "Number of all messages.",
 	})
 	serverNewTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_new_transactions",
-		Help: "Number of new transactions.",
+		Help: "Number of new messages.",
 	})
 	serverKnownTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_known_transactions",
-		Help: "Number of known transactions.",
+		Help: "Number of known messages.",
 	})
 	serverConfirmedTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_confirmed_transactions",
-		Help: "Number of confirmed transactions.",
+		Help: "Number of confirmed messages.",
 	})
 	serverInvalidTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_invalid_transactions",
-		Help: "Number of invalid transactions.",
+		Help: "Number of invalid messages.",
 	})
 	serverInvalidRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_invalid_requests",
@@ -63,7 +63,7 @@ func init() {
 	})
 	serverSentTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_sent_transactions",
-		Help: "Number of sent transactions.",
+		Help: "Number of sent messages.",
 	})
 	serverSentTransactionRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_sent_transaction_requests",
@@ -83,7 +83,7 @@ func init() {
 	})
 	serverSentSpamTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_sent_spam_transactions",
-		Help: "Number of sent spam transactions.",
+		Help: "Number of sent spam messages.",
 	})
 	serverValidatedBundles = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_validated_bundles",

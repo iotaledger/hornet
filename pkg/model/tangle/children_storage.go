@@ -37,7 +37,7 @@ func GetApproversStorageSize() int {
 	return childrenStorage.GetSize()
 }
 
-func configureApproversStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func configureChildrenStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	childrenStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixChildren}),

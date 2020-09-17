@@ -96,7 +96,7 @@ func configureEvents() {
 
 		// propagate new transaction root snapshot indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateTransactionRootSnapshotIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		dag.UpdateMessageRootSnapshotIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()

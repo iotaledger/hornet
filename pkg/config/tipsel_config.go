@@ -2,13 +2,13 @@ package config
 
 const (
 	// CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+	// value for the YMRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxYoungestRootSnapshotIndexToLSMI"
 	// CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
+	// value between OMRSI of a given transaction in relation to the current LSMI before it gets semi-lazy.
 	CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI = "tipsel.maxDeltaTxOldestRootSnapshotIndexToLSMI"
 	// CfgTipSelBelowMaxDepth is the maximum allowed delta
-	// value between OTRSI of a given transaction in relation to the current LSMI before it gets lazy.
+	// value between OMRSI of a given transaction in relation to the current LSMI before it gets lazy.
 	CfgTipSelBelowMaxDepth = "tipsel.belowMaxDepth"
 	// the config group used for the non-lazy tip-pool
 	CfgTipSelNonLazy = "tipsel.nonLazy."
@@ -31,11 +31,11 @@ const (
 
 func init() {
 	configFlagSet.Int(CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI, 8, "the maximum allowed delta "+
-		"value for the YTRSI of a given transaction in relation to the current LSMI before it gets lazy")
+		"value for the YMRSI of a given transaction in relation to the current LSMI before it gets lazy")
 	configFlagSet.Int(CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI, 13, "the maximum allowed delta "+
-		"value between OTRSI of a given transaction in relation to the current LSMI before it gets semi-lazy")
+		"value between OMRSI of a given transaction in relation to the current LSMI before it gets semi-lazy")
 	configFlagSet.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
-		"value for the OTRSI of a given transaction in relation to the current LSMI before it gets lazy")
+		"value for the OMRSI of a given transaction in relation to the current LSMI before it gets lazy")
 	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
 	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first transaction (non-lazy)")

@@ -102,18 +102,18 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorPublicKey ed25519.PublicKey, milestoneHash hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64) {
+func SetSnapshotMilestone(coordinatorPublicKey ed25519.PublicKey, milestoneMessageID hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	CoordinatorPublicKey: %v
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, hex.EncodeToString(coordinatorPublicKey), snapshotIndex, milestoneHash.Hex(), entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second)))
+	Timestamp: %v`, hex.EncodeToString(coordinatorPublicKey), snapshotIndex, milestoneMessageID.Hex(), entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second)))
 
 	sn := &SnapshotInfo{
 		CoordinatorPublicKey: coordinatorPublicKey,
-		MilestoneMessageID:   milestoneHash,
+		MilestoneMessageID:   milestoneMessageID,
 		SnapshotIndex:        snapshotIndex,
 		EntryPointIndex:      entryPointIndex,
 		PruningIndex:         pruningIndex,

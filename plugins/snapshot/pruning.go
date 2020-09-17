@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	// AdditionalPruningThreshold is needed, because the transactions in the getMilestoneApprovees call in getSolidEntryPoints
-	// can reference older transactions as well
+	// AdditionalPruningThreshold is needed, because the messages in the getMilestoneApprovees call in getSolidEntryPoints
+	// can reference older messages as well
 	AdditionalPruningThreshold = 50
 )
 
@@ -108,13 +108,13 @@ func pruneTransactions(txsToCheckMap map[string]struct{}) int {
 
 		cachedTx.ConsumeMessage(func(tx *hornet.Transaction) { // tx -1
 			// Delete the reference in the approvees
-			tangle.DeleteChild(tx.GetTrunkHash(), tx.GetTxHash())
-			tangle.DeleteChild(tx.GetBranchHash(), tx.GetTxHash())
+			tangle.DeleteChild(tx.GetTrunkHash(), tx.GetMessageID())
+			tangle.DeleteChild(tx.GetBranchHash(), tx.GetMessageID())
 
-			tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
-			tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
-			tangle.DeleteChildren(tx.GetTxHash())
-			tangle.DeleteMessage(tx.GetTxHash())
+			tangle.DeleteTag(tx.GetTag(), tx.GetMessageID())
+			tangle.DeleteAddress(tx.GetAddress(), tx.GetMessageID())
+			tangle.DeleteChildren(tx.GetMessageID())
+			tangle.DeleteMessage(tx.GetMessageID())
 		})
 	}
 
@@ -203,11 +203,11 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		txsToCheckMap := make(map[string]struct{})
 
 		err := dag.TraverseParents(cachedMs.GetMilestone().MessageID,
-			// traversal stops if no more transactions pass the given condition
+			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1
 				defer cachedTxMeta.Release(true) // tx -1
-				// everything that was referenced by that milestone can be pruned (even transactions of older milestones)
+				// everything that was referenced by that milestone can be pruned (even messages of older milestones)
 				return true, nil
 			},
 			// consumer
@@ -240,7 +240,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
 
-		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d transactions. ", milestoneIndex, time.Since(ts), txCountDeleted, txCountChecked)
+		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, txCountChecked)
 
 		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}

@@ -75,7 +75,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 	txsToTraverse[string(msTailTxHash)] = struct{}{}
 
 	// Collect all tx by traversing the tangle
-	// Loop as long as new transactions are added in every loop cycle
+	// Loop as long as new messages are added in every loop cycle
 	for len(txsToTraverse) != 0 {
 
 		for txHash := range txsToTraverse {

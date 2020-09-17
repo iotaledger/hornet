@@ -25,21 +25,21 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 	defer cachedMessageMetadata.Release(true) // meta -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
-	// information about yrtsi and ortsi, return that info
-	yrtsi, ortsi, rtsci := cachedMessageMetadata.GetMetadata().GetRootSnapshotIndexes()
+	// information about ymrsi and omrsi, return that info
+	ymrsi, omrsi, rtsci := cachedMessageMetadata.GetMetadata().GetRootSnapshotIndexes()
 	if rtsci == lsmi {
-		return yrtsi, ortsi
+		return ymrsi, omrsi
 	}
 
 	youngestTxRootSnapshotIndex = 0
 	oldestTxRootSnapshotIndex = 0
 
-	updateIndexes := func(yrtsi milestone.Index, ortsi milestone.Index) {
-		if (youngestTxRootSnapshotIndex == 0) || (youngestTxRootSnapshotIndex < yrtsi) {
-			youngestTxRootSnapshotIndex = yrtsi
+	updateIndexes := func(ymrsi milestone.Index, omrsi milestone.Index) {
+		if (youngestTxRootSnapshotIndex == 0) || (youngestTxRootSnapshotIndex < ymrsi) {
+			youngestTxRootSnapshotIndex = ymrsi
 		}
-		if (oldestTxRootSnapshotIndex == 0) || (oldestTxRootSnapshotIndex > ortsi) {
-			oldestTxRootSnapshotIndex = ortsi
+		if (oldestTxRootSnapshotIndex == 0) || (oldestTxRootSnapshotIndex > omrsi) {
+			oldestTxRootSnapshotIndex = omrsi
 		}
 	}
 
@@ -59,7 +59,7 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 		func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			// first check if the tx was confirmed => update yrtsi and ortsi with the confirmation index
+			// first check if the tx was confirmed => update ymrsi and omrsi with the confirmation index
 			if confirmed, at := cachedMetadata.GetMetadata().GetConfirmed(); confirmed {
 				updateIndexes(at, at)
 				return false, nil
@@ -70,10 +70,10 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 			}
 
 			// if the tx was not confirmed yet, but already contains recent (calculation index matches LSMI) information
-			// about yrtsi and ortsi, propagate that info
-			yrtsi, ortsi, rtsci := cachedMetadata.GetMetadata().GetRootSnapshotIndexes()
+			// about ymrsi and omrsi, propagate that info
+			ymrsi, omrsi, rtsci := cachedMetadata.GetMetadata().GetRootSnapshotIndexes()
 			if rtsci == lsmi {
-				updateIndexes(yrtsi, ortsi)
+				updateIndexes(ymrsi, omrsi)
 				return false, nil
 			}
 
@@ -124,13 +124,13 @@ func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetad
 	return youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex
 }
 
-// UpdateTransactionRootSnapshotIndexes updates the transaction root snapshot
+// UpdateMessageRootSnapshotIndexes updates the transaction root snapshot
 // indexes of the future cone of all given transactions.
 // all the transactions of the newly confirmed cone already have updated transaction root snapshot indexes.
 // we have to walk the future cone, and update the past cone of all transactions that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same transactions multiple times.
-func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone.Index) {
+func UpdateMessageRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone.Index) {
 	traversed := map[string]struct{}{}
 
 	// we update all transactions in order from oldest to latest

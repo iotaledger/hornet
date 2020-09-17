@@ -264,14 +264,8 @@ type CoordinatorConfig struct {
 	Seed string
 	// The MWM/PoW difficulty to use.
 	MWM int
-	// The security level used for milestones.
-	SecurityLevel int
 	// The interval in which to issue new milestones.
 	IssuanceIntervalSeconds int
-	// The depth of the coo merkle tree.
-	MerkleTreeDepth int
-	// The path to the Merkle tree file.
-	MerkleTreeFilePath string
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -280,10 +274,7 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMWM, cooConfig.MWM),
 		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKey, cooConfig.Address),
-		fmt.Sprintf("--%s=%s", config.CfgCoordinatorMerkleTreeFilePath, cooConfig.MerkleTreeFilePath),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
-		fmt.Sprintf("--%s=%d", config.CfgCoordinatorSecurityLevel, cooConfig.SecurityLevel),
-		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMerkleTreeDepth, cooConfig.MerkleTreeDepth),
 	}
 }
 
@@ -295,10 +286,7 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		Address:                 "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
 		Seed:                    "MFKHXRCTTRSPATPMAGFCSSIBJXDWNCLBQJPMHQGMGJEWYJNUXSXAGVSUJK9BMCAFEDNTXHDWWVVNILDRG",
 		MWM:                     1,
-		SecurityLevel:           2,
 		IssuanceIntervalSeconds: 10,
-		MerkleTreeDepth:         18,
-		MerkleTreeFilePath:      "/assets/coordinator.tree",
 	}
 }
 

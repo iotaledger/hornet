@@ -35,9 +35,11 @@ func createCheckpoint(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash
 // createMilestone creates a signed milestone bundle.
 func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, securityLvl consts.SecurityLevel, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
 
+	pubKey := privateKey.Public().(ed25519.PublicKey)
+
 	iotaMsg := &iotago.Message{Version: 1, Parent1: parent1MessageID.ID(), Parent2: parent2MessageID.ID()}
 	msPayload := &iotago.MilestonePayload{Index: 1000, Timestamp: uint64(time.Now().Unix()), InclusionMerkleProof: whiteFlagMerkleRootTreeHash}
-	pubKey := privateKey.Public().(ed25519.PublicKey)
+	iotaMsg.Payload = msPayload
 
 	err := msPayload.Sign(iotaMsg, privateKey)
 	if err != nil {

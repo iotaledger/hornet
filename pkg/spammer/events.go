@@ -4,21 +4,21 @@ import (
 	"github.com/iotaledger/hive.go/events"
 )
 
-// SpamStats are stats for a single spam transaction/bundle.
+// SpamStats are stats for a single spam message.
 type SpamStats struct {
-	GTTA float32 `json:"gtta"`
-	POW  float32 `json:"pow"`
+	Tipselection float32 `json:"tipselect"`
+	ProofOfWork  float32 `json:"pow"`
 }
 
 // AvgSpamMetrics are average metrics of the created spam.
 type AvgSpamMetrics struct {
-	New              uint32  `json:"new"`
-	AveragePerSecond float32 `json:"avg"`
+	NewMessages              uint32  `json:"newMsgs"`
+	AverageMessagesPerSecond float32 `json:"avgMsgs"`
 }
 
 // SpammerEvents are the events issued by the spammer.
 type SpammerEvents struct {
-	// Fired when a single spam transaction/bundle is issued.
+	// Fired when a single spam message is issued.
 	SpamPerformed *events.Event
 	// Fired when average spam metrics were updated by the worker.
 	AvgSpamMetricsUpdated *events.Event
