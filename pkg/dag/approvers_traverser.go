@@ -27,8 +27,8 @@ type ApproversTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewApproversTraverser create a new traverser to traverse the approvers (future cone)
-func NewApproversTraverser(condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ApproversTraverser {
+// NewChildrenTraverser create a new traverser to traverse the approvers (future cone)
+func NewChildrenTraverser(condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ApproversTraverser {
 
 	return &ApproversTraverser{
 		condition:             condition,

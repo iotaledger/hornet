@@ -202,7 +202,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		txsToCheckMap := make(map[string]struct{})
 
-		err := dag.TraverseApprovees(cachedMs.GetMilestone().MessageID,
+		err := dag.TraverseParents(cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more transactions pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // tx +1

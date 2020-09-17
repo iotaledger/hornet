@@ -30,8 +30,8 @@ type HeaviestSelector struct {
 	randomTipsPerCheckpoint                           int
 	heaviestBranchSelectionDeadline                   time.Duration
 
-	trackedTails map[string]*bundleTail // map of all tracked bundle transaction tails
-	tips         *list.List             // list of available tips
+	trackedMessages map[string]*bundleTail // map of all tracked bundle transaction tails
+	tips            *list.List             // list of available tips
 }
 
 type bundleTail struct {
@@ -106,7 +106,7 @@ func (s *HeaviestSelector) reset() {
 	defer s.Unlock()
 
 	// create an empty map
-	s.trackedTails = make(map[trinary.Hash]*bundleTail)
+	s.trackedMessages = make(map[trinary.Hash]*bundleTail)
 
 	// create an empty list
 	s.tips = list.New()
@@ -231,34 +231,34 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 	return result, nil
 }
 
-// OnNewSolidBundle adds a new bundle to be processed by s.
-// The bundle must be solid and OnNewSolidBundle must be called in the order of solidification.
+// OnNewSolidMessage adds a new bundle to be processed by s.
+// The bundle must be solid and OnNewSolidMessage must be called in the order of solidification.
 // The bundle must also not be below max depth.
-func (s *HeaviestSelector) OnNewSolidBundle(bndl *tangle.Message) (trackedTailsCount int) {
+func (s *HeaviestSelector) OnNewSolidMessage(msg *tangle.Message) (trackedTailsCount int) {
 	s.Lock()
 	defer s.Unlock()
 
 	// filter duplicate transaction
-	if _, contains := s.trackedTails[string(bndl.GetTailHash())]; contains {
+	if _, contains := s.trackedMessages[string(msg.GetMessageID())]; contains {
 		return
 	}
 
-	trunkItem := s.trackedTails[string(bndl.GetTrunkHash(true))]
-	branchItem := s.trackedTails[string(bndl.GetBranchHash(true))]
+	trunkItem := s.trackedMessages[string(msg.GetParent1MessageID())]
+	branchItem := s.trackedMessages[string(msg.GetParent2MessageID())]
 
 	// compute the referenced transactions
 	// all the known approvers in the HeaviestSelector are represented by a unique bit in a bitset.
 	// if a new approver is added, we expand the bitset by 1 bit and store the Union of the bitsets
 	// of trunk and branch for this approver, to know which parts of the cone are referenced by this approver.
-	idx := uint(len(s.trackedTails))
-	it := &bundleTail{hash: bndl.GetTailHash(), refs: bitset.New(idx + 1).Set(idx)}
+	idx := uint(len(s.trackedMessages))
+	it := &bundleTail{hash: msg.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
 	if trunkItem != nil {
 		it.refs.InPlaceUnion(trunkItem.refs)
 	}
 	if branchItem != nil {
 		it.refs.InPlaceUnion(branchItem.refs)
 	}
-	s.trackedTails[string(it.hash)] = it
+	s.trackedMessages[string(it.hash)] = it
 
 	// update tips
 	s.removeTip(trunkItem)
@@ -292,5 +292,5 @@ func (s *HeaviestSelector) tipsToList() *bundleTailList {
 
 // GetTrackedTailsCount returns the amount of known bundle tails.
 func (s *HeaviestSelector) GetTrackedTailsCount() (trackedTails int) {
-	return len(s.trackedTails)
+	return len(s.trackedMessages)
 }

@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/math"
-
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -34,14 +31,14 @@ type Confirmation struct {
 
 // WhiteFlagMutations contains the ledger mutations and referenced transactions applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
-	// The tails of bundles which mutate the ledger in the order in which they were applied.
-	TailsIncluded hornet.Hashes
-	// The tails of bundles which were excluded as they were conflicting with the mutations.
-	TailsExcludedConflicting hornet.Hashes
-	// The tails which were excluded because they were part of a zero or spam value transfer.
-	TailsExcludedZeroValue hornet.Hashes
-	// The tails which were referenced by the milestone (should be the sum of TailsIncluded + TailsExcludedConflicting + TailsExcludedZeroValue).
-	TailsReferenced hornet.Hashes
+	// The messages which mutate the ledger in the order in which they were applied.
+	MessagesIncluded hornet.Hashes
+	// The messages which were excluded as they were conflicting with the mutations.
+	MessagesExcludedConflicting hornet.Hashes
+	// The messages which were excluded because they were part of a zero or spam value transfer.
+	MessagesExcludedZeroValue hornet.Hashes
+	// The messages which were referenced by the milestone (should be the sum of MessagesIncluded + MessagesExcludedConflicting + MessagesExcludedZeroValue).
+	MessagesReferenced hornet.Hashes
 	// Contains the updated state of the addresses which were mutated by the given confirmation.
 	NewAddressState map[string]int64
 	// Contains the mutations to the state of the addresses for the given confirmation.
@@ -59,115 +56,106 @@ type WhiteFlagMutations struct {
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedTxMetas and cachedBundles have to be released outside.
-func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parentMessageID ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
-		TailsIncluded:            make(hornet.Hashes, 0),
-		TailsExcludedConflicting: make(hornet.Hashes, 0),
-		TailsExcludedZeroValue:   make(hornet.Hashes, 0),
-		TailsReferenced:          make(hornet.Hashes, 0),
-		NewAddressState:          make(map[string]int64),
-		AddressMutations:         make(map[string]int64),
+		MessagesIncluded:            make(hornet.Hashes, 0),
+		MessagesExcludedConflicting: make(hornet.Hashes, 0),
+		MessagesExcludedZeroValue:   make(hornet.Hashes, 0),
+		MessagesReferenced:          make(hornet.Hashes, 0),
+		NewAddressState:             make(map[string]int64),
+		AddressMutations:            make(map[string]int64),
 	}
 
 	// traversal stops if no more transactions pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-		defer cachedTxMeta.Release(true) // meta -1
+	condition := func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
+		defer cachedMetadata.Release(true) // meta -1
 
-		if _, exists := cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())]; !exists {
+		if _, exists := cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())]; !exists {
 			// release the tx metadata at the end to speed up calculation
-			cachedTxMetas[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedTxMeta.Retain()
-		}
-
-		if !cachedTxMeta.GetMetadata().IsTail() {
-			return false, fmt.Errorf("%w: candidate tx %s is not a tail of a bundle", ErrMilestoneApprovedInvalidBundle, cachedTxMeta.GetMetadata().GetMessageID().Hex())
+			cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMetadata.Retain()
 		}
 
 		// load up bundle
-		cachedBundle, exists := cachedBundles[string(cachedTxMeta.GetMetadata().GetMessageID())]
+		cachedMessage, exists := cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())]
 		if !exists {
-			cachedBundle = tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID()) // bundle +1
-			if cachedBundle == nil {
-				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Hex(), cachedTxMeta.GetMetadata().GetMessageID().Hex())
+			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // bundle +1
+			if cachedMessage == nil {
+				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 			}
 			// release the bundles at the end to speed up calculation
-			cachedBundles[string(cachedTxMeta.GetMetadata().GetMessageID())] = cachedBundle
-		}
-
-		// check validty and correct strict semantics
-		if !cachedBundle.GetMessage().IsValid() || !cachedBundle.GetMessage().ValidStrictSemantics() {
-			return false, fmt.Errorf("%w: bundle %s is invalid", ErrMilestoneApprovedInvalidBundle, cachedBundle.GetMessage().GetMessageID().Hex())
+			cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMessage
 		}
 
 		// only traverse and process the transaction if it was not confirmed yet
-		return !cachedTxMeta.GetMetadata().IsConfirmed(), nil
+		return !cachedMetadata.GetMetadata().IsConfirmed(), nil
 	}
 
 	// consumer
-	consumer := func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-		defer cachedTxMeta.Release(true) // meta -1
+	consumer := func(cachedMetadata *tangle.CachedMetadata) error { // meta +1
+		defer cachedMetadata.Release(true) // meta -1
 
-		// load up bundle
-		cachedBundle := tangle.GetCachedMessageOrNil(cachedTxMeta.GetMetadata().GetMessageID())
-		if cachedBundle == nil {
-			return fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrBundleNotFound, cachedTxMeta.GetMetadata().GetBundleHash().Hex(), cachedTxMeta.GetMetadata().GetMessageID().Hex())
+		// load up message
+		cachedMessage := tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID())
+		if cachedMessage == nil {
+			return fmt.Errorf("%w: message %s of candidate tx %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 		}
-		defer cachedBundle.Release(true)
+		defer cachedMessage.Release(true)
 
 		// exclude zero or spam value bundles
-		bundle := cachedBundle.GetMessage()
-		mutations := bundle.GetLedgerChanges()
-		if bundle.IsValueSpam() || len(mutations) == 0 {
-			wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetMessageID())
-			wfConf.TailsExcludedZeroValue = append(wfConf.TailsExcludedZeroValue, cachedTxMeta.GetMetadata().GetMessageID())
-			return nil
-		}
+		//message := cachedMessage.GetMessage()
+		//mutations := message.GetLedgerChanges()
+		//if message.IsValueSpam() || len(mutations) == 0 {
+		//	wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
+		//	wfConf.MessagesExcludedZeroValue = append(wfConf.MessagesExcludedZeroValue, cachedMetadata.GetMetadata().GetMessageID())
+		//	return nil
+		//}
 
 		var conflicting bool
 
-		// contains the updated mutations from this bundle against the
+		// contains the updated mutations from this message against the
 		// current mutations of the milestone's confirming cone (or previous ledger state).
 		// we only apply it to the milestone's confirming cone mutations if
-		// the bundle doesn't create any conflict.
+		// the message doesn't create any conflict.
 		patchedState := make(map[string]int64)
 		validMutations := make(map[string]int64)
 
-		for addr, change := range mutations {
+		//for addr, change := range mutations {
+		//
+		//	// load state from milestone cone mutation or previous milestone
+		//	balance, has := wfConf.NewAddressState[addr]
+		//	if !has {
+		//		balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.Hash(addr))
+		//		if err != nil {
+		//			return fmt.Errorf("%w: unable to retrieve balance of address %s", err, addr)
+		//		}
+		//		balance = int64(balanceStateFromPreviousMilestone)
+		//	}
+		//
+		//	// note that there's no overflow of int64 values here
+		//	// as a valid message's transaction can not spend more than the total supply,
+		//	// meaning that newBalance could be max 2*total_supply or min -total_supply.
+		//	newBalance := balance + change
+		//
+		//	// on below zero or above total supply the mutation is invalid
+		//	if newBalance < 0 || math.AbsInt64(newBalance) > consts.TotalSupply {
+		//		conflicting = true
+		//		break
+		//	}
+		//
+		//	patchedState[addr] = newBalance
+		//	validMutations[addr] = validMutations[addr] + change
+		//}
 
-			// load state from milestone cone mutation or previous milestone
-			balance, has := wfConf.NewAddressState[addr]
-			if !has {
-				balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.Hash(addr))
-				if err != nil {
-					return fmt.Errorf("%w: unable to retrieve balance of address %s", err, addr)
-				}
-				balance = int64(balanceStateFromPreviousMilestone)
-			}
-
-			// note that there's no overflow of int64 values here
-			// as a valid bundle's transaction can not spend more than the total supply,
-			// meaning that newBalance could be max 2*total_supply or min -total_supply.
-			newBalance := balance + change
-
-			// on below zero or above total supply the mutation is invalid
-			if newBalance < 0 || math.AbsInt64(newBalance) > consts.TotalSupply {
-				conflicting = true
-				break
-			}
-
-			patchedState[addr] = newBalance
-			validMutations[addr] = validMutations[addr] + change
-		}
-
-		wfConf.TailsReferenced = append(wfConf.TailsReferenced, cachedTxMeta.GetMetadata().GetMessageID())
+		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
 
 		if conflicting {
-			wfConf.TailsExcludedConflicting = append(wfConf.TailsExcludedConflicting, cachedTxMeta.GetMetadata().GetMessageID())
+			wfConf.MessagesExcludedConflicting = append(wfConf.MessagesExcludedConflicting, cachedMetadata.GetMetadata().GetMessageID())
 			return nil
 		}
 
 		// mark the given tail to be part of milestone ledger changing tail inclusion set
-		wfConf.TailsIncluded = append(wfConf.TailsIncluded, cachedTxMeta.GetMetadata().GetMessageID())
+		wfConf.MessagesIncluded = append(wfConf.MessagesIncluded, cachedMetadata.GetMetadata().GetMessageID())
 
 		// incorporate the mutations in accordance with the previous mutations
 		// in the milestone's confirming cone/previous ledger state.
@@ -186,10 +174,10 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If trunk and branch of a bundle head transaction are both SEPs, are already processed or already confirmed,
 	// then the mutations from the transaction retrieved from the stack are accumulated to the given Confirmation struct's mutations.
-	// If the popped transaction was used to mutate the Confirmation struct, it will also be appended to Confirmation.TailsIncluded.
-	if len(branchHash) == 0 {
+	// If the popped transaction was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncluded.
+	if len(parentMessageID) == 0 {
 		// no branch hash given, only walk trunk
-		if err := dag.TraverseApprovees(trunkHash,
+		if err := dag.TraverseParents(parent1MessageID,
 			condition,
 			consumer,
 			// called on missing approvees
@@ -198,12 +186,12 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			false, true, nil); err != nil {
+			false, nil); err != nil {
 			return nil, err
 		}
 	} else {
 		// branch hash given, first walk trunk then branch
-		if err := dag.TraverseApproveesTrunkBranch(trunkHash, branchHash[0],
+		if err := dag.TraverseParent1AndParent2(parent1MessageID, parentMessageID[0],
 			condition,
 			consumer,
 			// called on missing approvees
@@ -212,15 +200,15 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
-			false, true, nil); err != nil {
+			false, nil); err != nil {
 			return nil, err
 		}
 	}
 
 	// compute merkle tree root hash
-	wfConf.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConf.TailsIncluded)
+	wfConf.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesIncluded)
 
-	if len(wfConf.TailsIncluded) != (len(wfConf.TailsReferenced) - len(wfConf.TailsExcludedConflicting) - len(wfConf.TailsExcludedZeroValue)) {
+	if len(wfConf.MessagesIncluded) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedConflicting) - len(wfConf.MessagesExcludedZeroValue)) {
 		return nil, ErrIncludedTailsSumDoesntMatch
 	}
 

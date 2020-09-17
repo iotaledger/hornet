@@ -221,7 +221,7 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	_, startTxConfirmedAt := cachedStartTxMeta.GetMetadata().GetConfirmed()
 	defer cachedStartTxMeta.Release(true)
 
-	dag.TraverseApprovees(cachedStartTxMeta.GetMetadata().GetMessageID(),
+	dag.TraverseParents(cachedStartTxMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1

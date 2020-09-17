@@ -10,8 +10,8 @@ import (
 
 // UpdateOutdatedRootSnapshotIndexes updates the transaction root snapshot indexes of the given transactions.
 // the "outdatedTransactions" should be ordered from oldest to latest to avoid recursion.
-func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi milestone.Index) {
-	for _, outdatedTxHash := range outdatedTransactions {
+func UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs hornet.Hashes, lsmi milestone.Index) {
+	for _, outdatedTxHash := range outdatedMessageIDs {
 		cachedTxMeta := tangle.GetCachedMessageMetadataOrNil(outdatedTxHash)
 		if cachedTxMeta == nil {
 			panic(tangle.ErrMessageNotFound)
@@ -21,12 +21,12 @@ func UpdateOutdatedRootSnapshotIndexes(outdatedTransactions hornet.Hashes, lsmi 
 }
 
 // GetTransactionRootSnapshotIndexes searches the transaction root snapshot indexes for a given transaction.
-func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
-	defer cachedTxMeta.Release(true) // meta -1
+func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
+	defer cachedMessageMetadata.Release(true) // meta -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
 	// information about yrtsi and ortsi, return that info
-	yrtsi, ortsi, rtsci := cachedTxMeta.GetMetadata().GetRootSnapshotIndexes()
+	yrtsi, ortsi, rtsci := cachedMessageMetadata.GetMetadata().GetRootSnapshotIndexes()
 	if rtsci == lsmi {
 		return yrtsi, ortsi
 	}
@@ -43,35 +43,35 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 		}
 	}
 
-	// collect all approvees in the cone that are not confirmed,
+	// collect all parents in the cone that are not confirmed,
 	// are no solid entry points and have no recent calculation index
-	var outdatedTransactions hornet.Hashes
+	var outdatedMessageIDs hornet.Hashes
 
-	startTxHash := cachedTxMeta.GetMetadata().GetMessageID()
+	startMessageID := cachedMessageMetadata.GetMetadata().GetMessageID()
 
 	indexesValid := true
 
-	// traverse the approvees of this transaction to calculate the root snapshot indexes for this transaction.
-	// this walk will also collect all outdated transactions in the same cone, to update them afterwards.
-	if err := TraverseApprovees(cachedTxMeta.GetMetadata().GetMessageID(),
+	// traverse the parents of this message to calculate the root snapshot indexes for this message.
+	// this walk will also collect all outdated messages in the same cone, to update them afterwards.
+	if err := TraverseParents(cachedMessageMetadata.GetMetadata().GetMessageID(),
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
-			defer cachedTxMeta.Release(true) // meta -1
+		func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedMetadata.Release(true) // meta -1
 
 			// first check if the tx was confirmed => update yrtsi and ortsi with the confirmation index
-			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed {
+			if confirmed, at := cachedMetadata.GetMetadata().GetConfirmed(); confirmed {
 				updateIndexes(at, at)
 				return false, nil
 			}
 
-			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetMessageID()) {
+			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
 				return true, nil
 			}
 
 			// if the tx was not confirmed yet, but already contains recent (calculation index matches LSMI) information
 			// about yrtsi and ortsi, propagate that info
-			yrtsi, ortsi, rtsci := cachedTxMeta.GetMetadata().GetRootSnapshotIndexes()
+			yrtsi, ortsi, rtsci := cachedMetadata.GetMetadata().GetRootSnapshotIndexes()
 			if rtsci == lsmi {
 				updateIndexes(yrtsi, ortsi)
 				return false, nil
@@ -80,15 +80,15 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 			return true, nil
 		},
 		// consumer
-		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
-			defer cachedTxMeta.Release(true) // meta -1
+		func(cachedMetadata *tangle.CachedMetadata) error { // meta +1
+			defer cachedMetadata.Release(true) // meta -1
 
-			if bytes.Equal(startTxHash, cachedTxMeta.GetMetadata().GetMessageID()) {
-				// skip the start transaction, so it doesn't get added to the outdatedTransactions
+			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
+				// skip the start transaction, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
 
-			outdatedTransactions = append(outdatedTransactions, cachedTxMeta.GetMetadata().GetMessageID())
+			outdatedMessageIDs = append(outdatedMessageIDs, cachedMetadata.GetMetadata().GetMessageID())
 			return nil
 		},
 		// called on missing approvees
@@ -101,7 +101,7 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 			// if the approvee is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(txHash)
 			updateIndexes(entryPointIndex, entryPointIndex)
-		}, false, false, nil); err != nil {
+		}, false, nil); err != nil {
 		if err == tangle.ErrMessageNotFound {
 			indexesValid = false
 		} else {
@@ -111,7 +111,7 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 
 	// update the outdated root snapshot indexes of all transactions in the cone in order from oldest txs to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
-	UpdateOutdatedRootSnapshotIndexes(outdatedTransactions, lsmi)
+	UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs, lsmi)
 
 	// only set the calculated root snapshot indexes if all transactions in the past cone were found
 	if !indexesValid {
@@ -119,7 +119,7 @@ func GetTransactionRootSnapshotIndexes(cachedTxMeta *tangle.CachedMetadata, lsmi
 	}
 
 	// set the new transaction root snapshot indexes in the metadata of the transaction
-	cachedTxMeta.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
+	cachedMessageMetadata.GetMetadata().SetRootSnapshotIndexes(youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex, lsmi)
 
 	return youngestTxRootSnapshotIndex, oldestTxRootSnapshotIndex
 }
@@ -136,7 +136,7 @@ func UpdateTransactionRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone
 	// we update all transactions in order from oldest to latest
 	for _, txHash := range txHashes {
 
-		if err := TraverseApprovers(txHash,
+		if err := TraverseChildren(txHash,
 			// traversal stops if no more transactions pass the given condition
 			func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedTxMeta.Release(true) // meta -1

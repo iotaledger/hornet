@@ -67,12 +67,12 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseCorrupted()
 	})
 
-	if err := address.ValidAddress(config.NodeConfig.GetString(config.CfgCoordinatorAddress)); err != nil {
+	if err := address.ValidAddress(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)); err != nil {
 		log.Fatal(err.Error())
 	}
 
 	tangle.ConfigureMilestones(
-		hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress)),
+		hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)),
 		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
 		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),

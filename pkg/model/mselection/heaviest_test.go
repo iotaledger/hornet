@@ -34,7 +34,7 @@ func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 	var lastHash = hornet.NullHashBytes
 	for i := 1; i <= numTestTxs; i++ {
 		bndl := newTestBundle(i, lastHash, lastHash)
-		hps.OnNewSolidBundle(bndl)
+		hps.OnNewSolidMessage(bndl)
 		lastHash = bndl.GetTailHash()
 	}
 
@@ -51,7 +51,7 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 		lastHash[i] = hornet.NullHashBytes
 		for j := 1; j <= numTestTxs; j++ {
 			bndl := newTestBundle(i*numTestTxs+j, lastHash[i], lastHash[i])
-			hps.OnNewSolidBundle(bndl)
+			hps.OnNewSolidMessage(bndl)
 			lastHash[i] = bndl.GetTailHash()
 		}
 	}
@@ -66,7 +66,7 @@ func TestHeaviestSelector_SelectTipsCancel(t *testing.T) {
 	// create a very large blow ball
 	for i := 1; i <= 10000; i++ {
 		bndl := newTestBundle(i, hornet.NullHashBytes, hornet.NullHashBytes)
-		hps.OnNewSolidBundle(bndl)
+		hps.OnNewSolidMessage(bndl)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,7 +90,7 @@ func TestHeaviestSelector_Concurrent(t *testing.T) {
 	hashes := []hornet.MilestoneMessageID{hornet.NullHashBytes}
 	for i := 0; i < 1000; i++ {
 		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hps.OnNewSolidBundle(bndl)
+		hps.OnNewSolidMessage(bndl)
 		hashes = append(hashes, bndl.GetTailHash())
 	}
 
@@ -107,7 +107,7 @@ func TestHeaviestSelector_Concurrent(t *testing.T) {
 
 	for i := 1000; i < 2000; i++ {
 		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hps.OnNewSolidBundle(bndl)
+		hps.OnNewSolidMessage(bndl)
 		hashes = append(hashes, bndl.GetTailHash())
 	}
 	wg.Wait()
@@ -136,7 +136,7 @@ func BenchmarkHeaviestSelector_SelectTips(b *testing.B) {
 	hashes := []hornet.MilestoneMessageID{hornet.NullHashBytes}
 	for i := 0; i < numBenchmarkTxs; i++ {
 		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hps.OnNewSolidBundle(bndl)
+		hps.OnNewSolidMessage(bndl)
 		hashes = append(hashes, bndl.GetTailHash())
 	}
 	b.ResetTimer()

@@ -165,25 +165,25 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 }
 
 // AddTip adds the given tailTxHash as a tip.
-func (ts *TipSelector) AddTip(bndl *tangle.Message) {
+func (ts *TipSelector) AddTip(message *tangle.Message) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	tailTxHash := bndl.GetTailHash()
+	messageID := message.GetMessageID()
 
-	if _, exists := ts.nonLazyTipsMap[string(tailTxHash)]; exists {
+	if _, exists := ts.nonLazyTipsMap[string(messageID)]; exists {
 		// tip already exists
 		return
 	}
 
-	if _, exists := ts.semiLazyTipsMap[string(tailTxHash)]; exists {
+	if _, exists := ts.semiLazyTipsMap[string(messageID)]; exists {
 		// tip already exists
 		return
 	}
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	score := ts.calculateScore(tailTxHash, lsmi)
+	score := ts.calculateScore(messageID, lsmi)
 	if score == ScoreLazy {
 		// do not add lazy tips.
 		// lazy tips should also not remove other tips from the pool, otherwise the tip pool will run empty.
@@ -192,17 +192,17 @@ func (ts *TipSelector) AddTip(bndl *tangle.Message) {
 
 	tip := &Tip{
 		Score:             score,
-		Hash:              tailTxHash,
+		Hash:              messageID,
 		TimeFirstApprover: time.Time{},
 		ApproversCount:    atomic.NewUint32(0),
 	}
 
 	switch tip.Score {
 	case ScoreNonLazy:
-		ts.nonLazyTipsMap[string(tailTxHash)] = tip
+		ts.nonLazyTipsMap[string(messageID)] = tip
 		metrics.SharedServerMetrics.TipsNonLazy.Add(1)
 	case ScoreSemiLazy:
-		ts.semiLazyTipsMap[string(tailTxHash)] = tip
+		ts.semiLazyTipsMap[string(messageID)] = tip
 		metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
 	}
 
@@ -211,8 +211,8 @@ func (ts *TipSelector) AddTip(bndl *tangle.Message) {
 	// the approvees (trunk and branch) are the tail transactions this tip approves
 	// remove them from the tip pool
 	approveeTailTxHashes := map[string]struct{}{
-		string(bndl.GetTrunkHash(true)):  {},
-		string(bndl.GetBranchHash(true)): {},
+		string(message.GetParent1MessageID()): {},
+		string(message.GetParent2MessageID()): {},
 	}
 
 	checkTip := func(tipsMap map[string]*Tip, approveeTip *Tip, retentionRulesTipsLimit int, maxApprovers uint32, maxReferencedTipAgeSeconds time.Duration) bool {

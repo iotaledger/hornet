@@ -1,6 +1,7 @@
 package peering
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -14,7 +15,6 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/peering"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol"
@@ -37,10 +37,13 @@ var (
 func Manager() *peering.Manager {
 	managerOnce.Do(func() {
 		// init protocol package with handshake data
-		cooAddrBytes := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
+		cooPublicKey, err := hex.DecodeString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
+		if err != nil {
+			log.Panicf("Error reading coordinator public key: %v", err)
+		}
 		mwm := config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 		bindAddr := config.NodeConfig.GetString(config.CfgNetGossipBindAddress)
-		if err := protocol.Init(cooAddrBytes, mwm, bindAddr); err != nil {
+		if err := protocol.Init(cooPublicKey, mwm, bindAddr); err != nil {
 			log.Fatalf("couldn't initialize protocol: %s", err)
 		}
 
@@ -67,7 +70,7 @@ func Manager() *peering.Manager {
 		manager = peering.NewManager(peering.Options{
 			BindAddress: config.NodeConfig.GetString(config.CfgNetGossipBindAddress),
 			ValidHandshake: handshake.Handshake{
-				ByteEncodedCooAddress: cooAddrBytes,
+				ByteEncodedCooAddress: cooPublicKey,
 				MWM:                   byte(mwm),
 			},
 			MaxConnected:  config.PeeringConfig.GetInt(config.CfgPeeringMaxPeers),

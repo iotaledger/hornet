@@ -63,7 +63,7 @@ func (msg *Message) ObjectStorageKey() []byte {
 }
 
 func (msg *Message) ObjectStorageValue() (_ []byte) {
-	data, err := msg.message.Serialize(iotago.DeSeriModePerformValidation)
+	data, err := msg.message.Serialize(iotago.DeSeriModePerformValidation) //TODO: should we skip verification?
 	if err != nil {
 		log.Fatalf("Error serializing message: %v", err)
 	}

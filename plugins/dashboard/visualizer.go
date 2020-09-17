@@ -132,7 +132,7 @@ func runVisualizer() {
 		}
 
 		var excludedIDs []string
-		for _, txHash := range confirmation.Mutations.TailsExcludedConflicting {
+		for _, txHash := range confirmation.Mutations.MessagesExcludedConflicting {
 			excludedIDs = append(excludedIDs, txHash.Hex()[:VisualizerIdLength])
 		}
 
