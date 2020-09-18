@@ -20,12 +20,12 @@ func ShortenedHash(hash hornet.Hash) string {
 
 // ShortenedTag returns a shortened tag or milestone index for the given bundle.
 // this is used for the dot file.
-func ShortenedTag(bundle *tangle.CachedMessage) string {
-	if bundle.GetMessage().IsMilestone() {
-		return fmt.Sprintf("%d", bundle.GetMessage().GetMilestoneIndex())
+func ShortenedTag(cachedMessage *tangle.CachedMessage) string {
+	if cachedMessage.GetMessage().IsMilestone() {
+		return fmt.Sprintf("%d", cachedMessage.GetMessage().GetMilestoneIndex())
 	}
 
-	tail := bundle.GetMessage().GetTail()
+	tail := cachedMessage.GetMessage().GetTail()
 	defer tail.Release(true)
 
 	tag := tail.GetTransaction().Tx.Tag

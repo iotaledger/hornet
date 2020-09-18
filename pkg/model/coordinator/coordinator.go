@@ -39,8 +39,8 @@ var (
 	ErrInvalidSiblingsTrytesLength = errors.New("siblings trytes too long")
 )
 
-// CoordinatorEvents are the events issued by the coordinator.
-type CoordinatorEvents struct {
+// Events are the events issued by the coordinator.
+type Events struct {
 	// Fired when a checkpoint message is issued.
 	IssuedCheckpointTransaction *events.Event
 	// Fired when a milestone is issued.
@@ -66,7 +66,7 @@ type Coordinator struct {
 	bootstrapped bool
 
 	// events of the coordinator
-	Events *CoordinatorEvents
+	Events *Events
 }
 
 // MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.Hash hashing functions.
@@ -74,8 +74,6 @@ type Coordinator struct {
 func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead
 	var hashFunc crypto.Hash
-
-	hashFunc.String()
 	switch strings.ToLower(name) {
 	case "blake2b-512":
 		hashFunc = crypto.BLAKE2b_512
@@ -110,7 +108,7 @@ func New(privateKey ed25519.PrivateKey, minWeightMagnitude int, stateFilePath st
 		powHandler:              powHandler,
 		sendMesssageFunc:        sendMessageFunc,
 		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
-		Events: &CoordinatorEvents{
+		Events: &Events{
 			IssuedCheckpointTransaction: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:             events.NewEvent(MilestoneCaller),
 		},
@@ -176,10 +174,9 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
-		state.LatestMilestoneHash = latestMilestoneHash
+		state.LatestMilestoneMessageID = latestMilestoneHash
 		state.LatestMilestoneIndex = startIndex - 1
-		state.LatestMilestoneTime = 0
-		state.LatestMilestoneTransactions = hornet.Hashes{hornet.NullMessageID}
+		state.LatestMilestoneTime = time.Now()
 
 		coo.state = state
 		coo.bootstrapped = false
@@ -235,35 +232,27 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, par
 		return fmt.Errorf("failed to compute muations: %w", err)
 	}
 
-	b, err := createMilestone(coo.privateKey, newMilestoneIndex, coo.securityLvl, parent1MessageID, parent2MessageID, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneMsg, err := createMilestone(coo.privateKey, newMilestoneIndex, parent1MessageID, parent2MessageID, coo.minWeightMagnitude, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create: %w", err)
 	}
 
-	if err := coo.sendMesssageFunc(b, true); err != nil {
+	if err := coo.sendMesssageFunc(milestoneMsg, true); err != nil {
 		return err
 	}
 
-	txHashes := make(hornet.Hashes, 0, len(b))
-	for i := range b {
-		txHashes = append(txHashes, hornet.HashFromHashTrytes(b[i].Hash))
-	}
-
-	tailTx := &b[0]
-
 	// always reference the last milestone directly to speed up syncing
-	latestMilestoneHash := hornet.HashFromHashTrytes(tailTx.Hash)
+	latestMilestoneHash := milestoneMsg.GetMessageID()
 
-	coo.state.LatestMilestoneHash = latestMilestoneHash
+	coo.state.LatestMilestoneMessageID = latestMilestoneHash
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
-	coo.state.LatestMilestoneTime = int64(tailTx.Timestamp)
-	coo.state.LatestMilestoneTransactions = txHashes
+	coo.state.LatestMilestoneTime = time.Now()
 
 	if err := coo.state.storeStateFile(coo.stateFilePath); err != nil {
 		return fmt.Errorf("failed to update state: %w", err)
 	}
 
-	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneHash)
+	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneMessageID)
 
 	return nil
 }
@@ -278,7 +267,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
 		// parent1 and parent2 reference the last known milestone or NullHash if startIndex = 1 (see InitState)
-		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneHash, coo.state.LatestMilestoneHash, coo.state.LatestMilestoneIndex+1); err != nil {
+		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneMessageID, coo.state.LatestMilestoneMessageID, coo.state.LatestMilestoneIndex+1); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
 		}
@@ -286,7 +275,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 		coo.bootstrapped = true
 	}
 
-	return coo.state.LatestMilestoneHash, nil
+	return coo.state.LatestMilestoneMessageID, nil
 }
 
 // IssueCheckpoint tries to create and send a "checkpoint" to the network.
@@ -313,16 +302,16 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 	}
 
 	for i, tip := range tips {
-		b, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powHandler)
+		msg, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create: %w", err)
 		}
 
-		if err := coo.sendMesssageFunc(b, false); err != nil {
+		if err := coo.sendMesssageFunc(msg, false); err != nil {
 			return nil, err
 		}
 
-		lastCheckpointHash = hornet.HashFromHashTrytes(b[0].Hash)
+		lastCheckpointHash = msg.GetMessageID()
 
 		coo.Events.IssuedCheckpointTransaction.Trigger(checkpointIndex, i, len(tips), lastCheckpointHash)
 	}
@@ -353,7 +342,7 @@ func (coo *Coordinator) IssueMilestone(parent1MessageID hornet.Hash, parent2Mess
 		return nil, nil, err
 	}
 
-	return coo.state.LatestMilestoneHash, nil, nil
+	return coo.state.LatestMilestoneMessageID, nil, nil
 }
 
 // GetInterval returns the interval milestones should be issued.
