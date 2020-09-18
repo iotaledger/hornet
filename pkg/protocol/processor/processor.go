@@ -168,7 +168,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 // CompressAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
 func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	txBytesTruncated := compressed.TruncateTxTrits(txTrits)
 	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {

@@ -32,7 +32,7 @@ func ZeroValueTx(t *testing.T, tag trinary.Trytes) []trinary.Trytes {
 
 	var b bundle.Bundle
 	entry := bundle.BundleEntry{
-		Address:                   trinary.MustPad(utils.RandomTrytesInsecure(consts.AddressTrinarySize/3), consts.AddressTrinarySize/3),
+		Address:                   utils.RandomKerlHashTrytesInsecure(),
 		Value:                     0,
 		Tag:                       tag,
 		Timestamp:                 uint64(time.Now().UnixNano() / int64(time.Second)),

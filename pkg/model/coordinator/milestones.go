@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/encoding/b1t6"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/transaction"
@@ -16,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/t6b1"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -80,7 +80,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	siblingsTrytes := strings.Join(leafSiblings, "")
 
 	// append t6b1 encoded merkle tree root hash to the head's signature message fragment data
-	siblingsTrytes += t6b1.MustBytesToTrytes(whiteFlagMerkleRootTreeHash)
+	siblingsTrytes += b1t6.EncodeToTrytes(whiteFlagMerkleRootTreeHash)
 
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 

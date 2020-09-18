@@ -67,7 +67,10 @@ func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsB
 	}
 
 	// Verify the calculated MerkleTreeHash with the one inside the milestone
-	merkleTreeHash := msBundle.GetMilestoneMerkleTreeHash()
+	merkleTreeHash, err := msBundle.GetMilestoneMerkleTreeHash()
+	if err != nil {
+		return nil, fmt.Errorf("confirmMilestone: invalid MerkleTreeHash: %w", err)
+	}
 	if !bytes.Equal(mutations.MerkleTreeHash, merkleTreeHash) {
 		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(mutations.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/converter"
+	"github.com/iotaledger/iota.go/encoding/ascii"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/signing"
 	"github.com/iotaledger/iota.go/signing/key"
@@ -88,7 +88,7 @@ func createBundle(seed trinary.Trytes, seedIndex uint64, txAddress trinary.Hash,
 		messageString = fmt.Sprintf("%v\n%v", messageString, additionalMesssage[0])
 	}
 
-	message, err := converter.ASCIIToTrytes(messageString)
+	message, err := ascii.EncodeToTrytes(messageString)
 	if err != nil {
 		return nil, fmt.Errorf("ASCIIToTrytes: %v", err.Error())
 	}
