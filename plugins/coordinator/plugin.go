@@ -310,7 +310,7 @@ func isBelowMaxDepth(cachedTailTxMeta *tangle.CachedMetadata) bool {
 }
 
 // GetEvents returns the events of the coordinator
-func GetEvents() *coordinator.CoordinatorEvents {
+func GetEvents() *coordinator.Events {
 	if coo == nil {
 		return nil
 	}

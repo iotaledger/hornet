@@ -44,7 +44,7 @@ type WhiteFlagMutations struct {
 	// Contains the mutations to the state of the addresses for the given confirmation.
 	AddressMutations map[string]int64
 	// The merkle tree root hash of all tails.
-	MerkleTreeHash []byte
+	MerkleTreeHash [64]byte
 }
 
 // ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by trunk and branch.
@@ -206,7 +206,8 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 	}
 
 	// compute merkle tree root hash
-	wfConf.MerkleTreeHash = NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesIncluded)
+	merkleTreeHash := NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesIncluded)
+	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:64])
 
 	if len(wfConf.MessagesIncluded) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedConflicting) - len(wfConf.MessagesExcludedZeroValue)) {
 		return nil, ErrIncludedTailsSumDoesntMatch

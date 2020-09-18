@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -16,12 +17,9 @@ type State struct {
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
 
-	LatestMilestoneIndex milestone.Index
-	LatestMilestoneHash  hornet.Hash
-	LatestMilestoneTime  int64
-
-	// LatestMilestoneTransactions are the transaction hashes of the latest milestone
-	LatestMilestoneTransactions hornet.Hashes
+	LatestMilestoneIndex     milestone.Index
+	LatestMilestoneMessageID hornet.Hash
+	LatestMilestoneTime      time.Time
 }
 
 // MarshalBinary returns the binary representation of the coordinator state.
@@ -29,22 +27,15 @@ func (cs *State) MarshalBinary() (data []byte, err error) {
 
 	/*
 		 4 bytes uint32 			LatestMilestoneIndex
-		49 bytes     			    LatestMilestoneHash
+		32 bytes     			    LatestMilestoneMessageID
 		 8 bytes uint64 			LatestMilestoneTime
-		49 bytes                    LatestMilestoneTransactions	(x latestMilestoneTransactionsCount)
 	*/
 
-	data = make([]byte, 4+49+8+(49*len(cs.LatestMilestoneTransactions)))
+	data = make([]byte, 4+32+8)
 
 	binary.LittleEndian.PutUint32(data[0:4], uint32(cs.LatestMilestoneIndex))
-	copy(data[4:53], cs.LatestMilestoneHash)
-	binary.LittleEndian.PutUint64(data[53:61], uint64(cs.LatestMilestoneTime))
-
-	offset := 61
-	for _, txHash := range cs.LatestMilestoneTransactions {
-		copy(data[offset:offset+49], txHash)
-		offset += 49
-	}
+	copy(data[4:36], cs.LatestMilestoneMessageID)
+	binary.LittleEndian.PutUint64(data[36:44], uint64(cs.LatestMilestoneTime.UnixNano()))
 
 	return data, nil
 }
@@ -54,27 +45,17 @@ func (cs *State) UnmarshalBinary(data []byte) error {
 
 	/*
 		 4 bytes uint32 			LatestMilestoneIndex
-		49 bytes     			    LatestMilestoneHash
+		32 bytes     			    LatestMilestoneMessageID
 		 8 bytes uint64 			LatestMilestoneTime
-		49 bytes                    LatestMilestoneTransactions	(x latestMilestoneTransactionsCount)
 	*/
 
-	if len(data) < 61 {
-		return fmt.Errorf("not enough bytes to unmarshal state, expected: 61, got: %d", len(data))
+	if len(data) < 44 {
+		return fmt.Errorf("not enough bytes to unmarshal state, expected: 44, got: %d", len(data))
 	}
 
 	cs.LatestMilestoneIndex = milestone.Index(binary.LittleEndian.Uint32(data[0:4]))
-	cs.LatestMilestoneHash = hornet.Hash(data[4:53])
-	cs.LatestMilestoneTime = int64(binary.LittleEndian.Uint64(data[53:61]))
-	cs.LatestMilestoneTransactions = make(hornet.Hashes, 0)
-
-	latestMilestoneTransactionsCount := (len(data) - 61) / 49
-
-	offset := 61
-	for i := 0; i < latestMilestoneTransactionsCount; i++ {
-		cs.LatestMilestoneTransactions = append(cs.LatestMilestoneTransactions, hornet.Hash(data[offset:offset+49]))
-		offset += 49
-	}
+	cs.LatestMilestoneMessageID = hornet.Hash(data[4:36])
+	cs.LatestMilestoneTime = time.Unix(0, int64(binary.LittleEndian.Uint64(data[36:44])))
 
 	return nil
 }
