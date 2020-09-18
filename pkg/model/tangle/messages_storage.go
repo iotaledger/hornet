@@ -3,8 +3,9 @@ package tangle
 import (
 	"bytes"
 	"fmt"
-	iotago "github.com/iotaledger/iota.go"
 	"time"
+
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
@@ -59,8 +60,8 @@ func (cachedMsgs CachedMessages) Retain() CachedMessages {
 
 // msg -1
 func (cachedMsgs CachedMessages) Release(force ...bool) {
-	for _, cachedTx := range cachedMsgs {
-		cachedTx.Release(force...)
+	for _, cachedMsg := range cachedMsgs {
+		cachedMsg.Release(force...)
 	}
 }
 
@@ -241,7 +242,7 @@ func StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdde
 	// Store msg + metadata atomically in the same callback
 	var cachedMeta objectstorage.CachedObject
 
-	cachedTxData := messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
+	cachedMsgData := messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
 		newlyAdded = true
 
 		metadata := hornet.NewMessageMetadata(message.GetMessageID(), message.GetParent1MessageID(), message.GetParent2MessageID())
@@ -257,7 +258,7 @@ func StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdde
 		cachedMeta = metadataStorage.Load(message.GetMessageID()) // meta +1
 	}
 
-	return &CachedMessage{msg: cachedTxData, metadata: cachedMeta}, newlyAdded
+	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
 }
 
 // MessageIDConsumer consumes the given message ID during looping through all messages in the persistence layer.

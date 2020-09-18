@@ -82,19 +82,19 @@ func configure(plugin *node.Plugin) {
 func run(_ *node.Plugin) {
 	log.Info("Starting ZMQ Publisher ...")
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglePackage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTransaction := events.NewClosure(func(cachedMsg *tanglePackage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			if !tanglePackage.IsNodeSyncedWithThreshold() {
-				cachedTx.Release(true) // tx -1
+				cachedMsg.Release(true) // msg -1
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		if _, added := newTxWorkerPool.TrySubmit(cachedTx); added { // tx pass +1
-			return // Avoid tx -1 (done inside workerpool task)
+		if _, added := newTxWorkerPool.TrySubmit(cachedMsg); added { // tx pass +1
+			return // Avoid msg -1 (done inside workerpool task)
 		}
-		cachedTx.Release(true) // tx -1
+		cachedMsg.Release(true) // msg -1
 	})
 
 	onTransactionConfirmed := events.NewClosure(func(cachedMeta *tanglePackage.CachedMetadata, msIndex milestone.Index, confTime int64) {

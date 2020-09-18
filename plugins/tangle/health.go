@@ -31,9 +31,9 @@ func IsNodeHealthy() bool {
 		return false
 	}
 
-	cachedMsTailTx := cachedLatestMs.GetMessage().GetTail() // tx +1
+	cachedMsTailTx := cachedLatestMs.GetMessage().GetTail() // msg +1
 	milestoneTimestamp = cachedMsTailTx.GetTransaction().GetTimestamp()
-	cachedMsTailTx.Release(true) // tx -1
+	cachedMsTailTx.Release(true) // msg -1
 	cachedLatestMs.Release(true) // message -1
 
 	// Check whether the milestone is older than 5 minutes

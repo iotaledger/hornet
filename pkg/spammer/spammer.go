@@ -59,7 +59,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 		indexation = s.indexSemiLazy
 	}
 
-	txCount := int(metrics.SharedServerMetrics.SentSpamTransactions.Load()) + 1
+	txCount := int(metrics.SharedServerMetrics.SentSpamMessages.Load()) + 1
 
 	now := time.Now()
 	messageString := s.message

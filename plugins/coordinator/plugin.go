@@ -14,6 +14,8 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -284,7 +286,7 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	}
 
-	if err := gossip.Processor().VerifyAndEmit(msg); err != nil {
+	if err := gossip.Processor().SerializeAndEmit(msg, iotago.DeSeriModePerformValidation); err != nil {
 		return err
 	}
 
@@ -301,7 +303,7 @@ func isBelowMaxDepth(cachedTailTxMeta *tangle.CachedMetadata) bool {
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	_, omrsi := dag.GetTransactionRootSnapshotIndexes(cachedTailTxMeta.Retain(), lsmi) // meta +1
+	_, omrsi := dag.GetMessageRootSnapshotIndexes(cachedTailTxMeta.Retain(), lsmi) // meta +1
 
 	// if the OMRSI to LSMI delta is over belowMaxDepth, then the tip is invalid.
 	return (lsmi - omrsi) > belowMaxDepth

@@ -84,7 +84,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 		cachedMessages:         make(tangle.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		powHandler:             pow.New(nil, "", 30*time.Second),
-		lastMilestoneHash:      hornet.NullHashBytes,
+		lastMilestoneHash:      hornet.NullMessageID,
 	}
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testState.Name()))
@@ -98,7 +98,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	}
 
 	// Move remaining supply to 999..999
-	balances[string(hornet.NullHashBytes)] = consts.TotalSupply - sum
+	balances[string(hornet.NullMessageID)] = consts.TotalSupply - sum
 
 	te.store = mapdb.NewMapDB()
 	te.configureStorages(te.store)
@@ -120,7 +120,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	te.VerifyLSMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		conf := te.IssueAndConfirmMilestoneOnTip(hornet.NullHashBytes, false)
+		conf := te.IssueAndConfirmMilestoneOnTip(hornet.NullMessageID, false)
 		require.Equal(testState, 3, conf.MessagesConfirmed) // 3 for milestone
 		require.Equal(testState, 3, conf.MessagesZeroValue) // 3 for milestone
 		require.Equal(testState, 0, conf.MessagesValue)

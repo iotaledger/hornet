@@ -16,12 +16,12 @@ func UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs hornet.Hashes, lsmi mi
 		if cachedMsgMeta == nil {
 			panic(tangle.ErrMessageNotFound)
 		}
-		GetTransactionRootSnapshotIndexes(cachedMsgMeta, lsmi)
+		GetMessageRootSnapshotIndexes(cachedMsgMeta, lsmi)
 	}
 }
 
 // GetTransactionRootSnapshotIndexes searches the message root snapshot indexes for a given message.
-func GetTransactionRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
+func GetMessageRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
 	defer cachedMessageMetadata.Release(true) // meta -1
 
 	// if the tx already contains recent (calculation index matches LSMI)
@@ -147,7 +147,7 @@ func UpdateMessageRootSnapshotIndexes(txHashes hornet.Hashes, lsmi milestone.Ind
 				traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
 
 				// updates the message root snapshot indexes of the outdated past cone for this message
-				GetTransactionRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi) // meta pass +1
+				GetMessageRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi) // meta pass +1
 
 				return nil
 			}, false, nil); err != nil {

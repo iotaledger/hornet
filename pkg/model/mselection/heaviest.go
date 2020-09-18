@@ -9,8 +9,6 @@ import (
 
 	"github.com/willf/bitset"
 
-	"github.com/muxxer/iota.go/trinary"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -29,38 +27,38 @@ type HeaviestSelector struct {
 	randomTipsPerCheckpoint                       int
 	heaviestBranchSelectionDeadline               time.Duration
 
-	trackedMessages map[string]*bundleTail // map of all tracked bundle transaction tails
-	tips            *list.List             // list of available tips
+	trackedMessages map[string]*trackedMessage // map of all tracked messages
+	tips            *list.List                 // list of available tips
 }
 
-type bundleTail struct {
-	hash hornet.Hash    // hash of the corresponding tail transaction
-	tip  *list.Element  // pointer to the element in the tip list
-	refs *bitset.BitSet // BitSet of all the referenced transactions
+type trackedMessage struct {
+	messageID hornet.Hash    // message ID of the corresponding message
+	tip       *list.Element  // pointer to the element in the tip list
+	refs      *bitset.BitSet // BitSet of all the referenced messages
 }
 
-type bundleTailList struct {
-	tails map[string]*bundleTail
+type trackedMessagesList struct {
+	msgs map[string]*trackedMessage
 }
 
-// Len returns the length of the inner tails slice.
-func (il *bundleTailList) Len() int {
-	return len(il.tails)
+// Len returns the length of the inner msgs slice.
+func (il *trackedMessagesList) Len() int {
+	return len(il.msgs)
 }
 
-// randomTip selects a random tip item from the bundleTailList.
-func (il *bundleTailList) randomTip() (*bundleTail, error) {
-	if len(il.tails) == 0 {
+// randomTip selects a random tip item from the trackedMessagesList.
+func (il *trackedMessagesList) randomTip() (*trackedMessage, error) {
+	if len(il.msgs) == 0 {
 		return nil, ErrNoTipsAvailable
 	}
 
-	randomTailIndex := utils.RandomInsecure(0, len(il.tails)-1)
+	randomMsgIndex := utils.RandomInsecure(0, len(il.msgs)-1)
 
-	for _, tip := range il.tails {
-		randomTailIndex--
+	for _, tip := range il.msgs {
+		randomMsgIndex--
 
-		// if randomTailIndex is below zero, we return the given tip
-		if randomTailIndex < 0 {
+		// if randomMsgIndex is below zero, we return the given tip
+		if randomMsgIndex < 0 {
 			return tip, nil
 		}
 	}
@@ -69,22 +67,22 @@ func (il *bundleTailList) randomTip() (*bundleTail, error) {
 }
 
 // referenceTip removes the tip and set all bits of all referenced
-// transactions of the tip in all existing tips to zero.
+// messages of the tip in all existing tips to zero.
 // this way we can track which parts of the cone would already be referenced by this tip, and
 // correctly calculate the weight of the remaining tips.
-func (il *bundleTailList) referenceTip(tip *bundleTail) {
+func (il *trackedMessagesList) referenceTip(tip *trackedMessage) {
 
 	il.removeTip(tip)
 
-	// set all bits of all referenced transactions in all existing tips to zero
-	for _, otherTip := range il.tails {
+	// set all bits of all referenced messages in all existing tips to zero
+	for _, otherTip := range il.msgs {
 		otherTip.refs.InPlaceDifference(tip.refs)
 	}
 }
 
 // removeTip removes the tip from the map.
-func (il *bundleTailList) removeTip(tip *bundleTail) {
-	delete(il.tails, string(tip.hash))
+func (il *trackedMessagesList) removeTip(tip *trackedMessage) {
+	delete(il.msgs, string(tip.messageID))
 }
 
 // New creates a new HeaviestSelector instance.
@@ -99,41 +97,41 @@ func New(minHeaviestBranchUnconfirmedMessagesThreshold int, maxHeaviestBranchTip
 	return s
 }
 
-// reset resets the tracked transactions map and tips list of s.
+// reset resets the tracked messages map and tips list of s.
 func (s *HeaviestSelector) reset() {
 	s.Lock()
 	defer s.Unlock()
 
 	// create an empty map
-	s.trackedMessages = make(map[trinary.Hash]*bundleTail)
+	s.trackedMessages = make(map[string]*trackedMessage)
 
 	// create an empty list
 	s.tips = list.New()
 }
 
 // selectTip selects a tip to be used for the next checkpoint.
-// it returns a tip, confirming the most transactions in the future cone,
-// and the amount of referenced transactions of this tip, that were not referenced by previously chosen tips.
-func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uint, error) {
+// it returns a tip, confirming the most messages in the future cone,
+// and the amount of referenced messages of this tip, that were not referenced by previously chosen tips.
+func (s *HeaviestSelector) selectTip(tipsList *trackedMessagesList) (*trackedMessage, uint, error) {
 
 	if tipsList.Len() == 0 {
 		return nil, 0, ErrNoTipsAvailable
 	}
 
 	var best = struct {
-		tips  []*bundleTail
+		tips  []*trackedMessage
 		count uint
 	}{
-		tips:  []*bundleTail{},
+		tips:  []*trackedMessage{},
 		count: 0,
 	}
 
-	// loop through all tips and find the one with the most referenced transactions
-	for _, tip := range tipsList.tails {
+	// loop through all tips and find the one with the most referenced messages
+	for _, tip := range tipsList.msgs {
 		c := tip.refs.Count()
 		if c > best.count {
 			// tip with heavier branch found
-			best.tips = []*bundleTail{
+			best.tips = []*trackedMessage{
 				tip,
 			}
 			best.count = c
@@ -153,13 +151,13 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 	return selected, best.count, nil
 }
 
-// SelectTips tries to collect tips that confirm the most recent transactions since the last reset of the selector.
-// best tips are determined by counting the referenced transactions (heaviest branches) and by "removing" the
-// transactions of the referenced cone of the already choosen tips in the bitsets of the available tips.
+// SelectTips tries to collect tips that confirm the most recent messages since the last reset of the selector.
+// best tips are determined by counting the referenced messages (heaviest branches) and by "removing" the
+// messages of the referenced cone of the already choosen tips in the bitsets of the available tips.
 // only tips are considered that were present at the beginning of the SelectTips call,
 // to prevent attackers from creating heavier branches while we are searching the best tips.
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if
-// the current best tip is not below "UnconfirmedTransactionsThreshold" before.
+// the current best tip is not below "UnconfirmedMessagesThreshold" before.
 // a minimum amount of selected tips can be enforced, even if none of the heaviest branches matches the
 // "minHeaviestBranchUnconfirmedMessagesThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
@@ -200,13 +198,13 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 		}
 
 		if (len(result) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedMessagesThreshold)) || deadlineExceeded) {
-			// minimum amount of tips reached and the heaviest tips do not confirm enough transactions or the deadline was exceeded
+			// minimum amount of tips reached and the heaviest tips do not confirm enough messages or the deadline was exceeded
 			// => no need to collect more
 			break
 		}
 
 		tipsList.referenceTip(tip)
-		result = append(result, tip.hash)
+		result = append(result, tip.messageID)
 	}
 
 	if len(result) == 0 {
@@ -221,7 +219,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 		}
 
 		tipsList.referenceTip(item)
-		result = append(result, item.hash)
+		result = append(result, item.messageID)
 	}
 
 	// reset the whole HeaviestSelector if valid tips were found
@@ -230,45 +228,45 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 	return result, nil
 }
 
-// OnNewSolidMessage adds a new bundle to be processed by s.
-// The bundle must be solid and OnNewSolidMessage must be called in the order of solidification.
-// The bundle must also not be below max depth.
-func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *hornet.MessageMetadata) (trackedTailsCount int) {
+// OnNewSolidMessage adds a new message to be processed by s.
+// The message must be solid and OnNewSolidMessage must be called in the order of solidification.
+// The message must also not be below max depth.
+func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *hornet.MessageMetadata) (trackedMessagesCount int) {
 	s.Lock()
 	defer s.Unlock()
 
-	// filter duplicate transaction
+	// filter duplicate messages
 	if _, contains := s.trackedMessages[string(msgMeta.GetMessageID())]; contains {
 		return
 	}
 
-	trunkItem := s.trackedMessages[string(msgMeta.GetParent1MessageID())]
-	branchItem := s.trackedMessages[string(msgMeta.GetParent2MessageID())]
+	parent1Item := s.trackedMessages[string(msgMeta.GetParent1MessageID())]
+	parent2Item := s.trackedMessages[string(msgMeta.GetParent2MessageID())]
 
-	// compute the referenced transactions
+	// compute the referenced messages
 	// all the known children in the HeaviestSelector are represented by a unique bit in a bitset.
 	// if a new child is added, we expand the bitset by 1 bit and store the Union of the bitsets
-	// of trunk and branch for this child, to know which parts of the cone are referenced by this child.
+	// of parent1 and parent2 for this child, to know which parts of the cone are referenced by this child.
 	idx := uint(len(s.trackedMessages))
-	it := &bundleTail{hash: msgMeta.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
-	if trunkItem != nil {
-		it.refs.InPlaceUnion(trunkItem.refs)
+	it := &trackedMessage{messageID: msgMeta.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
+	if parent1Item != nil {
+		it.refs.InPlaceUnion(parent1Item.refs)
 	}
-	if branchItem != nil {
-		it.refs.InPlaceUnion(branchItem.refs)
+	if parent2Item != nil {
+		it.refs.InPlaceUnion(parent2Item.refs)
 	}
-	s.trackedMessages[string(it.hash)] = it
+	s.trackedMessages[string(it.messageID)] = it
 
 	// update tips
-	s.removeTip(trunkItem)
-	s.removeTip(branchItem)
+	s.removeTip(parent1Item)
+	s.removeTip(parent2Item)
 	it.tip = s.tips.PushBack(it)
 
 	return s.GetTrackedMessagesCount()
 }
 
 // removeTip removes the tip item from s.
-func (s *HeaviestSelector) removeTip(it *bundleTail) {
+func (s *HeaviestSelector) removeTip(it *trackedMessage) {
 	if it == nil || it.tip == nil {
 		return
 	}
@@ -277,19 +275,19 @@ func (s *HeaviestSelector) removeTip(it *bundleTail) {
 }
 
 // tipsToList returns a new list containing the current tips.
-func (s *HeaviestSelector) tipsToList() *bundleTailList {
+func (s *HeaviestSelector) tipsToList() *trackedMessagesList {
 	s.Lock()
 	defer s.Unlock()
 
-	result := make(map[string]*bundleTail)
+	result := make(map[string]*trackedMessage)
 	for e := s.tips.Front(); e != nil; e = e.Next() {
-		tip := e.Value.(*bundleTail)
-		result[string(tip.hash)] = tip
+		tip := e.Value.(*trackedMessage)
+		result[string(tip.messageID)] = tip
 	}
-	return &bundleTailList{tails: result}
+	return &trackedMessagesList{msgs: result}
 }
 
 // GetTrackedMessagesCount returns the amount of known messages.
-func (s *HeaviestSelector) GetTrackedMessagesCount() (trackedTails int) {
+func (s *HeaviestSelector) GetTrackedMessagesCount() (trackedMessagesCount int) {
 	return len(s.trackedMessages)
 }

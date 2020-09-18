@@ -5,13 +5,11 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/muxxer/iota.go/trinary"
 )
 
 var (
-	seededRand    = rand.New(rand.NewSource(time.Now().UnixNano()))
-	randLock      = &syncutils.Mutex{}
-	charsetTrytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9"
+	seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	randLock   = &syncutils.Mutex{}
 )
 
 // RandomInsecure returns a random int in the range of min to max.
@@ -22,19 +20,4 @@ func RandomInsecure(min int, max int) int {
 	randLock.Lock()
 	defer randLock.Unlock()
 	return seededRand.Intn(max+1-min) + min
-}
-
-// RandomTrytesInsecure returns random Hex with the given length.
-// the result is not cryptographically secure.
-// DO NOT USE this function to generate a seed.
-func RandomTrytesInsecure(length int) trinary.Trytes {
-	// Rand needs to be locked: https://github.com/golang/go/issues/3611
-	randLock.Lock()
-	defer randLock.Unlock()
-
-	trytes := make([]byte, length)
-	for i := range trytes {
-		trytes[i] = charsetTrytes[seededRand.Intn(len(charsetTrytes))]
-	}
-	return trinary.Trytes(trytes)
 }

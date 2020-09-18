@@ -161,8 +161,8 @@ func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDisca
 
 // RequestParents enqueues requests for the parents of the given transaction to the request queue, if the
 // given transaction is not a solid entry point and neither its parents are and also not in the database.
-func RequestParents(cachedTx *tangle.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
-	cachedTx.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
+func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
+	cachedMsg.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
 		txHash := metadata.GetMessageID()
 
 		if tangle.SolidEntryPointsContain(txHash) {

@@ -73,7 +73,7 @@ func (t *ParentTraverser) reset() {
 
 // Traverse starts to traverse the parents (past cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
-// It is a DFS with trunk / branch.
+// It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
 func (t *ParentTraverser) Traverse(startMessageID hornet.Hash, traverseSolidEntryPoints bool) error {
 
@@ -121,11 +121,11 @@ func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID hornet.Hash
 		}
 	}
 
-	// since we first feed the stack the trunk,
-	// we need to make sure that we also examine the branch path.
-	// however, we only need to do it if the branch wasn't processed yet.
-	// the referenced branch message could for example already be processed
-	// if it is directly/indirectly approved by the trunk.
+	// since we first feed the stack the parent1,
+	// we need to make sure that we also examine the parent2 path.
+	// however, we only need to do it if the parent2 wasn't processed yet.
+	// the referenced parent2 message could for example already be processed
+	// if it is directly/indirectly approved by the parent1.
 	t.stack.PushFront(parent2MessageID)
 	for t.stack.Len() > 0 {
 		if err := t.processStackParents(); err != nil {
@@ -164,7 +164,7 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 
 		if !t.traverseSolidEntryPoints {
-			// remove the message from the stack, trunk and branch are not traversed
+			// remove the message from the stack, parent1 and parent2 are not traversed
 			t.processed[string(currentMessageID)] = struct{}{}
 			delete(t.checked, string(currentMessageID))
 			t.stack.Remove(ele)
@@ -176,7 +176,7 @@ func (t *ParentTraverser) processStackParents() error {
 	if !exists {
 		cachedMetadata = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMetadata == nil {
-			// remove the message from the stack, trunk and branch are not traversed
+			// remove the message from the stack, parent1 and parent2 are not traversed
 			t.processed[string(currentMessageID)] = struct{}{}
 			delete(t.checked, string(currentMessageID))
 			t.stack.Remove(ele)

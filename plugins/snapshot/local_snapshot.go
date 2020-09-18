@@ -74,15 +74,15 @@ func getMilestoneParents(milestoneIndex milestone.Index, milestoneMessageID horn
 	if err := dag.TraverseParents(milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // tx +1
-			defer cachedMsgMeta.Release(true) // tx -1
+		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // msg +1
+			defer cachedMsgMeta.Release(true) // msg -1
 			// collect all msg that were confirmed by that milestone or newer
 			confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
 			return (confirmed && at >= milestoneIndex), nil
 		},
 		// consumer
-		func(cachedMsgMeta *tangle.CachedMetadata) error { // tx +1
-			defer cachedMsgMeta.Release(true) // tx -1
+		func(cachedMsgMeta *tangle.CachedMetadata) error { // msg +1
+			defer cachedMsgMeta.Release(true) // msg -1
 			parents = append(parents, cachedMsgMeta.GetMetadata().GetMessageID())
 			return nil
 		},
@@ -347,8 +347,8 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		return err
 	}
 
-	cachedTargetMsTail := cachedTargetMs.GetMessage().GetTail() // tx +1
-	defer cachedTargetMsTail.Release(true)                      // tx -1
+	cachedTargetMsTail := cachedTargetMs.GetMessage().GetTail() // msg +1
+	defer cachedTargetMsTail.Release(true)                      // msg -1
 
 	lsh := &localSnapshotHeader{
 		msHash:           cachedTargetMs.GetMessage().GetTailHash(),

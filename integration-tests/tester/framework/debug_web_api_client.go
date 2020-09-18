@@ -136,6 +136,7 @@ func (api *WebAPI) Neighbors() ([]*peer.Info, error) {
 	return res.Neighbors, nil
 }
 
+/*
 func (api *WebAPI) Info() (*webapi.GetNodeInfoReturn, error) {
 	res := &webapi.GetNodeInfoReturn{}
 	if err := api.do(http.MethodPost, struct {
@@ -146,6 +147,7 @@ func (api *WebAPI) Info() (*webapi.GetNodeInfoReturn, error) {
 	return res, nil
 
 }
+*/
 
 // BaseURL returns the baseURL of the API.
 func (api *WebAPI) BaseURL() string {
