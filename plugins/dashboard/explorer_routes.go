@@ -57,13 +57,13 @@ type ExplorerTx struct {
 	MilestoneIndex milestone.Index `json:"milestone_index"`
 }
 
-func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
+func createExplorerTx(cachedMsg *tangle.CachedMessage) (*ExplorerTx, error) {
 
-	defer cachedTx.Release(true) // tx -1
+	defer cachedMsg.Release(true) // msg -1
 
-	originTx := cachedTx.GetMessage().Tx
-	confirmed, by := cachedTx.GetMetadata().GetConfirmed()
-	conflicting := cachedTx.GetMetadata().IsConflicting()
+	originTx := cachedMsg.GetMessage().Tx
+	confirmed, by := cachedMsg.GetMetadata().GetConfirmed()
+	conflicting := cachedMsg.GetMetadata().IsConflicting()
 	t := &ExplorerTx{
 		Hash:                          originTx.Hash,
 		SignatureMessageFragment:      originTx.SignatureMessageFragment,
@@ -86,14 +86,14 @@ func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
 			Conflicting bool            `json:"conflicting"`
 			Milestone   milestone.Index `json:"milestone_index"`
 		}{confirmed, conflicting, by},
-		Solid: cachedTx.GetMetadata().IsSolid(),
+		Solid: cachedMsg.GetMetadata().IsSolid(),
 	}
 
 	// Children
-	t.Children = tangle.GetChildrenMessageIDs(cachedTx.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
+	t.Children = tangle.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
-	trits, err := trinary.BytesToTrits(cachedTx.GetMessage().GetMessageID())
+	trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID())
 	if err != nil {
 		return nil, err
 	}
@@ -109,10 +109,10 @@ func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
 
 	// get previous/next hash
 	var cachedMessage *tangle.CachedMessage
-	if cachedTx.GetMessage().IsTail() {
-		cachedMessage = tangle.GetCachedMessageOrNil(cachedTx.GetMessage().GetMessageID()) // message +1
+	if cachedMsg.GetMessage().IsTail() {
+		cachedMessage = tangle.GetCachedMessageOrNil(cachedMsg.GetMessage().GetMessageID()) // message +1
 	} else {
-		cachedMessages := tangle.GetBundlesOfTransactionOrNil(cachedTx.GetMessage().GetMessageID(), true) // message +1
+		cachedMessages := tangle.GetBundlesOfTransactionOrNil(cachedMsg.GetMessage().GetMessageID(), true) // message +1
 		if cachedMessages != nil {
 			cachedMessage = cachedMessages[0]
 
@@ -125,15 +125,15 @@ func createExplorerTx(cachedTx *tangle.CachedMessage) (*ExplorerTx, error) {
 
 	if cachedMessage != nil {
 		t.BundleComplete = true
-		cachedTxs := cachedMessage.GetMessage().GetTransactions() // tx +1
-		for _, cachedMessageTx := range cachedTxs {
+		cachedMsgs := cachedMessage.GetMessage().GetTransactions() // msg +1
+		for _, cachedMessageTx := range cachedMsgs {
 			if cachedMessageTx.GetTransaction().Tx.CurrentIndex+1 == t.CurrentIndex {
 				t.Previous = cachedMessageTx.GetTransaction().Tx.Hash
 			} else if cachedMessageTx.GetTransaction().Tx.CurrentIndex-1 == t.CurrentIndex {
 				t.Next = cachedMessageTx.GetTransaction().Tx.Hash
 			}
 		}
-		cachedTxs.Release(true) // tx -1
+		cachedMsgs.Release(true) // msg -1
 
 		// check whether milestone
 		if cachedMessage.GetMessage().IsMilestone() {
@@ -296,8 +296,8 @@ func findMilestone(index milestone.Index) (*ExplorerTx, error) {
 	}
 	defer cachedMs.Release(true) // message -1
 
-	cachedTailTx := cachedMs.GetMessage().GetTail() // tx +1
-	defer cachedTailTx.Release(true)                // tx -1
+	cachedTailTx := cachedMs.GetMessage().GetTail() // msg +1
+	defer cachedTailTx.Release(true)                // msg -1
 	return createExplorerTx(cachedTailTx.Retain())  // tx pass +1
 }
 
@@ -306,13 +306,13 @@ func findTransaction(hash trinary.Hash) (*ExplorerTx, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", hash)
 	}
 
-	cachedTx := tangle.GetCachedMessageOrNil(hornet.HashFromHashTrytes(hash)) // tx +1
-	if cachedTx == nil {
+	cachedMsg := tangle.GetCachedMessageOrNil(hornet.HashFromHashTrytes(hash)) // msg +1
+	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "tx %s unknown", hash)
 	}
 
-	t, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
-	cachedTx.Release(true)                        // tx -1
+	t, err := createExplorerTx(cachedMsg.Retain()) // tx pass +1
+	cachedMsg.Release(true)                        // msg -1
 	return t, err
 }
 
@@ -334,12 +334,12 @@ func findTag(tag trinary.Trytes) (*ExplorerTag, error) {
 	if len(txHashes) != 0 {
 		for i := 0; i < len(txHashes); i++ {
 			txHash := txHashes[i]
-			cachedTx := tangle.GetCachedMessageOrNil(txHash) // tx +1
-			if cachedTx == nil {
+			cachedMsg := tangle.GetCachedMessageOrNil(txHash) // msg +1
+			if cachedMsg == nil {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to tag %s", txHash.Trytes(), tag)
 			}
-			expTx, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
-			cachedTx.Release(true)                            // tx -1
+			expTx, err := createExplorerTx(cachedMsg.Retain()) // tx pass +1
+			cachedMsg.Release(true)                            // msg -1
 			if err != nil {
 				return nil, err
 			}
@@ -364,16 +364,16 @@ func findBundles(hash trinary.Hash) ([][]*ExplorerTx, error) {
 	expBndls := [][]*ExplorerTx{}
 	for _, cachedMessage := range cachedMessages {
 		sl := []*ExplorerTx{}
-		cachedTxs := cachedMessage.GetMessage().GetTransactions() // tx +1
-		for _, cachedTx := range cachedTxs {
-			expTx, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
+		cachedMsgs := cachedMessage.GetMessage().GetTransactions() // msg +1
+		for _, cachedMsg := range cachedMsgs {
+			expTx, err := createExplorerTx(cachedMsg.Retain()) // tx pass +1
 			if err != nil {
-				cachedTxs.Release(true) // tx -1
+				cachedMsgs.Release(true) // msg -1
 				return nil, err
 			}
 			sl = append(sl, expTx)
 		}
-		cachedTxs.Release(true) // tx -1
+		cachedMsgs.Release(true) // msg -1
 		expBndls = append(expBndls, sl)
 	}
 
@@ -396,12 +396,12 @@ func findAddress(hash trinary.Hash, valueOnly bool) (*ExplorerAddress, error) {
 	if len(txHashes) != 0 {
 		for i := 0; i < len(txHashes); i++ {
 			txHash := txHashes[i]
-			cachedTx := tangle.GetCachedMessageOrNil(txHash) // tx +1
-			if cachedTx == nil {
+			cachedMsg := tangle.GetCachedMessageOrNil(txHash) // msg +1
+			if cachedMsg == nil {
 				return nil, errors.Wrapf(ErrNotFound, "tx %s not found but associated to address %s", txHash, hash)
 			}
-			expTx, err := createExplorerTx(cachedTx.Retain()) // tx pass +1
-			cachedTx.Release(true)                            // tx -1
+			expTx, err := createExplorerTx(cachedMsg.Retain()) // tx pass +1
+			cachedMsg.Release(true)                            // msg -1
 			if err != nil {
 				return nil, err
 			}

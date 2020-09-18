@@ -132,10 +132,10 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
 
 	// The tx will be added to the storage inside this function, so the transaction object automatically updates
-	cachedTx, alreadyAdded := tangle.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // tx +1
+	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // msg +1
 
 	// Release shouldn't be forced, to cache the latest transactions
-	defer cachedTx.Release(!isNodeSyncedWithThreshold) // tx -1
+	defer cachedMsg.Release(!isNodeSyncedWithThreshold) // msg -1
 
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewTransactions.Inc()
@@ -148,21 +148,21 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 		// request them for messages which should be part of milestone cones
 		if request != nil {
 			// add this newly received message's parents to the request queue
-			gossip.RequestParents(cachedTx.Retain(), request.MilestoneIndex, true)
+			gossip.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
 		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = solidMilestoneIndex
 		}
-		Events.ReceivedNewMessage.Trigger(cachedTx, latestMilestoneIndex, solidMilestoneIndex)
+		Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, solidMilestoneIndex)
 
 	} else {
 		metrics.SharedServerMetrics.KnownTransactions.Inc()
 		if p != nil {
 			p.Metrics.KnownTransactions.Inc()
 		}
-		Events.ReceivedKnownMessage.Trigger(cachedTx)
+		Events.ReceivedKnownMessage.Trigger(cachedMsg)
 	}
 
 	// "ProcessedTransaction" event has to be fired after "ReceivedNewTransaction" event,

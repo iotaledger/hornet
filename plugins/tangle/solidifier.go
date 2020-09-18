@@ -268,7 +268,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	/* How milestone solidification works:
 
 	- A Milestone comes in and gets validated
-	- Request milestone trunk/branch without traversion
+	- Request milestone trunk/parent2 without traversion
 	- Everytime a request queue gets empty, start the solidifier for the next known non-solid milestone
 	- If tx are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted

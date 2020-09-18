@@ -18,7 +18,7 @@ import (
 )
 
 // storeTransaction adds the transaction to the storage layer.
-func (te *TestEnvironment) storeTransaction(tx *transaction.Transaction) *tangle.CachedMessage {
+func (te *TestEnvironment) storeTransaction(tx *transaction.Message) *tangle.CachedMessage {
 
 	txTrits, err := transaction.TransactionToTrits(tx)
 	require.NoError(te.testState, err)
@@ -26,11 +26,11 @@ func (te *TestEnvironment) storeTransaction(tx *transaction.Transaction) *tangle
 	//txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
 	//hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
-	cachedTx, alreadyAdded := tangle.AddMessageToStorage(hornetTx, tangle.GetLatestMilestoneIndex(), false, true, true)
-	require.NotNil(te.testState, cachedTx)
+	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(hornetTx, tangle.GetLatestMilestoneIndex(), false, true, true)
+	require.NotNil(te.testState, cachedMsg)
 	require.False(te.testState, alreadyAdded)
 
-	return cachedTx
+	return cachedMsg
 }
 
 // StoreBundle adds all messages of the bundle to the storage layer and solidifies them.
@@ -41,11 +41,11 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 
 	// Store all messages in the database
 	for i := 0; i < len(bndl); i++ {
-		cachedTx := te.storeTransaction(&bndl[i])
-		require.NotNil(te.testState, cachedTx)
+		cachedMsg := te.storeTransaction(&bndl[i])
+		require.NotNil(te.testState, cachedMsg)
 
-		hashes = append(hashes, cachedTx.GetMessage().GetMessageID())
-		cachedTx.Release(true)
+		hashes = append(hashes, cachedMsg.GetMessage().GetMessageID())
+		cachedMsg.Release(true)
 	}
 
 	// Solidify tx if not a milestone
@@ -66,12 +66,12 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 
 	// Trigger bundle construction due to solid tail
 	if !isMilestone {
-		cachedTx := tangle.GetCachedMessageOrNil(tailTx)
-		require.NotNil(te.testState, cachedTx)
-		require.True(te.testState, cachedTx.GetMetadata().IsSolid())
+		cachedMsg := tangle.GetCachedMessageOrNil(tailTx)
+		require.NotNil(te.testState, cachedMsg)
+		require.True(te.testState, cachedMsg.GetMetadata().IsSolid())
 
-		//tangle.OnMessageSolid(cachedTx.Retain())
-		cachedTx.Release(true)
+		//tangle.OnMessageSolid(cachedMsg.Retain())
+		cachedMsg.Release(true)
 	}
 
 	cachedMessage := tangle.GetCachedMessageOrNil(tailTx)
@@ -142,14 +142,14 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		return -1
 	}
 
-	visitedBundles := make(map[string]tangle.CachedMessages)
+	visitedCachedMessages := make(map[string]tangle.CachedMessages)
 
 	bundleTxs := tangle.GetAllBundleTransactionHashes(100)
 	for _, hash := range bundleTxs {
 		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hash)
-		if _, visited := visitedBundles[string(cachedMsgMeta.GetMetadata().GetBundleHash())]; !visited {
+		if _, visited := visitedCachedMessages[string(cachedMsgMeta.GetMetadata().GetBundleHash())]; !visited {
 			bndls := tangle.GetBundlesOfTransactionOrNil(cachedMsgMeta.GetMetadata().GetMessageID(), false)
-			visitedBundles[string(cachedMsgMeta.GetMetadata().GetBundleHash())] = bndls
+			visitedCachedMessages[string(cachedMsgMeta.GetMetadata().GetBundleHash())] = bndls
 		}
 		cachedMsgMeta.Release(true)
 	}
@@ -160,17 +160,17 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 	var conflicting []string
 
 	dotFile := fmt.Sprintf("digraph %s\n{\n", te.testState.Name())
-	for _, bndls := range visitedBundles {
+	for _, cachedMessage := range visitedCachedMessages {
 		//singleBundle := len(bndls) == 1
-		for _, bndl := range bndls {
+		for _, bndl := range cachedMessage {
 			shortBundle := utils.ShortenedTag(bndl)
 
-			tailHash := bndl.GetMessage().GetTailHash()
+			tailHash := bndl.GetMessage().GetMessageID()
 			if index := indexOf(tailHash); index != -1 {
 				dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortBundle, index, shortBundle)
 			}
 
-			trunk := bndl.GetMessage().GetTrunkHash(true)
+			trunk := bndl.GetMessage().GetParent1MessageID(true)
 			if tangle.SolidEntryPointsContain(trunk) {
 				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Trunk\" ];\n", shortBundle, utils.ShortenedHash(trunk))
 			} else {
@@ -179,7 +179,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				trunkBundles.Release()
 			}
 
-			branch := bndl.GetMessage().GetBranchHash(true)
+			branch := bndl.GetMessage().GetParent2MessageID(true)
 			if tangle.SolidEntryPointsContain(branch) {
 				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Branch\" ];\n", shortBundle, utils.ShortenedHash(branch))
 			} else {
@@ -203,7 +203,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				}
 			}
 		}
-		bndls.Release()
+		cachedMessage.Release()
 	}
 
 	for _, milestone := range milestones {

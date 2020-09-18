@@ -1,7 +1,6 @@
 package bqueue
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/peering"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/helpers"
@@ -9,18 +8,18 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
-// Broadcast defines a transaction and requested transaction hash which should be broadcasted.
+const (
+	// Size defines the default size of the broadcast queue.
+	Size = 1000
+)
+
+// Broadcast defines a message which should be broadcasted.
 type Broadcast struct {
-	// The byte encoded transaction data to broadcast.
+	// The message data to broadcast.
 	MsgData []byte
-	// The requested transaction hash.
-	RequestedTxHash hornet.Hash
 	// The IDs of the peers to exclude from broadcasting.
 	ExcludePeers map[string]struct{}
 }
-
-// Size defines the default size of the broadcast queue.
-const Size = 1000
 
 // Queue implements a queue which broadcasts its elements to all wanted peers.
 type Queue interface {
@@ -57,7 +56,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 					return true
 				}
 
-				// just send the transaction when the peer supports STING
+				// only send the transaction when the peer supports STING
 				if p.Protocol.Supports(sting.FeatureSet) {
 					helpers.SendTransaction(p, b.MsgData)
 					return true

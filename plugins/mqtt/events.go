@@ -17,9 +17,9 @@ var (
 	prevLMI milestone.Index = 0
 )
 
-func onNewTx(cachedTx *tangle.CachedMessage) {
+func onNewTx(cachedMsg *tangle.CachedMessage) {
 
-	cachedTx.ConsumeMessage(func(msg *tangle.Message) {
+	cachedMsg.ConsumeMessage(func(msg *tangle.Message) {
 
 		// tx topic
 		err := publishTx(tx.Tx)
@@ -39,13 +39,13 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 
 	cachedMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
 
-		cachedTx := tangle.GetCachedMessageOrNil(metadata.GetMessageID())
-		if cachedTx == nil {
+		cachedMsg := tangle.GetCachedMessageOrNil(metadata.GetMessageID())
+		if cachedMsg == nil {
 			log.Warnf("%w hash: %s", tangle.ErrMessageNotFound, metadata.GetMessageID().Hex())
 			return
 		}
 
-		cachedTx.ConsumeMessage(func(msg *tangle.Message) {
+		cachedMsg.ConsumeMessage(func(msg *tangle.Message) {
 			// conf_trytes topic
 			if err := publishConfTrytes(tx.Tx, msIndex); err != nil {
 				log.Warn(err.Error())
@@ -145,11 +145,11 @@ func publishLSM(bndl *tangle.Message) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+func publishConfTx(iotaTx *transaction.Message, msIndex milestone.Index) error {
 
 	return mqttBroker.Send(topicSN, fmt.Sprintf(`{"msIndex":%d,"txHash":"%v","address":"%v","trunk":"%v","branch":"%v","bundle":"%v","timestamp":"%s"}`,
 		msIndex,                  // Index of the milestone that confirmed the transaction
-		iotaTx.Hash,              // Transaction hash
+		iotaTx.Hash,              // Message hash
 		iotaTx.Address,           // Address
 		iotaTx.TrunkTransaction,  // Trunk transaction hash
 		iotaTx.BranchTransaction, // Branch transaction hash
@@ -158,7 +158,7 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 }
 
 // Publish confirmed transaction trytes
-func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+func publishConfTrytes(iotaTx *transaction.Message, msIndex milestone.Index) error {
 
 	trytes, err := transaction.TransactionToTrytes(iotaTx)
 	if err != nil {
@@ -166,15 +166,15 @@ func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index)
 	}
 
 	return mqttBroker.Send(topicConfTrytes, fmt.Sprintf(`{"txHash":"%v","trytes":"%v","msIndex":%d,"timestamp":"%s"}`,
-		iotaTx.Hash, // Transaction hash
-		trytes,      // Transaction trytes
+		iotaTx.Hash, // Message hash
+		trytes,      // Message trytes
 		msIndex,     // Index of the milestone that confirmed the transaction
 		time.Now().UTC().Format(time.RFC3339),
 	))
 }
 
 // Publish transaction trytes of an tx that has recently been added to the ledger
-func publishTxTrytes(iotaTx *transaction.Transaction) error {
+func publishTxTrytes(iotaTx *transaction.Message) error {
 
 	trytes, err := transaction.TransactionToTrytes(iotaTx)
 	if err != nil {
@@ -182,17 +182,17 @@ func publishTxTrytes(iotaTx *transaction.Transaction) error {
 	}
 
 	err = mqttBroker.Send(topicTxTrytes, fmt.Sprintf(`{"txHash":"%v","trytes":"%v","timestamp":"%s"}`,
-		iotaTx.Hash, // Transaction hash
-		trytes,      // Transaction trytes
+		iotaTx.Hash, // Message hash
+		trytes,      // Message trytes
 		time.Now().UTC().Format(time.RFC3339)))
 	return err
 }
 
 // Publish a transaction that has recently been added to the ledger
-func publishTx(iotaTx *transaction.Transaction) error {
+func publishTx(iotaTx *transaction.Message) error {
 
 	return mqttBroker.Send(topicTX, fmt.Sprintf(`{"txHash":"%v","address":"%v","value":%d,"obsoleteTag":"%v","txTimestamp":%d,"currentIndex":%d,"lastIndex":%d,"bundle":"%v","trunk":"%v","branch":"%v","recTimestamp":%d,"tag":"%v","timestamp":"%s"}`,
-		iotaTx.Hash,              // Transaction hash
+		iotaTx.Hash,              // Message hash
 		iotaTx.Address,           // Address
 		iotaTx.Value,             // Value
 		iotaTx.ObsoleteTag,       // Obsolete tag

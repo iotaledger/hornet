@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"crypto"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -126,8 +127,10 @@ func (coo *Coordinator) CheckPublicKey(key string) error {
 		return err
 	}
 
-	if publicKey.Equal(coo.privateKey.Public()) {
-		return errors.New("COO public key does not match the public key derived from the private key: %s != %s", hex.EncodeString(publicKey), hex.EncodeString(coo.privateKey.Public()))
+	cooPublicKey := coo.privateKey.Public().(ed25519.PublicKey)
+
+	if publicKey.Equal(cooPublicKey) {
+		return fmt.Errorf("COO public key does not match the public key derived from the private key: %s != %s", hex.EncodeToString(publicKey), hex.EncodeToString(cooPublicKey))
 	}
 
 	return nil
@@ -157,17 +160,17 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 
 		if startIndex == 1 {
 			// if we bootstrap a network, NullHash has to be set as a solid entry point
-			tangle.SolidEntryPointsAdd(hornet.NullHashBytes, startIndex)
+			tangle.SolidEntryPointsAdd(hornet.NullMessageID, startIndex)
 		}
 
-		latestMilestoneHash := hornet.NullHashBytes
+		latestMilestoneHash := hornet.NullMessageID
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
 			cachedMilestoneMsg := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
 			if cachedMilestoneMsg == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneHash = cachedMilestoneMsg.GetMessage().GetTailHash()
+			latestMilestoneHash = cachedMilestoneMsg.GetMessage().GetMessageID()
 			cachedMilestoneMsg.Release()
 		}
 
@@ -176,7 +179,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		state.LatestMilestoneHash = latestMilestoneHash
 		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = 0
-		state.LatestMilestoneTransactions = hornet.Hashes{hornet.NullHashBytes}
+		state.LatestMilestoneTransactions = hornet.Hashes{hornet.NullMessageID}
 
 		coo.state = state
 		coo.bootstrapped = false
@@ -207,7 +210,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 }
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
-func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash hornet.Hash, newMilestoneIndex milestone.Index) error {
+func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, newMilestoneIndex milestone.Index) error {
 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 	cachedMessages := make(map[string]*tangle.CachedMessage)
@@ -227,12 +230,12 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 	}()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, parent1MessageID, parent2MessageID)
 	if err != nil {
 		return fmt.Errorf("failed to compute muations: %w", err)
 	}
 
-	b, err := createMilestone(coo.privateKey, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powHandler)
+	b, err := createMilestone(coo.privateKey, newMilestoneIndex, coo.securityLvl, parent1MessageID, parent2MessageID, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create: %w", err)
 	}
@@ -274,7 +277,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
-		// trunk and branch reference the last known milestone or NullHash if startIndex = 1 (see InitState)
+		// parent1 and parent2 reference the last known milestone or NullHash if startIndex = 1 (see InitState)
 		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneHash, coo.state.LatestMilestoneHash, coo.state.LatestMilestoneIndex+1); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
@@ -329,7 +332,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 
 // IssueMilestone creates the next milestone.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) IssueMilestone(trunkHash hornet.Hash, branchHash hornet.Hash) (hornet.Hash, error, error) {
+func (coo *Coordinator) IssueMilestone(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (hornet.Hash, error, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
@@ -345,7 +348,7 @@ func (coo *Coordinator) IssueMilestone(trunkHash hornet.Hash, branchHash hornet.
 		return nil, tangle.ErrNodeLoadTooHigh, nil
 	}
 
-	if err := coo.createAndSendMilestone(trunkHash, branchHash, coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(parent1MessageID, parent2MessageID, coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, nil, err
 	}

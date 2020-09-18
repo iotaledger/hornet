@@ -95,23 +95,8 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all bundles where a single tx of the bundle doesn't exist in the database anymore.
-	if err := cleanupBundles(); err != nil {
-		return err
-	}
-
-	// deletes all bundles messages where the msg doesn't exist in the database anymore.
-	if err := cleanupBundleTransactions(); err != nil {
-		return err
-	}
-
 	// deletes all children where the msg doesn't exist in the database anymore.
 	if err := cleanupChildren(); err != nil {
-		return err
-	}
-
-	// deletes all tags where the msg doesn't exist in the database anymore.
-	if err := cleanupTags(); err != nil {
 		return err
 	}
 

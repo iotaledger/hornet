@@ -404,7 +404,7 @@ func currentNodeStatus() *NodeStatus {
 		NumberOfSentMilestoneReq:       metrics.SharedServerMetrics.SentMilestoneRequests.Load(),
 		NumberOfSentHeartbeats:         metrics.SharedServerMetrics.SentHeartbeats.Load(),
 		NumberOfDroppedSentPackets:     metrics.SharedServerMetrics.DroppedMessages.Load(),
-		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.SentSpamTransactions.Load(),
+		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.SentSpamMessages.Load(),
 		NumberOfValidatedBundles:       metrics.SharedServerMetrics.ValidatedBundles.Load(),
 	}
 

@@ -125,6 +125,6 @@ func collectServer() {
 	serverSentMilestoneRequests.Set(float64(metrics.SharedServerMetrics.SentMilestoneRequests.Load()))
 	serverSentHeartbeats.Set(float64(metrics.SharedServerMetrics.SentHeartbeats.Load()))
 	serverDroppedSentPackets.Set(float64(metrics.SharedServerMetrics.DroppedMessages.Load()))
-	serverSentSpamTransactions.Set(float64(metrics.SharedServerMetrics.SentSpamTransactions.Load()))
+	serverSentSpamTransactions.Set(float64(metrics.SharedServerMetrics.SentSpamMessages.Load()))
 	serverValidatedBundles.Set(float64(metrics.SharedServerMetrics.ValidatedBundles.Load()))
 }

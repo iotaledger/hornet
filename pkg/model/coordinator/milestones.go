@@ -4,9 +4,6 @@ import (
 	"crypto/ed25519"
 	"time"
 
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/merkle"
-
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -33,7 +30,7 @@ func createCheckpoint(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, securityLvl consts.SecurityLevel, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
+func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, mwm int, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
 
 	pubKey := privateKey.Public().(ed25519.PublicKey)
 

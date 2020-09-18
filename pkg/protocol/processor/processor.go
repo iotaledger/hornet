@@ -7,15 +7,9 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/guards"
-	"github.com/muxxer/iota.go/math"
-	"github.com/muxxer/iota.go/transaction"
-	"github.com/muxxer/iota.go/trinary"
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -72,7 +66,7 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 		case sting.MessageTypeTransaction:
 			proc.processTransaction(p, data)
 		case sting.MessageTypeTransactionRequest:
-			proc.processTransactionRequest(p, data)
+			proc.processMessageRequest(p, data)
 		case sting.MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
 		}
@@ -127,57 +121,17 @@ func (proc *Processor) Process(p *peer.Peer, msgType message.Type, data []byte) 
 	proc.wp.Submit(p, msgType, data)
 }
 
-// ValidateTransactionTrytesAndEmit validates the given transaction trytes which were not received via gossip but
-// through some other mechanism. This function does not run within the Processor's worker pool.
-// Emits a TransactionProcessed and BroadcastTransaction event if the transaction was processed.
-func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes) error {
-	if !guards.IsTransactionTrytes(txTrytes) {
-		return consts.ErrInvalidTransactionTrytes
-	}
+// SerializeAndEmit serializes the given message and emits TransactionProcessed and BroadcastTransaction events.
+func (proc *Processor) SerializeAndEmit(msg *tangle.Message, deSeriMode iotago.DeSerializationMode) error {
 
-	txTrits, err := trinary.TrytesToTrits(txTrytes)
+	msgData, err := msg.GetMessage().Serialize(deSeriMode)
 	if err != nil {
 		return err
 	}
 
-	tx, err := transaction.ParseTransaction(txTrits, true)
-	if err != nil {
-		return err
-	}
+	proc.Events.MessageProcessed.Trigger(msg, (*rqueue.Request)(nil), (*peer.Peer)(nil))
+	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{MsgData: msgData})
 
-	//hashTrits := batchhasher.CURLP81.MessageID(txTrits)
-	hashTrits := []int8{}
-	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
-
-	if tx.Value != 0 {
-		// last trit must be zero because of KERL
-		if txTrits[consts.AddressTrinaryOffset+consts.AddressTrinarySize-1] != 0 {
-			return consts.ErrInvalidAddress
-		}
-
-		if math.AbsInt64(tx.Value) > consts.TotalSupply {
-			return consts.ErrInsufficientBalance
-		}
-	}
-
-	if !transaction.HasValidNonce(tx, config.NodeConfig.GetUint64(config.CfgCoordinatorMWM)) {
-		return consts.ErrInvalidTransactionHash
-	}
-
-	return proc.VerifyAndEmit(tx, txTrits)
-}
-
-// VerifyAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
-// This function does not run within the Processor's worker pool.
-func (proc *Processor) VerifyAndEmit(msg *tangle.Message) error {
-	//msgBytes := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	//hornetTx := hornet.NewTransactionFromTx(tx, msgBytes)
-
-	proc.Events.MessageProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
-	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{
-		MsgData:         msgBytes,
-		RequestedTxHash: hornetTx.GetMessageID(),
-	})
 	return nil
 }
 
@@ -217,29 +171,29 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 		return
 	}
 
-	cachedTxs := cachedReqMs.GetMessage().GetTransactions() // msgs +1
-	for _, cachedTxToSend := range cachedTxs {
-		transactionMsg, _ := sting.NewTransactionMessage(cachedTxToSend.GetTransaction().RawBytes)
+	cachedMsgs := cachedReqMs.GetMessage().GetTransactions() // msgs +1
+	for _, cachedMsgToSend := range cachedMsgs {
+		transactionMsg, _ := sting.NewTransactionMessage(cachedMsgToSend.GetTransaction().RawBytes)
 		p.EnqueueForSending(transactionMsg)
 	}
-	cachedTxs.Release(true)   // msgs -1
+	cachedMsgs.Release(true)  // msgs -1
 	cachedReqMs.Release(true) // message -1
 }
 
 // processes the given transaction request by parsing it and then replying to the peer with it.
-func (proc *Processor) processTransactionRequest(p *peer.Peer, data []byte) {
+func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
 	if len(data) != 49 {
 		return
 	}
 
-	cachedTx := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // tx +1
-	if cachedTx == nil {
+	cachedMsg := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // msg +1
+	if cachedMsg == nil {
 		// can't reply if we don't have the requested transaction
 		return
 	}
-	defer cachedTx.Release()
+	defer cachedMsg.Release()
 
-	transactionMsg, _ := sting.NewTransactionMessage(cachedTx.GetMessage().RawBytes)
+	transactionMsg, _ := sting.NewTransactionMessage(cachedMsg.GetMessage().RawBytes)
 	p.EnqueueForSending(transactionMsg)
 }
 

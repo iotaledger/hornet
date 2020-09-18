@@ -96,7 +96,7 @@ func UpdateDatabaseVersion() bool {
 	currentDbVersion := int(value[0])
 
 	if currentDbVersion == 1 && DbVersion == 2 {
-		// add information about trunk and branch to transaction metadata
+		// add information about parent1 and parent2 to transaction metadata
 		if err := migrateVersionOneToVersionTwo(); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to migrate database to new version"))
 		}
@@ -109,6 +109,6 @@ func UpdateDatabaseVersion() bool {
 
 func migrateVersionOneToVersionTwo() error {
 	// this is a soft migration in the metadata storage
-	// trunk an branch hashes were added to the metadata
+	// parent1 an parent2 hashes were added to the metadata
 	return nil
 }

@@ -45,7 +45,7 @@ type ServerMetrics struct {
 	// The number of dropped messages.
 	DroppedMessages atomic.Uint32
 	// The number of sent spam transactions.
-	SentSpamTransactions atomic.Uint32
+	SentSpamMessages atomic.Uint32
 	// The number of validated bundles.
 	ValidatedBundles atomic.Uint32
 	// The number of non-lazy tips.

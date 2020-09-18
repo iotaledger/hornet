@@ -18,9 +18,9 @@ var (
 	prevLMI milestone.Index = 0
 )
 
-func onNewTx(cachedTx *tangle.CachedMessage) {
+func onNewTx(cachedMsg *tangle.CachedMessage) {
 
-	cachedTx.ConsumeMessage(func(msg *tangle.Message) {
+	cachedMsg.ConsumeMessage(func(msg *tangle.Message) {
 		// tx topic
 		err := publishTx(tx.Tx)
 		if err != nil {
@@ -39,13 +39,13 @@ func onConfirmedTx(cachedMeta *tangle.CachedMetadata, msIndex milestone.Index, _
 
 	cachedMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
 
-		cachedTx := tangle.GetCachedMessageOrNil(metadata.GetMessageID())
-		if cachedTx == nil {
+		cachedMsg := tangle.GetCachedMessageOrNil(metadata.GetMessageID())
+		if cachedMsg == nil {
 			log.Warnf("%w hash: %s", tangle.ErrMessageNotFound, metadata.GetMessageID().Hex())
 			return
 		}
 
-		cachedTx.ConsumeMessage(func(msg *tangle.Message) {
+		cachedMsg.ConsumeMessage(func(msg *tangle.Message) {
 			if err := publishConfTx(tx.Tx, msIndex); err != nil {
 				log.Warn(err.Error())
 			}
@@ -159,11 +159,11 @@ func publishLSM(ms *tangle.Milestone) error {
 }
 
 // Publish confirmed transaction
-func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+func publishConfTx(iotaTx *transaction.Message, msIndex milestone.Index) error {
 
 	messages := []string{
 		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
-		iotaTx.Hash,                           // Transaction hash
+		iotaTx.Hash,                           // Message hash
 		iotaTx.Address,                        // Address
 		iotaTx.TrunkTransaction,               // Trunk transaction hash
 		iotaTx.BranchTransaction,              // Branch transaction hash
@@ -174,7 +174,7 @@ func publishConfTx(iotaTx *transaction.Transaction, msIndex milestone.Index) err
 }
 
 // Publish confirmed trytes
-func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+func publishConfTrytes(iotaTx *transaction.Message, msIndex milestone.Index) error {
 
 	trytes, err := transaction.TransactionToTrytes(iotaTx)
 	if err != nil {
@@ -182,8 +182,8 @@ func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index)
 	}
 
 	messages := []string{
-		iotaTx.Hash,                           // Transaction hash
-		trytes,                                // Transaction trytes
+		iotaTx.Hash,                           // Message hash
+		trytes,                                // Message trytes
 		strconv.FormatInt(int64(msIndex), 10), // Index of the milestone that confirmed the transaction
 	}
 
@@ -191,7 +191,7 @@ func publishConfTrytes(iotaTx *transaction.Transaction, msIndex milestone.Index)
 }
 
 // Publish transaction trytes of an tx that has recently been added to the ledger
-func publishTxTrytes(iotaTx *transaction.Transaction) error {
+func publishTxTrytes(iotaTx *transaction.Message) error {
 
 	trytes, err := transaction.TransactionToTrytes(iotaTx)
 	if err != nil {
@@ -199,18 +199,18 @@ func publishTxTrytes(iotaTx *transaction.Transaction) error {
 	}
 
 	messages := []string{
-		trytes,      // Transaction trytes
-		iotaTx.Hash, // Transaction hash
+		trytes,      // Message trytes
+		iotaTx.Hash, // Message hash
 	}
 
 	return publisher.Send(topicTxTrytes, messages)
 }
 
 // Publish a transaction that has recently been added to the ledger
-func publishTx(iotaTx *transaction.Transaction) error {
+func publishTx(iotaTx *transaction.Message) error {
 
 	messages := []string{
-		iotaTx.Hash,                         // Transaction hash
+		iotaTx.Hash,                         // Message hash
 		iotaTx.Address,                      // Address
 		strconv.FormatInt(iotaTx.Value, 10), // Value
 		iotaTx.ObsoleteTag,                  // Obsolete tag
@@ -228,7 +228,7 @@ func publishTx(iotaTx *transaction.Transaction) error {
 }
 
 // Publish a confirmed transaction for a specific address
-func publishConfTxForAddress(iotaTx *transaction.Transaction, msIndex milestone.Index) error {
+func publishConfTxForAddress(iotaTx *transaction.Message, msIndex milestone.Index) error {
 
 	messages := []string{
 		iotaTx.Hash,

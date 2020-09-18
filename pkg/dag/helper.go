@@ -17,10 +17,10 @@ type OnMissingParent func(parentMessageID hornet.Hash) error
 // OnSolidEntryPoint gets called when during traversal the startMsg or parent is a solid entry point.
 type OnSolidEntryPoint func(messageID hornet.Hash)
 
-// TraverseParent1AndParent2 starts to traverse the parents (past cone) of the given trunk message until
+// TraverseParent1AndParent2 starts to traverse the parents (past cone) of the given parent1 message until
 // the traversal stops due to no more transactions passing the given condition.
-// Afterwards it traverses the parents (past cone) of the given branch message.
-// It is a DFS with trunk / branch.
+// Afterwards it traverses the parents (past cone) of the given parent2 message.
+// It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
 func TraverseParent1AndParent2(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
@@ -30,7 +30,7 @@ func TraverseParent1AndParent2(parent1MessageID hornet.Hash, parent2MessageID ho
 
 // TraverseParents starts to traverse the parents (past cone) of the given start message until
 // the traversal stops due to no more transactions passing the given condition.
-// It is a DFS with trunk / branch.
+// It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
 func TraverseParents(startMessageID hornet.Hash, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 

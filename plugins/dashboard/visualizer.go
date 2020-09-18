@@ -23,14 +23,14 @@ const (
 
 // vertex defines a vertex in a DAG.
 type vertex struct {
-	ID          string `json:"id"`
-	Tag         string `json:"tag"`
-	TrunkID     string `json:"trunk_id"`
-	BranchID    string `json:"branch_id"`
-	IsSolid     bool   `json:"is_solid"`
-	IsConfirmed bool   `json:"is_confirmed"`
-	IsMilestone bool   `json:"is_milestone"`
-	IsTip       bool   `json:"is_tip"`
+	ID               string `json:"id"`
+	Tag              string `json:"tag"`
+	Parent1MessageID string `json:"trunk_id"`
+	Parent2MessageID string `json:"branch_id"`
+	IsSolid          bool   `json:"is_solid"`
+	IsConfirmed      bool   `json:"is_confirmed"`
+	IsMilestone      bool   `json:"is_milestone"`
+	IsTip            bool   `json:"is_tip"`
 }
 
 // metainfo signals that metadata of a given transaction changed.
@@ -52,8 +52,8 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedTx *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedTx.ConsumeMessageAndMetadata(func(msg *tangle.Message, metadata *hornet.MessageMetadata) { // tx -1
+	onReceivedNewTransaction := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedMsg.ConsumeMessageAndMetadata(func(msg *tangle.Message, metadata *hornet.MessageMetadata) { // msg -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -62,14 +62,14 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:          tx.Tx.Hash,
-						Tag:         tx.Tx.Tag,
-						TrunkID:     tx.Tx.TrunkTransaction[:VisualizerIdLength],
-						BranchID:    tx.Tx.BranchTransaction[:VisualizerIdLength],
-						IsSolid:     metadata.IsSolid(),
-						IsConfirmed: metadata.IsConfirmed(),
-						IsMilestone: false,
-						IsTip:       false,
+						ID:               tx.Tx.Hash,
+						Tag:              tx.Tx.Tag,
+						Parent1MessageID: tx.Tx.TrunkTransaction[:VisualizerIdLength],
+						Parent2MessageID: tx.Tx.BranchTransaction[:VisualizerIdLength],
+						IsSolid:          metadata.IsSolid(),
+						IsConfirmed:      metadata.IsConfirmed(),
+						IsMilestone:      false,
+						IsTip:            false,
 					},
 				},
 			)
@@ -156,7 +156,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.Hash.Hex()[:VisualizerIdLength],
+					ID:    tip.MessageID.Hex()[:VisualizerIdLength],
 					IsTip: true,
 				},
 			},
@@ -172,7 +172,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.Hash.Hex()[:VisualizerIdLength],
+					ID:    tip.MessageID.Hex()[:VisualizerIdLength],
 					IsTip: false,
 				},
 			},

@@ -13,16 +13,14 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/muxxer/iota.go/address"
-
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/peering"
@@ -67,14 +65,13 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseCorrupted()
 	})
 
-	if err := address.ValidAddress(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)); err != nil {
+	cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
+	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	tangle.ConfigureMilestones(
-		hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)),
-		config.NodeConfig.GetInt(config.CfgCoordinatorSecurityLevel),
-		uint64(config.NodeConfig.GetInt(config.CfgCoordinatorMerkleTreeDepth)),
+		cooPublicKey,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
@@ -199,12 +196,12 @@ func configureEvents() {
 		gossip.BroadcastHeartbeat(nil)
 	})
 
-	onReceivedNewTx = events.NewClosure(func(cachedTx *tangle.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTx = events.NewClosure(func(cachedMsg *tangle.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		// Force release possible here, since processIncomingTx still holds a reference
-		defer cachedTx.Release(true) // tx -1
+		defer cachedMsg.Release(true) // msg -1
 
 		if tangle.IsNodeSyncedWithThreshold() {
-			solidifyFutureConeOfTx(cachedTx.GetCachedMetadata()) // meta pass +1
+			solidifyFutureConeOfTx(cachedMsg.GetCachedMetadata()) // meta pass +1
 		}
 	})
 }
