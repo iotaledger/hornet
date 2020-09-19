@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/profiling"
@@ -25,7 +24,6 @@ import (
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/gohornet/hornet/plugins/webapi"
-	"github.com/gohornet/hornet/plugins/zmq"
 )
 
 func main() {
@@ -56,8 +54,6 @@ func main() {
 			metrics.PLUGIN,
 			snapshot.PLUGIN,
 			dashboard.PLUGIN,
-			zmq.PLUGIN,
-			mqtt.PLUGIN,
 			spammer.PLUGIN,
 			coordinator.PLUGIN,
 			prometheus.PLUGIN,
