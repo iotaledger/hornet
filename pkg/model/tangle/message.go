@@ -2,10 +2,11 @@ package tangle
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go"
-	"log"
 )
 
 // Storable Object
@@ -63,6 +64,28 @@ func (msg *Message) GetParent1MessageID() hornet.Hash {
 
 func (msg *Message) GetParent2MessageID() hornet.Hash {
 	return msg.message.Parent2[:]
+}
+
+func (msg *Message) IsMilestone() bool {
+	switch ms := msg.GetMessage().Payload.(type) {
+	case *iotago.MilestonePayload:
+		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
+			return true
+		}
+	default:
+	}
+
+	return false
+}
+
+func (msg *Message) IsValue() bool {
+	switch msg.GetMessage().Payload.(type) {
+	case *iotago.SignedTransactionPayload:
+		return true
+	default:
+	}
+
+	return false
 }
 
 // ObjectStorage interface

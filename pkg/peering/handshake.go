@@ -61,12 +61,12 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 	}
 
 	// check whether the peer uses the same coordinator address
-	if !bytes.Equal(handshakeMsg.ByteEncodedCooAddress, m.Opts.ValidHandshake.ByteEncodedCooAddress) {
+	if !bytes.Equal(handshakeMsg.CooPublicKey, m.Opts.ValidHandshake.CooPublicKey) {
 		return ErrNonMatchingCooAddr
 	}
 
 	// check feature set compatibility
-	version, err := handshakeMsg.SupportedVersion(protocol.SupportedFeatureSets)
+	version, err := handshakeMsg.VersionSupported(protocol.MinimumVersion)
 	if err != nil {
 		return errors.Wrapf(err, "protocol version %d is not supported", version)
 	}
@@ -137,7 +137,7 @@ func (m *Manager) verifyHandshake(p *peer.Peer, handshakeMsg *handshake.Handshak
 
 	m.Unlock()
 
-	p.Protocol.FeatureSet = byte(version)
+	p.Protocol.Version = version
 	p.Protocol.Handshaked()
 	return nil
 }

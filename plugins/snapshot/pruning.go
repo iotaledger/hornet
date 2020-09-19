@@ -19,67 +19,59 @@ const (
 	AdditionalPruningThreshold = 50
 )
 
-// pruneUnconfirmedTransactions prunes all unconfirmed tx from the database for the given milestone
-func pruneUnconfirmedTransactions(targetIndex milestone.Index) (txCountDeleted int, txCountChecked int) {
+func setIsPruning(value bool) {
+	statusLock.Lock()
+	isPruning = value
+	statusLock.Unlock()
+}
 
-	txsToCheckMap := make(map[string]struct{})
+// pruneUnconfirmedMessages prunes all unconfirmed messages from the database for the given milestone
+func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
 
-	// Check if tx is still unconfirmed
-loopOverUnconfirmed:
-	for _, txHash := range tangle.GetUnconfirmedMessageIDs(targetIndex, true) {
-		if _, exists := txsToCheckMap[string(txHash)]; exists {
+	messagesToCheckMap := make(map[string]struct{})
+
+	// Check if message is still unconfirmed
+	for _, messageID := range tangle.GetUnconfirmedMessageIDs(targetIndex, true) {
+		if _, exists := messagesToCheckMap[string(messageID)]; exists {
 			continue
 		}
 
-		cachedMsg := tangle.GetCachedMessageOrNil(txHash) // msg +1
+		cachedMsg := tangle.GetCachedMessageOrNil(messageID) // msg +1
 		if cachedMsg == nil {
-			// transaction was already deleted or marked for deletion
+			// message was already deleted or marked for deletion
 			continue
 		}
 
 		if cachedMsg.GetMetadata().IsConfirmed() {
-			// transaction was already confirmed
+			// message was already confirmed
 			cachedMsg.Release(true) // msg -1
 			continue
 		}
 
-		if tangle.IsMaybeMilestoneTx(cachedMsg.Retain()) {
-			bundles := tangle.GetBundlesOfTransactionOrNil(txHash, true) // bundles +1
-			if bundles != nil && len(bundles) > 0 {
-				for _, bndl := range bundles {
-					if bndl.GetMessage().IsMilestone() {
-						cachedMsg.Release(true) // msg -1
-						bundles.Release(true)   // bundles -1
-						// Do not prune unconfirmed tx that are part of a milestone
-						continue loopOverUnconfirmed
-					}
-				}
-				bundles.Release(true) // bundles -1
-			}
-		}
-
 		cachedMsg.Release(true) // msg -1
-		txsToCheckMap[string(txHash)] = struct{}{}
+		messagesToCheckMap[string(messageID)] = struct{}{}
 	}
 
-	txCountDeleted = pruneMessages(txsToCheckMap)
+	msgCountDeleted = pruneMessages(messagesToCheckMap)
 	tangle.DeleteUnconfirmedMessages(targetIndex)
 
-	return txCountDeleted, len(txsToCheckMap)
+	return msgCountDeleted, len(messagesToCheckMap)
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func pruneMilestone(milestoneIndex milestone.Index) {
 
 	// state diffs
-	if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
-		log.Warn(err)
-	}
+	/*
+		if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
+			log.Warn(err)
+		}
+	*/
 
 	tangle.DeleteMilestone(milestoneIndex)
 }
 
-// pruneMessages prunes the children, bundles, bundle txs, addresses, tags and transaction metadata from the database
+// pruneMessages removes all the associated data of the given message IDs from the database
 func pruneMessages(messageIDsToDelete map[string]struct{}) int {
 
 	for messageIDToDelete := range messageIDsToDelete {
@@ -100,12 +92,6 @@ func pruneMessages(messageIDsToDelete map[string]struct{}) int {
 	}
 
 	return len(messageIDsToDelete)
-}
-
-func setIsPruning(value bool) {
-	statusLock.Lock()
-	isPruning = value
-	statusLock.Unlock()
 }
 
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
@@ -157,8 +143,8 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	snapshotInfo.EntryPointIndex = targetIndex
 	tangle.SetSnapshotInfo(snapshotInfo)
 
-	// unconfirmed txs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
-	pruneUnconfirmedTransactions(snapshotInfo.PruningIndex)
+	// unconfirmed msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
+	pruneUnconfirmedMessages(snapshotInfo.PruningIndex)
 
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
@@ -172,7 +158,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
 		ts := time.Now()
-		txCountDeleted, msgCountChecked := pruneUnconfirmedTransactions(milestoneIndex)
+		txCountDeleted, msgCountChecked := pruneUnconfirmedMessages(milestoneIndex)
 
 		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {

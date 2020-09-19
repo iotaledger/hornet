@@ -34,9 +34,8 @@ func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, paren
 
 	pubKey := privateKey.Public().(ed25519.PublicKey)
 
-	iotaMsg := &iotago.Message{Version: 1, Parent1: parent1MessageID.ID(), Parent2: parent2MessageID.ID()}
 	msPayload := &iotago.MilestonePayload{Index: 1000, Timestamp: uint64(time.Now().Unix()), InclusionMerkleProof: whiteFlagMerkleRootTreeHash}
-	iotaMsg.Payload = msPayload
+	iotaMsg := &iotago.Message{Version: 1, Parent1: parent1MessageID.ID(), Parent2: parent2MessageID.ID(), Payload: msPayload}
 
 	err := msPayload.Sign(iotaMsg, privateKey)
 	if err != nil {

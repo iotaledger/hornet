@@ -24,7 +24,7 @@ var (
 	TipSelector *tipselect.TipSelector
 
 	// Closures
-	onBundleSolid        *events.Closure
+	onMessageSolid       *events.Closure
 	onMilestoneConfirmed *events.Closure
 )
 
@@ -72,19 +72,14 @@ func run(_ *node.Plugin) {
 }
 
 func configureEvents() {
-	onBundleSolid = events.NewClosure(func(cachedMessage *tangle.CachedMessage) {
-		cachedMessage.ConsumeMessage(func(bndl *tangle.Message) { // message -1
+	onMessageSolid = events.NewClosure(func(cachedMessage *tangle.CachedMessage) {
+		cachedMessage.ConsumeMessage(func(message *tangle.Message) { // message -1
 			// do not add tips during syncing, because it is not needed at all
 			if !tangle.IsNodeSyncedWithThreshold() {
 				return
 			}
 
-			if bndl.IsInvalidPastCone() || !bndl.IsValid() || !bndl.ValidStrictSemantics() {
-				// ignore invalid bundles or semantically invalid bundles or bundles with invalid past cone
-				return
-			}
-
-			TipSelector.AddTip(bndl)
+			TipSelector.AddTip(message)
 		})
 	})
 
@@ -97,7 +92,7 @@ func configureEvents() {
 		// propagate new transaction root snapshot indexes to the future cone for URTS
 		ts := time.Now()
 		dag.UpdateMessageRootSnapshotIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
-		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+		log.Debugf("UpdateMessageRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()
 		removedTipCount := TipSelector.UpdateScores()
@@ -106,11 +101,11 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	tangleplugin.Events.BundleSolid.Attach(onBundleSolid)
+	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
 	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 }
 
 func detachEvents() {
-	tangleplugin.Events.BundleSolid.Detach(onBundleSolid)
+	tangleplugin.Events.MessageSolid.Detach(onMessageSolid)
 	tangleplugin.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 }

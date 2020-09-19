@@ -16,13 +16,9 @@ func BroadcastHeartbeat(filter func(p *peer.Peer) bool) {
 	}
 
 	connected, synced := manager.ConnectedAndSyncedPeerCount()
-	heartbeatMsg, _ := sting.NewHeartbeatMessage(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
+	heartbeatMsg, _ := sting.NewHeartbeatMsg(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
 
 	manager.ForAllConnected(func(p *peer.Peer) bool {
-		if !p.Protocol.Supports(sting.FeatureSet) {
-			return true
-		}
-
 		if filter != nil && !filter(p) {
 			return true
 		}
@@ -63,9 +59,6 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	// send each ms request to a random peer who supports the message
 	for _, msIndex := range msIndexes {
 		manager.ForAllConnected(func(p *peer.Peer) bool {
-			if !p.Protocol.Supports(sting.FeatureSet) {
-				return true
-			}
 			if !p.HasDataFor(msIndex) {
 				return true
 			}

@@ -18,13 +18,13 @@ import (
 )
 
 // storeTransaction adds the transaction to the storage layer.
-func (te *TestEnvironment) storeTransaction(tx *transaction.Message) *tangle.CachedMessage {
+func (te *TestEnvironment) storeTransaction(msg *transaction.Message) *tangle.CachedMessage {
 
-	txTrits, err := transaction.TransactionToTrits(tx)
+	txTrits, err := transaction.TransactionToTrits(msg)
 	require.NoError(te.testState, err)
 
 	//txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
-	//hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
+	//hornetTx := hornet.NewTransactionFromTx(msg, txBytesTruncated)
 
 	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(hornetTx, tangle.GetLatestMilestoneIndex(), false, true, true)
 	require.NotNil(te.testState, cachedMsg)
@@ -48,7 +48,7 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 		cachedMsg.Release(true)
 	}
 
-	// Solidify tx if not a milestone
+	// Solidify msg if not a milestone
 	for _, hash := range hashes {
 		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(hash)
 		require.NotNil(te.testState, cachedMsgMeta)
@@ -95,10 +95,10 @@ func (te *TestEnvironment) AttachAndStoreBundle(trunk hornet.Hash, branch hornet
 	powed, err := pow.DoPoW(trunk.Hex(), branch.Hex(), trytes, mwm, powFunc)
 	require.NoError(te.testState, err)
 
-	txs, err := transaction.AsTransactionObjects(powed, nil)
+	msgs, err := transaction.AsTransactionObjects(powed, nil)
 	require.NoError(te.testState, err)
 
-	return te.StoreBundle(txs, false)
+	return te.StoreBundle(msgs, false)
 }
 
 // VerifyLSMI checks if the latest solid milestone index is equal to the given milestone index.

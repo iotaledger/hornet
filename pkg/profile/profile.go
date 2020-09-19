@@ -88,23 +88,7 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Tags: CacheOpts{
-			CacheTimeMs: 10000,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		Bundles: CacheOpts{
-			CacheTimeMs: 30000,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		BundleTransactions: CacheOpts{
+		Indexations: CacheOpts{
 			CacheTimeMs: 10000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -120,7 +104,7 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		Messages: CacheOpts{
 			CacheTimeMs: 30000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -128,7 +112,7 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedTx: CacheOpts{
+		UnconfirmedMessages: CacheOpts{
 			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -136,7 +120,7 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		IncomingTransactionFilter: CacheOpts{
+		IncomingMessagesFilter: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -165,23 +149,7 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Tags: CacheOpts{
-			CacheTimeMs: 5000,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		Bundles: CacheOpts{
-			CacheTimeMs: 15000,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		BundleTransactions: CacheOpts{
+		Indexations: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -197,7 +165,7 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		Messages: CacheOpts{
 			CacheTimeMs: 15000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -205,7 +173,7 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedTx: CacheOpts{
+		UnconfirmedMessages: CacheOpts{
 			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -213,7 +181,7 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		IncomingTransactionFilter: CacheOpts{
+		IncomingMessagesFilter: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -242,24 +210,8 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Tags: CacheOpts{
+		Indexations: CacheOpts{
 			CacheTimeMs: 200,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		Bundles: CacheOpts{
-			CacheTimeMs: 5000,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		BundleTransactions: CacheOpts{
-			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -274,7 +226,7 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		Messages: CacheOpts{
 			CacheTimeMs: 5000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -282,7 +234,7 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedTx: CacheOpts{
+		UnconfirmedMessages: CacheOpts{
 			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -290,7 +242,7 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		IncomingTransactionFilter: CacheOpts{
+		IncomingMessagesFilter: CacheOpts{
 			CacheTimeMs: 2500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -319,24 +271,8 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Tags: CacheOpts{
+		Indexations: CacheOpts{
 			CacheTimeMs: 100,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		Bundles: CacheOpts{
-			CacheTimeMs: 1500,
-			LeakDetectionOptions: LeakDetectionOpts{
-				Enabled:                false,
-				MaxConsumersPerObject:  20,
-				MaxConsumerHoldTimeSec: 100,
-			},
-		},
-		BundleTransactions: CacheOpts{
-			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
 				MaxConsumersPerObject:  20,
@@ -351,7 +287,7 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		Transactions: CacheOpts{
+		Messages: CacheOpts{
 			CacheTimeMs: 1500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -359,7 +295,7 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedTx: CacheOpts{
+		UnconfirmedMessages: CacheOpts{
 			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -367,7 +303,7 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		IncomingTransactionFilter: CacheOpts{
+		IncomingMessagesFilter: CacheOpts{
 			CacheTimeMs: 2000,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -384,15 +320,13 @@ type Profile struct {
 }
 
 type Caches struct {
-	Addresses                 CacheOpts `mapstructure:"addresses"`
-	Bundles                   CacheOpts `mapstructure:"bundles"`
-	BundleTransactions        CacheOpts `mapstructure:"bundleTransactions"`
-	Children                  CacheOpts `mapstructure:"children"`
-	Tags                      CacheOpts `mapstructure:"tags"`
-	Milestones                CacheOpts `mapstructure:"milestones"`
-	Transactions              CacheOpts `mapstructure:"transactions"`
-	IncomingTransactionFilter CacheOpts `mapstructure:"incomingTransactionFilter"`
-	UnconfirmedTx             CacheOpts `mapstructure:"unconfirmedTx"`
+	Addresses              CacheOpts `mapstructure:"addresses"`
+	Children               CacheOpts `mapstructure:"children"`
+	Indexations            CacheOpts `mapstructure:"indexations"`
+	Milestones             CacheOpts `mapstructure:"milestones"`
+	Messages               CacheOpts `mapstructure:"messages"`
+	IncomingMessagesFilter CacheOpts `mapstructure:"incomingMessagesFilter"`
+	UnconfirmedMessages    CacheOpts `mapstructure:"unconfirmedMessages"`
 }
 
 type CacheOpts struct {

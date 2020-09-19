@@ -150,13 +150,13 @@ func newTestBundle(idx int, trunk, parent2MessageID hornet.Hash) *tangle.Message
 	bndl := tangle.Message{
 
 	}
-	tx := &transaction.Message{
+	msg := &transaction.Message{
 		Hash:              trinary.IntToTrytes(int64(idx), consts.HashTrytesSize),
 		Value:             0,
 		Timestamp:         uint64(idx),
 		TrunkTransaction:  trunk.Hex(),
 		parent2MessageIDTransaction: parent2MessageID.Hex(),
 	}
-	return hornet.NewTransactionFromTx(tx, nil)
+	return hornet.NewTransactionFromTx(msg, nil)
 }
 */

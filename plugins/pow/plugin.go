@@ -28,7 +28,10 @@ var (
 func Handler() *powpackage.Handler {
 	handlerOnce.Do(func() {
 		// init the pow handler with all possible settings
-		powsrvAPIKey, _ := config.LoadHashFromEnvironment("POWSRV_API_KEY", 12)
+		powsrvAPIKey, err := config.LoadStringFromEnvironment("POWSRV_API_KEY")
+		if err != nil && len(powsrvAPIKey) > 12 {
+			powsrvAPIKey = powsrvAPIKey[:12]
+		}
 		handler = powpackage.New(log, powsrvAPIKey, powsrvInitCooldown)
 
 	})

@@ -72,7 +72,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		defer cachedMetadata.Release(true) // meta -1
 
 		if _, exists := cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())]; !exists {
-			// release the tx metadata at the end to speed up calculation
+			// release the msg metadata at the end to speed up calculation
 			cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMetadata.Retain()
 		}
 
@@ -81,7 +81,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		if !exists {
 			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
-				return false, fmt.Errorf("%w: bundle %s of candidate tx %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
+				return false, fmt.Errorf("%w: bundle %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 			}
 			// release the bundles at the end to speed up calculation
 			cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMessage
@@ -98,7 +98,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		// load up message
 		cachedMessage := tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID())
 		if cachedMessage == nil {
-			return fmt.Errorf("%w: message %s of candidate tx %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 		}
 		defer cachedMessage.Release(true)
 

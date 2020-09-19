@@ -93,7 +93,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	bundleD := te.AttachAndStoreBundle(bundleB.GetMessage().GetTailHash(), bundleC.GetMessage().GetTailHash(), utils.ZeroValueTx(t, "D"))
 	bundleE := te.AttachAndStoreBundle(bundleB.GetMessage().GetTailHash(), bundleA.GetMessage().GetTailHash(), utils.ZeroValueTx(t, "E"))
 
-	// Confirming milestone include all tx up to bundle E. This should only include A, B and E
+	// Confirming milestone include all msg up to bundle E. This should only include A, B and E
 	conf := te.IssueAndConfirmMilestoneOnTip(bundleE.GetMessage().GetTailHash(), true)
 	require.Equal(t, 3+3, conf.MessagesConfirmed) // A, B, E + 3 for Milestone
 	require.Equal(t, 3+3, conf.MessagesZeroValue) // 3 are for the milestone itself

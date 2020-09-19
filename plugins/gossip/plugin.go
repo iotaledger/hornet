@@ -18,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/bqueue"
 	"github.com/gohornet/hornet/pkg/protocol/processor"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	peeringplugin "github.com/gohornet/hornet/plugins/peering"
 )
@@ -57,7 +56,7 @@ func Processor() *processor.Processor {
 	msgProcessorOnce.Do(func() {
 		msgProcessor = processor.New(requestQueue, peeringplugin.Manager(), &processor.Options{
 			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
-			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingTransactionFilter,
+			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
 		})
 	})
 	return msgProcessor
@@ -81,15 +80,13 @@ func configure(plugin *node.Plugin) {
 	// register event handlers for messages
 	manager.Events.PeerConnected.Attach(events.NewClosure(func(p *peer.Peer) {
 
-		if p.Protocol.Supports(sting.FeatureSet) {
-			addSTINGMessageEventHandlers(p)
+		addSTINGMessageEventHandlers(p)
 
-			// send heartbeat and latest milestone request
-			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
-				connected, synced := manager.ConnectedAndSyncedPeerCount()
-				helpers.SendHeartbeat(p, tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
-				helpers.SendLatestMilestoneRequest(p)
-			}
+		// send heartbeat and latest milestone request
+		if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
+			connected, synced := manager.ConnectedAndSyncedPeerCount()
+			helpers.SendHeartbeat(p, tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
+			helpers.SendLatestMilestoneRequest(p)
 		}
 
 		disconnectSignal := make(chan struct{})

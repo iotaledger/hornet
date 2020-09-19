@@ -159,7 +159,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		latestMilestoneHash := hornet.NullMessageID
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
-			cachedMilestoneMsg := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
+			cachedMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 			if cachedMilestoneMsg == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
@@ -191,7 +191,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedMilestoneMsg := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
+	cachedMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 	if cachedMilestoneMsg == nil {
 		return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 	}
@@ -215,7 +215,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, par
 			cachedMessage.Release(true) // message -1
 		}
 
-		// Release all tx metadata at the end
+		// Release all msg metadata at the end
 		for _, cachedMsgMeta := range cachedMsgMetas {
 			cachedMsgMeta.Release(true) // meta -1
 		}

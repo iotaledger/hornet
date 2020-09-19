@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -64,18 +63,10 @@ func runRequestWorkers() {
 				return
 			case <-requestQueueEnqueueSignal:
 
-				// abort if no peer is connected or no peer supports sting
-				if !manager.AnySTINGPeerConnected() {
-					continue
-				}
-
 				// drain request queue
 				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
 					requested := false
 					manager.ForAllConnected(func(p *peer.Peer) bool {
-						if !p.Protocol.Supports(sting.FeatureSet) {
-							return true
-						}
 						// we only send a request message if the peer actually has the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
 						if !p.HasDataFor(r.MilestoneIndex) {
@@ -92,10 +83,6 @@ func runRequestWorkers() {
 						// so we ask all neighbors that could have the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
 						manager.ForAllConnected(func(p *peer.Peer) bool {
-							if !p.Protocol.Supports(sting.FeatureSet) {
-								return true
-							}
-
 							// we only send a request message if the peer could have the data
 							if !p.CouldHaveDataFor(r.MilestoneIndex) {
 								return true
@@ -178,15 +165,18 @@ func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, pr
 
 // RequestMilestoneParents enqueues requests for the parents of the given milestone bundle to the request queue,
 // if the parents are not solid entry points and not already in the database.
-func RequestMilestoneParents(cachedMs *tangle.CachedMilestone) bool {
-	defer cachedMs.Release() // message -1
+func RequestMilestoneParents(cachedMilestone *tangle.CachedMilestone) bool {
+	defer cachedMilestone.Release(true) // message -1
 
-	cachedHeadTxMeta := cachedMs.GetMessage().GetHeadMetadata() // meta +1
-	defer cachedHeadTxMeta.Release()                            // meta -1
+	msIndex := cachedMilestone.GetMilestone().Index
 
-	msIndex := cachedMs.GetMessage().GetMilestoneIndex()
+	cachedMilestoneMsgMeta := tangle.GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
+	if cachedMilestoneMsgMeta == nil {
+		panic("milestone metadata doesn't exist")
+	}
+	defer cachedMilestoneMsgMeta.Release(true) // meta -1
 
-	txMeta := cachedHeadTxMeta.GetMetadata()
+	txMeta := cachedMilestoneMsgMeta.GetMetadata()
 	enqueued := Request(txMeta.GetParent1MessageID(), msIndex, true)
 	if !bytes.Equal(txMeta.GetParent1MessageID(), txMeta.GetParent2MessageID()) {
 		enqueuedTwo := Request(txMeta.GetParent2MessageID(), msIndex, true)

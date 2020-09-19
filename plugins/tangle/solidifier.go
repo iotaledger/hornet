@@ -37,8 +37,8 @@ var (
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewTxCount       uint32
-	oldConfirmedTxCount uint32
+	oldNewMsgCount       uint32
+	oldConfirmedMsgCount uint32
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone = milestone.Index(0)
@@ -49,8 +49,8 @@ var (
 
 type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
-	TPS                    float64         `json:"tps"`
-	CTPS                   float64         `json:"ctps"`
+	MPS                    float64         `json:"tps"`
+	CMPS                   float64         `json:"ctps"`
 	ConfirmationRate       float64         `json:"conf_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
@@ -70,43 +70,36 @@ func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
 }
 
 // solidQueueCheck traverses a milestone and checks if it is solid
-// Missing tx are requested
+// Missing msg are requested
 // Can be aborted with abortSignal
 // all cachedMsgMetas have to be released outside.
-func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, cachedMetadata *tangle.CachedMetadata, abortSignal chan struct{}) (solid bool, aborted bool) {
-	defer cachedMetadata.Release(true)
-
+func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal chan struct{}) (solid bool, aborted bool) {
 	ts := time.Now()
-
-	if _, exists := cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())]; !exists {
-		// release the transactions at the end to speed up calculation
-		cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMetadata.Retain()
-	}
 
 	txsChecked := 0
 	var txsToSolidify hornet.Hashes
 	txsToRequest := make(map[string]struct{})
 
-	// collect all tx to solidify by traversing the tangle
-	if err := dag.TraverseParents(cachedMetadata.GetMetadata().GetMessageID(),
+	// collect all msg to solidify by traversing the tangle
+	if err := dag.TraverseParents(milestoneMessageID,
 		// traversal stops if no more transactions pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			if _, exists := cachedMessageMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())]; !exists {
-				// release the tx metadata at the end to speed up calculation
+				// release the msg metadata at the end to speed up calculation
 				cachedMessageMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
 			}
 
-			// if the tx is solid, there is no need to traverse its parents
+			// if the msg is solid, there is no need to traverse its parents
 			return !cachedMsgMeta.GetMetadata().IsSolid(), nil
 		},
 		// consumer
 		func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			// mark the tx as checked
+			// mark the msg as checked
 			txsChecked++
 
 			// collect the txToSolidify in an ordered way
@@ -116,7 +109,7 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 		},
 		// called on missing parents
 		func(parentHash hornet.Hash) error {
-			// tx does not exist => request missing tx
+			// msg does not exist => request missing msg
 			txsToRequest[string(parentHash)] = struct{}{}
 			return nil
 		},
@@ -138,7 +131,7 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 			txHashes = append(txHashes, hornet.Hash(txHash))
 		}
 		requested := gossip.RequestMultiple(txHashes, milestoneIndex, true)
-		log.Warnf("Stopped solidifier due to missing tx -> Requested missing txs (%d/%d), collect: %v", requested, len(txHashes), tCollect.Sub(ts).Truncate(time.Millisecond))
+		log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(txHashes), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
 
@@ -156,11 +149,11 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 	tSolid := time.Now()
 
 	if tangle.IsNodeSyncedWithThreshold() {
-		// propagate solidity to the future cone (txs attached to the txs of this milestone)
+		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
 		solidifyFutureCone(cachedMessageMetas, txsToSolidify, abortSignal)
 	}
 
-	log.Infof("Solidifier finished: txs: %d, collect: %v, solidity %v, propagation: %v, total: %v", txsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
+	log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", txsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
 	return true, false
 }
 
@@ -172,7 +165,7 @@ func solidifyFutureConeOfTx(cachedMsgMeta *tangle.CachedMetadata) error {
 	cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta
 
 	defer func() {
-		// release all tx metadata at the end
+		// release all msg metadata at the end
 		for _, cachedMsgMeta := range cachedMsgMetas {
 			// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
 			cachedMsgMeta.Release(true) // meta -1
@@ -199,7 +192,7 @@ func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, txHash
 				defer cachedMsgMeta.Release(true) // meta -1
 
 				if _, exists := cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())]; !exists {
-					// release the tx metadata at the end to speed up calculation
+					// release the msg metadata at the end to speed up calculation
 					cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
 				}
 
@@ -261,7 +254,7 @@ func abortMilestoneSolidification() {
 	signalChanMilestoneStopSolidificationLock.Unlock()
 }
 
-// solidifyMilestone tries to solidify the next known non-solid milestone and requests missing tx
+// solidifyMilestone tries to solidify the next known non-solid milestone and requests missing msg
 func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 	/* How milestone solidification works:
@@ -269,7 +262,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	- A Milestone comes in and gets validated
 	- Request milestone trunk/parent2 without traversion
 	- Everytime a request queue gets empty, start the solidifier for the next known non-solid milestone
-	- If tx are missing, they are requested by the solidifier
+	- If msg are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted
 	*/
 	if !force {
@@ -326,7 +319,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	// Release shouldn't be forced, to cache the latest milestones
 	defer cachedMsToSolidify.Release() // message -1
 
-	milestoneIndexToSolidify := cachedMsToSolidify.GetMessage().GetMilestoneIndex()
+	milestoneIndexToSolidify := cachedMsToSolidify.GetMilestone().Index
 	setSolidifierMilestoneIndex(milestoneIndexToSolidify)
 
 	signalChanMilestoneStopSolidificationLock.Lock()
@@ -336,7 +329,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 
 	defer func() {
-		// release all tx metadata at the end
+		// release all msg metadata at the end
 		for _, cachedMsgMeta := range cachedMsgMetas {
 			// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
 			cachedMsgMeta.Release(true) // meta -1
@@ -344,12 +337,12 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}()
 
 	log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := solidQueueCheck(cachedMsgMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetMessage().GetTailMetadata(), signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
+	if becameSolid, aborted := solidQueueCheck(cachedMsgMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetMilestone().MessageID, signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
 		} else {
-			// Milestone not solid yet and missing tx were requested
+			// Milestone not solid yet and missing msg were requested
 			Events.MilestoneSolidificationFailed.Trigger(milestoneIndexToSolidify)
 			log.Infof("Milestone couldn't be solidified! %d", milestoneIndexToSolidify)
 		}
@@ -362,8 +355,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // message +1
-		if cachedClosestNextMs.GetMessage().GetMilestoneIndex() == milestoneIndexToSolidify {
-			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetMessage().GetMilestoneIndex())
+		if cachedClosestNextMs.GetMilestone().Index == milestoneIndexToSolidify {
+			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetMilestone().Index)
 		}
 		cachedClosestNextMs.Release() // message -1
 
@@ -374,11 +367,11 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		return
 	}
 
-	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, cachedMsToSolidify.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {
-		Events.MessageConfirmed.Trigger(txMeta, index, confTime)
+	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {
+		Events.MessageConfirmed.Trigger(msgMeta, index, confTime)
 	}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
-		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // bundle pass +1
+		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
 		Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
 		Events.MilestoneConfirmed.Trigger(confirmation)
 	})
@@ -398,7 +391,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	)
 
 	var ctpsMessage string
-	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.GetMessage().GetTail(), conf.Index); err == nil {
+	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), conf.Index); err == nil {
 		if tangle.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the TPS and conf.rate is wrong)
 			if firstSyncedMilestone == 0 {
@@ -411,10 +404,10 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 		if tangle.IsNodeSynced() && (conf.Index > firstSyncedMilestone+1) {
 			// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
-			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.TPS, metric.CTPS, metric.ConfirmationRate)
+			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ConfirmationRate)
 			Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
-			ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CTPS)
+			ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CMPS)
 		}
 	}
 
@@ -431,10 +424,8 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
 }
 
-func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedMessage, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
-
-	newMilestoneTimestamp := time.Unix(cachedMsTailTx.GetMessage().GetTimestamp(), 0)
-	cachedMsTailTx.Release()
+func getConfirmedMilestoneMetric(cachedMilestone *tangle.CachedMilestone, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
+	defer cachedMilestone.Release(true)
 
 	oldMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
 	if oldMilestone == nil {
@@ -442,35 +433,28 @@ func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedMessage, milestone
 	}
 	defer oldMilestone.Release(true) // milestone -1
 
-	oldMilestoneTailTx := tangle.GetCachedMessageOrNil(oldMilestone.GetMilestone().MessageID)
-	if oldMilestoneTailTx == nil {
-		return nil, ErrMilestoneNotFound
-	}
-	defer oldMilestoneTailTx.Release(true)
-
-	oldMilestoneTimestamp := time.Unix(oldMilestoneTailTx.GetMessage().GetTimestamp(), 0)
-	timeDiff := newMilestoneTimestamp.Sub(oldMilestoneTimestamp).Seconds()
+	timeDiff := cachedMilestone.GetMilestone().Timestamp.Sub(oldMilestone.GetMilestone().Timestamp).Seconds()
 	if timeDiff == 0 {
 		return nil, ErrDivisionByZero
 	}
 
-	newNewTxCount := metrics.SharedServerMetrics.NewTransactions.Load()
-	newTxDiff := utils.GetUint32Diff(newNewTxCount, oldNewTxCount)
-	oldNewTxCount = newNewTxCount
+	newNewMsgCount := metrics.SharedServerMetrics.NewTransactions.Load()
+	newMsgDiff := utils.GetUint32Diff(newNewMsgCount, oldNewMsgCount)
+	oldNewMsgCount = newNewMsgCount
 
-	newConfirmedTxCount := metrics.SharedServerMetrics.ConfirmedMessages.Load()
-	confirmedTxDiff := utils.GetUint32Diff(newConfirmedTxCount, oldConfirmedTxCount)
-	oldConfirmedTxCount = newConfirmedTxCount
+	newConfirmedMsgCount := metrics.SharedServerMetrics.ConfirmedMessages.Load()
+	confirmedMsgDiff := utils.GetUint32Diff(newConfirmedMsgCount, oldConfirmedMsgCount)
+	oldConfirmedMsgCount = newConfirmedMsgCount
 
 	confRate := 0.0
-	if newTxDiff != 0 {
-		confRate = (float64(confirmedTxDiff) / float64(newTxDiff)) * 100.0
+	if newMsgDiff != 0 {
+		confRate = (float64(confirmedMsgDiff) / float64(newMsgDiff)) * 100.0
 	}
 
 	metric := &ConfirmedMilestoneMetric{
 		MilestoneIndex:         milestoneIndexToSolidify,
-		TPS:                    float64(newTxDiff) / timeDiff,
-		CTPS:                   float64(confirmedTxDiff) / timeDiff,
+		MPS:                    float64(newMsgDiff) / timeDiff,
+		CMPS:                   float64(confirmedMsgDiff) / timeDiff,
 		ConfirmationRate:       confRate,
 		TimeSinceLastMilestone: timeDiff,
 	}

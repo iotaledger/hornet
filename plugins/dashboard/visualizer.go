@@ -24,9 +24,8 @@ const (
 // vertex defines a vertex in a DAG.
 type vertex struct {
 	ID               string `json:"id"`
-	Tag              string `json:"tag"`
-	Parent1MessageID string `json:"trunk_id"`
-	Parent2MessageID string `json:"branch_id"`
+	Parent1MessageID string `json:"parent1_id"`
+	Parent2MessageID string `json:"parent2_2"`
 	IsSolid          bool   `json:"is_solid"`
 	IsConfirmed      bool   `json:"is_confirmed"`
 	IsMilestone      bool   `json:"is_milestone"`
@@ -38,7 +37,7 @@ type metainfo struct {
 	ID string `json:"id"`
 }
 
-// confirmationinfo signals confirmation of a milestone tail tx with a list of exluded txs in the past cone.
+// confirmationinfo signals confirmation of a milestone tail msg with a list of exluded msgs in the past cone.
 type confirmationinfo struct {
 	ID          string   `json:"id"`
 	ExcludedIDs []string `json:"excluded_ids"`
@@ -53,7 +52,7 @@ type tipinfo struct {
 func runVisualizer() {
 
 	onReceivedNewTransaction := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedMsg.ConsumeMessageAndMetadata(func(msg *tangle.Message, metadata *hornet.MessageMetadata) { // msg -1
+		cachedMsg.ConsumeMessageAndMetadata(func(msg *tanglePackage.Message, metadata *hornet.MessageMetadata) { // msg -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
@@ -62,10 +61,9 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:               tx.Tx.Hash,
-						Tag:              tx.Tx.Tag,
-						Parent1MessageID: tx.Tx.TrunkTransaction[:VisualizerIdLength],
-						Parent2MessageID: tx.Tx.BranchTransaction[:VisualizerIdLength],
+						ID:               msg.GetMessageID().Hex(),
+						Parent1MessageID: msg.GetParent1MessageID().Hex()[:VisualizerIdLength],
+						Parent2MessageID: msg.GetParent2MessageID().Hex()[:VisualizerIdLength],
 						IsSolid:          metadata.IsSolid(),
 						IsConfirmed:      metadata.IsConfirmed(),
 						IsMilestone:      false,
@@ -92,21 +90,19 @@ func runVisualizer() {
 	})
 
 	onReceivedNewMilestone := events.NewClosure(func(cachedMessage *tanglePackage.CachedMessage) {
-		cachedMessage.ConsumeMessage(func(bndl *tanglePackage.Message) { // message -1
+		cachedMessage.ConsumeMessage(func(message *tanglePackage.Message) { // message -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
 
-			for _, txHash := range bndl.GetTxHashes() {
-				hub.BroadcastMsg(
-					&Msg{
-						Type: MsgTypeMilestoneInfo,
-						Data: &metainfo{
-							ID: txHash.Hex()[:VisualizerIdLength],
-						},
+			hub.BroadcastMsg(
+				&Msg{
+					Type: MsgTypeMilestoneInfo,
+					Data: &metainfo{
+						ID: message.GetMessageID().Hex()[:VisualizerIdLength],
 					},
-				)
-			}
+				},
+			)
 		})
 	})
 

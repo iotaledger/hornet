@@ -5,7 +5,6 @@ import (
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/helpers"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
 const (
@@ -56,12 +55,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 					return true
 				}
 
-				// only send the transaction when the peer supports STING
-				if p.Protocol.Supports(sting.FeatureSet) {
-					helpers.SendTransaction(p, b.MsgData)
-					return true
-				}
-
+				helpers.SendTransaction(p, b.MsgData)
 				return true
 			})
 		}

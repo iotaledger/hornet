@@ -30,7 +30,7 @@ type MessageMetadata struct {
 	// Unix time when the Tx became solid (needed for local modifiers for tipselection)
 	solidificationTimestamp int32
 
-	// The index of the milestone which confirmed this tx
+	// The index of the milestone which confirmed this msg
 	confirmationIndex milestone.Index
 
 	// youngestRootSnapshotIndex is the highest confirmed index of the past cone of this transaction

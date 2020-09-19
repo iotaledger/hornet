@@ -53,10 +53,6 @@ func run(plugin *node.Plugin) {
 func configureEvents() {
 
 	onPeerConnected = events.NewClosure(func(p *peer.Peer) {
-		if !p.Protocol.Supports(sting.FeatureSet) {
-			return
-		}
-
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *sting.Heartbeat) {
 			warpSync.UpdateCurrent(tangle.GetSolidMilestoneIndex())
 			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
