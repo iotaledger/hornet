@@ -30,7 +30,7 @@ const (
 func init() {
 	// ToDo:
 	//configFlagSet.String(CfgCoordinatorPublicKey, "", "the ed25519 public key of the coordinator in hex representation")
-	configFlagSet.String(CfgCoordinatorPublicKey, "fc13f5dab468cd9c5acc7d1f72b3953239a3e2d4aca2297d798a4d0af19650fc7cfa6137dabed69d4c019e8b14def301724c5f88cdfbbd290d040472c032461c", "the ed25519 public key of the coordinator in hex representation")
+	configFlagSet.String(CfgCoordinatorPublicKey, "fc13f5dab468cd9c5acc7d1f72b3953239a3e2d4aca2297d798a4d0af19650fc", "the ed25519 public key of the coordinator in hex representation")
 	configFlagSet.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the difficulty used by the network for proof of work.")
 	configFlagSet.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
 	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")

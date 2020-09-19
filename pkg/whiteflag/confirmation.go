@@ -1,7 +1,6 @@
 package whiteflag
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -16,7 +15,7 @@ import (
 type ConfirmedMilestoneStats struct {
 	Index               milestone.Index
 	ConfirmationTime    int64
-	Txs                 tangle.CachedMessages
+	CachedMessages      tangle.CachedMessages
 	MessagesConfirmed   int
 	MessagesConflicting int
 	MessagesValue       int
@@ -25,12 +24,10 @@ type ConfirmedMilestoneStats struct {
 	Total               time.Duration
 }
 
-// ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
-// then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
+// ConfirmMilestone traverses a milestone and collects all unconfirmed msg,
+// then the ledger diffs are calculated, the ledger state is checked and all msg are marked as confirmed.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessage *tangle.CachedMessage, forEachConfirmedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
-	defer cachedMessage.Release(true)
-	message := cachedMessage.GetMessage()
+func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID hornet.Hash, forEachConfirmedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
@@ -43,16 +40,27 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 		}
 	}()
 
-	if _, exists := cachedMessages[string(cachedMessage.GetMessage().GetMessageID())]; !exists {
+	cachedMilestoneMessage := tangle.GetCachedMessageOrNil(milestoneMessageID)
+	if cachedMilestoneMessage == nil {
+		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.Hex())
+	}
+
+	if _, exists := cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())]; !exists {
 		// release the bundles at the end to speed up calculation
-		cachedMessages[string(cachedMessage.GetMessage().GetMessageID())] = cachedMessage.Retain()
+		cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())] = cachedMilestoneMessage.Retain()
 	}
 
 	//tangle.WriteLockLedger()
 	//defer tangle.WriteUnlockLedger()
+	message := cachedMilestoneMessage.GetMessage()
+
 	ms, err := tangle.CheckIfMilestone(message)
 	if err != nil {
 		return nil, err
+	}
+
+	if ms == nil {
+		return nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.GetMessageID().Hex())
 	}
 
 	milestoneIndex := milestone.Index(ms.Index)
@@ -72,9 +80,11 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, cach
 	}
 
 	// Verify the calculated MerkleTreeHash with the one inside the milestone
-	merkleTreeHash := ms.InclusionMerkleProof[:]
-	if !bytes.Equal(mutations.MerkleTreeHash, merkleTreeHash) {
-		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(mutations.MerkleTreeHash), hex.EncodeToString(merkleTreeHash))
+	merkleTreeHash := ms.InclusionMerkleProof
+	if mutations.MerkleTreeHash != merkleTreeHash {
+		mutationsMerkleTreeHashSlice := mutations.MerkleTreeHash[:]
+		milestoneMerkleTreeHashSlice := merkleTreeHash[:]
+		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(mutationsMerkleTreeHashSlice), hex.EncodeToString(milestoneMerkleTreeHashSlice))
 	}
 
 	tc := time.Now()

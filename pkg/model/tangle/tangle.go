@@ -90,10 +90,10 @@ func ConfigureDatabases(directory string) {
 func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 
 	configureHealthStore(store)
-	configureMessageStorage(store, caches.Transactions)
+	configureMessageStorage(store, caches.Messages)
 	configureChildrenStorage(store, caches.Children)
 	configureMilestoneStorage(store, caches.Milestones)
-	configureUnconfirmedMessageStorage(store, caches.UnconfirmedTx)
+	configureUnconfirmedMessageStorage(store, caches.UnconfirmedMessages)
 	configureSnapshotStore(store)
 }
 

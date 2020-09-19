@@ -9,7 +9,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "approvers": {
+      "children": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": false,
@@ -17,24 +17,8 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "tags": {
+      "indexations": {
         "cacheTimeMs": 100,
-        "leakDetection": {
-          "enabled": false,
-          "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
-        }
-      },
-      "bundles": {
-        "cacheTimeMs": 1500,
-        "leakDetection": {
-          "enabled": false,
-          "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
-        }
-      },
-      "bundletransactions": {
-        "cacheTimeMs": 500,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -49,7 +33,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "transactions": {
+      "messages": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": false,
@@ -57,7 +41,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "unconfirmedTx": {
+      "unconfirmedMessages": {
         "cacheTimeMs": 100,
         "leakDetection": {
           "enabled": false,
@@ -65,7 +49,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "incomingTransactionFilter": {
+      "incomingMessagesFilter": {
         "cacheTimeMs": 2000,
         "leakDetection": {
           "enabled": false,
@@ -85,7 +69,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "approvers": {
+      "children": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": true,
@@ -93,24 +77,8 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "tags": {
+      "indexations": {
         "cacheTimeMs": 1500,
-        "leakDetection": {
-          "enabled": true,
-          "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
-        }
-      },
-      "bundles": {
-        "cacheTimeMs": 1500,
-        "leakDetection": {
-          "enabled": true,
-          "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
-        }
-      },
-      "bundletransactions": {
-        "cacheTimeMs": 500,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -125,7 +93,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "transactions": {
+      "messages": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": true,
@@ -133,7 +101,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "unconfirmedTx": {
+      "unconfirmedMessages": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": true,
@@ -141,7 +109,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "incomingTransactionFilter": {
+      "incomingMessagesFilter": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": true,

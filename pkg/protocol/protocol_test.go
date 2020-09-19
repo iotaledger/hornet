@@ -1,6 +1,7 @@
 package protocol_test
 
 import (
+	"crypto/ed25519"
 	"io"
 	"sync"
 	"testing"
@@ -79,7 +80,7 @@ func TestProtocol_Receive(t *testing.T) {
 		handshakeMessageReceived = true
 	}))
 
-	handshakeMsg, err := handshake.NewHandshakeMessage(protocol.SupportedFeatureSets, 100, make([]byte, 49), 14)
+	handshakeMsg, err := handshake.NewHandshakeMsg(protocol.Version, 100, make([]byte, ed25519.PublicKeySize), 14)
 	assert.NoError(t, err)
 
 	wg := consume(t, p, conn, len(handshakeMsg))
@@ -100,7 +101,7 @@ func TestProtocol_Send(t *testing.T) {
 		handshakeMessageSent = true
 	}))
 
-	handshakeMsg, err := handshake.NewHandshakeMessage(protocol.SupportedFeatureSets, 100, make([]byte, 49), 14)
+	handshakeMsg, err := handshake.NewHandshakeMsg(protocol.Version, 100, make([]byte, ed25519.PublicKeySize), 14)
 	assert.NoError(t, err)
 
 	wg := consume(t, p, conn, len(handshakeMsg))
@@ -112,7 +113,7 @@ func TestProtocol_Send(t *testing.T) {
 
 func TestProtocol_Supports(t *testing.T) {
 	p := &protocol.Protocol{}
-	p.FeatureSet = sting.FeatureSet
-	assert.True(t, p.Supports(sting.FeatureSet))
-	assert.False(t, p.Supports(243))
+	p.Version = sting.MinimumVersion
+	assert.True(t, p.Supports(sting.MinimumVersion))
+	assert.False(t, p.Supports(5000))
 }

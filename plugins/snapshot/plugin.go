@@ -1,7 +1,7 @@
 package snapshot
 
 import (
-	"bytes"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,10 +17,10 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -32,22 +32,22 @@ var (
 	overwriteCooAddress = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
 	forceGlobalSnapshot = pflag.Bool("forceGlobalSnapshot", false, "force loading of a global snapshot, even if a database already exists")
 
-	ErrNoSnapshotSpecified             = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL           = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURLs)
-	ErrSnapshotDownloadWasAborted      = errors.New("snapshot download was aborted")
-	ErrSnapshotDownloadNoValidSource   = errors.New("no valid source found, snapshot download not possible")
-	ErrSnapshotImportWasAborted        = errors.New("snapshot import was aborted")
-	ErrSnapshotImportFailed            = errors.New("snapshot import failed")
-	ErrSnapshotCreationWasAborted      = errors.New("operation was aborted")
-	ErrSnapshotCreationFailed          = errors.New("creating snapshot failed")
-	ErrTargetIndexTooNew               = errors.New("snapshot target is too new.")
-	ErrTargetIndexTooOld               = errors.New("snapshot target is too old.")
-	ErrNotEnoughHistory                = errors.New("not enough history.")
-	ErrNoPruningNeeded                 = errors.New("no pruning needed.")
-	ErrPruningAborted                  = errors.New("pruning was aborted.")
-	ErrUnconfirmedTxInSubtangle        = errors.New("unconfirmed tx in subtangle")
-	ErrInvalidBalance                  = errors.New("invalid balance! total does not match supply:")
-	ErrWrongCoordinatorAddressDatabase = errors.New("configured coordinator address does not match database information")
+	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
+	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURLs)
+	ErrSnapshotDownloadWasAborted        = errors.New("snapshot download was aborted")
+	ErrSnapshotDownloadNoValidSource     = errors.New("no valid source found, snapshot download not possible")
+	ErrSnapshotImportWasAborted          = errors.New("snapshot import was aborted")
+	ErrSnapshotImportFailed              = errors.New("snapshot import failed")
+	ErrSnapshotCreationWasAborted        = errors.New("operation was aborted")
+	ErrSnapshotCreationFailed            = errors.New("creating snapshot failed")
+	ErrTargetIndexTooNew                 = errors.New("snapshot target is too new.")
+	ErrTargetIndexTooOld                 = errors.New("snapshot target is too old.")
+	ErrNotEnoughHistory                  = errors.New("not enough history.")
+	ErrNoPruningNeeded                   = errors.New("no pruning needed.")
+	ErrPruningAborted                    = errors.New("pruning was aborted.")
+	ErrUnconfirmedTxInSubtangle          = errors.New("unconfirmed msg in subtangle")
+	ErrInvalidBalance                    = errors.New("invalid balance! total does not match supply:")
+	ErrWrongCoordinatorPublicKeyDatabase = errors.New("configured coordinator public key does not match database information")
 
 	localSnapshotLock       = syncutils.Mutex{}
 	newSolidMilestoneSignal = make(chan milestone.Index)
@@ -87,23 +87,30 @@ func configure(plugin *node.Plugin) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
+		cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		// Check coordinator address in database
-		if !bytes.Equal(snapshotInfo.CoordinatorPublicKey, coordinatorAddress) {
+		if !snapshotInfo.CoordinatorPublicKey.Equal(cooPublicKey) {
 			if !*overwriteCooAddress {
-				log.Panic(errors.Wrapf(ErrWrongCoordinatorAddressDatabase, "%v != %v", snapshotInfo.CoordinatorPublicKey.Hex(), config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)))
+				snapshotCooPublicKey := snapshotInfo.CoordinatorPublicKey[:]
+				configCooPublicKey := cooPublicKey[:]
+
+				log.Panic(errors.Wrapf(ErrWrongCoordinatorPublicKeyDatabase, "%v != %v", hex.EncodeToString(snapshotCooPublicKey), hex.EncodeToString(configCooPublicKey)))
 			}
 
 			// Overwrite old coordinator address
-			snapshotInfo.CoordinatorPublicKey = coordinatorAddress
+			snapshotInfo.CoordinatorPublicKey = cooPublicKey
 			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 
 		if !*forceGlobalSnapshot {
 			// If we don't enforce loading of a global snapshot,
 			// we can check the ledger state of current database and start the node.
-			tangle.GetLedgerStateForLSMI(nil)
+			// ToDo:
+			//tangle.GetLedgerStateForLSMI(nil)
 			return
 		}
 	}

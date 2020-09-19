@@ -157,35 +157,34 @@ func (h *Handler) DoPoW(msg *tangle.Message, mwm int, shutdownSignal <-chan stru
 	// ToDo:
 	return nil
 
-	if h.connectPowsrv() {
-		// connected to powsrv.io
-		// powsrv.io only accepts mwm <= 14
-		if mwm <= 14 {
-			h.powsrvLock.RLock()
-			nonce = "999"
-			/*
+	/*
+		if h.connectPowsrv() {
+			// connected to powsrv.io
+			// powsrv.io only accepts mwm <= 14
+			if mwm <= 14 {
+				h.powsrvLock.RLock()
 				nonce, err := h.powsrvClient.PowFunc(trytes, mwm)
 				if err == nil {
 					h.powsrvLock.RUnlock()
 					return nonce, nil
 				}
-			*/
-			h.powsrvLock.RUnlock()
+				h.powsrvLock.RUnlock()
 
-			h.powsrvLock.Lock()
-			if !h.powsrvErrorHandled {
-				// some error occurred => disconnect from powsrv.io
-				if h.log != nil {
-					h.log.Warnf("Error during PoW via powsrv.io: %w", err)
+				h.powsrvLock.Lock()
+				if !h.powsrvErrorHandled {
+					// some error occurred => disconnect from powsrv.io
+					if h.log != nil {
+						h.log.Warnf("Error during PoW via powsrv.io: %w", err)
+					}
+					h.disconnectPowsrv()
 				}
-				h.disconnectPowsrv()
+				h.powsrvLock.Unlock()
 			}
-			h.powsrvLock.Unlock()
 		}
-	}
 
-	// Local PoW
-	return h.localPoWFunc(trytes, mwm, parallelism...)
+		// Local PoW
+		return h.localPoWFunc(trytes, mwm, parallelism...)
+	*/
 }
 
 // Close closes the PoW handler

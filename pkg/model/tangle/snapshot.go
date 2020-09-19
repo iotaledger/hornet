@@ -30,7 +30,7 @@ type SnapshotInfo struct {
 	SnapshotIndex        milestone.Index
 	EntryPointIndex      milestone.Index
 	PruningIndex         milestone.Index
-	Timestamp            int64
+	Timestamp            time.Time
 	Metadata             bitmask.BitMask
 }
 
@@ -46,23 +46,23 @@ func loadSnapshotInfo() {
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, hex.EncodeToString(info.CoordinatorPublicKey), info.SnapshotIndex, info.MilestoneMessageID.Hex(), info.EntryPointIndex, info.PruningIndex, time.Unix(info.Timestamp, 0).Truncate(time.Second)))
+	Timestamp: %v`, hex.EncodeToString(info.CoordinatorPublicKey), info.SnapshotIndex, info.MilestoneMessageID.Hex(), info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
 	}
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 84 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != 84", len(bytes))
+	if len(bytes) != ed25519.PublicKeySize+52 {
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != %d", len(bytes), ed25519.PublicKeySize+56)
 	}
 
-	cooPublicKey := ed25519.PublicKey(bytes[:32])
-	milestoneMessageID := hornet.Hash(bytes[32:64])
-	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[64:68]))
-	entryPointIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[68:72]))
-	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[72:76]))
-	timestamp := int64(binary.LittleEndian.Uint64(bytes[76:84]))
-	metadata := bitmask.BitMask(bytes[84])
+	cooPublicKey := ed25519.PublicKey(bytes[:ed25519.PublicKeySize])
+	milestoneMessageID := hornet.Hash(bytes[ed25519.PublicKeySize : ed25519.PublicKeySize+32])
+	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[ed25519.PublicKeySize+32 : ed25519.PublicKeySize+36]))
+	entryPointIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[ed25519.PublicKeySize+36 : ed25519.PublicKeySize+40]))
+	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[ed25519.PublicKeySize+40 : ed25519.PublicKeySize+44]))
+	timestamp := int64(binary.LittleEndian.Uint64(bytes[ed25519.PublicKeySize+44 : ed25519.PublicKeySize+52]))
+	metadata := bitmask.BitMask(bytes[ed25519.PublicKeySize+52])
 
 	return &SnapshotInfo{
 		CoordinatorPublicKey: cooPublicKey,
@@ -70,7 +70,7 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 		SnapshotIndex:        snapshotIndex,
 		EntryPointIndex:      entryPointIndex,
 		PruningIndex:         pruningIndex,
-		Timestamp:            timestamp,
+		Timestamp:            time.Unix(timestamp, 0),
 		Metadata:             metadata,
 	}, nil
 }
@@ -78,7 +78,7 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 func (i *SnapshotInfo) GetBytes() []byte {
 	var bytes []byte
 
-	bytes = append(bytes, i.CoordinatorPublicKey[:32]...)
+	bytes = append(bytes, i.CoordinatorPublicKey[:ed25519.PublicKeySize]...)
 	bytes = append(bytes, i.MilestoneMessageID[:32]...)
 
 	snapshotIndexBytes := make([]byte, 4)
@@ -94,7 +94,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	bytes = append(bytes, pruningIndexBytes...)
 
 	timestampBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(timestampBytes, uint64(i.Timestamp))
+	binary.LittleEndian.PutUint64(timestampBytes, uint64(i.Timestamp.Unix()))
 	bytes = append(bytes, timestampBytes...)
 
 	bytes = append(bytes, byte(i.Metadata))
@@ -102,14 +102,14 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorPublicKey ed25519.PublicKey, milestoneMessageID hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp int64) {
+func SetSnapshotMilestone(coordinatorPublicKey ed25519.PublicKey, milestoneMessageID hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	CoordinatorPublicKey: %v
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, hex.EncodeToString(coordinatorPublicKey), snapshotIndex, milestoneMessageID.Hex(), entryPointIndex, pruningIndex, time.Unix(timestamp, 0).Truncate(time.Second)))
+	Timestamp: %v`, hex.EncodeToString(coordinatorPublicKey), snapshotIndex, milestoneMessageID.Hex(), entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
 
 	sn := &SnapshotInfo{
 		CoordinatorPublicKey: coordinatorPublicKey,

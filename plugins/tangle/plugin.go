@@ -18,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/database"
@@ -113,10 +112,6 @@ func run(plugin *node.Plugin) {
 
 			// check if peers are alive by checking whether we received heartbeats lately
 			peering.Manager().ForAllConnected(func(p *peer.Peer) bool {
-				if !p.Protocol.Supports(sting.FeatureSet) {
-					return true
-				}
-
 				if time.Since(p.HeartbeatReceivedTime) < HeartbeatReceiveTimeout {
 					return true
 				}

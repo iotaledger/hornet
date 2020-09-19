@@ -33,7 +33,7 @@ func NewMessageCaller(handler interface{}, params ...interface{}) {
 }
 
 func MessageConfirmedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime int64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(int64))
+	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64))
 }
 
 // CachedMessage contains two cached objects, one for transaction data and one for metadata.
@@ -153,7 +153,7 @@ func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, erro
 	return msg, nil
 }
 
-func GetTransactionStorageSize() int {
+func GetMessageStorageSize() int {
 	return messagesStorage.GetSize()
 }
 

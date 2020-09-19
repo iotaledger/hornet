@@ -14,7 +14,7 @@ type ParentTraverser struct {
 	cachedMessageMetas map[string]*tangle.CachedMetadata
 	cachedMessages     map[string]*tangle.CachedMessage
 
-	// stack holding the ordered tx to process
+	// stack holding the ordered msg to process
 	stack *list.List
 
 	// processed map with already processed transactions
@@ -53,7 +53,7 @@ func (t *ParentTraverser) cleanup(forceRelease bool) {
 		cachedMsg.Release(forceRelease) // message -1
 	}
 
-	// release all tx metadata at the end
+	// release all msg metadata at the end
 	for _, cachedMetadata := range t.cachedMessageMetas {
 		cachedMetadata.Release(forceRelease) // meta -1
 	}
@@ -146,7 +146,7 @@ func (t *ParentTraverser) processStackParents() error {
 	default:
 	}
 
-	// load candidate tx
+	// load candidate msg
 	ele := t.stack.Front()
 	currentMessageID := ele.Value.(hornet.Hash)
 
@@ -196,7 +196,7 @@ func (t *ParentTraverser) processStackParents() error {
 	if !checkedBefore {
 		var err error
 
-		// check condition to decide if tx should be consumed and traversed
+		// check condition to decide if msg should be consumed and traversed
 		traverse, err = t.condition(cachedMetadata.Retain()) // meta + 1
 		if err != nil {
 			// there was an error, stop processing the stack

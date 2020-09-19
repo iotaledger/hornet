@@ -2,11 +2,10 @@ package handshake
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/binary"
 	"errors"
 	"time"
-
-	"github.com/willf/bitset"
 
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/tlv"
@@ -27,23 +26,17 @@ var (
 	// Made up of:
 	// - own server socket port (2 bytes)
 	// - time at which the packet was sent (8 bytes)
-	// - own used byte encoded coordinator address (49 bytes)
+	// - own used coordinator public key (64 bytes)
 	// - own used MWM (1 byte)
-	// - supported protocol versions. we need up to 32 bytes to represent 256 possible protocol
-	//   versions. only up to N bytes are used to communicate the highest supported version.
+	// - version (2 byte)
 	HandshakeMessageDefinition = &message.Definition{
 		ID:             MessageTypeHandshake,
-		MaxBytesLength: 92,
-		VariableLength: true,
+		MaxBytesLength: 2 + 8 + 64 + 1 + 2,
+		VariableLength: false,
 	}
 )
 
 type HeaderState int32
-
-const (
-	// The amount of bytes used for the coo address sent in a handshake packet.
-	ByteEncodedCooAddressBytesLength = 49
-)
 
 var (
 	ErrVersionNotSupported = errors.New("version not supported")
@@ -51,54 +44,28 @@ var (
 
 // Handshake defines information exchanged during the handshake phase between two peers.
 type Handshake struct {
-	ServerSocketPort      uint16
-	SentTimestamp         uint64
-	ByteEncodedCooAddress []byte
-	MWM                   byte
-	SupportedVersions     []byte
+	ServerSocketPort uint16
+	SentTimestamp    uint64
+	CooPublicKey     ed25519.PublicKey
+	MWM              byte
+	Version          uint16
 }
 
-// SupportedVersion returns the highest supported protocol version.
-func (hs Handshake) SupportedVersion(ownSupportedMessagesBitset *bitset.BitSet) (version int, err error) {
-	hsSupportedMessagesBitset := bitset.New(uint(len(hs.SupportedVersions) * 8))
-	hsSupportedMessagesBitset.UnmarshalBinary(hs.SupportedVersions)
-
-	bothSupportedMessagesBitset := hsSupportedMessagesBitset.Union(ownSupportedMessagesBitset)
-
-	if !bothSupportedMessagesBitset.Any() {
-		// we don't support any protocol version the peer supports
-		// return the highest supported version of a given node
-		for i := int(hsSupportedMessagesBitset.Len()) - 1; i >= 0; i-- {
-			if hsSupportedMessagesBitset.Test(uint(i)) {
-				return 1 << i, ErrVersionNotSupported
-			}
-		}
-
+// VersionSupported returns if the protocol version is supported by this node.
+func (hs Handshake) VersionSupported(ownMinimumVersion uint16) (version uint16, err error) {
+	if hs.Version < ownMinimumVersion {
+		return hs.Version, ErrVersionNotSupported
 	}
 
-	for i := int(bothSupportedMessagesBitset.Len()) - 1; i >= 0; i-- {
-		if bothSupportedMessagesBitset.Test(uint(i)) {
-			return 1 << i, nil
-		}
-	}
-
-	return 0, ErrVersionNotSupported
+	return hs.Version, nil
 }
 
-// NewHandshakeMessage creates a new handshake message.
-func NewHandshakeMessage(ownSupportedMessagesBitset *bitset.BitSet, ownSourcePort uint16, ownByteEncodedCooAddress []byte, ownUsedMWM byte) ([]byte, error) {
+// NewHandshakeMsg creates a new handshake message.
+func NewHandshakeMsg(ownVersion uint16, ownSourcePort uint16, ownCooPublicKey ed25519.PublicKey, ownUsedMWM byte) ([]byte, error) {
 
-	maxLength := HandshakeMessageDefinition.MaxBytesLength
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HandshakeMessageDefinition.MaxBytesLength))
 
-	supportedMessageTypes, err := ownSupportedMessagesBitset.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	payloadLengthBytes := maxLength - (maxLength - 60) + uint16(len(supportedMessageTypes))
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+payloadLengthBytes))
-
-	if err := tlv.WriteHeader(buf, MessageTypeHandshake, payloadLengthBytes); err != nil {
+	if err := tlv.WriteHeader(buf, MessageTypeHandshake, HandshakeMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +77,7 @@ func NewHandshakeMessage(ownSupportedMessagesBitset *bitset.BitSet, ownSourcePor
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, ownByteEncodedCooAddress); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, ownCooPublicKey); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +85,7 @@ func NewHandshakeMessage(ownSupportedMessagesBitset *bitset.BitSet, ownSourcePor
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, supportedMessageTypes); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, ownVersion); err != nil {
 		return nil, err
 	}
 
@@ -129,9 +96,9 @@ func NewHandshakeMessage(ownSupportedMessagesBitset *bitset.BitSet, ownSourcePor
 func ParseHandshake(msg []byte) (*Handshake, error) {
 	var serverSocketPort uint16
 	var sentTimestamp uint64
-	byteEncodedCooAddress := make([]byte, ByteEncodedCooAddressBytesLength)
+	var cooPublicKey ed25519.PublicKey
 	var mwm byte
-	supportedVersions := make([]byte, 8)
+	var version uint16
 
 	r := bytes.NewReader(msg)
 
@@ -143,7 +110,7 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 		return nil, err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &byteEncodedCooAddress); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &cooPublicKey); err != nil {
 		return nil, err
 	}
 
@@ -151,10 +118,10 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 		return nil, err
 	}
 
-	if _, err := r.Read(supportedVersions); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &version); err != nil {
 		return nil, err
 	}
 
-	hs := &Handshake{ServerSocketPort: serverSocketPort, SentTimestamp: sentTimestamp, ByteEncodedCooAddress: byteEncodedCooAddress, MWM: mwm, SupportedVersions: supportedVersions}
+	hs := &Handshake{ServerSocketPort: serverSocketPort, SentTimestamp: sentTimestamp, CooPublicKey: cooPublicKey, MWM: mwm, Version: version}
 	return hs, nil
 }

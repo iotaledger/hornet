@@ -56,7 +56,6 @@ type WorkUnit struct {
 	// data
 	dataLock         syncutils.RWMutex
 	receivedMsgBytes []byte
-	receivedMsgID    hornet.Hash
 	msg              *tangle.Message
 
 	// status
@@ -127,9 +126,8 @@ func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 		exclude[p.ID] = struct{}{}
 	}
 	return &bqueue.Broadcast{
-		MsgData:         wu.receivedMsgBytes,
-		RequestedTxHash: wu.receivedMsgID,
-		ExcludePeers:    exclude,
+		MsgData:      wu.receivedMsgBytes,
+		ExcludePeers: exclude,
 	}
 }
 

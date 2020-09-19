@@ -60,6 +60,7 @@ type Milestone struct {
 
 	Index     milestone.Index
 	MessageID hornet.Hash
+	Timestamp time.Time
 }
 
 // ObjectStorage interface

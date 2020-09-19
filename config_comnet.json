@@ -109,13 +109,13 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2,
+      "maxChildren": 2,
       "spammerTipsThreshold": 0
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAgeSeconds": 3,
-      "maxApprovers": 2,
+      "maxChildren": 2,
       "spammerTipsThreshold": 30
     }
   },
@@ -137,14 +137,11 @@
     "advancementRange": 50
   },
   "spammer": {
-    "address": "HORNET99INTEGRATED99SPAMMER999999999999999999999999999999999999999999999999999999",
-    "message": "Spamming with HORNET tipselect",
-    "tag": "HORNET99INTEGRATED99SPAMMER",
-    "tagSemiLazy": "",
+    "message": "Binary is the future.",
+    "index": "HORNET Spammer",
+    "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "tpsRateLimit": 0.0,
-    "bundleSize": 1,
-    "valueSpam": false,
+    "mpsRateLimit": 0.0,
     "workers": 0,
     "autostart": false
   },

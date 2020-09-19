@@ -187,13 +187,13 @@ func run(_ *node.Plugin) {
 }
 
 func getMilestoneTailHash(index milestone.Index) hornet.Hash {
-	cachedMs := tangle.GetMilestoneOrNil(index) // message +1
+	cachedMs := tangle.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
 	defer cachedMs.Release(true) // message -1
 
-	return cachedMs.GetMessage().GetTailHash()
+	return cachedMs.GetMessage().GetMessageID()
 }
 
 // Msg represents a websocket message.
@@ -204,8 +204,8 @@ type Msg struct {
 
 // LivefeedTransaction represents a transaction for the livefeed.
 type LivefeedTransaction struct {
-	Hash  string `json:"hash"`
-	Value int64  `json:"value"`
+	MessageID string `json:"hash"`
+	Value     int64  `json:"value"`
 }
 
 // LivefeedMilestone represents a milestone for the livefeed.
@@ -281,7 +281,7 @@ type PeerMetric struct {
 	Alias            string                `json:"alias,omitempty"`
 	OriginAddr       string                `json:"origin_addr"`
 	ConnectionOrigin peer.ConnectionOrigin `json:"connection_origin"`
-	ProtocolVersion  byte                  `json:"protocol_version"`
+	ProtocolVersion  uint16                `json:"protocol_version"`
 	BytesRead        uint64                `json:"bytes_read"`
 	BytesWritten     uint64                `json:"bytes_written"`
 	Heartbeat        *sting.Heartbeat      `json:"heartbeat"`
@@ -291,12 +291,11 @@ type PeerMetric struct {
 
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
-	RequestQueue                 Cache `json:"request_queue"`
-	Children                     Cache `json:"children"`
-	Bundles                      Cache `json:"bundles"`
-	Milestones                   Cache `json:"milestones"`
-	Transactions                 Cache `json:"transactions"`
-	IncomingTransactionWorkUnits Cache `json:"incoming_transaction_work_units"`
+	RequestQueue             Cache `json:"request_queue"`
+	Children                 Cache `json:"children"`
+	Milestones               Cache `json:"milestones"`
+	Messages                 Cache `json:"messages"`
+	IncomingMessageWorkUnits Cache `json:"incoming_message_work_units"`
 }
 
 // Cache represents metrics about a cache.
@@ -316,7 +315,7 @@ func peerMetrics() []*PeerMetric {
 			m.Identity = info.Peer.ID
 			m.Alias = info.Alias
 			m.ConnectionOrigin = info.Peer.ConnectionOrigin
-			m.ProtocolVersion = info.Peer.Protocol.FeatureSet
+			m.ProtocolVersion = info.Peer.Protocol.Version
 			m.BytesRead = info.Peer.Conn.BytesRead()
 			m.BytesWritten = info.Peer.Conn.BytesWritten()
 			m.Heartbeat = info.Peer.LatestHeartbeat
@@ -375,16 +374,13 @@ func currentNodeStatus() *NodeStatus {
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
-		Bundles: Cache{
-			Size: tangle.GetBundleStorageSize(),
-		},
 		Milestones: Cache{
 			Size: tangle.GetMilestoneStorageSize(),
 		},
-		Transactions: Cache{
-			Size: tangle.GetTransactionStorageSize(),
+		Messages: Cache{
+			Size: tangle.GetMessageStorageSize(),
 		},
-		IncomingTransactionWorkUnits: Cache{
+		IncomingMessageWorkUnits: Cache{
 			Size: gossip.Processor().WorkUnitsSize(),
 		},
 	}

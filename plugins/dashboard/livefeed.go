@@ -14,25 +14,26 @@ import (
 
 func runLiveFeed() {
 
-	newTxZeroValueRateLimiter := time.NewTicker(time.Second / 10)
-	newTxValueRateLimiter := time.NewTicker(time.Second / 20)
+	newMessageNoValueRateLimiter := time.NewTicker(time.Second / 10)
+	newMessageValueRateLimiter := time.NewTicker(time.Second / 20)
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedMsg.ConsumeMessage(func(msg *tangle.Message) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedMsg.ConsumeMessage(func(msg *tanglemodel.Message) {
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
 			}
 
-			if tx.Tx.Value == 0 {
+			if !msg.IsValue() {
 				select {
-				case <-newTxZeroValueRateLimiter.C:
-					hub.BroadcastMsg(&Msg{Type: MsgTypeTxZeroValue, Data: &LivefeedTransaction{Hash: tx.Tx.Hash, Value: tx.Tx.Value}})
+				case <-newMessageNoValueRateLimiter.C:
+					hub.BroadcastMsg(&Msg{Type: MsgTypeTxZeroValue, Data: &LivefeedTransaction{MessageID: msg.GetMessageID().Hex(), Value: 0}})
 				default:
 				}
 			} else {
 				select {
-				case <-newTxValueRateLimiter.C:
-					hub.BroadcastMsg(&Msg{Type: MsgTypeTxValue, Data: &LivefeedTransaction{Hash: tx.Tx.Hash, Value: tx.Tx.Value}})
+				case <-newMessageValueRateLimiter.C:
+					// ToDo: Value
+					hub.BroadcastMsg(&Msg{Type: MsgTypeTxValue, Data: &LivefeedTransaction{MessageID: msg.GetMessageID().Hex(), Value: 0}})
 				default:
 				}
 			}
@@ -46,16 +47,16 @@ func runLiveFeed() {
 	})
 
 	daemon.BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTransaction)
-		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTransaction)
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		defer tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
 		<-shutdownSignal
 
 		log.Info("Stopping Dashboard[TxUpdater] ...")
-		newTxZeroValueRateLimiter.Stop()
-		newTxValueRateLimiter.Stop()
+		newMessageNoValueRateLimiter.Stop()
+		newMessageValueRateLimiter.Stop()
 		log.Info("Stopping Dashboard[TxUpdater] ... done")
 	}, shutdown.PriorityDashboard)
 }

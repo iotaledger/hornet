@@ -62,7 +62,7 @@ func ResetMilestoneIndexes() {
 
 // GetMilestoneOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
 // message +1
-func GetMilestoneOrNil(milestoneIndex milestone.Index) *CachedMessage {
+func GetMilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
 	cachedMs := GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 	if cachedMs == nil {
@@ -227,7 +227,7 @@ func GetLatestMilestoneIndex() milestone.Index {
 }
 
 // message +1
-func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMessage {
+func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
 	lmi := GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
@@ -246,7 +246,7 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMessage {
 			return nil
 		}
 
-		cachedMs := GetMilestoneOrNil(index) // message +1
+		cachedMs := GetCachedMilestoneOrNil(index) // milestone +1
 		if cachedMs != nil {
 			return cachedMs
 		}

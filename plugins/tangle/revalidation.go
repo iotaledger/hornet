@@ -36,17 +36,16 @@ var (
 //
 // Object Storages:
 // 		Stored with caching:
-//			- TxRaw (synced)					=> will be removed and added again by requesting the tx at solidification
-//			- TxMetadata (synced)				=> will be removed and added again if missing by receiving the tx (if not => reset)
-//			- BundleTransaction (synced)		=> will be removed and added again if missing by receiving the tx
-//			- Message (always)					=> will be removed and added again if missing by receiving the tx
-//			- Child (synced)					=> will be removed and added again if missing by receiving the tx
+//			- TxRaw (synced)					=> will be removed and added again by requesting the msg at solidification
+//			- TxMetadata (synced)				=> will be removed and added again if missing by receiving the msg (if not => reset)
+//			- Message (always)					=> will be removed and added again if missing by receiving the msg
+//			- Child (synced)					=> will be removed and added again if missing by receiving the msg
 //
 // 		Stored without caching:
-//			- Tag								=> will be removed and added again if missing by receiving the tx
-//			- Address							=> will be removed and added again if missing by receiving the tx
+//			- Tag								=> will be removed and added again if missing by receiving the msg
+//			- Address							=> will be removed and added again if missing by receiving the msg
 //			- UnconfirmedMessage 					=> will be removed at pruning anyway
-//			- Milestone							=> will be removed and added again by receiving the tx
+//			- Milestone							=> will be removed and added again by receiving the msg
 //
 // Database:
 // 		- LedgerState
@@ -105,7 +104,7 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all unconfirmed txs that are left in the database (we do not need them since we deleted all unconfirmed txs).
+	// deletes all unconfirmed msgs that are left in the database (we do not need them since we deleted all unconfirmed msgs).
 	if err := cleanupUnconfirmedMsgs(); err != nil {
 		return err
 	}
@@ -177,9 +176,11 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		}
 
 		tangle.DeleteUnconfirmedMessages(msIndex)
-		if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
-			panic(err)
-		}
+		/*
+			if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
+				panic(err)
+			}
+		*/
 
 		tangle.DeleteMilestone(msIndex)
 	}
@@ -194,62 +195,64 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 
 // deletes all ledger diffs which have a confirmation milestone newer than the last local snapshot's milestone.
 func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
-
-	start := time.Now()
-
-	ledgerDiffsToDelete := make(map[milestone.Index]struct{})
-
-	lastStatusTime := time.Now()
-	var ledgerDiffsCounter int64
-	tangle.ForEachLedgerDiffHash(func(msIndex milestone.Index, address hornet.Hash) bool {
-		ledgerDiffsCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return false
-			}
-
-			log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
-		}
-
-		// do not delete older milestones
-		if msIndex <= info.SnapshotIndex {
-			return true
-		}
-
-		ledgerDiffsToDelete[msIndex] = struct{}{}
-
-		return true
-	}, true)
-
-	if daemon.IsStopped() {
-		return tangle.ErrOperationAborted
-	}
-
-	total := len(ledgerDiffsToDelete)
-	var deletionCounter int64
-	for msIndex := range ledgerDiffsToDelete {
-		deletionCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return tangle.ErrOperationAborted
-			}
-
-			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting ledger diffs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
-		}
-
-		tangle.DeleteLedgerDiffForMilestone(msIndex)
-	}
-
-	log.Infof("deleting ledger diffs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
-
 	return nil
+	/*
+		start := time.Now()
+
+		ledgerDiffsToDelete := make(map[milestone.Index]struct{})
+
+		lastStatusTime := time.Now()
+		var ledgerDiffsCounter int64
+		tangle.ForEachLedgerDiffHash(func(msIndex milestone.Index, address hornet.Hash) bool {
+			ledgerDiffsCounter++
+
+			if time.Since(lastStatusTime) >= printStatusInterval {
+				lastStatusTime = time.Now()
+
+				if daemon.IsStopped() {
+					return false
+				}
+
+				log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
+			}
+
+			// do not delete older milestones
+			if msIndex <= info.SnapshotIndex {
+				return true
+			}
+
+			ledgerDiffsToDelete[msIndex] = struct{}{}
+
+			return true
+		}, true)
+
+		if daemon.IsStopped() {
+			return tangle.ErrOperationAborted
+		}
+
+		total := len(ledgerDiffsToDelete)
+		var deletionCounter int64
+		for msIndex := range ledgerDiffsToDelete {
+			deletionCounter++
+
+			if time.Since(lastStatusTime) >= printStatusInterval {
+				lastStatusTime = time.Now()
+
+				if daemon.IsStopped() {
+					return tangle.ErrOperationAborted
+				}
+
+				percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+				log.Infof("deleting ledger diffs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			}
+
+			tangle.DeleteLedgerDiffForMilestone(msIndex)
+		}
+
+		log.Infof("deleting ledger diffs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+
+		return nil
+	*/
 }
 
 // deletes all messages which are not confirmed, not solid or
@@ -463,68 +466,70 @@ func cleanupChildren() error {
 
 // deletes all addresses where the msg doesn't exist in the database anymore.
 func cleanupAddresses() error {
-
-	type address struct {
-		address hornet.Hash
-		txHash  hornet.Hash
-	}
-
-	addressesToDelete := make(map[string]*address)
-
-	start := time.Now()
-
-	lastStatusTime := time.Now()
-	var addressesCounter int64
-	tangle.ForEachAddress(func(addressHash hornet.Hash, txHash hornet.Hash, isValue bool) bool {
-		addressesCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return false
-			}
-
-			log.Infof("analyzed %d addresses", addressesCounter)
-		}
-
-		// delete address if transaction doesn't exist
-		if !tangle.MessageExistsInStore(txHash) {
-			addressesToDelete[string(txHash)] = &address{address: addressHash, txHash: txHash}
-		}
-
-		return true
-	}, true)
-	log.Infof("analyzed %d addresses", addressesCounter)
-
-	if daemon.IsStopped() {
-		return tangle.ErrOperationAborted
-	}
-
-	total := len(addressesToDelete)
-	var deletionCounter int64
-	for _, addr := range addressesToDelete {
-		deletionCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if daemon.IsStopped() {
-				return tangle.ErrOperationAborted
-			}
-
-			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting addresses...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
-		}
-
-		tangle.DeleteAddress(addr.address, addr.txHash)
-	}
-
-	tangle.FlushAddressStorage()
-
-	log.Infof("deleting addresses...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
-
 	return nil
+	/*
+		type address struct {
+			address hornet.Hash
+			txHash  hornet.Hash
+		}
+
+		addressesToDelete := make(map[string]*address)
+
+		start := time.Now()
+
+		lastStatusTime := time.Now()
+		var addressesCounter int64
+		tangle.ForEachAddress(func(addressHash hornet.Hash, txHash hornet.Hash, isValue bool) bool {
+			addressesCounter++
+
+			if time.Since(lastStatusTime) >= printStatusInterval {
+				lastStatusTime = time.Now()
+
+				if daemon.IsStopped() {
+					return false
+				}
+
+				log.Infof("analyzed %d addresses", addressesCounter)
+			}
+
+			// delete address if transaction doesn't exist
+			if !tangle.MessageExistsInStore(txHash) {
+				addressesToDelete[string(txHash)] = &address{address: addressHash, txHash: txHash}
+			}
+
+			return true
+		}, true)
+		log.Infof("analyzed %d addresses", addressesCounter)
+
+		if daemon.IsStopped() {
+			return tangle.ErrOperationAborted
+		}
+
+		total := len(addressesToDelete)
+		var deletionCounter int64
+		for _, addr := range addressesToDelete {
+			deletionCounter++
+
+			if time.Since(lastStatusTime) >= printStatusInterval {
+				lastStatusTime = time.Now()
+
+				if daemon.IsStopped() {
+					return tangle.ErrOperationAborted
+				}
+
+				percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
+				log.Infof("deleting addresses...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			}
+
+			tangle.DeleteAddress(addr.address, addr.txHash)
+		}
+
+		tangle.FlushAddressStorage()
+
+		log.Infof("deleting addresses...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+
+		return nil
+	*/
 }
 
 // deletes all unconfirmed msgs that are left in the database (we do not need them since we deleted all unconfirmed msgs).
@@ -546,14 +551,14 @@ func cleanupUnconfirmedMsgs() error {
 				return false
 			}
 
-			log.Infof("analyzed %d unconfirmed txs", unconfirmedTxsCounter)
+			log.Infof("analyzed %d unconfirmed msgs", unconfirmedTxsCounter)
 		}
 
 		unconfirmedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d unconfirmed txs", unconfirmedTxsCounter)
+	log.Infof("analyzed %d unconfirmed msgs", unconfirmedTxsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
@@ -572,7 +577,7 @@ func cleanupUnconfirmedMsgs() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting unconfirmed txs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			log.Infof("deleting unconfirmed msgs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		tangle.DeleteUnconfirmedMessages(msIndex)
@@ -580,7 +585,7 @@ func cleanupUnconfirmedMsgs() error {
 
 	tangle.FlushUnconfirmedMessagesStorage()
 
-	log.Infof("deleting unconfirmed txs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting unconfirmed msgs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -589,22 +594,24 @@ func cleanupUnconfirmedMsgs() error {
 func applySnapshotLedger(info *tangle.SnapshotInfo) error {
 
 	log.Info("applying snapshot balances to the ledger state...")
-	// Get the ledger state of the last snapshot
-	snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
-	if err != nil {
-		return err
-	}
 
-	if info.SnapshotIndex != snapshotIndex {
-		return ErrSnapshotIndexWrong
-	}
+	/*
+		// Get the ledger state of the last snapshot
+		snapshotBalances, snapshotIndex, err := tangle.GetAllSnapshotBalances(nil)
+		if err != nil {
+			return err
+		}
 
-	// Store the snapshot balances as the current valid ledger
-	if err = tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
-		return err
-	}
-	log.Info("applying snapshot balances to the ledger state ... done!")
+		if info.SnapshotIndex != snapshotIndex {
+			return ErrSnapshotIndexWrong
+		}
 
+		// Store the snapshot balances as the current valid ledger
+		if err = tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
+			return err
+		}
+		log.Info("applying snapshot balances to the ledger state ... done!")
+	*/
 	// Set the valid solid milestone index
 	tangle.OverwriteSolidMilestoneIndex(info.SnapshotIndex)
 

@@ -24,7 +24,7 @@ func UpdateOutdatedRootSnapshotIndexes(outdatedMessageIDs hornet.Hashes, lsmi mi
 func GetMessageRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi milestone.Index) (youngestTxRootSnapshotIndex milestone.Index, oldestTxRootSnapshotIndex milestone.Index) {
 	defer cachedMessageMetadata.Release(true) // meta -1
 
-	// if the tx already contains recent (calculation index matches LSMI)
+	// if the msg already contains recent (calculation index matches LSMI)
 	// information about ymrsi and omrsi, return that info
 	ymrsi, omrsi, rtsci := cachedMessageMetadata.GetMetadata().GetRootSnapshotIndexes()
 	if rtsci == lsmi {
@@ -59,7 +59,7 @@ func GetMessageRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata,
 		func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			// first check if the tx was confirmed => update ymrsi and omrsi with the confirmation index
+			// first check if the msg was confirmed => update ymrsi and omrsi with the confirmation index
 			if confirmed, at := cachedMetadata.GetMetadata().GetConfirmed(); confirmed {
 				updateIndexes(at, at)
 				return false, nil
@@ -69,7 +69,7 @@ func GetMessageRootSnapshotIndexes(cachedMessageMetadata *tangle.CachedMetadata,
 				return true, nil
 			}
 
-			// if the tx was not confirmed yet, but already contains recent (calculation index matches LSMI) information
+			// if the msg was not confirmed yet, but already contains recent (calculation index matches LSMI) information
 			// about ymrsi and omrsi, propagate that info
 			ymrsi, omrsi, rtsci := cachedMetadata.GetMetadata().GetRootSnapshotIndexes()
 			if rtsci == lsmi {

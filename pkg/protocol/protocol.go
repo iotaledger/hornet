@@ -1,13 +1,12 @@
 package protocol
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"sync/atomic"
-
-	"github.com/willf/bitset"
 
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/events"
@@ -20,42 +19,35 @@ import (
 )
 
 var (
-	/*
-		The supported protocol versions by this node. Bitmasks are used to denote what protocol version this node
-		supports in its implementation. The LSB acts as a starting point. Up to 32 bytes are supported in the handshake
-		packet, limiting the amount of supported denoted protocol versions to 256.
-
-		Examples:
-		[00000001] denotes that this node supports protocol version 1.
-		[00000111] denotes that this node supports protocol versions 1, 2 and 3.
-		[01101110] denotes that this node supports protocol versions 2, 3, 4, 6 and 7.
-		[01101110, 01010001] denotes that this node supports protocol versions 2, 3, 4, 6, 7, 9, 13 and 15.
-		[01101110, 01010001, 00010001] denotes that this node supports protocol versions 2, 3, 4, 6, 7, 9, 13, 15, 17 and 21.
-	*/
-
-	// supported protocol messages/feature sets
-	SupportedFeatureSets = bitset.From([]uint64{sting.FeatureSet})
+	// Version is the protocol version of this node.
+	Version uint16
+	// MinimumVersion is the minimum version peers need to get accepted by this node.
+	MinimumVersion uint16
 )
 
 var (
-	ownByteEncodedCooAddress []byte
-	ownMWM                   uint64
-	ownSrvSocketPort         uint16
+	ownCooPublicKey  ed25519.PublicKey
+	ownMWM           uint64
+	ownSrvSocketPort uint16
 )
 
 // Init initializes the protocol package with the given handshake information.
-func Init(cooAddressBytes []byte, mwm int, gossipBindAddr string) error {
-	ownByteEncodedCooAddress = cooAddressBytes
+func Init(cooAddressBytes ed25519.PublicKey, mwm int, gossipBindAddr string) error {
+	ownCooPublicKey = cooAddressBytes
+
 	ownMWM = uint64(mwm)
 	_, portStr, err := net.SplitHostPort(gossipBindAddr)
 	if err != nil {
 		return fmt.Errorf("gossip bind address is invalid: %w", err)
 	}
+
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return fmt.Errorf("gossip bind address is invalid: %w", err)
 	}
+
 	ownSrvSocketPort = uint16(port)
+
 	return nil
 }
 
@@ -79,7 +71,7 @@ type Events struct {
 type Protocol struct {
 	// The protocol features this instance supports.
 	// This variable is only usable after protocol handshake.
-	FeatureSet byte
+	Version uint16
 	// Holds events for sent and received messages, handshake completion and generic errors.
 	Events Events
 	// the underlying connection
@@ -132,14 +124,15 @@ func New(conn io.ReadWriteCloser) *Protocol {
 }
 
 // Supports tells whether the protocol supports the given feature set.
-func (p *Protocol) Supports(featureSet byte) bool {
-	return p.FeatureSet&featureSet > 0
+func (p *Protocol) Supports(minimumVersion uint16) bool {
+	return p.Version >= minimumVersion
 }
 
 // SupportedFeatureSets returns a slice of named supported feature sets.
 func (p *Protocol) SupportedFeatureSets() []string {
 	var features []string
-	if p.Supports(sting.FeatureSet) {
+
+	if p.Version > 0 {
 		features = append(features, sting.FeatureSetName)
 	}
 	return features
@@ -149,7 +142,7 @@ func (p *Protocol) SupportedFeatureSets() []string {
 // the connection.
 func (p *Protocol) Start() {
 	// kick off protocol by sending a handshake message
-	handshakeMsg, err := handshake.NewHandshakeMessage(SupportedFeatureSets, ownSrvSocketPort, ownByteEncodedCooAddress, byte(ownMWM))
+	handshakeMsg, err := handshake.NewHandshakeMsg(Version, ownSrvSocketPort, ownCooPublicKey, byte(ownMWM))
 	if err != nil {
 		fmt.Println("creating handshake message error: ", err)
 		_ = p.conn.Close()

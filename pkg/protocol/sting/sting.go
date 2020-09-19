@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/gohornet/hornet/pkg/consts"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/protocol/message"
@@ -17,20 +16,20 @@ var (
 	ErrInvalidSourceLength = errors.New("invalid source byte slice")
 )
 
-// FeatureSet denotes the version bit for Chrysalis-Pt1 support.
-const FeatureSet = 1 << 2
+// MinimumVersion denotes the minimum version for Chrysalis-Pt2 support.
+const MinimumVersion = 1
 
 // FeatureSetName is the name of the feature set.
-const FeatureSetName = "Chrysalis-Pt1"
+const FeatureSetName = "Chrysalis-Pt2"
 
 func init() {
 	if err := message.RegisterType(MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition); err != nil {
 		panic(err)
 	}
-	if err := message.RegisterType(MessageTypeTransaction, TransactionMessageDefinition); err != nil {
+	if err := message.RegisterType(MessageTypeTransaction, MessageMessageDefinition); err != nil {
 		panic(err)
 	}
-	if err := message.RegisterType(MessageTypeTransactionRequest, TransactionRequestMessageDefinition); err != nil {
+	if err := message.RegisterType(MessageTypeTransactionRequest, MessageRequestMessageDefinition); err != nil {
 		panic(err)
 	}
 	if err := message.RegisterType(MessageTypeHeartbeat, HeartbeatMessageDefinition); err != nil {
@@ -61,15 +60,15 @@ const (
 
 var (
 	// TransactionMessageFormat defines a transaction message's format.
-	TransactionMessageDefinition = &message.Definition{
+	MessageMessageDefinition = &message.Definition{
 		ID:             MessageTypeTransaction,
-		MaxBytesLength: consts.NonSigTxPartBytesLength + consts.SigDataMaxBytesLength,
+		MaxBytesLength: 4096, // ToDo
 		VariableLength: true,
 	}
 
 	// The requested transaction hash gossipping packet.
 	// Contains only a hash of a requested transaction payload.
-	TransactionRequestMessageDefinition = &message.Definition{
+	MessageRequestMessageDefinition = &message.Definition{
 		ID:             MessageTypeTransactionRequest,
 		MaxBytesLength: RequestedTransactionHashMsgBytesLength,
 		VariableLength: false,
@@ -91,8 +90,8 @@ var (
 	}
 )
 
-// NewTransactionMessage creates a new transaction message.
-func NewTransactionMessage(txData []byte) ([]byte, error) {
+// NewMessageMsg creates a new message message.
+func NewMessageMsg(txData []byte) ([]byte, error) {
 	msgBytesLength := uint16(len(txData))
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+msgBytesLength))
 
@@ -107,10 +106,10 @@ func NewTransactionMessage(txData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// NewTransactionRequestMessage creates a transaction request message.
-func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+TransactionRequestMessageDefinition.MaxBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, TransactionRequestMessageDefinition.MaxBytesLength); err != nil {
+// NewMessageRequestMsg creates a message request message.
+func NewMessageRequestMsg(requestedHash hornet.Hash) ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MessageRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, MessageRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -121,8 +120,8 @@ func NewTransactionRequestMessage(requestedHash hornet.Hash) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// NewHeartbeatMessage creates a new heartbeat message.
-func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
+// NewHeartbeatMsg creates a new heartbeat message.
+func NewHeartbeatMsg(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
@@ -151,8 +150,8 @@ func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneInd
 	return buf.Bytes(), nil
 }
 
-// NewMilestoneRequestMessage creates a new milestone request message.
-func NewMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte, error) {
+// NewMilestoneRequestMsg creates a new milestone request message.
+func NewMilestoneRequestMsg(requestedMilestoneIndex milestone.Index) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MilestoneRequestMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err

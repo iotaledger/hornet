@@ -70,8 +70,8 @@ func Manager() *peering.Manager {
 		manager = peering.NewManager(peering.Options{
 			BindAddress: config.NodeConfig.GetString(config.CfgNetGossipBindAddress),
 			ValidHandshake: handshake.Handshake{
-				ByteEncodedCooAddress: cooPublicKey,
-				MWM:                   byte(mwm),
+				CooPublicKey: cooPublicKey,
+				MWM:          byte(mwm),
 			},
 			MaxConnected:  config.PeeringConfig.GetInt(config.CfgPeeringMaxPeers),
 			AcceptAnyPeer: config.PeeringConfig.GetBool(config.CfgPeeringAcceptAnyConnection),

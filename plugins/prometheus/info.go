@@ -3,10 +3,10 @@ package prometheus
 import (
 	"strconv"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/muxxer/iota.go/consts"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -89,32 +89,28 @@ func collectInfo() {
 	lmi := tangle.GetLatestMilestoneIndex()
 	infoMilestoneIndex.Set(float64(lmi))
 	infoMilestone.Reset()
-	infoMilestone.WithLabelValues(consts.NullHashTrytes, strconv.Itoa(int(lmi))).Set(1)
+	infoMilestone.WithLabelValues(hornet.NullMessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
 
 	// Latest milestone hash
-	cachedLatestMs := tangle.GetMilestoneOrNil(lmi)
-	if cachedLatestMs != nil {
-		cachedMsTailTxMeta := cachedLatestMs.GetMessage().GetTailMetadata()
+	cachedLatestMilestone := tangle.GetCachedMilestoneOrNil(lmi)
+	if cachedLatestMilestone != nil {
 		infoMilestone.Reset()
-		infoMilestone.WithLabelValues(cachedMsTailTxMeta.GetMetadata().GetMessageID().Hex(), strconv.Itoa(int(lmi))).Set(1)
-		cachedMsTailTxMeta.Release()
-		cachedLatestMs.Release()
+		infoMilestone.WithLabelValues(cachedLatestMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
+		cachedLatestMilestone.Release(true)
 	}
 
 	// Solid milestone index
 	smi := tangle.GetSolidMilestoneIndex()
 	infoSolidMilestoneIndex.Set(float64(smi))
 	infoSolidMilestone.Reset()
-	infoSolidMilestone.WithLabelValues(consts.NullHashTrytes, strconv.Itoa(int(smi))).Set(1)
+	infoSolidMilestone.WithLabelValues(hornet.NullMessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
 
 	// Solid milestone hash
-	cachedSolidMs := tangle.GetMilestoneOrNil(smi)
-	if cachedSolidMs != nil {
-		cachedMsTailTxMeta := cachedSolidMs.GetMessage().GetTailMetadata()
+	cachedSolidMilestone := tangle.GetCachedMilestoneOrNil(smi)
+	if cachedSolidMilestone != nil {
 		infoSolidMilestone.Reset()
-		infoSolidMilestone.WithLabelValues(cachedMsTailTxMeta.GetMetadata().GetMessageID().Hex(), strconv.Itoa(int(smi))).Set(1)
-		cachedMsTailTxMeta.Release()
-		cachedSolidMs.Release()
+		infoSolidMilestone.WithLabelValues(cachedSolidMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
+		cachedSolidMilestone.Release(true)
 	}
 
 	// Snapshot index and Pruning index

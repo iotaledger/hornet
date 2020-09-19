@@ -165,36 +165,54 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 		msIndex = tangle.GetLatestMilestoneIndex()
 	}
 
-	cachedReqMs := tangle.GetMilestoneOrNil(msIndex) // message +1
-	if cachedReqMs == nil {
+	cachedMessage := tangle.GetMilestoneCachedMessageOrNil(msIndex) // message +1
+	if cachedMessage == nil {
 		// can't reply if we don't have the wanted milestone
 		return
 	}
+	defer cachedMessage.Release(true) // message -1
 
-	cachedMsgs := cachedReqMs.GetMessage().GetTransactions() // msgs +1
-	for _, cachedMsgToSend := range cachedMsgs {
-		transactionMsg, _ := sting.NewTransactionMessage(cachedMsgToSend.GetTransaction().RawBytes)
-		p.EnqueueForSending(transactionMsg)
+	cachedRequestedData, err := cachedMessage.GetMessage().GetMessage().Serialize(iotago.DeSeriModeNoValidation)
+	if err != nil {
+		// can't reply if serialization fails
+		return
 	}
-	cachedMsgs.Release(true)  // msgs -1
-	cachedReqMs.Release(true) // message -1
+
+	msg, err := sting.NewMessageMsg(cachedRequestedData)
+	if err != nil {
+		// can't reply if serialization fails
+		return
+	}
+
+	p.EnqueueForSending(msg)
 }
 
-// processes the given transaction request by parsing it and then replying to the peer with it.
+// processes the given message request by parsing it and then replying to the peer with it.
 func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
 	if len(data) != 49 {
 		return
 	}
 
-	cachedMsg := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // msg +1
-	if cachedMsg == nil {
-		// can't reply if we don't have the requested transaction
+	cachedMessage := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // message +1
+	if cachedMessage == nil {
+		// can't reply if we don't have the requested message
 		return
 	}
-	defer cachedMsg.Release()
+	defer cachedMessage.Release(true) // message -1
 
-	transactionMsg, _ := sting.NewTransactionMessage(cachedMsg.GetMessage().RawBytes)
-	p.EnqueueForSending(transactionMsg)
+	cachedRequestedData, err := cachedMessage.GetMessage().GetMessage().Serialize(iotago.DeSeriModeNoValidation)
+	if err != nil {
+		// can't reply if serialization fails
+		return
+	}
+
+	msg, err := sting.NewMessageMsg(cachedRequestedData)
+	if err != nil {
+		// can't reply if serialization fails
+		return
+	}
+
+	p.EnqueueForSending(msg)
 }
 
 // gets or creates a new WorkUnit for the given transaction and then processes the WorkUnit.
@@ -261,7 +279,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	/*
 		// ToDo:
 		// validate minimum weight magnitude requirement
-		if request == nil && !transaction.HasValidNonce(tx, proc.opts.ValidMWM) {
+		if request == nil && !transaction.HasValidNonce(msg, proc.opts.ValidMWM) {
 			wu.UpdateState(Invalid)
 			wu.punish()
 			return
@@ -269,7 +287,6 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	*/
 
 	wu.dataLock.Lock()
-	wu.receivedMsgID = msg.GetMessageID()
 	wu.msg = msg
 	wu.dataLock.Unlock()
 

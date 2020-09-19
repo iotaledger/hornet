@@ -13,7 +13,7 @@ import (
 type ChildrenTraverser struct {
 	cachedMsgMetas map[string]*tangle.CachedMetadata
 
-	// stack holding the ordered tx to process
+	// stack holding the ordered msg to process
 	stack *list.List
 
 	// discovers map with already found transactions
@@ -40,7 +40,7 @@ func NewChildrenTraverser(condition Predicate, consumer Consumer, walkAlreadyDis
 
 func (t *ChildrenTraverser) cleanup(forceRelease bool) {
 
-	// release all tx metadata at the end
+	// release all msg metadata at the end
 	for _, cachedMsgMeta := range t.cachedMsgMetas {
 		cachedMsgMeta.Release(forceRelease) // meta -1
 	}
@@ -93,7 +93,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	default:
 	}
 
-	// load candidate tx
+	// load candidate msg
 	ele := t.stack.Front()
 	currentTxHash := ele.Value.(hornet.Hash)
 
@@ -110,7 +110,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		t.cachedMsgMetas[string(currentTxHash)] = cachedMsgMeta
 	}
 
-	// check condition to decide if tx should be consumed and traversed
+	// check condition to decide if msg should be consumed and traversed
 	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta + 1
 	if err != nil {
 		// there was an error, stop processing the stack
