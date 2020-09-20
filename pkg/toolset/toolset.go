@@ -10,6 +10,7 @@ var (
 	tools = map[string]func([]string) error{
 		"pwdhash": hashPasswordAndSalt,
 		"seedgen": seedGen,
+		"ed25519": generateKeyEd25519,
 		"list":    listTools,
 	}
 )
@@ -56,6 +57,7 @@ func HandleTools() {
 func listTools(args []string) error {
 	fmt.Println("pwdhash: generates a sha265 sum from your password and salt")
 	fmt.Println("seedgen: generates an autopeering seed")
+	fmt.Println("ed25519: generates an ed25519 key pair")
 
 	return nil
 }
