@@ -7,10 +7,10 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
-// SendTransaction sends a transaction message to the given peer.
-func SendTransaction(p *peer.Peer, txData []byte) {
-	transactionMsg, _ := sting.NewMessageMsg(txData)
-	p.EnqueueForSending(transactionMsg)
+// SendMessage sends a message msg to the given peer.
+func SendMessage(p *peer.Peer, msgData []byte) {
+	messageMsg, _ := sting.NewMessageMsg(msgData)
+	p.EnqueueForSending(messageMsg)
 }
 
 // SendHeartbeat sends a heartbeat message to the given peer.
@@ -19,9 +19,9 @@ func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex mi
 	p.EnqueueForSending(heartbeatData)
 }
 
-// SendTransactionRequest sends a transaction request message to the given peer.
-func SendTransactionRequest(p *peer.Peer, requestedHash hornet.Hash) {
-	txReqData, _ := sting.NewMessageRequestMsg(requestedHash)
+// SendMessageRequest sends a message request message to the given peer.
+func SendMessageRequest(p *peer.Peer, requestedMessageID hornet.Hash) {
+	txReqData, _ := sting.NewMessageRequestMsg(requestedMessageID)
 	p.EnqueueForSending(txReqData)
 }
 

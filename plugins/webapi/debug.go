@@ -23,9 +23,9 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	for i := 0; i < len(queued); i++ {
 		req := queued[i]
 		debugReqs[offset+i] = &DebugRequest{
-			Hash:             req.Hash.Hex(),
+			MessageID:        req.MessageID.Hex(),
 			Type:             "queued",
-			TxExists:         tangle.ContainsMessage(req.Hash),
+			TxExists:         tangle.ContainsMessage(req.MessageID),
 			MilestoneIndex:   req.MilestoneIndex,
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
@@ -34,9 +34,9 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	for i := 0; i < len(pending); i++ {
 		req := pending[i]
 		debugReqs[offset+i] = &DebugRequest{
-			Hash:             req.Hash.Hex(),
+			MessageID:        req.MessageID.Hex(),
 			Type:             "pending",
-			TxExists:         tangle.ContainsMessage(req.Hash),
+			TxExists:         tangle.ContainsMessage(req.MessageID),
 			MilestoneIndex:   req.MilestoneIndex,
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
@@ -45,9 +45,9 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 	for i := 0; i < len(processing); i++ {
 		req := processing[i]
 		debugReqs[offset+i] = &DebugRequest{
-			Hash:             req.Hash.Hex(),
+			MessageID:        req.MessageID.Hex(),
 			Type:             "processing",
-			TxExists:         tangle.ContainsMessage(req.Hash),
+			TxExists:         tangle.ContainsMessage(req.MessageID),
 			MilestoneIndex:   req.MilestoneIndex,
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}

@@ -22,13 +22,13 @@ type Message struct {
 
 func NewMessage(iotaMsg *iotago.Message) (*Message, error) {
 
-	hash, err := iotaMsg.Hash()
+	messageID, err := iotaMsg.Hash()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Message{
-		messageID: hash[:],
+		messageID: messageID[:],
 		message:   iotaMsg,
 	}, nil
 }
@@ -39,13 +39,13 @@ func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Mess
 		return nil, err
 	}
 
-	hash, err := msg.Hash()
+	messageID, err := msg.Hash()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Message{
-		messageID: hash[:],
+		messageID: messageID[:],
 		message:   msg,
 	}, nil
 }

@@ -23,30 +23,30 @@ func TestRequestQueue(t *testing.T) {
 
 	requests := []*rqueue.Request{
 		{
-			Hash:           hashA,
+			MessageID:      hashA,
 			MilestoneIndex: 10,
 		},
 		{
-			Hash:           hashB,
+			MessageID:      hashB,
 			MilestoneIndex: 7,
 		},
 		{
-			Hash:           hashZ,
+			MessageID:      hashZ,
 			MilestoneIndex: 7,
 		},
 		{
-			Hash:           hashC,
+			MessageID:      hashC,
 			MilestoneIndex: 5,
 		},
 		{
-			Hash:           hashD,
+			MessageID:      hashD,
 			MilestoneIndex: 2,
 		},
 	}
 
 	for _, r := range requests {
 		assert.True(t, q.Enqueue(r))
-		assert.True(t, q.IsQueued(r.Hash))
+		assert.True(t, q.IsQueued(r.MessageID))
 	}
 
 	queued, pending, processing := q.Size()
@@ -64,11 +64,11 @@ func TestRequestQueue(t *testing.T) {
 		// since we have two request under the same milestone/priority
 		// we need to make a special case
 		if i == 1 || i == 2 {
-			assert.Contains(t, hornet.Hashes{hashB, hashZ}, r.Hash)
+			assert.Contains(t, hornet.Hashes{hashB, hashZ}, r.MessageID)
 		} else {
 			assert.Equal(t, r, requests[i])
 		}
-		assert.True(t, q.IsPending(r.Hash))
+		assert.True(t, q.IsPending(r.MessageID))
 	}
 
 	// queued drained, therefore all reqs pending and non queued
@@ -78,7 +78,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Zero(t, processing)
 
 	// mark last from test set as received
-	q.Received(requests[len(requests)-1].Hash)
+	q.Received(requests[len(requests)-1].MessageID)
 
 	// check processing
 	queued, pending, processing = q.Size()
@@ -86,7 +86,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, pending)
 	assert.Equal(t, processing, 1)
 
-	q.Processed(requests[len(requests)-1].Hash)
+	q.Processed(requests[len(requests)-1].MessageID)
 
 	// check processed
 	queued, pending, processing = q.Size()
@@ -107,8 +107,8 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, requests[0], q.Peek())
 
 	// mark last from test set as received and processed
-	q.Received(requests[len(requests)-1].Hash)
-	q.Processed(requests[len(requests)-1].Hash)
+	q.Received(requests[len(requests)-1].MessageID)
+	q.Processed(requests[len(requests)-1].MessageID)
 
 	queued, pending, processing = q.Size()
 	assert.Equal(t, queued, len(requests)-1)
@@ -120,7 +120,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, bytes.Equal(queuedReq.Hash, requests[len(requests)-1].Hash))
+		assert.False(t, bytes.Equal(queuedReq.MessageID, requests[len(requests)-1].MessageID))
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))

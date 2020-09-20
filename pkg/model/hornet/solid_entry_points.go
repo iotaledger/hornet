@@ -31,20 +31,20 @@ func (s *SolidEntryPoints) Hashes() Hashes {
 	return solidEntryPointCopy
 }
 
-func (s *SolidEntryPoints) Contains(txHash Hash) bool {
-	_, exists := s.entryPointsMap[string(txHash)]
+func (s *SolidEntryPoints) Contains(messageID Hash) bool {
+	_, exists := s.entryPointsMap[string(messageID)]
 	return exists
 }
 
-func (s *SolidEntryPoints) Index(txHash Hash) (milestone.Index, bool) {
-	index, exists := s.entryPointsMap[string(txHash)]
+func (s *SolidEntryPoints) Index(messageID Hash) (milestone.Index, bool) {
+	index, exists := s.entryPointsMap[string(messageID)]
 	return index, exists
 }
 
-func (s *SolidEntryPoints) Add(txHash Hash, milestoneIndex milestone.Index) {
-	if _, exists := s.entryPointsMap[string(txHash)]; !exists {
-		s.entryPointsMap[string(txHash)] = milestoneIndex
-		s.entryPointsSlice = append(s.entryPointsSlice, txHash)
+func (s *SolidEntryPoints) Add(messageID Hash, milestoneIndex milestone.Index) {
+	if _, exists := s.entryPointsMap[string(messageID)]; !exists {
+		s.entryPointsMap[string(messageID)] = milestoneIndex
+		s.entryPointsSlice = append(s.entryPointsSlice, messageID)
 		s.SetModified(true)
 	}
 }
@@ -78,10 +78,10 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 	solidEntryPointsCount := len(solidEntryPointsBytes) / (32 + 4)
 	for i := 0; i < solidEntryPointsCount; i++ {
-		hashBuf := make([]byte, 32)
+		messageIDBuf := make([]byte, 32)
 		var msIndex uint32
 
-		err = binary.Read(bytesReader, binary.BigEndian, hashBuf)
+		err = binary.Read(bytesReader, binary.BigEndian, messageIDBuf)
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
@@ -91,7 +91,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
 
-		s.Add(Hash(hashBuf), milestone.Index(msIndex))
+		s.Add(Hash(messageIDBuf), milestone.Index(msIndex))
 	}
 
 	return s, nil
@@ -101,8 +101,8 @@ func (s *SolidEntryPoints) GetBytes() []byte {
 
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 
-	for hash, msIndex := range s.entryPointsMap {
-		err := binary.Write(buf, binary.BigEndian, []byte(hash)[:32])
+	for messageID, msIndex := range s.entryPointsMap {
+		err := binary.Write(buf, binary.BigEndian, []byte(messageID)[:32])
 		if err != nil {
 			return nil
 		}

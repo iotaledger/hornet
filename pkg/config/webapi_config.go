@@ -21,8 +21,8 @@ const (
 	CfgWebAPIBasicAuthPasswordSalt = "httpapi.basicauth.passwordsalt" // must be lower cased
 	// the maximum number of characters that the body of an API call may contain
 	CfgWebAPILimitsMaxBodyLengthBytes = "httpAPI.limits.bodyLengthBytes"
-	// the maximum number of transactions that may be returned by the findTransactions endpoint
-	CfgWebAPILimitsMaxFindTransactions = "httpAPI.limits.findTransactions"
+	// the maximum number of messages that may be returned by the findTransactions endpoint
+	CfgWebAPILimitsMaxFindMessages = "httpAPI.limits.findTransactions"
 	// the maximum number of trytes that may be returned by the getTrytes endpoint
 	CfgWebAPILimitsMaxGetTrytes = "httpAPI.limits.getTrytes"
 	// the maximum number of parameters in an API call
@@ -54,7 +54,7 @@ func init() {
 	configFlagSet.String(CfgWebAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a sha256 hash")
 	configFlagSet.String(CfgWebAPIBasicAuthPasswordSalt, "", "the HTTP basic auth salt used for hashing the password")
 	configFlagSet.Int(CfgWebAPILimitsMaxBodyLengthBytes, 1000000, "the maximum number of characters that the body of an API call may contain")
-	configFlagSet.Int(CfgWebAPILimitsMaxFindTransactions, 1000, "the maximum number of transactions that may be returned by the findTransactions endpoint")
+	configFlagSet.Int(CfgWebAPILimitsMaxFindMessages, 1000, "the maximum number of messages that may be returned by the findTransactions endpoint")
 	configFlagSet.Int(CfgWebAPILimitsMaxGetTrytes, 1000, "the maximum number of trytes that may be returned by the getTrytes endpoint")
 	configFlagSet.Int(CfgWebAPILimitsMaxRequestsList, 1000, "the maximum number of parameters in an API call")
 }

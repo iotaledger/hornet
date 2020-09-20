@@ -6,52 +6,52 @@ import (
 )
 
 var (
-	serverAllTransactions             prometheus.Gauge
-	serverNewTransactions             prometheus.Gauge
-	serverKnownTransactions           prometheus.Gauge
-	serverConfirmedTransactions       prometheus.Gauge
-	serverInvalidTransactions         prometheus.Gauge
-	serverInvalidRequests             prometheus.Gauge
-	serverReceivedTransactionRequests prometheus.Gauge
-	serverReceivedMilestoneRequests   prometheus.Gauge
-	serverReceivedHeartbeats          prometheus.Gauge
-	serverSentTransactions            prometheus.Gauge
-	serverSentTransactionRequests     prometheus.Gauge
-	serverSentMilestoneRequests       prometheus.Gauge
-	serverSentHeartbeats              prometheus.Gauge
-	serverDroppedSentPackets          prometheus.Gauge
-	serverSentSpamTransactions        prometheus.Gauge
-	serverValidatedBundles            prometheus.Gauge
+	serverAllMessages               prometheus.Gauge
+	serverNewMessages               prometheus.Gauge
+	serverKnownMessages             prometheus.Gauge
+	serverConfirmedMessages         prometheus.Gauge
+	serverInvalidMessages           prometheus.Gauge
+	serverInvalidRequests           prometheus.Gauge
+	serverReceivedMessageRequests   prometheus.Gauge
+	serverReceivedMilestoneRequests prometheus.Gauge
+	serverReceivedHeartbeats        prometheus.Gauge
+	serverSentMessages              prometheus.Gauge
+	serverSentMessageRequests       prometheus.Gauge
+	serverSentMilestoneRequests     prometheus.Gauge
+	serverSentHeartbeats            prometheus.Gauge
+	serverDroppedSentPackets        prometheus.Gauge
+	serverSentSpamMessages          prometheus.Gauge
+	serverValidatedMessages         prometheus.Gauge
 )
 
 func init() {
-	serverAllTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_all_transactions",
+	serverAllMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_all_messages",
 		Help: "Number of all messages.",
 	})
-	serverNewTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_new_transactions",
+	serverNewMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_new_messages",
 		Help: "Number of new messages.",
 	})
-	serverKnownTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_known_transactions",
+	serverKnownMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_known_messages",
 		Help: "Number of known messages.",
 	})
-	serverConfirmedTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_confirmed_transactions",
+	serverConfirmedMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_confirmed_messages",
 		Help: "Number of confirmed messages.",
 	})
-	serverInvalidTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_invalid_transactions",
+	serverInvalidMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_invalid_messages",
 		Help: "Number of invalid messages.",
 	})
 	serverInvalidRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_invalid_requests",
 		Help: "Number of invalid requests.",
 	})
-	serverReceivedTransactionRequests = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_received_transaction_requests",
-		Help: "Number of received transaction requests.",
+	serverReceivedMessageRequests = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_received_message_requests",
+		Help: "Number of received message requests.",
 	})
 	serverReceivedMilestoneRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_received_milestone_requests",
@@ -61,13 +61,13 @@ func init() {
 		Name: "iota_server_received_heartbeats",
 		Help: "Number of received heartbeats.",
 	})
-	serverSentTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_sent_transactions",
+	serverSentMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_sent_messages",
 		Help: "Number of sent messages.",
 	})
-	serverSentTransactionRequests = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_sent_transaction_requests",
-		Help: "Number of sent transaction requests.",
+	serverSentMessageRequests = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_sent_message_requests",
+		Help: "Number of sent message requests.",
 	})
 	serverSentMilestoneRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_sent_milestone_requests",
@@ -81,50 +81,50 @@ func init() {
 		Name: "iota_server_dropped_sent_packets",
 		Help: "Number of dropped sent packets.",
 	})
-	serverSentSpamTransactions = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_sent_spam_transactions",
+	serverSentSpamMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_sent_spam_messages",
 		Help: "Number of sent spam messages.",
 	})
-	serverValidatedBundles = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_validated_bundles",
-		Help: "Number of validated bundles.",
+	serverValidatedMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_validated_messages",
+		Help: "Number of validated messages.",
 	})
 
-	registry.MustRegister(serverAllTransactions)
-	registry.MustRegister(serverNewTransactions)
-	registry.MustRegister(serverKnownTransactions)
-	registry.MustRegister(serverConfirmedTransactions)
-	registry.MustRegister(serverInvalidTransactions)
+	registry.MustRegister(serverAllMessages)
+	registry.MustRegister(serverNewMessages)
+	registry.MustRegister(serverKnownMessages)
+	registry.MustRegister(serverConfirmedMessages)
+	registry.MustRegister(serverInvalidMessages)
 	registry.MustRegister(serverInvalidRequests)
-	registry.MustRegister(serverReceivedTransactionRequests)
+	registry.MustRegister(serverReceivedMessageRequests)
 	registry.MustRegister(serverReceivedMilestoneRequests)
 	registry.MustRegister(serverReceivedHeartbeats)
-	registry.MustRegister(serverSentTransactions)
-	registry.MustRegister(serverSentTransactionRequests)
+	registry.MustRegister(serverSentMessages)
+	registry.MustRegister(serverSentMessageRequests)
 	registry.MustRegister(serverSentMilestoneRequests)
 	registry.MustRegister(serverSentHeartbeats)
 	registry.MustRegister(serverDroppedSentPackets)
-	registry.MustRegister(serverSentSpamTransactions)
-	registry.MustRegister(serverValidatedBundles)
+	registry.MustRegister(serverSentSpamMessages)
+	registry.MustRegister(serverValidatedMessages)
 
 	addCollect(collectServer)
 }
 
 func collectServer() {
-	serverAllTransactions.Set(float64(metrics.SharedServerMetrics.Transactions.Load()))
-	serverNewTransactions.Set(float64(metrics.SharedServerMetrics.NewTransactions.Load()))
-	serverKnownTransactions.Set(float64(metrics.SharedServerMetrics.KnownTransactions.Load()))
-	serverConfirmedTransactions.Set(float64(metrics.SharedServerMetrics.ConfirmedMessages.Load()))
-	serverInvalidTransactions.Set(float64(metrics.SharedServerMetrics.InvalidTransactions.Load()))
+	serverAllMessages.Set(float64(metrics.SharedServerMetrics.Messages.Load()))
+	serverNewMessages.Set(float64(metrics.SharedServerMetrics.NewMessages.Load()))
+	serverKnownMessages.Set(float64(metrics.SharedServerMetrics.KnownMessages.Load()))
+	serverConfirmedMessages.Set(float64(metrics.SharedServerMetrics.ConfirmedMessages.Load()))
+	serverInvalidMessages.Set(float64(metrics.SharedServerMetrics.InvalidMessages.Load()))
 	serverInvalidRequests.Set(float64(metrics.SharedServerMetrics.InvalidRequests.Load()))
-	serverReceivedTransactionRequests.Set(float64(metrics.SharedServerMetrics.ReceivedTransactionRequests.Load()))
+	serverReceivedMessageRequests.Set(float64(metrics.SharedServerMetrics.ReceivedMessageRequests.Load()))
 	serverReceivedMilestoneRequests.Set(float64(metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load()))
 	serverReceivedHeartbeats.Set(float64(metrics.SharedServerMetrics.ReceivedHeartbeats.Load()))
-	serverSentTransactions.Set(float64(metrics.SharedServerMetrics.SentTransactions.Load()))
-	serverSentTransactionRequests.Set(float64(metrics.SharedServerMetrics.SentTransactionRequests.Load()))
+	serverSentMessages.Set(float64(metrics.SharedServerMetrics.SentMessages.Load()))
+	serverSentMessageRequests.Set(float64(metrics.SharedServerMetrics.SentMessageRequests.Load()))
 	serverSentMilestoneRequests.Set(float64(metrics.SharedServerMetrics.SentMilestoneRequests.Load()))
 	serverSentHeartbeats.Set(float64(metrics.SharedServerMetrics.SentHeartbeats.Load()))
 	serverDroppedSentPackets.Set(float64(metrics.SharedServerMetrics.DroppedMessages.Load()))
-	serverSentSpamTransactions.Set(float64(metrics.SharedServerMetrics.SentSpamMessages.Load()))
-	serverValidatedBundles.Set(float64(metrics.SharedServerMetrics.ValidatedBundles.Load()))
+	serverSentSpamMessages.Set(float64(metrics.SharedServerMetrics.SentSpamMessages.Load()))
+	serverValidatedMessages.Set(float64(metrics.SharedServerMetrics.ValidatedMessages.Load()))
 }

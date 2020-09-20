@@ -17,9 +17,8 @@ import (
 )
 
 var (
-	snapshot                             *SnapshotInfo
-	mutex                                syncutils.RWMutex
-	latestSeenMilestoneIndexFromSnapshot = milestone.Index(0)
+	snapshot *SnapshotInfo
+	mutex    syncutils.RWMutex
 
 	ErrParseSnapshotInfoFailed = errors.New("Parsing of snapshot info failed")
 )
@@ -140,14 +139,4 @@ func GetSnapshotInfo() *SnapshotInfo {
 	defer mutex.RUnlock()
 
 	return snapshot
-}
-
-func SetLatestSeenMilestoneIndexFromSnapshot(milestoneIndex milestone.Index) {
-	if latestSeenMilestoneIndexFromSnapshot < milestoneIndex {
-		latestSeenMilestoneIndexFromSnapshot = milestoneIndex
-	}
-}
-
-func GetLatestSeenMilestoneIndexFromSnapshot() milestone.Index {
-	return latestSeenMilestoneIndexFromSnapshot
 }

@@ -55,7 +55,7 @@ func (bc *queue) Run(shutdownSignal <-chan struct{}) {
 					return true
 				}
 
-				helpers.SendTransaction(p, b.MsgData)
+				helpers.SendMessage(p, b.MsgData)
 				return true
 			})
 		}

@@ -123,10 +123,9 @@ func WaitForNodeSynced(timeout time.Duration) bool {
 	return isNodeSynced
 }
 
-// The node is synced if LMI != 0, LMI >= "recentSeenMilestones" from snapshot and LSMI == LMI.
+// The node is synced if LMI != 0 and LSMI == LMI.
 func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
-	if latestIndex == 0 || latestIndex < GetLatestSeenMilestoneIndexFromSnapshot() {
-		// the node can't be sync if not all "recentSeenMilestones" from the snapshot file have been solidified.
+	if latestIndex == 0 {
 		isNodeSynced = false
 		isNodeSyncedThreshold = false
 		return

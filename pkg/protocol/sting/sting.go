@@ -26,10 +26,10 @@ func init() {
 	if err := message.RegisterType(MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition); err != nil {
 		panic(err)
 	}
-	if err := message.RegisterType(MessageTypeTransaction, MessageMessageDefinition); err != nil {
+	if err := message.RegisterType(MessageTypeMessage, MessageMessageDefinition); err != nil {
 		panic(err)
 	}
-	if err := message.RegisterType(MessageTypeTransactionRequest, MessageRequestMessageDefinition); err != nil {
+	if err := message.RegisterType(MessageTypeMessageRequest, MessageRequestMessageDefinition); err != nil {
 		panic(err)
 	}
 	if err := message.RegisterType(MessageTypeHeartbeat, HeartbeatMessageDefinition); err != nil {
@@ -38,15 +38,15 @@ func init() {
 }
 
 const (
-	MessageTypeMilestoneRequest   message.Type = 3
-	MessageTypeTransaction        message.Type = 4
-	MessageTypeTransactionRequest message.Type = 5
-	MessageTypeHeartbeat          message.Type = 6
+	MessageTypeMilestoneRequest message.Type = 3
+	MessageTypeMessage          message.Type = 4
+	MessageTypeMessageRequest   message.Type = 5
+	MessageTypeHeartbeat        message.Type = 6
 )
 
 const (
-	// The amount of bytes used for the requested transaction hash.
-	RequestedTransactionHashMsgBytesLength = 49
+	// The amount of bytes used for the requested message ID.
+	RequestedMessageIDMsgBytesLength = 32
 
 	// The amount of bytes used for the requested milestone index.
 	RequestedMilestoneIndexMsgBytesLength = 4
@@ -59,18 +59,18 @@ const (
 )
 
 var (
-	// TransactionMessageFormat defines a transaction message's format.
+	// MessageMessageDefinition defines a message message's format.
 	MessageMessageDefinition = &message.Definition{
-		ID:             MessageTypeTransaction,
+		ID:             MessageTypeMessage,
 		MaxBytesLength: 4096, // ToDo
 		VariableLength: true,
 	}
 
-	// The requested transaction hash gossipping packet.
-	// Contains only a hash of a requested transaction payload.
+	// The requested message ID gossipping packet.
+	// Contains only an ID of a requested message payload.
 	MessageRequestMessageDefinition = &message.Definition{
-		ID:             MessageTypeTransactionRequest,
-		MaxBytesLength: RequestedTransactionHashMsgBytesLength,
+		ID:             MessageTypeMessageRequest,
+		MaxBytesLength: RequestedMessageIDMsgBytesLength,
 		VariableLength: false,
 	}
 
@@ -95,7 +95,7 @@ func NewMessageMsg(txData []byte) ([]byte, error) {
 	msgBytesLength := uint16(len(txData))
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+msgBytesLength))
 
-	if err := tlv.WriteHeader(buf, MessageTypeTransaction, msgBytesLength); err != nil {
+	if err := tlv.WriteHeader(buf, MessageTypeMessage, msgBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -107,13 +107,13 @@ func NewMessageMsg(txData []byte) ([]byte, error) {
 }
 
 // NewMessageRequestMsg creates a message request message.
-func NewMessageRequestMsg(requestedHash hornet.Hash) ([]byte, error) {
+func NewMessageRequestMsg(requestedMessageID hornet.Hash) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MessageRequestMessageDefinition.MaxBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeTransactionRequest, MessageRequestMessageDefinition.MaxBytesLength); err != nil {
+	if err := tlv.WriteHeader(buf, MessageTypeMessageRequest, MessageRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, requestedHash[:RequestedTransactionHashMsgBytesLength]); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, requestedMessageID[:RequestedMessageIDMsgBytesLength]); err != nil {
 		return nil, err
 	}
 

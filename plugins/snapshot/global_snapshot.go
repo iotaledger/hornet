@@ -26,7 +26,7 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone.In
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
 
-	// Genesis transaction must be marked as SEP with snapshot index during loading a global snapshot,
+	// Genesis message must be marked as SEP with snapshot index during loading a global snapshot,
 	// because coordinator bootstraps the network by referencing the genesis msg
 	tangle.SolidEntryPointsAdd(hornet.NullMessageID, snapshotIndex)
 	tangle.StoreSolidEntryPoints()
@@ -95,7 +95,6 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone.In
 	}
 
 	tangle.SetSnapshotMilestone(cooPublicKey, hornet.NullMessageID, snapshotIndex, snapshotIndex, snapshotIndex, time.Time{})
-	tangle.SetLatestSeenMilestoneIndexFromSnapshot(snapshotIndex)
 
 	// set the solid milestone index based on the snapshot milestone
 	tangle.SetSolidMilestoneIndex(snapshotIndex, false)

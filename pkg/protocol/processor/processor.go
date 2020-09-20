@@ -63,9 +63,9 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 		data := task.Param(2).([]byte)
 
 		switch task.Param(1).(message.Type) {
-		case sting.MessageTypeTransaction:
-			proc.processTransaction(p, data)
-		case sting.MessageTypeTransactionRequest:
+		case sting.MessageTypeMessage:
+			proc.processMessage(p, data)
+		case sting.MessageTypeMessageRequest:
 			proc.processMessageRequest(p, data)
 		case sting.MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
@@ -87,9 +87,9 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 
 // Events are the events fired by the Processor.
 type Events struct {
-	// Fired when a transaction was fully processed.
+	// Fired when a message was fully processed.
 	MessageProcessed *events.Event
-	// Fired when a transaction is meant to be broadcasted.
+	// Fired when a message is meant to be broadcasted.
 	BroadcastMessage *events.Event
 }
 
@@ -121,7 +121,7 @@ func (proc *Processor) Process(p *peer.Peer, msgType message.Type, data []byte) 
 	proc.wp.Submit(p, msgType, data)
 }
 
-// SerializeAndEmit serializes the given message and emits TransactionProcessed and BroadcastTransaction events.
+// SerializeAndEmit serializes the given message and emits MessageProcessed and BroadcastMessage events.
 func (proc *Processor) SerializeAndEmit(msg *tangle.Message, deSeriMode iotago.DeSerializationMode) error {
 
 	msgData, err := msg.GetMessage().Serialize(deSeriMode)
@@ -215,8 +215,8 @@ func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
 	p.EnqueueForSending(msg)
 }
 
-// gets or creates a new WorkUnit for the given transaction and then processes the WorkUnit.
-func (proc *Processor) processTransaction(p *peer.Peer, data []byte) {
+// gets or creates a new WorkUnit for the given message and then processes the WorkUnit.
+func (proc *Processor) processMessage(p *peer.Peer, data []byte) {
 	cachedWorkUnit := proc.workUnitFor(data) // workUnit +1
 	defer cachedWorkUnit.Release()           // workUnit -1
 	workUnit := cachedWorkUnit.WorkUnit()
@@ -225,8 +225,8 @@ func (proc *Processor) processTransaction(p *peer.Peer, data []byte) {
 }
 
 // tries to process the WorkUnit by first checking in what state it is.
-// if the WorkUnit is invalid (because the underlying transaction is invalid), the given peer is punished.
-// if the WorkUnit is already completed, and the transaction was requested, this function emits a TransactionProcessed event.
+// if the WorkUnit is invalid (because the underlying message is invalid), the given peer is punished.
+// if the WorkUnit is already completed, and the message was requested, this function emits a MessageProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
 func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	wu.processingLock.Lock()
@@ -238,7 +238,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	case wu.Is(Invalid):
 		wu.processingLock.Unlock()
 
-		metrics.SharedServerMetrics.InvalidTransactions.Inc()
+		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
 		proc.pm.Remove(p.ID)
@@ -247,15 +247,15 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
-		// emit an event to say that a transaction was fully processed
+		// emit an event to say that a message was fully processed
 		if request := proc.requestQueue.Received(wu.msg.GetMessageID()); request != nil {
 			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
 			return
 		}
 
 		if tangle.ContainsMessage(wu.msg.GetMessageID()) {
-			metrics.SharedServerMetrics.KnownTransactions.Inc()
-			p.Metrics.KnownTransactions.Inc()
+			metrics.SharedServerMetrics.KnownMessages.Inc()
+			p.Metrics.KnownMessages.Inc()
 			return
 		}
 
@@ -279,7 +279,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	/*
 		// ToDo:
 		// validate minimum weight magnitude requirement
-		if request == nil && !transaction.HasValidNonce(msg, proc.opts.ValidMWM) {
+		if request == nil && !message.HasValidNonce(msg, proc.opts.ValidMWM) {
 			wu.UpdateState(Invalid)
 			wu.punish()
 			return
@@ -304,11 +304,11 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 
 	proc.Events.MessageProcessed.Trigger(msg, request, p)
 
-	// increase the known transaction count for all other peers
+	// increase the known message count for all other peers
 	wu.increaseKnownTxCount(p)
 
 	// ToDo: broadcast on solidification
-	// broadcast the transaction if it wasn't requested and not known yet
+	// broadcast the message if it wasn't requested and not known yet
 	if request == nil && !containsTx {
 		proc.Events.BroadcastMessage.Trigger(wu.broadcast())
 	}

@@ -64,7 +64,7 @@ func TriggerSolidifier() {
 func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
 	defer cachedMetadata.Release(true)
 
-	// update the solidity flags of this transaction
+	// update the solidity flags of this message
 	cachedMetadata.GetMetadata().SetSolid(true)
 
 	Events.MessageSolid.Trigger(cachedMetadata)
@@ -77,13 +77,13 @@ func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
 func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal chan struct{}) (solid bool, aborted bool) {
 	ts := time.Now()
 
-	txsChecked := 0
-	var txsToSolidify hornet.Hashes
-	txsToRequest := make(map[string]struct{})
+	msgsChecked := 0
+	var messageIDsToSolidify hornet.Hashes
+	messageIDsToRequest := make(map[string]struct{})
 
 	// collect all msg to solidify by traversing the tangle
 	if err := dag.TraverseParents(milestoneMessageID,
-		// traversal stops if no more transactions pass the given condition
+		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
@@ -101,17 +101,17 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			// mark the msg as checked
-			txsChecked++
+			msgsChecked++
 
 			// collect the txToSolidify in an ordered way
-			txsToSolidify = append(txsToSolidify, cachedMsgMeta.GetMetadata().GetMessageID())
+			messageIDsToSolidify = append(messageIDsToSolidify, cachedMsgMeta.GetMetadata().GetMessageID())
 
 			return nil
 		},
 		// called on missing parents
-		func(parentHash hornet.Hash) error {
+		func(parentMessageID hornet.Hash) error {
 			// msg does not exist => request missing msg
-			txsToRequest[string(parentHash)] = struct{}{}
+			messageIDsToRequest[string(parentMessageID)] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -126,22 +126,22 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 
 	tCollect := time.Now()
 
-	if len(txsToRequest) > 0 {
-		var txHashes hornet.Hashes
-		for txHash := range txsToRequest {
-			txHashes = append(txHashes, hornet.Hash(txHash))
+	if len(messageIDsToRequest) > 0 {
+		var messageIDs hornet.Hashes
+		for messageID := range messageIDsToRequest {
+			messageIDs = append(messageIDs, hornet.Hash(messageID))
 		}
-		requested := gossip.RequestMultiple(txHashes, milestoneIndex, true)
-		log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(txHashes), tCollect.Sub(ts).Truncate(time.Millisecond))
+		requested := gossip.RequestMultiple(messageIDs, milestoneIndex, true)
+		log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
 
-	// no transactions to request => the whole cone is solid
-	// we mark all transactions as solid in order from oldest to latest (needed for the tip pool)
-	for _, txHash := range txsToSolidify {
-		cachedMsgMeta, exists := cachedMessageMetas[string(txHash)]
+	// no messages to request => the whole cone is solid
+	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
+	for _, messageID := range messageIDsToSolidify {
+		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
 		if !exists {
-			log.Panicf("solidQueueCheck: Tx not found: %v", txHash.Hex())
+			log.Panicf("solidQueueCheck: Message not found: %v", messageID.Hex())
 		}
 
 		markMessageAsSolid(cachedMsgMeta.Retain())
@@ -151,16 +151,16 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 
 	if tangle.IsNodeSyncedWithThreshold() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		solidifyFutureCone(cachedMessageMetas, txsToSolidify, abortSignal)
+		solidifyFutureCone(cachedMessageMetas, messageIDsToSolidify, abortSignal)
 	}
 
-	log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", txsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
+	log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
 	return true, false
 }
 
-// solidifyFutureConeOfTx updates the solidity of the future cone (transactions approving the given transaction).
-// we have to walk the future cone, if a transaction became newly solid during the walk.
-func solidifyFutureConeOfTx(cachedMsgMeta *tangle.CachedMetadata) error {
+// solidifyFutureConeOfMsg updates the solidity of the future cone (messages approving the given message).
+// we have to walk the future cone, if a message became newly solid during the walk.
+func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 	cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta
@@ -173,22 +173,22 @@ func solidifyFutureConeOfTx(cachedMsgMeta *tangle.CachedMetadata) error {
 		}
 	}()
 
-	txHashes := hornet.Hashes{cachedMsgMeta.GetMetadata().GetMessageID()}
+	messageIDs := hornet.Hashes{cachedMsgMeta.GetMetadata().GetMessageID()}
 
-	return solidifyFutureCone(cachedMsgMetas, txHashes, nil)
+	return solidifyFutureCone(cachedMsgMetas, messageIDs, nil)
 }
 
-// solidifyFutureCone updates the solidity of the future cone (transactions approving the given transactions).
-// we have to walk the future cone, if a transaction became newly solid during the walk.
+// solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
+// we have to walk the future cone, if a message became newly solid during the walk.
 // all cachedMsgMetas have to be released outside.
-func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, txHashes hornet.Hashes, abortSignal chan struct{}) error {
+func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messageIDs hornet.Hashes, abortSignal chan struct{}) error {
 
-	for _, txHash := range txHashes {
+	for _, messageID := range messageIDs {
 
-		startTxHash := txHash
+		startMessageID := messageID
 
-		if err := dag.TraverseChildren(txHash,
-			// traversal stops if no more transactions pass the given condition
+		if err := dag.TraverseChildren(messageID,
+			// traversal stops if no more messages pass the given condition
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
@@ -197,43 +197,43 @@ func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, txHash
 					cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
 				}
 
-				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startTxHash, cachedMsgMeta.GetMetadata().GetMessageID()) {
-					// do not walk the future cone if the current transaction is already solid, except it was the startTx
+				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+					// do not walk the future cone if the current message is already solid, except it was the startTx
 					return false, nil
 				}
 
-				// check if current transaction is solid by checking the solidity of its parents
-				parentHashes := hornet.Hashes{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
+				// check if current message is solid by checking the solidity of its parents
+				parentMessageIDs := hornet.Hashes{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
 				if !bytes.Equal(cachedMsgMeta.GetMetadata().GetParent1MessageID(), cachedMsgMeta.GetMetadata().GetParent2MessageID()) {
-					parentHashes = append(parentHashes, cachedMsgMeta.GetMetadata().GetParent2MessageID())
+					parentMessageIDs = append(parentMessageIDs, cachedMsgMeta.GetMetadata().GetParent2MessageID())
 				}
 
-				for _, parentHash := range parentHashes {
-					if tangle.SolidEntryPointsContain(parentHash) {
+				for _, parentMessageID := range parentMessageIDs {
+					if tangle.SolidEntryPointsContain(parentMessageID) {
 						// Ignore solid entry points (snapshot milestone included)
 						continue
 					}
 
-					cachedParentTxMeta := tangle.GetCachedMessageMetadataOrNil(parentHash) // meta +1
+					cachedParentTxMeta := tangle.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
 					if cachedParentTxMeta == nil {
-						// parent is missing => transaction is not solid
-						// do not walk the future cone if the current transaction is not solid
+						// parent is missing => message is not solid
+						// do not walk the future cone if the current message is not solid
 						return false, nil
 					}
 
 					if !cachedParentTxMeta.GetMetadata().IsSolid() {
-						// parent is not solid => transaction is not solid
-						// do not walk the future cone if the current transaction is not solid
+						// parent is not solid => message is not solid
+						// do not walk the future cone if the current message is not solid
 						cachedParentTxMeta.Release(true) // meta -1
 						return false, nil
 					}
 					cachedParentTxMeta.Release(true) // meta -1
 				}
 
-				// mark current transaction as solid
+				// mark current message as solid
 				markMessageAsSolid(cachedMsgMeta.Retain())
 
-				// walk the future cone since the transaction got newly solid
+				// walk the future cone since the message got newly solid
 				return true, nil
 			},
 			// consumer
@@ -261,7 +261,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	/* How milestone solidification works:
 
 	- A Milestone comes in and gets validated
-	- Request milestone trunk/parent2 without traversion
+	- Request milestone parent1/parent2 without traversion
 	- Everytime a request queue gets empty, start the solidifier for the next known non-solid milestone
 	- If msg are missing, they are requested by the solidifier
 	- The traversion can be aborted with a signal and restarted
@@ -439,7 +439,7 @@ func getConfirmedMilestoneMetric(cachedMilestone *tangle.CachedMilestone, milest
 		return nil, ErrDivisionByZero
 	}
 
-	newNewMsgCount := metrics.SharedServerMetrics.NewTransactions.Load()
+	newNewMsgCount := metrics.SharedServerMetrics.NewMessages.Load()
 	newMsgDiff := utils.GetUint32Diff(newNewMsgCount, oldNewMsgCount)
 	oldNewMsgCount = newNewMsgCount
 

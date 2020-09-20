@@ -29,16 +29,16 @@ func (t *Hasher) EmptyRoot() []byte {
 }
 
 // TreeHash computes the Merkle tree hash of the provided hashes.
-func (t *Hasher) TreeHash(tailHashes []hornet.Hash) []byte {
-	if len(tailHashes) == 0 {
+func (t *Hasher) TreeHash(hashes []hornet.Hash) []byte {
+	if len(hashes) == 0 {
 		return t.EmptyRoot()
 	}
-	if len(tailHashes) == 1 {
-		return t.HashLeaf(tailHashes[0])
+	if len(hashes) == 1 {
+		return t.HashLeaf(hashes[0])
 	}
 
-	k := largestPowerOfTwo(len(tailHashes))
-	return t.HashNode(t.TreeHash(tailHashes[:k]), t.TreeHash(tailHashes[k:]))
+	k := largestPowerOfTwo(len(hashes))
+	return t.HashNode(t.TreeHash(hashes[:k]), t.TreeHash(hashes[k:]))
 }
 
 // HashLeaf returns the Merkle tree leaf hash of the input hash.

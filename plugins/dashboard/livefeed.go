@@ -26,14 +26,14 @@ func runLiveFeed() {
 			if !msg.IsValue() {
 				select {
 				case <-newMessageNoValueRateLimiter.C:
-					hub.BroadcastMsg(&Msg{Type: MsgTypeTxZeroValue, Data: &LivefeedTransaction{MessageID: msg.GetMessageID().Hex(), Value: 0}})
+					hub.BroadcastMsg(&Msg{Type: MsgTypeTxZeroValue, Data: &LivefeedMessage{MessageID: msg.GetMessageID().Hex(), Value: 0}})
 				default:
 				}
 			} else {
 				select {
 				case <-newMessageValueRateLimiter.C:
 					// ToDo: Value
-					hub.BroadcastMsg(&Msg{Type: MsgTypeTxValue, Data: &LivefeedTransaction{MessageID: msg.GetMessageID().Hex(), Value: 0}})
+					hub.BroadcastMsg(&Msg{Type: MsgTypeTxValue, Data: &LivefeedMessage{MessageID: msg.GetMessageID().Hex(), Value: 0}})
 				default:
 				}
 			}
@@ -41,8 +41,8 @@ func runLiveFeed() {
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
-		if msTailTxHash := getMilestoneTailHash(msIndex); msTailTxHash != nil {
-			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{Hash: msTailTxHash.Hex(), Index: msIndex}})
+		if milestoneMessageID := getMilestoneMessageID(msIndex); milestoneMessageID != nil {
+			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.Hex(), Index: msIndex}})
 		}
 	})
 

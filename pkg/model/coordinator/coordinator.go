@@ -42,12 +42,12 @@ var (
 // Events are the events issued by the coordinator.
 type Events struct {
 	// Fired when a checkpoint message is issued.
-	IssuedCheckpointTransaction *events.Event
+	IssuedCheckpointMessage *events.Event
 	// Fired when a milestone is issued.
 	IssuedMilestone *events.Event
 }
 
-// Coordinator is used to issue signed transactions, called "milestones" to secure an IOTA network and prevent double spends.
+// Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
@@ -109,8 +109,8 @@ func New(privateKey ed25519.PrivateKey, minWeightMagnitude int, stateFilePath st
 		sendMesssageFunc:        sendMessageFunc,
 		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
 		Events: &Events{
-			IssuedCheckpointTransaction: events.NewEvent(CheckpointCaller),
-			IssuedMilestone:             events.NewEvent(MilestoneCaller),
+			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
+			IssuedMilestone:         events.NewEvent(MilestoneCaller),
 		},
 	}
 
@@ -157,24 +157,24 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		}
 
 		if startIndex == 1 {
-			// if we bootstrap a network, NullHash has to be set as a solid entry point
+			// if we bootstrap a network, NullMessageID has to be set as a solid entry point
 			tangle.SolidEntryPointsAdd(hornet.NullMessageID, startIndex)
 		}
 
-		latestMilestoneHash := hornet.NullMessageID
+		latestMilestoneMessageID := hornet.NullMessageID
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
 			cachedMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 			if cachedMilestoneMsg == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneHash = cachedMilestoneMsg.GetMessage().GetMessageID()
+			latestMilestoneMessageID = cachedMilestoneMsg.GetMessage().GetMessageID()
 			cachedMilestoneMsg.Release()
 		}
 
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
-		state.LatestMilestoneMessageID = latestMilestoneHash
+		state.LatestMilestoneMessageID = latestMilestoneMessageID
 		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = time.Now()
 
@@ -215,12 +215,12 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, par
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
 
-		// release all bundles at the end
+		// release all messages at the end
 		for _, cachedMessage := range cachedMessages {
 			cachedMessage.Release(true) // message -1
 		}
 
-		// Release all msg metadata at the end
+		// Release all message metadata at the end
 		for _, cachedMsgMeta := range cachedMsgMetas {
 			cachedMsgMeta.Release(true) // meta -1
 		}
@@ -242,9 +242,9 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, par
 	}
 
 	// always reference the last milestone directly to speed up syncing
-	latestMilestoneHash := milestoneMsg.GetMessageID()
+	latestMilestoneMessageID := milestoneMsg.GetMessageID()
 
-	coo.state.LatestMilestoneMessageID = latestMilestoneHash
+	coo.state.LatestMilestoneMessageID = latestMilestoneMessageID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = time.Now()
 
@@ -266,7 +266,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
-		// parent1 and parent2 reference the last known milestone or NullHash if startIndex = 1 (see InitState)
+		// parent1 and parent2 reference the last known milestone or NullMessageID if startIndex = 1 (see InitState)
 		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneMessageID, coo.state.LatestMilestoneMessageID, coo.state.LatestMilestoneIndex+1); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
@@ -279,10 +279,10 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 }
 
 // IssueCheckpoint tries to create and send a "checkpoint" to the network.
-// a checkpoint can contain multiple chained transactions to reference big parts of the unconfirmed cone.
+// a checkpoint can contain multiple chained messages to reference big parts of the unconfirmed cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash hornet.Hash, tips hornet.Hashes) (hornet.Hash, error) {
+func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID hornet.Hash, tips hornet.Hashes) (hornet.Hash, error) {
 
 	if len(tips) == 0 {
 		return nil, ErrNoTipsGiven
@@ -302,7 +302,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 	}
 
 	for i, tip := range tips {
-		msg, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powHandler)
+		msg, err := createCheckpoint(tip, lastCheckpointMessageID, coo.minWeightMagnitude, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create: %w", err)
 		}
@@ -311,12 +311,12 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 			return nil, err
 		}
 
-		lastCheckpointHash = msg.GetMessageID()
+		lastCheckpointMessageID = msg.GetMessageID()
 
-		coo.Events.IssuedCheckpointTransaction.Trigger(checkpointIndex, i, len(tips), lastCheckpointHash)
+		coo.Events.IssuedCheckpointMessage.Trigger(checkpointIndex, i, len(tips), lastCheckpointMessageID)
 	}
 
-	return lastCheckpointHash, nil
+	return lastCheckpointMessageID, nil
 }
 
 // IssueMilestone creates the next milestone.

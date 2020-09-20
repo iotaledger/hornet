@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	MaxTransactionsForAddressResults = 100
-	MaxChildrenResults               = 100
-	MaxTagResults                    = 100
-	MaxBundleResults                 = 100
+	MaxMessagesForAddressResults = 100
+	MaxChildrenResults           = 100
+	MaxIndexationResults         = 100
 )
 
 type ExplorerMessage struct {
@@ -100,7 +99,7 @@ type SearchResult struct {
 	Message   *ExplorerMessage     `json:"msg"`
 	Tag       *ExplorerTag         `json:"tag"`
 	Address   *ExplorerAddress     `json:"address"`
-	Messages  [][]*ExplorerMessage `json:"bundles"`
+	Messages  [][]*ExplorerMessage `json:"messages"`
 	Milestone *ExplorerMessage     `json:"milestone"`
 }
 
@@ -148,11 +147,11 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		if err != nil {
 			return errors.Wrapf(ErrInvalidParameter, "%s is not a valid index", indexStr)
 		}
-		msTailTx, err := findMilestone(milestone.Index(index))
+		milestoneMessage, err := findMilestone(milestone.Index(index))
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, msTailTx)
+		return c.JSON(http.StatusOK, milestoneMessage)
 	})
 
 	routeGroup.GET("/search/:search", func(c echo.Context) error {
@@ -162,9 +161,9 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		// milestone query
 		index, err := strconv.Atoi(search)
 		if err == nil {
-			msTailTx, err := findMilestone(milestone.Index(index))
+			milestoneMessage, err := findMilestone(milestone.Index(index))
 			if err == nil {
-				result.Milestone = msTailTx
+				result.Milestone = milestoneMessage
 			}
 			return c.JSON(http.StatusOK, result)
 		}
@@ -224,19 +223,19 @@ func findMilestone(index milestone.Index) (*ExplorerMessage, error) {
 	return createExplorerMessage(cachedMsg.Retain()) // msg pass +1
 }
 
-func findTransaction(messageID string) (*ExplorerMessage, error) {
-	if len(messageID) != 64 {
-		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", messageID)
+func findTransaction(msgID string) (*ExplorerMessage, error) {
+	if len(msgID) != 64 {
+		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", msgID)
 	}
 
-	msgID, err := hex.DecodeString(messageID)
+	messageID, err := hex.DecodeString(msgID)
 	if err != nil {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
 	}
 
-	cachedMsg := tangle.GetCachedMessageOrNil(msgID) // msg +1
+	cachedMsg := tangle.GetCachedMessageOrNil(messageID) // msg +1
 	if cachedMsg == nil {
-		return nil, errors.Wrapf(ErrNotFound, "msg %s unknown", messageID)
+		return nil, errors.Wrapf(ErrNotFound, "msg %s unknown", msgID)
 	}
 
 	t, err := createExplorerMessage(cachedMsg.Retain()) // msg pass +1

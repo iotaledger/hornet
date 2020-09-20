@@ -18,7 +18,7 @@ func ShortenedHash(hash hornet.Hash) string {
 	return trytes[0:4] + "..." + trytes[77:81]
 }
 
-// ShortenedTag returns a shortened tag or milestone index for the given bundle.
+// ShortenedTag returns a shortened tag or milestone index for the given message.
 // this is used for the dot file.
 func ShortenedTag(cachedMessage *tangle.CachedMessage) string {
 	if cachedMessage.GetMessage().IsMilestone() {

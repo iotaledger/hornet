@@ -131,17 +131,17 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
 
-	// The msg will be added to the storage inside this function, so the transaction object automatically updates
+	// The msg will be added to the storage inside this function, so the message object automatically updates
 	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // msg +1
 
-	// Release shouldn't be forced, to cache the latest transactions
+	// Release shouldn't be forced, to cache the latest messages
 	defer cachedMsg.Release(!isNodeSyncedWithThreshold) // msg -1
 
 	if !alreadyAdded {
-		metrics.SharedServerMetrics.NewTransactions.Inc()
+		metrics.SharedServerMetrics.NewMessages.Inc()
 
 		if p != nil {
-			p.Metrics.NewTransactions.Inc()
+			p.Metrics.NewMessages.Inc()
 		}
 
 		// since we only add the parents if there was a source request, we only
@@ -158,16 +158,16 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 		Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, solidMilestoneIndex)
 
 	} else {
-		metrics.SharedServerMetrics.KnownTransactions.Inc()
+		metrics.SharedServerMetrics.KnownMessages.Inc()
 		if p != nil {
-			p.Metrics.KnownTransactions.Inc()
+			p.Metrics.KnownMessages.Inc()
 		}
 		Events.ReceivedKnownMessage.Trigger(cachedMsg)
 	}
 
-	// "ProcessedTransaction" event has to be fired after "ReceivedNewTransaction" event,
+	// "ProcessedMessage" event has to be fired after "ReceivedNewMessage" event,
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
-	// with the transactions it issued itself because the transactions may be not solid yet and therefore their bundles
+	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
 	Events.ProcessedMessage.Trigger(incomingMsg.GetMessageID())
 
@@ -177,8 +177,8 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
-	// we actually handled a transaction stemming from a request (as otherwise the solidifier
-	// is triggered too often through transactions received from normal gossip)
+	// we actually handled a message stemming from a request (as otherwise the solidifier
+	// is triggered too often through messages received from normal gossip)
 	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty

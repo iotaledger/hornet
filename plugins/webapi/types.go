@@ -137,7 +137,7 @@ type GetRequestsReturn struct {
 }
 
 type DebugRequest struct {
-	Hash             string          `json:"hash"`
+	MessageID        string          `json:"messageID"`
 	Type             string          `json:"type"`
 	TxExists         bool            `json:"txExists"`
 	EnqueueTimestamp int64           `json:"enqueueTime"`

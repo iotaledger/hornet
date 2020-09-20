@@ -12,12 +12,11 @@ import (
 
 type ParentTraverser struct {
 	cachedMessageMetas map[string]*tangle.CachedMetadata
-	cachedMessages     map[string]*tangle.CachedMessage
 
 	// stack holding the ordered msg to process
 	stack *list.List
 
-	// processed map with already processed transactions
+	// processed map with already processed messages
 	processed map[string]struct{}
 
 	// checked map with result of traverse condition
@@ -48,11 +47,6 @@ func NewParentTraverser(condition Predicate, consumer Consumer, onMissingParent 
 
 func (t *ParentTraverser) cleanup(forceRelease bool) {
 
-	// release all bundles at the end
-	for _, cachedMsg := range t.cachedMessages {
-		cachedMsg.Release(forceRelease) // message -1
-	}
-
 	// release all msg metadata at the end
 	for _, cachedMetadata := range t.cachedMessageMetas {
 		cachedMetadata.Release(forceRelease) // meta -1
@@ -65,7 +59,6 @@ func (t *ParentTraverser) cleanup(forceRelease bool) {
 func (t *ParentTraverser) reset() {
 
 	t.cachedMessageMetas = make(map[string]*tangle.CachedMetadata)
-	t.cachedMessages = make(map[string]*tangle.CachedMessage)
 	t.processed = make(map[string]struct{})
 	t.checked = make(map[string]bool)
 	t.stack = list.New()
@@ -98,7 +91,7 @@ func (t *ParentTraverser) Traverse(startMessageID hornet.Hash, traverseSolidEntr
 }
 
 // TraverseParent1AndParent2 starts to traverse the parents (past cone) of the given parent1 until
-// the traversal stops due to no more transactions passing the given condition.
+// the traversal stops due to no more messages passing the given condition.
 // Afterwards it traverses the parents (past cone) of the given parent2.
 // It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order

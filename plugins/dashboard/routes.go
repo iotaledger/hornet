@@ -168,8 +168,8 @@ func websocketRoute(ctx echo.Context) error {
 		case MsgTypeMs:
 			start := tangle.GetLatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
-				if msTailTxHash := getMilestoneTailHash(i); msTailTxHash != nil {
-					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{msTailTxHash.Hex(), i}})
+				if milestoneMessageID := getMilestoneMessageID(i); milestoneMessageID != nil {
+					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.Hex(), Index: i}})
 				} else {
 					break
 				}

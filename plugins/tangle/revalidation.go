@@ -85,11 +85,11 @@ func revalidateDatabase() error {
 	}
 
 	// clean up messages which are above the local snapshot
-	if err := cleanupTransactions(snapshotInfo); err != nil {
+	if err := cleanupMessages(snapshotInfo); err != nil {
 		return err
 	}
 
-	// deletes all transaction metadata where the msg doesn't exist in the database anymore.
+	// deletes all message metadata where the msg doesn't exist in the database anymore.
 	if err := cleanupMessageMetadata(); err != nil {
 		return err
 	}
@@ -257,15 +257,15 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 
 // deletes all messages which are not confirmed, not solid or
 // their confirmation milestone is newer than the last local snapshot's milestone.
-func cleanupTransactions(info *tangle.SnapshotInfo) error {
+func cleanupMessages(info *tangle.SnapshotInfo) error {
 
 	start := time.Now()
 
-	transactionsToDelete := make(map[string]struct{})
+	messagesToDelete := make(map[string]struct{})
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	tangle.ForEachMessageID(func(txHash hornet.Hash) bool {
+	tangle.ForEachMessageID(func(messageID hornet.Hash) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -278,23 +278,23 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 			log.Infof("analyzed %d messages", txsCounter)
 		}
 
-		storedTxMeta := tangle.GetStoredMetadataOrNil(txHash)
+		storedTxMeta := tangle.GetStoredMetadataOrNil(messageID)
 
-		// delete transaction if metadata doesn't exist
+		// delete message if metadata doesn't exist
 		if storedTxMeta == nil {
-			transactionsToDelete[string(txHash)] = struct{}{}
+			messagesToDelete[string(messageID)] = struct{}{}
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			transactionsToDelete[string(txHash)] = struct{}{}
+			messagesToDelete[string(messageID)] = struct{}{}
 			return true
 		}
 
 		// not confirmed or above snapshot index
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			transactionsToDelete[string(txHash)] = struct{}{}
+			messagesToDelete[string(messageID)] = struct{}{}
 			return true
 		}
 
@@ -306,9 +306,9 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 		return tangle.ErrOperationAborted
 	}
 
-	total := len(transactionsToDelete)
+	total := len(messagesToDelete)
 	var deletionCounter int64
-	for txHash := range transactionsToDelete {
+	for messageID := range messagesToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -322,7 +322,7 @@ func cleanupTransactions(info *tangle.SnapshotInfo) error {
 			log.Infof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteMessage(hornet.Hash(txHash))
+		tangle.DeleteMessage(hornet.Hash(messageID))
 	}
 
 	tangle.FlushMessagesStorage()
@@ -341,7 +341,7 @@ func cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	tangle.ForEachMessageMetadataMessageID(func(txHash hornet.Hash) bool {
+	tangle.ForEachMessageMetadataMessageID(func(messageID hornet.Hash) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -351,17 +351,17 @@ func cleanupMessageMetadata() error {
 				return false
 			}
 
-			log.Infof("analyzed %d transaction metadata", metadataCounter)
+			log.Infof("analyzed %d message metadata", metadataCounter)
 		}
 
-		// delete metadata if transaction doesn't exist
-		if !tangle.MessageExistsInStore(txHash) {
-			metadataToDelete[string(txHash)] = struct{}{}
+		// delete metadata if message doesn't exist
+		if !tangle.MessageExistsInStore(messageID) {
+			metadataToDelete[string(messageID)] = struct{}{}
 		}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d transaction metadata", metadataCounter)
+	log.Infof("analyzed %d message metadata", metadataCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
@@ -369,7 +369,7 @@ func cleanupMessageMetadata() error {
 
 	total := len(metadataToDelete)
 	var deletionCounter int64
-	for txHash := range metadataToDelete {
+	for messageID := range metadataToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -380,15 +380,15 @@ func cleanupMessageMetadata() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting transaction metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			log.Infof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteMessageMetadata(hornet.Hash(txHash))
+		tangle.DeleteMessageMetadata(hornet.Hash(messageID))
 	}
 
 	tangle.FlushMessagesStorage()
 
-	log.Infof("deleting transaction metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -397,8 +397,8 @@ func cleanupMessageMetadata() error {
 func cleanupChildren() error {
 
 	type child struct {
-		txHash    hornet.Hash
-		childHash hornet.Hash
+		messageID      hornet.Hash
+		childMessageID hornet.Hash
 	}
 
 	start := time.Now()
@@ -407,7 +407,7 @@ func cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	tangle.ForEachChild(func(txHash hornet.Hash, childHash hornet.Hash) bool {
+	tangle.ForEachChild(func(messageID hornet.Hash, childMessageID hornet.Hash) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -420,14 +420,14 @@ func cleanupChildren() error {
 			log.Infof("analyzed %d children", childCounter)
 		}
 
-		// delete child if transaction doesn't exist
-		if !tangle.MessageExistsInStore(txHash) {
-			childrenToDelete[string(txHash)+string(childHash)] = &child{txHash: txHash, childHash: childHash}
+		// delete child if message doesn't exist
+		if !tangle.MessageExistsInStore(messageID) {
+			childrenToDelete[string(messageID)+string(childMessageID)] = &child{messageID: messageID, childMessageID: childMessageID}
 		}
 
-		// delete child if child transaction doesn't exist
-		if !tangle.MessageExistsInStore(childHash) {
-			childrenToDelete[string(txHash)+string(childHash)] = &child{txHash: txHash, childHash: childHash}
+		// delete child if child message doesn't exist
+		if !tangle.MessageExistsInStore(childMessageID) {
+			childrenToDelete[string(messageID)+string(childMessageID)] = &child{messageID: messageID, childMessageID: childMessageID}
 		}
 
 		return true
@@ -454,7 +454,7 @@ func cleanupChildren() error {
 			log.Infof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteChild(child.txHash, child.childHash)
+		tangle.DeleteChild(child.messageID, child.childMessageID)
 	}
 
 	tangle.FlushChildrenStorage()
@@ -467,10 +467,11 @@ func cleanupChildren() error {
 // deletes all addresses where the msg doesn't exist in the database anymore.
 func cleanupAddresses() error {
 	return nil
+
 	/*
 		type address struct {
-			address hornet.Hash
-			txHash  hornet.Hash
+			address   hornet.Hash
+			messageID hornet.Hash
 		}
 
 		addressesToDelete := make(map[string]*address)
@@ -479,7 +480,7 @@ func cleanupAddresses() error {
 
 		lastStatusTime := time.Now()
 		var addressesCounter int64
-		tangle.ForEachAddress(func(addressHash hornet.Hash, txHash hornet.Hash, isValue bool) bool {
+		tangle.ForEachAddress(func(addressHash hornet.Hash, messageID hornet.Hash, isValue bool) bool {
 			addressesCounter++
 
 			if time.Since(lastStatusTime) >= printStatusInterval {
@@ -492,9 +493,9 @@ func cleanupAddresses() error {
 				log.Infof("analyzed %d addresses", addressesCounter)
 			}
 
-			// delete address if transaction doesn't exist
-			if !tangle.MessageExistsInStore(txHash) {
-				addressesToDelete[string(txHash)] = &address{address: addressHash, txHash: txHash}
+			// delete address if message doesn't exist
+			if !tangle.MessageExistsInStore(messageID) {
+				addressesToDelete[string(messageID)] = &address{address: addressHash, messageID: messageID}
 			}
 
 			return true
@@ -521,7 +522,7 @@ func cleanupAddresses() error {
 				log.Infof("deleting addresses...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 			}
 
-			tangle.DeleteAddress(addr.address, addr.txHash)
+			tangle.DeleteAddress(addr.address, addr.messageID)
 		}
 
 		tangle.FlushAddressStorage()
@@ -541,7 +542,7 @@ func cleanupUnconfirmedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unconfirmedTxsCounter int64
-	tangle.ForEachUnconfirmedMessage(func(msIndex milestone.Index, txHash hornet.Hash) bool {
+	tangle.ForEachUnconfirmedMessage(func(msIndex milestone.Index, messageID hornet.Hash) bool {
 		unconfirmedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {

@@ -132,8 +132,8 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
-	for solidEntryPoint, index := range newSolidEntryPoints {
-		tangle.SolidEntryPointsAdd(hornet.Hash(solidEntryPoint), index)
+	for solidEntryPointMessageID, index := range newSolidEntryPoints {
+		tangle.SolidEntryPointsAdd(hornet.Hash(solidEntryPointMessageID), index)
 	}
 	tangle.StoreSolidEntryPoints()
 	tangle.WriteUnlockSolidEntryPoints()
@@ -184,7 +184,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 				return nil
 			},
 			// called on missing parents
-			func(parentHash hornet.Hash) error { return nil },
+			func(parentMessageID hornet.Hash) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,

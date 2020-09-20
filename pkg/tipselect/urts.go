@@ -80,14 +80,14 @@ type Events struct {
 
 // TipSelector manages a list of tips and emits events for their removal and addition.
 type TipSelector struct {
-	// maxDeltaTxYoungestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value for the YMRSI of a given message in relation to the current LSMI before it gets lazy.
-	maxDeltaTxYoungestRootSnapshotIndexToLSMI milestone.Index
-	// maxDeltaTxOldestRootSnapshotIndexToLSMI is the maximum allowed delta
-	// value between OMRSI of a given message in relation to the current LSMI before it gets semi-lazy.
-	maxDeltaTxOldestRootSnapshotIndexToLSMI milestone.Index
+	// maxDeltaMsgYoungestConeRootIndexToLSMI is the maximum allowed delta
+	// value for the YCRI of a given message in relation to the current LSMI before it gets lazy.
+	maxDeltaMsgYoungestConeRootIndexToLSMI milestone.Index
+	// maxDeltaMsgOldestConeRootIndexToLSMI is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current LSMI before it gets semi-lazy.
+	maxDeltaMsgOldestConeRootIndexToLSMI milestone.Index
 	// belowMaxDepth is the maximum allowed delta
-	// value between OMRSI of a given message in relation to the current LSMI before it gets lazy.
+	// value between OCRI of a given message in relation to the current LSMI before it gets lazy.
 	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
 	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
@@ -130,8 +130,8 @@ type TipSelector struct {
 }
 
 // New creates a new tip-selector.
-func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
-	maxDeltaTxOldestRootSnapshotIndexToLSMI int,
+func New(maxDeltaMsgYoungestConeRootIndexToLSMI int,
+	maxDeltaMsgOldestConeRootIndexToLSMI int,
 	belowMaxDepth int,
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeSecondsNonLazy time.Duration,
@@ -143,19 +143,19 @@ func New(maxDeltaTxYoungestRootSnapshotIndexToLSMI int,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		maxDeltaTxYoungestRootSnapshotIndexToLSMI: milestone.Index(maxDeltaTxYoungestRootSnapshotIndexToLSMI),
-		maxDeltaTxOldestRootSnapshotIndexToLSMI:   milestone.Index(maxDeltaTxOldestRootSnapshotIndexToLSMI),
-		belowMaxDepth:                             milestone.Index(belowMaxDepth),
-		retentionRulesTipsLimitNonLazy:            retentionRulesTipsLimitNonLazy,
-		maxReferencedTipAgeSecondsNonLazy:         maxReferencedTipAgeSecondsNonLazy,
-		maxChildrenNonLazy:                        maxChildrenNonLazy,
-		spammerTipsThresholdNonLazy:               spammerTipsThresholdNonLazy,
-		retentionRulesTipsLimitSemiLazy:           retentionRulesTipsLimitSemiLazy,
-		maxReferencedTipAgeSecondsSemiLazy:        maxReferencedTipAgeSecondsSemiLazy,
-		maxChildrenSemiLazy:                       maxChildrenSemiLazy,
-		spammerTipsThresholdSemiLazy:              spammerTipsThresholdSemiLazy,
-		nonLazyTipsMap:                            make(map[string]*Tip),
-		semiLazyTipsMap:                           make(map[string]*Tip),
+		maxDeltaMsgYoungestConeRootIndexToLSMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToLSMI),
+		maxDeltaMsgOldestConeRootIndexToLSMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToLSMI),
+		belowMaxDepth:                          milestone.Index(belowMaxDepth),
+		retentionRulesTipsLimitNonLazy:         retentionRulesTipsLimitNonLazy,
+		maxReferencedTipAgeSecondsNonLazy:      maxReferencedTipAgeSecondsNonLazy,
+		maxChildrenNonLazy:                     maxChildrenNonLazy,
+		spammerTipsThresholdNonLazy:            spammerTipsThresholdNonLazy,
+		retentionRulesTipsLimitSemiLazy:        retentionRulesTipsLimitSemiLazy,
+		maxReferencedTipAgeSecondsSemiLazy:     maxReferencedTipAgeSecondsSemiLazy,
+		maxChildrenSemiLazy:                    maxChildrenSemiLazy,
+		spammerTipsThresholdSemiLazy:           spammerTipsThresholdSemiLazy,
+		nonLazyTipsMap:                         make(map[string]*Tip),
+		semiLazyTipsMap:                        make(map[string]*Tip),
 		Events: Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
@@ -305,10 +305,10 @@ func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	// record stats
 	start := time.Now()
 
-	tipHash, err := ts.randomTipWithoutLocking(tipsMap)
+	tipMessageID, err := ts.randomTipWithoutLocking(tipsMap)
 	ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start)})
 
-	return tipHash, err
+	return tipMessageID, err
 }
 
 // SelectTips selects two tips.
@@ -485,8 +485,8 @@ func (ts *TipSelector) UpdateScores() int {
 }
 
 // calculateScore calculates the tip selection score of this message
-func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) Score {
-	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(txHash) // meta +1
+func (ts *TipSelector) calculateScore(messageID hornet.Hash, lsmi milestone.Index) Score {
+	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
@@ -494,20 +494,20 @@ func (ts *TipSelector) calculateScore(txHash hornet.Hash, lsmi milestone.Index) 
 	}
 	defer cachedMsgMeta.Release(true)
 
-	ymrsi, omrsi := dag.GetMessageRootSnapshotIndexes(cachedMsgMeta.Retain(), lsmi) // meta +1
+	ycri, ocri := dag.GetConeRootIndexes(cachedMsgMeta.Retain(), lsmi) // meta +1
 
-	// if the LSMI to YMRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy
-	if (lsmi - ymrsi) > ts.maxDeltaTxYoungestRootSnapshotIndexToLSMI {
+	// if the LSMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy
+	if (lsmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToLSMI {
 		return ScoreLazy
 	}
 
-	// if the OMRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
-	if (lsmi - omrsi) > ts.belowMaxDepth {
+	// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
+	if (lsmi - ocri) > ts.belowMaxDepth {
 		return ScoreLazy
 	}
 
-	// if the OMRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy
-	if (lsmi - omrsi) > ts.maxDeltaTxOldestRootSnapshotIndexToLSMI {
+	// if the OCRI to LSMI delta is over maxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy
+	if (lsmi - ocri) > ts.maxDeltaMsgOldestConeRootIndexToLSMI {
 		return ScoreSemiLazy
 	}
 
