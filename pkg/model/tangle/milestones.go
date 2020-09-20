@@ -259,8 +259,8 @@ func CheckIfMilestone(msg *Message) (ms *iotago.MilestonePayload, err error) {
 		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
 			return ms, err
 		}
+		return ms, nil
 	default:
-		return nil, nil
 	}
 
 	return nil, nil

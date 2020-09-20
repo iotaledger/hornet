@@ -6,8 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -72,12 +70,12 @@ func loadSnapshotFromTextfiles(filePathLedger string, snapshotIndex milestone.In
 	for _, value := range ledgerState {
 		total += value
 	}
-
-	if total != iotago.TokenSupply {
-		return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, iotago.TokenSupply)
-	}
-
 	/*
+
+		if total != iotago.TokenSupply {
+			return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, iotago.TokenSupply)
+		}
+
 		err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, snapshotIndex)
 		if err != nil {
 			return errors.Wrapf(ErrSnapshotImportFailed, "snapshot ledgerEntries: %s", err)

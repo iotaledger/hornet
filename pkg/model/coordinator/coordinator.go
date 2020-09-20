@@ -127,7 +127,7 @@ func (coo *Coordinator) CheckPublicKey(key string) error {
 
 	cooPublicKey := coo.privateKey.Public().(ed25519.PublicKey)
 
-	if publicKey.Equal(cooPublicKey) {
+	if !publicKey.Equal(cooPublicKey) {
 		return fmt.Errorf("COO public key does not match the public key derived from the private key: %s != %s", hex.EncodeToString(publicKey), hex.EncodeToString(cooPublicKey))
 	}
 
