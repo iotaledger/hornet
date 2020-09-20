@@ -51,8 +51,8 @@ func loadSnapshotInfo() {
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != ed25519.PublicKeySize+52 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != %d", len(bytes), ed25519.PublicKeySize+56)
+	if len(bytes) != ed25519.PublicKeySize+53 {
+		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "Invalid length %d != %d", len(bytes), ed25519.PublicKeySize+53)
 	}
 
 	cooPublicKey := ed25519.PublicKey(bytes[:ed25519.PublicKeySize])

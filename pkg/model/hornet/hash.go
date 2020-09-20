@@ -26,6 +26,7 @@ func (h Hash) Hex() string {
 func (h Hash) ID() (id [32]byte) {
 	if len(h) == 32 {
 		copy(id[:], h[:32])
+		return
 	}
 
 	panic(fmt.Sprintf("Unknown hash length (%d)", len(h)))

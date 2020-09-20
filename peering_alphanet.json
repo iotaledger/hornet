@@ -1,0 +1,11 @@
+{
+  "acceptanyconnection": true,
+  "maxpeers": 5,
+  "peers": [
+    {
+      "identity": "localhost:15601",
+      "alias": "Node 2",
+      "preferIPv6": false
+    }
+  ]
+}

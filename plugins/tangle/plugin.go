@@ -212,7 +212,7 @@ func attachSolidifierGossipEvents() {
 }
 
 func detachHeartbeatEvents() {
-	Events.SolidMilestoneChanged.Detach(onSolidMilestoneIndexChanged)
+	Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }

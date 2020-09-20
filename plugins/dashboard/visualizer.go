@@ -89,21 +89,21 @@ func runVisualizer() {
 		)
 	})
 
-	onReceivedNewMilestone := events.NewClosure(func(cachedMessage *tanglePackage.CachedMessage) {
-		cachedMessage.ConsumeMessage(func(message *tanglePackage.Message) { // message -1
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
-				return
-			}
+	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *tanglePackage.CachedMilestone) {
+		defer cachedMilestone.Release(true) // milestone -1
 
-			hub.BroadcastMsg(
-				&Msg{
-					Type: MsgTypeMilestoneInfo,
-					Data: &metainfo{
-						ID: message.GetMessageID().Hex()[:VisualizerIdLength],
-					},
+		if !tanglemodel.IsNodeSyncedWithThreshold() {
+			return
+		}
+
+		hub.BroadcastMsg(
+			&Msg{
+				Type: MsgTypeMilestoneInfo,
+				Data: &metainfo{
+					ID: cachedMilestone.GetMilestone().MessageID.Hex()[:VisualizerIdLength],
 				},
-			)
-		})
+			},
+		)
 	})
 
 	// show checkpoints as milestones in the coordinator node
