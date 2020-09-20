@@ -95,22 +95,22 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 }
 
 // adds a Request for the given peer to this WorkUnit.
-// requestedTxHashBytes can be nil to flag that this request just reflects a receive from the given
+// requestedMessageID can be nil to flag that this request just reflects a receive from the given
 // peer and has no associated request.
-func (wu *WorkUnit) addReceivedFrom(p *peer.Peer, requestedTxHash hornet.Hash) {
+func (wu *WorkUnit) addReceivedFrom(p *peer.Peer, requestedMessageID hornet.Hash) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	wu.receivedFrom = append(wu.receivedFrom, p)
 }
 
-// punishes, respectively increases the invalid transaction metric of all peers
-// which sent the given underlying transaction of this WorkUnit.
+// punishes, respectively increases the invalid message metric of all peers
+// which sent the given underlying message of this WorkUnit.
 // it also closes the connection to these peers.
 func (wu *WorkUnit) punish() {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
-		metrics.SharedServerMetrics.InvalidTransactions.Inc()
+		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
 		peering.Manager().Remove(p.ID)
@@ -131,7 +131,7 @@ func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 	}
 }
 
-// increases the known transaction metric of all peers
+// increases the known message metric of all peers
 // except the given peer
 func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *peer.Peer) {
 	wu.receivedFromLock.Lock()
@@ -141,7 +141,7 @@ func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *peer.Peer) {
 		if p.ID == excludedPeer.ID {
 			continue
 		}
-		metrics.SharedServerMetrics.KnownTransactions.Inc()
-		p.Metrics.KnownTransactions.Inc()
+		metrics.SharedServerMetrics.KnownMessages.Inc()
+		p.Metrics.KnownMessages.Inc()
 	}
 }

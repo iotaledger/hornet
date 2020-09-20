@@ -37,7 +37,7 @@ type TestEnvironment struct {
 	// Milestones are the created milestones by the coordinator during the test.
 	Milestones tangle.CachedMessages
 
-	// cachedMessages is used to cleanup all bundles at the end of a test.
+	// cachedMessages is used to cleanup all messages at the end of a test.
 	cachedMessages tangle.CachedMessages
 
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
@@ -49,8 +49,8 @@ type TestEnvironment struct {
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
 
-	// lastMilestoneHash is the tail transaction hash of the last issued milestone.
-	lastMilestoneHash hornet.Hash
+	// lastMilestoneMessageID is the message ID of the last issued milestone.
+	lastMilestoneMessageID hornet.Hash
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
@@ -84,7 +84,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 		cachedMessages:         make(tangle.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		powHandler:             pow.New(nil, "", 30*time.Second),
-		lastMilestoneHash:      hornet.NullMessageID,
+		lastMilestoneMessageID: hornet.NullMessageID,
 	}
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testState.Name()))

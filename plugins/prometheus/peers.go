@@ -8,46 +8,46 @@ import (
 )
 
 var (
-	peersAllTransactions             *prometheus.GaugeVec
-	peersNewTransactions             *prometheus.GaugeVec
-	peersKnownTransactions           *prometheus.GaugeVec
-	peersReceivedTransactionRequests *prometheus.GaugeVec
-	peersReceivedMilestoneRequests   *prometheus.GaugeVec
-	peersReceivedHeartbeats          *prometheus.GaugeVec
-	peersSentTransactions            *prometheus.GaugeVec
-	peersSentTransactionRequests     *prometheus.GaugeVec
-	peersSentMilestoneRequests       *prometheus.GaugeVec
-	peersSentHeartbeats              *prometheus.GaugeVec
-	peersDroppedSentPackets          *prometheus.GaugeVec
-	peersConnected                   *prometheus.GaugeVec
+	peersAllMessages               *prometheus.GaugeVec
+	peersNewMessages               *prometheus.GaugeVec
+	peersKnownMessages             *prometheus.GaugeVec
+	peersReceivedMessageRequests   *prometheus.GaugeVec
+	peersReceivedMilestoneRequests *prometheus.GaugeVec
+	peersReceivedHeartbeats        *prometheus.GaugeVec
+	peersSentMessages              *prometheus.GaugeVec
+	peersSentMessageRequests       *prometheus.GaugeVec
+	peersSentMilestoneRequests     *prometheus.GaugeVec
+	peersSentHeartbeats            *prometheus.GaugeVec
+	peersDroppedSentPackets        *prometheus.GaugeVec
+	peersConnected                 *prometheus.GaugeVec
 )
 
 func init() {
-	peersAllTransactions = prometheus.NewGaugeVec(
+	peersAllMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_peers_all_transactions",
+			Name: "iota_peers_all_messages",
 			Help: "Number of all messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
-	peersNewTransactions = prometheus.NewGaugeVec(
+	peersNewMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_peers_new_transactions",
+			Name: "iota_peers_new_messages",
 			Help: "Number of new messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
-	peersKnownTransactions = prometheus.NewGaugeVec(
+	peersKnownMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_peers_known_transactions",
+			Name: "iota_peers_known_messages",
 			Help: "Number of known messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
-	peersReceivedTransactionRequests = prometheus.NewGaugeVec(
+	peersReceivedMessageRequests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_peers_received_transaction_requests",
-			Help: "Number of received transaction requests by peer.",
+			Name: "iota_peers_received_message_requests",
+			Help: "Number of received message requests by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
@@ -65,17 +65,17 @@ func init() {
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
-	peersSentTransactions = prometheus.NewGaugeVec(
+	peersSentMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_peers_sent_transactions",
+			Name: "iota_peers_sent_messages",
 			Help: "Number of sent messages by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
-	peersSentTransactionRequests = prometheus.NewGaugeVec(
+	peersSentMessageRequests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_peers_sent_transaction_requests",
-			Help: "Number of sent transaction requests by peer.",
+			Name: "iota_peers_sent_message_requests",
+			Help: "Number of sent message requests by peer.",
 		},
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
@@ -108,14 +108,14 @@ func init() {
 		[]string{"address", "port", "domain", "alias", "type", "autopeering_id"},
 	)
 
-	registry.MustRegister(peersAllTransactions)
-	registry.MustRegister(peersNewTransactions)
-	registry.MustRegister(peersKnownTransactions)
-	registry.MustRegister(peersReceivedTransactionRequests)
+	registry.MustRegister(peersAllMessages)
+	registry.MustRegister(peersNewMessages)
+	registry.MustRegister(peersKnownMessages)
+	registry.MustRegister(peersReceivedMessageRequests)
 	registry.MustRegister(peersReceivedMilestoneRequests)
 	registry.MustRegister(peersReceivedHeartbeats)
-	registry.MustRegister(peersSentTransactions)
-	registry.MustRegister(peersSentTransactionRequests)
+	registry.MustRegister(peersSentMessages)
+	registry.MustRegister(peersSentMessageRequests)
 	registry.MustRegister(peersSentMilestoneRequests)
 	registry.MustRegister(peersSentHeartbeats)
 	registry.MustRegister(peersDroppedSentPackets)
@@ -125,14 +125,14 @@ func init() {
 }
 
 func collectPeers() {
-	peersAllTransactions.Reset()
-	peersNewTransactions.Reset()
-	peersKnownTransactions.Reset()
-	peersReceivedTransactionRequests.Reset()
+	peersAllMessages.Reset()
+	peersNewMessages.Reset()
+	peersKnownMessages.Reset()
+	peersReceivedMessageRequests.Reset()
 	peersReceivedMilestoneRequests.Reset()
 	peersReceivedHeartbeats.Reset()
-	peersSentTransactions.Reset()
-	peersSentTransactionRequests.Reset()
+	peersSentMessages.Reset()
+	peersSentMessageRequests.Reset()
 	peersSentMilestoneRequests.Reset()
 	peersSentHeartbeats.Reset()
 	peersDroppedSentPackets.Reset()
@@ -149,17 +149,17 @@ func collectPeers() {
 			"autopeering_id": peer.AutopeeringID,
 		}
 
-		peersAllTransactions.With(labels).Set(float64(peer.NumberOfAllTransactions))
-		peersNewTransactions.With(labels).Set(float64(peer.NumberOfNewTransactions))
-		peersKnownTransactions.With(labels).Set(float64(peer.NumberOfKnownTransactions))
-		peersReceivedTransactionRequests.With(labels).Set(float64(peer.NumberOfReceivedTransactionReq))
-		peersReceivedMilestoneRequests.With(labels).Set(float64(peer.NumberOfReceivedMilestoneReq))
-		peersReceivedHeartbeats.With(labels).Set(float64(peer.NumberOfReceivedHeartbeats))
-		peersSentTransactions.With(labels).Set(float64(peer.NumberOfSentTransactions))
-		peersSentTransactionRequests.With(labels).Set(float64(peer.NumberOfSentTransactionsReq))
-		peersSentMilestoneRequests.With(labels).Set(float64(peer.NumberOfSentMilestoneReq))
-		peersSentHeartbeats.With(labels).Set(float64(peer.NumberOfSentHeartbeats))
-		peersDroppedSentPackets.With(labels).Set(float64(peer.NumberOfDroppedSentPackets))
+		peersAllMessages.With(labels).Set(float64(peer.ReceivedMessages))
+		peersNewMessages.With(labels).Set(float64(peer.NewMessages))
+		peersKnownMessages.With(labels).Set(float64(peer.KnownMessages))
+		peersReceivedMessageRequests.With(labels).Set(float64(peer.ReceivedMessageReq))
+		peersReceivedMilestoneRequests.With(labels).Set(float64(peer.ReceivedMilestoneReq))
+		peersReceivedHeartbeats.With(labels).Set(float64(peer.ReceivedHeartbeats))
+		peersSentMessages.With(labels).Set(float64(peer.SentMessages))
+		peersSentMessageRequests.With(labels).Set(float64(peer.SentMessageReq))
+		peersSentMilestoneRequests.With(labels).Set(float64(peer.SentMilestoneReq))
+		peersSentHeartbeats.With(labels).Set(float64(peer.SentHeartbeats))
+		peersDroppedSentPackets.With(labels).Set(float64(peer.DroppedSentPackets))
 		peersConnected.With(labels).Set(0)
 		if peer.Connected {
 			peersConnected.With(labels).Set(1)

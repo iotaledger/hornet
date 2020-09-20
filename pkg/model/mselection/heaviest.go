@@ -176,7 +176,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 		return nil, ErrNoTipsAvailable
 	}
 
-	var result hornet.Hashes
+	var tips hornet.Hashes
 
 	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.heaviestBranchSelectionDeadline))
@@ -197,17 +197,17 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 			break
 		}
 
-		if (len(result) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedMessagesThreshold)) || deadlineExceeded) {
+		if (len(tips) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedMessagesThreshold)) || deadlineExceeded) {
 			// minimum amount of tips reached and the heaviest tips do not confirm enough messages or the deadline was exceeded
 			// => no need to collect more
 			break
 		}
 
 		tipsList.referenceTip(tip)
-		result = append(result, tip.messageID)
+		tips = append(tips, tip.messageID)
 	}
 
-	if len(result) == 0 {
+	if len(tips) == 0 {
 		return nil, ErrNoTipsAvailable
 	}
 
@@ -219,13 +219,13 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 		}
 
 		tipsList.referenceTip(item)
-		result = append(result, item.messageID)
+		tips = append(tips, item.messageID)
 	}
 
 	// reset the whole HeaviestSelector if valid tips were found
 	s.reset()
 
-	return result, nil
+	return tips, nil
 }
 
 // OnNewSolidMessage adds a new message to be processed by s.

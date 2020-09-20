@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"bytes"
 	"errors"
 	"sync"
 	"time"
@@ -63,7 +64,6 @@ var (
 	onIssuedMilestone    *events.Closure
 
 	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
-	ErrTailTxNotFound  = errors.New("tail transaction not found in bundle")
 )
 
 func configure(plugin *node.Plugin) {
@@ -247,28 +247,32 @@ func run(plugin *node.Plugin) {
 
 func sendMessage(msg *tangle.Message, isMilestone bool) error {
 
-	msgIDLock := syncutils.Mutex{}
+	messageIDLock := syncutils.Mutex{}
 
-	// search the tail transaction hash of the bundle
-	msgIDs := make(map[string]struct{})
-	msgIDs[string(msg.GetMessageID())] = struct{}{}
+	// search the ID of the milestone message
+	messageID := msg.GetMessageID()
 
 	// wgMessageProcessed waits until the message got solid
 	wgMessageProcessed := sync.WaitGroup{}
 	wgMessageProcessed.Add(1)
 
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
-		msgIDLock.Lock()
-		defer msgIDLock.Unlock()
+		messageIDLock.Lock()
+		defer messageIDLock.Unlock()
 
-		msgID := cachedMsgMeta.GetMetadata().GetMessageID()
-		if _, exists := msgIDs[string(msgID)]; exists {
-			// message is solid
-			wgMessageProcessed.Done()
-
-			// we have to delete this message from the map because the event may be fired several times
-			delete(msgIDs, string(msgID))
+		if messageID == nil {
+			return
 		}
+
+		if !bytes.Equal(messageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+			return
+		}
+
+		// message is solid
+		wgMessageProcessed.Done()
+
+		// we have to set the messageID to nil, because the event may be fired several times
+		messageID = nil
 	})
 
 	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
@@ -297,16 +301,16 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 	return nil
 }
 
-// isBelowMaxDepth checks the below max depth criteria for the given tail transaction.
-func isBelowMaxDepth(cachedTailTxMeta *tangle.CachedMetadata) bool {
-	defer cachedTailTxMeta.Release(true)
+// isBelowMaxDepth checks the below max depth criteria for the given message.
+func isBelowMaxDepth(cachedMsgMeta *tangle.CachedMetadata) bool {
+	defer cachedMsgMeta.Release(true)
 
 	lsmi := tangle.GetSolidMilestoneIndex()
 
-	_, omrsi := dag.GetMessageRootSnapshotIndexes(cachedTailTxMeta.Retain(), lsmi) // meta +1
+	_, ocri := dag.GetConeRootIndexes(cachedMsgMeta.Retain(), lsmi) // meta +1
 
-	// if the OMRSI to LSMI delta is over belowMaxDepth, then the tip is invalid.
-	return (lsmi - omrsi) > belowMaxDepth
+	// if the OCRI to LSMI delta is over belowMaxDepth, then the tip is invalid.
+	return (lsmi - ocri) > belowMaxDepth
 }
 
 // GetEvents returns the events of the coordinator
@@ -348,25 +352,25 @@ func configureEvents() {
 			return
 		}
 
-		// propagate new transaction root snapshot indexes to the future cone for URTS
-		dag.UpdateMessageRootSnapshotIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		// propagate new cone root indexes to the future cone for URTS
+		dag.UpdateConeRootIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
-		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 
-	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
-		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Hex())
+	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.Hash) {
+		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.Hex())
 	})
 
-	onIssuedMilestone = events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
-		log.Infof("milestone issued (%d): %v", index, tailTxHash.Hex())
+	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID hornet.Hash) {
+		log.Infof("milestone issued (%d): %v", index, messageID.Hex())
 	})
 }
 
 func attachEvents() {
 	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
 	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
-	coo.Events.IssuedCheckpointTransaction.Attach(onIssuedCheckpoint)
+	coo.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
 	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 

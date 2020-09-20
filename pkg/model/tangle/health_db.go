@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DbVersion = 2
+	DbVersion = 1
 )
 
 var (
@@ -93,22 +93,7 @@ func UpdateDatabaseVersion() bool {
 		return false
 	}
 
-	currentDbVersion := int(value[0])
-
-	if currentDbVersion == 1 && DbVersion == 2 {
-		// add information about parent1 and parent2 to transaction metadata
-		if err := migrateVersionOneToVersionTwo(); err != nil {
-			panic(errors.Wrap(NewDatabaseError(err), "failed to migrate database to new version"))
-		}
-		setDatabaseVersion()
-		return true
-	}
+	//currentDbVersion := int(value[0])
 
 	return false
-}
-
-func migrateVersionOneToVersionTwo() error {
-	// this is a soft migration in the metadata storage
-	// parent1 an parent2 hashes were added to the metadata
-	return nil
 }

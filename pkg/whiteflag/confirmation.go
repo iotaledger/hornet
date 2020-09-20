@@ -34,7 +34,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	defer func() {
 		// All releases are forced since the cone is confirmed and not needed anymore
 
-		// release all bundles at the end
+		// release all messages at the end
 		for _, cachedMsg := range cachedMessages {
 			cachedMsg.Release(true) // message -1
 		}
@@ -46,7 +46,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	}
 
 	if _, exists := cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())]; !exists {
-		// release the bundles at the end to speed up calculation
+		// release the messages at the end to speed up calculation
 		cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())] = cachedMilestoneMessage.Retain()
 	}
 
@@ -69,14 +69,14 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 
 	mutations, err := ComputeWhiteFlagMutations(cachedMessageMetas, cachedMessages, tangle.GetMilestoneMerkleHashFunc(), message.GetMessageID())
 	if err != nil {
-		// According to the RFC we should panic if we encounter any invalid bundles during confirmation
+		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
 	}
 
 	confirmation := &Confirmation{
-		MilestoneIndex: milestoneIndex,
-		MilestoneHash:  message.GetMessageID(),
-		Mutations:      mutations,
+		MilestoneIndex:     milestoneIndex,
+		MilestoneMessageID: message.GetMessageID(),
+		Mutations:          mutations,
 	}
 
 	// Verify the calculated MerkleTreeHash with the one inside the milestone
@@ -93,9 +93,6 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	//if err != nil {
 	//	return nil, fmt.Errorf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
 	//}
-
-	//cachedMsTailTx := message.GetTail()
-	//defer cachedMsTailTx.Release(true)
 
 	loadMessageMetadata := func(messageID hornet.Hash) (*tangle.CachedMetadata, error) {
 		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
@@ -130,10 +127,10 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
-				meta.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
 				conf.MessagesValue++
-				metrics.SharedServerMetrics.ValueTransactions.Inc()
+				metrics.SharedServerMetrics.ValueMessages.Inc()
 				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
 				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
 			}
@@ -147,10 +144,10 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
-				meta.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
 				conf.MessagesZeroValue++
-				metrics.SharedServerMetrics.ZeroValueTransactions.Inc()
+				metrics.SharedServerMetrics.NonValueMessages.Inc()
 				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
 				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
 			}
@@ -165,7 +162,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 			meta.GetMetadata().SetConflicting(true)
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
-				meta.GetMetadata().SetRootSnapshotIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
 				conf.MessagesConflicting++
 				metrics.SharedServerMetrics.ConflictingMessages.Inc()

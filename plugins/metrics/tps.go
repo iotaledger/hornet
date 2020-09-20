@@ -13,9 +13,9 @@ var (
 
 // measures the TPS values
 func measureTPS() {
-	incomingTxCnt := metrics.SharedServerMetrics.Transactions.Load()
-	incomingNewTxCnt := metrics.SharedServerMetrics.NewTransactions.Load()
-	outgoingTxCnt := metrics.SharedServerMetrics.SentTransactions.Load()
+	incomingTxCnt := metrics.SharedServerMetrics.Messages.Load()
+	incomingNewTxCnt := metrics.SharedServerMetrics.NewMessages.Load()
+	outgoingTxCnt := metrics.SharedServerMetrics.SentMessages.Load()
 
 	tpsMetrics := &TPSMetrics{
 		Incoming: utils.GetUint32Diff(incomingTxCnt, lastIncomingTxCnt),

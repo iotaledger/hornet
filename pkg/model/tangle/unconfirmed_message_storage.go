@@ -54,7 +54,7 @@ func configureUnconfirmedMessageStorage(store kvstore.KVStore, opts profile.Cach
 	)
 }
 
-// GetUnconfirmedMessageIDs returns all hashes of unconfirmed messages for that milestone.
+// GetUnconfirmedMessageIDs returns all message IDs of unconfirmed messages for that milestone.
 func GetUnconfirmedMessageIDs(msIndex milestone.Index, forceRelease bool) hornet.Hashes {
 
 	var unconfirmedMessageIDs hornet.Hashes
@@ -70,10 +70,10 @@ func GetUnconfirmedMessageIDs(msIndex milestone.Index, forceRelease bool) hornet
 	return unconfirmedMessageIDs
 }
 
-// UnconfirmedMessageConsumer consumes the given unconfirmed transaction during looping through all unconfirmed transactions in the persistence layer.
+// UnconfirmedMessageConsumer consumes the given unconfirmed message during looping through all unconfirmed messages in the persistence layer.
 type UnconfirmedMessageConsumer func(msIndex milestone.Index, messageID hornet.Hash) bool
 
-// ForEachUnconfirmedMessage loops over all unconfirmed transactions.
+// ForEachUnconfirmedMessage loops over all unconfirmed messages.
 func ForEachUnconfirmedMessage(consumer UnconfirmedMessageConsumer, skipCache bool) {
 	unconfirmedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:36])
@@ -86,7 +86,7 @@ func StoreUnconfirmedMessage(msIndex milestone.Index, messageID hornet.Hash) *Ca
 	return &CachedUnconfirmedMessage{CachedObject: unconfirmedMessagesStorage.Store(unconfirmedTx)}
 }
 
-// DeleteUnconfirmedMessages deletes unconfirmed transaction entries.
+// DeleteUnconfirmedMessages deletes unconfirmed message entries.
 func DeleteUnconfirmedMessages(msIndex milestone.Index) int {
 
 	msIndexBytes := make([]byte, 4)

@@ -33,14 +33,14 @@ type MessageMetadata struct {
 	// The index of the milestone which confirmed this msg
 	confirmationIndex milestone.Index
 
-	// youngestRootSnapshotIndex is the highest confirmed index of the past cone of this transaction
-	youngestRootSnapshotIndex milestone.Index
+	// youngestConeRootIndex is the highest confirmed index of the past cone of this message
+	youngestConeRootIndex milestone.Index
 
-	// oldestRootSnapshotIndex is the lowest confirmed index of the past cone of this transaction
-	oldestRootSnapshotIndex milestone.Index
+	// oldestConeRootIndex is the lowest confirmed index of the past cone of this message
+	oldestConeRootIndex milestone.Index
 
-	// rootSnapshotCalculationIndex is the solid index ymrsi and omrsi were calculated at
-	rootSnapshotCalculationIndex milestone.Index
+	// coneRootCalculationIndex is the solid index ycri and ocri were calculated at
+	coneRootCalculationIndex milestone.Index
 
 	// parent1MessageID is the parent1 (trunk) of the message
 	parent1MessageID Hash
@@ -144,21 +144,21 @@ func (m *MessageMetadata) SetConflicting(conflicting bool) {
 	}
 }
 
-func (m *MessageMetadata) SetRootSnapshotIndexes(ymrsi milestone.Index, omrsi milestone.Index, rtsci milestone.Index) {
+func (m *MessageMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.youngestRootSnapshotIndex = ymrsi
-	m.oldestRootSnapshotIndex = omrsi
-	m.rootSnapshotCalculationIndex = rtsci
+	m.youngestConeRootIndex = ycri
+	m.oldestConeRootIndex = ocri
+	m.coneRootCalculationIndex = ci
 	m.SetModified(true)
 }
 
-func (m *MessageMetadata) GetRootSnapshotIndexes() (ymrsi milestone.Index, omrsi milestone.Index, rtsci milestone.Index) {
+func (m *MessageMetadata) GetConeRootIndexes() (ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.youngestRootSnapshotIndex, m.oldestRootSnapshotIndex, m.rootSnapshotCalculationIndex
+	return m.youngestConeRootIndex, m.oldestConeRootIndex, m.coneRootCalculationIndex
 }
 
 func (m *MessageMetadata) GetMetadata() byte {
@@ -186,9 +186,9 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		1 byte  metadata bitmask
 		4 bytes uint32 solidificationTimestamp
 		4 bytes uint32 confirmationIndex
-		4 bytes uint32 youngestRootSnapshotIndex
-		4 bytes uint32 oldestRootSnapshotIndex
-		4 bytes uint32 rootSnapshotCalculationIndex
+		4 bytes uint32 youngestConeRootIndex
+		4 bytes uint32 oldestConeRootIndex
+		4 bytes uint32 coneRootCalculationIndex
 		32 bytes parent1 id
 		32 bytes parent2 id
 	*/
@@ -197,9 +197,9 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 	value[0] = byte(m.metadata)
 	binary.LittleEndian.PutUint32(value[1:], uint32(m.solidificationTimestamp))
 	binary.LittleEndian.PutUint32(value[5:], uint32(m.confirmationIndex))
-	binary.LittleEndian.PutUint32(value[9:], uint32(m.youngestRootSnapshotIndex))
-	binary.LittleEndian.PutUint32(value[13:], uint32(m.oldestRootSnapshotIndex))
-	binary.LittleEndian.PutUint32(value[17:], uint32(m.rootSnapshotCalculationIndex))
+	binary.LittleEndian.PutUint32(value[9:], uint32(m.youngestConeRootIndex))
+	binary.LittleEndian.PutUint32(value[13:], uint32(m.oldestConeRootIndex))
+	binary.LittleEndian.PutUint32(value[17:], uint32(m.coneRootCalculationIndex))
 	value = append(value, m.parent1MessageID...)
 	value = append(value, m.parent2MessageID...)
 
@@ -212,9 +212,9 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		1 byte  metadata bitmask
 		4 bytes uint32 solidificationTimestamp
 		4 bytes uint32 confirmationIndex
-		4 bytes uint32 youngestRootSnapshotIndex
-		4 bytes uint32 oldestRootSnapshotIndex
-		4 bytes uint32 rootSnapshotCalculationIndex
+		4 bytes uint32 youngestConeRootIndex
+		4 bytes uint32 oldestConeRootIndex
+		4 bytes uint32 coneRootCalculationIndex
 		32 bytes parent1 id
 		32 bytes parent2 id
 	*/
@@ -224,9 +224,9 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	m.metadata = bitmask.BitMask(data[0])
 	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
 	m.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
-	m.youngestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[9:13]))
-	m.oldestRootSnapshotIndex = milestone.Index(binary.LittleEndian.Uint32(data[13:17]))
-	m.rootSnapshotCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[17:21]))
+	m.youngestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[9:13]))
+	m.oldestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[13:17]))
+	m.coneRootCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[17:21]))
 
 	return m, nil
 }

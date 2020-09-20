@@ -32,8 +32,8 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	TipSelector = tipselect.New(
-		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI),
-		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI),
+		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
+		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
 		config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth),
 
 		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
@@ -89,10 +89,10 @@ func configureEvents() {
 			return
 		}
 
-		// propagate new transaction root snapshot indexes to the future cone for URTS
+		// propagate new cone root indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateMessageRootSnapshotIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
-		log.Debugf("UpdateMessageRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
+		dag.UpdateConeRootIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()
 		removedTipCount := TipSelector.UpdateScores()

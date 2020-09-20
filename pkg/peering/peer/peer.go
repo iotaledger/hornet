@@ -188,29 +188,29 @@ func (p *Peer) EnqueueForSending(data []byte) {
 // Info returns a snapshot of the peer in time of calling Info().
 func (p *Peer) Info() *Info {
 	info := &Info{
-		Peer:                           p,
-		Address:                        p.ID,
-		Port:                           p.InitAddress.Port,
-		Domain:                         p.InitAddress.Addr,
-		DomainWithPort:                 p.InitAddress.String(),
-		Alias:                          p.InitAddress.Alias,
-		PreferIPv6:                     p.InitAddress.PreferIPv6,
-		NumberOfAllTransactions:        p.Metrics.ReceivedTransactions.Load(),
-		NumberOfNewTransactions:        p.Metrics.NewTransactions.Load(),
-		NumberOfKnownTransactions:      p.Metrics.KnownTransactions.Load(),
-		NumberOfReceivedTransactionReq: p.Metrics.ReceivedTransactionRequests.Load(),
-		NumberOfReceivedMilestoneReq:   p.Metrics.ReceivedMilestoneRequests.Load(),
-		NumberOfReceivedHeartbeats:     p.Metrics.ReceivedHeartbeats.Load(),
-		NumberOfSentPackets:            p.Metrics.SentPackets.Load(),
-		NumberOfSentTransactions:       p.Metrics.SentTransactions.Load(),
-		NumberOfSentTransactionsReq:    p.Metrics.SentTransactionRequests.Load(),
-		NumberOfSentMilestoneReq:       p.Metrics.SentMilestoneRequests.Load(),
-		NumberOfSentHeartbeats:         p.Metrics.SentHeartbeats.Load(),
-		NumberOfDroppedSentPackets:     p.Metrics.DroppedPackets.Load(),
-		ConnectionType:                 "tcp",
-		Connected:                      false,
-		Autopeered:                     false,
-		AutopeeringID:                  "",
+		Peer:                 p,
+		Address:              p.ID,
+		Port:                 p.InitAddress.Port,
+		Domain:               p.InitAddress.Addr,
+		DomainWithPort:       p.InitAddress.String(),
+		Alias:                p.InitAddress.Alias,
+		PreferIPv6:           p.InitAddress.PreferIPv6,
+		ReceivedMessages:     p.Metrics.ReceivedMessages.Load(),
+		NewMessages:          p.Metrics.NewMessages.Load(),
+		KnownMessages:        p.Metrics.KnownMessages.Load(),
+		ReceivedMessageReq:   p.Metrics.ReceivedMessageRequests.Load(),
+		ReceivedMilestoneReq: p.Metrics.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:   p.Metrics.ReceivedHeartbeats.Load(),
+		SentPackets:          p.Metrics.SentPackets.Load(),
+		SentMessages:         p.Metrics.SentMessages.Load(),
+		SentMessageReq:       p.Metrics.SentMessageRequests.Load(),
+		SentMilestoneReq:     p.Metrics.SentMilestoneRequests.Load(),
+		SentHeartbeats:       p.Metrics.SentHeartbeats.Load(),
+		DroppedSentPackets:   p.Metrics.DroppedPackets.Load(),
+		ConnectionType:       "tcp",
+		Connected:            false,
+		Autopeered:           false,
+		AutopeeringID:        "",
 	}
 	if p.Autopeering != nil {
 		info.Autopeered = true
@@ -253,13 +253,13 @@ func NewID(ip string, port uint16) string {
 // Metrics defines a set of metrics regarding a peer.
 type Metrics struct {
 	// The number of received messages which are new.
-	NewTransactions atomic.Uint32
+	NewMessages atomic.Uint32
 	// The number of received messages which are already known.
-	KnownTransactions atomic.Uint32
+	KnownMessages atomic.Uint32
 	// The number of received messages.
-	ReceivedTransactions atomic.Uint32
-	// The number of received transaction requests.
-	ReceivedTransactionRequests atomic.Uint32
+	ReceivedMessages atomic.Uint32
+	// The number of received message requests.
+	ReceivedMessageRequests atomic.Uint32
 	// The number of received milestone requests.
 	ReceivedMilestoneRequests atomic.Uint32
 	// The number of received heartbeats.
@@ -267,9 +267,9 @@ type Metrics struct {
 	// The number of sent packets.
 	SentPackets atomic.Uint32
 	// The number of sent messages.
-	SentTransactions atomic.Uint32
-	// The number of sent transaction requests.
-	SentTransactionRequests atomic.Uint32
+	SentMessages atomic.Uint32
+	// The number of sent message requests.
+	SentMessageRequests atomic.Uint32
 	// The number of sent milestone requests.
 	SentMilestoneRequests atomic.Uint32
 	// The number of sent heartbeats.
@@ -280,27 +280,27 @@ type Metrics struct {
 
 // Info acts as a static snapshot of information about a peer.
 type Info struct {
-	Peer                           *Peer  `json:"-"`
-	Address                        string `json:"address"`
-	Port                           uint16 `json:"port,omitempty"`
-	Domain                         string `json:"domain,omitempty"`
-	DomainWithPort                 string `json:"-"`
-	Alias                          string `json:"alias,omitempty"`
-	PreferIPv6                     bool   `json:"-"`
-	NumberOfAllTransactions        uint32 `json:"numberOfAllTransactions"`
-	NumberOfNewTransactions        uint32 `json:"numberOfNewTransactions"`
-	NumberOfKnownTransactions      uint32 `json:"numberOfKnownTransactions"`
-	NumberOfReceivedTransactionReq uint32 `json:"numberOfReceivedTransactionReq"`
-	NumberOfReceivedMilestoneReq   uint32 `json:"numberOfReceivedMilestoneReq"`
-	NumberOfReceivedHeartbeats     uint32 `json:"numberOfReceivedHeartbeats"`
-	NumberOfSentPackets            uint32 `json:"numberOfSentPackets"`
-	NumberOfSentTransactions       uint32 `json:"numberOfSentTransactions"`
-	NumberOfSentTransactionsReq    uint32 `json:"numberOfSentTransactionsReq"`
-	NumberOfSentMilestoneReq       uint32 `json:"numberOfSentMilestoneReq"`
-	NumberOfSentHeartbeats         uint32 `json:"numberOfSentHeartbeats"`
-	NumberOfDroppedSentPackets     uint32 `json:"numberOfDroppedSentPackets"`
-	ConnectionType                 string `json:"connectionType"`
-	Connected                      bool   `json:"connected"`
-	Autopeered                     bool   `json:"autopeered"`
-	AutopeeringID                  string `json:"autopeeringId,omitempty"`
+	Peer                 *Peer  `json:"-"`
+	Address              string `json:"address"`
+	Port                 uint16 `json:"port,omitempty"`
+	Domain               string `json:"domain,omitempty"`
+	DomainWithPort       string `json:"-"`
+	Alias                string `json:"alias,omitempty"`
+	PreferIPv6           bool   `json:"-"`
+	ReceivedMessages     uint32 `json:"allMessages"`
+	NewMessages          uint32 `json:"newMessages"`
+	KnownMessages        uint32 `json:"knownMessages"`
+	ReceivedMessageReq   uint32 `json:"receivedMessageReq"`
+	ReceivedMilestoneReq uint32 `json:"receivedMilestoneReq"`
+	ReceivedHeartbeats   uint32 `json:"receivedHeartbeats"`
+	SentPackets          uint32 `json:"sentPackets"`
+	SentMessages         uint32 `json:"sentMessages"`
+	SentMessageReq       uint32 `json:"sentMessageReq"`
+	SentMilestoneReq     uint32 `json:"sentMilestoneReq"`
+	SentHeartbeats       uint32 `json:"sentHeartbeats"`
+	DroppedSentPackets   uint32 `json:"droppedSentPackets"`
+	ConnectionType       string `json:"connectionType"`
+	Connected            bool   `json:"connected"`
+	Autopeered           bool   `json:"autopeered"`
+	AutopeeringID        string `json:"autopeeringId,omitempty"`
 }

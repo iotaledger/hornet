@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	// NullMessageID is the ID of the genesis transaction.
+	// NullMessageID is the ID of the genesis message.
 	NullMessageID = Hash(make([]byte, 32))
 )
 

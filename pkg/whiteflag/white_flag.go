@@ -12,24 +12,21 @@ import (
 )
 
 var (
-	// ErrMilestoneApprovedInvalidBundle is returned when a milestone approves an invalid bundle in its past cone.
-	ErrMilestoneApprovedInvalidBundle = errors.New("the milestone approved an invalid bundle")
-
-	// ErrIncludedTailsSumDoesntMatch is returned when the sum of the included tails a milestone approves does not match the referenced tails minus the excluded tails.
-	ErrIncludedTailsSumDoesntMatch = errors.New("the sum of the included tails doesn't match the referenced tails minus the excluded tails")
+	// ErrIncludedMessagesSumDoesntMatch is returned when the sum of the included messages a milestone approves does not match the referenced messages minus the excluded messages.
+	ErrIncludedMessagesSumDoesntMatch = errors.New("the sum of the included messages doesn't match the referenced messages minus the excluded messages")
 )
 
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
 type Confirmation struct {
 	// The index of the milestone that got confirmed.
 	MilestoneIndex milestone.Index
-	// The transaction hash of the tail transaction of the milestone that got confirmed.
-	MilestoneHash hornet.Hash
-	// The ledger mutations and referenced transactions of this milestone.
+	// The message ID of the milestone that got confirmed.
+	MilestoneMessageID hornet.Hash
+	// The ledger mutations and referenced messages of this milestone.
 	Mutations *WhiteFlagMutations
 }
 
-// WhiteFlagMutations contains the ledger mutations and referenced transactions applied to a cone under the "white-flag" approach.
+// WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The messages which mutate the ledger in the order in which they were applied.
 	MessagesIncluded hornet.Hashes
@@ -43,20 +40,19 @@ type WhiteFlagMutations struct {
 	NewAddressState map[string]int64
 	// Contains the mutations to the state of the addresses for the given confirmation.
 	AddressMutations map[string]int64
-	// The merkle tree root hash of all tails.
+	// The merkle tree root hash of all messages.
 	MerkleTreeHash [64]byte
 }
 
-// ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by trunk and branch.
-// Via a post-order depth-first search the approved bundles of the given cone are traversed and
+// ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by parent1 and parent2.
+// Via a post-order depth-first search the approved messages of the given cone are traversed and
 // in their corresponding order applied/mutated against the previous ledger state, respectively previous applied mutations.
-// Bundles within the approving cone must obey to strict schematics and be valid. Bundles causing conflicts are
-// ignored but do not create an error.
-// It also computes the merkle tree root hash consisting out of the tail transaction hashes
-// of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
+// Messages within the approving cone must be valid. Messages causing conflicts are ignored but do not create an error.
+// It also computes the merkle tree root hash consisting out of the IDs of the messages which are part of the set
+// which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parentMessageID ...hornet.Hash) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID ...hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncluded:            make(hornet.Hashes, 0),
 		MessagesExcludedConflicting: make(hornet.Hashes, 0),
@@ -66,7 +62,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		AddressMutations:            make(map[string]int64),
 	}
 
-	// traversal stops if no more transactions pass the given condition
+	// traversal stops if no more messages pass the given condition
 	// Caution: condition func is not in DFS order
 	condition := func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
@@ -76,18 +72,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 			cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMetadata.Retain()
 		}
 
-		// load up bundle
-		cachedMessage, exists := cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())]
-		if !exists {
-			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
-			if cachedMessage == nil {
-				return false, fmt.Errorf("%w: bundle %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
-			}
-			// release the bundles at the end to speed up calculation
-			cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMessage
-		}
-
-		// only traverse and process the transaction if it was not confirmed yet
+		// only traverse and process the message if it was not confirmed yet
 		return !cachedMetadata.GetMetadata().IsConfirmed(), nil
 	}
 
@@ -96,13 +81,18 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		defer cachedMetadata.Release(true) // meta -1
 
 		// load up message
-		cachedMessage := tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID())
-		if cachedMessage == nil {
-			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
-		}
-		defer cachedMessage.Release(true)
+		cachedMessage, exists := cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())]
+		if !exists {
+			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
+			if cachedMessage == nil {
+				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
+			}
 
-		// exclude zero or spam value bundles
+			// release the messages at the end to speed up calculation
+			cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMessage
+		}
+
+		// exclude non value messages or spam value messages
 		//message := cachedMessage.GetMessage()
 		//mutations := message.GetLedgerChanges()
 		//if message.IsValueSpam() || len(mutations) == 0 {
@@ -133,7 +123,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 		//	}
 		//
 		//	// note that there's no overflow of int64 values here
-		//	// as a valid message's transaction can not spend more than the total supply,
+		//	// as a valid message's message can not spend more than the total supply,
 		//	// meaning that newBalance could be max 2*total_supply or min -total_supply.
 		//	newBalance := balance + change
 		//
@@ -154,7 +144,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 			return nil
 		}
 
-		// mark the given tail to be part of milestone ledger changing tail inclusion set
+		// mark the given message to be part of milestone ledger by changing message inclusion set
 		wfConf.MessagesIncluded = append(wfConf.MessagesIncluded, cachedMetadata.GetMetadata().GetMessageID())
 
 		// incorporate the mutations in accordance with the previous mutations
@@ -172,11 +162,11 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 	}
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
-	// If trunk and branch of a bundle head transaction are both SEPs, are already processed or already confirmed,
-	// then the mutations from the transaction retrieved from the stack are accumulated to the given Confirmation struct's mutations.
-	// If the popped transaction was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncluded.
-	if len(parentMessageID) == 0 {
-		// no branch hash given, only walk trunk
+	// If parent1 and parent2 of a message are both SEPs, are already processed or already confirmed,
+	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
+	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncluded.
+	if len(parent2MessageID) == 0 {
+		// no parent2 message ID given, only walk parent 1
 		if err := dag.TraverseParents(parent1MessageID,
 			condition,
 			consumer,
@@ -190,8 +180,8 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 			return nil, err
 		}
 	} else {
-		// branch hash given, first walk trunk then branch
-		if err := dag.TraverseParent1AndParent2(parent1MessageID, parentMessageID[0],
+		// parent2 message ID given, first walk parent1 then parent2
+		if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID[0],
 			condition,
 			consumer,
 			// called on missing parents
@@ -210,7 +200,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:64])
 
 	if len(wfConf.MessagesIncluded) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedConflicting) - len(wfConf.MessagesExcludedZeroValue)) {
-		return nil, ErrIncludedTailsSumDoesntMatch
+		return nil, ErrIncludedMessagesSumDoesntMatch
 	}
 
 	return wfConf, nil

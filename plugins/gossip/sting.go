@@ -15,28 +15,28 @@ import (
 // sets up the event handlers which propagate STING messages.
 func addSTINGMessageEventHandlers(p *peer.Peer) {
 
-	p.Protocol.Events.Received[sting.MessageTypeTransaction].Attach(events.NewClosure(func(data []byte) {
-		p.Metrics.ReceivedTransactions.Inc()
-		metrics.SharedServerMetrics.Transactions.Inc()
-		msgProcessor.Process(p, sting.MessageTypeTransaction, data)
+	p.Protocol.Events.Received[sting.MessageTypeMessage].Attach(events.NewClosure(func(data []byte) {
+		p.Metrics.ReceivedMessages.Inc()
+		metrics.SharedServerMetrics.Messages.Inc()
+		msgProcessor.Process(p, sting.MessageTypeMessage, data)
 	}))
 
-	p.Protocol.Events.Sent[sting.MessageTypeTransaction].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[sting.MessageTypeMessage].Attach(events.NewClosure(func() {
 		p.Metrics.SentPackets.Inc()
-		p.Metrics.SentTransactions.Inc()
-		metrics.SharedServerMetrics.SentTransactions.Inc()
+		p.Metrics.SentMessages.Inc()
+		metrics.SharedServerMetrics.SentMessages.Inc()
 	}))
 
-	p.Protocol.Events.Received[sting.MessageTypeTransactionRequest].Attach(events.NewClosure(func(data []byte) {
-		p.Metrics.ReceivedTransactionRequests.Inc()
-		metrics.SharedServerMetrics.ReceivedTransactionRequests.Inc()
-		msgProcessor.Process(p, sting.MessageTypeTransactionRequest, data)
+	p.Protocol.Events.Received[sting.MessageTypeMessageRequest].Attach(events.NewClosure(func(data []byte) {
+		p.Metrics.ReceivedMessageRequests.Inc()
+		metrics.SharedServerMetrics.ReceivedMessageRequests.Inc()
+		msgProcessor.Process(p, sting.MessageTypeMessageRequest, data)
 	}))
 
-	p.Protocol.Events.Sent[sting.MessageTypeTransactionRequest].Attach(events.NewClosure(func() {
+	p.Protocol.Events.Sent[sting.MessageTypeMessageRequest].Attach(events.NewClosure(func() {
 		p.Metrics.SentPackets.Inc()
-		p.Metrics.SentTransactionRequests.Inc()
-		metrics.SharedServerMetrics.SentTransactionRequests.Inc()
+		p.Metrics.SentMessageRequests.Inc()
+		metrics.SharedServerMetrics.SentMessageRequests.Inc()
 	}))
 
 	p.Protocol.Events.Received[sting.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {

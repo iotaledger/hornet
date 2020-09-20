@@ -16,7 +16,7 @@ type ChildrenTraverser struct {
 	// stack holding the ordered msg to process
 	stack *list.List
 
-	// discovers map with already found transactions
+	// discovers map with already found messages
 	discovered map[string]struct{}
 
 	condition             Predicate
@@ -57,9 +57,9 @@ func (t *ChildrenTraverser) reset() {
 }
 
 // Traverse starts to traverse the children (future cone) of the given start message until
-// the traversal stops due to no more transactions passing the given condition.
+// the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startTxHash hornet.Hash) error {
+func (t *ChildrenTraverser) Traverse(startMessageID hornet.Hash) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -69,9 +69,9 @@ func (t *ChildrenTraverser) Traverse(startTxHash hornet.Hash) error {
 
 	defer t.cleanup(true)
 
-	t.stack.PushFront(startTxHash)
+	t.stack.PushFront(startMessageID)
 	if !t.walkAlreadyDiscovered {
-		t.discovered[string(startTxHash)] = struct{}{}
+		t.discovered[string(startMessageID)] = struct{}{}
 	}
 
 	for t.stack.Len() > 0 {
@@ -95,19 +95,19 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentTxHash := ele.Value.(hornet.Hash)
+	currentMessageID := ele.Value.(hornet.Hash)
 
 	// remove the message from the stack
 	t.stack.Remove(ele)
 
-	cachedMsgMeta, exists := t.cachedMsgMetas[string(currentTxHash)]
+	cachedMsgMeta, exists := t.cachedMsgMetas[string(currentMessageID)]
 	if !exists {
-		cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(currentTxHash) // meta +1
+		cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(tangle.ErrMessageNotFound, "hash: %s", currentTxHash.Hex())
+			return errors.Wrapf(tangle.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
 		}
-		t.cachedMsgMetas[string(currentTxHash)] = cachedMsgMeta
+		t.cachedMsgMetas[string(currentMessageID)] = cachedMsgMeta
 	}
 
 	// check condition to decide if msg should be consumed and traversed
@@ -130,18 +130,18 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	for _, childHash := range tangle.GetChildrenMessageIDs(currentTxHash) {
+	for _, childMessageID := range tangle.GetChildrenMessageIDs(currentMessageID) {
 		if !t.walkAlreadyDiscovered {
-			if _, childDiscovered := t.discovered[string(childHash)]; childDiscovered {
+			if _, childDiscovered := t.discovered[string(childMessageID)]; childDiscovered {
 				// child was already discovered
 				continue
 			}
 
-			t.discovered[string(childHash)] = struct{}{}
+			t.discovered[string(childMessageID)] = struct{}{}
 		}
 
 		// traverse the child
-		t.stack.PushBack(childHash)
+		t.stack.PushBack(childMessageID)
 	}
 
 	return nil

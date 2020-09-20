@@ -73,7 +73,7 @@ func runRequestWorkers() {
 							return true
 						}
 
-						helpers.SendTransactionRequest(p, r.Hash)
+						helpers.SendMessageRequest(p, r.MessageID)
 						requested = true
 						return false
 					})
@@ -88,7 +88,7 @@ func runRequestWorkers() {
 								return true
 							}
 
-							helpers.SendTransactionRequest(p, r.Hash)
+							helpers.SendMessageRequest(p, r.MessageID)
 							return true
 						})
 					}
@@ -114,19 +114,19 @@ func enqueueAndSignal(r *rqueue.Request) bool {
 	return true
 }
 
-// Request enqueues a request to the request queue for the given transaction if it isn't a solid entry point
+// Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
-func Request(hash hornet.Hash, msIndex milestone.Index, preventDiscard ...bool) bool {
-	if tangle.SolidEntryPointsContain(hash) {
+func Request(messageID hornet.Hash, msIndex milestone.Index, preventDiscard ...bool) bool {
+	if tangle.SolidEntryPointsContain(messageID) {
 		return false
 	}
 
-	if tangle.ContainsMessage(hash) {
+	if tangle.ContainsMessage(messageID) {
 		return false
 	}
 
 	r := &rqueue.Request{
-		Hash:           hash,
+		MessageID:      messageID,
 		MilestoneIndex: msIndex,
 	}
 	if len(preventDiscard) > 0 {
@@ -135,24 +135,24 @@ func Request(hash hornet.Hash, msIndex milestone.Index, preventDiscard ...bool) 
 	return enqueueAndSignal(r)
 }
 
-// RequestMultiple works like Request but takes multiple transaction hashes.
-func RequestMultiple(hashes hornet.Hashes, msIndex milestone.Index, preventDiscard ...bool) int {
+// RequestMultiple works like Request but takes multiple message IDs.
+func RequestMultiple(messageIDs hornet.Hashes, msIndex milestone.Index, preventDiscard ...bool) int {
 	requested := 0
-	for _, hash := range hashes {
-		if Request(hash, msIndex, preventDiscard...) {
+	for _, messageID := range messageIDs {
+		if Request(messageID, msIndex, preventDiscard...) {
 			requested++
 		}
 	}
 	return requested
 }
 
-// RequestParents enqueues requests for the parents of the given transaction to the request queue, if the
-// given transaction is not a solid entry point and neither its parents are and also not in the database.
+// RequestParents enqueues requests for the parents of the given message to the request queue, if the
+// given message is not a solid entry point and neither its parents are and also not in the database.
 func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
 	cachedMsg.ConsumeMetadata(func(metadata *hornet.MessageMetadata) {
-		txHash := metadata.GetMessageID()
+		messageID := metadata.GetMessageID()
 
-		if tangle.SolidEntryPointsContain(txHash) {
+		if tangle.SolidEntryPointsContain(messageID) {
 			return
 		}
 
@@ -163,7 +163,7 @@ func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, pr
 	})
 }
 
-// RequestMilestoneParents enqueues requests for the parents of the given milestone bundle to the request queue,
+// RequestMilestoneParents enqueues requests for the parents of the given milestone to the request queue,
 // if the parents are not solid entry points and not already in the database.
 func RequestMilestoneParents(cachedMilestone *tangle.CachedMilestone) bool {
 	defer cachedMilestone.Release(true) // message -1
@@ -201,10 +201,10 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 			log.Panicf("milestone %d wasn't found", ms)
 		}
 
-		msHash := cachedMs.GetMilestone().MessageID
+		milestoneMessageID := cachedMs.GetMilestone().MessageID
 		cachedMs.Release(true) // message -1
 
-		dag.TraverseParents(msHash,
+		dag.TraverseParents(milestoneMessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
@@ -219,8 +219,8 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 				return nil
 			},
 			// called on missing parents
-			func(parentHash hornet.Hash) error {
-				Request(parentHash, ms, preventDiscard...)
+			func(parentMessageID hornet.Hash) error {
+				Request(parentMessageID, ms, preventDiscard...)
 				return nil
 			},
 			// called on solid entry points

@@ -36,7 +36,7 @@ func MessageConfirmedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64))
 }
 
-// CachedMessage contains two cached objects, one for transaction data and one for metadata.
+// CachedMessage contains two cached objects, one for message data and one for metadata.
 type CachedMessage struct {
 	msg      objectstorage.CachedObject
 	metadata objectstorage.CachedObject
@@ -218,20 +218,20 @@ func GetCachedMessageMetadataOrNil(messageID hornet.Hash) *CachedMetadata {
 }
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func GetStoredMetadataOrNil(txHash hornet.Hash) *hornet.MessageMetadata {
-	storedMeta := metadataStorage.LoadObjectFromStore(txHash)
+func GetStoredMetadataOrNil(messageID hornet.Hash) *hornet.MessageMetadata {
+	storedMeta := metadataStorage.LoadObjectFromStore(messageID)
 	if storedMeta == nil {
 		return nil
 	}
 	return storedMeta.(*hornet.MessageMetadata)
 }
 
-// ContainsMessage returns if the given transaction exists in the cache/persistence layer.
+// ContainsMessage returns if the given message exists in the cache/persistence layer.
 func ContainsMessage(messageID hornet.Hash) bool {
 	return messagesStorage.Contains(messageID)
 }
 
-// MessageExistsInStore returns if the given transaction exists in the persistence layer.
+// MessageExistsInStore returns if the given message exists in the persistence layer.
 func MessageExistsInStore(messageID hornet.Hash) bool {
 	return messagesStorage.ObjectExistsInStore(messageID)
 }

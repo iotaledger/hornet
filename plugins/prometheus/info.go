@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	infoApp                   *prometheus.GaugeVec
-	infoMilestone             *prometheus.GaugeVec
-	infoMilestoneIndex        prometheus.Gauge
-	infoSolidMilestone        *prometheus.GaugeVec
-	infoSolidMilestoneIndex   prometheus.Gauge
-	infoSnapshotIndex         prometheus.Gauge
-	infoPruningIndex          prometheus.Gauge
-	infoTips                  prometheus.Gauge
-	infoTransactionsToRequest prometheus.Gauge
+	infoApp                 *prometheus.GaugeVec
+	infoMilestone           *prometheus.GaugeVec
+	infoMilestoneIndex      prometheus.Gauge
+	infoSolidMilestone      *prometheus.GaugeVec
+	infoSolidMilestoneIndex prometheus.Gauge
+	infoSnapshotIndex       prometheus.Gauge
+	infoPruningIndex        prometheus.Gauge
+	infoTips                prometheus.Gauge
+	infoMessagesToRequest   prometheus.Gauge
 )
 
 func init() {
@@ -35,7 +35,7 @@ func init() {
 			Name: "iota_info_latest_milestone",
 			Help: "Latest milestone.",
 		},
-		[]string{"hash", "index"},
+		[]string{"messageID", "index"},
 	)
 	infoMilestoneIndex = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_info_latest_milestone_index",
@@ -46,7 +46,7 @@ func init() {
 			Name: "iota_info_latest_solid_milestone",
 			Help: "Latest solid milestone.",
 		},
-		[]string{"hash", "index"},
+		[]string{"messageID", "index"},
 	)
 	infoSolidMilestoneIndex = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_info_latest_solid_milestone_index",
@@ -64,8 +64,8 @@ func init() {
 		Name: "iota_info_tips",
 		Help: "Number of tips.",
 	})
-	infoTransactionsToRequest = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_info_transactions_to_request",
+	infoMessagesToRequest = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_info_messages_to_request",
 		Help: "Number of messages to request.",
 	})
 
@@ -79,7 +79,7 @@ func init() {
 	registry.MustRegister(infoSnapshotIndex)
 	registry.MustRegister(infoPruningIndex)
 	registry.MustRegister(infoTips)
-	registry.MustRegister(infoTransactionsToRequest)
+	registry.MustRegister(infoMessagesToRequest)
 
 	addCollect(collectInfo)
 }
@@ -91,7 +91,7 @@ func collectInfo() {
 	infoMilestone.Reset()
 	infoMilestone.WithLabelValues(hornet.NullMessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
 
-	// Latest milestone hash
+	// Latest milestone message ID
 	cachedLatestMilestone := tangle.GetCachedMilestoneOrNil(lmi)
 	if cachedLatestMilestone != nil {
 		infoMilestone.Reset()
@@ -105,7 +105,7 @@ func collectInfo() {
 	infoSolidMilestone.Reset()
 	infoSolidMilestone.WithLabelValues(hornet.NullMessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
 
-	// Solid milestone hash
+	// Solid milestone message ID
 	cachedSolidMilestone := tangle.GetCachedMilestoneOrNil(smi)
 	if cachedSolidMilestone != nil {
 		infoSolidMilestone.Reset()
@@ -123,7 +123,7 @@ func collectInfo() {
 	// Tips
 	infoTips.Set(0)
 
-	// Transactions to request
+	// Messages to request
 	queued, pending, _ := gossip.RequestQueue().Size()
-	infoTransactionsToRequest.Set(float64(queued + pending))
+	infoMessagesToRequest.Set(float64(queued + pending))
 }

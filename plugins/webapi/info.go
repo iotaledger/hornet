@@ -16,7 +16,7 @@ func init() {
 func getNodeAPIConfiguration(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	result := GetNodeAPIConfigurationReturn{
-		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions),
+		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindMessages),
 		MaxRequestsList:     config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxRequestsList),
 		MaxGetTrytes:        config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes),
 		MaxBodyLength:       config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxBodyLengthBytes),

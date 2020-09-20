@@ -28,7 +28,7 @@ const (
 func (te *TestEnvironment) configureCoordinator() {
 
 	storeMessageFunc := func(msg *tangle.Message, isMilestone bool) error {
-		cachedMessage := te.StoreMessage(msg, true) // no need to release, since we store all the bundles for later cleanup
+		cachedMessage := te.StoreMessage(msg, true) // no need to release, since we remember all the messages for later cleanup
 
 		if isMilestone {
 			tangle.SetLatestMilestoneIndex(cachedMessage.GetMessage().GetMilestoneIndex())
@@ -42,9 +42,6 @@ func (te *TestEnvironment) configureCoordinator() {
 	require.NoError(te.testState, err)
 	require.NotNil(te.testState, te.coo)
 
-	err := te.coo.InitMerkleTree(fmt.Sprintf("%s/pkg/testsuite/assets/coordinator.tree", searchProjectRootFolder()), cooAddress)
-	require.NoError(te.testState, err)
-
 	te.coo.InitState(true, 0)
 
 	// save snapshot info
@@ -53,10 +50,10 @@ func (te *TestEnvironment) configureCoordinator() {
 	// configure Milestones
 	tangle.ConfigureMilestones(hornet.HashFromAddressTrytes(cooAddress), int(cooSecLevel), merkleTreeDepth, merkleHashFunc)
 
-	milestoneHash, err := te.coo.Bootstrap()
+	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.testState, err)
 
-	te.lastMilestoneHash = milestoneHash
+	te.lastMilestoneMessageID = milestoneMessageID
 
 	ms := tangle.GetCachedMilestoneOrNil(1)
 	require.NotNil(te.testState, ms)
@@ -87,10 +84,10 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.Hash, create
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
-	milestoneHash, noncriticalErr, criticalErr := te.coo.IssueMilestone(te.lastMilestoneHash, tip)
+	milestoneMessageID, noncriticalErr, criticalErr := te.coo.IssueMilestone(te.lastMilestoneMessageID, tip)
 	require.NoError(te.testState, noncriticalErr)
 	require.NoError(te.testState, criticalErr)
-	te.lastMilestoneHash = milestoneHash
+	te.lastMilestoneMessageID = milestoneMessageID
 
 	te.VerifyLMI(currentIndex + 1)
 

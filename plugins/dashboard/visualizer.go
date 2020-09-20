@@ -32,18 +32,18 @@ type vertex struct {
 	IsTip            bool   `json:"is_tip"`
 }
 
-// metainfo signals that metadata of a given transaction changed.
+// metainfo signals that metadata of a given message changed.
 type metainfo struct {
 	ID string `json:"id"`
 }
 
-// confirmationinfo signals confirmation of a milestone tail msg with a list of exluded msgs in the past cone.
+// confirmationinfo signals confirmation of a milestone msg with a list of exluded msgs in the past cone.
 type confirmationinfo struct {
 	ID          string   `json:"id"`
 	ExcludedIDs []string `json:"excluded_ids"`
 }
 
-// tipinfo holds information about whether a given transaction is a tip or not.
+// tipinfo holds information about whether a given message is a tip or not.
 type tipinfo struct {
 	ID    string `json:"id"`
 	IsTip bool   `json:"is_tip"`
@@ -51,7 +51,7 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewTransaction := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *tanglePackage.Message, metadata *hornet.MessageMetadata) { // msg -1
 			if !tanglemodel.IsNodeSyncedWithThreshold() {
 				return
@@ -74,7 +74,7 @@ func runVisualizer() {
 		})
 	})
 
-	onTransactionSolid := events.NewClosure(func(txHash hornet.Hash) {
+	onMessageSolid := events.NewClosure(func(messageID hornet.Hash) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -83,7 +83,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeSolidInfo,
 				Data: &metainfo{
-					ID: txHash.Hex()[:VisualizerIdLength],
+					ID: messageID.Hex()[:VisualizerIdLength],
 				},
 			},
 		)
@@ -107,7 +107,7 @@ func runVisualizer() {
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointTransaction := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
+	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.Hash) {
 		if !tanglemodel.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -116,7 +116,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: txHash.Hex()[:VisualizerIdLength],
+					ID: messageID.Hex()[:VisualizerIdLength],
 				},
 			},
 		)
@@ -128,15 +128,15 @@ func runVisualizer() {
 		}
 
 		var excludedIDs []string
-		for _, txHash := range confirmation.Mutations.MessagesExcludedConflicting {
-			excludedIDs = append(excludedIDs, txHash.Hex()[:VisualizerIdLength])
+		for _, messageID := range confirmation.Mutations.MessagesExcludedConflicting {
+			excludedIDs = append(excludedIDs, messageID.Hex()[:VisualizerIdLength])
 		}
 
 		hub.BroadcastMsg(
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneHash.Hex()[:VisualizerIdLength],
+					ID:          confirmation.MilestoneMessageID.Hex()[:VisualizerIdLength],
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -176,15 +176,15 @@ func runVisualizer() {
 	})
 
 	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTransaction)
-		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTransaction)
-		tangle.Events.MessageSolid.Attach(onTransactionSolid)
-		defer tangle.Events.MessageSolid.Detach(onTransactionSolid)
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
+		tangle.Events.MessageSolid.Attach(onMessageSolid)
+		defer tangle.Events.MessageSolid.Detach(onMessageSolid)
 		tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
 		defer tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
 		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
-			cooEvents.IssuedCheckpointTransaction.Attach(onIssuedCheckpointTransaction)
-			defer cooEvents.IssuedCheckpointTransaction.Detach(onIssuedCheckpointTransaction)
+			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
+			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
 		}
 		tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 		defer tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)

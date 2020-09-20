@@ -37,7 +37,7 @@ const (
 	MsgTypeSyncStatus byte = iota
 	// MsgTypeNodeStatus is the type of the NodeStatus message.
 	MsgTypeNodeStatus
-	// MsgTypeTPSMetric is the type of the transactions per second (TPS) metric message.
+	// MsgTypeTPSMetric is the type of the messages per second (MPS) metric message.
 	MsgTypeTPSMetric
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
@@ -176,7 +176,7 @@ func run(_ *node.Plugin) {
 
 	// run the message live feed
 	runLiveFeed()
-	// run the visualizer transaction feed
+	// run the visualizer message feed
 	runVisualizer()
 	// run the tipselection feed
 	runTipSelMetricWorker()
@@ -186,7 +186,7 @@ func run(_ *node.Plugin) {
 	runSpammerMetricWorker()
 }
 
-func getMilestoneTailHash(index milestone.Index) hornet.Hash {
+func getMilestoneMessageID(index milestone.Index) hornet.Hash {
 	cachedMs := tangle.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
@@ -202,16 +202,16 @@ type Msg struct {
 	Data interface{} `json:"data"`
 }
 
-// LivefeedTransaction represents a transaction for the livefeed.
-type LivefeedTransaction struct {
-	MessageID string `json:"hash"`
+// LivefeedMessage represents a message for the livefeed.
+type LivefeedMessage struct {
+	MessageID string `json:"messageID"`
 	Value     int64  `json:"value"`
 }
 
 // LivefeedMilestone represents a milestone for the livefeed.
 type LivefeedMilestone struct {
-	Hash  string          `json:"hash"`
-	Index milestone.Index `json:"index"`
+	MessageID string          `json:"messageID"`
+	Index     milestone.Index `json:"index"`
 }
 
 // SyncStatus represents the node sync status.
@@ -243,21 +243,21 @@ type NodeStatus struct {
 
 // ServerMetrics are global metrics of the server.
 type ServerMetrics struct {
-	NumberOfAllTransactions        uint32 `json:"all_txs"`
-	NumberOfNewTransactions        uint32 `json:"new_txs"`
-	NumberOfKnownTransactions      uint32 `json:"known_txs"`
-	NumberOfInvalidTransactions    uint32 `json:"invalid_txs"`
-	NumberOfInvalidRequests        uint32 `json:"invalid_req"`
-	NumberOfReceivedTransactionReq uint32 `json:"rec_tx_req"`
-	NumberOfReceivedMilestoneReq   uint32 `json:"rec_ms_req"`
-	NumberOfReceivedHeartbeats     uint32 `json:"rec_heartbeat"`
-	NumberOfSentTransactions       uint32 `json:"sent_txs"`
-	NumberOfSentTransactionsReq    uint32 `json:"sent_tx_req"`
-	NumberOfSentMilestoneReq       uint32 `json:"sent_ms_req"`
-	NumberOfSentHeartbeats         uint32 `json:"sent_heartbeat"`
-	NumberOfDroppedSentPackets     uint32 `json:"dropped_sent_packets"`
-	NumberOfSentSpamTxsCount       uint32 `json:"sent_spam_txs"`
-	NumberOfValidatedBundles       uint32 `json:"validated_bundles"`
+	AllMessages          uint32 `json:"all_msgs"`
+	NewMessages          uint32 `json:"new_msgs"`
+	KnownMessages        uint32 `json:"known_msgs"`
+	InvalidMessages      uint32 `json:"invalid_msgs"`
+	InvalidRequests      uint32 `json:"invalid_req"`
+	ReceivedMessageReq   uint32 `json:"rec_msg_req"`
+	ReceivedMilestoneReq uint32 `json:"rec_ms_req"`
+	ReceivedHeartbeats   uint32 `json:"rec_heartbeat"`
+	SentMessages         uint32 `json:"sent_msgs"`
+	SentMessageReq       uint32 `json:"sent_msg_req"`
+	SentMilestoneReq     uint32 `json:"sent_ms_req"`
+	SentHeartbeats       uint32 `json:"sent_heartbeat"`
+	DroppedSentPackets   uint32 `json:"dropped_sent_packets"`
+	SentSpamMsgsCount    uint32 `json:"sent_spam_messages"`
+	ValidatedMessages    uint32 `json:"validated_messages"`
 }
 
 // MemMetrics represents memory metrics.
@@ -387,21 +387,21 @@ func currentNodeStatus() *NodeStatus {
 
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
-		NumberOfAllTransactions:        metrics.SharedServerMetrics.Transactions.Load(),
-		NumberOfNewTransactions:        metrics.SharedServerMetrics.NewTransactions.Load(),
-		NumberOfKnownTransactions:      metrics.SharedServerMetrics.KnownTransactions.Load(),
-		NumberOfInvalidTransactions:    metrics.SharedServerMetrics.InvalidTransactions.Load(),
-		NumberOfInvalidRequests:        metrics.SharedServerMetrics.InvalidRequests.Load(),
-		NumberOfReceivedTransactionReq: metrics.SharedServerMetrics.ReceivedTransactionRequests.Load(),
-		NumberOfReceivedMilestoneReq:   metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),
-		NumberOfReceivedHeartbeats:     metrics.SharedServerMetrics.ReceivedHeartbeats.Load(),
-		NumberOfSentTransactions:       metrics.SharedServerMetrics.SentTransactions.Load(),
-		NumberOfSentTransactionsReq:    metrics.SharedServerMetrics.SentTransactionRequests.Load(),
-		NumberOfSentMilestoneReq:       metrics.SharedServerMetrics.SentMilestoneRequests.Load(),
-		NumberOfSentHeartbeats:         metrics.SharedServerMetrics.SentHeartbeats.Load(),
-		NumberOfDroppedSentPackets:     metrics.SharedServerMetrics.DroppedMessages.Load(),
-		NumberOfSentSpamTxsCount:       metrics.SharedServerMetrics.SentSpamMessages.Load(),
-		NumberOfValidatedBundles:       metrics.SharedServerMetrics.ValidatedBundles.Load(),
+		AllMessages:          metrics.SharedServerMetrics.Messages.Load(),
+		NewMessages:          metrics.SharedServerMetrics.NewMessages.Load(),
+		KnownMessages:        metrics.SharedServerMetrics.KnownMessages.Load(),
+		InvalidMessages:      metrics.SharedServerMetrics.InvalidMessages.Load(),
+		InvalidRequests:      metrics.SharedServerMetrics.InvalidRequests.Load(),
+		ReceivedMessageReq:   metrics.SharedServerMetrics.ReceivedMessageRequests.Load(),
+		ReceivedMilestoneReq: metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:   metrics.SharedServerMetrics.ReceivedHeartbeats.Load(),
+		SentMessages:         metrics.SharedServerMetrics.SentMessages.Load(),
+		SentMessageReq:       metrics.SharedServerMetrics.SentMessageRequests.Load(),
+		SentMilestoneReq:     metrics.SharedServerMetrics.SentMilestoneRequests.Load(),
+		SentHeartbeats:       metrics.SharedServerMetrics.SentHeartbeats.Load(),
+		DroppedSentPackets:   metrics.SharedServerMetrics.DroppedMessages.Load(),
+		SentSpamMsgsCount:    metrics.SharedServerMetrics.SentSpamMessages.Load(),
+		ValidatedMessages:    metrics.SharedServerMetrics.ValidatedMessages.Load(),
 	}
 
 	// memory metrics

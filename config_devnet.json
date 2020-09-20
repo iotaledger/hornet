@@ -72,7 +72,7 @@
     "merkleTreeFilePath": "coordinator.tree",
     "intervalSeconds": 30,
     "checkpoints": {
-      "maxTrackedTails": 10000
+      "maxTrackedMessages": 10000
     },
     "tipsel": {
       "minHeaviestBranchUnconfirmedMessagesThreshold": 20,
@@ -97,8 +97,8 @@
     }
   },
   "tipsel": {
-    "maxDeltaTxYoungestRootSnapshotIndexToLSMI": 2,
-    "maxDeltaTxOldestRootSnapshotIndexToLSMI": 7,
+    "maxDeltaMsgYoungestConeRootIndexToLSMI": 2,
+    "maxDeltaMsgOldestConeRootIndexToLSMI": 7,
     "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
