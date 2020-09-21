@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20200928201937-b5c5df0302e3
 	github.com/dchest/blake2b v1.0.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -27,6 +28,7 @@ require (
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
+	github.com/luca-moser/iota v0.0.0-20200907161409-c2ea8722f631
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
 	github.com/muxxer/iota.go v1.0.0-beta.11.0.20200916213055-851daf436c69
