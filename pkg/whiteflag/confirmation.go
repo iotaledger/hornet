@@ -44,8 +44,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	if cachedMilestoneMessage == nil {
 		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.Hex())
 	}
-	// ToDo: Why does it panic in the storage layer if we uncomment this?
-	//defer cachedMilestoneMessage.Release(true)
+	defer cachedMilestoneMessage.Release(true)
 
 	if _, exists := cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())]; !exists {
 		// release the messages at the end to speed up calculation
