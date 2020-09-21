@@ -9,13 +9,12 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/batchhasher"
-
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/curl"
 
 	"go.uber.org/atomic"
 )
@@ -152,15 +151,26 @@ func (s *Spammer) doPow(b bundle.Bundle, trunk trinary.Hash, branch trinary.Hash
 		b[i].Nonce = nonce
 
 		// set new transaction hash
-		b[i].Hash = transactionHash(&b[i])
-		prev = b[i].Hash
+		hash, err := transactionHash(&b[i])
+		if err != nil {
+			return err
+		}
+
+		b[i].Hash = hash
+		prev = hash
 	}
 	return nil
 }
 
 // transactionHash makes a transaction hash from the given transaction.
-func transactionHash(t *transaction.Transaction) trinary.Hash {
-	trits, _ := transaction.TransactionToTrits(t)
-	hashTrits := batchhasher.CURLP81.Hash(trits)
-	return trinary.MustTritsToTrytes(hashTrits)
+func transactionHash(t *transaction.Transaction) (trinary.Hash, error) {
+	trits, err := transaction.TransactionToTrits(t)
+	if err != nil {
+		return "", err
+	}
+	hashTrits, err := curl.Hasher().Hash(trits)
+	if err != nil {
+		return "", err
+	}
+	return trinary.MustTritsToTrytes(hashTrits), nil
 }

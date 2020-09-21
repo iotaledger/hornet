@@ -13,9 +13,8 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/batchhasher"
-
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/plugins/curl"
 	"github.com/gohornet/hornet/plugins/pow"
 )
 
@@ -125,7 +124,13 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		// Calculate the transaction hash with the batched hasher
-		hashTrits := batchhasher.CURLP81.Hash(txTrits)
+		hashTrits, err := curl.Hasher().Hash(txTrits)
+		if err != nil {
+			e.Error = err.Error()
+			c.JSON(http.StatusInternalServerError, e)
+			return
+		}
+
 		txs[i].Hash = trinary.MustTritsToTrytes(hashTrits)
 
 		prev = txs[i].Hash

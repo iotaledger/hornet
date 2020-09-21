@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/batchhasher"
+	"github.com/gohornet/hornet/plugins/curl"
 )
 
 const (
@@ -89,7 +89,10 @@ func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Ha
 	// calculate the transaction hash with the batched hasher if not given
 	skipHashCalc := len(txHash) > 0
 	if !skipHashCalc {
-		hashTrits := batchhasher.CURLP81.Hash(txDataTrits)
+		hashTrits, err := curl.Hasher().Hash(txDataTrits)
+		if err != nil {
+			return nil, err
+		}
 		txHash = []trinary.Hash{trinary.MustTritsToTrytes(hashTrits)}
 	}
 

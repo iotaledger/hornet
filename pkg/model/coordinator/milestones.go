@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/encoding/b1t6"
@@ -18,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/curl"
 )
 
 // tagForIndex creates a tag for a specific index.
@@ -186,17 +186,27 @@ func doPow(tx *transaction.Transaction, mwm int, powHandler *pow.Handler) error 
 
 	tx.Nonce = nonce
 
-	// set new transaction hash
-	tx.Hash = transactionHash(tx)
+	hash, err := transactionHash(tx)
+	if err != nil {
+		return err
+	}
+
+	tx.Hash = hash
 
 	return nil
 }
 
 // transactionHash makes a transaction hash from the given transaction.
-func transactionHash(t *transaction.Transaction) trinary.Hash {
-	trits, _ := transaction.TransactionToTrits(t)
-	hashTrits := batchhasher.CURLP81.Hash(trits)
-	return trinary.MustTritsToTrytes(hashTrits)
+func transactionHash(t *transaction.Transaction) (trinary.Hash, error) {
+	trits, err := transaction.TransactionToTrits(t)
+	if err != nil {
+		return "", err
+	}
+	hashTrits, err := curl.Hasher().Hash(trits)
+	if err != nil {
+		return "", err
+	}
+	return trinary.MustTritsToTrytes(hashTrits), nil
 }
 
 // finalizeInsecure sets the bundle hash for all transactions in the bundle.
