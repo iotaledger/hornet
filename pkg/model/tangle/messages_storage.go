@@ -24,6 +24,10 @@ func MessageCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMsg *CachedMessage))(params[0].(*CachedMessage).Retain())
 }
 
+func MessageMetadataCaller(handler interface{}, params ...interface{}) {
+	handler.(func(cachedMsgMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain())
+}
+
 func MessageIDCaller(handler interface{}, params ...interface{}) {
 	handler.(func(messageID hornet.Hash))(params[0].(hornet.Hash))
 }

@@ -188,7 +188,7 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 
 // processes the given message request by parsing it and then replying to the peer with it.
 func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
-	if len(data) != 49 {
+	if len(data) != 32 {
 		return
 	}
 

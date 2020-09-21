@@ -1,5 +1,5 @@
 {
-  "useProfile": "auto",
+  "useProfile": "debug",
   "httpAPI": {
     "basicAuth": {
       "enabled": false,
@@ -134,7 +134,7 @@
     "cpuMaxUsage": 0.8,
     "mpsRateLimit": 5.0,
     "workers": 0,
-    "autostart": false
+    "autostart": true
   },
   "mqtt": {
     "config": "mqtt_config.json"

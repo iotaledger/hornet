@@ -10,6 +10,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -72,14 +73,14 @@ func run(_ *node.Plugin) {
 }
 
 func configureEvents() {
-	onMessageSolid = events.NewClosure(func(cachedMessage *tangle.CachedMessage) {
-		cachedMessage.ConsumeMessage(func(message *tangle.Message) { // message -1
+	onMessageSolid = events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
+		cachedMsgMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
 			if !tangle.IsNodeSyncedWithThreshold() {
 				return
 			}
 
-			TipSelector.AddTip(message)
+			TipSelector.AddTip(metadata)
 		})
 	})
 

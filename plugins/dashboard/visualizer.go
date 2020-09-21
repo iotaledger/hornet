@@ -7,8 +7,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	tanglePackage "github.com/gohornet/hornet/pkg/model/tangle"
-	tanglemodel "github.com/gohornet/hornet/pkg/model/tangle"
+	tanglepackage "github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -51,9 +50,9 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedMsg.ConsumeMessageAndMetadata(func(msg *tanglePackage.Message, metadata *hornet.MessageMetadata) { // msg -1
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglepackage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedMsg.ConsumeMessageAndMetadata(func(msg *tanglepackage.Message, metadata *hornet.MessageMetadata) { // msg -1
+			if !tanglepackage.IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -74,25 +73,28 @@ func runVisualizer() {
 		})
 	})
 
-	onMessageSolid := events.NewClosure(func(messageID hornet.Hash) {
-		if !tanglemodel.IsNodeSyncedWithThreshold() {
-			return
-		}
+	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tanglepackage.CachedMetadata) {
+		cachedMsgMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // metadata -1
 
-		hub.BroadcastMsg(
-			&Msg{
-				Type: MsgTypeSolidInfo,
-				Data: &metainfo{
-					ID: messageID.Hex()[:VisualizerIdLength],
+			if !tanglepackage.IsNodeSyncedWithThreshold() {
+				return
+			}
+
+			hub.BroadcastMsg(
+				&Msg{
+					Type: MsgTypeSolidInfo,
+					Data: &metainfo{
+						ID: cachedMsgMeta.GetMetadata().GetMessageID().Hex()[:VisualizerIdLength],
+					},
 				},
-			},
-		)
+			)
+		})
 	})
 
-	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *tanglePackage.CachedMilestone) {
+	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *tanglepackage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if !tanglemodel.IsNodeSyncedWithThreshold() {
+		if !tanglepackage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -108,7 +110,7 @@ func runVisualizer() {
 
 	// show checkpoints as milestones in the coordinator node
 	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.Hash) {
-		if !tanglemodel.IsNodeSyncedWithThreshold() {
+		if !tanglepackage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -123,7 +125,7 @@ func runVisualizer() {
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if !tanglemodel.IsNodeSyncedWithThreshold() {
+		if !tanglepackage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -144,7 +146,7 @@ func runVisualizer() {
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
-		if !tanglemodel.IsNodeSyncedWithThreshold() {
+		if !tanglepackage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -160,7 +162,7 @@ func runVisualizer() {
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		if !tanglemodel.IsNodeSyncedWithThreshold() {
+		if !tanglepackage.IsNodeSyncedWithThreshold() {
 			return
 		}
 

@@ -30,7 +30,7 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.Hash(data[:49]),
+		MessageID: hornet.Hash(data[:32]),
 	}, nil
 }
 
