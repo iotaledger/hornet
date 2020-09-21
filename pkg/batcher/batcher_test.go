@@ -50,7 +50,7 @@ func TestCancelJob(t *testing.T) {
 	resultChan := b.SubmitHash(nullTransactionTrits)
 	assert.NoError(t, b.Close())
 	r := <-resultChan
-	assert.Equal(t, batcher.ErrCancelled, r.Err)
+	assert.Equal(t, batcher.ErrCanceled, r.Err)
 }
 
 func TestCancelBatch(t *testing.T) {
@@ -67,9 +67,9 @@ func TestCancelBatch(t *testing.T) {
 	for i := 0; i < b.WorkerCount()*b.BatchSize(); i++ {
 		assert.NoError(t, (<-results[i]).Err)
 	}
-	// the final batch should be cancelled
+	// the final batch should be canceled
 	for i := b.WorkerCount() * b.BatchSize(); i < hashCount; i++ {
-		assert.Equal(t, batcher.ErrCancelled, (<-results[i]).Err)
+		assert.Equal(t, batcher.ErrCanceled, (<-results[i]).Err)
 	}
 }
 

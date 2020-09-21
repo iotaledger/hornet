@@ -14,8 +14,8 @@ import (
 var (
 	// ErrClosed is returned when a job is submitted after Close was called.
 	ErrClosed = errors.New("use of closed batcher")
-	// ErrCancelled is returned when a submitted job could not be processed before Close was called.
-	ErrCancelled = errors.New("processing cancelled")
+	// ErrCanceled is returned when a submitted job could not be processed before Close was called.
+	ErrCanceled = errors.New("processing canceled")
 )
 
 const (
@@ -80,7 +80,7 @@ func (c *Curl) BatchSize() int {
 }
 
 // Close stops the batched Curl hasher.
-// It blocks until all remaining jobs have been processed or cancelled. Successive cals of Close are ignored.
+// It blocks until all remaining jobs have been processed or canceled. Successive cals of Close are ignored.
 func (c *Curl) Close() error {
 	c.closeOnce.Do(func() {
 		close(c.closing)
@@ -179,7 +179,7 @@ Loop:
 
 func (c *Curl) cancel(batch []job) {
 	for i := range batch {
-		batch[i].result <- CurlResult{nil, ErrCancelled}
+		batch[i].result <- CurlResult{nil, ErrCanceled}
 	}
 }
 
