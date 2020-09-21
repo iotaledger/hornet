@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/luca-moser/iota"
+	"github.com/iotaledger/iota.go"
 )
 
 const (
@@ -101,7 +101,7 @@ type FileHeader struct {
 	// The milestone index for which this local snapshot was taken.
 	MilestoneIndex uint64
 	// The hash of the milestone corresponding to the given milestone index.
-	MilestoneHash [iota.MilestoneHashLength]byte
+	MilestoneHash [iota.MilestonePayloadHashLength]byte
 	// The time at which the local snapshot was taken.
 	Timestamp uint64
 	// The count of solid entry points.
@@ -161,7 +161,7 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, header *FileHeader,
 	}
 
 	// seek back to counts version+timestamp+msindex+mshash and write element counts
-	if _, err := writeSeeker.Seek(iota.OneByte+iota.UInt64ByteSize+iota.UInt64ByteSize+iota.MilestoneHashLength, io.SeekStart); err != nil {
+	if _, err := writeSeeker.Seek(iota.OneByte+iota.UInt64ByteSize+iota.UInt64ByteSize+iota.MilestonePayloadHashLength, io.SeekStart); err != nil {
 		return err
 	}
 

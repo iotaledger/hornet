@@ -9,7 +9,7 @@ import (
 
 	"github.com/blang/vfs/memfs"
 	"github.com/gohornet/hornet/plugins/snapshot"
-	"github.com/luca-moser/iota"
+	"github.com/iotaledger/iota.go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,7 +35,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 	rand.Seed(346587549867)
 
 	originHeader := &snapshot.FileHeader{
-		Version: iota.LSFormatVersion, MilestoneIndex: uint64(rand.Intn(10000)),
+		Version: snapshot.SupportedFormatVersion, MilestoneIndex: uint64(rand.Intn(10000)),
 		MilestoneHash: rand32ByteHash(), Timestamp: uint64(time.Now().Unix()),
 	}
 

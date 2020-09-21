@@ -28,7 +28,6 @@ require (
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
-	github.com/luca-moser/iota v0.0.0-20200907161409-c2ea8722f631
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
 	github.com/muxxer/iota.go v1.0.0-beta.11.0.20200916213055-851daf436c69
