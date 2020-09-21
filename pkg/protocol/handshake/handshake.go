@@ -26,12 +26,12 @@ var (
 	// Made up of:
 	// - own server socket port (2 bytes)
 	// - time at which the packet was sent (8 bytes)
-	// - own used coordinator public key (64 bytes)
+	// - own used coordinator public key (32 bytes)
 	// - own used MWM (1 byte)
 	// - version (2 byte)
 	HandshakeMessageDefinition = &message.Definition{
 		ID:             MessageTypeHandshake,
-		MaxBytesLength: 2 + 8 + 64 + 1 + 2,
+		MaxBytesLength: 2 + 8 + ed25519.PublicKeySize + 1 + 2,
 		VariableLength: false,
 	}
 )
@@ -96,7 +96,7 @@ func NewHandshakeMsg(ownVersion uint16, ownSourcePort uint16, ownCooPublicKey ed
 func ParseHandshake(msg []byte) (*Handshake, error) {
 	var serverSocketPort uint16
 	var sentTimestamp uint64
-	var cooPublicKey ed25519.PublicKey
+	var cooPublicKey = make([]byte, ed25519.PublicKeySize)
 	var mwm byte
 	var version uint16
 
@@ -110,7 +110,7 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 		return nil, err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &cooPublicKey); err != nil {
+	if _, err := r.Read(cooPublicKey); err != nil {
 		return nil, err
 	}
 

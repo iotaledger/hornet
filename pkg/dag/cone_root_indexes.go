@@ -21,12 +21,12 @@ func UpdateOutdatedConeRootIndexes(outdatedMessageIDs hornet.Hashes, lsmi milest
 }
 
 // GetConeRootIndexes searches the cone root indexes for a given message.
-func GetConeRootIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index) {
-	defer cachedMessageMetadata.Release(true) // meta -1
+func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index) {
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	// if the msg already contains recent (calculation index matches LSMI)
 	// information about ycri and ocri, return that info
-	ycri, ocri, ci := cachedMessageMetadata.GetMetadata().GetConeRootIndexes()
+	ycri, ocri, ci := cachedMsgMeta.GetMetadata().GetConeRootIndexes()
 	if ci == lsmi {
 		return ycri, ocri
 	}
@@ -47,13 +47,13 @@ func GetConeRootIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi miles
 	// are no solid entry points and have no recent calculation index
 	var outdatedMessageIDs hornet.Hashes
 
-	startMessageID := cachedMessageMetadata.GetMetadata().GetMessageID()
+	startMessageID := cachedMsgMeta.GetMetadata().GetMessageID()
 
 	indexesValid := true
 
 	// traverse the parents of this message to calculate the cone root indexes for this message.
 	// this walk will also collect all outdated messages in the same cone, to update them afterwards.
-	if err := TraverseParents(cachedMessageMetadata.GetMetadata().GetMessageID(),
+	if err := TraverseParents(cachedMsgMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
@@ -117,7 +117,7 @@ func GetConeRootIndexes(cachedMessageMetadata *tangle.CachedMetadata, lsmi miles
 	}
 
 	// set the new cone root indexes in the metadata of the message
-	cachedMessageMetadata.GetMetadata().SetConeRootIndexes(youngestConeRootIndex, oldestConeRootIndex, lsmi)
+	cachedMsgMeta.GetMetadata().SetConeRootIndexes(youngestConeRootIndex, oldestConeRootIndex, lsmi)
 
 	return youngestConeRootIndex, oldestConeRootIndex
 }

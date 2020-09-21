@@ -273,22 +273,24 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 	wgMessageProcessed.Add(1)
 
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
-		messageIDLock.Lock()
-		defer messageIDLock.Unlock()
+		cachedMsgMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // metadata -1
+			messageIDLock.Lock()
+			defer messageIDLock.Unlock()
 
-		if messageID == nil {
-			return
-		}
+			if messageID == nil {
+				return
+			}
 
-		if !bytes.Equal(messageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
-			return
-		}
+			if !bytes.Equal(messageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+				return
+			}
 
-		// message is solid
-		wgMessageProcessed.Done()
+			// message is solid
+			wgMessageProcessed.Done()
 
-		// we have to set the messageID to nil, because the event may be fired several times
-		messageID = nil
+			// we have to set the messageID to nil, because the event may be fired several times
+			messageID = nil
+		})
 	})
 
 	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)

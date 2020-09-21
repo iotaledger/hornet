@@ -20,7 +20,7 @@ var Events = pluginEvents{
 	ReceivedNewMessage:            events.NewEvent(tangle.NewMessageCaller),
 	ReceivedKnownMessage:          events.NewEvent(tangle.MessageCaller),
 	ProcessedMessage:              events.NewEvent(tangle.MessageIDCaller),
-	MessageSolid:                  events.NewEvent(tangle.MessageCaller),
+	MessageSolid:                  events.NewEvent(tangle.MessageMetadataCaller),
 	MessageConfirmed:              events.NewEvent(tangle.MessageConfirmedCaller),
 	MessageStored:                 events.NewEvent(tangle.MessageCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.MilestoneCaller),

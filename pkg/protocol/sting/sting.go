@@ -62,7 +62,7 @@ var (
 	// MessageMessageDefinition defines a message message's format.
 	MessageMessageDefinition = &message.Definition{
 		ID:             MessageTypeMessage,
-		MaxBytesLength: 4096, // ToDo
+		MaxBytesLength: 1024, // ToDo
 		VariableLength: true,
 	}
 
@@ -91,15 +91,15 @@ var (
 )
 
 // NewMessageMsg creates a new message message.
-func NewMessageMsg(txData []byte) ([]byte, error) {
-	msgBytesLength := uint16(len(txData))
+func NewMessageMsg(msgData []byte) ([]byte, error) {
+	msgBytesLength := uint16(len(msgData))
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+msgBytesLength))
 
 	if err := tlv.WriteHeader(buf, MessageTypeMessage, msgBytesLength); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, txData); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, msgData); err != nil {
 		return nil, err
 	}
 

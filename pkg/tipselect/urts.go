@@ -165,11 +165,11 @@ func New(maxDeltaMsgYoungestConeRootIndexToLSMI int,
 }
 
 // AddTip adds the given message as a tip.
-func (ts *TipSelector) AddTip(message *tangle.Message) {
+func (ts *TipSelector) AddTip(messageMeta *hornet.MessageMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	messageID := message.GetMessageID()
+	messageID := messageMeta.GetMessageID()
 
 	if _, exists := ts.nonLazyTipsMap[string(messageID)]; exists {
 		// tip already exists
@@ -211,8 +211,8 @@ func (ts *TipSelector) AddTip(message *tangle.Message) {
 	// the parents are the messages this tip approves
 	// remove them from the tip pool
 	parentMessageIDs := map[string]struct{}{
-		string(message.GetParent1MessageID()): {},
-		string(message.GetParent2MessageID()): {},
+		string(messageMeta.GetParent1MessageID()): {},
+		string(messageMeta.GetParent2MessageID()): {},
 	}
 
 	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAgeSeconds time.Duration) bool {

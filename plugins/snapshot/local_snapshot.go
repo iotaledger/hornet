@@ -374,7 +374,7 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 		return err
 	}
 
-	if err = binary.Write(buf, binary.LittleEndian, ls.milestoneMessageID[:49]); err != nil {
+	if err = binary.Write(buf, binary.LittleEndian, ls.milestoneMessageID[:32]); err != nil {
 		return err
 	}
 
@@ -401,7 +401,7 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 		default:
 		}
 
-		if err = binary.Write(buf, binary.LittleEndian, hornet.Hash(messageID)[:49]); err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, hornet.Hash(messageID)[:32]); err != nil {
 			return err
 		}
 
@@ -417,7 +417,7 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 		default:
 		}
 
-		if err = binary.Write(buf, binary.LittleEndian, hornet.Hash(addr)[:49]); err != nil {
+		if err = binary.Write(buf, binary.LittleEndian, hornet.Hash(addr)[:32]); err != nil {
 			return err
 		}
 
@@ -467,7 +467,7 @@ func LoadSnapshotFromFile(filePath string) error {
 			return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", fileVersion, SupportedLocalSnapshotFileVersions)
 		}
 
-		milestoneMessageID := make(hornet.Hash, 49)
+		milestoneMessageID := make(hornet.Hash, 32)
 		if _, err := file.Read(milestoneMessageID); err != nil {
 			return err
 		}
@@ -515,7 +515,7 @@ func LoadSnapshotFromFile(filePath string) error {
 			}
 
 			var val int32
-			messageIDBuf := make(hornet.Hash, 49)
+			messageIDBuf := make(hornet.Hash, 32)
 
 			if err := binary.Read(file, binary.LittleEndian, messageIDBuf); err != nil {
 				return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
@@ -539,7 +539,7 @@ func LoadSnapshotFromFile(filePath string) error {
 			}
 
 			var val int32
-			messageIDBuf := make(hornet.Hash, 49)
+			messageIDBuf := make(hornet.Hash, 32)
 
 			if err := binary.Read(file, binary.LittleEndian, messageIDBuf); err != nil {
 				return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
@@ -562,7 +562,7 @@ func LoadSnapshotFromFile(filePath string) error {
 			}
 
 			var val uint64
-			addrBuf := make(hornet.Hash, 49)
+			addrBuf := make(hornet.Hash, 32)
 
 			if err := binary.Read(file, binary.LittleEndian, addrBuf); err != nil {
 				return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)

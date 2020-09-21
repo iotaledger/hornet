@@ -44,6 +44,8 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	if cachedMilestoneMessage == nil {
 		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.Hex())
 	}
+	// ToDo: Why does it panic in the storage layer if we uncomment this?
+	//defer cachedMilestoneMessage.Release(true)
 
 	if _, exists := cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())]; !exists {
 		// release the messages at the end to speed up calculation
@@ -67,7 +69,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 
 	ts := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(cachedMessageMetas, cachedMessages, tangle.GetMilestoneMerkleHashFunc(), message.GetMessageID())
+	mutations, err := ComputeWhiteFlagMutations(cachedMessageMetas, cachedMessages, tangle.GetMilestoneMerkleHashFunc(), message.GetParent1MessageID(), message.GetParent2MessageID())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)

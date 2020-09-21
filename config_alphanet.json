@@ -1,5 +1,5 @@
 {
-  "useProfile": "auto",
+  "useProfile": "debug",
   "httpAPI": {
     "basicAuth": {
       "enabled": false,
@@ -114,7 +114,7 @@
     "alias": "",
     "showAliasInGetNodeInfo": false,
     "disablePlugins": ["Autopeering"],
-    "enablePlugins": []
+    "enablePlugins": ["Spammer", "Coordinator"]
   },
   "logger": {
     "level": "debug",
@@ -132,9 +132,9 @@
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 0.0,
+    "mpsRateLimit": 5.0,
     "workers": 0,
-    "autostart": false
+    "autostart": true
   },
   "mqtt": {
     "config": "mqtt_config.json"
