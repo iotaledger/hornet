@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/iotaledger/iota.go/encoding/t5b1"
 	_ "golang.org/x/crypto/blake2b" // import implementation
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/iotaledger/iota.go/encoding/t5b1"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/whiteflag"

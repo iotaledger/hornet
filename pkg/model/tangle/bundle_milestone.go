@@ -57,7 +57,7 @@ func (bundle *Bundle) GetMilestoneMerkleTreeHash() ([]byte, error) {
 	auditPathTrytesLen := int(coordinatorMerkleTreeDepth) * consts.HashTrytesSize
 
 	txSig := headTx.GetTransaction().Tx.SignatureMessageFragment
-	if auditPathTrytesLen+hashTrytesLen > len(txSig) || auditPathTrytesLen > len(txSig) {
+	if auditPathTrytesLen >= len(txSig) || auditPathTrytesLen+hashTrytesLen > len(txSig) {
 		return nil, ErrInvalidAuditPathLength
 	}
 	return b1t6.DecodeTrytes(txSig[auditPathTrytesLen : auditPathTrytesLen+hashTrytesLen])

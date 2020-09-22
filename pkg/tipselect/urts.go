@@ -52,7 +52,7 @@ const (
 var (
 	// ErrNoTipsAvailable is returned when no tips are available in the node.
 	ErrNoTipsAvailable = errors.New("no tips available")
-	// ErrTipLazy is returned when the choosen tip was lazy already.
+	// ErrTipLazy is returned when the chosen tip was lazy already.
 	ErrTipLazy = errors.New("tip already lazy")
 )
 

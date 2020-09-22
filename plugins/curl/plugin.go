@@ -1,7 +1,6 @@
 package curl
 
 import (
-	"runtime"
 	"sync"
 	"time"
 
@@ -30,8 +29,9 @@ var (
 func Hasher() *batcher.Curl {
 	hasherOnce.Do(func() {
 		// create a new batched Curl instance to compute transaction hashes
-		// TODO: probably >1 worker is not helping; using exactly one would reduce memory and overhead
-		hasher = batcher.NewCurlP81(inputSize, timeout, runtime.NumCPU())
+		// on average amd64 hardware, even a single worker can hash about 100Mb/s; this is sufficient for all scenarios
+		// TODO: verify performance on arm (especially 32bit) that >1 worker is indeed not needed and beneficial
+		hasher = batcher.NewCurlP81(inputSize, timeout, 1)
 	})
 	return hasher
 }

@@ -93,8 +93,7 @@ func createExplorerTx(cachedTx *tangle.CachedTransaction) (*ExplorerTx, error) {
 	t.Approvers = tangle.GetApproverHashes(cachedTx.GetTransaction().GetTxHash(), MaxApproversResults).Trytes()
 
 	// compute mwm
-	hash := cachedTx.GetTransaction().GetTxHash().Trytes()
-	t.MWM = trinary.TrailingZeros(trinary.MustTrytesToTrits(hash))
+	t.MWM = trinary.TrailingZeros(cachedTx.GetTransaction().GetTxHash().Trits())
 
 	// get previous/next hash
 	var cachedBndl *tangle.CachedBundle

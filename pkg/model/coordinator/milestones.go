@@ -79,7 +79,7 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
 
-	// append t6b1 encoded merkle tree root hash to the head's signature message fragment data
+	// append the b1t6 encoded Merkle tree hash to the head transaction's signature message fragment
 	siblingsTrytes += b1t6.EncodeToTrytes(whiteFlagMerkleRootTreeHash)
 
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.SignatureMessageFragmentSizeInTrytes)

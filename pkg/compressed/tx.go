@@ -23,14 +23,14 @@ const (
 	SigDataMaxBytesLength = 1312
 )
 
-// TruncateTxTrits converts the given bytes transaction trits to bytes and truncates them.
+// TruncateTxTrits encodes txTrits into bytes and truncates them.
 func TruncateTxTrits(txTrits trinary.Trits) []byte {
 	txBytes := make([]byte, t5b1.EncodedLen(len(txTrits)))
 	t5b1.Encode(txBytes, txTrits)
 	return TruncateTx(txBytes)
 }
 
-// TruncateTx truncates the given bytes encoded transaction data.
+// TruncateTx truncates the encoded transaction data.
 //	txBytes the transaction bytes to truncate
 //	return an array containing the truncated transaction data
 func TruncateTx(txBytes []byte) []byte {
@@ -70,14 +70,13 @@ func expandTx(data []byte) ([]byte, error) {
 }
 
 func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Hash) (*transaction.Transaction, error) {
-
 	// expand received tx data
 	txDataBytes, err := expandTx(transactionData)
 	if err != nil {
 		return nil, err
 	}
 
-	// convert bytes to trits
+	// decode the bytes back into trits
 	txDataTrits := make(trinary.Trits, t5b1.DecodedLen(TransactionSize))
 	_, err = t5b1.Decode(txDataTrits, txDataBytes)
 	if err != nil {

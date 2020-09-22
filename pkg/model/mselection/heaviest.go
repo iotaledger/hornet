@@ -156,7 +156,7 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 
 // SelectTips tries to collect tips that confirm the most recent transactions since the last reset of the selector.
 // best tips are determined by counting the referenced transactions (heaviest branches) and by "removing" the
-// transactions of the referenced cone of the already choosen tips in the bitsets of the available tips.
+// transactions of the referenced cone of the already chosen tips in the bitsets of the available tips.
 // only tips are considered that were present at the beginning of the SelectTips call,
 // to prevent attackers from creating heavier branches while we are searching the best tips.
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if

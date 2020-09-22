@@ -16,6 +16,7 @@ func TestHashFromAddressTrytes(t *testing.T) {
 
 	assert.Len(t, hash, 49)
 	assert.Equal(t, trytes[:consts.HashTrytesSize], hash.Trytes())
+	assert.Equal(t, trinary.MustTrytesToTrits(trytes[:consts.HashTrytesSize]), hash.Trits())
 }
 
 func TestHashFromHashTrytes(t *testing.T) {
@@ -24,6 +25,7 @@ func TestHashFromHashTrytes(t *testing.T) {
 
 	assert.Len(t, hash, 49)
 	assert.Equal(t, trytes, hash.Trytes())
+	assert.Equal(t, trinary.MustTrytesToTrits(trytes), hash.Trits())
 }
 
 func TestHashFromTagTrytes(t *testing.T) {
@@ -32,6 +34,7 @@ func TestHashFromTagTrytes(t *testing.T) {
 
 	assert.Len(t, hash, 17)
 	assert.Equal(t, trytes, hash.Trytes())
+	assert.Equal(t, trinary.MustTrytesToTrits(trytes), hash.Trits())
 }
 
 func TestHashes_Trytes(t *testing.T) {

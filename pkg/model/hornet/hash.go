@@ -52,7 +52,7 @@ func HashFromTagTrytes(trytes trinary.Trytes) Hash {
 	return t5b1.EncodeTrytes(trytes)
 }
 
-// Trytes converts the binary Hash to its trinary representation.
+// Trytes converts the binary Hash to its tryte representation.
 // It panics when the binary encoding is invalid.
 func (h Hash) Trytes() trinary.Trytes {
 	switch len(h) {
@@ -68,6 +68,27 @@ func (h Hash) Trytes() trinary.Trytes {
 func mustDecodeToTrytes(src []byte) trinary.Trytes {
 	dst, err := t5b1.DecodeToTrytes(src)
 	if err != nil {
+		panic(fmt.Sprintf("invalid hash bytes: %v", err))
+	}
+	return dst
+}
+
+// Trits converts the binary Hash to its trit representation.
+// It panics when the binary encoding is invalid.
+func (h Hash) Trits() trinary.Trits {
+	switch len(h) {
+	case hashBytesSize:
+		return mustDecodeToTrits(h)[:consts.HashTrinarySize]
+	case tagBytesSize:
+		return mustDecodeToTrits(h)[:consts.TagTrinarySize]
+	default:
+		panic("invalid hash length")
+	}
+}
+
+func mustDecodeToTrits(src []byte) trinary.Trits {
+	dst := make(trinary.Trits, t5b1.DecodedLen(len(src)))
+	if _, err := t5b1.Decode(dst, src); err != nil {
 		panic(fmt.Sprintf("invalid hash bytes: %v", err))
 	}
 	return dst
