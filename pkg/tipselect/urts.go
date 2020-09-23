@@ -165,7 +165,7 @@ func New(maxDeltaMsgYoungestConeRootIndexToLSMI int,
 }
 
 // AddTip adds the given message as a tip.
-func (ts *TipSelector) AddTip(messageMeta *hornet.MessageMetadata) {
+func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 

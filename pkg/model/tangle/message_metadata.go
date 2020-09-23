@@ -1,4 +1,4 @@
-package hornet
+package tangle
 
 import (
 	"encoding/binary"
@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -22,7 +23,7 @@ type MessageMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	messageID Hash
+	messageID hornet.Hash
 
 	// Metadata
 	metadata bitmask.BitMask
@@ -43,13 +44,13 @@ type MessageMetadata struct {
 	coneRootCalculationIndex milestone.Index
 
 	// parent1MessageID is the parent1 (trunk) of the message
-	parent1MessageID Hash
+	parent1MessageID hornet.Hash
 
 	// parent2MessageID is the parent2 (branch) of the message
-	parent2MessageID Hash
+	parent2MessageID hornet.Hash
 }
 
-func NewMessageMetadata(messageID Hash, parent1MessageID Hash, parent2MessageID Hash) *MessageMetadata {
+func NewMessageMetadata(messageID hornet.Hash, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) *MessageMetadata {
 	return &MessageMetadata{
 		messageID:        messageID,
 		parent1MessageID: parent1MessageID,
@@ -57,15 +58,15 @@ func NewMessageMetadata(messageID Hash, parent1MessageID Hash, parent2MessageID 
 	}
 }
 
-func (m *MessageMetadata) GetMessageID() Hash {
+func (m *MessageMetadata) GetMessageID() hornet.Hash {
 	return m.messageID
 }
 
-func (m *MessageMetadata) GetParent1MessageID() Hash {
+func (m *MessageMetadata) GetParent1MessageID() hornet.Hash {
 	return m.parent1MessageID
 }
 
-func (m *MessageMetadata) GetParent2MessageID() Hash {
+func (m *MessageMetadata) GetParent2MessageID() hornet.Hash {
 	return m.parent2MessageID
 }
 
