@@ -3,11 +3,13 @@ package hornet
 import (
 	"encoding/hex"
 	"fmt"
+
+	iotago "github.com/iotaledger/iota.go"
 )
 
 var (
 	// NullMessageID is the ID of the genesis message.
-	NullMessageID = Hash(make([]byte, 32))
+	NullMessageID = Hash(make([]byte, iotago.MessageHashLength))
 )
 
 // Hash is the binary representation of a Hash.
@@ -15,7 +17,7 @@ type Hash []byte
 
 // Hex converts the binary Hash to its hex string representation.
 func (h Hash) Hex() string {
-	if len(h) == 32 {
+	if len(h) == iotago.MessageHashLength {
 		return hex.EncodeToString(h)
 	}
 
@@ -23,9 +25,9 @@ func (h Hash) Hex() string {
 }
 
 // ID converts the binary Hash to an array representation.
-func (h Hash) ID() (id [32]byte) {
-	if len(h) == 32 {
-		copy(id[:], h[:32])
+func (h Hash) ID() (id [iotago.MessageHashLength]byte) {
+	if len(h) == iotago.MessageHashLength {
+		copy(id[:], h[:iotago.MessageHashLength])
 		return
 	}
 
