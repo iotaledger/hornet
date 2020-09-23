@@ -1,4 +1,4 @@
-package hornet
+package tangle
 
 import (
 	"encoding/binary"
@@ -6,16 +6,17 @@ import (
 
 	"github.com/iotaledger/hive.go/objectstorage"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 type UnconfirmedMessage struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
-	messageID            Hash
+	messageID            hornet.Hash
 }
 
-func NewUnconfirmedMessage(msIndex milestone.Index, messageID Hash) *UnconfirmedMessage {
+func NewUnconfirmedMessage(msIndex milestone.Index, messageID hornet.Hash) *UnconfirmedMessage {
 	return &UnconfirmedMessage{
 		latestMilestoneIndex: msIndex,
 		messageID:            messageID,
@@ -26,7 +27,7 @@ func (t *UnconfirmedMessage) GetLatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnconfirmedMessage) GetMessageID() Hash {
+func (t *UnconfirmedMessage) GetMessageID() hornet.Hash {
 	return t.messageID
 }
 

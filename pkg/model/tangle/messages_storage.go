@@ -78,12 +78,12 @@ func (c *CachedMessage) GetCachedMetadata() *CachedMetadata {
 	return &CachedMetadata{c.metadata.Retain()}
 }
 
-func (c *CachedMessage) GetMetadata() *hornet.MessageMetadata {
-	return c.metadata.Get().(*hornet.MessageMetadata)
+func (c *CachedMessage) GetMetadata() *MessageMetadata {
+	return c.metadata.Get().(*MessageMetadata)
 }
 
-func (c *CachedMetadata) GetMetadata() *hornet.MessageMetadata {
-	return c.Get().(*hornet.MessageMetadata)
+func (c *CachedMetadata) GetMetadata() *MessageMetadata {
+	return c.Get().(*MessageMetadata)
 }
 
 // msg +1
@@ -104,11 +104,11 @@ func (c *CachedMessage) Exists() bool {
 
 // msg -1
 // meta -1
-func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *hornet.MessageMetadata)) {
+func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *MessageMetadata)) {
 
 	c.msg.Consume(func(txObject objectstorage.StorableObject) {
 		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) {
-			consumer(txObject.(*Message), metadataObject.(*hornet.MessageMetadata))
+			consumer(txObject.(*Message), metadataObject.(*MessageMetadata))
 		}, true)
 	}, true)
 }
@@ -124,17 +124,17 @@ func (c *CachedMessage) ConsumeMessage(consumer func(*Message)) {
 
 // msg -1
 // meta -1
-func (c *CachedMessage) ConsumeMetadata(consumer func(*hornet.MessageMetadata)) {
+func (c *CachedMessage) ConsumeMetadata(consumer func(*MessageMetadata)) {
 	defer c.msg.Release(true)
 	c.metadata.Consume(func(object objectstorage.StorableObject) {
-		consumer(object.(*hornet.MessageMetadata))
+		consumer(object.(*MessageMetadata))
 	}, true)
 }
 
 // meta -1
-func (c *CachedMetadata) ConsumeMetadata(consumer func(*hornet.MessageMetadata)) {
+func (c *CachedMetadata) ConsumeMetadata(consumer func(*MessageMetadata)) {
 	c.Consume(func(object objectstorage.StorableObject) {
-		consumer(object.(*hornet.MessageMetadata))
+		consumer(object.(*MessageMetadata))
 	}, true)
 }
 
@@ -178,7 +178,7 @@ func configureMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
 	metadataStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixMessageMetadata}),
-		hornet.MetadataFactory,
+		MetadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(false),
@@ -222,12 +222,12 @@ func GetCachedMessageMetadataOrNil(messageID hornet.Hash) *CachedMetadata {
 }
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func GetStoredMetadataOrNil(messageID hornet.Hash) *hornet.MessageMetadata {
+func GetStoredMetadataOrNil(messageID hornet.Hash) *MessageMetadata {
 	storedMeta := metadataStorage.LoadObjectFromStore(messageID)
 	if storedMeta == nil {
 		return nil
 	}
-	return storedMeta.(*hornet.MessageMetadata)
+	return storedMeta.(*MessageMetadata)
 }
 
 // ContainsMessage returns if the given message exists in the cache/persistence layer.
@@ -249,7 +249,7 @@ func StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdde
 	cachedMsgData := messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
 		newlyAdded = true
 
-		metadata := hornet.NewMessageMetadata(message.GetMessageID(), message.GetParent1MessageID(), message.GetParent2MessageID())
+		metadata := NewMessageMetadata(message.GetMessageID(), message.GetParent1MessageID(), message.GetParent2MessageID())
 		cachedMeta = metadataStorage.Store(metadata) // meta +1
 
 		message.Persist()

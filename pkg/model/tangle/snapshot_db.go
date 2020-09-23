@@ -6,7 +6,6 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -45,7 +44,7 @@ func readSnapshotInfo() (*SnapshotInfo, error) {
 	return info, nil
 }
 
-func storeSolidEntryPoints(points *hornet.SolidEntryPoints) error {
+func storeSolidEntryPoints(points *SolidEntryPoints) error {
 	if points.IsModified() {
 
 		if err := snapshotStore.Set([]byte("solidEntryPoints"), points.GetBytes()); err != nil {
@@ -58,7 +57,7 @@ func storeSolidEntryPoints(points *hornet.SolidEntryPoints) error {
 	return nil
 }
 
-func readSolidEntryPoints() (*hornet.SolidEntryPoints, error) {
+func readSolidEntryPoints() (*SolidEntryPoints, error) {
 	value, err := snapshotStore.Get([]byte("solidEntryPoints"))
 	if err != nil {
 		if err != kvstore.ErrKeyNotFound {
@@ -67,7 +66,7 @@ func readSolidEntryPoints() (*hornet.SolidEntryPoints, error) {
 		return nil, nil
 	}
 
-	points, err := hornet.SolidEntryPointsFromBytes(value)
+	points, err := SolidEntryPointsFromBytes(value)
 	if err != nil {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to convert solid entry points")
 	}

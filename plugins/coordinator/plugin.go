@@ -257,7 +257,7 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 	wgMessageProcessed.Add(1)
 
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *hornet.MessageMetadata) { // metadata -1
+		cachedMsgMeta.ConsumeMetadata(func(metadata *tangle.MessageMetadata) { // metadata -1
 			messageIDLock.Lock()
 			defer messageIDLock.Unlock()
 

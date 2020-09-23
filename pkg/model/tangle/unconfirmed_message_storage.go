@@ -26,13 +26,13 @@ func (cachedUnconfirmedMessages CachedUnconfirmedMessages) Release(force ...bool
 	}
 }
 
-func (c *CachedUnconfirmedMessage) GetUnconfirmedMessage() *hornet.UnconfirmedMessage {
-	return c.Get().(*hornet.UnconfirmedMessage)
+func (c *CachedUnconfirmedMessage) GetUnconfirmedMessage() *UnconfirmedMessage {
+	return c.Get().(*UnconfirmedMessage)
 }
 
 func unconfirmedMessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 
-	unconfirmedTx := hornet.NewUnconfirmedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:36])
+	unconfirmedTx := NewUnconfirmedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:36])
 	return unconfirmedTx, nil
 }
 
@@ -82,7 +82,7 @@ func ForEachUnconfirmedMessage(consumer UnconfirmedMessageConsumer, skipCache bo
 
 // unconfirmedTx +1
 func StoreUnconfirmedMessage(msIndex milestone.Index, messageID hornet.Hash) *CachedUnconfirmedMessage {
-	unconfirmedTx := hornet.NewUnconfirmedMessage(msIndex, messageID)
+	unconfirmedTx := NewUnconfirmedMessage(msIndex, messageID)
 	return &CachedUnconfirmedMessage{CachedObject: unconfirmedMessagesStorage.Store(unconfirmedTx)}
 }
 

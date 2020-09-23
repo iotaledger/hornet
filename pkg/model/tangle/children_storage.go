@@ -24,12 +24,12 @@ func (cachedChildren CachedChildren) Release(force ...bool) {
 	}
 }
 
-func (c *CachedChild) GetChild() *hornet.Child {
-	return c.Get().(*hornet.Child)
+func (c *CachedChild) GetChild() *Child {
+	return c.Get().(*Child)
 }
 
 func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	child := hornet.NewChild(key[:32], key[32:64])
+	child := NewChild(key[:32], key[32:64])
 	return child, nil
 }
 
@@ -90,13 +90,13 @@ func ForEachChild(consumer ChildConsumer, skipCache bool) {
 
 // child +1
 func StoreChild(parentMessageID hornet.Hash, childMessageID hornet.Hash) *CachedChild {
-	child := hornet.NewChild(parentMessageID, childMessageID)
+	child := NewChild(parentMessageID, childMessageID)
 	return &CachedChild{CachedObject: childrenStorage.Store(child)}
 }
 
 // child +-0
 func DeleteChild(messageID hornet.Hash, childMessageID hornet.Hash) {
-	child := hornet.NewChild(messageID, childMessageID)
+	child := NewChild(messageID, childMessageID)
 	childrenStorage.Delete(child.ObjectStorageKey())
 }
 

@@ -1,29 +1,31 @@
-package hornet
+package tangle
 
 import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/objectstorage"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 type Child struct {
 	objectstorage.StorableObjectFlags
-	parentMessageID Hash
-	childMessageID  Hash
+	parentMessageID hornet.Hash
+	childMessageID  hornet.Hash
 }
 
-func NewChild(parentMessageID Hash, childMessageId Hash) *Child {
+func NewChild(parentMessageID hornet.Hash, childMessageId hornet.Hash) *Child {
 	return &Child{
 		parentMessageID: parentMessageID,
 		childMessageID:  childMessageId,
 	}
 }
 
-func (a *Child) GetParentMessageID() Hash {
+func (a *Child) GetParentMessageID() hornet.Hash {
 	return a.parentMessageID
 }
 
-func (a *Child) GetChildMessageID() Hash {
+func (a *Child) GetChildMessageID() hornet.Hash {
 	return a.childMessageID
 }
 

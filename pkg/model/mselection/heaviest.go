@@ -10,6 +10,7 @@ import (
 	"github.com/willf/bitset"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -231,7 +232,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 // OnNewSolidMessage adds a new message to be processed by s.
 // The message must be solid and OnNewSolidMessage must be called in the order of solidification.
 // The message must also not be below max depth.
-func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *hornet.MessageMetadata) (trackedMessagesCount int) {
+func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *tangle.MessageMetadata) (trackedMessagesCount int) {
 	s.Lock()
 	defer s.Unlock()
 
