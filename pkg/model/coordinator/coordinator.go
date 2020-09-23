@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"crypto"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -9,13 +10,11 @@ import (
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 
-	"github.com/pkg/errors"
-
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/merkle"
-	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -25,17 +24,16 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
-// Bundle represents grouped together transactions forming a transfer.
-type Bundle = []*transaction.Transaction
-
 // SendBundleFunc is a function which sends a bundle to the network.
-type SendBundleFunc = func(b Bundle, isMilestone bool) error
+type SendBundleFunc = func(b bundle.Bundle, isMilestone bool) error
 
 var (
 	// ErrNoTipsGiven is returned when no tips were given to issue a checkpoint.
 	ErrNoTipsGiven = errors.New("no tips given")
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
+	// ErrInvalidSiblingsTrytesLength is returned when the computed siblings trytes do not fit into the signature message fragment.
+	ErrInvalidSiblingsTrytesLength = errors.New("siblings trytes too long")
 )
 
 // CoordinatorEvents are the events issued by the coordinator.
@@ -231,24 +229,24 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 	// compute merkle tree root
 	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedTxMetas, cachedBundles, coo.milestoneMerkleHashFunc, trunkHash, branchHash)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to compute muations: %w", err)
 	}
 
 	b, err := createMilestone(coo.seed, newMilestoneIndex, coo.securityLvl, trunkHash, branchHash, coo.minWeightMagnitude, coo.merkleTree, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create: %w", err)
 	}
 
 	if err := coo.sendBundleFunc(b, true); err != nil {
-		return err
+		return fmt.Errorf("failed to send: %w", err)
 	}
 
-	txHashes := hornet.Hashes{}
-	for _, tx := range b {
-		txHashes = append(txHashes, hornet.HashFromHashTrytes(tx.Hash))
+	txHashes := make(hornet.Hashes, 0, len(b))
+	for i := range b {
+		txHashes = append(txHashes, hornet.HashFromHashTrytes(b[i].Hash))
 	}
 
-	tailTx := b[0]
+	tailTx := &b[0]
 
 	// always reference the last milestone directly to speed up syncing
 	latestMilestoneHash := hornet.HashFromHashTrytes(tailTx.Hash)
@@ -259,7 +257,7 @@ func (coo *Coordinator) createAndSendMilestone(trunkHash hornet.Hash, branchHash
 	coo.state.LatestMilestoneTransactions = txHashes
 
 	if err := coo.state.storeStateFile(coo.stateFilePath); err != nil {
-		return err
+		return fmt.Errorf("failed to update state: %w", err)
 	}
 
 	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneHash)
@@ -308,11 +306,11 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 	for i, tip := range tips {
 		b, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powHandler)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create: %w", err)
 		}
 
 		if err := coo.sendBundleFunc(b, false); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to send: %w", err)
 		}
 
 		lastCheckpointHash = hornet.HashFromHashTrytes(b[0].Hash)
