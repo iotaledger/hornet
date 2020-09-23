@@ -55,3 +55,5 @@ require (
 	google.golang.org/grpc v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
 )
+
+replace github.com/iotaledger/iota.go => github.com/Wollac/iota.go v1.0.0-beta.9.0.20200923185057-e07ab2b9ea38
