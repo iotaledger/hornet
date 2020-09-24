@@ -218,10 +218,10 @@ func setIsSnapshotting(value bool) {
 func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
-	return createLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
+	return createFullLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
 }
 
-func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 	log.Infof("creating local snapshot for targetIndex %d", targetIndex)
 	ts := time.Now()
 
@@ -244,11 +244,10 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	defer cachedTargetMilestone.Release(true) // milestone -1
 
 	header := &FileHeader{
-		Version:        SupportedFormatVersion,
-		MilestoneIndex: uint64(targetIndex),
-		Timestamp:      uint64(ts.Unix()),
+		Version:           SupportedFormatVersion,
+		SEPMilestoneIndex: uint64(targetIndex),
 	}
-	copy(header.MilestoneHash[:], cachedTargetMilestone.GetMilestone().MessageID)
+	copy(header.SEPMilestoneHash[:], cachedTargetMilestone.GetMilestone().MessageID)
 
 	// build temp file path
 	filePathTmp := filePath + "_tmp"
@@ -260,13 +259,17 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
 	}
 
-	if err := StreamLocalSnapshotDataTo(lsFile, header,
+	if err := StreamFullLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header,
 		func() *[32]byte {
-			// TODO: generate SEP
+			// TODO: generate SEPs
 			return nil
 		},
-		func() *TransactionOutputs {
-			// TODO: generate UTXO
+		func() *Output {
+			// TODO: generate outputs
+			return nil
+		},
+		func() *MilestoneDiff {
+			// TODO: generate milestone diffs
 			return nil
 		}); err != nil {
 		_ = lsFile.Close()
@@ -327,8 +330,9 @@ func localSnapshotFileHash(filePath string) ([]byte, error) {
 	return sha256Hash.Sum(nil), nil
 }
 
-func LoadSnapshotFromFile(filePath string) error {
-	log.Info("importing snapshot file...")
+func LoadFullSnapshotFromFile(filePath string) error {
+	log.Info("importing full snapshot file...")
+	s := time.Now()
 
 	lsFile, err := os.Open(filePath)
 	if err != nil {
@@ -336,15 +340,13 @@ func LoadSnapshotFromFile(filePath string) error {
 	}
 	defer lsFile.Close()
 
-	var lsHeader *FileHeader
-	var outputsCount uint64
-
-	headerConsumer := func(header *FileHeader) error {
+	var lsHeader *ReadFileHeader
+	headerConsumer := func(header *ReadFileHeader) error {
 		if header.Version != SupportedFormatVersion {
 			return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
 		}
 		lsHeader = header
-		log.Infof("solid entry points: %d, utxo txs: %d", header.SEPCount, header.UTXOCount)
+		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.UTXOCount, header.MilestoneDiffCount)
 		return nil
 	}
 
@@ -358,25 +360,29 @@ func LoadSnapshotFromFile(filePath string) error {
 		return nil
 	}
 
-	utxoConsumer := func(outputs *TransactionOutputs) error {
-		outputsCount += uint64(len(outputs.UnspentOutputs))
-		// TODO: consume UTXOs
+	outputConsumer := func(unspentOutput *Output) error {
+		// TODO: consume unspentOutput
 		return nil
 	}
 
-	if err := StreamLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, utxoConsumer); err != nil {
+	msDiffConsumer := func(msDiff *MilestoneDiff) error {
+		// TODO: consume milestone diff
+		return nil
+	}
+
+	if err := StreamFullLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import local snapshot file: %w", err)
 	}
 
-	log.Infof("imported local snapshot file: %d SEPs, %d txs, %d outputs", lsHeader.SEPCount, lsHeader.UTXOCount, outputsCount)
+	log.Infof("imported local snapshot file, took %v", time.Since(s))
 
 	cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
 	if err != nil {
 		return err
 	}
 
-	lsMilestoneIndex := milestone.Index(lsHeader.MilestoneIndex)
-	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.MilestoneHash[:], lsMilestoneIndex, lsMilestoneIndex, lsMilestoneIndex, time.Now())
+	lsMilestoneIndex := milestone.Index(lsHeader.SEPMilestoneIndex)
+	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.SEPMilestoneHash[:], lsMilestoneIndex, lsMilestoneIndex, lsMilestoneIndex, time.Now())
 	tangle.SetSolidMilestoneIndex(lsMilestoneIndex, false)
 
 	return nil

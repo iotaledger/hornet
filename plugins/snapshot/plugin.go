@@ -149,7 +149,7 @@ func configure(plugin *node.Plugin) {
 				}
 			}
 
-			err = LoadSnapshotFromFile(path)
+			err = LoadFullSnapshotFromFile(path)
 		}
 	default:
 		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
@@ -194,7 +194,7 @@ func run(_ *node.Plugin) {
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
 					localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
-					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
+					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
 						}

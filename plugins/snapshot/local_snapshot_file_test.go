@@ -14,53 +14,70 @@ import (
 )
 
 type test struct {
-	name             string
-	snapshotFileName string
-	originHeader     *snapshot.FileHeader
-	sepGenerator     snapshot.SEPIteratorFunc
-	sepGenRetriever  sepRetrieverFunc
-	utxoGenerator    snapshot.UTXOIteratorFunc
-	utxoGenRetriever utxoRetrieverFunc
-	headerConsumer   snapshot.HeaderConsumerFunc
-	sepConsumer      snapshot.SEPConsumerFunc
-	sepConRetriever  sepRetrieverFunc
-	utxoConsumer     snapshot.UTXOConsumerFunc
-	utxoConRetriever utxoRetrieverFunc
+	name               string
+	snapshotFileName   string
+	originHeader       *snapshot.FileHeader
+	sepGenerator       snapshot.SEPIteratorFunc
+	sepGenRetriever    sepRetrieverFunc
+	outputGenerator    snapshot.OutputIteratorFunc
+	outputGenRetriever outputRetrieverFunc
+	msDiffGenerator    snapshot.MilestoneDiffIteratorFunc
+	msDiffGenRetriever msDiffRetrieverFunc
+	headerConsumer     snapshot.HeaderConsumerFunc
+	sepConsumer        snapshot.SEPConsumerFunc
+	sepConRetriever    sepRetrieverFunc
+	outputConsumer     snapshot.OutputConsumerFunc
+	outputConRetriever outputRetrieverFunc
+	msDiffConsumer     snapshot.MilestoneDiffConsumerFunc
+	msDiffConRetriever msDiffRetrieverFunc
 }
 
-func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
+func TestStreamFullLocalSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
 	rand.Seed(346587549867)
 
 	originHeader := &snapshot.FileHeader{
-		Version: snapshot.SupportedFormatVersion, MilestoneIndex: uint64(rand.Intn(10000)),
-		MilestoneHash: rand32ByteHash(), Timestamp: uint64(time.Now().Unix()),
+		Version:              snapshot.SupportedFormatVersion,
+		SEPMilestoneIndex:    uint64(rand.Intn(10000)),
+		SEPMilestoneHash:     rand32ByteHash(),
+		LedgerMilestoneIndex: uint64(rand.Intn(10000)),
+		LedgerMilestoneHash:  rand32ByteHash(),
 	}
+
+	originTimestamp := uint64(time.Now().Unix())
 
 	testCases := []test{
 		func() test {
 
 			// create generators and consumers
-			utxoIterFunc, utxosGenRetriever := newUTXOGenerator(1000000, 4)
 			sepIterFunc, sepGenRetriever := newSEPGenerator(150)
-			sepConsumerfunc, sepsCollRetriever := newSEPCollector()
-			utxoConsumerFunc, utxoCollRetriever := newUTXOCollector()
+			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
+
+			outputIterFunc, outputGenRetriever := newOutputsGenerator(1000000)
+			outputConsumerFunc, outputCollRetriever := newOutputCollector()
+
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(50)
+			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
 
 			t := test{
-				name:             "150 seps, 1 mil txs, uncompressed",
-				snapshotFileName: "uncompressed_snapshot.bin",
-				originHeader:     originHeader,
-				sepGenerator:     sepIterFunc,
-				sepGenRetriever:  sepGenRetriever,
-				utxoGenerator:    utxoIterFunc,
-				utxoGenRetriever: utxosGenRetriever,
-				headerConsumer:   headerEqualFunc(t, originHeader),
-				sepConsumer:      sepConsumerfunc,
-				sepConRetriever:  sepsCollRetriever,
-				utxoConsumer:     utxoConsumerFunc,
-				utxoConRetriever: utxoCollRetriever,
+				name:               "150 seps, 1 mil outputs, 50 ms diffs",
+				snapshotFileName:   "full_snapshot.bin",
+				originHeader:       originHeader,
+				sepGenerator:       sepIterFunc,
+				sepGenRetriever:    sepGenRetriever,
+				outputGenerator:    outputIterFunc,
+				outputGenRetriever: outputGenRetriever,
+				msDiffGenerator:    msDiffIterFunc,
+				msDiffGenRetriever: msDiffGenRetriever,
+				headerConsumer:     headerEqualFunc(t, originHeader),
+				sepConsumer:        sepConsumerFunc,
+				sepConRetriever:    sepsCollRetriever,
+				outputConsumer:     outputConsumerFunc,
+				outputConRetriever: outputCollRetriever,
+				msDiffConsumer:     msDiffConsumerFunc,
+				msDiffConRetriever: msDiffCollRetriever,
 			}
 			return t
 		}(),
@@ -73,7 +90,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamLocalSnapshotDataTo(snapshotFileWrite, tt.originHeader, tt.sepGenerator, tt.utxoGenerator))
+			require.NoError(t, snapshot.StreamFullLocalSnapshotDataTo(snapshotFileWrite, originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)
@@ -84,12 +101,12 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamLocalSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.utxoConsumer))
+			require.NoError(t, snapshot.StreamFullLocalSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.msDiffConsumer))
 
-			utxoGenerated, _ := tt.utxoGenRetriever()
-			utxoConsumed, _ := tt.utxoConRetriever()
-			require.EqualValues(t, utxoGenerated, utxoConsumed)
+			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
+			require.EqualValues(t, tt.outputGenRetriever(), tt.outputConRetriever())
+			require.EqualValues(t, tt.msDiffGenRetriever(), tt.msDiffConRetriever())
 		})
 	}
 
@@ -122,41 +139,77 @@ func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 		}
 }
 
-type utxoRetrieverFunc func() ([]snapshot.TransactionOutputs, uint64)
+type outputRetrieverFunc func() []snapshot.Output
 
-func newUTXOGenerator(count int, maxRandOutputsPerTx int) (snapshot.UTXOIteratorFunc, utxoRetrieverFunc) {
-	var generatedUTXOs []snapshot.TransactionOutputs
-	var outputsTotal uint64
-	return func() *snapshot.TransactionOutputs {
+func newOutputsGenerator(count int) (snapshot.OutputIteratorFunc, outputRetrieverFunc) {
+	var generatedOutputs []snapshot.Output
+	return func() *snapshot.Output {
 			if count == 0 {
 				return nil
 			}
 			count--
-			outputsCount := rand.Intn(maxRandOutputsPerTx) + 1
-			tx := randLSTransactionUnspentOutputs(outputsCount)
-			generatedUTXOs = append(generatedUTXOs, *tx)
-			outputsTotal += uint64(len(tx.UnspentOutputs))
-			return tx
-		}, func() ([]snapshot.TransactionOutputs, uint64) {
-			return generatedUTXOs, outputsTotal
+			output := randLSTransactionUnspentOutputs()
+			generatedOutputs = append(generatedOutputs, *output)
+			return output
+		}, func() []snapshot.Output {
+			return generatedOutputs
 		}
 }
 
-func newUTXOCollector() (snapshot.UTXOConsumerFunc, utxoRetrieverFunc) {
-	var generatedUTXOs []snapshot.TransactionOutputs
-	return func(utxo *snapshot.TransactionOutputs) error {
-			generatedUTXOs = append(generatedUTXOs, *utxo)
+func newOutputCollector() (snapshot.OutputConsumerFunc, outputRetrieverFunc) {
+	var generatedOutputs []snapshot.Output
+	return func(utxo *snapshot.Output) error {
+			generatedOutputs = append(generatedOutputs, *utxo)
 			return nil
-		}, func() ([]snapshot.TransactionOutputs, uint64) {
-			return generatedUTXOs, 0
+		}, func() []snapshot.Output {
+			return generatedOutputs
+		}
+}
+
+type msDiffRetrieverFunc func() []*snapshot.MilestoneDiff
+
+func newMsDiffGenerator(count int) (snapshot.MilestoneDiffIteratorFunc, msDiffRetrieverFunc) {
+	var generateMsDiffs []*snapshot.MilestoneDiff
+	return func() *snapshot.MilestoneDiff {
+			if count == 0 {
+				return nil
+			}
+			count--
+
+			msDiff := &snapshot.MilestoneDiff{
+				MilestoneIndex: uint64(rand.Int63()),
+			}
+
+			createdCount := rand.Intn(2000) + 1
+			for i := 0; i < createdCount; i++ {
+				msDiff.Created = append(msDiff.Created, randLSTransactionUnspentOutputs())
+			}
+
+			consumedCount := rand.Intn(2000) + 1
+			for i := 0; i < consumedCount; i++ {
+				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionUnspentOutputs())
+			}
+
+			generateMsDiffs = append(generateMsDiffs, msDiff)
+			return msDiff
+		}, func() []*snapshot.MilestoneDiff {
+			return generateMsDiffs
+		}
+}
+
+func newMsDiffCollector() (snapshot.MilestoneDiffConsumerFunc, msDiffRetrieverFunc) {
+	var generatedMsDiffs []*snapshot.MilestoneDiff
+	return func(msDiff *snapshot.MilestoneDiff) error {
+			generatedMsDiffs = append(generatedMsDiffs, msDiff)
+			return nil
+		}, func() []*snapshot.MilestoneDiff {
+			return generatedMsDiffs
 		}
 }
 
 func headerEqualFunc(t *testing.T, originHeader *snapshot.FileHeader) snapshot.HeaderConsumerFunc {
-	return func(readHeader *snapshot.FileHeader) error {
-		readHeader.UTXOCount = 0
-		readHeader.SEPCount = 0
-		require.Equal(t, originHeader, readHeader)
+	return func(readHeader *snapshot.ReadFileHeader) error {
+		require.EqualValues(t, *originHeader, readHeader.FileHeader)
 		return nil
 	}
 }
@@ -176,21 +229,13 @@ func rand32ByteHash() [iota.TransactionIDLength]byte {
 	return h
 }
 
-func randLSTransactionUnspentOutputs(outputsCount int) *snapshot.TransactionOutputs {
-	return &snapshot.TransactionOutputs{
+func randLSTransactionUnspentOutputs() *snapshot.Output {
+	addr, _ := randEd25519Addr()
+	return &snapshot.Output{
 		TransactionHash: rand32ByteHash(),
-		UnspentOutputs: func() []*snapshot.UnspentOutput {
-			outputs := make([]*snapshot.UnspentOutput, outputsCount)
-			for i := 0; i < outputsCount; i++ {
-				addr, _ := randEd25519Addr()
-				outputs[i] = &snapshot.UnspentOutput{
-					Index:   uint16(i),
-					Address: addr,
-					Value:   uint64(rand.Intn(1000000) + 1),
-				}
-			}
-			return outputs
-		}(),
+		Index:           uint16(rand.Intn(100)),
+		Address:         addr,
+		Value:           uint64(rand.Intn(1000000) + 1),
 	}
 }
 
