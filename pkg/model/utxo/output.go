@@ -3,6 +3,7 @@ package utxo
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/iotaledger/hive.go/byteutils"
 	iotago "github.com/iotaledger/iota.go"
@@ -11,8 +12,10 @@ import (
 )
 
 type Output struct {
+	kvStorable
+
 	TransactionID *iotago.SignedTransactionPayloadHash
-	Index         uint16
+	OutputIndex   uint16
 
 	MessageID hornet.Hash
 	Address   *iotago.Ed25519Address
@@ -20,7 +23,7 @@ type Output struct {
 	Amount uint64
 }
 
-func NewOutput(messageID hornet.Hash, transaction iotago.SignedTransactionPayload, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
 
 	var deposit *iotago.SigLockedSingleDeposit
 	switch unsignedTx := transaction.Transaction.(type) {
@@ -54,31 +57,56 @@ func NewOutput(messageID hornet.Hash, transaction iotago.SignedTransactionPayloa
 
 	return &Output{
 		TransactionID: txID,
-		Index:         index,
+		OutputIndex:   index,
 		MessageID:     messageID,
 		Address:       address,
 		Amount:        deposit.Amount,
 	}, nil
 }
 
-func (o *Output) StorageKey() (key []byte) {
+func (o *Output) UTXOKey() (key []byte) {
 	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, o.Index)
+	binary.LittleEndian.PutUint16(bytes, o.OutputIndex)
+	return byteutils.ConcatBytes(o.Address[:], o.TransactionID[:], bytes)
+}
+
+func (o *Output) kvStorableKey() (key []byte) {
+	bytes := make([]byte, 2)
+	binary.LittleEndian.PutUint16(bytes, o.OutputIndex)
 	return byteutils.ConcatBytes(o.TransactionID[:], bytes)
 }
 
-func (o *Output) StorageValue() (value []byte) {
+func (o *Output) kvStorableValue() (value []byte) {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, o.Amount)
 	return byteutils.ConcatBytes(o.MessageID, o.Address[:], bytes)
 }
 
-func (o *Output) FromStorage(key []byte, value []byte) {
+func (o *Output) kvStorableLoad(key []byte, value []byte) error {
+
+	expectedKeyLength := iotago.SignedTransactionPayloadHashLength + 2
+
+	if len(key) < expectedKeyLength {
+		return fmt.Errorf("not enough bytes in key to unmarshal object, expected: %d, got: %d", expectedKeyLength, len(key))
+	}
+
+	expectedValueLength := iotago.MessageHashLength + iotago.Ed25519AddressBytesLength + 8
+
+	if len(value) < expectedValueLength {
+		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
+	}
 
 	copy(o.TransactionID[:], key[:iotago.SignedTransactionPayloadHashLength])
-	o.Index = binary.LittleEndian.Uint16(key[int(iotago.SignedTransactionPayloadHashLength):2])
+	o.OutputIndex = binary.LittleEndian.Uint16(key[int(iotago.SignedTransactionPayloadHashLength):2])
 
 	copy(o.MessageID, value[:iotago.MessageHashLength])
 	copy(o.Address[:], value[iotago.MessageHashLength:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])
 	o.Amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.Ed25519AddressBytesLength+8])
+
+	return nil
+}
+
+func (o *Output) IsUnspentWithoutLocking() (bool, error) {
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, o.kvStorableKey())
+	return utxoStorage.Has(key)
 }
