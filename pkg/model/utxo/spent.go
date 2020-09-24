@@ -64,7 +64,7 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 
 	copy(s.Address[:], key[:iotago.Ed25519AddressBytesLength])
 	copy(s.TransactionID[:], key[iotago.Ed25519AddressBytesLength:iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength])
-	s.OutputIndex = binary.LittleEndian.Uint16(key[int(iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength):2])
+	s.OutputIndex = binary.LittleEndian.Uint16(key[iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength : iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength+2])
 
 	/*
 	   32 bytes            TargetTransactionID
