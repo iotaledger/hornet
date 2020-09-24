@@ -24,7 +24,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20200917222020-d5f10a0e336e
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200921113327-a63ae48f8193
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200924082456-3727c167ee44
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
@@ -55,5 +55,3 @@ require (
 	google.golang.org/grpc v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
 )
-
-replace github.com/iotaledger/iota.go => github.com/Wollac/iota.go v1.0.0-beta.9.0.20200923185057-e07ab2b9ea38
