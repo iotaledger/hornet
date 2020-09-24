@@ -24,8 +24,10 @@ const (
 )
 
 var (
-	// Returned when a wrong snapshot type is being read.
-	ErrWrongSnapshotType = errors.New("wrong snapshot type")
+	// Returned when an output producer has not been provided.
+	ErrOutputProducerNotProvided = errors.New("output producer is not provided")
+	// Returned when an output consumer has not been provided.
+	ErrOutputConsumerNotProvided = errors.New("output consumer is not provided")
 )
 
 // Type defines the type of the local snapshot.
@@ -35,7 +37,8 @@ const (
 	// Full is a local snapshot which contains the full ledger entry for a given milestone
 	// plus the milestone diffs which subtracted to the ledger milestone reduce to the snapshot milestone ledger.
 	Full Type = iota
-	// Delta is a local snapshot which contains solely diffs of milestones newer than a certain ledger milestone.
+	// Delta is a local snapshot which contains solely diffs of milestones newer than a certain ledger milestone
+	// instead of the complete ledger state of a given milestone.
 	Delta
 )
 
@@ -115,8 +118,8 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// SEPIteratorFunc yields a solid entry point to be written to a local snapshot or nil if no more is available.
-type SEPIteratorFunc func() *[SolidEntryPointHashLength]byte
+// SEPProducerFunc yields a solid entry point to be written to a local snapshot or nil if no more is available.
+type SEPProducerFunc func() *[SolidEntryPointHashLength]byte
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
@@ -126,15 +129,15 @@ type SEPConsumerFunc func([SolidEntryPointHashLength]byte) error
 // A returned error signals to cancel further reading.
 type HeaderConsumerFunc func(*ReadFileHeader) error
 
-// OutputIteratorFunc yields an output to be written to a local snapshot or nil if no more is available.
-type OutputIteratorFunc func() *Output
+// OutputProducerFunc yields an output to be written to a local snapshot or nil if no more is available.
+type OutputProducerFunc func() *Output
 
 // OutputConsumerFunc consumes the given output.
 // A returned error signals to cancel further reading.
 type OutputConsumerFunc func(output *Output) error
 
-// MilestoneDiffIteratorFunc yields a milestone diff to be written to a local snapshot or nil if no more is available.
-type MilestoneDiffIteratorFunc func() *MilestoneDiff
+// MilestoneDiffProducerFunc yields a milestone diff to be written to a local snapshot or nil if no more is available.
+type MilestoneDiffProducerFunc func() *MilestoneDiff
 
 // MilestoneDiffConsumerFunc consumes the given MilestoneDiff.
 // A returned error signals to cancel further reading.
@@ -163,20 +166,26 @@ type ReadFileHeader struct {
 	Timestamp uint64
 	// The count of solid entry points.
 	SEPCount uint64
-	// The count of UTXOs.
-	UTXOCount uint64
+	// The count of outputs. This count is zero if a delta local snapshot has been read.
+	OutputCount uint64
 	// The count of milestone diffs.
 	MilestoneDiffCount uint64
 }
 
-// StreamFullLocalSnapshotDataTo streams a full local snapshot data into the given io.WriteSeeker.
-func StreamFullLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *FileHeader,
-	sepIter SEPIteratorFunc, outputIter OutputIteratorFunc, msDiffIter MilestoneDiffIteratorFunc) error {
+// StreamLocalSnapshotDataTo streams a local snapshot data into the given io.WriteSeeker.
+// FileHeader.Type is used to determine whether to write a full or delta local snapshot.
+// If the type of the local snapshot is Full, then OutputProducerFunc must be provided.
+func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *FileHeader,
+	sepProd SEPProducerFunc, outputProd OutputProducerFunc, msDiffProd MilestoneDiffProducerFunc) error {
 
-	var sepsCount, utxoCount, msDiffCount uint64
+	if header.Type == Full && outputProd == nil {
+		return ErrOutputProducerNotProvided
+	}
+
+	var sepsCount, outputCount, msDiffCount uint64
 
 	// write LS file version and type
-	if _, err := writeSeeker.Write([]byte{header.Version, byte(Full)}); err != nil {
+	if _, err := writeSeeker.Write([]byte{header.Version, byte(header.Type)}); err != nil {
 		return fmt.Errorf("unable to write LS version and type: %w", err)
 	}
 
@@ -200,30 +209,36 @@ func StreamFullLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64,
 		return fmt.Errorf("unable to write LS ledger milestone hash: %w", err)
 	}
 
-	// write count and hash place holders
-	if _, err := writeSeeker.Write(make([]byte, iotago.UInt64ByteSize*3)); err != nil {
-		return fmt.Errorf("unable to write LS SEPs/Outputs/Diffs placeholders: %w", err)
+	// write count placeholders
+	placeholderSpace := iotago.UInt64ByteSize * 3
+	if header.Type == Delta {
+		placeholderSpace -= iotago.UInt64ByteSize
+	}
+	if _, err := writeSeeker.Write(make([]byte, placeholderSpace)); err != nil {
+		return fmt.Errorf("unable to write LS counter placeholders: %w", err)
 	}
 
-	for sep := sepIter(); sep != nil; sep = sepIter() {
+	for sep := sepProd(); sep != nil; sep = sepProd() {
 		sepsCount++
 		if _, err := writeSeeker.Write(sep[:]); err != nil {
 			return fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err)
 		}
 	}
 
-	for output := outputIter(); output != nil; output = outputIter() {
-		utxoCount++
-		outputBytes, err := output.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("unable to serialize LS output #%d: %w", utxoCount, err)
-		}
-		if _, err := writeSeeker.Write(outputBytes); err != nil {
-			return fmt.Errorf("unable to write LS output #%d: %w", utxoCount, err)
+	if header.Type == Full {
+		for output := outputProd(); output != nil; output = outputProd() {
+			outputCount++
+			outputBytes, err := output.MarshalBinary()
+			if err != nil {
+				return fmt.Errorf("unable to serialize LS output #%d: %w", outputCount, err)
+			}
+			if _, err := writeSeeker.Write(outputBytes); err != nil {
+				return fmt.Errorf("unable to write LS output #%d: %w", outputCount, err)
+			}
 		}
 	}
 
-	for msDiff := msDiffIter(); msDiff != nil; msDiff = msDiffIter() {
+	for msDiff := msDiffProd(); msDiff != nil; msDiff = msDiffProd() {
 		msDiffCount++
 		msDiffBytes, err := msDiff.MarshalBinary()
 		if err != nil {
@@ -242,8 +257,10 @@ func StreamFullLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64,
 		return fmt.Errorf("unable to write to LS SEPs count: %w", err)
 	}
 
-	if err := binary.Write(writeSeeker, binary.LittleEndian, utxoCount); err != nil {
-		return fmt.Errorf("unable to write to LS outputs count: %w", err)
+	if header.Type == Full {
+		if err := binary.Write(writeSeeker, binary.LittleEndian, outputCount); err != nil {
+			return fmt.Errorf("unable to write to LS outputs count: %w", err)
+		}
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, msDiffCount); err != nil {
@@ -253,60 +270,63 @@ func StreamFullLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64,
 	return nil
 }
 
-// StreamFullLocalSnapshotDataFrom consumes a full local snapshot from the given reader.
-func StreamFullLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
+// StreamLocalSnapshotDataFrom consumes a local snapshot from the given reader.
+// OutputConsumerFunc must not be nil if the local snapshot is not a delta snapshot.
+func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 	sepConsumer SEPConsumerFunc, outputConsumer OutputConsumerFunc, msDiffConsumer MilestoneDiffConsumerFunc) error {
-	header := &ReadFileHeader{}
+	readHeader := &ReadFileHeader{}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.Version); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Version); err != nil {
 		return fmt.Errorf("unable to read LS version: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.Type); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Type); err != nil {
 		return fmt.Errorf("unable to read LS type: %w", err)
 	}
 
-	if header.Type != Full {
-		return fmt.Errorf("%w: expected to read a full local snapshot but got: %d", ErrWrongSnapshotType, header.Type)
+	if readHeader.Type == Full && outputConsumer == nil {
+		return ErrOutputConsumerNotProvided
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.Timestamp); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Timestamp); err != nil {
 		return fmt.Errorf("unable to read LS timestamp: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.SEPMilestoneIndex); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
 	}
 
-	if _, err := io.ReadFull(reader, header.SEPMilestoneHash[:]); err != nil {
+	if _, err := io.ReadFull(reader, readHeader.SEPMilestoneHash[:]); err != nil {
 		return fmt.Errorf("unable to read LS SEPs milestone hash: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.LedgerMilestoneIndex); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone index: %w", err)
 	}
 
-	if _, err := io.ReadFull(reader, header.LedgerMilestoneHash[:]); err != nil {
+	if _, err := io.ReadFull(reader, readHeader.LedgerMilestoneHash[:]); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone hash: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.SEPCount); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPCount); err != nil {
 		return fmt.Errorf("unable to read LS SEPs count: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.UTXOCount); err != nil {
-		return fmt.Errorf("unable to read LS outputs count: %w", err)
+	if readHeader.Type == Full {
+		if err := binary.Read(reader, binary.LittleEndian, &readHeader.OutputCount); err != nil {
+			return fmt.Errorf("unable to read LS outputs count: %w", err)
+		}
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &header.MilestoneDiffCount); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.MilestoneDiffCount); err != nil {
 		return fmt.Errorf("unable to read LS ms-diff count: %w", err)
 	}
 
-	if err := headerConsumer(header); err != nil {
+	if err := headerConsumer(readHeader); err != nil {
 		return err
 	}
 
-	for i := uint64(0); i < header.SEPCount; i++ {
+	for i := uint64(0); i < readHeader.SEPCount; i++ {
 		var sep [SolidEntryPointHashLength]byte
 		if _, err := io.ReadFull(reader, sep[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
@@ -316,18 +336,20 @@ func StreamFullLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderCons
 		}
 	}
 
-	for i := uint64(0); i < header.UTXOCount; i++ {
-		output, err := readOutput(reader)
-		if err != nil {
-			return fmt.Errorf("at pos %d: %w", i, err)
-		}
+	if readHeader.Type == Full {
+		for i := uint64(0); i < readHeader.OutputCount; i++ {
+			output, err := readOutput(reader)
+			if err != nil {
+				return fmt.Errorf("at pos %d: %w", i, err)
+			}
 
-		if err := outputConsumer(output); err != nil {
-			return err
+			if err := outputConsumer(output); err != nil {
+				return err
+			}
 		}
 	}
 
-	for i := uint64(0); i < header.MilestoneDiffCount; i++ {
+	for i := uint64(0); i < readHeader.MilestoneDiffCount; i++ {
 		msDiff, err := readMilestoneDiff(reader)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)

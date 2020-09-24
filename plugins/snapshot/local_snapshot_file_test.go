@@ -17,11 +17,12 @@ type test struct {
 	name               string
 	snapshotFileName   string
 	originHeader       *snapshot.FileHeader
-	sepGenerator       snapshot.SEPIteratorFunc
+	originTimestamp    uint64
+	sepGenerator       snapshot.SEPProducerFunc
 	sepGenRetriever    sepRetrieverFunc
-	outputGenerator    snapshot.OutputIteratorFunc
+	outputGenerator    snapshot.OutputProducerFunc
 	outputGenRetriever outputRetrieverFunc
-	msDiffGenerator    snapshot.MilestoneDiffIteratorFunc
+	msDiffGenerator    snapshot.MilestoneDiffProducerFunc
 	msDiffGenRetriever msDiffRetrieverFunc
 	headerConsumer     snapshot.HeaderConsumerFunc
 	sepConsumer        snapshot.SEPConsumerFunc
@@ -32,24 +33,25 @@ type test struct {
 	msDiffConRetriever msDiffRetrieverFunc
 }
 
-func TestStreamFullLocalSnapshotDataToAndFrom(t *testing.T) {
+func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
 	rand.Seed(346587549867)
 
-	originHeader := &snapshot.FileHeader{
-		Version:              snapshot.SupportedFormatVersion,
-		SEPMilestoneIndex:    uint64(rand.Intn(10000)),
-		SEPMilestoneHash:     rand32ByteHash(),
-		LedgerMilestoneIndex: uint64(rand.Intn(10000)),
-		LedgerMilestoneHash:  rand32ByteHash(),
-	}
-
-	originTimestamp := uint64(time.Now().Unix())
-
 	testCases := []test{
 		func() test {
+
+			originHeader := &snapshot.FileHeader{
+				Type:                 snapshot.Full,
+				Version:              snapshot.SupportedFormatVersion,
+				SEPMilestoneIndex:    uint64(rand.Intn(10000)),
+				SEPMilestoneHash:     rand32ByteHash(),
+				LedgerMilestoneIndex: uint64(rand.Intn(10000)),
+				LedgerMilestoneHash:  rand32ByteHash(),
+			}
+
+			originTimestamp := uint64(time.Now().Unix())
 
 			// create generators and consumers
 			sepIterFunc, sepGenRetriever := newSEPGenerator(150)
@@ -62,9 +64,10 @@ func TestStreamFullLocalSnapshotDataToAndFrom(t *testing.T) {
 			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
 
 			t := test{
-				name:               "150 seps, 1 mil outputs, 50 ms diffs",
+				name:               "full: 150 seps, 1 mil outputs, 50 ms diffs",
 				snapshotFileName:   "full_snapshot.bin",
 				originHeader:       originHeader,
+				originTimestamp:    originTimestamp,
 				sepGenerator:       sepIterFunc,
 				sepGenRetriever:    sepGenRetriever,
 				outputGenerator:    outputIterFunc,
@@ -81,6 +84,43 @@ func TestStreamFullLocalSnapshotDataToAndFrom(t *testing.T) {
 			}
 			return t
 		}(),
+		func() test {
+
+			originHeader := &snapshot.FileHeader{
+				Type:                 snapshot.Delta,
+				Version:              snapshot.SupportedFormatVersion,
+				SEPMilestoneIndex:    uint64(rand.Intn(10000)),
+				SEPMilestoneHash:     rand32ByteHash(),
+				LedgerMilestoneIndex: uint64(rand.Intn(10000)),
+				LedgerMilestoneHash:  rand32ByteHash(),
+			}
+
+			originTimestamp := uint64(time.Now().Unix())
+
+			// create generators and consumers
+			sepIterFunc, sepGenRetriever := newSEPGenerator(150)
+			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
+
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(50)
+			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
+
+			t := test{
+				name:               "delta: 150 seps, 50 ms diffs",
+				snapshotFileName:   "delta_snapshot.bin",
+				originHeader:       originHeader,
+				originTimestamp:    originTimestamp,
+				sepGenerator:       sepIterFunc,
+				sepGenRetriever:    sepGenRetriever,
+				msDiffGenerator:    msDiffIterFunc,
+				msDiffGenRetriever: msDiffGenRetriever,
+				headerConsumer:     headerEqualFunc(t, originHeader),
+				sepConsumer:        sepConsumerFunc,
+				sepConRetriever:    sepsCollRetriever,
+				msDiffConsumer:     msDiffConsumerFunc,
+				msDiffConRetriever: msDiffCollRetriever,
+			}
+			return t
+		}(),
 	}
 
 	for _, tt := range testCases {
@@ -90,22 +130,24 @@ func TestStreamFullLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamFullLocalSnapshotDataTo(snapshotFileWrite, originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
+			require.NoError(t, snapshot.StreamLocalSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)
 			require.NoError(t, err)
-			fmt.Printf("%s: written local snapshot file size: %d MB\n", tt.name, fileInfo.Size()/1024/1024)
+			fmt.Printf("%s: written (snapshot type: %d) local snapshot file size: %d MB\n", tt.name, tt.originHeader.Type, fileInfo.Size()/1024/1024)
 
 			// read back written data and verify that it is equal
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamFullLocalSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.msDiffConsumer))
+			require.NoError(t, snapshot.StreamLocalSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.msDiffConsumer))
 
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
-			require.EqualValues(t, tt.outputGenRetriever(), tt.outputConRetriever())
+			if tt.originHeader.Type == snapshot.Full {
+				require.EqualValues(t, tt.outputGenRetriever(), tt.outputConRetriever())
+			}
 			require.EqualValues(t, tt.msDiffGenRetriever(), tt.msDiffConRetriever())
 		})
 	}
@@ -114,7 +156,7 @@ func TestStreamFullLocalSnapshotDataToAndFrom(t *testing.T) {
 
 type sepRetrieverFunc func() [][snapshot.SolidEntryPointHashLength]byte
 
-func newSEPGenerator(count int) (snapshot.SEPIteratorFunc, sepRetrieverFunc) {
+func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 	var generatedSEPs [][snapshot.SolidEntryPointHashLength]byte
 	return func() *[snapshot.SolidEntryPointHashLength]byte {
 			if count == 0 {
@@ -141,7 +183,7 @@ func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 
 type outputRetrieverFunc func() []snapshot.Output
 
-func newOutputsGenerator(count int) (snapshot.OutputIteratorFunc, outputRetrieverFunc) {
+func newOutputsGenerator(count int) (snapshot.OutputProducerFunc, outputRetrieverFunc) {
 	var generatedOutputs []snapshot.Output
 	return func() *snapshot.Output {
 			if count == 0 {
@@ -168,7 +210,7 @@ func newOutputCollector() (snapshot.OutputConsumerFunc, outputRetrieverFunc) {
 
 type msDiffRetrieverFunc func() []*snapshot.MilestoneDiff
 
-func newMsDiffGenerator(count int) (snapshot.MilestoneDiffIteratorFunc, msDiffRetrieverFunc) {
+func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRetrieverFunc) {
 	var generateMsDiffs []*snapshot.MilestoneDiff
 	return func() *snapshot.MilestoneDiff {
 			if count == 0 {
@@ -180,12 +222,12 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffIteratorFunc, msDiffRe
 				MilestoneIndex: uint64(rand.Int63()),
 			}
 
-			createdCount := rand.Intn(2000) + 1
+			createdCount := rand.Intn(500) + 1
 			for i := 0; i < createdCount; i++ {
 				msDiff.Created = append(msDiff.Created, randLSTransactionUnspentOutputs())
 			}
 
-			consumedCount := rand.Intn(2000) + 1
+			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
 				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionUnspentOutputs())
 			}

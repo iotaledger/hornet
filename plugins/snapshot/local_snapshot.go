@@ -259,7 +259,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
 	}
 
-	if err := StreamFullLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header,
+	if err := StreamLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header,
 		func() *[32]byte {
 			// TODO: generate SEPs
 			return nil
@@ -346,7 +346,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 			return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
 		}
 		lsHeader = header
-		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.UTXOCount, header.MilestoneDiffCount)
+		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
 		return nil
 	}
 
@@ -370,7 +370,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return nil
 	}
 
-	if err := StreamFullLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
+	if err := StreamLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import local snapshot file: %w", err)
 	}
 
