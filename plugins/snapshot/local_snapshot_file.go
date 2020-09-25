@@ -76,9 +76,12 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone.
 type MilestoneDiff struct {
-	MilestoneIndex uint64    `json:"milestone_index"`
-	Created        []*Output `json:"created"`
-	Consumed       []*Output `json:"consumed"`
+	// The index of the milestone for which the diff applies.
+	MilestoneIndex uint64 `json:"milestone_index"`
+	// The created outputs with this milestone.
+	Created []*Output `json:"created"`
+	// The consumed outputs with this milestone.
+	Consumed []*Output `json:"consumed"`
 }
 
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
@@ -332,7 +335,7 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
 		if err := sepConsumer(sep); err != nil {
-			return err
+			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
 	}
 
@@ -344,7 +347,7 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 			}
 
 			if err := outputConsumer(output); err != nil {
-				return err
+				return fmt.Errorf("output consumer error at pos %d: %w", i, err)
 			}
 		}
 	}
@@ -355,7 +358,7 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
 		if err := msDiffConsumer(msDiff); err != nil {
-			return err
+			return fmt.Errorf("ms-diff consumer error at pos %d: %w", i, err)
 		}
 	}
 
