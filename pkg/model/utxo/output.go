@@ -14,13 +14,14 @@ import (
 type Output struct {
 	kvStorable
 
-	TransactionID *iotago.SignedTransactionPayloadHash
+	TransactionID iotago.SignedTransactionPayloadHash
 	OutputIndex   uint16
 
 	MessageID hornet.Hash
-	Address   *iotago.Ed25519Address
 
-	Amount uint64
+	Type    iotago.OutputType
+	Address iotago.Ed25519Address
+	Amount  uint64
 }
 
 func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
@@ -47,18 +48,19 @@ func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPaylo
 		return nil, err
 	}
 
-	var address *iotago.Ed25519Address
+	var address iotago.Ed25519Address
 	switch a := deposit.Address.(type) {
 	case *iotago.Ed25519Address:
-		address = a
+		address = *a
 	default:
 		return nil, errors.New("unsupported deposit address")
 	}
 
 	return &Output{
-		TransactionID: txID,
+		TransactionID: *txID,
 		OutputIndex:   index,
 		MessageID:     messageID,
+		Type:          iotago.OutputSigLockedSingleDeposit,
 		Address:       address,
 		Amount:        deposit.Amount,
 	}, nil
@@ -79,7 +81,7 @@ func (o *Output) kvStorableKey() (key []byte) {
 func (o *Output) kvStorableValue() (value []byte) {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, o.Amount)
-	return byteutils.ConcatBytes(o.MessageID, o.Address[:], bytes)
+	return byteutils.ConcatBytes(o.MessageID, []byte{o.Type}, o.Address[:], bytes)
 }
 
 func (o *Output) kvStorableLoad(key []byte, value []byte) error {
@@ -90,7 +92,7 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 		return fmt.Errorf("not enough bytes in key to unmarshal object, expected: %d, got: %d", expectedKeyLength, len(key))
 	}
 
-	expectedValueLength := iotago.MessageHashLength + iotago.Ed25519AddressBytesLength + 8
+	expectedValueLength := iotago.MessageHashLength + 1 + iotago.Ed25519AddressBytesLength + 8
 
 	if len(value) < expectedValueLength {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
@@ -100,8 +102,9 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 	o.OutputIndex = binary.LittleEndian.Uint16(key[iotago.SignedTransactionPayloadHashLength : iotago.SignedTransactionPayloadHashLength+2])
 
 	copy(o.MessageID, value[:iotago.MessageHashLength])
-	copy(o.Address[:], value[iotago.MessageHashLength:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])
-	o.Amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.Ed25519AddressBytesLength+8])
+	o.Type = value[iotago.MessageHashLength]
+	copy(o.Address[:], value[iotago.MessageHashLength+1:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])
+	o.Amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+1+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.Ed25519AddressBytesLength+8])
 
 	return nil
 }
