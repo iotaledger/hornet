@@ -14,17 +14,17 @@ import (
 type Spent struct {
 	kvStorable
 
-	Address       *iotago.Ed25519Address
-	TransactionID *iotago.SignedTransactionPayloadHash
+	Address       iotago.Ed25519Address
+	TransactionID iotago.SignedTransactionPayloadHash
 	OutputIndex   uint16
 
 	Output *Output
 
-	TargetTransactionID *iotago.SignedTransactionPayloadHash
+	TargetTransactionID iotago.SignedTransactionPayloadHash
 	ConfirmationIndex   milestone.Index
 }
 
-func NewSpent(output *Output, targetTransactionID *iotago.SignedTransactionPayloadHash, confirmationIndex milestone.Index) *Spent {
+func NewSpent(output *Output, targetTransactionID iotago.SignedTransactionPayloadHash, confirmationIndex milestone.Index) *Spent {
 	return &Spent{
 		Address:             output.Address,
 		TransactionID:       output.TransactionID,
