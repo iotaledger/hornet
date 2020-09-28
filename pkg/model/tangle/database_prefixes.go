@@ -8,5 +8,6 @@ const (
 	StorePrefixChildren            byte = 4
 	StorePrefixSnapshot            byte = 5
 	StorePrefixUnconfirmedMessages byte = 6
-	StorePrefixAutopeering         byte = 7
+	StorePrefixIndexation          byte = 7
+	StorePrefixAutopeering         byte = 8
 )
