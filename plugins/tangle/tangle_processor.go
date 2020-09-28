@@ -28,6 +28,8 @@ var (
 	lastIncomingMPS uint32
 	lastNewMPS      uint32
 	lastOutgoingMPS uint32
+
+	startWaitGroup sync.WaitGroup
 )
 
 func configureTangleProcessor(_ *node.Plugin) {
@@ -50,6 +52,8 @@ func configureTangleProcessor(_ *node.Plugin) {
 
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
+
+	startWaitGroup.Add(4)
 
 	onMsgProcessed := events.NewClosure(func(message *tangle.Message, request *rqueue.Request, p *peer.Peer) {
 		receiveMsgWorkerPool.Submit(message, request, p)
@@ -84,6 +88,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		gossip.Processor().Events.MessageProcessed.Attach(onMsgProcessed)
 		receiveMsgWorkerPool.Start()
+		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
 		gossip.Processor().Events.MessageProcessed.Detach(onMsgProcessed)
