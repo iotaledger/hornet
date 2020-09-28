@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gohornet/hornet/plugins/p2p"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -44,6 +45,7 @@ func main() {
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		plugins = append(plugins, []*node.Plugin{
 			pow.PLUGIN,
+			p2p.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
 			peering.PLUGIN,

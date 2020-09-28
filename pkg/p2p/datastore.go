@@ -1,4 +1,4 @@
-package network
+package p2p
 
 import (
 	"github.com/iotaledger/hive.go/kvstore"

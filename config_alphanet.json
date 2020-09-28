@@ -114,7 +114,7 @@
     "alias": "",
     "showAliasInGetNodeInfo": false,
     "disablePlugins": ["Autopeering"],
-    "enablePlugins": ["Spammer", "Coordinator"]
+    "enablePlugins": ["Spammer"]
   },
   "logger": {
     "level": "debug",
