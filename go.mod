@@ -26,9 +26,13 @@ require (
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20200916211606-91bd423186fa
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200921100501-4142e8eb15bb
+	github.com/ipfs/go-ds-badger v0.2.5 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
+	github.com/libp2p/go-libp2p v0.11.0 // indirect
+	github.com/libp2p/go-libp2p-connmgr v0.2.4 // indirect
+	github.com/libp2p/go-libp2p-kad-dht v0.10.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
 	github.com/muxxer/iota.go v1.0.0-beta.11.0.20200916213055-851daf436c69

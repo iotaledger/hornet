@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Autopeering", node.Enabled, configure, run)
+	PLUGIN = node.NewPlugin("Autopeering", node.Disabled, configure, run)
 
 	log   *logger.Logger
 	local *Local

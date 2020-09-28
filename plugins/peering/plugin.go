@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	PLUGIN      = node.NewPlugin("Peering", node.Enabled, configure, run)
+	PLUGIN      = node.NewPlugin("Peering", node.Disabled, configure, run)
 	log         *logger.Logger
 	manager     *peering.Manager
 	managerOnce sync.Once
