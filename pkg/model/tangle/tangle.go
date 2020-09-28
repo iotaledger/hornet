@@ -42,8 +42,6 @@ func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 		MaxOpenFiles:                16384,
 		MemTableSize:                64 << 20,
 		MemTableStopWritesThreshold: 4,
-		MinCompactionRate:           4 << 20, // 4 MB/s
-		MinFlushRate:                4 << 20, // 4 MB/s
 	}
 	opts.Experimental.L0SublevelCompactions = true
 

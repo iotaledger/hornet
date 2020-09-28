@@ -5,26 +5,24 @@ go 1.15
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/cockroachdb/pebble v0.0.0-20200915204653-08b545a1f540
+	github.com/cockroachdb/pebble v0.0.0-20200928201937-b5c5df0302e3
+	github.com/dchest/blake2b v1.0.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200506085104-5ee50844ed64
-	github.com/fhmq/hmq v0.0.0-20200826092422-b8bacb4c3d2c
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/gin-contrib/gzip v0.0.2
+	github.com/gin-contrib/gzip v0.0.3
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/go-zeromq/zmq4 v0.10.0
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200916211606-91bd423186fa
+	github.com/iotaledger/hive.go v0.0.0-20200928092608-af0f0dc4fd6f
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200921100501-4142e8eb15bb
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
@@ -50,6 +48,6 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.7.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/sys v0.0.0-20200918174421-af09f7315aff // indirect
+	golang.org/x/sys v0.0.0-20200928205150-006507a75852 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
 )
