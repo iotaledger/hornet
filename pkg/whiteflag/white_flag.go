@@ -52,7 +52,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID ...hornet.Hash) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncluded:            make(hornet.Hashes, 0),
 		MessagesExcludedConflicting: make(hornet.Hashes, 0),
@@ -165,34 +165,17 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 	// If parent1 and parent2 of a message are both SEPs, are already processed or already confirmed,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncluded.
-	if len(parent2MessageID) == 0 {
-		// no parent2 message ID given, only walk parent 1
-		if err := dag.TraverseParents(parent1MessageID,
-			condition,
-			consumer,
-			// called on missing parents
-			// return error on missing parents
-			nil,
-			// called on solid entry points
-			// Ignore solid entry points (snapshot milestone included)
-			nil,
-			false, nil); err != nil {
-			return nil, err
-		}
-	} else {
-		// parent2 message ID given, first walk parent1 then parent2
-		if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID[0],
-			condition,
-			consumer,
-			// called on missing parents
-			// return error on missing parents
-			nil,
-			// called on solid entry points
-			// Ignore solid entry points (snapshot milestone included)
-			nil,
-			false, nil); err != nil {
-			return nil, err
-		}
+	if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID,
+		condition,
+		consumer,
+		// called on missing parents
+		// return error on missing parents
+		nil,
+		// called on solid entry points
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		false, nil); err != nil {
+		return nil, err
 	}
 
 	// compute merkle tree root hash
