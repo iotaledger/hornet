@@ -317,6 +317,22 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 		StoreChild(cachedMessage.GetMessage().GetParent2MessageID(), cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
 	}
 
+	// store indexation if the message contains an indexation payload
+	switch payload := cachedMessage.GetMessage().GetMessage().Payload.(type) {
+	case *iotago.IndexationPayload:
+		StoreIndexation(payload.Index, cachedMessage.GetMessage().GetMessageID()).Release(true)
+	case *iotago.UnsignedTransaction:
+		// check optional payload of unsigned transaction payload
+		switch optionalPayload := payload.Payload.(type) {
+		case *iotago.IndexationPayload:
+			StoreIndexation(optionalPayload.Index, cachedMessage.GetMessage().GetMessageID()).Release(true)
+		default:
+			// do nothing
+		}
+	default:
+		// do nothing
+	}
+
 	// Store only non-requested messages, since all requested messages are confirmed by a milestone anyway
 	// This is only used to delete unconfirmed messages from the database at pruning
 	if !requested {

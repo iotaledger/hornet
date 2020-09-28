@@ -94,6 +94,7 @@ func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 	configureChildrenStorage(store, caches.Children)
 	configureMilestoneStorage(store, caches.Milestones)
 	configureUnconfirmedMessageStorage(store, caches.UnconfirmedMessages)
+	configureIndexationStorage(store, caches.Indexations)
 	configureSnapshotStore(store)
 }
 
