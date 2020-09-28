@@ -101,20 +101,12 @@ func Host() host.Host {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 		}
 
-		listenAddrs := config.NodeConfig.GetStringSlice(config.CfgP2PBindAddresses)
-		multiAddrs := make([]multiaddr.Multiaddr, len(listenAddrs))
-		for i, listenAddr := range listenAddrs {
-			ma, err := multiaddr.NewMultiaddr(listenAddr)
-			if err != nil {
-				panic(fmt.Sprintf("unable to parse multi address for bind address at pos %d: %s", i, err))
-			}
-			multiAddrs[i] = ma
-		}
-
 		var idht *dht.IpfsDHT
+		staticPeers := config.NodeConfig.GetStringSlice(config.CfgP2PBindAddresses)
+
 		selfHost, err = libp2p.New(ctx,
 			libp2p.Identity(prvKey),
-			libp2p.ListenAddrs(multiAddrs...),
+			libp2p.ListenAddrStrings(staticPeers...),
 			libp2p.Peerstore(peerStore),
 			libp2p.Transport(libp2pquic.NewTransport),
 			libp2p.DefaultTransports,
