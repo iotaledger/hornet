@@ -2,6 +2,7 @@
 package networking
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-core/routing"
@@ -26,7 +28,8 @@ import (
 )
 
 const (
-	pubKeyFileName = "key.pub"
+	pubKeyFileName       = "key.pub"
+	iotaGossipProtocolID = "/iota-gossip/1.0.0"
 )
 
 var (
@@ -59,7 +62,7 @@ func Peer() host.Host {
 
 		// make sure nobody copies around the peer store since it contains the
 		// private key of the node
-		log.Infof("never share your %s folder as it contains your node's private key", peerStorePath)
+		log.Infof("never share your %s folder as it contains your node's private key!", peerStorePath)
 
 		// load up the previously generated identity or create a new one
 		isPeerStoreNew := os.IsNotExist(statPeerStorePathErr)
@@ -74,8 +77,8 @@ func Peer() host.Host {
 			libp2p.ListenAddrStrings(),
 			libp2p.Peerstore(peerStore),
 			libp2p.ConnectionManager(connmgr.NewConnManager(
-				100,
-				400,
+				config.NodeConfig.GetInt(config.CfgLibp2pConnMngLowWatermark),
+				config.NodeConfig.GetInt(config.CfgLibp2pConnMngHighWatermark),
 				time.Minute,
 			)),
 			// attempt to open ports using uPNP for NATed hosts.
@@ -107,6 +110,32 @@ func configure(plugin *node.Plugin) {
 
 func run(_ *node.Plugin) {
 	p := Peer()
+	p.SetStreamHandler(iotaGossipProtocolID, gossipStreamHandler)
+	Peer().Network().SetConnHandler(func(conn network.Conn) {
+
+	})
+	log.Info("listening on:")
+	for _, multiAddr := range p.Addrs() {
+		log.Infof("%s", multiAddr.String())
+	}
+}
+
+func gossipStreamHandler(stream network.Stream) {
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+
+	Peer().
+
+	go readData(rw)
+	go writeData(rw)
+}
+
+func readData(rw *bufio.ReadWriter) {
+	for {
+		select {}
+	}
+}
+
+func writeData(rw *bufio.ReadWriter) {
 
 }
 
