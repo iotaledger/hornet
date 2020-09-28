@@ -3,6 +3,7 @@ package tangle
 import (
 	"fmt"
 	"runtime"
+	"sync"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -26,6 +27,8 @@ var (
 	lastIncomingMPS uint32
 	lastNewMPS      uint32
 	lastOutgoingMPS uint32
+
+	startWaitGroup sync.WaitGroup
 )
 
 func configureTangleProcessor(_ *node.Plugin) {
@@ -48,6 +51,8 @@ func configureTangleProcessor(_ *node.Plugin) {
 
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
+
+	startWaitGroup.Add(4)
 
 	onMsgProcessed := events.NewClosure(func(message *tangle.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
 		receiveMsgWorkerPool.Submit(message, request, proto)
@@ -73,6 +78,7 @@ func runTangleProcessor(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
 		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
+		startWaitGroup.Done()
 		<-shutdownSignal
 		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
@@ -81,6 +87,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		gossip.Service().MessageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		receiveMsgWorkerPool.Start()
+		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
 		gossip.Service().MessageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
@@ -93,6 +100,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		processValidMilestoneWorkerPool.Start()
 		tangle.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		tangle.Events.ReceivedInvalidMilestone.Attach(onReceivedInvalidMilestone)
+		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		tangle.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
@@ -104,11 +112,18 @@ func runTangleProcessor(_ *node.Plugin) {
 	daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		milestoneSolidifierWorkerPool.Start()
+		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		milestoneSolidifierWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.PriorityMilestoneSolidifier)
+
+}
+
+// WaitForTangleProcessorStartup waits until all background workers of the tangle processor are started.
+func WaitForTangleProcessorStartup() {
+	startWaitGroup.Wait()
 }
 
 func IsReceiveTxWorkerPoolBusy() bool {
