@@ -5,18 +5,19 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/kerl"
 )
 
 func main() {
-	b := make([]byte, consts.HashTrytesSize)
+	b := make([]byte, consts.HashBytesSize)
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
 	}
 
-	tryteAlphabetLength := len(consts.TryteAlphabet)
-	var seed string
-	for _, randByte := range b {
-		seed += string(consts.TryteAlphabet[randByte%byte(tryteAlphabetLength)])
+	// convert to trytes and set the last trit to zero
+	seed, err := kerl.KerlBytesToTrytes(b)
+	if err != nil {
+		panic(err)
 	}
 
 	fmt.Println(seed)
