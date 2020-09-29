@@ -7,6 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/marshalutil"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go"
@@ -186,6 +187,71 @@ func storeDiff(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent
 	}
 
 	return mutations.Set(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key), value.Bytes())
+}
+
+func GetMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key, uint32(msIndex))
+
+	value, err := utxoStorage.Get(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	marshalUtil := marshalutil.New(value)
+
+	var outputs []*Output
+	var spents []*Spent
+
+	outputCount, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := 0; i < int(outputCount); i++ {
+		transactionIDBytes, err := marshalUtil.ReadBytes(iotago.SignedTransactionPayloadHashLength)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		outputIndex, err := marshalUtil.ReadUint16()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var transactionID iotago.SignedTransactionPayloadHash
+		copy(transactionID[:], transactionIDBytes)
+
+		outputs = append(outputs, &Output{TransactionID: transactionID, OutputIndex: outputIndex})
+	}
+
+	spentCount, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := 0; i < int(spentCount); i++ {
+		addressBytes, err := marshalUtil.ReadBytes(iotago.Ed25519AddressBytesLength)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		outputIndex, err := marshalUtil.ReadUint16()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var address iotago.Ed25519Address
+		copy(address[:], addressBytes)
+
+		spents = append(spents, &Spent{Address: address, OutputIndex: outputIndex})
+	}
+
+	return outputs, spents, nil
 }
 
 func ApplyConfirmation(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent) error {
