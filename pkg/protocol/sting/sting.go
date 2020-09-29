@@ -99,7 +99,7 @@ func NewMessageMsg(msgData []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, msgData); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, msgData); err != nil {
 		return nil, err
 	}
 
@@ -113,7 +113,7 @@ func NewMessageRequestMsg(requestedMessageID hornet.Hash) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, requestedMessageID[:RequestedMessageIDMsgBytesLength]); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, requestedMessageID[:RequestedMessageIDMsgBytesLength]); err != nil {
 		return nil, err
 	}
 
@@ -127,23 +127,23 @@ func NewHeartbeatMsg(solidMilestoneIndex milestone.Index, prunedMilestoneIndex m
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, solidMilestoneIndex); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, solidMilestoneIndex); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, prunedMilestoneIndex); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, prunedMilestoneIndex); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, latestMilestoneIndex); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, latestMilestoneIndex); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, connectedNeighbors); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, connectedNeighbors); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, syncedNeighbors); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, syncedNeighbors); err != nil {
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func NewMilestoneRequestMsg(requestedMilestoneIndex milestone.Index) ([]byte, er
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, requestedMilestoneIndex); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, requestedMilestoneIndex); err != nil {
 		return nil, err
 	}
 
@@ -170,6 +170,6 @@ func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 		return 0, ErrInvalidSourceLength
 	}
 
-	msIndex := binary.BigEndian.Uint32(source)
+	msIndex := binary.LittleEndian.Uint32(source)
 	return milestone.Index(msIndex), nil
 }

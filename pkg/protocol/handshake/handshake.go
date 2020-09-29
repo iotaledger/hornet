@@ -69,23 +69,23 @@ func NewHandshakeMsg(ownVersion uint16, ownSourcePort uint16, ownCooPublicKey ed
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, ownSourcePort); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, ownSourcePort); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, time.Now().UnixNano()/int64(time.Millisecond)); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, time.Now().UnixNano()/int64(time.Millisecond)); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, ownCooPublicKey); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, ownCooPublicKey); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, ownUsedMWM); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, ownUsedMWM); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.BigEndian, ownVersion); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, ownVersion); err != nil {
 		return nil, err
 	}
 
@@ -102,11 +102,11 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 
 	r := bytes.NewReader(msg)
 
-	if err := binary.Read(r, binary.BigEndian, &serverSocketPort); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &serverSocketPort); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &sentTimestamp); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &sentTimestamp); err != nil {
 		return nil, err
 	}
 
@@ -114,11 +114,11 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 		return nil, err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &mwm); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &mwm); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(r, binary.BigEndian, &version); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &version); err != nil {
 		return nil, err
 	}
 
