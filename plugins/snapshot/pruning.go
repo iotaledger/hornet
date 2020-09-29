@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/database"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -28,53 +29,53 @@ func setIsPruning(value bool) {
 // pruneUnconfirmedMessages prunes all unconfirmed messages from the database for the given milestone
 func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
 
-	messagesToCheckMap := make(map[string]struct{})
+	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unconfirmed
 	for _, messageID := range tangle.GetUnconfirmedMessageIDs(targetIndex, true) {
-		if _, exists := messagesToCheckMap[string(messageID)]; exists {
+		if _, exists := messageIDsToDeleteMap[string(messageID)]; exists {
 			continue
 		}
 
-		cachedMsg := tangle.GetCachedMessageOrNil(messageID) // msg +1
-		if cachedMsg == nil {
+		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+		if cachedMsgMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
 		}
 
-		if cachedMsg.GetMetadata().IsConfirmed() {
+		if cachedMsgMeta.GetMetadata().IsConfirmed() {
 			// message was already confirmed
-			cachedMsg.Release(true) // msg -1
+			cachedMsgMeta.Release(true) // meta -1
 			continue
 		}
 
-		cachedMsg.Release(true) // msg -1
-		messagesToCheckMap[string(messageID)] = struct{}{}
+		cachedMsgMeta.Release(true) // meta -1
+		messageIDsToDeleteMap[string(messageID)] = struct{}{}
 	}
 
-	msgCountDeleted = pruneMessages(messagesToCheckMap)
+	msgCountDeleted = pruneMessages(messageIDsToDeleteMap)
 	tangle.DeleteUnconfirmedMessages(targetIndex)
 
-	return msgCountDeleted, len(messagesToCheckMap)
+	return msgCountDeleted, len(messageIDsToDeleteMap)
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func pruneMilestone(milestoneIndex milestone.Index) {
+func pruneMilestone(milestoneIndex milestone.Index) error {
 
-	// state diffs
-	/*
-		if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
-			log.Warn(err)
-		}
-	*/
+	err := utxo.PruneMilestoneIndex(milestoneIndex)
+	if err != nil {
+		return err
+	}
 
 	tangle.DeleteMilestone(milestoneIndex)
+
+	return nil
 }
 
 // pruneMessages removes all the associated data of the given message IDs from the database
-func pruneMessages(messageIDsToDelete map[string]struct{}) int {
+func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
-	for messageIDToDelete := range messageIDsToDelete {
+	for messageIDToDelete := range messageIDsToDeleteMap {
 
 		cachedMsg := tangle.GetCachedMessageOrNil(hornet.Hash(messageIDToDelete)) // msg +1
 		if cachedMsg == nil {
@@ -99,7 +100,7 @@ func pruneMessages(messageIDsToDelete map[string]struct{}) int {
 		})
 	}
 
-	return len(messageIDsToDelete)
+	return len(messageIDsToDeleteMap)
 }
 
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
@@ -175,7 +176,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		msgsToCheckMap := make(map[string]struct{})
+		messageIDsToDeleteMap := make(map[string]struct{})
 
 		err := dag.TraverseParents(cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more messages pass the given condition
@@ -188,7 +189,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// consumer
 			func(cachedMsgMeta *tangle.CachedMetadata) error { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
-				msgsToCheckMap[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
+				messageIDsToDeleteMap[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
 				return nil
 			},
 			// called on missing parents
@@ -206,10 +207,13 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			continue
 		}
 
-		msgCountChecked += len(msgsToCheckMap)
-		txCountDeleted += pruneMessages(msgsToCheckMap)
+		err = pruneMilestone(milestoneIndex)
+		if err != nil {
+			log.Warnf("Pruning milestone (%d) failed! %v", err.Error())
+		}
 
-		pruneMilestone(milestoneIndex)
+		msgCountChecked += len(messageIDsToDeleteMap)
+		txCountDeleted += pruneMessages(messageIDsToDeleteMap)
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		tangle.SetSnapshotInfo(snapshotInfo)
