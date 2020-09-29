@@ -53,10 +53,10 @@ type Header struct {
 
 // WriteHeader writes a TLV header into the given Writer.
 func WriteHeader(buf io.Writer, msgType message.Type, msgBytesLength uint16) error {
-	if err := binary.Write(buf, binary.BigEndian, byte(msgType)); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, byte(msgType)); err != nil {
 		return err
 	}
-	return binary.Write(buf, binary.BigEndian, msgBytesLength)
+	return binary.Write(buf, binary.LittleEndian, msgBytesLength)
 }
 
 // ParseHeader parses the given buffer to a Header.
@@ -69,7 +69,7 @@ func ParseHeader(buf []byte) (*Header, error) {
 	}
 
 	// extract length of message
-	advMsgBytesLength := binary.BigEndian.Uint16(buf[1:3])
+	advMsgBytesLength := binary.LittleEndian.Uint16(buf[1:3])
 
 	if (advMsgBytesLength > def.MaxBytesLength) || (!def.VariableLength && (advMsgBytesLength < def.MaxBytesLength)) {
 		return nil, fmt.Errorf("%s: advertised length: %d bytes; max length: %d bytes", ErrInvalidMessageLength.Error(), advMsgBytesLength, def.MaxBytesLength)
