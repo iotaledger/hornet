@@ -86,7 +86,15 @@ func pruneMessages(messageIDsToDelete map[string]struct{}) int {
 			tangle.DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
 			tangle.DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
 
+			// delete all children of this message
 			tangle.DeleteChildren(msg.GetMessageID())
+
+			indexationPayload := tangle.CheckIfIndexation(msg)
+			if indexationPayload != nil {
+				// delete indexation if the message contains an indexation payload
+				tangle.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
+			}
+
 			tangle.DeleteMessage(msg.GetMessageID())
 		})
 	}

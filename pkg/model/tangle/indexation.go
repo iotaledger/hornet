@@ -5,6 +5,7 @@ import (
 
 	"github.com/dchest/blake2b"
 	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
@@ -44,5 +45,26 @@ func (i *Indexation) ObjectStorageKey() []byte {
 }
 
 func (i *Indexation) ObjectStorageValue() (_ []byte) {
+	return nil
+}
+
+func CheckIfIndexation(msg *Message) (indexation *iotago.IndexationPayload) {
+
+	// check if the message contains an indexation payload
+	switch payload := msg.GetMessage().Payload.(type) {
+	case *iotago.IndexationPayload:
+		return payload
+	case *iotago.UnsignedTransaction:
+		// check optional payload of unsigned transaction payload
+		switch optionalPayload := payload.Payload.(type) {
+		case *iotago.IndexationPayload:
+			return optionalPayload
+		default:
+			// do nothing
+		}
+	default:
+		// do nothing
+	}
+
 	return nil
 }
