@@ -104,10 +104,7 @@ func UnspentOutputsForAddress(address *iotago.Ed25519Address) ([]*Output, error)
 	return outputs, err
 }
 
-func SpentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+func spentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
 
 	var spents []*Spent
 
@@ -142,6 +139,14 @@ func SpentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
 	return spents, err
 }
 
+func SpentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return spentOutputsForAddress(address)
+}
+
 func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey())
 	return mutations.Set(key, output.kvStorableValue())
@@ -161,6 +166,10 @@ func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations
 	mutations.Delete(unspentKey)
 
 	return mutations.Set(spentKey, spent.kvStorableValue())
+}
+
+func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, spent.kvStorableKey()))
 }
 
 func storeDiff(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent, mutations kvstore.BatchedMutations) error {
@@ -189,10 +198,7 @@ func storeDiff(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent
 	return mutations.Set(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key), value.Bytes())
 }
 
-func GetMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+func getMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
@@ -240,6 +246,11 @@ func GetMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 			return nil, nil, err
 		}
 
+		transactionIDBytes, err := marshalUtil.ReadBytes(iotago.SignedTransactionPayloadHashLength)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		outputIndex, err := marshalUtil.ReadUint16()
 		if err != nil {
 			return nil, nil, err
@@ -248,10 +259,56 @@ func GetMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 		var address iotago.Ed25519Address
 		copy(address[:], addressBytes)
 
-		spents = append(spents, &Spent{Address: address, OutputIndex: outputIndex})
+		var transactionID iotago.SignedTransactionPayloadHash
+		copy(transactionID[:], transactionIDBytes)
+
+		spents = append(spents, &Spent{Address: address, TransactionID: transactionID, OutputIndex: outputIndex})
 	}
 
 	return outputs, spents, nil
+}
+
+func deleteMilestoneDiffs(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key, uint32(msIndex))
+
+	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
+}
+
+func PruneMilestoneIndex(msIndex milestone.Index) error {
+
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	_, spents, err := getMilestoneDiffs(msIndex)
+	if err != nil {
+		return err
+	}
+
+	mutation := utxoStorage.Batched()
+
+	for _, spent := range spents {
+		err = deleteOutput(&Output{TransactionID: spent.TransactionID, OutputIndex: spent.OutputIndex}, mutation)
+		if err != nil {
+			mutation.Cancel()
+			return err
+		}
+
+		err = deleteSpent(spent, mutation)
+		if err != nil {
+			mutation.Cancel()
+			return err
+		}
+	}
+
+	err = deleteMilestoneDiffs(msIndex, mutation)
+	if err != nil {
+		mutation.Cancel()
+		return err
+	}
+
+	return mutation.Commit()
 }
 
 func ApplyConfirmation(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent) error {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -112,4 +113,8 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 func (o *Output) IsUnspentWithoutLocking() (bool, error) {
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, o.kvStorableKey())
 	return utxoStorage.Has(key)
+}
+
+func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
+	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey()))
 }
