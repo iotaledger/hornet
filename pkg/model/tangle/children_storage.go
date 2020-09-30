@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -29,7 +30,7 @@ func (c *CachedChild) GetChild() *Child {
 }
 
 func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	child := NewChild(key[:32], key[32:64])
+	child := NewChild(key[:iotago.MessageHashLength], key[iotago.MessageHashLength:iotago.MessageHashLength])
 	return child, nil
 }
 
@@ -44,7 +45,7 @@ func configureChildrenStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		childrenFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.PartitionKey(32, 32),
+		objectstorage.PartitionKey(iotago.MessageHashLength, iotago.MessageHashLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -66,7 +67,7 @@ func GetChildrenMessageIDs(messageID hornet.Hash, maxFind ...int) hornet.Hashes 
 			return false
 		}
 
-		childrenMessageIDs = append(childrenMessageIDs, key[32:64])
+		childrenMessageIDs = append(childrenMessageIDs, key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength])
 		return true
 	}, false, messageID)
 
@@ -84,7 +85,7 @@ type ChildConsumer func(messageID hornet.Hash, childMessageID hornet.Hash) bool
 // ForEachChild loops over all children.
 func ForEachChild(consumer ChildConsumer, skipCache bool) {
 	childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(key[:32], key[32:64])
+		return consumer(key[:iotago.MessageHashLength], key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength])
 	}, skipCache)
 }
 
