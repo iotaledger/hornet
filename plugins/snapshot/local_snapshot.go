@@ -1,12 +1,10 @@
 package snapshot
 
 import (
-	"bufio"
 	"crypto/sha256"
-	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -26,11 +24,12 @@ const (
 )
 
 var (
-	SupportedLocalSnapshotFileVersions = []byte{5}
-
-	ErrCritical                 = errors.New("critical error")
+	// Returned when a critical error stops the execution of a task.
+	ErrCritical = errors.New("critical error")
+	// Returned when an unsupported local snapshot file version is read.
 	ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
-	ErrChildMsgNotFound         = errors.New("child message not found")
+	// Returned when a child message wasn't found.
+	ErrChildMsgNotFound = errors.New("child message not found")
 )
 
 // isSolidEntryPoint checks whether any direct child of the given message was confirmed by a milestone which is above the target milestone.
@@ -56,7 +55,7 @@ func isSolidEntryPoint(messageID hornet.Hash, targetIndex milestone.Index) bool 
 	return false
 }
 
-// getMilestoneParents traverses a milestone and collects all messages that were confirmed by that milestone or newer
+// getMilestoneParents traverses a milestone and collects all messages that were confirmed by that milestone or newer.
 func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal <-chan struct{}) (hornet.Hashes, error) {
 
 	var parentMessageIDs hornet.Hashes
@@ -185,7 +184,7 @@ func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.Snaps
 	}
 
 	minimumIndex := milestone.Index(SolidEntryPointCheckThresholdPast + 1)
-	maximumIndex := milestone.Index(solidMilestoneIndex - SolidEntryPointCheckThresholdFuture)
+	maximumIndex := solidMilestoneIndex - SolidEntryPointCheckThresholdFuture
 
 	if checkSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
 		minimumIndex = snapshotInfo.SnapshotIndex + 1
@@ -210,63 +209,20 @@ func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.Snaps
 	return nil
 }
 
-func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) ([]byte, error) {
-
-	if _, fileErr := os.Stat(filePath); os.IsNotExist(fileErr) {
-		// create dir if it not exists
-		if err := os.MkdirAll(filepath.Dir(filePath), 0700); err != nil {
-			return nil, err
-		}
-	}
-	exportFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0660)
-	if err != nil {
-		return nil, err
-	}
-	defer exportFile.Close()
-
-	// write into the file with an 8MB buffer
-	fileBufWriter := bufio.NewWriterSize(exportFile, 4096*2)
-
-	// write header, SEPs, seen milestones and ledger
-	if err := lsh.WriteToBuffer(fileBufWriter, abortSignal); err != nil {
-		return nil, err
-	}
-
-	// flush remains of header and content to file
-	if err := fileBufWriter.Flush(); err != nil {
-		return nil, err
-	}
-
-	// seek back to the beginning of the file
-	if _, err := exportFile.Seek(0, 0); err != nil {
-		return nil, err
-	}
-
-	// compute sha256 of file
-	lsHash := sha256.New()
-	if _, err := io.Copy(lsHash, exportFile); err != nil {
-		return nil, err
-	}
-
-	// write sha256 hash into the file
-	sha256Hash := lsHash.Sum(nil)
-	if err := binary.Write(exportFile, binary.LittleEndian, sha256Hash); err != nil {
-		return nil, err
-	}
-
-	return sha256Hash, nil
-}
-
 func setIsSnapshotting(value bool) {
 	statusLock.Lock()
 	isSnapshotting = value
 	statusLock.Unlock()
 }
 
-func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+	localSnapshotLock.Lock()
+	defer localSnapshotLock.Unlock()
+	return createFullLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
+}
 
+func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 	log.Infof("creating local snapshot for targetIndex %d", targetIndex)
-
 	ts := time.Now()
 
 	snapshotInfo := tangle.GetSnapshotInfo()
@@ -287,46 +243,45 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	}
 	defer cachedTargetMilestone.Release(true) // milestone -1
 
-	newBalances := make(map[string]uint64)
-	/*
-		newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(targetIndex, abortSignal)
-		if err != nil {
-			if err == tangle.ErrOperationAborted {
-				return err
-			}
-			return errors.Wrap(ErrCritical, err.Error())
-		}
-
-		if ledgerIndex != targetIndex {
-			return errors.Wrapf(ErrCritical, "ledger index wrong! %d/%d", ledgerIndex, targetIndex)
-		}
-	*/
-
-	newSolidEntryPoints, err := getSolidEntryPoints(targetIndex, abortSignal)
-	if err != nil {
-		return err
+	header := &FileHeader{
+		Version:           SupportedFormatVersion,
+		SEPMilestoneIndex: uint64(targetIndex),
 	}
+	copy(header.SEPMilestoneHash[:], cachedTargetMilestone.GetMilestone().MessageID)
 
-	lsh := &localSnapshotHeader{
-		milestoneMessageID: cachedTargetMilestone.GetMilestone().MessageID,
-		msIndex:            targetIndex,
-		msTimestamp:        cachedTargetMilestone.GetMilestone().Timestamp,
-		solidEntryPoints:   newSolidEntryPoints,
-		balances:           newBalances,
-	}
-
+	// build temp file path
 	filePathTmp := filePath + "_tmp"
+	_ = os.Remove(filePathTmp)
 
-	// Remove old temp file
-	os.Remove(filePathTmp)
-
-	hash, err := createSnapshotFile(filePathTmp, lsh, abortSignal)
+	// create temp file
+	lsFile, err := os.OpenFile(filePathTmp, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
 	}
 
+	if err := StreamLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header,
+		func() *[32]byte {
+			// TODO: generate SEPs
+			return nil
+		},
+		func() *Output {
+			// TODO: generate outputs
+			return nil
+		},
+		func() *MilestoneDiff {
+			// TODO: generate milestone diffs
+			return nil
+		}); err != nil {
+		_ = lsFile.Close()
+		return fmt.Errorf("couldn't generate local snapshot file: %w", err)
+	}
+
+	// rename tmp file to final file name
+	if err := lsFile.Close(); err != nil {
+		return fmt.Errorf("unable to close local snapshot file: %w", err)
+	}
 	if err := os.Rename(filePathTmp, filePath); err != nil {
-		return err
+		return fmt.Errorf("unable to rename temp local snapshot file: %w", err)
 	}
 
 	if writeToDatabase {
@@ -348,260 +303,87 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
-	log.Infof("created local snapshot for target index %d (sha256: %x), took %v", targetIndex, hash, time.Since(ts))
+	// re-read the local snapshot file to compute its hash.
+	// note that this step can only be done after the local snapshot file
+	// has been written since the ls file generation uses seeking.
+	lsFileHash, err := localSnapshotFileHash(filePath)
+	if err != nil {
+		return err
+	}
 
+	log.Infof("created local snapshot for target index %d (sha256: %x), took %v", targetIndex, lsFileHash, time.Since(ts))
 	return nil
 }
 
-func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
-	localSnapshotLock.Lock()
-	defer localSnapshotLock.Unlock()
-	return createLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
+// computes the sha256b hash of the given local snapshot file.
+func localSnapshotFileHash(filePath string) ([]byte, error) {
+	writtenLsFile, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open local snapshot file for hash computation: %w", err)
+	}
+	defer writtenLsFile.Close()
+
+	sha256Hash := sha256.New()
+	if _, err := io.Copy(sha256Hash, writtenLsFile); err != nil {
+		return nil, fmt.Errorf("unable to copy local snapshot file content for hash computation: %w", err)
+	}
+	return sha256Hash.Sum(nil), nil
 }
 
-type localSnapshotHeader struct {
-	milestoneMessageID hornet.Hash
-	msIndex            milestone.Index
-	msTimestamp        time.Time
-	solidEntryPoints   map[string]milestone.Index
-	balances           map[string]uint64
-}
+func LoadFullSnapshotFromFile(filePath string) error {
+	log.Info("importing full snapshot file...")
+	s := time.Now()
 
-func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan struct{}) error {
-	var err error
-
-	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersions[0]); err != nil {
-		return err
+	lsFile, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("unable to open local snapshot file for import: %w", err)
 	}
+	defer lsFile.Close()
 
-	if err = binary.Write(buf, binary.LittleEndian, ls.milestoneMessageID[:32]); err != nil {
-		return err
-	}
-
-	if err = binary.Write(buf, binary.LittleEndian, ls.msIndex); err != nil {
-		return err
-	}
-
-	if err = binary.Write(buf, binary.LittleEndian, int64(ls.msTimestamp.Second())); err != nil {
-		return err
-	}
-
-	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.solidEntryPoints))); err != nil {
-		return err
-	}
-
-	if err = binary.Write(buf, binary.LittleEndian, int32(len(ls.balances))); err != nil {
-		return err
-	}
-
-	for messageID, val := range ls.solidEntryPoints {
-		select {
-		case <-abortSignal:
-			return ErrSnapshotCreationWasAborted
-		default:
+	var lsHeader *ReadFileHeader
+	headerConsumer := func(header *ReadFileHeader) error {
+		if header.Version != SupportedFormatVersion {
+			return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
 		}
-
-		if err = binary.Write(buf, binary.LittleEndian, hornet.Hash(messageID)[:32]); err != nil {
-			return err
-		}
-
-		if err = binary.Write(buf, binary.LittleEndian, val); err != nil {
-			return err
-		}
+		lsHeader = header
+		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
+		return nil
 	}
 
-	for addr, val := range ls.balances {
-		select {
-		case <-abortSignal:
-			return ErrSnapshotCreationWasAborted
-		default:
-		}
-
-		if err = binary.Write(buf, binary.LittleEndian, hornet.Hash(addr)[:32]); err != nil {
-			return err
-		}
-
-		if err = binary.Write(buf, binary.LittleEndian, val); err != nil {
-			return err
-		}
+	// note that we only get the hash of the SEP message instead
+	// of also its associated oldest cone root index, since the index
+	// of the local snapshot milestone will be below max depth anyway.
+	// this information was included in pre Chrysalis Phase 2 local snapshots
+	// but has been deemed unnecessary for the reason mentioned above.
+	sepConsumer := func(sepMsgHashBytes [32]byte) error {
+		// TODO: consume SEP
+		return nil
 	}
 
-	return nil
-}
+	outputConsumer := func(unspentOutput *Output) error {
+		// TODO: consume unspentOutput
+		return nil
+	}
 
-func LoadSnapshotFromFile(filePath string) error {
-	log.Info("Loading snapshot file...")
+	msDiffConsumer := func(msDiff *MilestoneDiff) error {
+		// TODO: consume milestone diff
+		return nil
+	}
 
-	// ToDo:
+	if err := StreamLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
+		return fmt.Errorf("unable to import local snapshot file: %w", err)
+	}
+
+	log.Infof("imported local snapshot file, took %v", time.Since(s))
 
 	cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
 	if err != nil {
 		return err
 	}
 
-	tangle.SetSnapshotMilestone(cooPublicKey, hornet.NullMessageID, milestone.Index(1), milestone.Index(1), milestone.Index(1), time.Now())
-	tangle.SetSolidMilestoneIndex(milestone.Index(1), false)
+	lsMilestoneIndex := milestone.Index(lsHeader.SEPMilestoneIndex)
+	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.SEPMilestoneHash[:], lsMilestoneIndex, lsMilestoneIndex, lsMilestoneIndex, time.Now())
+	tangle.SetSolidMilestoneIndex(lsMilestoneIndex, false)
 
 	return nil
-	/*
-		file, err := os.OpenFile(filePath, os.O_RDONLY, 0666)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		// check file version
-		var fileVersion byte
-		if err := binary.Read(file, binary.LittleEndian, &fileVersion); err != nil {
-			return err
-		}
-
-		var supported bool
-		for _, v := range SupportedLocalSnapshotFileVersions {
-			if v == fileVersion {
-				supported = true
-				break
-			}
-		}
-		if !supported {
-			return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", fileVersion, SupportedLocalSnapshotFileVersions)
-		}
-
-		milestoneMessageID := make(hornet.Hash, 32)
-		if _, err := file.Read(milestoneMessageID); err != nil {
-			return err
-		}
-
-		tangle.WriteLockSolidEntryPoints()
-		tangle.ResetSolidEntryPoints()
-
-		var msIndex int32
-		var msTimestamp int64
-		var solidEntryPointsCount, seenMilestonesCount, ledgerEntriesCount int32
-
-		if err := binary.Read(file, binary.LittleEndian, &msIndex); err != nil {
-			return err
-		}
-
-		if err := binary.Read(file, binary.LittleEndian, &msTimestamp); err != nil {
-			return err
-		}
-
-		if err := binary.Read(file, binary.LittleEndian, &solidEntryPointsCount); err != nil {
-			return err
-		}
-
-		if err := binary.Read(file, binary.LittleEndian, &seenMilestonesCount); err != nil {
-			return err
-		}
-
-		if err := binary.Read(file, binary.LittleEndian, &ledgerEntriesCount); err != nil {
-			return err
-		}
-
-		cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
-		if err != nil {
-			return err
-		}
-
-		tangle.SetSnapshotMilestone(cooPublicKey, milestoneMessageID, milestone.Index(msIndex), milestone.Index(msIndex), milestone.Index(msIndex), time.Unix(msTimestamp, 0))
-		tangle.SolidEntryPointsAdd(milestoneMessageID, milestone.Index(msIndex))
-
-		log.Info("importing solid entry points")
-
-		for i := 0; i < int(solidEntryPointsCount); i++ {
-			if daemon.IsStopped() {
-				return ErrSnapshotImportWasAborted
-			}
-
-			var val int32
-			messageIDBuf := make(hornet.Hash, 32)
-
-			if err := binary.Read(file, binary.LittleEndian, messageIDBuf); err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
-			}
-
-			if err := binary.Read(file, binary.LittleEndian, &val); err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "solidEntryPoints: %v", err)
-			}
-
-			tangle.SolidEntryPointsAdd(messageIDBuf, milestone.Index(val))
-		}
-
-		tangle.StoreSolidEntryPoints()
-		tangle.WriteUnlockSolidEntryPoints()
-
-		log.Info("importing seen milestones")
-
-		for i := 0; i < int(seenMilestonesCount); i++ {
-			if daemon.IsStopped() {
-				return ErrSnapshotImportWasAborted
-			}
-
-			var val int32
-			messageIDBuf := make(hornet.Hash, 32)
-
-			if err := binary.Read(file, binary.LittleEndian, messageIDBuf); err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
-			}
-
-			if err := binary.Read(file, binary.LittleEndian, &val); err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "seenMilestones: %v", err)
-			}
-
-			// request the milestone and prevent the request from being discarded from the request queue
-			gossip.Request(messageIDBuf, milestone.Index(val), true)
-		}
-
-		log.Info("importing ledger state")
-
-		ledgerState := make(map[string]uint64)
-		for i := 0; i < int(ledgerEntriesCount); i++ {
-			if daemon.IsStopped() {
-				return ErrSnapshotImportWasAborted
-			}
-
-			var val uint64
-			addrBuf := make(hornet.Hash, 32)
-
-			if err := binary.Read(file, binary.LittleEndian, addrBuf); err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
-			}
-
-			if err := binary.Read(file, binary.LittleEndian, &val); err != nil {
-				return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
-			}
-
-			ledgerState[string(addrBuf)] = val
-		}
-
-		var total uint64
-		for _, value := range ledgerState {
-			total += value
-		}
-
-		if total != iotago.TokenSupply {
-			return errors.Wrapf(ErrInvalidBalance, "%d != %d", total, iotago.TokenSupply)
-		}
-
-		err = tangle.StoreSnapshotBalancesInDatabase(ledgerState, milestone.Index(msIndex))
-		if err != nil {
-			return errors.Wrapf(ErrSnapshotImportFailed, "snapshot ledgerEntries: %s", err)
-		}
-
-		err = tangle.StoreLedgerBalancesInDatabase(ledgerState, milestone.Index(msIndex))
-		if err != nil {
-			return errors.Wrapf(ErrSnapshotImportFailed, "ledgerEntries: %v", err)
-		}
-
-		// set the solid milestone index based on the snapshot milestone
-		tangle.SetSolidMilestoneIndex(milestone.Index(msIndex), false)
-
-		log.Info("finished loading snapshot")
-
-		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(milestone.Index(msIndex))
-
-		return nil
-	*/
-
 }
