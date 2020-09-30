@@ -88,6 +88,45 @@ func (msg *Message) IsValue() bool {
 	return false
 }
 
+func (msg *Message) GetSignedTransactionPayload() *iotago.SignedTransactionPayload {
+
+	switch payload := msg.GetMessage().Payload.(type) {
+	case *iotago.SignedTransactionPayload:
+		return payload
+	default:
+		return nil
+	}
+}
+
+func (msg *Message) GetUnsignedTransaction() *iotago.UnsignedTransaction {
+
+	if signedTransaction := msg.GetSignedTransactionPayload(); signedTransaction != nil {
+		switch unsignedTransaction := signedTransaction.Transaction.(type) {
+		case *iotago.UnsignedTransaction:
+			return unsignedTransaction
+		default:
+			return nil
+		}
+	}
+	return nil
+}
+
+func (msg *Message) GetUnsignedTransactionUTXOInputs() []iotago.UTXOInputID {
+
+	var inputs []iotago.UTXOInputID
+	if unsignedTransaction := msg.GetUnsignedTransaction(); unsignedTransaction != nil {
+		for _, input := range unsignedTransaction.Inputs {
+			switch utxoInput := input.(type) {
+			case *iotago.UTXOInput:
+				inputs = append(inputs, utxoInput.ID())
+			default:
+				return nil
+			}
+		}
+	}
+	return inputs
+}
+
 // ObjectStorage interface
 
 func (msg *Message) Update(_ objectstorage.StorableObject) {

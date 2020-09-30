@@ -42,13 +42,11 @@ func configureOutputsStorage(store kvstore.KVStore) {
 	utxoStorage = store.WithRealm([]byte{StorePrefixUTXO})
 }
 
-func ReadOutputForTransactionWithoutLocking(transactionID *iotago.SignedTransactionPayloadHash, outputIndex uint16) (*Output, error) {
+func ReadOutputForTransactionWithoutLocking(utxoInputId iotago.UTXOInputID) (*Output, error) {
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, outputIndex)
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, transactionID[:], bytes)
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, utxoInputId[:])
 	value, err := utxoStorage.Get(key)
 	if err != nil {
 		return nil, err
@@ -61,11 +59,11 @@ func ReadOutputForTransactionWithoutLocking(transactionID *iotago.SignedTransact
 	return output, nil
 }
 
-func IsOutputUnspent(transactionID *iotago.SignedTransactionPayloadHash, outputIndex uint16) (bool, error) {
+func IsOutputUnspent(utxoInputId iotago.UTXOInputID) (bool, error) {
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	output, err := ReadOutputForTransactionWithoutLocking(transactionID, outputIndex)
+	output, err := ReadOutputForTransactionWithoutLocking(utxoInputId)
 	if err != nil {
 		return false, err
 	}
@@ -73,12 +71,12 @@ func IsOutputUnspent(transactionID *iotago.SignedTransactionPayloadHash, outputI
 	return output.IsUnspentWithoutLocking()
 }
 
-func UnspentOutputsForAddress(address *iotago.Ed25519Address) ([]*Output, error) {
+func UnspentOutputsForAddress(address *iotago.Ed25519Address) (Outputs, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	var outputs []*Output
+	var outputs Outputs
 
 	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, address[:])
 
@@ -104,9 +102,9 @@ func UnspentOutputsForAddress(address *iotago.Ed25519Address) ([]*Output, error)
 	return outputs, err
 }
 
-func spentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
+func spentOutputsForAddress(address *iotago.Ed25519Address) (Spents, error) {
 
-	var spents []*Spent
+	var spents Spents
 
 	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:])
 
@@ -139,7 +137,7 @@ func spentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
 	return spents, err
 }
 
-func SpentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
+func SpentOutputsForAddress(address *iotago.Ed25519Address) (Spents, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
@@ -172,7 +170,7 @@ func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, spent.kvStorableKey()))
 }
 
-func storeDiff(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent, mutations kvstore.BatchedMutations) error {
+func storeDiff(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, mutations kvstore.BatchedMutations) error {
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
@@ -198,7 +196,7 @@ func storeDiff(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent
 	return mutations.Set(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key), value.Bytes())
 }
 
-func getMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
+func getMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
@@ -210,8 +208,8 @@ func getMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 
 	marshalUtil := marshalutil.New(value)
 
-	var outputs []*Output
-	var spents []*Spent
+	var outputs Outputs
+	var spents Spents
 
 	outputCount, err := marshalUtil.ReadUint32()
 	if err != nil {
@@ -219,20 +217,15 @@ func getMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 	}
 
 	for i := 0; i < int(outputCount); i++ {
-		transactionIDBytes, err := marshalUtil.ReadBytes(iotago.SignedTransactionPayloadHashLength)
+		outputIDBytes, err := marshalUtil.ReadBytes(iotago.TransactionIDLength + 2)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		outputIndex, err := marshalUtil.ReadUint16()
-		if err != nil {
-			return nil, nil, err
-		}
+		var outputID iotago.UTXOInputID
+		copy(outputID[:], outputIDBytes)
 
-		var transactionID iotago.SignedTransactionPayloadHash
-		copy(transactionID[:], transactionIDBytes)
-
-		outputs = append(outputs, &Output{TransactionID: transactionID, OutputIndex: outputIndex})
+		outputs = append(outputs, &Output{OutputID: outputID})
 	}
 
 	spentCount, err := marshalUtil.ReadUint32()
@@ -246,12 +239,7 @@ func getMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 			return nil, nil, err
 		}
 
-		transactionIDBytes, err := marshalUtil.ReadBytes(iotago.SignedTransactionPayloadHashLength)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		outputIndex, err := marshalUtil.ReadUint16()
+		outputIDBytes, err := marshalUtil.ReadBytes(iotago.TransactionIDLength + 2)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -259,10 +247,10 @@ func getMilestoneDiffs(msIndex milestone.Index) ([]*Output, []*Spent, error) {
 		var address iotago.Ed25519Address
 		copy(address[:], addressBytes)
 
-		var transactionID iotago.SignedTransactionPayloadHash
-		copy(transactionID[:], transactionIDBytes)
+		var outputID iotago.UTXOInputID
+		copy(outputID[:], outputIDBytes)
 
-		spents = append(spents, &Spent{Address: address, TransactionID: transactionID, OutputIndex: outputIndex})
+		spents = append(spents, &Spent{Address: address, OutputID: outputID})
 	}
 
 	return outputs, spents, nil
@@ -289,7 +277,7 @@ func PruneMilestoneIndex(msIndex milestone.Index) error {
 	mutation := utxoStorage.Batched()
 
 	for _, spent := range spents {
-		err = deleteOutput(&Output{TransactionID: spent.TransactionID, OutputIndex: spent.OutputIndex}, mutation)
+		err = deleteOutput(&Output{OutputID: spent.OutputID}, mutation)
 		if err != nil {
 			mutation.Cancel()
 			return err
@@ -311,7 +299,7 @@ func PruneMilestoneIndex(msIndex milestone.Index) error {
 	return mutation.Commit()
 }
 
-func ApplyConfirmation(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent) error {
+func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
 	WriteLockLedger()
 	defer WriteUnlockLedger()

@@ -14,9 +14,8 @@ import (
 type Spent struct {
 	kvStorable
 
-	Address       iotago.Ed25519Address
-	TransactionID iotago.SignedTransactionPayloadHash
-	OutputIndex   uint16
+	Address  iotago.Ed25519Address
+	OutputID iotago.UTXOInputID
 
 	Output *Output
 
@@ -24,11 +23,12 @@ type Spent struct {
 	ConfirmationIndex   milestone.Index
 }
 
+type Spents []*Spent
+
 func NewSpent(output *Output, targetTransactionID iotago.SignedTransactionPayloadHash, confirmationIndex milestone.Index) *Spent {
 	return &Spent{
 		Address:             output.Address,
-		TransactionID:       output.TransactionID,
-		OutputIndex:         output.OutputIndex,
+		OutputID:            output.OutputID,
 		Output:              output,
 		TargetTransactionID: targetTransactionID,
 		ConfirmationIndex:   confirmationIndex,
@@ -36,9 +36,7 @@ func NewSpent(output *Output, targetTransactionID iotago.SignedTransactionPayloa
 }
 
 func (s *Spent) kvStorableKey() (key []byte) {
-	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, s.OutputIndex)
-	return byteutils.ConcatBytes(s.Address[:], s.TransactionID[:], bytes)
+	return byteutils.ConcatBytes(s.Address[:], s.OutputID[:])
 }
 
 func (s *Spent) kvStorableValue() (value []byte) {
@@ -63,8 +61,7 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 	}
 
 	copy(s.Address[:], key[:iotago.Ed25519AddressBytesLength])
-	copy(s.TransactionID[:], key[iotago.Ed25519AddressBytesLength:iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength])
-	s.OutputIndex = binary.LittleEndian.Uint16(key[iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength : iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength+2])
+	copy(s.OutputID[:], key[iotago.Ed25519AddressBytesLength:iotago.Ed25519AddressBytesLength+iotago.TransactionIDLength+2])
 
 	/*
 	   32 bytes            TargetTransactionID
