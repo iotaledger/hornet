@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go"
+	
+	"github.com/iotaledger/hive.go/objectstorage"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 // Storable Object

@@ -146,7 +146,7 @@ func (c *CachedMessage) Release(force ...bool) {
 
 func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
-		messageID: key[:32],
+		messageID: key[:iotago.MessageHashLength],
 		message:   &iotago.Message{},
 	}
 

@@ -3,6 +3,8 @@ package tangle
 import (
 	"time"
 
+	iotago "github.com/iotaledger/iota.go"
+	
 	"github.com/dchest/blake2b"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
@@ -25,8 +27,8 @@ func (c *CachedIndexation) GetIndexation() *Indexation {
 
 func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Indexation{
-		indexationHash: key[:32],
-		messageID:      key[32:64],
+		indexationHash: key[:IndexationHashLength],
+		messageID:      key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength],
 	}, nil
 }
 
@@ -41,7 +43,7 @@ func configureIndexationStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		indexationFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.PartitionKey(32, 32),
+		objectstorage.PartitionKey(IndexationHashLength, iotago.MessageHashLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -65,7 +67,7 @@ func GetIndexMessageIDs(index string, maxFind ...int) hornet.Hashes {
 			return false
 		}
 
-		messageIDs = append(messageIDs, key[32:64])
+		messageIDs = append(messageIDs, key[IndexationHashLength:IndexationHashLength+iotago.MessageHashLength])
 		return true
 	}, false, indexationHash[:])
 
@@ -80,7 +82,7 @@ func ForEachMessageIDWithIndex(index string, consumer IndexConsumer, skipCache b
 	indexationHash := blake2b.Sum256([]byte(index))
 
 	indexationStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(key[32:64])
+		return consumer(key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength])
 	}, skipCache, indexationHash[:])
 }
 

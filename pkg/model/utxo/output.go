@@ -59,10 +59,10 @@ func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPaylo
 	}
 
 	var outputID iotago.UTXOInputID
-	copy(outputID[:32], txID[:])
+	copy(outputID[:iotago.TransactionIDLength], txID[:])
 	bytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(bytes, index)
-	copy(outputID[32:34], bytes)
+	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+2], bytes)
 
 	return &Output{
 		OutputID:  outputID,
@@ -102,7 +102,7 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 	}
 
 	copy(o.OutputID[:], key[:iotago.TransactionIDLength+2])
-	
+
 	copy(o.MessageID, value[:iotago.MessageHashLength])
 	o.Type = value[iotago.MessageHashLength]
 	copy(o.Address[:], value[iotago.MessageHashLength+1:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])

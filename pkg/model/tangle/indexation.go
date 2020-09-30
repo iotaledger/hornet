@@ -10,6 +10,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
+const (
+	IndexationHashLength = 32
+)
+
 type Indexation struct {
 	objectstorage.StorableObjectFlags
 	indexationHash hornet.Hash
