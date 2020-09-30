@@ -48,20 +48,15 @@
     "path": "devnetdb"
   },
   "snapshots": {
-    "loadType": "local",
-    "local": {
-      "depth": 50,
-      "intervalSynced": 50,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/devnet/export.bin",
-      "downloadURLs": ["https://dbfiles.iota.org/devnet/hornet/latest-export.bin"]
-    },
-    "global": {
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 60480
-    }
+    "depth": 50,
+    "intervalSynced": 50,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/devnet/export.bin",
+    "downloadURLs": ["https://dbfiles.iota.org/devnet/hornet/latest-export.bin"]
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 60480
   },
   "coordinator": {
     "address": "GYISMBVRKSCEXXTUPBWTIHRCZIKIRPDYAHAYKMNTPZSCSDNADDWAEUNHKUERZCTVAYJCNFXGTNUH9OGTW",

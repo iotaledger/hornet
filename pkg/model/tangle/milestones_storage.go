@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"time"
-	
+
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/iotaledger/hive.go/kvstore"

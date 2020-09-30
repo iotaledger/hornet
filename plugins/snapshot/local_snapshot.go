@@ -245,7 +245,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 
 	header := &FileHeader{
 		Version:           SupportedFormatVersion,
-		SEPMilestoneIndex: uint64(targetIndex),
+		SEPMilestoneIndex: milestone.Index(targetIndex),
 	}
 	copy(header.SEPMilestoneHash[:], cachedTargetMilestone.GetMilestone().MessageID)
 

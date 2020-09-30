@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -19,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -29,8 +29,8 @@ var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	overwriteCooAddress = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
-	forceGlobalSnapshot = pflag.Bool("forceGlobalSnapshot", false, "force loading of a global snapshot, even if a database already exists")
+	overwriteCooAddress  = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
+	forceLoadingSnapshot = pflag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURLs)
@@ -106,56 +106,41 @@ func configure(plugin *node.Plugin) {
 			tangle.SetSnapshotInfo(snapshotInfo)
 		}
 
-		if !*forceGlobalSnapshot {
-			// If we don't enforce loading of a global snapshot,
+		if !*forceLoadingSnapshot {
+			// If we don't enforce loading of a snapshot,
 			// we can check the ledger state of current database and start the node.
-			// ToDo:
-			//tangle.GetLedgerStateForLSMI(nil)
+			if err := utxo.CheckLedgerState(); err != nil {
+				log.Fatal(err.Error())
+			}
 			return
 		}
 	}
 
-	snapshotTypeToLoad := strings.ToLower(config.NodeConfig.GetString(config.CfgSnapshotLoadType))
-
-	if *forceGlobalSnapshot && snapshotTypeToLoad != "global" {
-		log.Fatalf("global snapshot enforced but wrong snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
+	path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
+	if path == "" {
+		log.Fatal(ErrNoSnapshotSpecified.Error())
 	}
 
-	var err = ErrNoSnapshotSpecified
-	switch snapshotTypeToLoad {
-	case "global":
-		if path := config.NodeConfig.GetString(config.CfgGlobalSnapshotPath); path != "" {
-			err = LoadGlobalSnapshot(path, milestone.Index(config.NodeConfig.GetInt(config.CfgGlobalSnapshotIndex)))
+	if _, fileErr := os.Stat(path); os.IsNotExist(fileErr) {
+		// create dir if it not exists
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			log.Fatalf("could not create snapshot dir '%s'", path)
 		}
-	case "local":
-		if path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath); path != "" {
 
-			if _, fileErr := os.Stat(path); os.IsNotExist(fileErr) {
-				// create dir if it not exists
-				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-					log.Fatalf("could not create snapshot dir '%s'", path)
-				}
-				if urls := config.NodeConfig.GetStringSlice(config.CfgLocalSnapshotsDownloadURLs); len(urls) > 0 {
-					log.Infof("Downloading snapshot from one of the provided sources %v", urls)
-					downloadErr := downloadSnapshotFile(path, urls)
-					if downloadErr != nil {
-						err = errors.Wrap(downloadErr, "Error downloading snapshot file")
-						break
-					}
-					log.Info("Snapshot download finished")
-				} else {
-					err = ErrNoSnapshotDownloadURL
-					break
-				}
-			}
-
-			err = LoadFullSnapshotFromFile(path)
+		urls := config.NodeConfig.GetStringSlice(config.CfgLocalSnapshotsDownloadURLs)
+		if len(urls) == 0 {
+			log.Fatal(ErrNoSnapshotDownloadURL.Error())
 		}
-	default:
-		log.Fatalf("invalid snapshot type under config option '%s': %s", config.CfgSnapshotLoadType, config.NodeConfig.GetString(config.CfgSnapshotLoadType))
+
+		log.Infof("Downloading snapshot from one of the provided sources %v", urls)
+		if err := downloadSnapshotFile(path, urls); err != nil {
+			log.Fatalf("Error downloading snapshot file: %w", err)
+		}
+
+		log.Info("Snapshot download finished")
 	}
 
-	if err != nil {
+	if err := LoadFullSnapshotFromFile(path); err != nil {
 		tangle.MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}

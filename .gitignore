@@ -26,9 +26,11 @@ dist/
 
 # Database directory
 mainnetdb/
+mainnetdb2/
 comnetdb/
 devnetdb/
 alphanetdb/
+alphanetdb2/
 
 # snapshot dir
 snapshots/
