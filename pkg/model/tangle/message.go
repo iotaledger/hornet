@@ -129,6 +129,26 @@ func (msg *Message) GetUnsignedTransactionUTXOInputs() []iotago.UTXOInputID {
 	return inputs
 }
 
+func (msg *Message) GetSignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
+
+	if signedTransaction := msg.GetSignedTransactionPayload(); signedTransaction != nil {
+		switch unlockBlock := signedTransaction.UnlockBlocks[inputIndex].(type) {
+		case *iotago.SignatureUnlockBlock:
+			switch signature := unlockBlock.Signature.(type) {
+			case *iotago.Ed25519Signature:
+				return signature
+			default:
+				return nil
+			}
+		case *iotago.ReferenceUnlockBlock:
+			return msg.GetSignatureForInputIndex(unlockBlock.Reference)
+		default:
+			return nil
+		}
+	}
+	return nil
+}
+
 // ObjectStorage interface
 
 func (msg *Message) Update(_ objectstorage.StorableObject) {

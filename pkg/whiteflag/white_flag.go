@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"errors"
 	"fmt"
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/iotaledger/hive.go/kvstore"
 
@@ -123,7 +124,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		// Also sum up the amount required
 		var inputOutputs utxo.Outputs
 		var inputAmount uint64
-		for _, input := range inputs {
+		for inputIndex, input := range inputs {
 
 			// Check if this input was already spent during the confirmation
 			_, hasSpent := wfConf.NewSpents[string(input[:])]
@@ -161,6 +162,21 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 
 			if !unspent {
 				// output is already spent, so mark as conflicting
+				conflicting = true
+				break
+			}
+
+			// Validate signature
+			signature := message.GetSignatureForInputIndex(uint16(inputIndex))
+			if signature == nil {
+				// No valid signature found for index
+				conflicting = true
+				break
+			}
+
+			unsignedTransactionBytes, err := unsignedTransaction.Serialize(iotago.DeSeriModeNoValidation)
+			if err := signature.Valid(unsignedTransactionBytes, &output.Address); err != nil {
+				// Invalid signature
 				conflicting = true
 				break
 			}
