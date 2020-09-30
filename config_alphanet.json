@@ -48,22 +48,15 @@
     "path": "alphanetdb"
   },
   "snapshots": {
-    "loadType": "global",
-    "local": {
-      "depth": 50,
-      "intervalSynced": 200,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/alphanet/export.bin",
-      "downloadURLs": []
-    },
-    "global": {
-      "path": "snapshotAlphanet.txt",
-      "index": 0
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 60480
-    }
+    "depth": 50,
+    "intervalSynced": 200,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/alphanet/export.bin",
+    "downloadURLs": []
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 500
   },
   "coordinator": {
     "publicKey": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",

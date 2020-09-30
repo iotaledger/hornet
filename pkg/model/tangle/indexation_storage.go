@@ -4,7 +4,7 @@ import (
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
-	
+
 	"github.com/dchest/blake2b"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"

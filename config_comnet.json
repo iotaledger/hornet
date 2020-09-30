@@ -48,24 +48,17 @@
     "path": "comnetdb"
   },
   "snapshots": {
-    "loadType": "local",
-    "local": {
-      "depth": 50,
-      "intervalSynced": 200,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/comnet/export.bin",
-      "downloadURLs": [
-        "https://ls.manapotion.io/comnet/export.bin"
-      ]
-    },
-    "global": {
-      "path": "snapshot.csv",
-      "index": 0
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 1000
-    }
+    "depth": 50,
+    "intervalSynced": 200,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/comnet/export.bin",
+    "downloadURLs": [
+      "https://ls.manapotion.io/comnet/export.bin"
+    ]
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 1000
   },
   "coordinator": {
     "address": "UOMFQOULWQLXQQHFMFRQQTRDKDHVMRFFEGZ9LDU9TFZZ9CHDLZSIAHA9MXNSLYOERCHDUVDFEEZAEOBEW",

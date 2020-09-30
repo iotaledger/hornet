@@ -5,7 +5,7 @@ import (
 	"log"
 
 	iotago "github.com/iotaledger/iota.go"
-	
+
 	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"

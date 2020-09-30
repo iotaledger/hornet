@@ -8,6 +8,8 @@ import (
 	"io"
 
 	iotago "github.com/iotaledger/iota.go"
+
+	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 const (
@@ -44,21 +46,21 @@ const (
 
 // Output defines an output within a local snapshot.
 type Output struct {
-	TransactionHash [iotago.TransactionIDLength]byte `json:"transaction_hash"`
+	TransactionID [iotago.TransactionIDLength]byte `json:"transaction_hash"`
 	// The index of the output.
-	Index uint16 `json:"index"`
+	OutputIndex uint16 `json:"index"`
 	// The underlying address to which this output deposits to.
 	Address iotago.Serializable `json:"address"`
 	// The value of the deposit.
-	Value uint64 `json:"value"`
+	Amount uint64 `json:"value"`
 }
 
 func (s *Output) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
-	if _, err := b.Write(s.TransactionHash[:]); err != nil {
+	if _, err := b.Write(s.TransactionID[:]); err != nil {
 		return nil, fmt.Errorf("unable to write transaction hash for ls-output: %w", err)
 	}
-	if err := binary.Write(&b, binary.LittleEndian, s.Index); err != nil {
+	if err := binary.Write(&b, binary.LittleEndian, s.OutputIndex); err != nil {
 		return nil, fmt.Errorf("unable to write index for ls-output: %w", err)
 	}
 	addrData, err := s.Address.Serialize(iotago.DeSeriModePerformValidation)
@@ -68,7 +70,7 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	if _, err := b.Write(addrData); err != nil {
 		return nil, fmt.Errorf("unable to write address for ls-output: %w", err)
 	}
-	if err := binary.Write(&b, binary.LittleEndian, s.Value); err != nil {
+	if err := binary.Write(&b, binary.LittleEndian, s.Amount); err != nil {
 		return nil, fmt.Errorf("unable to write value for ls-output: %w", err)
 	}
 	return b.Bytes(), nil
@@ -77,7 +79,7 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone.
 type MilestoneDiff struct {
 	// The index of the milestone for which the diff applies.
-	MilestoneIndex uint64 `json:"milestone_index"`
+	MilestoneIndex milestone.Index `json:"milestone_index"`
 	// The created outputs with this milestone.
 	Created []*Output `json:"created"`
 	// The consumed outputs with this milestone.
@@ -153,11 +155,11 @@ type FileHeader struct {
 	// Type denotes the type of this local snapshot.
 	Type Type
 	// The milestone index of the SEPs for which this local snapshot was taken.
-	SEPMilestoneIndex uint64
+	SEPMilestoneIndex milestone.Index
 	// The hash of the milestone of the SEPs.
 	SEPMilestoneHash [iotago.MilestonePayloadHashLength]byte
 	// The milestone index of the ledger data within the local snapshot.
-	LedgerMilestoneIndex uint64
+	LedgerMilestoneIndex milestone.Index
 	// The hash of the ledger milestone.
 	LedgerMilestoneHash [iotago.MilestonePayloadHashLength]byte
 }
@@ -406,11 +408,11 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 // reads an Output from the given reader.
 func readOutput(reader io.Reader) (*Output, error) {
 	output := &Output{}
-	if _, err := io.ReadFull(reader, output.TransactionHash[:]); err != nil {
+	if _, err := io.ReadFull(reader, output.TransactionID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output tx hash: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &output.Index); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &output.OutputIndex); err != nil {
 		return nil, fmt.Errorf("unable to read LS output index: %w", err)
 	}
 
@@ -446,7 +448,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 	}
 	output.Address = addr
 
-	if err := binary.Read(reader, binary.LittleEndian, &output.Value); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &output.Amount); err != nil {
 		return nil, fmt.Errorf("unable to read LS output value: %w", err)
 	}
 

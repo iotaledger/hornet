@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/blang/vfs/memfs"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/iotaledger/iota.go"
 	"github.com/stretchr/testify/require"
@@ -45,9 +46,9 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			originHeader := &snapshot.FileHeader{
 				Type:                 snapshot.Full,
 				Version:              snapshot.SupportedFormatVersion,
-				SEPMilestoneIndex:    uint64(rand.Intn(10000)),
+				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				SEPMilestoneHash:     rand32ByteHash(),
-				LedgerMilestoneIndex: uint64(rand.Intn(10000)),
+				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneHash:  rand32ByteHash(),
 			}
 
@@ -89,9 +90,9 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			originHeader := &snapshot.FileHeader{
 				Type:                 snapshot.Delta,
 				Version:              snapshot.SupportedFormatVersion,
-				SEPMilestoneIndex:    uint64(rand.Intn(10000)),
+				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				SEPMilestoneHash:     rand32ByteHash(),
-				LedgerMilestoneIndex: uint64(rand.Intn(10000)),
+				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneHash:  rand32ByteHash(),
 			}
 
@@ -219,7 +220,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			msDiff := &snapshot.MilestoneDiff{
-				MilestoneIndex: uint64(rand.Int63()),
+				MilestoneIndex: milestone.Index(rand.Int63()),
 			}
 
 			createdCount := rand.Intn(500) + 1
@@ -274,10 +275,10 @@ func rand32ByteHash() [iota.TransactionIDLength]byte {
 func randLSTransactionUnspentOutputs() *snapshot.Output {
 	addr, _ := randEd25519Addr()
 	return &snapshot.Output{
-		TransactionHash: rand32ByteHash(),
-		Index:           uint16(rand.Intn(100)),
-		Address:         addr,
-		Value:           uint64(rand.Intn(1000000) + 1),
+		TransactionID: rand32ByteHash(),
+		OutputIndex:   uint16(rand.Intn(100)),
+		Address:       addr,
+		Amount:        uint64(rand.Intn(1000000) + 1),
 	}
 }
 

@@ -44,24 +44,18 @@
     }
   },
   "snapshots": {
-    "loadType": "local",
-    "local": {
-      "intervalSynced": 50,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/mainnet/export.bin",
-      "downloadURLs": [
-        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin",
-        "https://x-vps.com/export.bin"
-      ]
-    },
-    "global": {
-      "path": "snapshotMainnet.txt",
-      "index": 1050000
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 60480
-    }
+    "intervalSynced": 50,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/mainnet/export.bin",
+    "downloadURLs": [
+      "https://ls.manapotion.io/export.bin",
+      "https://x-vps.com/export.bin",
+      "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+    ]
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 60480
   },
   "network": {
     "preferIPv6": false,
