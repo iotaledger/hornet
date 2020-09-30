@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
@@ -94,6 +95,8 @@ func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 	configureUnconfirmedMessageStorage(store, caches.UnconfirmedMessages)
 	configureIndexationStorage(store, caches.Indexations)
 	configureSnapshotStore(store)
+
+	utxo.ConfigureStorages(store)
 }
 
 func FlushStorages() {
