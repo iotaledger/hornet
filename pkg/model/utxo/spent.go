@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -72,4 +73,62 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 	s.ConfirmationIndex = milestone.Index(binary.LittleEndian.Uint32(value[iotago.SignedTransactionPayloadHashLength : iotago.SignedTransactionPayloadHashLength+4]))
 
 	return nil
+}
+
+func spentOutputsForAddress(address *iotago.Ed25519Address) (Spents, error) {
+
+	var spents Spents
+
+	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:])
+
+	err := utxoStorage.Iterate(addressKeyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+
+		spent := &Spent{}
+		if err := spent.kvStorableLoad(key[33:], value); err != nil {
+			return false
+		}
+
+		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[33:])
+
+		outputValue, err := utxoStorage.Get(outputKey)
+		if err != nil {
+			return false
+		}
+
+		output := &Output{}
+		if err := output.kvStorableLoad(outputKey[1:], outputValue); err != nil {
+			return false
+		}
+
+		spent.Output = output
+
+		spents = append(spents, spent)
+
+		return true
+	})
+
+	return spents, err
+}
+
+func SpentOutputsForAddress(address *iotago.Ed25519Address) (Spents, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return spentOutputsForAddress(address)
+}
+
+func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
+
+	key := spent.kvStorableKey()
+	unspentKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, key)
+	spentKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, key)
+
+	mutations.Delete(unspentKey)
+
+	return mutations.Set(spentKey, spent.kvStorableValue())
+}
+
+func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, spent.kvStorableKey()))
 }

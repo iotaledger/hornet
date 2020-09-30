@@ -116,6 +116,26 @@ func (o *Output) IsUnspentWithoutLocking() (bool, error) {
 	return utxoStorage.Has(key)
 }
 
+func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey())
+	return mutations.Set(key, output.kvStorableValue())
+}
+
 func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey()))
+}
+
+func ReadOutputForTransactionWithoutLocking(utxoInputId iotago.UTXOInputID) (*Output, error) {
+
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, utxoInputId[:])
+	value, err := utxoStorage.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &Output{}
+	if err := output.kvStorableLoad(key[1:], value); err != nil {
+		return nil, err
+	}
+	return output, nil
 }
