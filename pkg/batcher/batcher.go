@@ -80,7 +80,7 @@ func (c *Curl) BatchSize() int {
 }
 
 // Close stops the batched Curl hasher.
-// It blocks until all remaining jobs have been processed or canceled. Successive cals of Close are ignored.
+// It blocks until all remaining jobs have been processed or canceled. Successive calls of Close are ignored.
 func (c *Curl) Close() error {
 	c.closeOnce.Do(func() {
 		close(c.closing)
