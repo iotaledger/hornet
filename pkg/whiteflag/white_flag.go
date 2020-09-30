@@ -153,6 +153,12 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				return err
 			}
 
+			// Check if this output is unspent
+			if !output.IsUnspentWithoutLocking() {
+				conflicting = true
+				break
+			}
+
 			inputOutputs = append(inputOutputs, output)
 			inputAmount += output.Amount
 		}
