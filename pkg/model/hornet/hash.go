@@ -9,11 +9,11 @@ import (
 )
 
 var (
-	// NullHashBytes is the binary hash of the genesis transaction.
-	NullHashBytes = make(Hash, hashBytesSize)
-
 	hashBytesSize = t5b1.EncodedLen(consts.HashTrinarySize)
 	tagBytesSize  = t5b1.EncodedLen(consts.TagTrinarySize)
+
+	// NullHashBytes is the binary hash of the genesis transaction.
+	NullHashBytes = make(Hash, hashBytesSize)
 )
 
 const (
