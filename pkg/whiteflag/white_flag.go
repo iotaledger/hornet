@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/iotaledger/hive.go/kvstore"
+
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 )
 
 var (
@@ -29,17 +32,17 @@ type Confirmation struct {
 // WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The messages which mutate the ledger in the order in which they were applied.
-	MessagesIncluded hornet.Hashes
+	MessagesWithIncludedTransactions hornet.Hashes
 	// The messages which were excluded as they were conflicting with the mutations.
-	MessagesExcludedConflicting hornet.Hashes
+	MessagesExcludedWithConflictingTransactions hornet.Hashes
 	// The messages which were excluded because they were part of a zero or spam value transfer.
-	MessagesExcludedZeroValue hornet.Hashes
-	// The messages which were referenced by the milestone (should be the sum of MessagesIncluded + MessagesExcludedConflicting + MessagesExcludedZeroValue).
+	MessagesExcludedWithoutTransactions hornet.Hashes
+	// The messages which were referenced by the milestone (should be the sum of MessagesWithIncludedTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
 	MessagesReferenced hornet.Hashes
-	// Contains the updated state of the addresses which were mutated by the given confirmation.
-	NewAddressState map[string]int64
-	// Contains the mutations to the state of the addresses for the given confirmation.
-	AddressMutations map[string]int64
+	// Contains the newly created Unspent Outputs by the given confirmation.
+	NewOutputs map[string]*utxo.Output
+	// Contains the Spent Outputs for the given confirmation.
+	NewSpents map[string]*utxo.Spent
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [64]byte
 }
@@ -52,14 +55,14 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
-		MessagesIncluded:            make(hornet.Hashes, 0),
-		MessagesExcludedConflicting: make(hornet.Hashes, 0),
-		MessagesExcludedZeroValue:   make(hornet.Hashes, 0),
-		MessagesReferenced:          make(hornet.Hashes, 0),
-		NewAddressState:             make(map[string]int64),
-		AddressMutations:            make(map[string]int64),
+		MessagesWithIncludedTransactions:            make(hornet.Hashes, 0),
+		MessagesExcludedWithConflictingTransactions: make(hornet.Hashes, 0),
+		MessagesExcludedWithoutTransactions:         make(hornet.Hashes, 0),
+		MessagesReferenced:                          make(hornet.Hashes, 0),
+		NewOutputs:                                  make(map[string]*utxo.Output),
+		NewSpents:                                   make(map[string]*utxo.Spent),
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -92,70 +95,103 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 			cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMessage
 		}
 
-		// exclude non value messages or spam value messages
-		//message := cachedMessage.GetMessage()
-		//mutations := message.GetLedgerChanges()
-		//if message.IsValueSpam() || len(mutations) == 0 {
-		//	wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
-		//	wfConf.MessagesExcludedZeroValue = append(wfConf.MessagesExcludedZeroValue, cachedMetadata.GetMetadata().GetMessageID())
-		//	return nil
-		//}
+		message := cachedMessage.GetMessage()
+
+		// exclude message without transactions
+		if !message.IsValue() {
+			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, message.GetMessageID())
+			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, message.GetMessageID())
+			return nil
+		}
 
 		var conflicting bool
 
-		// contains the updated mutations from this message against the
-		// current mutations of the milestone's confirming cone (or previous ledger state).
-		// we only apply it to the milestone's confirming cone mutations if
-		// the message doesn't create any conflict.
-		patchedState := make(map[string]int64)
-		validMutations := make(map[string]int64)
+		signedTransaction := message.GetSignedTransactionPayload()
+		signedTransactionHash, err := signedTransaction.Hash()
+		if err != nil {
+			return err
+		}
 
-		//for addr, change := range mutations {
-		//
-		//	// load state from milestone cone mutation or previous milestone
-		//	balance, has := wfConf.NewAddressState[addr]
-		//	if !has {
-		//		balanceStateFromPreviousMilestone, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.Hash(addr))
-		//		if err != nil {
-		//			return fmt.Errorf("%w: unable to retrieve balance of address %s", err, addr)
-		//		}
-		//		balance = int64(balanceStateFromPreviousMilestone)
-		//	}
-		//
-		//	// note that there's no overflow of int64 values here
-		//	// as a valid message's message can not spend more than the total supply,
-		//	// meaning that newBalance could be max 2*total_supply or min -total_supply.
-		//	newBalance := balance + change
-		//
-		//	// on below zero or above total supply the mutation is invalid
-		//	if newBalance < 0 || math.AbsInt64(newBalance) > consts.TotalSupply {
-		//		conflicting = true
-		//		break
-		//	}
-		//
-		//	patchedState[addr] = newBalance
-		//	validMutations[addr] = validMutations[addr] + change
-		//}
+		unsignedTransaction := message.GetUnsignedTransaction()
+		if unsignedTransaction == nil {
+			return fmt.Errorf("no unsigned transaction found")
+		}
+
+		inputs := message.GetUnsignedTransactionUTXOInputs()
+
+		// Go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
+		// Also sum up the amount required
+		var inputOutputs utxo.Outputs
+		var inputAmount uint64
+		for _, input := range inputs {
+
+			// Check if this input was already spent during the confirmation
+			_, hasSpent := wfConf.NewSpents[string(input[:])]
+			if hasSpent {
+				// UTXO already spent, so mark as conflicting
+				conflicting = true
+				break
+			}
+
+			// Check if this input was newly created in this cone
+			output, hasOutput := wfConf.NewOutputs[string(input[:])]
+			if hasOutput {
+				// UTXO is in the current ledger mutation, so use it
+				inputOutputs = append(inputOutputs, output)
+				inputAmount += output.Amount
+				continue
+			}
+
+			// Check current ledger for this input
+			output, err := utxo.ReadOutputForTransactionWithoutLocking(input)
+			if err != nil {
+				if err == kvstore.ErrKeyNotFound {
+					// Input not found, so mark as invalid tx
+					conflicting = true
+					break
+				}
+				return err
+			}
+
+			inputOutputs = append(inputOutputs, output)
+			inputAmount += output.Amount
+		}
+
+		//Go through all deposits and generate unspent outputs
+		var outputAmount uint64
+		var depositOutputs utxo.Outputs
+		for i := 0; i < len(unsignedTransaction.Outputs); i++ {
+			output, err := utxo.NewOutput(message.GetMessageID(), signedTransaction, uint16(i))
+			if err != nil {
+				return err
+			}
+			depositOutputs = append(depositOutputs, output)
+			outputAmount += output.Amount
+		}
+
+		// Check that the transaction is consuming and sending the same amount
+		if inputAmount != outputAmount {
+			conflicting = true
+		}
 
 		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
 
 		if conflicting {
-			wfConf.MessagesExcludedConflicting = append(wfConf.MessagesExcludedConflicting, cachedMetadata.GetMetadata().GetMessageID())
+			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, cachedMetadata.GetMetadata().GetMessageID())
 			return nil
 		}
 
 		// mark the given message to be part of milestone ledger by changing message inclusion set
-		wfConf.MessagesIncluded = append(wfConf.MessagesIncluded, cachedMetadata.GetMetadata().GetMessageID())
+		wfConf.MessagesWithIncludedTransactions = append(wfConf.MessagesWithIncludedTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
-		// incorporate the mutations in accordance with the previous mutations
-		// in the milestone's confirming cone/previous ledger state.
-		for addr, balance := range patchedState {
-			wfConf.NewAddressState[addr] = balance
+		// Save the inputs as spent
+		for _, input := range inputOutputs {
+			delete(wfConf.NewOutputs, string(input.OutputID[:]))
+			wfConf.NewSpents[string(input.OutputID[:])] = utxo.NewSpent(input, *signedTransactionHash, msIndex)
 		}
 
-		// incorporate the mutations in accordance with the previous mutations
-		for addr, mutation := range validMutations {
-			wfConf.AddressMutations[addr] = wfConf.AddressMutations[addr] + mutation
+		for _, output := range depositOutputs {
+			wfConf.NewOutputs[string(output.OutputID[:])] = output
 		}
 
 		return nil
@@ -164,7 +200,7 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If parent1 and parent2 of a message are both SEPs, are already processed or already confirmed,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
-	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncluded.
+	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesWithIncludedTransactions.
 	if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID,
 		condition,
 		consumer,
@@ -179,10 +215,10 @@ func ComputeWhiteFlagMutations(cachedMessageMetas map[string]*tangle.CachedMetad
 	}
 
 	// compute merkle tree root hash
-	merkleTreeHash := NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesIncluded)
+	merkleTreeHash := NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesWithIncludedTransactions)
 	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:64])
 
-	if len(wfConf.MessagesIncluded) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedConflicting) - len(wfConf.MessagesExcludedZeroValue)) {
+	if len(wfConf.MessagesWithIncludedTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch
 	}
 

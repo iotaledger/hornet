@@ -227,7 +227,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, par
 	}()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, parent1MessageID, parent2MessageID)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(newMilestoneIndex, cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, parent1MessageID, parent2MessageID)
 	if err != nil {
 		return fmt.Errorf("failed to compute muations: %w", err)
 	}

@@ -15,8 +15,7 @@ import (
 type Output struct {
 	kvStorable
 
-	TransactionID iotago.SignedTransactionPayloadHash
-	OutputIndex   uint16
+	OutputID iotago.UTXOInputID
 
 	MessageID hornet.Hash
 
@@ -24,6 +23,8 @@ type Output struct {
 	Address iotago.Ed25519Address
 	Amount  uint64
 }
+
+type Outputs []*Output
 
 func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
 
@@ -57,26 +58,27 @@ func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPaylo
 		return nil, errors.New("unsupported deposit address")
 	}
 
+	var outputID iotago.UTXOInputID
+	copy(outputID[:32], txID[:])
+	bytes := make([]byte, 2)
+	binary.LittleEndian.PutUint16(bytes, index)
+	copy(outputID[32:34], bytes)
+
 	return &Output{
-		TransactionID: *txID,
-		OutputIndex:   index,
-		MessageID:     messageID,
-		Type:          iotago.OutputSigLockedSingleDeposit,
-		Address:       address,
-		Amount:        deposit.Amount,
+		OutputID:  outputID,
+		MessageID: messageID,
+		Type:      iotago.OutputSigLockedSingleDeposit,
+		Address:   address,
+		Amount:    deposit.Amount,
 	}, nil
 }
 
 func (o *Output) UTXOKey() (key []byte) {
-	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, o.OutputIndex)
-	return byteutils.ConcatBytes(o.Address[:], o.TransactionID[:], bytes)
+	return byteutils.ConcatBytes(o.Address[:], o.OutputID[:])
 }
 
 func (o *Output) kvStorableKey() (key []byte) {
-	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, o.OutputIndex)
-	return byteutils.ConcatBytes(o.TransactionID[:], bytes)
+	return o.OutputID[:]
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
@@ -99,9 +101,8 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
 	}
 
-	copy(o.TransactionID[:], key[:iotago.SignedTransactionPayloadHashLength])
-	o.OutputIndex = binary.LittleEndian.Uint16(key[iotago.SignedTransactionPayloadHashLength : iotago.SignedTransactionPayloadHashLength+2])
-
+	copy(o.OutputID[:], key[:iotago.TransactionIDLength+2])
+	
 	copy(o.MessageID, value[:iotago.MessageHashLength])
 	o.Type = value[iotago.MessageHashLength]
 	copy(o.Address[:], value[iotago.MessageHashLength+1:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])

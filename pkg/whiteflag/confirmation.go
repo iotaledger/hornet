@@ -5,23 +5,23 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 )
 
 type ConfirmedMilestoneStats struct {
-	Index               milestone.Index
-	ConfirmationTime    int64
-	CachedMessages      tangle.CachedMessages
-	MessagesConfirmed   int
-	MessagesConflicting int
-	MessagesValue       int
-	MessagesZeroValue   int
-	Collecting          time.Duration
-	Total               time.Duration
+	Index                                       milestone.Index
+	ConfirmationTime                            int64
+	CachedMessages                              tangle.CachedMessages
+	MessagesConfirmed                           int
+	MessagesExcludedWithConflictingTransactions int
+	MessagesWithIncludedTransactions            int
+	MessagesExcludedWithoutTransactions         int
+	Collecting                                  time.Duration
+	Total                                       time.Duration
 }
 
 // ConfirmMilestone traverses a milestone and collects all unconfirmed msg,
@@ -51,8 +51,8 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())] = cachedMilestoneMessage.Retain()
 	}
 
-	//tangle.WriteLockLedger()
-	//defer tangle.WriteUnlockLedger()
+	utxo.WriteLockLedger()
+	defer utxo.WriteUnlockLedger()
 	message := cachedMilestoneMessage.GetMessage()
 
 	ms, err := tangle.CheckIfMilestone(message)
@@ -68,7 +68,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 
 	ts := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(cachedMessageMetas, cachedMessages, tangle.GetMilestoneMerkleHashFunc(), message.GetParent1MessageID(), message.GetParent2MessageID())
+	mutations, err := ComputeWhiteFlagMutations(milestoneIndex, cachedMessageMetas, cachedMessages, tangle.GetMilestoneMerkleHashFunc(), message.GetParent1MessageID(), message.GetParent2MessageID())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
@@ -90,10 +90,20 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 
 	tc := time.Now()
 
-	//err = tangle.ApplyLedgerDiffWithoutLocking(mutations.AddressMutations, milestoneIndex)
-	//if err != nil {
-	//	return nil, fmt.Errorf("confirmMilestone: ApplyLedgerDiff failed with Error: %v", err)
-	//}
+	var newOutputs utxo.Outputs
+	for _, output := range mutations.NewOutputs {
+		newOutputs = append(newOutputs, output)
+	}
+
+	var newSpents utxo.Spents
+	for _, spent := range mutations.NewSpents {
+		newSpents = append(newSpents, spent)
+	}
+
+	err = utxo.ApplyConfirmation(milestoneIndex, newOutputs, newSpents)
+	if err != nil {
+		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
+	}
 
 	loadMessageMetadata := func(messageID hornet.Hash) (*tangle.CachedMetadata, error) {
 		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
@@ -124,13 +134,13 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	confirmationTime := ms.Timestamp
 
 	// confirm all included messages
-	for _, messageID := range mutations.MessagesIncluded {
+	for _, messageID := range mutations.MessagesWithIncludedTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
-				conf.MessagesValue++
+				conf.MessagesWithIncludedTransactions++
 				metrics.SharedServerMetrics.ValueMessages.Inc()
 				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
 				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
@@ -141,13 +151,13 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	}
 
 	// confirm all excluded messages with zero value
-	for _, messageID := range mutations.MessagesExcludedZeroValue {
+	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
-				conf.MessagesZeroValue++
+				conf.MessagesExcludedWithoutTransactions++
 				metrics.SharedServerMetrics.NonValueMessages.Inc()
 				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
 				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
@@ -158,14 +168,14 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	}
 
 	// confirm all conflicting messages
-	for _, messageID := range mutations.MessagesExcludedConflicting {
+	for _, messageID := range mutations.MessagesExcludedWithConflictingTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			meta.GetMetadata().SetConflicting(true)
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
-				conf.MessagesConflicting++
+				conf.MessagesExcludedWithConflictingTransactions++
 				metrics.SharedServerMetrics.ConflictingMessages.Inc()
 				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
 				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)

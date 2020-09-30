@@ -130,7 +130,7 @@ func runVisualizer() {
 		}
 
 		var excludedIDs []string
-		for _, messageID := range confirmation.Mutations.MessagesExcludedConflicting {
+		for _, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
 			excludedIDs = append(excludedIDs, messageID.Hex()[:VisualizerIdLength])
 		}
 
