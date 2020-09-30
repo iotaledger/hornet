@@ -35,7 +35,7 @@ type WhiteFlagMutations struct {
 	MessagesIncludedWithTransactions hornet.Hashes
 	// The messages which were excluded as they were conflicting with the mutations.
 	MessagesExcludedWithConflictingTransactions hornet.Hashes
-	// The messages which were excluded because they were part of a zero or spam value transfer.
+	// The messages which were excluded because they did not include a value transaction.
 	MessagesExcludedWithoutTransactions hornet.Hashes
 	// The messages which were referenced by the milestone (should be the sum of MessagesIncludedWithTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
 	MessagesReferenced hornet.Hashes
@@ -133,7 +133,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				break
 			}
 
-			// Check if this input was newly created in this cone
+			// Check if this input was newly created during the confirmation
 			output, hasOutput := wfConf.NewOutputs[string(input[:])]
 			if hasOutput {
 				// UTXO is in the current ledger mutation, so use it
@@ -154,7 +154,13 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			// Check if this output is unspent
-			if !output.IsUnspentWithoutLocking() {
+			unspent, err := output.IsUnspentWithoutLocking()
+			if err != nil {
+				return err
+			}
+
+			if !unspent {
+				// output is already spent, so mark as conflicting
 				conflicting = true
 				break
 			}
@@ -196,6 +202,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			wfConf.NewSpents[string(input.OutputID[:])] = utxo.NewSpent(input, *signedTransactionHash, msIndex)
 		}
 
+		// Add new outputs
 		for _, output := range depositOutputs {
 			wfConf.NewOutputs[string(output.OutputID[:])] = output
 		}
