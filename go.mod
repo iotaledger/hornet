@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20200928201937-b5c5df0302e3
 	github.com/dchest/blake2b v1.0.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
