@@ -172,18 +172,20 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		//Go through all deposits and generate unspent outputs
 		var outputAmount uint64
 		var depositOutputs utxo.Outputs
-		for i := 0; i < len(unsignedTransaction.Outputs); i++ {
-			output, err := utxo.NewOutput(message.GetMessageID(), signedTransaction, uint16(i))
-			if err != nil {
-				return err
+		if !conflicting {
+			for i := 0; i < len(unsignedTransaction.Outputs); i++ {
+				output, err := utxo.NewOutput(message.GetMessageID(), signedTransaction, uint16(i))
+				if err != nil {
+					return err
+				}
+				depositOutputs = append(depositOutputs, output)
+				outputAmount += output.Amount
 			}
-			depositOutputs = append(depositOutputs, output)
-			outputAmount += output.Amount
-		}
 
-		// Check that the transaction is consuming and sending the same amount
-		if inputAmount != outputAmount {
-			conflicting = true
+			// Check that the transaction is consuming and sending the same amount
+			if inputAmount != outputAmount {
+				conflicting = true
+			}
 		}
 
 		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
