@@ -18,7 +18,7 @@ type ConfirmedMilestoneStats struct {
 	CachedMessages                              tangle.CachedMessages
 	MessagesConfirmed                           int
 	MessagesExcludedWithConflictingTransactions int
-	MessagesWithIncludedTransactions            int
+	MessagesIncludedWithTransactions            int
 	MessagesExcludedWithoutTransactions         int
 	Collecting                                  time.Duration
 	Total                                       time.Duration
@@ -134,13 +134,13 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	confirmationTime := ms.Timestamp
 
 	// confirm all included messages
-	for _, messageID := range mutations.MessagesWithIncludedTransactions {
+	for _, messageID := range mutations.MessagesIncludedWithTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
 			if !meta.GetMetadata().IsConfirmed() {
 				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesConfirmed++
-				conf.MessagesWithIncludedTransactions++
+				conf.MessagesIncludedWithTransactions++
 				metrics.SharedServerMetrics.ValueMessages.Inc()
 				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
 				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)

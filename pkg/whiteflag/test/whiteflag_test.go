@@ -45,7 +45,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	conf := te.IssueAndConfirmMilestoneOnTip(bundleC.GetMessage().GetTailHash(), true)
 
 	require.Equal(t, 4+4+4+3, conf.MessagesConfirmed) // 3 are for the milestone itself
-	require.Equal(t, 8, conf.MessagesWithIncludedTransactions)
+	require.Equal(t, 8, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 4, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 3, conf.MessagesExcludedWithoutTransactions) // The milestone
 
@@ -63,7 +63,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	// Confirming milestone at bundle E
 	conf = te.IssueAndConfirmMilestoneOnTip(bundleE.GetMessage().GetTailHash(), true)
 	require.Equal(t, 4+4+3, conf.MessagesConfirmed) // 3 are for the milestone itself
-	require.Equal(t, 4, conf.MessagesWithIncludedTransactions)
+	require.Equal(t, 4, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 4, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 3, conf.MessagesExcludedWithoutTransactions) // The milestone
 
@@ -97,7 +97,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	conf := te.IssueAndConfirmMilestoneOnTip(bundleE.GetMessage().GetTailHash(), true)
 	require.Equal(t, 3+3, conf.MessagesConfirmed)                   // A, B, E + 3 for Milestone
 	require.Equal(t, 3+3, conf.MessagesExcludedWithoutTransactions) // 3 are for the milestone itself
-	require.Equal(t, 0, conf.MessagesWithIncludedTransactions)
+	require.Equal(t, 0, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 
 	// Issue another bundle
@@ -108,6 +108,6 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 
 	require.Equal(t, 3+3, conf.MessagesConfirmed)                   // D, C, F + 3 for Milestone
 	require.Equal(t, 3+3, conf.MessagesExcludedWithoutTransactions) // 3 are for the milestone itself
-	require.Equal(t, 0, conf.MessagesWithIncludedTransactions)
+	require.Equal(t, 0, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 }
