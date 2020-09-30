@@ -300,7 +300,7 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		RunAsCoo:                false,
 		Bootstrap:               false,
 		Address:                 "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
-		Seed:                    "MFKHXRCTTRSPATPMAGFCSSIBJXDWNCLBQJPMHQGMGJEWYJNUXSXAGVSUJK9BMCAFEDNTXHDWWVVNILDRG",
+		Seed:                    "MFKHXRCTTRSPATPMAGFCSSIBJXDWNCLBQJPMHQGMGJEWYJNUXSXAGVSUJK9BMCAFEDNTXHDWWVVNILDRY",
 		MWM:                     1,
 		SecurityLevel:           2,
 		IssuanceIntervalSeconds: 10,
