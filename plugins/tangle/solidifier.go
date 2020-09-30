@@ -384,7 +384,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
 		conf.Index,
 		conf.MessagesConfirmed,
-		conf.MessagesWithIncludedTransactions,
+		conf.MessagesIncludedWithTransactions,
 		conf.MessagesExcludedWithoutTransactions,
 		conf.MessagesExcludedWithConflictingTransactions,
 		conf.Collecting.Truncate(time.Millisecond),

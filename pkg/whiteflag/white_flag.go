@@ -32,12 +32,12 @@ type Confirmation struct {
 // WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The messages which mutate the ledger in the order in which they were applied.
-	MessagesWithIncludedTransactions hornet.Hashes
+	MessagesIncludedWithTransactions hornet.Hashes
 	// The messages which were excluded as they were conflicting with the mutations.
 	MessagesExcludedWithConflictingTransactions hornet.Hashes
 	// The messages which were excluded because they were part of a zero or spam value transfer.
 	MessagesExcludedWithoutTransactions hornet.Hashes
-	// The messages which were referenced by the milestone (should be the sum of MessagesWithIncludedTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
+	// The messages which were referenced by the milestone (should be the sum of MessagesIncludedWithTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
 	MessagesReferenced hornet.Hashes
 	// Contains the newly created Unspent Outputs by the given confirmation.
 	NewOutputs map[string]*utxo.Output
@@ -57,7 +57,7 @@ type WhiteFlagMutations struct {
 // all cachedMsgMetas and cachedMessages have to be released outside.
 func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
-		MessagesWithIncludedTransactions:            make(hornet.Hashes, 0),
+		MessagesIncludedWithTransactions:            make(hornet.Hashes, 0),
 		MessagesExcludedWithConflictingTransactions: make(hornet.Hashes, 0),
 		MessagesExcludedWithoutTransactions:         make(hornet.Hashes, 0),
 		MessagesReferenced:                          make(hornet.Hashes, 0),
@@ -182,7 +182,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		}
 
 		// mark the given message to be part of milestone ledger by changing message inclusion set
-		wfConf.MessagesWithIncludedTransactions = append(wfConf.MessagesWithIncludedTransactions, cachedMetadata.GetMetadata().GetMessageID())
+		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
 		// Save the inputs as spent
 		for _, input := range inputOutputs {
@@ -200,7 +200,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If parent1 and parent2 of a message are both SEPs, are already processed or already confirmed,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
-	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesWithIncludedTransactions.
+	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
 	if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID,
 		condition,
 		consumer,
@@ -215,10 +215,10 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 	}
 
 	// compute merkle tree root hash
-	merkleTreeHash := NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesWithIncludedTransactions)
+	merkleTreeHash := NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesIncludedWithTransactions)
 	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:64])
 
-	if len(wfConf.MessagesWithIncludedTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
+	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch
 	}
 
