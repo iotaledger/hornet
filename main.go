@@ -8,6 +8,7 @@ import (
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/curl"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -39,6 +40,7 @@ func main() {
 		gracefulshutdown.PLUGIN,
 		profiling.PLUGIN,
 		database.PLUGIN,
+		curl.PLUGIN,
 		autopeering.PLUGIN,
 		webapi.PLUGIN,
 	}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/workerpool"
@@ -26,6 +25,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
+	"github.com/gohornet/hornet/plugins/curl"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	workerCount         = batchhasher.CURLP81.GetBatchSize() * batchhasher.CURLP81.GetWorkerCount()
+	workerCount         = curl.Hasher().BatchSize() * curl.Hasher().WorkerCount()
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
 )
 
@@ -144,7 +144,10 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 		return err
 	}
 
-	hashTrits := batchhasher.CURLP81.Hash(txTrits)
+	hashTrits, err := curl.Hasher().Hash(txTrits)
+	if err != nil {
+		return err
+	}
 	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
 
 	if tx.Value != 0 {
@@ -168,7 +171,7 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 // CompressAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
 func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	txBytesTruncated := compressed.TruncateTxTrits(txTrits)
 	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {

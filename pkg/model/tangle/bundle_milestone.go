@@ -1,12 +1,19 @@
 package tangle
 
 import (
+	"errors"
+
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/encoding/b1t6"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/t6b1"
+)
+
+var (
+	// ErrInvalidAuditPathLength is returned when audit path is too long to fit in the message fragment.
+	ErrInvalidAuditPathLength = errors.New("invalid audit path length")
 )
 
 func (bundle *Bundle) setMilestone(milestone bool) {
@@ -40,19 +47,18 @@ func (bundle *Bundle) GetMilestoneHash() hornet.Hash {
 	return bundle.tailTx
 }
 
-func (bundle *Bundle) GetMilestoneMerkleTreeHash() []byte {
+// GetMilestoneMerkleTreeHash returns the Merle tree hash in the milestone bundle.
+func (bundle *Bundle) GetMilestoneMerkleTreeHash() ([]byte, error) {
 
 	headTx := bundle.GetHead()
 	defer headTx.Release(true)
 
-	// t6b1 encoding, so 6 trits per byte
-	merkleRootHashSizeInTrytes := coordinatorMilestoneMerkleHashFunc.Size() * 6 / consts.TrinaryRadix
-	auditPathLength := coordinatorMerkleTreeDepth * consts.HashTrytesSize
+	hashTrytesLen := b1t6.EncodedLen(coordinatorMilestoneMerkleHashFunc.Size()) / consts.TritsPerTryte
+	auditPathTrytesLen := int(coordinatorMerkleTreeDepth) * consts.HashTrytesSize
 
-	if (auditPathLength + uint64(merkleRootHashSizeInTrytes)) > consts.SignatureMessageFragmentSizeInTrytes {
-		return nil
+	txSig := headTx.GetTransaction().Tx.SignatureMessageFragment
+	if auditPathTrytesLen >= len(txSig) || auditPathTrytesLen+hashTrytesLen > len(txSig) {
+		return nil, ErrInvalidAuditPathLength
 	}
-
-	merkleRootHashTrytes := headTx.GetTransaction().Tx.SignatureMessageFragment[auditPathLength : int(auditPathLength)+merkleRootHashSizeInTrytes]
-	return t6b1.MustTrytesToBytes(merkleRootHashTrytes)[:coordinatorMilestoneMerkleHashFunc.Size()]
+	return b1t6.DecodeTrytes(txSig[auditPathTrytesLen : auditPathTrytesLen+hashTrytesLen])
 }

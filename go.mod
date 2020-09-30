@@ -23,8 +23,8 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200915085419-9d728e38e5d9
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200729151348-3ce576f7cd9e
+	github.com/iotaledger/hive.go v0.0.0-20200917222020-d5f10a0e336e
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200924082456-3727c167ee44
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0

@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/encoding/t5b1"
 	"github.com/iotaledger/iota.go/math"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/iotaledger/hive.go/batchhasher"
+	"github.com/gohornet/hornet/plugins/curl"
 )
 
 const (
@@ -22,7 +23,14 @@ const (
 	SigDataMaxBytesLength = 1312
 )
 
-// Truncates the given bytes encoded transaction data.
+// TruncateTxTrits encodes txTrits into bytes and truncates them.
+func TruncateTxTrits(txTrits trinary.Trits) []byte {
+	txBytes := make([]byte, t5b1.EncodedLen(len(txTrits)))
+	t5b1.Encode(txBytes, txTrits)
+	return TruncateTx(txBytes)
+}
+
+// TruncateTx truncates the encoded transaction data.
 //	txBytes the transaction bytes to truncate
 //	return an array containing the truncated transaction data
 func TruncateTx(txBytes []byte) []byte {
@@ -62,23 +70,28 @@ func expandTx(data []byte) ([]byte, error) {
 }
 
 func TransactionFromCompressedBytes(transactionData []byte, txHash ...trinary.Hash) (*transaction.Transaction, error) {
-
 	// expand received tx data
 	txDataBytes, err := expandTx(transactionData)
 	if err != nil {
 		return nil, err
 	}
 
-	// convert bytes to trits
-	txDataTrits, err := trinary.BytesToTrits(txDataBytes, consts.TransactionTrinarySize)
+	// decode the bytes back into trits
+	txDataTrits := make(trinary.Trits, t5b1.DecodedLen(TransactionSize))
+	_, err = t5b1.Decode(txDataTrits, txDataBytes)
 	if err != nil {
 		return nil, err
 	}
+	// truncate the padding
+	txDataTrits = txDataTrits[:consts.TransactionTrinarySize]
 
 	// calculate the transaction hash with the batched hasher if not given
 	skipHashCalc := len(txHash) > 0
 	if !skipHashCalc {
-		hashTrits := batchhasher.CURLP81.Hash(txDataTrits)
+		hashTrits, err := curl.Hasher().Hash(txDataTrits)
+		if err != nil {
+			return nil, err
+		}
 		txHash = []trinary.Hash{trinary.MustTritsToTrytes(hashTrits)}
 	}
 

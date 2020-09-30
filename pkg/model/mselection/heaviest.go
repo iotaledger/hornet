@@ -156,7 +156,7 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 
 // SelectTips tries to collect tips that confirm the most recent transactions since the last reset of the selector.
 // best tips are determined by counting the referenced transactions (heaviest branches) and by "removing" the
-// transactions of the referenced cone of the already choosen tips in the bitsets of the available tips.
+// transactions of the referenced cone of the already chosen tips in the bitsets of the available tips.
 // only tips are considered that were present at the beginning of the SelectTips call,
 // to prevent attackers from creating heavier branches while we are searching the best tips.
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if
@@ -165,7 +165,7 @@ func (s *HeaviestSelector) selectTip(tipsList *bundleTailList) (*bundleTail, uin
 // "minHeaviestBranchUnconfirmedTransactionsThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
-// the selection is cancelled after a fixed deadline. in this case, it returns the current collected tips.
+// the selection is canceled after a fixed deadline. in this case, it returns the current collected tips.
 func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error) {
 
 	// create a working list with the current tips to release the lock to allow faster iteration
@@ -188,7 +188,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 	deadlineExceeded := false
 
 	for i := 0; i < s.maxHeaviestBranchTipsPerCheckpoint; i++ {
-		// when the context has been cancelled, stop collecting heaviest branch tips
+		// when the context has been canceled, stop collecting heaviest branch tips
 		select {
 		case <-ctx.Done():
 			deadlineExceeded = true

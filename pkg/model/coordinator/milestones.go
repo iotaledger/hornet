@@ -5,10 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/kerl"
+	"github.com/iotaledger/iota.go/encoding/b1t6"
 	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
@@ -16,8 +15,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/t6b1"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/curl"
 )
 
 // tagForIndex creates a tag for a specific index.
@@ -31,64 +30,67 @@ func randomTrytesWithRandomLengthPadded(min int, length int) trinary.Trytes {
 }
 
 // createCheckpoint creates a checkpoint transaction.
-func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, powHandler *pow.Handler) (Bundle, error) {
+func createCheckpoint(trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, powHandler *pow.Handler) (bundle.Bundle, error) {
 
 	tag := randomTrytesWithRandomLengthPadded(5, consts.TagTrinarySize/3)
 
-	tx := &transaction.Transaction{}
-	tx.SignatureMessageFragment = randomTrytesWithRandomLengthPadded(100, consts.SignatureMessageFragmentTrinarySize/3)
-	tx.Address = utils.RandomTrytesInsecure(consts.AddressTrinarySize / 3)
-	tx.Value = 0
-	tx.ObsoleteTag = tag
-	tx.Timestamp = uint64(time.Now().Unix())
-	tx.CurrentIndex = 0
-	tx.LastIndex = 0
-	tx.Bundle = consts.NullHashTrytes
-	tx.TrunkTransaction = trunkHash.Trytes()
-	tx.BranchTransaction = branchHash.Trytes()
-	tx.Tag = tag
-	tx.AttachmentTimestamp = 0
-	tx.AttachmentTimestampLowerBound = consts.LowerBoundAttachmentTimestamp
-	tx.AttachmentTimestampUpperBound = consts.UpperBoundAttachmentTimestamp
-	tx.Nonce = consts.NullTagTrytes
-
-	var err error
-	b := Bundle{tx}
+	b := bundle.Bundle{
+		transaction.Transaction{
+			SignatureMessageFragment:      randomTrytesWithRandomLengthPadded(100, consts.SignatureMessageFragmentTrinarySize/3),
+			Address:                       utils.RandomTrytesInsecure(consts.AddressTrinarySize / 3),
+			Value:                         0,
+			ObsoleteTag:                   tag,
+			Timestamp:                     uint64(time.Now().Unix()),
+			CurrentIndex:                  0,
+			LastIndex:                     0,
+			Bundle:                        consts.NullHashTrytes,
+			TrunkTransaction:              trunkHash.Trytes(),
+			BranchTransaction:             branchHash.Trytes(),
+			Tag:                           tag,
+			AttachmentTimestamp:           0,
+			AttachmentTimestampLowerBound: consts.LowerBoundAttachmentTimestamp,
+			AttachmentTimestampUpperBound: consts.UpperBoundAttachmentTimestamp,
+			Nonce:                         consts.NullTagTrytes,
+		},
+	}
 
 	// finalize bundle by adding the bundle hash
-	b, err = finalizeInsecure(b)
+	b, err := bundle.FinalizeInsecure(b)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to finalize: %w", err)
 	}
 
-	if err = doPow(tx, mwm, powHandler); err != nil {
-		return nil, err
+	if err = doPow(&b[0], mwm, powHandler); err != nil {
+		return nil, fmt.Errorf("failed to do PoW: %w", err)
 	}
-
-	return b, err
+	return b, nil
 }
 
 // createMilestone creates a signed milestone bundle.
-func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powHandler *pow.Handler) (Bundle, error) {
+func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl consts.SecurityLevel, trunkHash hornet.Hash, branchHash hornet.Hash, mwm int, merkleTree *merkle.MerkleTree, whiteFlagMerkleRootTreeHash []byte, powHandler *pow.Handler) (bundle.Bundle, error) {
 
 	// get the siblings in the current Merkle tree
 	leafSiblings, err := merkleTree.AuditPath(uint32(index))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to compute Merkle audit path: %w", err)
 	}
 
 	siblingsTrytes := strings.Join(leafSiblings, "")
 
-	// append t6b1 encoded merkle tree root hash to the head's signature message fragment data
-	siblingsTrytes += t6b1.MustBytesToTrytes(whiteFlagMerkleRootTreeHash)
-
+	// append the b1t6 encoded Merkle tree hash to the head transaction's signature message fragment
+	siblingsTrytes += b1t6.EncodeToTrytes(whiteFlagMerkleRootTreeHash)
+	if len(siblingsTrytes) > consts.SignatureMessageFragmentSizeInTrytes {
+		return nil, ErrInvalidSiblingsTrytesLength
+	}
 	paddedSiblingsTrytes := trinary.MustPad(siblingsTrytes, consts.SignatureMessageFragmentSizeInTrytes)
 
 	tag := tagForIndex(index)
 
-	// a milestone consists of two transactions.
+	// a milestone bundle consists of securityLvl transactions for the signatures and one for the audit path
+	b := make(bundle.Bundle, securityLvl+1)
+
 	// the last transaction (currentIndex == lastIndex) contains the siblings for the Merkle tree.
-	txSiblings := &transaction.Transaction{}
+	txSiblings := &b[securityLvl]
 	txSiblings.SignatureMessageFragment = paddedSiblingsTrytes
 	txSiblings.Address = merkleTree.Root
 	txSiblings.CurrentIndex = uint64(securityLvl)
@@ -103,13 +105,12 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 	txSiblings.Nonce = consts.NullTagTrytes
 
 	// the other transactions contain a signature that signs the siblings and thereby ensures the integrity.
-	var b Bundle
+	for i := 0; i < int(securityLvl); i++ {
+		tx := &b[i]
 
-	for txIndex := 0; txIndex < int(securityLvl); txIndex++ {
-		tx := &transaction.Transaction{}
 		tx.SignatureMessageFragment = consts.NullSignatureMessageFragmentTrytes
 		tx.Address = merkleTree.Root
-		tx.CurrentIndex = uint64(txIndex)
+		tx.CurrentIndex = uint64(i)
 		tx.LastIndex = uint64(securityLvl)
 		tx.Timestamp = uint64(time.Now().Unix())
 		tx.ObsoleteTag = tag
@@ -119,49 +120,35 @@ func createMilestone(seed trinary.Hash, index milestone.Index, securityLvl const
 		tx.BranchTransaction = trunkHash.Trytes()
 		tx.Tag = tag
 		tx.Nonce = consts.NullTagTrytes
-
-		b = append(b, tx)
 	}
 
-	b = append(b, txSiblings)
-	// Address + Value + ObsoleteTag + Timestamp + CurrentIndex + LastIndex
 	// finalize bundle by adding the bundle hash
-	b, err = finalizeInsecure(b)
+	b, err = bundle.FinalizeInsecure(b)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to finalize: %w", err)
 	}
 
 	if err = doPow(txSiblings, mwm, powHandler); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to do PoW: %w", err)
 	}
 
 	fragments, err := merkle.SignatureFragments(seed, uint32(index), securityLvl, txSiblings.Hash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign: %w", err)
 	}
 
 	// verify milestone signature
 	if valid, err := merkle.ValidateSignatureFragments(merkleTree.Root, uint32(index), leafSiblings, fragments, txSiblings.Hash); !valid {
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("Merkle root does not match")
+		return nil, fmt.Errorf("signature validation failed: %w", err)
 	}
 
 	if err = chainTransactionsFillSignatures(b, fragments, mwm, powHandler); err != nil {
-		return nil, err
-	}
-
-	// check all tx
-	iotaGoBundle := make(bundle.Bundle, len(b))
-	for i := 0; i < len(b); i++ {
-		iotaGoBundle[i] = *b[i]
+		return nil, fmt.Errorf("failed to add signatures: %w", err)
 	}
 
 	// validate bundle semantics and signatures
-	if err := bundle.ValidBundle(iotaGoBundle); err != nil {
-		fmt.Println(err.Error())
-		return nil, err
+	if err := bundle.ValidBundle(b); err != nil {
+		return nil, fmt.Errorf("bundle validation failed: %w", err)
 	}
 
 	return b, nil
@@ -186,56 +173,37 @@ func doPow(tx *transaction.Transaction, mwm int, powHandler *pow.Handler) error 
 
 	tx.Nonce = nonce
 
-	// set new transaction hash
-	tx.Hash = transactionHash(tx)
+	hash, err := transactionHash(tx)
+	if err != nil {
+		return err
+	}
+
+	tx.Hash = hash
 
 	return nil
 }
 
 // transactionHash makes a transaction hash from the given transaction.
-func transactionHash(t *transaction.Transaction) trinary.Hash {
-	trits, _ := transaction.TransactionToTrits(t)
-	hashTrits := batchhasher.CURLP81.Hash(trits)
-	return trinary.MustTritsToTrytes(hashTrits)
-}
-
-// finalizeInsecure sets the bundle hash for all transactions in the bundle.
-// we do not care about the M-Bug since we use a fixed version of the ISS.
-func finalizeInsecure(bundle Bundle) (Bundle, error) {
-
-	k := kerl.NewKerl()
-
-	for _, tx := range bundle {
-		txTrits, err := transaction.TransactionToTrits(tx)
-		if err != nil {
-			return nil, err
-		}
-
-		k.Absorb(txTrits[consts.AddressTrinaryOffset:consts.BundleTrinaryOffset]) // Address + Value + ObsoleteTag + Timestamp + CurrentIndex + LastIndex
-	}
-
-	bundleHashTrits, err := k.Squeeze(consts.HashTrinarySize)
+func transactionHash(t *transaction.Transaction) (trinary.Hash, error) {
+	trits, err := transaction.TransactionToTrits(t)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	bundleHash := trinary.MustTritsToTrytes(bundleHashTrits)
-
-	// set the computed bundle hash on each tx in the bundle
-	for _, tx := range bundle {
-		tx.Bundle = bundleHash
+	hashTrits, err := curl.Hasher().Hash(trits)
+	if err != nil {
+		return "", err
 	}
-
-	return bundle, nil
+	return trinary.MustTritsToTrytes(hashTrits), nil
 }
 
 // chainTransactionsFillSignatures fills the signature message fragments with the signature and sets the trunk to chain the txs in a bundle.
-func chainTransactionsFillSignatures(b Bundle, fragments []trinary.Trytes, mwm int, powHandler *pow.Handler) error {
+func chainTransactionsFillSignatures(b bundle.Bundle, fragments []trinary.Trytes, mwm int, powHandler *pow.Handler) error {
 	// to chain transactions we start from the LastIndex and move towards index 0.
 	prev := b[len(b)-1].Hash
 
 	// we have to skip the siblingsTx, because it is already complete
 	for i := len(b) - 2; i >= 0; i-- {
-		tx := b[i]
+		tx := &b[i]
 
 		// copy signature fragment
 		tx.SignatureMessageFragment = fragments[tx.CurrentIndex]

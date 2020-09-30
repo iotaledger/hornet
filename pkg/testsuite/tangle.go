@@ -25,7 +25,7 @@ func (te *TestEnvironment) storeTransaction(tx *transaction.Transaction) *tangle
 	txTrits, err := transaction.TransactionToTrits(tx)
 	require.NoError(te.testState, err)
 
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	txBytesTruncated := compressed.TruncateTxTrits(txTrits)
 	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	cachedTx, alreadyAdded := tangle.AddTransactionToStorage(hornetTx, tangle.GetLatestMilestoneIndex(), false, true, true)

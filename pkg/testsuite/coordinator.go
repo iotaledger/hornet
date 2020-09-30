@@ -32,12 +32,12 @@ const (
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator() {
 
-	storeBundleFunc := func(b coordinator.Bundle, isMilestone bool) error {
-		var bndl = make(bundle.Bundle, 0)
+	storeBundleFunc := func(b bundle.Bundle, isMilestone bool) error {
+		var bndl = make(bundle.Bundle, 0, len(b))
 
 		// insert it the reverse way
 		for i := len(b) - 1; i >= 0; i-- {
-			bndl = append(bndl, *b[i])
+			bndl = append(bndl, b[i])
 		}
 
 		ms := te.StoreBundle(bndl, true) // no need to release, since we store all the bundles for later cleanup
