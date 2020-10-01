@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/iotaledger/hive.go/byteutils"
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -46,22 +47,18 @@ const (
 
 // Output defines an output within a local snapshot.
 type Output struct {
-	TransactionID [iotago.TransactionIDLength]byte `json:"transaction_hash"`
-	// The index of the output.
-	OutputIndex uint16 `json:"index"`
+	// The transaction ID and the index of the output.
+	OutputID [iotago.TransactionIDLength + 2]byte `json:"output_id"`
 	// The underlying address to which this output deposits to.
 	Address iotago.Serializable `json:"address"`
-	// The value of the deposit.
-	Amount uint64 `json:"value"`
+	// The amount of the deposit.
+	Amount uint64 `json:"amount"`
 }
 
 func (s *Output) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
-	if _, err := b.Write(s.TransactionID[:]); err != nil {
-		return nil, fmt.Errorf("unable to write transaction hash for ls-output: %w", err)
-	}
-	if err := binary.Write(&b, binary.LittleEndian, s.OutputIndex); err != nil {
-		return nil, fmt.Errorf("unable to write index for ls-output: %w", err)
+	if _, err := b.Write(s.OutputID[:]); err != nil {
+		return nil, fmt.Errorf("unable to write output ID for ls-output: %w", err)
 	}
 	addrData, err := s.Address.Serialize(iotago.DeSeriModePerformValidation)
 	if err != nil {
@@ -76,14 +73,30 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// Spent defines an output within a local snapshot.
+type Spent struct {
+	Output
+	// The transaction ID the funds were spent with.
+	TargetTransactionID [iotago.TransactionIDLength]byte `json:"target_transaction_id"`
+}
+
+func (s *Spent) MarshalBinary() ([]byte, error) {
+	bytes, err := s.Output.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	return byteutils.ConcatBytes(bytes, s.TargetTransactionID[:]), nil
+}
+
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone.
 type MilestoneDiff struct {
 	// The index of the milestone for which the diff applies.
 	MilestoneIndex milestone.Index `json:"milestone_index"`
 	// The created outputs with this milestone.
 	Created []*Output `json:"created"`
-	// The consumed outputs with this milestone.
-	Consumed []*Output `json:"consumed"`
+	// The consumed spents with this milestone.
+	Consumed []*Spent `json:"consumed"`
 }
 
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
@@ -110,13 +123,13 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
 	}
 
-	for x, output := range md.Consumed {
-		outputBytes, err := output.MarshalBinary()
+	for x, spent := range md.Consumed {
+		spentBytes, err := spent.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("unable to serialize output %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to serialize spent %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
 		}
-		if _, err := b.Write(outputBytes); err != nil {
-			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+		if _, err := b.Write(spentBytes); err != nil {
+			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
 		}
 	}
 
@@ -393,13 +406,13 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff consumed count: %w", err)
 	}
 
-	msDiff.Consumed = make([]*Output, consumedCount)
+	msDiff.Consumed = make([]*Spent, consumedCount)
 	for i := uint64(0); i < consumedCount; i++ {
-		diffConsumedOutput, err := readOutput(reader)
+		diffConsumedSpent, err := readSpent(reader)
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
 		}
-		msDiff.Consumed[i] = diffConsumedOutput
+		msDiff.Consumed[i] = diffConsumedSpent
 	}
 
 	return msDiff, nil
@@ -408,12 +421,8 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 // reads an Output from the given reader.
 func readOutput(reader io.Reader) (*Output, error) {
 	output := &Output{}
-	if _, err := io.ReadFull(reader, output.TransactionID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS output tx hash: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &output.OutputIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS output index: %w", err)
+	if _, err := io.ReadFull(reader, output.OutputID[:]); err != nil {
+		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
 	}
 
 	// look ahead address type
@@ -453,4 +462,18 @@ func readOutput(reader io.Reader) (*Output, error) {
 	}
 
 	return output, nil
+}
+
+func readSpent(reader io.Reader) (*Spent, error) {
+	output, err := readOutput(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	spent := &Spent{Output: *output}
+	if _, err := io.ReadFull(reader, spent.TargetTransactionID[:]); err != nil {
+		return nil, fmt.Errorf("unable to read LS target transaction ID: %w", err)
+	}
+
+	return spent, nil
 }

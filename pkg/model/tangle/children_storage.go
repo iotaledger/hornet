@@ -30,7 +30,7 @@ func (c *CachedChild) GetChild() *Child {
 }
 
 func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	child := NewChild(key[:iotago.MessageHashLength], key[iotago.MessageHashLength:iotago.MessageHashLength])
+	child := NewChild(key[:iotago.MessageHashLength], key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength])
 	return child, nil
 }
 

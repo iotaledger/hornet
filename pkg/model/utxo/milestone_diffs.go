@@ -37,6 +37,14 @@ func storeDiff(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, mu
 	return mutations.Set(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key), value.Bytes())
 }
 
+func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key, uint32(msIndex))
+
+	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
+}
+
 func getMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
 
 	key := make([]byte, 4)
@@ -95,12 +103,4 @@ func getMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
 	}
 
 	return outputs, spents, nil
-}
-
-func deleteMilestoneDiffs(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
-
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, uint32(msIndex))
-
-	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
 }
