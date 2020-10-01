@@ -9,11 +9,14 @@ import (
 
 	"github.com/pkg/errors"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -30,6 +33,10 @@ var (
 	ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
 	// Returned when a child message wasn't found.
 	ErrChildMsgNotFound = errors.New("child message not found")
+	// Returned when the milestone diff that should be applied is not the current or next milestone.
+	ErrWrongMilestoneDiffIndex = errors.New("wrong milestone diff index")
+	// Returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
+	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
 )
 
 // isSolidEntryPoint checks whether any direct child of the given message was confirmed by a milestone which is above the target milestone.
@@ -350,25 +357,77 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return nil
 	}
 
+	if err := utxo.StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
+		return err
+	}
+
 	// note that we only get the hash of the SEP message instead
 	// of also its associated oldest cone root index, since the index
 	// of the local snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 local snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
 	sepConsumer := func(sepMsgHashBytes [32]byte) error {
-		// TODO: consume SEP
+		tangle.SolidEntryPointsAdd(sepMsgHashBytes[:], lsHeader.SEPMilestoneIndex)
 		return nil
 	}
 
 	outputConsumer := func(unspentOutput *Output) error {
-		// TODO: consume unspentOutput
-		return nil
+		switch addr := unspentOutput.Address.(type) {
+		case *iotago.WOTSAddress:
+			return iotago.ErrWOTSNotImplemented
+		case *iotago.Ed25519Address:
+			return utxo.AddUnspentOutput(&utxo.Output{OutputID: unspentOutput.OutputID, Address: *addr, Amount: unspentOutput.Amount})
+		default:
+			return iotago.ErrUnknownAddrType
+		}
 	}
 
 	msDiffConsumer := func(msDiff *MilestoneDiff) error {
-		// TODO: consume milestone diff
-		return nil
+		var newOutputs []*utxo.Output
+		var newSpents []*utxo.Spent
+
+		for _, createdOutput := range msDiff.Created {
+			switch addr := createdOutput.Address.(type) {
+			case *iotago.WOTSAddress:
+				return iotago.ErrWOTSNotImplemented
+			case *iotago.Ed25519Address:
+				newOutputs = append(newOutputs, &utxo.Output{OutputID: createdOutput.OutputID, Address: *addr, Amount: createdOutput.Amount})
+			default:
+				return iotago.ErrUnknownAddrType
+			}
+		}
+
+		for _, consumedOutput := range msDiff.Consumed {
+			switch addr := consumedOutput.Address.(type) {
+			case *iotago.WOTSAddress:
+				return iotago.ErrWOTSNotImplemented
+			case *iotago.Ed25519Address:
+				newSpents = append(newSpents, utxo.NewSpent(&utxo.Output{OutputID: consumedOutput.OutputID, Address: *addr, Amount: consumedOutput.Amount}, consumedOutput.TargetTransactionID, msDiff.MilestoneIndex))
+			default:
+				return iotago.ErrUnknownAddrType
+			}
+		}
+
+		ledgerIndex, err := utxo.ReadLedgerIndex()
+		if err != nil {
+			return err
+		}
+
+		if ledgerIndex == msDiff.MilestoneIndex {
+			return utxo.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+		}
+
+		if ledgerIndex == msDiff.MilestoneIndex+1 {
+			return utxo.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+		}
+
+		return ErrWrongMilestoneDiffIndex
 	}
+
+	tangle.WriteLockSolidEntryPoints()
+	tangle.ResetSolidEntryPoints()
+	defer tangle.WriteUnlockSolidEntryPoints()
+	defer tangle.StoreSolidEntryPoints()
 
 	if err := StreamLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import local snapshot file: %w", err)
@@ -381,9 +440,19 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	lsMilestoneIndex := milestone.Index(lsHeader.SEPMilestoneIndex)
-	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.SEPMilestoneHash[:], lsMilestoneIndex, lsMilestoneIndex, lsMilestoneIndex, time.Now())
-	tangle.SetSolidMilestoneIndex(lsMilestoneIndex, false)
+	utxo.CheckLedgerState()
+
+	ledgerIndex, err := utxo.ReadLedgerIndex()
+	if err != nil {
+		return err
+	}
+
+	if ledgerIndex != lsHeader.SEPMilestoneIndex {
+		return ErrFinalLedgerIndexDoesNotMatchSEPIndex
+	}
+
+	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.SEPMilestoneHash[:], lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
+	tangle.SetSolidMilestoneIndex(lsHeader.SEPMilestoneIndex, false)
 
 	return nil
 }

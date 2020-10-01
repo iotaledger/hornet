@@ -129,6 +129,14 @@ func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations
 	return mutations.Set(spentKey, spent.kvStorableValue())
 }
 
+func deleteSpentAndMarkUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	if err := deleteSpent(spent, mutations); err != nil {
+		return err
+	}
+
+	return markAsUnspent(spent.Output, mutations)
+}
+
 func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, spent.kvStorableKey()))
 }

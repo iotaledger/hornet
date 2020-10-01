@@ -13,6 +13,11 @@ func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Set(key, []byte{})
 }
 
+func deleteFromUnspent(output *Output, mutations kvstore.BatchedMutations) error {
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, output.UTXOKey())
+	return mutations.Delete(key)
+}
+
 func IsOutputUnspent(utxoInputId iotago.UTXOInputID) (bool, error) {
 	ReadLockLedger()
 	defer ReadUnlockLedger()
