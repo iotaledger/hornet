@@ -22,8 +22,8 @@ const (
 	// The offset of counters within a local snapshot file:
 	// version+type+timestamp+sep-ms-index+sep-ms-hash+ledger-ms-index+ledger-ms-hash
 	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize +
-		iotago.UInt64ByteSize + iotago.MilestonePayloadHashLength +
-		iotago.UInt64ByteSize + iotago.MilestonePayloadHashLength
+		iotago.UInt32ByteSize + iotago.MilestonePayloadHashLength +
+		iotago.UInt32ByteSize + iotago.MilestonePayloadHashLength
 )
 
 var (
@@ -73,7 +73,7 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Spent defines an output within a local snapshot.
+// Spent defines a spent within a local snapshot.
 type Spent struct {
 	Output
 	// The transaction ID the funds were spent with.
@@ -137,7 +137,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a local snapshot or nil if no more is available.
-type SEPProducerFunc func() *[SolidEntryPointHashLength]byte
+type SEPProducerFunc func() (*[SolidEntryPointHashLength]byte, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
@@ -148,14 +148,14 @@ type SEPConsumerFunc func([SolidEntryPointHashLength]byte) error
 type HeaderConsumerFunc func(*ReadFileHeader) error
 
 // OutputProducerFunc yields an output to be written to a local snapshot or nil if no more is available.
-type OutputProducerFunc func() *Output
+type OutputProducerFunc func() (*Output, error)
 
 // OutputConsumerFunc consumes the given output.
 // A returned error signals to cancel further reading.
 type OutputConsumerFunc func(output *Output) error
 
 // MilestoneDiffProducerFunc yields a milestone diff to be written to a local snapshot or nil if no more is available.
-type MilestoneDiffProducerFunc func() *MilestoneDiff
+type MilestoneDiffProducerFunc func() (*MilestoneDiff, error)
 
 // MilestoneDiffConsumerFunc consumes the given MilestoneDiff.
 // A returned error signals to cancel further reading.
@@ -236,7 +236,16 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 		return fmt.Errorf("unable to write LS counter placeholders: %w", err)
 	}
 
-	for sep := sepProd(); sep != nil; sep = sepProd() {
+	for {
+		sep, err := sepProd()
+		if err != nil {
+			return fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err)
+		}
+
+		if sep == nil {
+			break
+		}
+
 		sepsCount++
 		if _, err := writeSeeker.Write(sep[:]); err != nil {
 			return fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err)
@@ -244,7 +253,16 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 	}
 
 	if header.Type == Full {
-		for output := outputProd(); output != nil; output = outputProd() {
+		for {
+			output, err := outputProd()
+			if err != nil {
+				return fmt.Errorf("unable to get next LS output #%d: %w", outputCount+1, err)
+			}
+
+			if output == nil {
+				break
+			}
+
 			outputCount++
 			outputBytes, err := output.MarshalBinary()
 			if err != nil {
@@ -256,7 +274,16 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 		}
 	}
 
-	for msDiff := msDiffProd(); msDiff != nil; msDiff = msDiffProd() {
+	for {
+		msDiff, err := msDiffProd()
+		if err != nil {
+			return fmt.Errorf("unable to get next LS milestone diff #%d: %w", msDiffCount+1, err)
+		}
+
+		if msDiff == nil {
+			break
+		}
+
 		msDiffCount++
 		msDiffBytes, err := msDiff.MarshalBinary()
 		if err != nil {

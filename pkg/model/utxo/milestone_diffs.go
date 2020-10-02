@@ -45,7 +45,7 @@ func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) err
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
 }
 
-func getMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
+func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, error) {
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
@@ -103,4 +103,11 @@ func getMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
 	}
 
 	return outputs, spents, nil
+}
+
+func GetMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return GetMilestoneDiffsWithoutLocking(msIndex)
 }
