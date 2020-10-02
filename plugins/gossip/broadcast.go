@@ -3,27 +3,34 @@ package gossip
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/helpers"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.
-func BroadcastHeartbeat(filter func(p *peer.Peer) bool) {
+func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return
 	}
 
-	connected, synced := manager.ConnectedAndSyncedPeerCount()
-	heartbeatMsg, _ := sting.NewHeartbeatMsg(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), connected, synced)
+	latestMilestoneIndex := tangle.GetSolidMilestoneIndex()
+	connectedCount := p2pplug.PeeringService().ConnectedPeerCount()
+	syncedCount := Service().SynchronizedCount(latestMilestoneIndex)
+	// TODO: overflow not handled for synced/connected
+	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
-	manager.ForAllConnected(func(p *peer.Peer) bool {
-		if filter != nil && !filter(p) {
+	service := Service()
+	p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
+		proto := service.Protocol(p.ID)
+		if proto == nil {
 			return true
 		}
-
-		p.EnqueueForSending(heartbeatMsg)
+		if filter != nil && !filter(proto) {
+			return true
+		}
+		proto.Enqueue(heartbeatMsg)
 		return true
 	})
 }
@@ -56,13 +63,19 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 		return requested
 	}
 
+	service := Service()
+
 	// send each ms request to a random peer who supports the message
 	for _, msIndex := range msIndexes {
-		manager.ForAllConnected(func(p *peer.Peer) bool {
-			if !p.HasDataFor(msIndex) {
+		p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
+			proto := service.Protocol(p.ID)
+			if proto == nil {
 				return true
 			}
-			helpers.SendMilestoneRequest(p, msIndex)
+			if !proto.HasDataForMilestone(msIndex) {
+				return true
+			}
+			proto.SendMilestoneRequest(msIndex)
 			return false
 		})
 	}

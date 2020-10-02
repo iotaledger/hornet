@@ -1,15 +1,14 @@
-package processor
+package gossip
 
 import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/libp2p/go-libp2p-core/peer"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/bqueue"
-	"github.com/gohornet/hornet/plugins/peering"
+	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.
@@ -25,7 +24,7 @@ const (
 func newWorkUnit(key []byte) *WorkUnit {
 	wu := &WorkUnit{
 		receivedMsgBytes: make([]byte, len(key)),
-		receivedFrom:     make([]*peer.Peer, 0),
+		receivedFrom:     make([]*Protocol, 0),
 	}
 	copy(wu.receivedMsgBytes, key)
 	return wu
@@ -64,7 +63,7 @@ type WorkUnit struct {
 
 	// received from
 	receivedFromLock syncutils.RWMutex
-	receivedFrom     []*peer.Peer
+	receivedFrom     []*Protocol
 }
 
 func (wu *WorkUnit) Update(_ objectstorage.StorableObject) {
@@ -97,7 +96,7 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 // adds a Request for the given peer to this WorkUnit.
 // requestedMessageID can be nil to flag that this request just reflects a receive from the given
 // peer and has no associated request.
-func (wu *WorkUnit) addReceivedFrom(p *peer.Peer, requestedMessageID hornet.Hash) {
+func (wu *WorkUnit) addReceivedFrom(p *Protocol, requestedMessageID hornet.Hash) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	wu.receivedFrom = append(wu.receivedFrom, p)
@@ -113,19 +112,19 @@ func (wu *WorkUnit) punish() {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		peering.Manager().Remove(p.ID)
+		p2pplug.PeeringService().RemovePeer(p.PeerID)
 	}
 }
 
 // builds a Broadcast where all peers which are associated with this WorkUnit are excluded from.
-func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
+func (wu *WorkUnit) broadcast() *Broadcast {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
-	exclude := map[string]struct{}{}
+	exclude := map[peer.ID]struct{}{}
 	for _, p := range wu.receivedFrom {
-		exclude[p.ID] = struct{}{}
+		exclude[p.PeerID] = struct{}{}
 	}
-	return &bqueue.Broadcast{
+	return &Broadcast{
 		MsgData:      wu.receivedMsgBytes,
 		ExcludePeers: exclude,
 	}
@@ -133,12 +132,12 @@ func (wu *WorkUnit) broadcast() *bqueue.Broadcast {
 
 // increases the known message metric of all peers
 // except the given peer
-func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *peer.Peer) {
+func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 
 	for _, p := range wu.receivedFrom {
-		if p.ID == excludedPeer.ID {
+		if p.PeerID == excludedPeer.PeerID {
 			continue
 		}
 		metrics.SharedServerMetrics.KnownMessages.Inc()

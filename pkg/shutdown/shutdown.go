@@ -11,9 +11,9 @@ const (
 	PriorityReceiveTxWorker
 	PriorityBroadcastQueue
 	PriorityMessageProcessor
-	PriorityPeerSendQueue
-	PriorityPeeringTCPServer
-	PriorityPeerReconnecter
+	PriorityPeerGossipProtocolWrite
+	PriorityPeerGossipProtocolRead
+	PriorityPeeringService
 	PriorityHeartbeats
 	PriorityWarpSync
 	PriorityLocalSnapshots
@@ -24,7 +24,6 @@ const (
 	PriorityMetricsPublishers
 	PrioritySpammer
 	PriorityStatusReport
-	PriorityAutopeering
 	PriorityCoordinator
 	PriorityUpdateCheck
 	PriorityPrometheus

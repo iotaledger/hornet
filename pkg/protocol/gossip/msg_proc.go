@@ -1,11 +1,13 @@
-package processor
+package gossip
 
 import (
 	"errors"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -13,13 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering"
-	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/protocol/bqueue"
-	"github.com/gohornet/hornet/pkg/protocol/message"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
 )
 
 const (
@@ -32,11 +28,11 @@ var (
 )
 
 // New creates a new processor which parses messages.
-func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options) *Processor {
-	proc := &Processor{
-		pm:           peerManager,
+func NewMessageProcessor(requestQueue RequestQueue, peeringService *p2p.PeeringService, opts *Options) *MessageProcessor {
+	proc := &MessageProcessor{
+		ps:           peeringService,
 		requestQueue: requestQueue,
-		Events: Events{
+		Events: MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},
@@ -58,15 +54,15 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 	)
 
 	proc.wp = workerpool.New(func(task workerpool.Task) {
-		p := task.Param(0).(*peer.Peer)
+		p := task.Param(0).(*Protocol)
 		data := task.Param(2).([]byte)
 
 		switch task.Param(1).(message.Type) {
-		case sting.MessageTypeMessage:
+		case MessageTypeMessage:
 			proc.processMessage(p, data)
-		case sting.MessageTypeMessageRequest:
+		case MessageTypeMessageRequest:
 			proc.processMessageRequest(p, data)
-		case sting.MessageTypeMilestoneRequest:
+		case MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
 		}
 
@@ -77,70 +73,70 @@ func New(requestQueue rqueue.Queue, peerManager *peering.Manager, opts *Options)
 }
 
 func MessageProcessedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(msg *tangle.Message, request *rqueue.Request, p *peer.Peer))(params[0].(*tangle.Message), params[1].(*rqueue.Request), params[2].(*peer.Peer))
+	handler.(func(msg *tangle.Message, request *Request, proto *Protocol))(params[0].(*tangle.Message), params[1].(*Request), params[2].(*Protocol))
 }
 
 func BroadcastCaller(handler interface{}, params ...interface{}) {
-	handler.(func(b *bqueue.Broadcast))(params[0].(*bqueue.Broadcast))
+	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 
-// Events are the events fired by the Processor.
-type Events struct {
+// MessageProcessorEventsEvents are the events fired by the MessageProcessor.
+type MessageProcessorEvents struct {
 	// Fired when a message was fully processed.
 	MessageProcessed *events.Event
 	// Fired when a message is meant to be broadcasted.
 	BroadcastMessage *events.Event
 }
 
-// Processor processes submitted messages in parallel and fires appropriate completion events.
-type Processor struct {
-	Events       Events
-	pm           *peering.Manager
+// MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
+type MessageProcessor struct {
+	Events       MessageProcessorEvents
+	ps           *p2p.PeeringService
 	wp           *workerpool.WorkerPool
-	requestQueue rqueue.Queue
+	requestQueue RequestQueue
 	workUnits    *objectstorage.ObjectStorage
 	opts         Options
 }
 
-// The Options for the Processor.
+// The Options for the MessageProcessor.
 type Options struct {
 	ValidMWM          uint64
 	WorkUnitCacheOpts profile.CacheOpts
 }
 
 // Run runs the processor and blocks until the shutdown signal is triggered.
-func (proc *Processor) Run(shutdownSignal <-chan struct{}) {
+func (proc *MessageProcessor) Run(shutdownSignal <-chan struct{}) {
 	proc.wp.Start()
 	<-shutdownSignal
 	proc.wp.StopAndWait()
 }
 
 // Process submits the given message to the processor for processing.
-func (proc *Processor) Process(p *peer.Peer, msgType message.Type, data []byte) {
+func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
 	proc.wp.Submit(p, msgType, data)
 }
 
 // SerializeAndEmit serializes the given message and emits MessageProcessed and BroadcastMessage events.
-func (proc *Processor) SerializeAndEmit(msg *tangle.Message, deSeriMode iotago.DeSerializationMode) error {
+func (proc *MessageProcessor) SerializeAndEmit(msg *tangle.Message, deSeriMode iotago.DeSerializationMode) error {
 
 	msgData, err := msg.GetMessage().Serialize(deSeriMode)
 	if err != nil {
 		return err
 	}
 
-	proc.Events.MessageProcessed.Trigger(msg, (*rqueue.Request)(nil), (*peer.Peer)(nil))
-	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{MsgData: msgData})
+	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
+	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msgData})
 
 	return nil
 }
 
 // WorkUnitSize returns the size of WorkUnits currently cached.
-func (proc *Processor) WorkUnitsSize() int {
+func (proc *MessageProcessor) WorkUnitsSize() int {
 	return proc.workUnits.GetSize()
 }
 
 // gets a CachedWorkUnit or creates a new one if it not existent.
-func (proc *Processor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
+func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			return newWorkUnit(receivedTxBytes)
@@ -149,18 +145,18 @@ func (proc *Processor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 }
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
-func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
-	msIndex, err := sting.ExtractRequestedMilestoneIndex(data)
+func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) {
+	msIndex, err := ExtractRequestedMilestoneIndex(data)
 	if err != nil {
 		metrics.SharedServerMetrics.InvalidRequests.Inc()
 
 		// drop the connection to the peer
-		proc.pm.Remove(p.ID)
+		proc.ps.RemovePeer(p.PeerID)
 		return
 	}
 
 	// peers can request the latest milestone we know
-	if msIndex == sting.LatestMilestoneRequestIndex {
+	if msIndex == LatestMilestoneRequestIndex {
 		msIndex = tangle.GetLatestMilestoneIndex()
 	}
 
@@ -177,17 +173,17 @@ func (proc *Processor) processMilestoneRequest(p *peer.Peer, data []byte) {
 		return
 	}
 
-	msg, err := sting.NewMessageMsg(cachedRequestedData)
+	msg, err := NewMessageMsg(cachedRequestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
 	}
 
-	p.EnqueueForSending(msg)
+	p.Enqueue(msg)
 }
 
 // processes the given message request by parsing it and then replying to the peer with it.
-func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
+func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 	if len(data) != 32 {
 		return
 	}
@@ -205,17 +201,17 @@ func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
 		return
 	}
 
-	msg, err := sting.NewMessageMsg(cachedRequestedData)
+	msg, err := NewMessageMsg(cachedRequestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
 	}
 
-	p.EnqueueForSending(msg)
+	p.Enqueue(msg)
 }
 
 // gets or creates a new WorkUnit for the given message and then processes the WorkUnit.
-func (proc *Processor) processMessage(p *peer.Peer, data []byte) {
+func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 	cachedWorkUnit := proc.workUnitFor(data) // workUnit +1
 	defer cachedWorkUnit.Release()           // workUnit -1
 	workUnit := cachedWorkUnit.WorkUnit()
@@ -227,7 +223,7 @@ func (proc *Processor) processMessage(p *peer.Peer, data []byte) {
 // if the WorkUnit is invalid (because the underlying message is invalid), the given peer is punished.
 // if the WorkUnit is already completed, and the message was requested, this function emits a MessageProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
-func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
+func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Lock()
 
 	switch {
@@ -240,7 +236,7 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		proc.pm.Remove(p.ID)
+		proc.ps.RemovePeer(p.PeerID)
 
 		return
 	case wu.Is(Hashed):

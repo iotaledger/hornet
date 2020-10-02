@@ -43,7 +43,7 @@ var (
 //
 // 		Stored without caching:
 //			- Tag								=> will be removed and added again if missing by receiving the msg
-//			- Address							=> will be removed and added again if missing by receiving the msg
+//			- ID							=> will be removed and added again if missing by receiving the msg
 //			- UnconfirmedMessage 					=> will be removed at pruning anyway
 //			- Milestone							=> will be removed and added again by receiving the msg
 //

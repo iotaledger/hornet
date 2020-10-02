@@ -1,4 +1,4 @@
-package warpsync
+package gossip
 
 import (
 	"sync"
@@ -8,9 +8,9 @@ import (
 	"github.com/iotaledger/hive.go/events"
 )
 
-// New creates a new WarpSync instance with the given advancement range and criteria func.
+// NewWarpSync creates a new WarpSync instance with the given advancement range and criteria func.
 // If no advancement func is provided, the WarpSync uses AdvanceAtPercentageReached with DefaultAdvancementThreshold.
-func New(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
+func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
 	ws := &WarpSync{
 		Events: Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),

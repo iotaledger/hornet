@@ -15,7 +15,7 @@ const (
 
 func init() {
 	configFlagSet.StringSlice(CfgP2PBindAddresses, []string{"/ip4/127.0.0.1/tcp/15600"}, "the bind addresses for this node")
-	configFlagSet.String(CfgP2PPeerStorePath, "./peerstore", "the path to the peer store")
+	configFlagSet.String(CfgP2PPeerStorePath, "./p2pstore", "the path to the peer store")
 	configFlagSet.Int(CfgP2PConnMngHighWatermark, 10, "defines the threshold up on which connections count truncates to the lower watermark")
 	configFlagSet.Int(CfgP2PConnMngLowWatermark, 5, "defines the minimum connections count to hold after the high watermark was reached")
 	configFlagSet.StringSlice(CfgP2PPeers, []string{}, "the static peers this node should retain a connection to")

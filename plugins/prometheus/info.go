@@ -124,6 +124,6 @@ func collectInfo() {
 	infoTips.Set(0)
 
 	// Messages to request
-	queued, pending, _ := gossip.RequestQueue().Size()
+	queued, pending, _ := gossip.Service().RequestQueue.Size()
 	infoMessagesToRequest.Set(float64(queued + pending))
 }

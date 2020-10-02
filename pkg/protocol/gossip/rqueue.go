@@ -1,4 +1,4 @@
-package rqueue
+package gossip
 
 import (
 	"container/heap"
@@ -11,8 +11,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-// Queue implements a queue which contains requests for needed data.
-type Queue interface {
+// RequestQueue implements a queue which contains requests for needed data.
+type RequestQueue interface {
 	// Next returns the next request to send, pops it from the queue and marks it as pending.
 	Next() *Request
 	// Peek returns the next request to send without popping it from the queue.
@@ -55,8 +55,8 @@ type FilterFunc func(r *Request) bool
 
 const DefaultLatencyResolution = 100
 
-// New creates a new Queue where request are prioritized over their milestone index (lower = higher priority).
-func New(latencyResolution ...int32) Queue {
+// New creates a new RequestQueue where request are prioritized over their milestone index (lower = higher priority).
+func NewRequestQueue(latencyResolution ...int32) RequestQueue {
 	q := &priorityqueue{
 		queue:      make([]*Request, 0),
 		queued:     make(map[string]*Request),

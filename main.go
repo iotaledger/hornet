@@ -6,7 +6,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/toolset"
-	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
@@ -14,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
@@ -38,7 +36,6 @@ func main() {
 		gracefulshutdown.PLUGIN,
 		profiling.PLUGIN,
 		database.PLUGIN,
-		autopeering.PLUGIN,
 		webapi.PLUGIN,
 	}
 
@@ -48,7 +45,6 @@ func main() {
 			p2p.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
-			peering.PLUGIN,
 			warpsync.PLUGIN,
 			urts.PLUGIN,
 			metrics.PLUGIN,

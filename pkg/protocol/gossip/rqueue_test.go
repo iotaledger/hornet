@@ -1,17 +1,17 @@
-package rqueue_test
+package gossip_test
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/muxxer/iota.go/trinary"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRequestQueue(t *testing.T) {
-	q := rqueue.New()
+	q := gossip.NewRequestQueue()
 
 	var (
 		hashA = hornet.Hash(trinary.MustTrytesToBytes("A"))
@@ -21,7 +21,7 @@ func TestRequestQueue(t *testing.T) {
 		hashD = hornet.Hash(trinary.MustTrytesToBytes("D"))
 	)
 
-	requests := []*rqueue.Request{
+	requests := []*gossip.Request{
 		{
 			MessageID:      hashA,
 			MilestoneIndex: 10,

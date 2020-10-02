@@ -119,7 +119,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 			for layoutNeighbor := range layoutNeighbors {
 				layoutNode := n.Nodes[layoutNeighbor]
 				for _, neighbor := range neighbors {
-					if neighbor.Address == fmt.Sprintf("%s:15600", layoutNode.IP) {
+					if neighbor.ID == fmt.Sprintf("%s:15600", layoutNode.IP) {
 						peered++
 					}
 				}

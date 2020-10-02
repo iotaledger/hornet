@@ -2,17 +2,19 @@
 package p2p
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/config"
-	network2 "github.com/gohornet/hornet/pkg/p2p"
+	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
@@ -21,10 +23,8 @@ import (
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
-	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/libp2p/go-libp2p-core/routing"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
@@ -33,24 +33,22 @@ import (
 )
 
 const (
-	pubKeyFileName               = "key.pub"
-	iotaGossipProtocolIDTemplate = "/iota-gossip/%s/1.0.0"
+	pubKeyFileName = "key.pub"
 )
 
 var (
-	PLUGIN               = node.NewPlugin("P2P", node.Enabled, configure, run)
-	log                  *logger.Logger
-	hostOnce             sync.Once
-	selfHost             host.Host
-	peeringService       *network2.PeeringService
-	peeringServiceOnce   sync.Once
-	iotaGossipProtocolID protocol.ID
+	PLUGIN             = node.NewPlugin("P2P", node.Enabled, configure, run)
+	log                *logger.Logger
+	hostOnce           sync.Once
+	selfHost           host.Host
+	peeringService     *p2ppkg.PeeringService
+	peeringServiceOnce sync.Once
 )
 
 // PeeringService returns the PeeringService.
-func PeeringService() *network2.PeeringService {
+func PeeringService() *p2ppkg.PeeringService {
 	peeringServiceOnce.Do(func() {
-		peeringService = network2.NewPeeringService(Host())
+		peeringService = p2ppkg.NewPeeringService(Host())
 
 		// init PeeringService with peers from the config
 		peerIDsStr := config.NodeConfig.GetStringSlice(config.CfgP2PPeers)
@@ -123,12 +121,6 @@ func Host() host.Host {
 			libp2p.EnableAutoRelay(),
 		)
 
-		// init protocol ID
-		cooPubKey := config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)
-		iotaGossipProtocolID = protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, cooPubKey[:5]))
-
-		selfHost.SetStreamHandler(iotaGossipProtocolID, gossipStreamHandler)
-
 		if err != nil {
 			panic(fmt.Sprintf("unable to initialize peer: %s", err))
 		}
@@ -142,29 +134,39 @@ func configure(plugin *node.Plugin) {
 
 	ps := PeeringService()
 
-	ps.Events.Added.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.Added.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("added to peering service %s", ph.ID)
 	}))
-	ps.Events.Removed.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.Removed.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("removed from peering service %s", ph.ID)
 	}))
-	ps.Events.UpdatedAddrs.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.UpdatedAddrs.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("updated addresses for %s", ph.ID)
 	}))
-	ps.Events.Connected.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
-		log.Infof("connected %s", ph.ID)
-		initGossipStreamIfOutbound(ph.ID)
+	ps.Events.UpdatedAddrs.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
+		log.Infof("updated addresses for %s", ph.ID)
 	}))
-	ps.Events.Disconnected.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.Connected.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
+		conns := Host().Network().ConnsToPeer(ph.ID)
+		connsAddrsStr := make([]string, len(conns))
+		for i, conn := range conns {
+			connsAddrsStr[i] = conn.RemoteMultiaddr().String()
+		}
+		log.Infof("connected %s, connection addrs: %s", ph.ID, strings.Join(connsAddrsStr, ","))
+	}))
+	ps.Events.Disconnected.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("disconnected %s", ph.ID)
 	}))
-	ps.Events.Reconnecting.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.ClosedConnectionToUnknownPeer.Attach(events.NewClosure(func(peerID peer.ID) {
+		log.Infof("closed connection to unknown peer %s", peerID)
+	}))
+	ps.Events.Reconnecting.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("reconnecting to %s", ph.ID)
 	}))
-	ps.Events.Reconnected.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.Reconnected.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("reconnected to %s", ph.ID)
 	}))
-	ps.Events.ReconnectFailed.Attach(events.NewClosure(func(ph *network2.PeerHandler) {
+	ps.Events.ReconnectFailed.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
 		log.Infof("reconnect attempt failed to %s", ph.ID)
 	}))
 
@@ -181,55 +183,17 @@ func configure(plugin *node.Plugin) {
 func run(_ *node.Plugin) {
 	p := Host()
 
+	// register a daemon to disconnect all peers up on shutdown
+	daemon.BackgroundWorker("PeeringService", func(shutdownSignal <-chan struct{}) {
+		<-shutdownSignal
+		if err := PeeringService().Stop(); err != nil {
+			log.Error("unable to cleanly shutdown peering service: %s", err)
+		}
+	}, shutdown.PriorityPeeringService)
+
 	log.Infof("listening on: %s", p.Addrs())
 	if err := PeeringService().Start(); err != nil {
 		log.Errorf("unable to start PeeringService: %s", err)
-	}
-}
-
-func gossipStreamHandler(stream network.Stream) {
-	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-
-	go readData(rw)
-	go writeData(rw)
-}
-
-func initGossipStreamIfOutbound(id peer.ID) {
-	conns := Host().Network().ConnsToPeer(id)
-	if conns[0].Stat().Direction != network.DirOutbound {
-		return
-	}
-
-	log.Infof("starting protocol %s with %s", iotaGossipProtocolID, id)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	stream, err := Host().NewStream(ctx, id, iotaGossipProtocolID)
-	if err != nil {
-		log.Errorf("unable to start %s protocol with %s", iotaGossipProtocolID, id)
-		// TODO: close connection?
-		return
-	}
-	gossipStreamHandler(stream)
-}
-
-func readData(rw *bufio.ReadWriter) {
-	log.Info("reading protocol:")
-	buf := make([]byte, 1024)
-	read, err := rw.Read(buf)
-	if err != nil {
-		panic(fmt.Sprintf("unable to read message: %s", err))
-	}
-	log.Infof("got message %s", string(buf[:read]))
-}
-
-func writeData(rw *bufio.ReadWriter) {
-	log.Info("writing protocol:")
-	_, err := rw.Write([]byte(fmt.Sprintf("hello from %s\n", Host().ID())))
-	if err != nil {
-		log.Errorf("couldn't write: %s", err)
-	}
-	if err := rw.Flush(); err != nil {
-		log.Errorf("couldn't flush the toilette: %s", err)
 	}
 }
 

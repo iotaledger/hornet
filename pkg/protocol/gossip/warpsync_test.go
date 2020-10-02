@@ -1,21 +1,21 @@
-package warpsync_test
+package gossip_test
 
 import (
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/protocol/warpsync"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAdvanceAtEightyPercentReached(t *testing.T) {
-	f := warpsync.AdvanceAtPercentageReached(0.8)
+	f := gossip.AdvanceAtPercentageReached(0.8)
 	assert.False(t, f(0, 0, 10))
 	assert.False(t, f(5, 0, 10))
 	assert.True(t, f(8, 0, 10))
 }
 
 func TestWarpSync_Update(t *testing.T) {
-	ws := warpsync.New(50, warpsync.AdvanceAtPercentageReached(0.8))
+	ws := gossip.NewWarpSync(50, gossip.AdvanceAtPercentageReached(0.8))
 
 	ws.UpdateCurrent(100)
 	ws.UpdateTarget(1000)

@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func init() {
@@ -73,10 +73,13 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			added = true
 		}
 
-		if err := peering.Manager().Add(uri, preferIPv6, uri); err != nil {
-			log.Warnf("can't add peer %s, Error: %s", uri, err)
-			continue
-		}
+		/*
+			// TODO: accept a multi address
+			if err := peering.Manager().Add(uri, preferIPv6, uri); err != nil {
+				log.Warnf("can't add peer %s, Error: %s", uri, err)
+				continue
+			}
+		*/
 		addedPeers++
 	}
 
@@ -125,10 +128,12 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 			added = true
 		}
 
-		if err := peering.Manager().Add(peer.Identity, peer.PreferIPv6, peer.Alias); err != nil {
-			log.Warnf("Can't add peer %s, Error: %s", peer.Identity, err)
-			continue
-		}
+		/*
+			if err := peering.Manager().Add(peer.Identity, peer.PreferIPv6, peer.Alias); err != nil {
+				log.Warnf("Can't add peer %s, Error: %s", peer.Identity, err)
+				continue
+			}
+		*/
 		addedPeers++
 	}
 
@@ -161,13 +166,14 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		log.Warn(err)
 	}
 
-	peers := peering.Manager().PeerInfos()
+	peers := p2pplug.PeeringService().PeerSnapshots()
 	for _, uri := range query.Uris {
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
 		}
-		for _, p := range peers {
 
+		for _, p := range peers {
+			_ = p
 			for i, cn := range configNeighbors {
 				if strings.EqualFold(cn.ID, uri) {
 					removed = true
@@ -180,28 +186,30 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			}
 
 			// Remove connected neighbor
-			if p.Peer != nil {
-				if strings.EqualFold(p.Peer.ID, uri) || strings.EqualFold(p.DomainWithPort, uri) {
-					err := peering.Manager().Remove(uri)
-					if err != nil {
-						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-						c.JSON(http.StatusInternalServerError, e)
-						return
+			/*
+				if p.Peer != nil {
+					if strings.EqualFold(p.Peer.ID, uri) || strings.EqualFold(p.DomainWithPort, uri) {
+						err := peering.Manager().Remove(uri)
+						if err != nil {
+							e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+							c.JSON(http.StatusInternalServerError, e)
+							return
+						}
+						removedNeighbors++
 					}
-					removedNeighbors++
-				}
-			} else {
-				// Remove unconnected neighbor
-				if strings.EqualFold(p.Address, uri) {
-					err := peering.Manager().Remove(uri)
-					if err != nil {
-						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-						c.JSON(http.StatusInternalServerError, e)
-						return
+				} else {
+					// Remove unconnected neighbor
+					if strings.EqualFold(p.Address, uri) {
+						err := peering.Manager().Remove(uri)
+						if err != nil {
+							e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
+							c.JSON(http.StatusInternalServerError, e)
+							return
+						}
+						removedNeighbors++
 					}
-					removedNeighbors++
 				}
-			}
+			*/
 		}
 	}
 
@@ -216,5 +224,5 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func getNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	c.JSON(http.StatusOK, GetNeighborsReturn{Neighbors: peering.Manager().PeerInfos()})
+	c.JSON(http.StatusOK, GetNeighborsReturn{Neighbors: p2pplug.PeeringService().PeerSnapshots()})
 }

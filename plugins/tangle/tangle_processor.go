@@ -12,8 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
@@ -32,7 +31,7 @@ var (
 func configureTangleProcessor(_ *node.Plugin) {
 
 	receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
-		processIncomingTx(task.Param(0).(*tangle.Message), task.Param(1).(*rqueue.Request), task.Param(2).(*peer.Peer))
+		processIncomingTx(task.Param(0).(*tangle.Message), task.Param(1).(*gossippkg.Request), task.Param(2).(*gossippkg.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(receiveMsgWorkerCount), workerpool.QueueSize(receiveMsgQueueSize))
 
@@ -50,8 +49,8 @@ func configureTangleProcessor(_ *node.Plugin) {
 func runTangleProcessor(_ *node.Plugin) {
 	log.Info("Starting TangleProcessor ...")
 
-	onMsgProcessed := events.NewClosure(func(message *tangle.Message, request *rqueue.Request, p *peer.Peer) {
-		receiveMsgWorkerPool.Submit(message, request, p)
+	onMsgProcessed := events.NewClosure(func(message *tangle.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
+		receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
 	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
@@ -80,11 +79,11 @@ func runTangleProcessor(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
-		gossip.Processor().Events.MessageProcessed.Attach(onMsgProcessed)
+		gossip.Service().MessageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		receiveMsgWorkerPool.Start()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
-		gossip.Processor().Events.MessageProcessed.Detach(onMsgProcessed)
+		gossip.Service().MessageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
 		receiveMsgWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
@@ -116,7 +115,7 @@ func IsReceiveTxWorkerPoolBusy() bool {
 	return receiveMsgWorkerPool.GetPendingQueueSize() > (receiveMsgQueueSize / 2)
 }
 
-func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *peer.Peer) {
+func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
 
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
@@ -130,8 +129,8 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 	if !alreadyAdded {
 		metrics.SharedServerMetrics.NewMessages.Inc()
 
-		if p != nil {
-			p.Metrics.NewMessages.Inc()
+		if proto != nil {
+			proto.Metrics.NewMessages.Inc()
 		}
 
 		// since we only add the parents if there was a source request, we only
@@ -149,8 +148,8 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 
 	} else {
 		metrics.SharedServerMetrics.KnownMessages.Inc()
-		if p != nil {
-			p.Metrics.KnownMessages.Inc()
+		if proto != nil {
+			proto.Metrics.KnownMessages.Inc()
 		}
 		Events.ReceivedKnownMessage.Trigger(cachedMsg)
 	}
@@ -163,13 +162,13 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 
 	if request != nil {
 		// mark the received request as processed
-		gossip.RequestQueue().Processed(incomingMsg.GetMessageID())
+		gossip.Service().RequestQueue.Processed(incomingMsg.GetMessageID())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a message stemming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
+	if !tangle.IsNodeSynced() && request != nil && gossip.Service().RequestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
@@ -178,12 +177,12 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 
 func printStatus() {
 	var currentLowestMilestoneIndexInReqQ milestone.Index
-	if peekedRequest := gossip.RequestQueue().Peek(); peekedRequest != nil {
+	if peekedRequest := gossip.Service().RequestQueue.Peek(); peekedRequest != nil {
 		currentLowestMilestoneIndexInReqQ = peekedRequest.MilestoneIndex
 	}
 
-	queued, pending, processing := gossip.RequestQueue().Size()
-	avgLatency := gossip.RequestQueue().AvgLatency()
+	queued, pending, processing := gossip.Service().RequestQueue.Size()
+	avgLatency := gossip.Service().RequestQueue.AvgLatency()
 
 	println(
 		fmt.Sprintf(

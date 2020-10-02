@@ -2,32 +2,22 @@ package tangle
 
 import (
 	"os"
-	"time"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
-
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
-)
-
-const (
-	HeartbeatSentInterval   = 30 * time.Second
-	HeartbeatReceiveTimeout = 100 * time.Second
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/node"
 )
 
 var (
@@ -98,51 +88,8 @@ func run(plugin *node.Plugin) {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	daemon.BackgroundWorker("Tangle[Heartbeats]", func(shutdownSignal <-chan struct{}) {
-		attachHeartbeatEvents()
-
-		checkHeartbeats := func() {
-			// send a new heartbeat message to every neighbor at least every HeartbeatSentInterval
-			gossip.BroadcastHeartbeat(func(p *peer.Peer) bool {
-				return time.Since(p.HeartbeatSentTime) > HeartbeatSentInterval
-			})
-
-			peerIDsToRemove := make(map[string]struct{})
-			peersToReconnect := make(map[string]*peer.Peer)
-
-			// check if peers are alive by checking whether we received heartbeats lately
-			peering.Manager().ForAllConnected(func(p *peer.Peer) bool {
-				if time.Since(p.HeartbeatReceivedTime) < HeartbeatReceiveTimeout {
-					return true
-				}
-
-				// peer is connected but doesn't seem to be alive
-				if p.Autopeering != nil {
-					// it's better to drop the connection to autopeered peers and free the slots for other peers
-					peerIDsToRemove[p.ID] = struct{}{}
-					log.Infof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.Address(), p.Autopeering.ID())
-					return true
-				}
-
-				// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-				log.Infof("closing connection to neighbor %s because we didn't receive heartbeats anymore", p.ID)
-				peersToReconnect[p.ID] = p
-				return true
-			})
-
-			for peerIDToRemove := range peerIDsToRemove {
-				peering.Manager().Remove(peerIDToRemove)
-			}
-
-			for _, p := range peersToReconnect {
-				p.Conn.Close()
-			}
-
-		}
-		timeutil.Ticker(checkHeartbeats, 5*time.Second, shutdownSignal)
-
-		detachHeartbeatEvents()
-	}, shutdown.PriorityHeartbeats)
+	attachHeartbeatEvents()
+	detachHeartbeatEvents()
 
 	daemon.BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
 		attachSolidifierGossipEvents()

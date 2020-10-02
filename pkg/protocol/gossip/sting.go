@@ -1,4 +1,4 @@
-package sting
+package gossip
 
 import (
 	"bytes"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/protocol/message"
-	"github.com/gohornet/hornet/pkg/protocol/tlv"
+	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/protocol/tlv"
 )
 
 var (
@@ -21,21 +21,6 @@ const MinimumVersion = 1
 
 // FeatureSetName is the name of the feature set.
 const FeatureSetName = "Chrysalis-Pt2"
-
-func init() {
-	if err := message.RegisterType(MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition); err != nil {
-		panic(err)
-	}
-	if err := message.RegisterType(MessageTypeMessage, MessageMessageDefinition); err != nil {
-		panic(err)
-	}
-	if err := message.RegisterType(MessageTypeMessageRequest, MessageRequestMessageDefinition); err != nil {
-		panic(err)
-	}
-	if err := message.RegisterType(MessageTypeHeartbeat, HeartbeatMessageDefinition); err != nil {
-		panic(err)
-	}
-}
 
 const (
 	MessageTypeMilestoneRequest message.Type = 3
@@ -172,4 +157,29 @@ func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 
 	msIndex := binary.BigEndian.Uint32(source)
 	return milestone.Index(msIndex), nil
+}
+
+// Heartbeat contains information about a nodes current solid and pruned milestone index
+// and its connected and synced neighbors count.
+type Heartbeat struct {
+	SolidMilestoneIndex  milestone.Index `json:"solid_milestone_index"`
+	PrunedMilestoneIndex milestone.Index `json:"pruned_milestone_index"`
+	LatestMilestoneIndex milestone.Index `json:"latest_milestone_index"`
+	ConnectedNeighbors   int             `json:"connected_neighbors"`
+	SyncedNeighbors      int             `json:"synced_neighbors"`
+}
+
+/// ParseHeartbeat parses the given message into a heartbeat.
+func ParseHeartbeat(data []byte) *Heartbeat {
+	return &Heartbeat{
+		SolidMilestoneIndex:  milestone.Index(binary.BigEndian.Uint32(data[:4])),
+		PrunedMilestoneIndex: milestone.Index(binary.BigEndian.Uint32(data[4:8])),
+		LatestMilestoneIndex: milestone.Index(binary.BigEndian.Uint32(data[8:12])),
+		ConnectedNeighbors:   int(data[12]),
+		SyncedNeighbors:      int(data[13]),
+	}
+}
+
+func HeartbeatCaller(handler interface{}, params ...interface{}) {
+	handler.(func(heartbeat *Heartbeat))(params[0].(*Heartbeat))
 }

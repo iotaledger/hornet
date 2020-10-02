@@ -2,7 +2,7 @@ package webapi
 
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 //////////////////// addNeighbors /////////////////////////////////
@@ -53,8 +53,8 @@ type GetNeighbors struct {
 
 // GetNeighborsReturn struct
 type GetNeighborsReturn struct {
-	Neighbors []*peer.Info `json:"neighbors"`
-	Duration  int          `json:"duration"`
+	Neighbors []*p2p.PeerSnapshot `json:"neighbors"`
+	Duration  int                 `json:"duration"`
 }
 
 ////////////////// getNodeAPIConfiguration //////////////////////////
