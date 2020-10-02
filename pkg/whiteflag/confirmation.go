@@ -100,7 +100,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		newSpents = append(newSpents, spent)
 	}
 
-	err = utxo.ApplyConfirmation(milestoneIndex, newOutputs, newSpents)
+	err = utxo.ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents)
 	if err != nil {
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}

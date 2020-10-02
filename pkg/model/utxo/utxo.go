@@ -111,10 +111,7 @@ func ReadLedgerIndex() (milestone.Index, error) {
 	return ReadLedgerIndexWithoutLocking()
 }
 
-func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
-
-	WriteLockLedger()
-	defer WriteUnlockLedger()
+func ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
 	mutations := utxoStorage.Batched()
 
@@ -149,10 +146,15 @@ func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Sp
 	return mutations.Commit()
 }
 
-func RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
 	WriteLockLedger()
 	defer WriteUnlockLedger()
+
+	return ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+}
+
+func RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
 	mutations := utxoStorage.Batched()
 
@@ -192,6 +194,13 @@ func RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents
 	}
 
 	return mutations.Commit()
+}
+
+func RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	return RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
 }
 
 func CheckLedgerState() error {
