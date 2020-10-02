@@ -8,10 +8,11 @@ import (
 
 var (
 	tools = map[string]func([]string) error{
-		"pwdhash": hashPasswordAndSalt,
-		"seedgen": seedGen,
-		"ed25519": generateKeyEd25519,
-		"list":    listTools,
+		"pwdhash":     hashPasswordAndSalt,
+		"seedgen":     seedGen,
+		"ed25519":     generateKeyEd25519,
+		"list":        listTools,
+		"snapshotgen": snapshotGen,
 	}
 )
 
