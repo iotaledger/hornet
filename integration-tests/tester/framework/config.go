@@ -235,9 +235,9 @@ type SnapshotConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgSnapshotLoadType, snapshotConfig.LoadType),
-		fmt.Sprintf("--%s=%s", config.CfgGlobalSnapshotPath, snapshotConfig.GlobalSnapshotFilePath),
-		fmt.Sprintf("--%s=%d", config.CfgGlobalSnapshotIndex, snapshotConfig.GlobalSnapshotIndex),
+		//fmt.Sprintf("--%s=%s", config.CfgSnapshotLoadType, snapshotConfig.LoadType),
+		//fmt.Sprintf("--%s=%s", config.CfgGlobalSnapshotPath, snapshotConfig.GlobalSnapshotFilePath),
+		//fmt.Sprintf("--%s=%d", config.CfgGlobalSnapshotIndex, snapshotConfig.GlobalSnapshotIndex),
 		fmt.Sprintf("--%s=%s", config.CfgLocalSnapshotsPath, snapshotConfig.LocalSnapshotFilePath),
 	}
 }

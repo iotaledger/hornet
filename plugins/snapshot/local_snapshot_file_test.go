@@ -1,11 +1,14 @@
 package snapshot_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/blang/vfs/memfs"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -159,14 +162,14 @@ type sepRetrieverFunc func() [][snapshot.SolidEntryPointHashLength]byte
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 	var generatedSEPs [][snapshot.SolidEntryPointHashLength]byte
-	return func() *[snapshot.SolidEntryPointHashLength]byte {
+	return func() (*[snapshot.SolidEntryPointHashLength]byte, error) {
 			if count == 0 {
-				return nil
+				return nil, nil
 			}
 			count--
 			x := rand32ByteHash()
 			generatedSEPs = append(generatedSEPs, x)
-			return &x
+			return &x, nil
 		}, func() [][32]byte {
 			return generatedSEPs
 		}
@@ -186,14 +189,14 @@ type outputRetrieverFunc func() []snapshot.Output
 
 func newOutputsGenerator(count int) (snapshot.OutputProducerFunc, outputRetrieverFunc) {
 	var generatedOutputs []snapshot.Output
-	return func() *snapshot.Output {
+	return func() (*snapshot.Output, error) {
 			if count == 0 {
-				return nil
+				return nil, nil
 			}
 			count--
 			output := randLSTransactionUnspentOutputs()
 			generatedOutputs = append(generatedOutputs, *output)
-			return output
+			return output, nil
 		}, func() []snapshot.Output {
 			return generatedOutputs
 		}
@@ -213,9 +216,9 @@ type msDiffRetrieverFunc func() []*snapshot.MilestoneDiff
 
 func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRetrieverFunc) {
 	var generateMsDiffs []*snapshot.MilestoneDiff
-	return func() *snapshot.MilestoneDiff {
+	return func() (*snapshot.MilestoneDiff, error) {
 			if count == 0 {
-				return nil
+				return nil, nil
 			}
 			count--
 
@@ -230,11 +233,11 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionUnspentOutputs())
+				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents())
 			}
 
 			generateMsDiffs = append(generateMsDiffs, msDiff)
-			return msDiff
+			return msDiff, nil
 		}, func() []*snapshot.MilestoneDiff {
 			return generateMsDiffs
 		}
@@ -274,22 +277,44 @@ func rand32ByteHash() [iota.TransactionIDLength]byte {
 
 func randLSTransactionUnspentOutputs() *snapshot.Output {
 	addr, _ := randEd25519Addr()
+
+	var outputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+	transactionID := rand32ByteHash()
+	copy(outputID[:], transactionID[:])
+	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
+
 	return &snapshot.Output{
-		TransactionID: rand32ByteHash(),
-		OutputIndex:   uint16(rand.Intn(100)),
-		Address:       addr,
-		Amount:        uint64(rand.Intn(1000000) + 1),
+		OutputID: outputID,
+		Address:  addr,
+		Amount:   uint64(rand.Intn(1000000) + 1),
 	}
 }
 
-func randEd25519Addr() (*iota.Ed25519Address, []byte) {
+func randLSTransactionSpents() *snapshot.Spent {
+	addr, _ := randEd25519Addr()
+
+	var outputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+	transactionID := rand32ByteHash()
+	copy(outputID[:], transactionID[:])
+	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
+
+	output := &snapshot.Output{
+		OutputID: outputID,
+		Address:  addr,
+		Amount:   uint64(rand.Intn(1000000) + 1),
+	}
+
+	return &snapshot.Spent{Output: *output, TargetTransactionID: rand32ByteHash()}
+}
+
+func randEd25519Addr() (*iotago.Ed25519Address, []byte) {
 	// type
-	edAddr := &iota.Ed25519Address{}
-	addr := randBytes(iota.Ed25519AddressBytesLength)
+	edAddr := &iotago.Ed25519Address{}
+	addr := randBytes(iotago.Ed25519AddressBytesLength)
 	copy(edAddr[:], addr)
 	// serialized
-	var b [iota.Ed25519AddressSerializedBytesSize]byte
-	b[0] = iota.AddressEd25519
-	copy(b[iota.SmallTypeDenotationByteSize:], addr)
+	var b [iotago.Ed25519AddressSerializedBytesSize]byte
+	b[0] = iotago.AddressEd25519
+	copy(b[iotago.SmallTypeDenotationByteSize:], addr)
 	return edAddr, b[:]
 }

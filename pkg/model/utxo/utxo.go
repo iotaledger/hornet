@@ -47,7 +47,7 @@ func PruneMilestoneIndex(msIndex milestone.Index) error {
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	_, spents, err := getMilestoneDiffs(msIndex)
+	_, spents, err := GetMilestoneDiffsWithoutLocking(msIndex)
 	if err != nil {
 		return err
 	}
@@ -75,6 +75,40 @@ func PruneMilestoneIndex(msIndex milestone.Index) error {
 	}
 
 	return mutations.Commit()
+}
+
+func storeLedgerIndex(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	value := make([]byte, 4)
+	binary.LittleEndian.PutUint32(value, uint32(msIndex))
+
+	return mutations.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
+}
+
+func StoreLedgerIndex(msIndex milestone.Index) error {
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	value := make([]byte, 4)
+	binary.LittleEndian.PutUint32(value, uint32(msIndex))
+
+	return utxoStorage.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
+}
+
+func ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
+	value, err := utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
+	if err != nil {
+		return 0, err
+	}
+
+	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
+}
+
+func ReadLedgerIndex() (milestone.Index, error) {
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return ReadLedgerIndexWithoutLocking()
 }
 
 func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
@@ -113,36 +147,6 @@ func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Sp
 	}
 
 	return mutations.Commit()
-}
-
-func storeLedgerIndex(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
-
-	value := make([]byte, 4)
-	binary.LittleEndian.PutUint32(value, uint32(msIndex))
-
-	return mutations.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
-}
-
-func StoreLedgerIndex(msIndex milestone.Index) error {
-	WriteLockLedger()
-	defer WriteUnlockLedger()
-
-	value := make([]byte, 4)
-	binary.LittleEndian.PutUint32(value, uint32(msIndex))
-
-	return utxoStorage.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
-}
-
-func ReadLedgerIndex() (milestone.Index, error) {
-	ReadLockLedger()
-	defer ReadUnlockLedger()
-
-	value, err := utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
-	if err != nil {
-		return 0, err
-	}
-
-	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
 }
 
 func RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {

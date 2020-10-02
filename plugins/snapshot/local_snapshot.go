@@ -124,7 +124,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
+func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(solidEntryPointMessageID hornet.Hash, index milestone.Index) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -136,13 +136,13 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 	for milestoneIndex := targetIndex - SolidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
 		select {
 		case <-abortSignal:
-			return nil, ErrSnapshotCreationWasAborted
+			return ErrSnapshotCreationWasAborted
 		default:
 		}
 
 		cachedMilestone := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMilestone == nil {
-			return nil, errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
+			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
 		// Get all parents of that milestone
@@ -151,35 +151,40 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 
 		parentMessageIDs, err := getMilestoneParentMessageIDs(milestoneIndex, milestoneMessageID, abortSignal)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, parentMessageID := range parentMessageIDs {
 			select {
 			case <-abortSignal:
-				return nil, ErrSnapshotCreationWasAborted
+				return ErrSnapshotCreationWasAborted
 			default:
 			}
 
 			if isEntryPoint := isSolidEntryPoint(parentMessageID, targetIndex); isEntryPoint {
 				cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(parentMessageID)
 				if cachedMsgMeta == nil {
-					return nil, errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.Hex())
+					return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.Hex())
 				}
 
 				confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
 				if !confirmed {
 					cachedMsgMeta.Release(true)
-					return nil, errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", parentMessageID.Hex())
+					return errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", parentMessageID.Hex())
 				}
 				cachedMsgMeta.Release(true)
 
-				solidEntryPoints[string(parentMessageID)] = at
+				if _, exists := solidEntryPoints[string(parentMessageID)]; !exists {
+					solidEntryPoints[string(parentMessageID)] = at
+					if !solidEntryPointConsumer(parentMessageID, at) {
+						return ErrSnapshotCreationWasAborted
+					}
+				}
 			}
 		}
 	}
 
-	return solidEntryPoints, nil
+	return nil
 }
 
 func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.SnapshotInfo, checkSnapshotIndex bool) error {
@@ -252,6 +257,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 
 	header := &FileHeader{
 		Version:           SupportedFormatVersion,
+		Type:              Full,
 		SEPMilestoneIndex: milestone.Index(targetIndex),
 	}
 	copy(header.SEPMilestoneHash[:], cachedTargetMilestone.GetMilestone().MessageID)
@@ -266,19 +272,130 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
 	}
 
-	if err := StreamLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header,
-		func() *[32]byte {
-			// TODO: generate SEPs
-			return nil
-		},
-		func() *Output {
-			// TODO: generate outputs
-			return nil
-		},
-		func() *MilestoneDiff {
-			// TODO: generate milestone diffs
-			return nil
+	utxo.ReadLockLedger()
+	defer utxo.ReadUnlockLedger()
+
+	//
+	// solid entry points
+	//
+	solidEntryPointProducerChan := make(chan *[SolidEntryPointHashLength]byte)
+	solidEntryPointProducerErrorChan := make(chan error)
+
+	solidEntryPointProducerFunc := func() (*[SolidEntryPointHashLength]byte, error) {
+		select {
+		case err, ok := <-solidEntryPointProducerErrorChan:
+			if !ok {
+				return nil, nil
+			}
+			return nil, err
+		case sep, ok := <-solidEntryPointProducerChan:
+			if !ok {
+				return nil, nil
+			}
+			return sep, nil
+		}
+	}
+
+	go func() {
+		// calculate solid entry points for the target index
+		if err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID hornet.Hash, index milestone.Index) bool {
+
+			var solidEntryPoint [SolidEntryPointHashLength]byte
+			copy(solidEntryPoint[:], solidEntryPointMessageID)
+
+			solidEntryPointProducerChan <- &solidEntryPoint
+			return true
 		}); err != nil {
+			solidEntryPointProducerErrorChan <- err
+		}
+
+		close(solidEntryPointProducerChan)
+		close(solidEntryPointProducerErrorChan)
+	}()
+
+	//
+	// unspent outputs
+	//
+	outputProducerChan := make(chan *Output)
+	outputProducerErrorChan := make(chan error)
+
+	outputProducerFunc := func() (*Output, error) {
+		select {
+		case err, ok := <-outputProducerErrorChan:
+			if !ok {
+				return nil, nil
+			}
+			return nil, err
+		case output, ok := <-outputProducerChan:
+			if !ok {
+				return nil, nil
+			}
+			return output, nil
+		}
+	}
+
+	go func() {
+		if err := utxo.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
+			outputProducerChan <- &Output{OutputID: output.OutputID, Address: &output.Address, Amount: output.Amount}
+			return true
+		}); err != nil {
+			outputProducerErrorChan <- err
+		}
+
+		close(outputProducerChan)
+		close(outputProducerErrorChan)
+	}()
+
+	//
+	// milestone diffs
+	//
+	milestoneDiffProducerChan := make(chan *MilestoneDiff)
+	milestoneDiffProducerErrorChan := make(chan error)
+
+	milestoneDiffProducerFunc := func() (*MilestoneDiff, error) {
+		select {
+		case err, ok := <-milestoneDiffProducerErrorChan:
+			if !ok {
+				return nil, nil
+			}
+			return nil, err
+		case msDiff, ok := <-milestoneDiffProducerChan:
+			if !ok {
+				return nil, nil
+			}
+			return msDiff, nil
+		}
+	}
+
+	go func() {
+		for msIndex, _ := utxo.ReadLedgerIndexWithoutLocking(); msIndex >= targetIndex; msIndex-- {
+			newOutputs, newSpents, err := utxo.GetMilestoneDiffsWithoutLocking(msIndex)
+			if err != nil {
+				milestoneDiffProducerErrorChan <- err
+				close(milestoneDiffProducerChan)
+				close(milestoneDiffProducerErrorChan)
+				return
+			}
+
+			var createdOutputs []*Output
+			var consumedOutputs []*Spent
+
+			for _, createdOutput := range newOutputs {
+				createdOutputs = append(createdOutputs, &Output{OutputID: createdOutput.OutputID, Address: &createdOutput.Address, Amount: createdOutput.Amount})
+			}
+
+			for _, consumedOutput := range newSpents {
+				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{OutputID: consumedOutput.OutputID, Address: &consumedOutput.Address, Amount: consumedOutput.Output.Amount}, TargetTransactionID: consumedOutput.TargetTransactionID})
+			}
+
+			milestoneDiffProducerChan <- &MilestoneDiff{MilestoneIndex: msIndex, Created: createdOutputs, Consumed: consumedOutputs}
+		}
+
+		close(milestoneDiffProducerChan)
+		close(milestoneDiffProducerErrorChan)
+	}()
+
+	if err := StreamLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
 		_ = lsFile.Close()
 		return fmt.Errorf("couldn't generate local snapshot file: %w", err)
 	}
@@ -354,11 +471,12 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		}
 		lsHeader = header
 		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
-		return nil
-	}
 
-	if err := utxo.StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
-		return err
+		if err := utxo.StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	// note that we only get the hash of the SEP message instead

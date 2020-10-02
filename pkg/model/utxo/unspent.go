@@ -30,10 +30,7 @@ func IsOutputUnspent(utxoInputId iotago.UTXOInputID) (bool, error) {
 	return output.IsUnspentWithoutLocking()
 }
 
-func ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
 
 	var innerError error
 
@@ -67,6 +64,14 @@ func ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Add
 	}
 
 	return innerError
+}
+
+func ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return ForEachUnspentOutputWithoutLocking(consumer, address...)
 }
 
 func UnspentOutputsForAddress(address *iotago.Ed25519Address) ([]*Output, error) {
