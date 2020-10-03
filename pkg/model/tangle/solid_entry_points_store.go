@@ -49,7 +49,7 @@ func loadSolidEntryPoints() {
 	}
 }
 
-func SolidEntryPointsContain(messageID hornet.Hash) bool {
+func SolidEntryPointsContain(messageID *hornet.MessageID) bool {
 	ReadLockSolidEntryPoints()
 	defer ReadUnlockSolidEntryPoints()
 
@@ -59,7 +59,7 @@ func SolidEntryPointsContain(messageID hornet.Hash) bool {
 	return solidEntryPoints.Contains(messageID)
 }
 
-func SolidEntryPointsIndex(messageID hornet.Hash) (milestone.Index, bool) {
+func SolidEntryPointsIndex(messageID *hornet.MessageID) (milestone.Index, bool) {
 	ReadLockSolidEntryPoints()
 	defer ReadUnlockSolidEntryPoints()
 
@@ -70,7 +70,7 @@ func SolidEntryPointsIndex(messageID hornet.Hash) (milestone.Index, bool) {
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
-func SolidEntryPointsAdd(messageID hornet.Hash, milestoneIndex milestone.Index) {
+func SolidEntryPointsAdd(messageID *hornet.MessageID, milestoneIndex milestone.Index) {
 	if solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}

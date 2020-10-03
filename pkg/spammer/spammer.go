@@ -16,7 +16,7 @@ import (
 type SendMessageFunc = func(msg *tangle.Message) error
 
 // SpammerTipselFunc selects tips for the spammer.
-type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.Hashes, err error)
+type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err error)
 
 // Spammer is used to issue messages to the IOTA network to create load on the tangle.
 type Spammer struct {
@@ -67,7 +67,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	messageString += fmt.Sprintf("\nTimestamp: %s", now.Format(time.RFC3339))
 	messageString += fmt.Sprintf("\nTipselection: %v", durationGTTA.Truncate(time.Microsecond))
 
-	iotaMsg := &iotago.Message{Version: 1, Parent1: tips[0].ID(), Parent2: tips[1].ID(), Payload: &iotago.IndexationPayload{Index: indexation, Data: []byte(messageString)}}
+	iotaMsg := &iotago.Message{Version: 1, Parent1: *tips[0], Parent2: *tips[1], Payload: &iotago.IndexationPayload{Index: indexation, Data: []byte(messageString)}}
 
 	msg, err := tangle.NewMessage(iotaMsg)
 	if err != nil {

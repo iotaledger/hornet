@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"time"
@@ -73,11 +72,11 @@ func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
 // Missing msg are requested
 // Can be aborted with abortSignal
 // all cachedMsgMetas have to be released outside.
-func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal chan struct{}) (solid bool, aborted bool) {
+func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal chan struct{}) (solid bool, aborted bool) {
 	ts := time.Now()
 
 	msgsChecked := 0
-	var messageIDsToSolidify hornet.Hashes
+	var messageIDsToSolidify hornet.MessageIDs
 	messageIDsToRequest := make(map[string]struct{})
 
 	// collect all msg to solidify by traversing the tangle
@@ -87,9 +86,10 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			if _, exists := cachedMessageMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())]; !exists {
+			cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().MapKey()
+			if _, exists := cachedMessageMetas[cachedMsgMetaMapKey]; !exists {
 				// release the msg metadata at the end to speed up calculation
-				cachedMessageMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
+				cachedMessageMetas[cachedMsgMetaMapKey] = cachedMsgMeta.Retain()
 			}
 
 			// if the msg is solid, there is no need to traverse its parents
@@ -108,9 +108,9 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 			return nil
 		},
 		// called on missing parents
-		func(parentMessageID hornet.Hash) error {
+		func(parentMessageID *hornet.MessageID) error {
 			// msg does not exist => request missing msg
-			messageIDsToRequest[string(parentMessageID)] = struct{}{}
+			messageIDsToRequest[parentMessageID.MapKey()] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -126,9 +126,9 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 	tCollect := time.Now()
 
 	if len(messageIDsToRequest) > 0 {
-		var messageIDs hornet.Hashes
+		var messageIDs hornet.MessageIDs
 		for messageID := range messageIDsToRequest {
-			messageIDs = append(messageIDs, hornet.Hash(messageID))
+			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
 		}
 		requested := gossip.RequestMultiple(messageIDs, milestoneIndex, true)
 		log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
@@ -138,7 +138,7 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
-		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
+		cachedMsgMeta, exists := cachedMessageMetas[messageID.MapKey()]
 		if !exists {
 			log.Panicf("solidQueueCheck: Message not found: %v", messageID.Hex())
 		}
@@ -162,7 +162,7 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
-	cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta
+	cachedMsgMetas[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = cachedMsgMeta
 
 	defer func() {
 		// release all msg metadata at the end
@@ -172,7 +172,7 @@ func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 		}
 	}()
 
-	messageIDs := hornet.Hashes{cachedMsgMeta.GetMetadata().GetMessageID()}
+	messageIDs := hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetMessageID()}
 
 	return solidifyFutureCone(cachedMsgMetas, messageIDs, nil)
 }
@@ -180,7 +180,7 @@ func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 // solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
 // we have to walk the future cone, if a message became newly solid during the walk.
 // all cachedMsgMetas have to be released outside.
-func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messageIDs hornet.Hashes, abortSignal chan struct{}) error {
+func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messageIDs hornet.MessageIDs, abortSignal chan struct{}) error {
 
 	for _, messageID := range messageIDs {
 
@@ -191,19 +191,20 @@ func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messag
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				if _, exists := cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())]; !exists {
+				cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().MapKey()
+				if _, exists := cachedMsgMetas[cachedMsgMetaMapKey]; !exists {
 					// release the msg metadata at the end to speed up calculation
-					cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
+					cachedMsgMetas[cachedMsgMetaMapKey] = cachedMsgMeta.Retain()
 				}
 
-				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+				if cachedMsgMeta.GetMetadata().IsSolid() && *startMessageID != *cachedMsgMeta.GetMetadata().GetMessageID() {
 					// do not walk the future cone if the current message is already solid, except it was the startTx
 					return false, nil
 				}
 
 				// check if current message is solid by checking the solidity of its parents
-				parentMessageIDs := hornet.Hashes{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
-				if !bytes.Equal(cachedMsgMeta.GetMetadata().GetParent1MessageID(), cachedMsgMeta.GetMetadata().GetParent2MessageID()) {
+				parentMessageIDs := hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
+				if *cachedMsgMeta.GetMetadata().GetParent1MessageID() != *cachedMsgMeta.GetMetadata().GetParent2MessageID() {
 					parentMessageIDs = append(parentMessageIDs, cachedMsgMeta.GetMetadata().GetParent2MessageID())
 				}
 

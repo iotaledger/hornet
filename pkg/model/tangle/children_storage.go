@@ -30,7 +30,7 @@ func (c *CachedChild) GetChild() *Child {
 }
 
 func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	child := NewChild(key[:iotago.MessageHashLength], key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength])
+	child := NewChild(hornet.MessageIDFromBytes(key[:iotago.MessageHashLength]), hornet.MessageIDFromBytes(key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength]))
 	return child, nil
 }
 
@@ -57,8 +57,8 @@ func configureChildrenStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 }
 
 // children +-0
-func GetChildrenMessageIDs(messageID hornet.Hash, maxFind ...int) hornet.Hashes {
-	var childrenMessageIDs hornet.Hashes
+func GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...int) hornet.MessageIDs {
+	var childrenMessageIDs hornet.MessageIDs
 
 	i := 0
 	childrenStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -67,49 +67,49 @@ func GetChildrenMessageIDs(messageID hornet.Hash, maxFind ...int) hornet.Hashes 
 			return false
 		}
 
-		childrenMessageIDs = append(childrenMessageIDs, key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength])
+		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromBytes(key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength]))
 		return true
-	}, false, messageID)
+	}, false, messageID.Slice())
 
 	return childrenMessageIDs
 }
 
 // ContainsChild returns if the given child exists in the cache/persistence layer.
-func ContainsChild(messageID hornet.Hash, childMessageID hornet.Hash) bool {
-	return childrenStorage.Contains(append(messageID, childMessageID...))
+func ContainsChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
+	return childrenStorage.Contains(append(messageID.Slice(), childMessageID.Slice()...))
 }
 
 // ChildConsumer consumes the given child during looping through all children in the persistence layer.
-type ChildConsumer func(messageID hornet.Hash, childMessageID hornet.Hash) bool
+type ChildConsumer func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool
 
 // ForEachChild loops over all children.
 func ForEachChild(consumer ChildConsumer, skipCache bool) {
 	childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(key[:iotago.MessageHashLength], key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength])
+		return consumer(hornet.MessageIDFromBytes(key[:iotago.MessageHashLength]), hornet.MessageIDFromBytes(key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength]))
 	}, skipCache)
 }
 
 // child +1
-func StoreChild(parentMessageID hornet.Hash, childMessageID hornet.Hash) *CachedChild {
+func StoreChild(parentMessageID *hornet.MessageID, childMessageID *hornet.MessageID) *CachedChild {
 	child := NewChild(parentMessageID, childMessageID)
 	return &CachedChild{CachedObject: childrenStorage.Store(child)}
 }
 
 // child +-0
-func DeleteChild(messageID hornet.Hash, childMessageID hornet.Hash) {
+func DeleteChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) {
 	child := NewChild(messageID, childMessageID)
 	childrenStorage.Delete(child.ObjectStorageKey())
 }
 
 // child +-0
-func DeleteChildren(messageID hornet.Hash) {
+func DeleteChildren(messageID *hornet.MessageID) {
 
 	var keysToDelete [][]byte
 
 	childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, false, messageID)
+	}, false, messageID.Slice())
 
 	for _, key := range keysToDelete {
 		childrenStorage.Delete(key)

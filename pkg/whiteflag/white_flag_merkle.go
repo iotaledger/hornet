@@ -29,7 +29,7 @@ func (t *Hasher) EmptyRoot() []byte {
 }
 
 // TreeHash computes the Merkle tree hash of the provided hashes.
-func (t *Hasher) TreeHash(hashes []hornet.Hash) []byte {
+func (t *Hasher) TreeHash(hashes hornet.MessageIDs) []byte {
 	if len(hashes) == 0 {
 		return t.EmptyRoot()
 	}
@@ -42,10 +42,10 @@ func (t *Hasher) TreeHash(hashes []hornet.Hash) []byte {
 }
 
 // HashLeaf returns the Merkle tree leaf hash of the input hash.
-func (t *Hasher) HashLeaf(hash hornet.Hash) []byte {
+func (t *Hasher) HashLeaf(hash *hornet.MessageID) []byte {
 	h := t.New()
 	h.Write([]byte{LeafHashPrefix})
-	h.Write(hash)
+	h.Write(hash.Slice())
 	return h.Sum(nil)
 }
 

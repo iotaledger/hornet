@@ -16,25 +16,25 @@ const (
 
 type Indexation struct {
 	objectstorage.StorableObjectFlags
-	indexationHash hornet.Hash
-	messageID      hornet.Hash
+	indexationHash *hornet.MessageID
+	messageID      *hornet.MessageID
 }
 
-func NewIndexation(index string, messageID hornet.Hash) *Indexation {
+func NewIndexation(index string, messageID *hornet.MessageID) *Indexation {
 
-	indexationHash := blake2b.Sum256([]byte(index))
+	indexationHash := hornet.MessageID(blake2b.Sum256([]byte(index)))
 
 	return &Indexation{
-		indexationHash: indexationHash[:],
+		indexationHash: &indexationHash,
 		messageID:      messageID,
 	}
 }
 
-func (i *Indexation) GetHash() hornet.Hash {
+func (i *Indexation) GetHash() *hornet.MessageID {
 	return i.indexationHash
 }
 
-func (i *Indexation) GetMessageID() hornet.Hash {
+func (i *Indexation) GetMessageID() *hornet.MessageID {
 	return i.messageID
 }
 
@@ -45,7 +45,7 @@ func (i *Indexation) Update(_ objectstorage.StorableObject) {
 }
 
 func (i *Indexation) ObjectStorageKey() []byte {
-	return append(i.indexationHash, i.messageID...)
+	return append(i.indexationHash.Slice(), i.messageID.Slice()...)
 }
 
 func (i *Indexation) ObjectStorageValue() (_ []byte) {

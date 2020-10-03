@@ -27,7 +27,7 @@ type ConfirmedMilestoneStats struct {
 // ConfirmMilestone traverses a milestone and collects all unconfirmed msg,
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as confirmed.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID hornet.Hash, forEachConfirmedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachConfirmedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
@@ -46,9 +46,10 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	}
 	defer cachedMilestoneMessage.Release(true)
 
-	if _, exists := cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())]; !exists {
+	cachedMilestoneMessageMapKey := cachedMilestoneMessage.GetMessage().GetMessageID().MapKey()
+	if _, exists := cachedMessages[cachedMilestoneMessageMapKey]; !exists {
 		// release the messages at the end to speed up calculation
-		cachedMessages[string(cachedMilestoneMessage.GetMessage().GetMessageID())] = cachedMilestoneMessage.Retain()
+		cachedMessages[cachedMilestoneMessageMapKey] = cachedMilestoneMessage.Retain()
 	}
 
 	utxo.WriteLockLedger()
@@ -105,20 +106,21 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
 
-	loadMessageMetadata := func(messageID hornet.Hash) (*tangle.CachedMetadata, error) {
-		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
+	loadMessageMetadata := func(messageID *hornet.MessageID) (*tangle.CachedMetadata, error) {
+		messageIDMapKey := messageID.MapKey()
+		cachedMsgMeta, exists := cachedMessageMetas[messageIDMapKey]
 		if !exists {
 			cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
 			if cachedMsgMeta == nil {
 				return nil, fmt.Errorf("confirmMilestone: Message not found: %v", messageID.Hex())
 			}
-			cachedMessageMetas[string(messageID)] = cachedMsgMeta
+			cachedMessageMetas[messageIDMapKey] = cachedMsgMeta
 		}
 		return cachedMsgMeta, nil
 	}
 
 	// load the message for the given id
-	forMessageMetadataWithMessageID := func(messageID hornet.Hash, do func(meta *tangle.CachedMetadata)) error {
+	forMessageMetadataWithMessageID := func(messageID *hornet.MessageID, do func(meta *tangle.CachedMetadata)) error {
 		meta, err := loadMessageMetadata(messageID)
 		if err != nil {
 			return err

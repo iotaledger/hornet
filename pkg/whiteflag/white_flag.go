@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"errors"
 	"fmt"
+
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -25,7 +26,7 @@ type Confirmation struct {
 	// The index of the milestone that got confirmed.
 	MilestoneIndex milestone.Index
 	// The message ID of the milestone that got confirmed.
-	MilestoneMessageID hornet.Hash
+	MilestoneMessageID *hornet.MessageID
 	// The ledger mutations and referenced messages of this milestone.
 	Mutations *WhiteFlagMutations
 }
@@ -33,13 +34,13 @@ type Confirmation struct {
 // WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The messages which mutate the ledger in the order in which they were applied.
-	MessagesIncludedWithTransactions hornet.Hashes
+	MessagesIncludedWithTransactions hornet.MessageIDs
 	// The messages which were excluded as they were conflicting with the mutations.
-	MessagesExcludedWithConflictingTransactions hornet.Hashes
+	MessagesExcludedWithConflictingTransactions hornet.MessageIDs
 	// The messages which were excluded because they did not include a value transaction.
-	MessagesExcludedWithoutTransactions hornet.Hashes
+	MessagesExcludedWithoutTransactions hornet.MessageIDs
 	// The messages which were referenced by the milestone (should be the sum of MessagesIncludedWithTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
-	MessagesReferenced hornet.Hashes
+	MessagesReferenced hornet.MessageIDs
 	// Contains the newly created Unspent Outputs by the given confirmation.
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
@@ -56,12 +57,12 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
-		MessagesIncludedWithTransactions:            make(hornet.Hashes, 0),
-		MessagesExcludedWithConflictingTransactions: make(hornet.Hashes, 0),
-		MessagesExcludedWithoutTransactions:         make(hornet.Hashes, 0),
-		MessagesReferenced:                          make(hornet.Hashes, 0),
+		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
+		MessagesExcludedWithConflictingTransactions: make(hornet.MessageIDs, 0),
+		MessagesExcludedWithoutTransactions:         make(hornet.MessageIDs, 0),
+		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
 	}
@@ -71,9 +72,10 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 	condition := func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		if _, exists := cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())]; !exists {
+		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
+		if _, exists := cachedMessageMetas[cachedMetadataMapKey]; !exists {
 			// release the msg metadata at the end to speed up calculation
-			cachedMessageMetas[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMetadata.Retain()
+			cachedMessageMetas[cachedMetadataMapKey] = cachedMetadata.Retain()
 		}
 
 		// only traverse and process the message if it was not confirmed yet
@@ -84,8 +86,10 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 	consumer := func(cachedMetadata *tangle.CachedMetadata) error { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
+		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
+
 		// load up message
-		cachedMessage, exists := cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())]
+		cachedMessage, exists := cachedMessages[cachedMetadataMapKey]
 		if !exists {
 			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
@@ -93,7 +97,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			// release the messages at the end to speed up calculation
-			cachedMessages[string(cachedMetadata.GetMetadata().GetMessageID())] = cachedMessage
+			cachedMessages[cachedMetadataMapKey] = cachedMessage
 		}
 
 		message := cachedMessage.GetMessage()

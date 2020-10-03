@@ -76,20 +76,20 @@ func snapshotGen(args []string) error {
 		SEPMilestoneIndex:    milestone.Index(targetIndex),
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 	}
-	copy(header.SEPMilestoneHash[:], hornet.NullMessageID)
-	copy(header.LedgerMilestoneHash[:], hornet.NullMessageID)
+
+	header.SEPMilestoneHash = hornet.GetNullMessageID()
+	header.LedgerMilestoneHash = hornet.GetNullMessageID()
 
 	// solid entry points
 	// add "NullMessageID" as sole entry point
 	nullHashAdded := false
-	solidEntryPointProducerFunc := func() (*[snapshot.SolidEntryPointHashLength]byte, error) {
+	solidEntryPointProducerFunc := func() (*hornet.MessageID, error) {
 		if !nullHashAdded {
 			nullHashAdded = true
 
-			var solidEntryPoint [snapshot.SolidEntryPointHashLength]byte
-			copy(solidEntryPoint[:], hornet.NullMessageID)
+			solidEntryPoint := hornet.GetNullMessageID()
 
-			return &solidEntryPoint, nil
+			return solidEntryPoint, nil
 		}
 		return nil, nil
 	}
@@ -129,9 +129,10 @@ func snapshotGen(args []string) error {
 		}
 		totalAmount += balance
 
+		var nullMessageID [iotago.MessageHashLength]byte
 		var nullOutputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
 
-		return &snapshot.Output{OutputID: nullOutputID, Address: &address, Amount: balance}, nil
+		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: balance}, nil
 	}
 
 	// milestone diffs

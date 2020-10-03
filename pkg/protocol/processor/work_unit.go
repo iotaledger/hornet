@@ -97,7 +97,7 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 // adds a Request for the given peer to this WorkUnit.
 // requestedMessageID can be nil to flag that this request just reflects a receive from the given
 // peer and has no associated request.
-func (wu *WorkUnit) addReceivedFrom(p *peer.Peer, requestedMessageID hornet.Hash) {
+func (wu *WorkUnit) addReceivedFrom(p *peer.Peer, requestedMessageID *hornet.MessageID) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	wu.receivedFrom = append(wu.receivedFrom, p)

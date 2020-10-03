@@ -32,7 +32,7 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.Hash(data[:iotago.MessageHashLength]),
+		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageHashLength]),
 	}, nil
 }
 
@@ -61,7 +61,7 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	Index     milestone.Index
-	MessageID hornet.Hash
+	MessageID *hornet.MessageID
 	Timestamp time.Time
 }
 
@@ -79,7 +79,7 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
 		32 byte message ID
 	*/
-	return ms.MessageID
+	return ms.MessageID.Slice()
 }
 
 // Cached Object
@@ -138,7 +138,7 @@ func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 }
 
 // milestone +1
-func storeMilestone(index milestone.Index, messageID hornet.Hash) *CachedMilestone {
+func storeMilestone(index milestone.Index, messageID *hornet.MessageID) *CachedMilestone {
 	milestone := &Milestone{
 		Index:     index,
 		MessageID: messageID,

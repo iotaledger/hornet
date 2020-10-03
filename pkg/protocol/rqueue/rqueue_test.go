@@ -1,7 +1,6 @@
 package rqueue_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -14,11 +13,11 @@ func TestRequestQueue(t *testing.T) {
 	q := rqueue.New()
 
 	var (
-		hashA = hornet.Hash(trinary.MustTrytesToBytes("A"))
-		hashB = hornet.Hash(trinary.MustTrytesToBytes("B"))
-		hashZ = hornet.Hash(trinary.MustTrytesToBytes("Z"))
-		hashC = hornet.Hash(trinary.MustTrytesToBytes("C"))
-		hashD = hornet.Hash(trinary.MustTrytesToBytes("D"))
+		hashA = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("A"))
+		hashB = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("B"))
+		hashZ = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("Z"))
+		hashC = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("C"))
+		hashD = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("D"))
 	)
 
 	requests := []*rqueue.Request{
@@ -64,7 +63,7 @@ func TestRequestQueue(t *testing.T) {
 		// since we have two request under the same milestone/priority
 		// we need to make a special case
 		if i == 1 || i == 2 {
-			assert.Contains(t, hornet.Hashes{hashB, hashZ}, r.MessageID)
+			assert.Contains(t, hornet.MessageIDs{hashB, hashZ}, r.MessageID)
 		} else {
 			assert.Equal(t, r, requests[i])
 		}
@@ -120,7 +119,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, bytes.Equal(queuedReq.MessageID, requests[len(requests)-1].MessageID))
+		assert.False(t, *(queuedReq.MessageID) == *(requests[len(requests)-1].MessageID))
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))

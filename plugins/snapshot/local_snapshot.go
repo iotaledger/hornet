@@ -40,7 +40,7 @@ var (
 )
 
 // isSolidEntryPoint checks whether any direct child of the given message was confirmed by a milestone which is above the target milestone.
-func isSolidEntryPoint(messageID hornet.Hash, targetIndex milestone.Index) bool {
+func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index) bool {
 
 	for _, childMessageID := range tangle.GetChildrenMessageIDs(messageID) {
 		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(childMessageID) // meta +1
@@ -63,9 +63,9 @@ func isSolidEntryPoint(messageID hornet.Hash, targetIndex milestone.Index) bool 
 }
 
 // getMilestoneParents traverses a milestone and collects all messages that were confirmed by that milestone or newer.
-func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal <-chan struct{}) (hornet.Hashes, error) {
+func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal <-chan struct{}) (hornet.MessageIDs, error) {
 
-	var parentMessageIDs hornet.Hashes
+	var parentMessageIDs hornet.MessageIDs
 
 	ts := time.Now()
 
@@ -124,7 +124,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(solidEntryPointMessageID hornet.Hash, index milestone.Index) bool) error {
+func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(solidEntryPointMessageID *hornet.MessageID, index milestone.Index) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -174,8 +174,9 @@ func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan stru
 				}
 				cachedMsgMeta.Release(true)
 
-				if _, exists := solidEntryPoints[string(parentMessageID)]; !exists {
-					solidEntryPoints[string(parentMessageID)] = at
+				parentMessageIDMapKey := parentMessageID.MapKey()
+				if _, exists := solidEntryPoints[parentMessageIDMapKey]; !exists {
+					solidEntryPoints[parentMessageIDMapKey] = at
 					if !solidEntryPointConsumer(parentMessageID, at) {
 						return ErrSnapshotCreationWasAborted
 					}
@@ -259,8 +260,8 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		Version:           SupportedFormatVersion,
 		Type:              Full,
 		SEPMilestoneIndex: milestone.Index(targetIndex),
+		SEPMilestoneHash:  cachedTargetMilestone.GetMilestone().MessageID,
 	}
-	copy(header.SEPMilestoneHash[:], cachedTargetMilestone.GetMilestone().MessageID)
 
 	// build temp file path
 	filePathTmp := filePath + "_tmp"
@@ -275,35 +276,47 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	utxo.ReadLockLedger()
 	defer utxo.ReadUnlockLedger()
 
+	ledgerMilestoneIndex, err := utxo.ReadLedgerIndex()
+	if err != nil {
+		return fmt.Errorf("unable to read current ledger index: %w", err)
+	}
+
+	cachedMilestone := tangle.GetCachedMilestoneOrNil(ledgerMilestoneIndex)
+	if cachedMilestone == nil {
+		return errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
+	}
+
+	ledgerMilestoneMessageID := cachedMilestone.GetMilestone().MessageID
+	cachedMilestone.Release(true)
+
+	header.LedgerMilestoneIndex = ledgerMilestoneIndex
+	header.LedgerMilestoneHash = ledgerMilestoneMessageID
+
 	//
 	// solid entry points
 	//
-	solidEntryPointProducerChan := make(chan *[SolidEntryPointHashLength]byte)
+	solidEntryPointProducerChan := make(chan *hornet.MessageID)
 	solidEntryPointProducerErrorChan := make(chan error)
 
-	solidEntryPointProducerFunc := func() (*[SolidEntryPointHashLength]byte, error) {
+	solidEntryPointProducerFunc := func() (*hornet.MessageID, error) {
 		select {
 		case err, ok := <-solidEntryPointProducerErrorChan:
 			if !ok {
 				return nil, nil
 			}
 			return nil, err
-		case sep, ok := <-solidEntryPointProducerChan:
+		case solidEntryPointMessageID, ok := <-solidEntryPointProducerChan:
 			if !ok {
 				return nil, nil
 			}
-			return sep, nil
+			return solidEntryPointMessageID, nil
 		}
 	}
 
 	go func() {
 		// calculate solid entry points for the target index
-		if err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID hornet.Hash, index milestone.Index) bool {
-
-			var solidEntryPoint [SolidEntryPointHashLength]byte
-			copy(solidEntryPoint[:], solidEntryPointMessageID)
-
-			solidEntryPointProducerChan <- &solidEntryPoint
+		if err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID *hornet.MessageID, index milestone.Index) bool {
+			solidEntryPointProducerChan <- solidEntryPointMessageID
 			return true
 		}); err != nil {
 			solidEntryPointProducerErrorChan <- err
@@ -336,7 +349,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 
 	go func() {
 		if err := utxo.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
-			outputProducerChan <- &Output{OutputID: output.OutputID, Address: &output.Address, Amount: output.Amount}
+			outputProducerChan <- &Output{MessageID: *output.MessageID, OutputID: output.OutputID, Address: &output.Address, Amount: output.Amount}
 			return true
 		}); err != nil {
 			outputProducerErrorChan <- err
@@ -484,8 +497,8 @@ func LoadFullSnapshotFromFile(filePath string) error {
 	// of the local snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 local snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
-	sepConsumer := func(sepMsgHashBytes [32]byte) error {
-		tangle.SolidEntryPointsAdd(sepMsgHashBytes[:], lsHeader.SEPMilestoneIndex)
+	sepConsumer := func(solidEntryPointMessageID *hornet.MessageID) error {
+		tangle.SolidEntryPointsAdd(solidEntryPointMessageID, lsHeader.SEPMilestoneIndex)
 		return nil
 	}
 
@@ -569,7 +582,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return ErrFinalLedgerIndexDoesNotMatchSEPIndex
 	}
 
-	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.SEPMilestoneHash[:], lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
+	tangle.SetSnapshotMilestone(cooPublicKey, lsHeader.SEPMilestoneHash, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
 	tangle.SetSolidMilestoneIndex(lsHeader.SEPMilestoneIndex, false)
 
 	return nil

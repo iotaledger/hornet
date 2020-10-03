@@ -17,7 +17,7 @@ type Output struct {
 
 	OutputID iotago.UTXOInputID
 
-	MessageID hornet.Hash
+	MessageID *hornet.MessageID
 
 	Type    iotago.OutputType
 	Address iotago.Ed25519Address
@@ -26,7 +26,7 @@ type Output struct {
 
 type Outputs []*Output
 
-func NewOutput(messageID hornet.Hash, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
+func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
 
 	var deposit *iotago.SigLockedSingleDeposit
 	switch unsignedTx := transaction.Transaction.(type) {
@@ -84,29 +84,29 @@ func (o *Output) kvStorableKey() (key []byte) {
 func (o *Output) kvStorableValue() (value []byte) {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, o.Amount)
-	return byteutils.ConcatBytes(o.MessageID, []byte{o.Type}, o.Address[:], bytes)
+	return byteutils.ConcatBytes(o.MessageID.Slice(), []byte{o.Type}, o.Address[:], bytes)
 }
 
 func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 
-	expectedKeyLength := iotago.SignedTransactionPayloadHashLength + 2
+	expectedKeyLength := iotago.TransactionIDLength + iotago.UInt16ByteSize
 
 	if len(key) < expectedKeyLength {
 		return fmt.Errorf("not enough bytes in key to unmarshal object, expected: %d, got: %d", expectedKeyLength, len(key))
 	}
 
-	expectedValueLength := iotago.MessageHashLength + 1 + iotago.Ed25519AddressBytesLength + 8
+	expectedValueLength := iotago.MessageHashLength + iotago.OneByte + iotago.Ed25519AddressBytesLength + iotago.UInt64ByteSize
 
 	if len(value) < expectedValueLength {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
 	}
 
-	copy(o.OutputID[:], key[:iotago.TransactionIDLength+2])
+	copy(o.OutputID[:], key[:iotago.TransactionIDLength+iotago.UInt16ByteSize])
 
-	copy(o.MessageID, value[:iotago.MessageHashLength])
+	o.MessageID = hornet.MessageIDFromBytes(value[:iotago.MessageHashLength])
 	o.Type = value[iotago.MessageHashLength]
-	copy(o.Address[:], value[iotago.MessageHashLength+1:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])
-	o.Amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+1+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.Ed25519AddressBytesLength+8])
+	copy(o.Address[:], value[iotago.MessageHashLength+iotago.OneByte:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])
+	o.Amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
 
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -137,11 +138,11 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a local snapshot or nil if no more is available.
-type SEPProducerFunc func() (*[SolidEntryPointHashLength]byte, error)
+type SEPProducerFunc func() (*hornet.MessageID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
-type SEPConsumerFunc func([SolidEntryPointHashLength]byte) error
+type SEPConsumerFunc func(*hornet.MessageID) error
 
 // HeaderConsumerFunc consumes the local snapshot file header.
 // A returned error signals to cancel further reading.
@@ -170,11 +171,11 @@ type FileHeader struct {
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
 	// The hash of the milestone of the SEPs.
-	SEPMilestoneHash [iotago.MilestonePayloadHashLength]byte
+	SEPMilestoneHash *hornet.MessageID
 	// The milestone index of the ledger data within the local snapshot.
 	LedgerMilestoneIndex milestone.Index
 	// The hash of the ledger milestone.
-	LedgerMilestoneHash [iotago.MilestonePayloadHashLength]byte
+	LedgerMilestoneHash *hornet.MessageID
 }
 
 // ReadFileHeader is a FileHeader but with additional content read from the local snapshot.
@@ -341,17 +342,21 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
 	}
 
-	if _, err := io.ReadFull(reader, readHeader.SEPMilestoneHash[:]); err != nil {
+	var sepMilestoneMessageID hornet.MessageID
+	if _, err := io.ReadFull(reader, sepMilestoneMessageID[:]); err != nil {
 		return fmt.Errorf("unable to read LS SEPs milestone hash: %w", err)
 	}
+	readHeader.SEPMilestoneHash = &sepMilestoneMessageID
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone index: %w", err)
 	}
 
-	if _, err := io.ReadFull(reader, readHeader.LedgerMilestoneHash[:]); err != nil {
+	var ledgerMilestoneMessageID hornet.MessageID
+	if _, err := io.ReadFull(reader, ledgerMilestoneMessageID[:]); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone hash: %w", err)
 	}
+	readHeader.LedgerMilestoneHash = &ledgerMilestoneMessageID
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPCount); err != nil {
 		return fmt.Errorf("unable to read LS SEPs count: %w", err)
@@ -372,11 +377,11 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		var sep [SolidEntryPointHashLength]byte
-		if _, err := io.ReadFull(reader, sep[:]); err != nil {
+		var solidEntryPointMessageID hornet.MessageID
+		if _, err := io.ReadFull(reader, solidEntryPointMessageID[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
-		if err := sepConsumer(sep); err != nil {
+		if err := sepConsumer(&solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
 	}

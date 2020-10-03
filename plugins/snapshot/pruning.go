@@ -33,7 +33,8 @@ func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int,
 
 	// Check if message is still unconfirmed
 	for _, messageID := range tangle.GetUnconfirmedMessageIDs(targetIndex, true) {
-		if _, exists := messageIDsToDeleteMap[string(messageID)]; exists {
+		messageIDMapKey := messageID.MapKey()
+		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
 		}
 
@@ -50,7 +51,7 @@ func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int,
 		}
 
 		cachedMsgMeta.Release(true) // meta -1
-		messageIDsToDeleteMap[string(messageID)] = struct{}{}
+		messageIDsToDeleteMap[messageIDMapKey] = struct{}{}
 	}
 
 	msgCountDeleted = pruneMessages(messageIDsToDeleteMap)
@@ -77,7 +78,7 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		cachedMsg := tangle.GetCachedMessageOrNil(hornet.Hash(messageIDToDelete)) // msg +1
+		cachedMsg := tangle.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
@@ -136,7 +137,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	// calculate solid entry points for the new end of the tangle history
 	tangle.WriteLockSolidEntryPoints()
 	tangle.ResetSolidEntryPoints()
-	err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID hornet.Hash, index milestone.Index) bool {
+	err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID *hornet.MessageID, index milestone.Index) bool {
 		tangle.SolidEntryPointsAdd(solidEntryPointMessageID, index)
 		return true
 	})
@@ -189,11 +190,11 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 			// consumer
 			func(cachedMsgMeta *tangle.CachedMetadata) error { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
-				messageIDsToDeleteMap[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
+				messageIDsToDeleteMap[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
 				return nil
 			},
 			// called on missing parents
-			func(parentMessageID hornet.Hash) error { return nil },
+			func(parentMessageID *hornet.MessageID) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,

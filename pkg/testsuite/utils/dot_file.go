@@ -13,7 +13,7 @@ import (
 
 // ShortenedHash returns a shortened trinary hash for the given hash.
 // this is used for the dot file.
-func ShortenedHash(hash hornet.Hash) string {
+func ShortenedHash(hash *hornet.MessageID) string {
 	trytes := hash.Hex()
 	return trytes[0:4] + "..." + trytes[77:81]
 }

@@ -25,7 +25,7 @@ var (
 
 type SnapshotInfo struct {
 	CoordinatorPublicKey ed25519.PublicKey
-	MilestoneMessageID   hornet.Hash
+	MilestoneMessageID   *hornet.MessageID
 	SnapshotIndex        milestone.Index
 	EntryPointIndex      milestone.Index
 	PruningIndex         milestone.Index
@@ -56,7 +56,7 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	}
 
 	cooPublicKey := ed25519.PublicKey(bytes[:ed25519.PublicKeySize])
-	milestoneMessageID := hornet.Hash(bytes[ed25519.PublicKeySize : ed25519.PublicKeySize+32])
+	milestoneMessageID := hornet.MessageIDFromBytes(bytes[ed25519.PublicKeySize : ed25519.PublicKeySize+32])
 	snapshotIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[ed25519.PublicKeySize+32 : ed25519.PublicKeySize+36]))
 	entryPointIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[ed25519.PublicKeySize+36 : ed25519.PublicKeySize+40]))
 	pruningIndex := milestone.Index(binary.LittleEndian.Uint32(bytes[ed25519.PublicKeySize+40 : ed25519.PublicKeySize+44]))
@@ -101,7 +101,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return bytes
 }
 
-func SetSnapshotMilestone(coordinatorPublicKey ed25519.PublicKey, milestoneMessageID hornet.Hash, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
+func SetSnapshotMilestone(coordinatorPublicKey ed25519.PublicKey, milestoneMessageID *hornet.MessageID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	CoordinatorPublicKey: %v

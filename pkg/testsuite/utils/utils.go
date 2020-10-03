@@ -21,7 +21,7 @@ import (
 )
 
 // GenerateAddress generates an address for the given seed and index with medium security.
-func GenerateAddress(t *testing.T, seed trinary.Trytes, index uint64) hornet.Hash {
+func GenerateAddress(t *testing.T, seed trinary.Trytes, index uint64) *hornet.MessageID {
 	seedAddress, err := address.GenerateAddress(seed, index, consts.SecurityLevelMedium, false)
 	require.NoError(t, err)
 

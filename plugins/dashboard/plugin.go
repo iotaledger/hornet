@@ -186,7 +186,7 @@ func run(_ *node.Plugin) {
 	runSpammerMetricWorker()
 }
 
-func getMilestoneMessageID(index milestone.Index) hornet.Hash {
+func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
 	cachedMs := tangle.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil

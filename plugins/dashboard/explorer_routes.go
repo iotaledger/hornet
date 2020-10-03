@@ -12,6 +12,7 @@ import (
 
 	"github.com/muxxer/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
@@ -59,7 +60,8 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	t.Children = tangle.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
-	trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID())
+	// TODO:
+	trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID().Slice())
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +230,7 @@ func findTransaction(msgID string) (*ExplorerMessage, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", msgID)
 	}
 
-	messageID, err := hex.DecodeString(msgID)
+	messageID, err := hornet.MessageIDFromHex(msgID)
 	if err != nil {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
 	}
