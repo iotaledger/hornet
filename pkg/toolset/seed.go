@@ -2,7 +2,6 @@ package toolset
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -12,7 +11,7 @@ import (
 func seedGen(args []string) error {
 
 	if len(args) > 0 {
-		return errors.New("too many arguments for 'seedGen'")
+		return fmt.Errorf("too many arguments for '%s'", ToolSeedGen)
 	}
 
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
