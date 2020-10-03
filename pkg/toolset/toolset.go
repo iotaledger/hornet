@@ -6,13 +6,21 @@ import (
 	"strings"
 )
 
+const (
+	ToolPwdHash     = "pwdhash"
+	ToolSeedGen     = "seedgen"
+	ToolEd25519Key  = "ed25519key"
+	ToolEd25519Addr = "ed25519addr"
+	ToolSnapGen     = "snapgen"
+)
+
 var (
 	tools = map[string]func([]string) error{
-		"pwdhash":     hashPasswordAndSalt,
-		"seedgen":     seedGen,
-		"ed25519":     generateKeyEd25519,
-		"list":        listTools,
-		"snapshotgen": snapshotGen,
+		ToolPwdHash:     hashPasswordAndSalt,
+		ToolSeedGen:     seedGen,
+		ToolEd25519Key:  generateEd25519Key,
+		ToolEd25519Addr: generateEd25519Address,
+		ToolSnapGen:     snapshotGen,
 	}
 )
 
@@ -35,20 +43,19 @@ func HandleTools() {
 	}
 
 	if len(args) == 1 {
-		fmt.Print("no tool specified. enter 'tool list' to list available tools.\n\n")
 		listTools([]string{})
 		os.Exit(1)
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
 	if !exists {
-		fmt.Print("Tool not found.\n\n")
+		fmt.Print("tool not found.\n\n")
 		listTools([]string{})
 		os.Exit(1)
 	}
 
 	if err := tool(args[2:]); err != nil {
-		fmt.Printf("\nError: %v\n", err.Error())
+		fmt.Printf("\nerror: %v\n", err.Error())
 		os.Exit(1)
 	}
 
@@ -56,9 +63,11 @@ func HandleTools() {
 }
 
 func listTools(args []string) error {
-	fmt.Println("pwdhash: generates a sha265 sum from your password and salt")
-	fmt.Println("seedgen: generates an autopeering seed")
-	fmt.Println("ed25519: generates an ed25519 key pair")
+	fmt.Println(fmt.Sprintf("%-15s generates a sha265 sum from your password and salt", fmt.Sprintf("%s:", ToolPwdHash)))
+	fmt.Println(fmt.Sprintf("%-15s generates an autopeering seed", fmt.Sprintf("%s:", ToolSeedGen)))
+	fmt.Println(fmt.Sprintf("%-15s generates an ed25519 key pair", fmt.Sprintf("%s:", ToolEd25519Key)))
+	fmt.Println(fmt.Sprintf("%-15s generates an ed25519 address from a public key", fmt.Sprintf("%s:", ToolEd25519Addr)))
+	fmt.Println(fmt.Sprintf("%-15s generates an initial snapshot for a private network", fmt.Sprintf("%s:", ToolSnapGen)))
 
 	return nil
 }
