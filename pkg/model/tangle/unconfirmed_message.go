@@ -13,10 +13,10 @@ import (
 type UnconfirmedMessage struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
-	messageID            hornet.Hash
+	messageID            *hornet.MessageID
 }
 
-func NewUnconfirmedMessage(msIndex milestone.Index, messageID hornet.Hash) *UnconfirmedMessage {
+func NewUnconfirmedMessage(msIndex milestone.Index, messageID *hornet.MessageID) *UnconfirmedMessage {
 	return &UnconfirmedMessage{
 		latestMilestoneIndex: msIndex,
 		messageID:            messageID,
@@ -27,7 +27,7 @@ func (t *UnconfirmedMessage) GetLatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnconfirmedMessage) GetMessageID() hornet.Hash {
+func (t *UnconfirmedMessage) GetMessageID() *hornet.MessageID {
 	return t.messageID
 }
 
@@ -40,7 +40,7 @@ func (t *UnconfirmedMessage) Update(_ objectstorage.StorableObject) {
 func (t *UnconfirmedMessage) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(t.latestMilestoneIndex))
-	return append(key, t.messageID...)
+	return append(key, t.messageID.Slice()...)
 }
 
 func (t *UnconfirmedMessage) ObjectStorageValue() (_ []byte) {

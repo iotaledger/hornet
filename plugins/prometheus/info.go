@@ -89,7 +89,7 @@ func collectInfo() {
 	lmi := tangle.GetLatestMilestoneIndex()
 	infoMilestoneIndex.Set(float64(lmi))
 	infoMilestone.Reset()
-	infoMilestone.WithLabelValues(hornet.NullMessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
+	infoMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(lmi))).Set(1)
 
 	// Latest milestone message ID
 	cachedLatestMilestone := tangle.GetCachedMilestoneOrNil(lmi)
@@ -103,7 +103,7 @@ func collectInfo() {
 	smi := tangle.GetSolidMilestoneIndex()
 	infoSolidMilestoneIndex.Set(float64(smi))
 	infoSolidMilestone.Reset()
-	infoSolidMilestone.WithLabelValues(hornet.NullMessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
+	infoSolidMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(smi))).Set(1)
 
 	// Solid milestone message ID
 	cachedSolidMilestone := tangle.GetCachedMilestoneOrNil(smi)

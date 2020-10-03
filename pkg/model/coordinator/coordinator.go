@@ -158,10 +158,10 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 
 		if startIndex == 1 {
 			// if we bootstrap a network, NullMessageID has to be set as a solid entry point
-			tangle.SolidEntryPointsAdd(hornet.NullMessageID, startIndex)
+			tangle.SolidEntryPointsAdd(hornet.GetNullMessageID(), startIndex)
 		}
 
-		latestMilestoneMessageID := hornet.NullMessageID
+		latestMilestoneMessageID := hornet.GetNullMessageID()
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
 			cachedMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
@@ -207,7 +207,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 }
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
-func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, newMilestoneIndex milestone.Index) error {
+func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, newMilestoneIndex milestone.Index) error {
 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 	cachedMessages := make(map[string]*tangle.CachedMessage)
@@ -259,7 +259,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID hornet.Hash, par
 
 // Bootstrap creates the first milestone, if the network was not bootstrapped yet.
 // Returns critical errors.
-func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
+func (coo *Coordinator) Bootstrap() (*hornet.MessageID, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
@@ -282,7 +282,7 @@ func (coo *Coordinator) Bootstrap() (hornet.Hash, error) {
 // a checkpoint can contain multiple chained messages to reference big parts of the unconfirmed cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID hornet.Hash, tips hornet.Hashes) (hornet.Hash, error) {
+func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID *hornet.MessageID, tips hornet.MessageIDs) (*hornet.MessageID, error) {
 
 	if len(tips) == 0 {
 		return nil, ErrNoTipsGiven
@@ -321,7 +321,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 
 // IssueMilestone creates the next milestone.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) IssueMilestone(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash) (hornet.Hash, error, error) {
+func (coo *Coordinator) IssueMilestone(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*hornet.MessageID, error, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()

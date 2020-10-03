@@ -11,6 +11,7 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/blang/vfs/memfs"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/iotaledger/iota.go"
@@ -50,10 +51,14 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				Type:                 snapshot.Full,
 				Version:              snapshot.SupportedFormatVersion,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
-				SEPMilestoneHash:     rand32ByteHash(),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
-				LedgerMilestoneHash:  rand32ByteHash(),
 			}
+
+			sepMilestoneMessageId := hornet.MessageID(rand32ByteHash())
+			originHeader.SEPMilestoneHash = &sepMilestoneMessageId
+
+			ledgerMilestoneMessageId := hornet.MessageID(rand32ByteHash())
+			originHeader.LedgerMilestoneHash = &ledgerMilestoneMessageId
 
 			originTimestamp := uint64(time.Now().Unix())
 
@@ -94,10 +99,14 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				Type:                 snapshot.Delta,
 				Version:              snapshot.SupportedFormatVersion,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
-				SEPMilestoneHash:     rand32ByteHash(),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
-				LedgerMilestoneHash:  rand32ByteHash(),
 			}
+
+			sepMilestoneMessageId := hornet.MessageID(rand32ByteHash())
+			originHeader.SEPMilestoneHash = &sepMilestoneMessageId
+
+			ledgerMilestoneMessageId := hornet.MessageID(rand32ByteHash())
+			originHeader.LedgerMilestoneHash = &ledgerMilestoneMessageId
 
 			originTimestamp := uint64(time.Now().Unix())
 
@@ -158,29 +167,30 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 
 }
 
-type sepRetrieverFunc func() [][snapshot.SolidEntryPointHashLength]byte
+type sepRetrieverFunc func() hornet.MessageIDs
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
-	var generatedSEPs [][snapshot.SolidEntryPointHashLength]byte
-	return func() (*[snapshot.SolidEntryPointHashLength]byte, error) {
+	var generatedSEPs hornet.MessageIDs
+	return func() (*hornet.MessageID, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
 			x := rand32ByteHash()
-			generatedSEPs = append(generatedSEPs, x)
-			return &x, nil
-		}, func() [][32]byte {
+			msgID := hornet.MessageID(x)
+			generatedSEPs = append(generatedSEPs, &msgID)
+			return &msgID, nil
+		}, func() hornet.MessageIDs {
 			return generatedSEPs
 		}
 }
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
-	var generatedSEPs [][snapshot.SolidEntryPointHashLength]byte
-	return func(sep [snapshot.SolidEntryPointHashLength]byte) error {
+	var generatedSEPs hornet.MessageIDs
+	return func(sep *hornet.MessageID) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
-		}, func() [][32]byte {
+		}, func() hornet.MessageIDs {
 			return generatedSEPs
 		}
 }

@@ -20,18 +20,18 @@ type Queue interface {
 	// Enqueue enqueues the given request if it isn't already queued or pending.
 	Enqueue(*Request) (enqueued bool)
 	// IsQueued tells whether a given request for the given message ID is queued.
-	IsQueued(messageID hornet.Hash) bool
+	IsQueued(messageID *hornet.MessageID) bool
 	// IsPending tells whether a given request was popped from the queue and is now pending.
-	IsPending(messageID hornet.Hash) bool
+	IsPending(messageID *hornet.MessageID) bool
 	// IsProcessing tells whether a given request was popped from the queue, received and is now processing.
-	IsProcessing(messageID hornet.Hash) bool
+	IsProcessing(messageID *hornet.MessageID) bool
 	// Received marks a request as received and thereby removes it from the pending set.
 	// It is added to the processing set.
 	// Returns the origin request which was pending or nil if the message ID was not requested.
-	Received(messageID hornet.Hash) *Request
+	Received(messageID *hornet.MessageID) *Request
 	// Processed marks a request as fulfilled and thereby removes it from the processing set.
 	// Returns the origin request which was pending or nil if the message ID was not requested.
-	Processed(messageID hornet.Hash) *Request
+	Processed(messageID *hornet.MessageID) *Request
 	// EnqueuePending enqueues all pending requests back into the queue.
 	// It also discards requests in the pending set of which their enqueue time is over the given delta threshold.
 	// If discardOlderThan is zero, no requests are discarded.
@@ -73,7 +73,7 @@ func New(latencyResolution ...int32) Queue {
 // Request is a request for a particular message.
 type Request struct {
 	// The MessageID of the message to request.
-	MessageID hornet.Hash
+	MessageID *hornet.MessageID
 	// The milestone index under which this request is linked.
 	MilestoneIndex milestone.Index
 	// internal to the priority queue
@@ -116,13 +116,16 @@ func (pq *priorityqueue) Next() (r *Request) {
 func (pq *priorityqueue) Enqueue(r *Request) bool {
 	pq.Lock()
 	defer pq.Unlock()
-	if _, queued := pq.queued[string(r.MessageID)]; queued {
+
+	messageIDMapKey := r.MessageID.MapKey()
+
+	if _, queued := pq.queued[messageIDMapKey]; queued {
 		return false
 	}
-	if _, pending := pq.pending[string(r.MessageID)]; pending {
+	if _, pending := pq.pending[messageIDMapKey]; pending {
 		return false
 	}
-	if _, processing := pq.processing[string(r.MessageID)]; processing {
+	if _, processing := pq.processing[messageIDMapKey]; processing {
 		return false
 	}
 	if pq.filter != nil && !pq.filter(r) {
@@ -133,32 +136,34 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 	return true
 }
 
-func (pq *priorityqueue) IsQueued(messageID hornet.Hash) bool {
+func (pq *priorityqueue) IsQueued(messageID *hornet.MessageID) bool {
 	pq.RLock()
-	_, k := pq.queued[string(messageID)]
+	_, k := pq.queued[messageID.MapKey()]
 	pq.RUnlock()
 	return k
 }
 
-func (pq *priorityqueue) IsPending(messageID hornet.Hash) bool {
+func (pq *priorityqueue) IsPending(messageID *hornet.MessageID) bool {
 	pq.RLock()
-	_, k := pq.pending[string(messageID)]
+	_, k := pq.pending[messageID.MapKey()]
 	pq.RUnlock()
 	return k
 }
 
-func (pq *priorityqueue) IsProcessing(messageID hornet.Hash) bool {
+func (pq *priorityqueue) IsProcessing(messageID *hornet.MessageID) bool {
 	pq.RLock()
-	_, k := pq.processing[string(messageID)]
+	_, k := pq.processing[messageID.MapKey()]
 	pq.RUnlock()
 	return k
 }
 
-func (pq *priorityqueue) Received(messageID hornet.Hash) *Request {
+func (pq *priorityqueue) Received(messageID *hornet.MessageID) *Request {
 	pq.Lock()
 	defer pq.Unlock()
 
-	if req, wasPending := pq.pending[string(messageID)]; wasPending {
+	messageIDMapKey := messageID.MapKey()
+
+	if req, wasPending := pq.pending[messageIDMapKey]; wasPending {
 		pq.latencySum += time.Since(req.EnqueueTime).Milliseconds()
 		pq.latencyEntries++
 		if pq.latencyEntries == pq.latencyResolution {
@@ -166,27 +171,28 @@ func (pq *priorityqueue) Received(messageID hornet.Hash) *Request {
 			pq.latencySum = 0
 			pq.latencyEntries = 0
 		}
-		delete(pq.pending, string(messageID))
+		delete(pq.pending, messageIDMapKey)
 		if len(pq.pending) == 0 {
 			pq.latencySum = 0
 			pq.avgLatency.Store(0)
 		}
 
 		// add the request to processing
-		pq.processing[string(messageID)] = req
+		pq.processing[messageIDMapKey] = req
 
 		return req
 	}
 
 	// check if the request is in the queue (was enqueued again after request)
-	return pq.queued[string(messageID)]
+	return pq.queued[messageIDMapKey]
 }
 
-func (pq *priorityqueue) Processed(messageID hornet.Hash) *Request {
+func (pq *priorityqueue) Processed(messageID *hornet.MessageID) *Request {
 	pq.Lock()
-	req, wasProcessing := pq.processing[string(messageID)]
+	messageIDMapKey := messageID.MapKey()
+	req, wasProcessing := pq.processing[messageIDMapKey]
 	if wasProcessing {
-		delete(pq.processing, string(messageID))
+		delete(pq.processing, messageIDMapKey)
 	}
 	pq.Unlock()
 	return req
@@ -270,7 +276,7 @@ func (pq *priorityqueue) Filter(f FilterFunc) {
 		filteredQueue := make([]*Request, 0)
 		for _, r := range pq.queue {
 			if !f(r) {
-				delete(pq.queued, string(r.MessageID))
+				delete(pq.queued, r.MessageID.MapKey())
 				continue
 			}
 			filteredQueue = append(filteredQueue, r)
@@ -302,9 +308,11 @@ func (pq *priorityqueue) Push(x interface{}) {
 	r := x.(*Request)
 	pq.queue = append(pq.queue, r)
 
+	messageIDMapKey := r.MessageID.MapKey()
+
 	// mark as queued and remove from pending
-	delete(pq.pending, string(r.MessageID))
-	pq.queued[string(r.MessageID)] = r
+	delete(pq.pending, messageIDMapKey)
+	pq.queued[messageIDMapKey] = r
 }
 
 func (pq *priorityqueue) Pop() interface{} {
@@ -314,9 +322,11 @@ func (pq *priorityqueue) Pop() interface{} {
 	old[n-1] = nil // avoid memory leak
 	pq.queue = old[0 : n-1]
 
+	messageIDMapKey := r.MessageID.MapKey()
+
 	// mark as pending and remove from queued
-	delete(pq.queued, string(r.MessageID))
-	pq.pending[string(r.MessageID)] = r
+	delete(pq.queued, messageIDMapKey)
+	pq.pending[messageIDMapKey] = r
 	return r
 }
 

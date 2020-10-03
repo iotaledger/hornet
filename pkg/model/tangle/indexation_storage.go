@@ -27,8 +27,8 @@ func (c *CachedIndexation) GetIndexation() *Indexation {
 
 func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Indexation{
-		indexationHash: key[:IndexationHashLength],
-		messageID:      key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength],
+		indexationHash: hornet.MessageIDFromBytes(key[:IndexationHashLength]),
+		messageID:      hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength]),
 	}, nil
 }
 
@@ -55,8 +55,8 @@ func configureIndexationStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 }
 
 // indexation +-0
-func GetIndexMessageIDs(index string, maxFind ...int) hornet.Hashes {
-	var messageIDs hornet.Hashes
+func GetIndexMessageIDs(index string, maxFind ...int) hornet.MessageIDs {
+	var messageIDs hornet.MessageIDs
 
 	indexationHash := blake2b.Sum256([]byte(index))
 
@@ -67,7 +67,7 @@ func GetIndexMessageIDs(index string, maxFind ...int) hornet.Hashes {
 			return false
 		}
 
-		messageIDs = append(messageIDs, key[IndexationHashLength:IndexationHashLength+iotago.MessageHashLength])
+		messageIDs = append(messageIDs, hornet.MessageIDFromBytes(key[IndexationHashLength:IndexationHashLength+iotago.MessageHashLength]))
 		return true
 	}, false, indexationHash[:])
 
@@ -75,25 +75,25 @@ func GetIndexMessageIDs(index string, maxFind ...int) hornet.Hashes {
 }
 
 // IndexConsumer consumes the messageID during looping through all messages with given index in the persistence layer.
-type IndexConsumer func(messageID hornet.Hash) bool
+type IndexConsumer func(messageID *hornet.MessageID) bool
 
 // ForEachMessageIDWithIndex loops over all messages with the given index.
 func ForEachMessageIDWithIndex(index string, consumer IndexConsumer, skipCache bool) {
 	indexationHash := blake2b.Sum256([]byte(index))
 
 	indexationStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength])
+		return consumer(hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength]))
 	}, skipCache, indexationHash[:])
 }
 
 // indexation +1
-func StoreIndexation(index string, messageID hornet.Hash) *CachedIndexation {
+func StoreIndexation(index string, messageID *hornet.MessageID) *CachedIndexation {
 	indexation := NewIndexation(index, messageID)
 	return &CachedIndexation{CachedObject: indexationStorage.Store(indexation)}
 }
 
 // indexation +-0
-func DeleteIndexation(index string, messageID hornet.Hash) {
+func DeleteIndexation(index string, messageID *hornet.MessageID) {
 	indexation := NewIndexation(index, messageID)
 	indexationStorage.Delete(indexation.ObjectStorageKey())
 }

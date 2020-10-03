@@ -84,11 +84,11 @@ func spentOutputsForAddress(address *iotago.Ed25519Address) (Spents, error) {
 	err := utxoStorage.Iterate(addressKeyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 
 		spent := &Spent{}
-		if err := spent.kvStorableLoad(key[33:], value); err != nil {
+		if err := spent.kvStorableLoad(key[1+iotago.Ed25519AddressBytesLength:], value); err != nil {
 			return false
 		}
 
-		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[33:])
+		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[1+iotago.Ed25519AddressBytesLength:])
 
 		outputValue, err := utxoStorage.Get(outputKey)
 		if err != nil {

@@ -36,8 +36,8 @@ func (te *TestEnvironment) storeTransaction(msg *transaction.Message) *tangle.Ca
 // StoreBundle adds all messages of the bundle to the storage layer and solidifies them.
 func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *tangle.CachedMessage {
 
-	var tailTx hornet.Hash
-	var hashes hornet.Hashes
+	var tailTx *hornet.MessageID
+	var hashes hornet.MessageIDs
 
 	// Store all messages in the database
 	for i := 0; i < len(bndl); i++ {
@@ -89,7 +89,7 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *
 }
 
 // AttachAndStoreBundle attaches the given bundle to the given trunk and branch and does the "Proof of Work" and stores it.
-func (te *TestEnvironment) AttachAndStoreBundle(trunk hornet.Hash, branch hornet.Hash, trytes []trinary.Trytes) *tangle.CachedMessage {
+func (te *TestEnvironment) AttachAndStoreBundle(trunk *hornet.MessageID, branch *hornet.MessageID, trytes []trinary.Trytes) *tangle.CachedMessage {
 
 	_, powFunc := pow.GetFastestProofOfWorkImpl()
 	powed, err := pow.DoPoW(trunk.Hex(), branch.Hex(), trytes, mwm, powFunc)
@@ -130,7 +130,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
 func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confirmation) string {
 
-	indexOf := func(hash hornet.Hash) int {
+	indexOf := func(hash *hornet.MessageID) int {
 		if conf == nil {
 			return -1
 		}

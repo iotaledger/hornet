@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"bytes"
 	"errors"
 	"sync"
 	"time"
@@ -54,8 +53,8 @@ var (
 	selector *mselection.HeaviestSelector
 
 	lastCheckpointIndex     int
-	lastCheckpointMessageID hornet.Hash
-	lastMilestoneMessageID  hornet.Hash
+	lastCheckpointMessageID *hornet.MessageID
+	lastMilestoneMessageID  *hornet.MessageID
 
 	// Closures
 	onMessageSolid       *events.Closure
@@ -281,7 +280,7 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 				return
 			}
 
-			if !bytes.Equal(messageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+			if *messageID != *cachedMsgMeta.GetMetadata().GetMessageID() {
 				return
 			}
 
@@ -376,11 +375,11 @@ func configureEvents() {
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 
-	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.Hash) {
+	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
 		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.Hex())
 	})
 
-	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID hornet.Hash) {
+	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID *hornet.MessageID) {
 		log.Infof("milestone issued (%d): %v", index, messageID.Hex())
 	})
 }

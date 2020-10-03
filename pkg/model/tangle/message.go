@@ -16,7 +16,7 @@ type Message struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	messageID hornet.Hash
+	messageID *hornet.MessageID
 
 	// Value
 	message *iotago.Message
@@ -24,13 +24,15 @@ type Message struct {
 
 func NewMessage(iotaMsg *iotago.Message) (*Message, error) {
 
-	messageID, err := iotaMsg.Hash()
+	msgHash, err := iotaMsg.Hash()
 	if err != nil {
 		return nil, err
 	}
 
+	messageID := hornet.MessageID(*msgHash)
+
 	return &Message{
-		messageID: messageID[:],
+		messageID: &messageID,
 		message:   iotaMsg,
 	}, nil
 }
@@ -41,18 +43,20 @@ func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Mess
 		return nil, err
 	}
 
-	messageID, err := msg.Hash()
+	msgHash, err := msg.Hash()
 	if err != nil {
 		return nil, err
 	}
 
+	messageID := hornet.MessageID(*msgHash)
+
 	return &Message{
-		messageID: messageID[:],
+		messageID: &messageID,
 		message:   msg,
 	}, nil
 }
 
-func (msg *Message) GetMessageID() hornet.Hash {
+func (msg *Message) GetMessageID() *hornet.MessageID {
 	return msg.messageID
 }
 
@@ -60,12 +64,14 @@ func (msg *Message) GetMessage() *iotago.Message {
 	return msg.message
 }
 
-func (msg *Message) GetParent1MessageID() hornet.Hash {
-	return msg.message.Parent1[:]
+func (msg *Message) GetParent1MessageID() *hornet.MessageID {
+	parent1 := hornet.MessageID(msg.message.Parent1)
+	return &parent1
 }
 
-func (msg *Message) GetParent2MessageID() hornet.Hash {
-	return msg.message.Parent2[:]
+func (msg *Message) GetParent2MessageID() *hornet.MessageID {
+	parent2 := hornet.MessageID(msg.message.Parent2)
+	return &parent2
 }
 
 func (msg *Message) IsMilestone() bool {
@@ -156,7 +162,7 @@ func (msg *Message) Update(_ objectstorage.StorableObject) {
 }
 
 func (msg *Message) ObjectStorageKey() []byte {
-	return msg.messageID
+	return msg.messageID.Slice()
 }
 
 func (msg *Message) ObjectStorageValue() (_ []byte) {

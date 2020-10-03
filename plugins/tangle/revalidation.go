@@ -265,7 +265,7 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	tangle.ForEachMessageID(func(messageID hornet.Hash) bool {
+	tangle.ForEachMessageID(func(messageID *hornet.MessageID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -282,19 +282,19 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 
 		// delete message if metadata doesn't exist
 		if storedTxMeta == nil {
-			messagesToDelete[string(messageID)] = struct{}{}
+			messagesToDelete[messageID.MapKey()] = struct{}{}
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			messagesToDelete[string(messageID)] = struct{}{}
+			messagesToDelete[messageID.MapKey()] = struct{}{}
 			return true
 		}
 
 		// not confirmed or above snapshot index
 		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
-			messagesToDelete[string(messageID)] = struct{}{}
+			messagesToDelete[messageID.MapKey()] = struct{}{}
 			return true
 		}
 
@@ -322,7 +322,7 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 			log.Infof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteMessage(hornet.Hash(messageID))
+		tangle.DeleteMessage(hornet.MessageIDFromMapKey(messageID))
 	}
 
 	tangle.FlushMessagesStorage()
@@ -341,7 +341,7 @@ func cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	tangle.ForEachMessageMetadataMessageID(func(messageID hornet.Hash) bool {
+	tangle.ForEachMessageMetadataMessageID(func(messageID *hornet.MessageID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -356,7 +356,7 @@ func cleanupMessageMetadata() error {
 
 		// delete metadata if message doesn't exist
 		if !tangle.MessageExistsInStore(messageID) {
-			metadataToDelete[string(messageID)] = struct{}{}
+			metadataToDelete[messageID.MapKey()] = struct{}{}
 		}
 
 		return true
@@ -383,7 +383,7 @@ func cleanupMessageMetadata() error {
 			log.Infof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteMessageMetadata(hornet.Hash(messageID))
+		tangle.DeleteMessageMetadata(hornet.MessageIDFromMapKey(messageID))
 	}
 
 	tangle.FlushMessagesStorage()
@@ -397,8 +397,8 @@ func cleanupMessageMetadata() error {
 func cleanupChildren() error {
 
 	type child struct {
-		messageID      hornet.Hash
-		childMessageID hornet.Hash
+		messageID      *hornet.MessageID
+		childMessageID *hornet.MessageID
 	}
 
 	start := time.Now()
@@ -407,7 +407,7 @@ func cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	tangle.ForEachChild(func(messageID hornet.Hash, childMessageID hornet.Hash) bool {
+	tangle.ForEachChild(func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -420,14 +420,16 @@ func cleanupChildren() error {
 			log.Infof("analyzed %d children", childCounter)
 		}
 
+		childrenMapKey := messageID.MapKey() + childMessageID.MapKey()
+
 		// delete child if message doesn't exist
 		if !tangle.MessageExistsInStore(messageID) {
-			childrenToDelete[string(messageID)+string(childMessageID)] = &child{messageID: messageID, childMessageID: childMessageID}
+			childrenToDelete[childrenMapKey] = &child{messageID: messageID, childMessageID: childMessageID}
 		}
 
 		// delete child if child message doesn't exist
 		if !tangle.MessageExistsInStore(childMessageID) {
-			childrenToDelete[string(messageID)+string(childMessageID)] = &child{messageID: messageID, childMessageID: childMessageID}
+			childrenToDelete[childrenMapKey] = &child{messageID: messageID, childMessageID: childMessageID}
 		}
 
 		return true
@@ -495,7 +497,7 @@ func cleanupAddresses() error {
 
 			// delete address if message doesn't exist
 			if !tangle.MessageExistsInStore(messageID) {
-				addressesToDelete[string(messageID)] = &address{address: addressHash, messageID: messageID}
+				addressesToDelete[messageID.MapKey()] = &address{address: addressHash, messageID: messageID}
 			}
 
 			return true
@@ -542,7 +544,7 @@ func cleanupUnconfirmedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unconfirmedTxsCounter int64
-	tangle.ForEachUnconfirmedMessage(func(msIndex milestone.Index, messageID hornet.Hash) bool {
+	tangle.ForEachUnconfirmedMessage(func(msIndex milestone.Index, messageID *hornet.MessageID) bool {
 		unconfirmedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {

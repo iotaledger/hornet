@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -116,7 +115,7 @@ func enqueueAndSignal(r *rqueue.Request) bool {
 
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
-func Request(messageID hornet.Hash, msIndex milestone.Index, preventDiscard ...bool) bool {
+func Request(messageID *hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
 	if tangle.SolidEntryPointsContain(messageID) {
 		return false
 	}
@@ -136,7 +135,7 @@ func Request(messageID hornet.Hash, msIndex milestone.Index, preventDiscard ...b
 }
 
 // RequestMultiple works like Request but takes multiple message IDs.
-func RequestMultiple(messageIDs hornet.Hashes, msIndex milestone.Index, preventDiscard ...bool) int {
+func RequestMultiple(messageIDs hornet.MessageIDs, msIndex milestone.Index, preventDiscard ...bool) int {
 	requested := 0
 	for _, messageID := range messageIDs {
 		if Request(messageID, msIndex, preventDiscard...) {
@@ -157,7 +156,7 @@ func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, pr
 		}
 
 		Request(metadata.GetParent1MessageID(), msIndex, preventDiscard...)
-		if !bytes.Equal(metadata.GetParent1MessageID(), metadata.GetParent2MessageID()) {
+		if *metadata.GetParent1MessageID() != *metadata.GetParent2MessageID() {
 			Request(metadata.GetParent2MessageID(), msIndex, preventDiscard...)
 		}
 	})
@@ -178,7 +177,7 @@ func RequestMilestoneParents(cachedMilestone *tangle.CachedMilestone) bool {
 
 	txMeta := cachedMilestoneMsgMeta.GetMetadata()
 	enqueued := Request(txMeta.GetParent1MessageID(), msIndex, true)
-	if !bytes.Equal(txMeta.GetParent1MessageID(), txMeta.GetParent2MessageID()) {
+	if *txMeta.GetParent1MessageID() != *txMeta.GetParent2MessageID() {
 		enqueuedTwo := Request(txMeta.GetParent2MessageID(), msIndex, true)
 		if !enqueued && enqueuedTwo {
 			enqueued = true
@@ -209,17 +208,17 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())]
+				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]
 				return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
 			func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
-				traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
+				traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
 				return nil
 			},
 			// called on missing parents
-			func(parentMessageID hornet.Hash) error {
+			func(parentMessageID *hornet.MessageID) error {
 				Request(parentMessageID, ms, preventDiscard...)
 				return nil
 			},

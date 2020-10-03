@@ -45,7 +45,7 @@ func (te *TestEnvironment) configureCoordinator() {
 	te.coo.InitState(true, 0)
 
 	// save snapshot info
-	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.NullMessageID, 0, 0, 0, time.Now().Unix())
+	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.GetNullMessageID(), 0, 0, 0, time.Now().Unix())
 
 	// configure Milestones
 	tangle.ConfigureMilestones(hornet.HashFromAddressTrytes(cooAddress), int(cooSecLevel), merkleTreeDepth, merkleHashFunc)
@@ -78,7 +78,7 @@ func (te *TestEnvironment) configureCoordinator() {
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.Hash, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
 
 	currentIndex := tangle.GetSolidMilestoneIndex()
 	te.VerifyLMI(currentIndex)

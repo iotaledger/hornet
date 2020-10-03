@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"fmt"
 	"time"
 
@@ -29,7 +28,7 @@ func MessageMetadataCaller(handler interface{}, params ...interface{}) {
 }
 
 func MessageIDCaller(handler interface{}, params ...interface{}) {
-	handler.(func(messageID hornet.Hash))(params[0].(hornet.Hash))
+	handler.(func(messageID *hornet.MessageID))(params[0].(*hornet.MessageID))
 }
 
 func NewMessageCaller(handler interface{}, params ...interface{}) {
@@ -146,7 +145,7 @@ func (c *CachedMessage) Release(force ...bool) {
 
 func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
-		messageID: key[:iotago.MessageHashLength],
+		messageID: hornet.MessageIDFromBytes(key[:iotago.MessageHashLength]),
 		message:   &iotago.Message{},
 	}
 
@@ -191,14 +190,14 @@ func configureMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 }
 
 // msg +1
-func GetCachedMessageOrNil(messageID hornet.Hash) *CachedMessage {
-	cachedMsg := messagesStorage.Load(messageID) // msg +1
+func GetCachedMessageOrNil(messageID *hornet.MessageID) *CachedMessage {
+	cachedMsg := messagesStorage.Load(messageID.Slice()) // msg +1
 	if !cachedMsg.Exists() {
 		cachedMsg.Release(true) // msg -1
 		return nil
 	}
 
-	cachedMeta := metadataStorage.Load(messageID) // meta +1
+	cachedMeta := metadataStorage.Load(messageID.Slice()) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMsg.Release(true)  // msg -1
 		cachedMeta.Release(true) // meta -1
@@ -212,8 +211,8 @@ func GetCachedMessageOrNil(messageID hornet.Hash) *CachedMessage {
 }
 
 // metadata +1
-func GetCachedMessageMetadataOrNil(messageID hornet.Hash) *CachedMetadata {
-	cachedMeta := metadataStorage.Load(messageID) // meta +1
+func GetCachedMessageMetadataOrNil(messageID *hornet.MessageID) *CachedMetadata {
+	cachedMeta := metadataStorage.Load(messageID.Slice()) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMeta.Release(true) // metadata -1
 		return nil
@@ -222,8 +221,8 @@ func GetCachedMessageMetadataOrNil(messageID hornet.Hash) *CachedMetadata {
 }
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func GetStoredMetadataOrNil(messageID hornet.Hash) *MessageMetadata {
-	storedMeta := metadataStorage.LoadObjectFromStore(messageID)
+func GetStoredMetadataOrNil(messageID *hornet.MessageID) *MessageMetadata {
+	storedMeta := metadataStorage.LoadObjectFromStore(messageID.Slice())
 	if storedMeta == nil {
 		return nil
 	}
@@ -231,13 +230,13 @@ func GetStoredMetadataOrNil(messageID hornet.Hash) *MessageMetadata {
 }
 
 // ContainsMessage returns if the given message exists in the cache/persistence layer.
-func ContainsMessage(messageID hornet.Hash) bool {
-	return messagesStorage.Contains(messageID)
+func ContainsMessage(messageID *hornet.MessageID) bool {
+	return messagesStorage.Contains(messageID.Slice())
 }
 
 // MessageExistsInStore returns if the given message exists in the persistence layer.
-func MessageExistsInStore(messageID hornet.Hash) bool {
-	return messagesStorage.ObjectExistsInStore(messageID)
+func MessageExistsInStore(messageID *hornet.MessageID) bool {
+	return messagesStorage.ObjectExistsInStore(messageID.Slice())
 }
 
 // msg +1
@@ -259,39 +258,39 @@ func StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdde
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedMeta = metadataStorage.Load(message.GetMessageID()) // meta +1
+		cachedMeta = metadataStorage.Load(message.GetMessageID().Slice()) // meta +1
 	}
 
 	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
 }
 
 // MessageIDConsumer consumes the given message ID during looping through all messages in the persistence layer.
-type MessageIDConsumer func(messageID hornet.Hash) bool
+type MessageIDConsumer func(messageID *hornet.MessageID) bool
 
 // ForEachMessageID loops over all message IDs.
 func ForEachMessageID(consumer MessageIDConsumer, skipCache bool) {
 	messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(messageID)
+		return consumer(hornet.MessageIDFromBytes(messageID))
 	}, skipCache)
 }
 
 // ForEachMessageMetadataMessageID loops over all message metadata message IDs.
 func ForEachMessageMetadataMessageID(consumer MessageIDConsumer, skipCache bool) {
 	metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(messageID)
+		return consumer(hornet.MessageIDFromBytes(messageID))
 	}, skipCache)
 }
 
 // DeleteMessage deletes the message and metadata in the cache/persistence layer.
-func DeleteMessage(messageID hornet.Hash) {
+func DeleteMessage(messageID *hornet.MessageID) {
 	// metadata has to be deleted before the msg, otherwise we could run into a data race in the object storage
-	metadataStorage.Delete(messageID)
-	messagesStorage.Delete(messageID)
+	metadataStorage.Delete(messageID.Slice())
+	messagesStorage.Delete(messageID.Slice())
 }
 
 // DeleteMessageMetadata deletes the metadata in the cache/persistence layer.
-func DeleteMessageMetadata(messageID hornet.Hash) {
-	metadataStorage.Delete(messageID)
+func DeleteMessageMetadata(messageID *hornet.MessageID) {
+	metadataStorage.Delete(messageID.Slice())
 }
 
 func ShutdownMessagesStorage() {
@@ -313,7 +312,7 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 	}
 
 	StoreChild(cachedMessage.GetMessage().GetParent1MessageID(), cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
-	if !bytes.Equal(cachedMessage.GetMessage().GetParent1MessageID(), cachedMessage.GetMessage().GetParent2MessageID()) {
+	if *cachedMessage.GetMessage().GetParent1MessageID() != *cachedMessage.GetMessage().GetParent2MessageID() {
 		StoreChild(cachedMessage.GetMessage().GetParent2MessageID(), cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
 	}
 

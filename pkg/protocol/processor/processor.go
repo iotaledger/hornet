@@ -193,7 +193,7 @@ func (proc *Processor) processMessageRequest(p *peer.Peer, data []byte) {
 		return
 	}
 
-	cachedMessage := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // message +1
+	cachedMessage := tangle.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the requested message
 		return

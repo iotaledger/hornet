@@ -109,7 +109,7 @@ func runVisualizer() {
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.Hash) {
+	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
 		if !tanglepackage.IsNodeSyncedWithThreshold() {
 			return
 		}

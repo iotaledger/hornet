@@ -20,7 +20,7 @@ func SendHeartbeat(p *peer.Peer, solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendMessageRequest sends a message request message to the given peer.
-func SendMessageRequest(p *peer.Peer, requestedMessageID hornet.Hash) {
+func SendMessageRequest(p *peer.Peer, requestedMessageID *hornet.MessageID) {
 	txReqData, _ := sting.NewMessageRequestMsg(requestedMessageID)
 	p.EnqueueForSending(txReqData)
 }
