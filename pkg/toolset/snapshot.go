@@ -1,12 +1,9 @@
 package toolset
 
 import (
-	"bufio"
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -14,49 +11,67 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/snapshot"
 )
 
 func snapshotGen(args []string) error {
 
-	//
+	printUsage := func() {
+		println("Usage:")
+		println(fmt.Sprintf("	%s [MINT_ADDRESS] [COO_PUB_KEY] [OUTPUT_FILE_PATH]", ToolSnapGen))
+		println()
+		println("	[MINT_ADDRESS] 	   - the initial ed25519 address all the tokens will be minted to")
+		println("	[COO_PUB_KEY] 	   - the public key of the coordinator of the network")
+		println("	[OUTPUT_FILE_PATH] - the file path to the generated snapshot file")
+	}
+
 	// check arguments
-	//
 	if len(args) == 0 {
-		return errors.New("input balances filepath missing")
+		printUsage()
+		return errors.New("MINT_ADDRESS missing")
 	}
 
 	if len(args) == 1 {
-		return errors.New("output filepath missing")
+		printUsage()
+		return errors.New("COO_PUB_KEY missing")
 	}
 
-	if len(args) > 2 {
-		return errors.New("too many arguments for 'snapshotgen'")
+	if len(args) == 2 {
+		printUsage()
+		return errors.New("OUTPUT_FILE_PATH missing")
 	}
 
-	balancesFilePath := args[0]
-	outputFilePath := args[1]
-	targetIndex := 0
-
-	//
-	// check filepaths
-	//
-	if _, err := os.Stat(balancesFilePath); err != nil && os.IsNotExist(err) {
-		return errors.New("input balances file does not exist")
+	if len(args) > 3 {
+		printUsage()
+		return fmt.Errorf("too many arguments for '%s'", ToolSnapGen)
 	}
 
-	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
-		return errors.New("output file already exists")
-	}
+	// check mint address
+	mintAddress := args[0]
 
-	//
-	// open files
-	//
-	balancesFile, err := os.OpenFile(balancesFilePath, os.O_RDONLY, 0666)
+	addressBytes, err := hex.DecodeString(mintAddress)
 	if err != nil {
-		return fmt.Errorf("unable to open input balances file: %w", err)
+		return fmt.Errorf("can't decode MINT_ADDRESS: %v", err)
 	}
-	defer balancesFile.Close()
+	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
+		return fmt.Errorf("incorrect MINT_ADDRESS length: %d != %d (%s)", len(addressBytes), iotago.Ed25519AddressBytesLength, mintAddress)
+	}
+
+	var address iotago.Ed25519Address
+	copy(address[:], addressBytes)
+
+	// parse pubkey
+	cooPubKey, err := utils.ParseEd25519PublicKeyFromString(args[1])
+	if err != nil {
+		return fmt.Errorf("can't decode ED25519_PUB_KEY: %v", err)
+	}
+
+	// check filepath
+	outputFilePath := args[2]
+	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
+		return errors.New("OUTPUT_FILE_PATH already exists")
+	}
 
 	// build temp file path
 	outputFilePathTmp := outputFilePath + "_tmp"
@@ -67,12 +82,12 @@ func snapshotGen(args []string) error {
 		return fmt.Errorf("unable to create snapshot file: %w", err)
 	}
 
-	//
 	// create snapshot file
-	//
+	targetIndex := 0
 	header := &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 snapshot.Full,
+		CoordinatorPublicKey: cooPubKey,
 		SEPMilestoneIndex:    milestone.Index(targetIndex),
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 	}
@@ -84,75 +99,39 @@ func snapshotGen(args []string) error {
 	// add "NullMessageID" as sole entry point
 	nullHashAdded := false
 	solidEntryPointProducerFunc := func() (*hornet.MessageID, error) {
-		if !nullHashAdded {
-			nullHashAdded = true
-
-			solidEntryPoint := hornet.GetNullMessageID()
-
-			return solidEntryPoint, nil
-		}
-		return nil, nil
-	}
-
-	// unspent outputs
-	// read all addresses and balances from the input balances file and add a "NullOutputID" ("NullHash" as TransactionID and OutputIndex 0)
-	var totalAmount uint64 = 0
-
-	scanner := bufio.NewScanner(balancesFile)
-	outputProducerFunc := func() (*snapshot.Output, error) {
-		if !scanner.Scan() {
-			// end of file reached
+		if nullHashAdded {
 			return nil, nil
 		}
 
-		line := scanner.Text()
-		lineSplitted := strings.Split(line, ";")
+		nullHashAdded = true
 
-		if len(lineSplitted) != 2 {
-			return nil, fmt.Errorf("Wrong format in %v", balancesFilePath)
+		return hornet.GetNullMessageID(), nil
+	}
+
+	// unspent transaction outputs
+	outputAdded := false
+	outputProducerFunc := func() (*snapshot.Output, error) {
+		if outputAdded {
+			return nil, nil
 		}
 
-		addressBytes, err := hex.DecodeString(lineSplitted[0])
-		if err != nil {
-			return nil, fmt.Errorf("DecodeString: %v", err)
-		}
-		if len(addressBytes) != iotago.Ed25519AddressBytesLength {
-			return nil, fmt.Errorf("incorrect address length: %d != %d (%s)", len(addressBytes), iotago.Ed25519AddressBytesLength, lineSplitted[0])
-		}
-
-		var address iotago.Ed25519Address
-		copy(address[:], addressBytes)
-
-		balance, err := strconv.ParseUint(lineSplitted[1], 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("ParseUint: %v", err)
-		}
-		totalAmount += balance
+		outputAdded = true
 
 		var nullMessageID [iotago.MessageHashLength]byte
 		var nullOutputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
 
-		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: balance}, nil
+		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: iotago.TokenSupply}, nil
 	}
 
 	// milestone diffs
-	// no milestone diffs needed
 	milestoneDiffProducerFunc := func() (*snapshot.MilestoneDiff, error) {
+		// no milestone diffs needed
 		return nil, nil
 	}
 
 	if err := snapshot.StreamLocalSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
-	}
-
-	if err := scanner.Err(); err != nil {
-		_ = snapshotFile.Close()
-		return fmt.Errorf("couldn't read input balances file: %w", err)
-	}
-
-	if totalAmount != iotago.TokenSupply {
-		return fmt.Errorf("accumulated output balance is not equal to total supply: %d != %d", totalAmount, iotago.TokenSupply)
 	}
 
 	// rename tmp file to final file name
