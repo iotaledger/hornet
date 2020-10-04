@@ -73,10 +73,10 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 		return nil, errors.New("unsupported transaction type")
 	}
 
-	var address iotago.Ed25519Address
+	var address *iotago.Ed25519Address
 	switch a := deposit.Address.(type) {
 	case *iotago.Ed25519Address:
-		address = *a
+		address = a
 	default:
 		return nil, errors.New("unsupported deposit address")
 	}
@@ -96,7 +96,7 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 		outputID:   &outputID,
 		messageID:  messageID,
 		outputType: iotago.OutputSigLockedSingleDeposit,
-		address:    &address,
+		address:    address,
 		amount:     deposit.Amount,
 	}, nil
 }

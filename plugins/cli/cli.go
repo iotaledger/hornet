@@ -49,7 +49,7 @@ func ParseConfig() {
 }
 
 func PrintConfig() {
-	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
+	config.PrintConfig([]string{config.CfgRestAPIBasicAuthPasswordHash, config.CfgRestAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 
 	enablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins)
 	disablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins)

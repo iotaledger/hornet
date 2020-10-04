@@ -1,6 +1,6 @@
 {
   "useProfile": "debug",
-  "httpAPI": {
+  "restAPI": {
     "basicAuth": {
       "enabled": false,
       "username": "",
@@ -8,19 +8,6 @@
       "passwordSalt": ""
     },
     "excludeHealthCheckFromAuth": false,
-    "permitRemoteAccess": [
-      "getNodeInfo",
-      "getBalances",
-      "checkConsistency",
-      "getTipInfo",
-      "getTransactionsToApprove",
-      "getInclusionStates",
-      "getNodeAPIConfiguration",
-      "broadcastTransactions",
-      "findTransactions",
-      "storeTransactions",
-      "getTrytes"
-    ],
     "permittedRoutes": [
       "healthz"
     ],
@@ -28,9 +15,7 @@
     "bindAddress": "0.0.0.0:14265",
     "limits": {
       "bodyLengthBytes": 1000000,
-      "findTransactions": 1000,
-      "getTrytes": 1000,
-      "requestsList": 1000
+      "maxResults": 1000
     }
   },
   "dashboard": {
@@ -105,7 +90,7 @@
   },
   "node": {
     "alias": "",
-    "showAliasInGetNodeInfo": false,
+    "enableProofOfWork": false,
     "disablePlugins": ["Autopeering"],
     "enablePlugins": ["Spammer", "Coordinator"]
   },

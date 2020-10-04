@@ -20,7 +20,7 @@ const (
 	PriorityMetricsUpdater
 	PriorityDashboard
 	PriorityPoWHandler
-	PriorityAPI
+	PriorityRestAPI
 	PriorityMetricsPublishers
 	PrioritySpammer
 	PriorityStatusReport

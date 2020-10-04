@@ -159,8 +159,8 @@ type WebAPIConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (webAPIConfig *WebAPIConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgWebAPIBindAddress, webAPIConfig.BindAddress),
-		fmt.Sprintf("--%s=%s", config.CfgWebAPIPermitRemoteAccess, strings.Join(webAPIConfig.PermittedAPICalls, ",")),
+		fmt.Sprintf("--%s=%s", config.CfgRestAPIBindAddress, webAPIConfig.BindAddress),
+		//fmt.Sprintf("--%s=%s", config.CfgRestAPIPermitRemoteAccess, strings.Join(webAPIConfig.PermittedAPICalls, ",")),
 	}
 }
 
