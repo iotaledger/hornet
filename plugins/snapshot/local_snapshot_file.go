@@ -49,6 +49,8 @@ const (
 
 // Output defines an output within a local snapshot.
 type Output struct {
+	// The message ID of the message that contained the transaction where this output was created.
+	MessageID [iotago.MessageHashLength]byte `json:"message_id"`
 	// The transaction ID and the index of the output.
 	OutputID [iotago.TransactionIDLength + 2]byte `json:"output_id"`
 	// The underlying address to which this output deposits to.
@@ -59,6 +61,9 @@ type Output struct {
 
 func (s *Output) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
+	if _, err := b.Write(s.MessageID[:]); err != nil {
+		return nil, fmt.Errorf("unable to write message ID for ls-output: %w", err)
+	}
 	if _, err := b.Write(s.OutputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to write output ID for ls-output: %w", err)
 	}
@@ -461,6 +466,10 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 // reads an Output from the given reader.
 func readOutput(reader io.Reader) (*Output, error) {
 	output := &Output{}
+	if _, err := io.ReadFull(reader, output.MessageID[:]); err != nil {
+		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
+	}
+
 	if _, err := io.ReadFull(reader, output.OutputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
 	}
