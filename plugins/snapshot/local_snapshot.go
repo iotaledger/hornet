@@ -593,7 +593,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 	}
 
 	if ledgerIndex != lsHeader.SEPMilestoneIndex {
-		return ErrFinalLedgerIndexDoesNotMatchSEPIndex
+		return errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, lsHeader.SEPMilestoneIndex)
 	}
 
 	tangle.SetSnapshotMilestone(cooPublicKey, &lsHeader.SEPMilestoneHash, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
