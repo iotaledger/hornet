@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -21,8 +22,8 @@ const (
 	SolidEntryPointHashLength = iotago.MessageHashLength
 
 	// The offset of counters within a local snapshot file:
-	// version+type+timestamp+sep-ms-index+sep-ms-hash+ledger-ms-index+ledger-ms-hash
-	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize +
+	// version + type + timestamp + coo-pub-key + sep-ms-index + sep-ms-hash + ledger-ms-index + ledger-ms-hash
+	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + ed25519.PublicKeySize +
 		iotago.UInt32ByteSize + iotago.MilestonePayloadHashLength +
 		iotago.UInt32ByteSize + iotago.MilestonePayloadHashLength
 )
@@ -168,14 +169,16 @@ type FileHeader struct {
 	Version byte
 	// Type denotes the type of this local snapshot.
 	Type Type
+	// CoordinatorPublicKey is the coo public key of the network used to generate the snapshot.
+	CoordinatorPublicKey ed25519.PublicKey
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
 	// The hash of the milestone of the SEPs.
-	SEPMilestoneHash *hornet.MessageID
+	SEPMilestoneHash hornet.MessageID
 	// The milestone index of the ledger data within the local snapshot.
 	LedgerMilestoneIndex milestone.Index
 	// The hash of the ledger milestone.
-	LedgerMilestoneHash *hornet.MessageID
+	LedgerMilestoneHash hornet.MessageID
 }
 
 // ReadFileHeader is a FileHeader but with additional content read from the local snapshot.
@@ -210,6 +213,10 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, timestamp); err != nil {
 		return fmt.Errorf("unable to write LS timestamp: %w", err)
+	}
+
+	if err := binary.Write(writeSeeker, binary.LittleEndian, header.CoordinatorPublicKey[:ed25519.PublicKeySize]); err != nil {
+		return fmt.Errorf("unable to write LS COO public key: %w", err)
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.SEPMilestoneIndex); err != nil {
@@ -338,25 +345,26 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS timestamp: %w", err)
 	}
 
+	readHeader.CoordinatorPublicKey = make(ed25519.PublicKey, ed25519.PublicKeySize)
+	if _, err := io.ReadFull(reader, readHeader.CoordinatorPublicKey); err != nil {
+		return fmt.Errorf("unable to read LS COO public key: %w", err)
+	}
+
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
 	}
 
-	var sepMilestoneMessageID hornet.MessageID
-	if _, err := io.ReadFull(reader, sepMilestoneMessageID[:]); err != nil {
+	if _, err := io.ReadFull(reader, readHeader.SEPMilestoneHash[:]); err != nil {
 		return fmt.Errorf("unable to read LS SEPs milestone hash: %w", err)
 	}
-	readHeader.SEPMilestoneHash = &sepMilestoneMessageID
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone index: %w", err)
 	}
 
-	var ledgerMilestoneMessageID hornet.MessageID
-	if _, err := io.ReadFull(reader, ledgerMilestoneMessageID[:]); err != nil {
+	if _, err := io.ReadFull(reader, readHeader.LedgerMilestoneHash[:]); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone hash: %w", err)
 	}
-	readHeader.LedgerMilestoneHash = &ledgerMilestoneMessageID
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPCount); err != nil {
 		return fmt.Errorf("unable to read LS SEPs count: %w", err)
