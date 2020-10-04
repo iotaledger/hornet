@@ -350,7 +350,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 
 	go func() {
 		if err := utxo.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
-			outputProducerChan <- &Output{MessageID: *output.MessageID, OutputID: output.OutputID, Address: &output.Address, Amount: output.Amount}
+			outputProducerChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
 			return true
 		}); err != nil {
 			outputProducerErrorChan <- err
@@ -394,12 +394,12 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 			var createdOutputs []*Output
 			var consumedOutputs []*Spent
 
-			for _, createdOutput := range newOutputs {
-				createdOutputs = append(createdOutputs, &Output{OutputID: createdOutput.OutputID, Address: &createdOutput.Address, Amount: createdOutput.Amount})
+			for _, output := range newOutputs {
+				createdOutputs = append(createdOutputs, &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()})
 			}
 
-			for _, consumedOutput := range newSpents {
-				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{OutputID: consumedOutput.OutputID, Address: &consumedOutput.Address, Amount: consumedOutput.Output.Amount}, TargetTransactionID: consumedOutput.TargetTransactionID})
+			for _, spent := range newSpents {
+				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{MessageID: *spent.MessageID(), OutputID: *spent.OutputID(), Address: spent.Address(), Amount: spent.Amount()}, TargetTransactionID: *spent.TargetTransactionID()})
 			}
 
 			milestoneDiffProducerChan <- &MilestoneDiff{MilestoneIndex: msIndex, Created: createdOutputs, Consumed: consumedOutputs}
@@ -424,6 +424,8 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 
 	if writeToDatabase {
 		/*
+			// ToDo: Do we still store the initial snapshot in the database, or will the last full snapshot file be kept somewhere on disk?
+
 			// This has to be done before acquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
 			// In "solidifyMilestone" the LedgerLock is acquired, but by traversing the tangle, the SolidEntryPoint Lock is also acquired.
 			// ToDo: we should flush the caches here, just to be sure that all information before this local snapshot we stored in the persistence layer.
@@ -503,12 +505,16 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return nil
 	}
 
-	outputConsumer := func(unspentOutput *Output) error {
-		switch addr := unspentOutput.Address.(type) {
+	outputConsumer := func(output *Output) error {
+		switch addr := output.Address.(type) {
 		case *iotago.WOTSAddress:
 			return iotago.ErrWOTSNotImplemented
 		case *iotago.Ed25519Address:
-			return utxo.AddUnspentOutput(&utxo.Output{OutputID: unspentOutput.OutputID, Address: *addr, Amount: unspentOutput.Amount})
+
+			outputID := iotago.UTXOInputID(output.OutputID)
+			messageID := hornet.MessageID(output.MessageID)
+
+			return utxo.AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, addr, output.Amount))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -518,23 +524,30 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		var newOutputs []*utxo.Output
 		var newSpents []*utxo.Spent
 
-		for _, createdOutput := range msDiff.Created {
-			switch addr := createdOutput.Address.(type) {
+		for _, output := range msDiff.Created {
+			switch addr := output.Address.(type) {
 			case *iotago.WOTSAddress:
 				return iotago.ErrWOTSNotImplemented
 			case *iotago.Ed25519Address:
-				newOutputs = append(newOutputs, &utxo.Output{OutputID: createdOutput.OutputID, Address: *addr, Amount: createdOutput.Amount})
+
+				outputID := iotago.UTXOInputID(output.OutputID)
+				messageID := hornet.MessageID(output.MessageID)
+
+				newOutputs = append(newOutputs, utxo.GetOutput(&outputID, &messageID, addr, output.Amount))
 			default:
 				return iotago.ErrUnknownAddrType
 			}
 		}
 
-		for _, consumedOutput := range msDiff.Consumed {
-			switch addr := consumedOutput.Address.(type) {
+		for _, spent := range msDiff.Consumed {
+			switch addr := spent.Address.(type) {
 			case *iotago.WOTSAddress:
 				return iotago.ErrWOTSNotImplemented
 			case *iotago.Ed25519Address:
-				newSpents = append(newSpents, utxo.NewSpent(&utxo.Output{OutputID: consumedOutput.OutputID, Address: *addr, Amount: consumedOutput.Amount}, consumedOutput.TargetTransactionID, msDiff.MilestoneIndex))
+				outputID := iotago.UTXOInputID(spent.OutputID)
+				messageID := hornet.MessageID(spent.MessageID)
+
+				newSpents = append(newSpents, utxo.NewSpent(utxo.GetOutput(&outputID, &messageID, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
 			default:
 				return iotago.ErrUnknownAddrType
 			}

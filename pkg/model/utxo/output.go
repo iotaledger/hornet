@@ -15,16 +15,44 @@ import (
 type Output struct {
 	kvStorable
 
-	OutputID iotago.UTXOInputID
+	outputID   *iotago.UTXOInputID
+	messageID  *hornet.MessageID
+	outputType iotago.OutputType
+	address    *iotago.Ed25519Address
+	amount     uint64
+}
 
-	MessageID *hornet.MessageID
+func (o *Output) OutputID() *iotago.UTXOInputID {
+	return o.outputID
+}
 
-	Type    iotago.OutputType
-	Address iotago.Ed25519Address
-	Amount  uint64
+func (o *Output) MessageID() *hornet.MessageID {
+	return o.messageID
+}
+
+func (o *Output) OutputType() iotago.OutputType {
+	return o.outputType
+}
+
+func (o *Output) Address() *iotago.Ed25519Address {
+	return o.address
+}
+
+func (o *Output) Amount() uint64 {
+	return o.amount
 }
 
 type Outputs []*Output
+
+func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, address *iotago.Ed25519Address, amount uint64) *Output {
+	return &Output{
+		outputID:   outputID,
+		messageID:  messageID,
+		outputType: iotago.OutputSigLockedSingleDeposit,
+		address:    address,
+		amount:     amount,
+	}
+}
 
 func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
 
@@ -45,17 +73,17 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 		return nil, errors.New("unsupported transaction type")
 	}
 
-	txID, err := transaction.Hash()
-	if err != nil {
-		return nil, err
-	}
-
 	var address iotago.Ed25519Address
 	switch a := deposit.Address.(type) {
 	case *iotago.Ed25519Address:
 		address = *a
 	default:
 		return nil, errors.New("unsupported deposit address")
+	}
+
+	txID, err := transaction.Hash()
+	if err != nil {
+		return nil, err
 	}
 
 	var outputID iotago.UTXOInputID
@@ -65,26 +93,26 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+2], bytes)
 
 	return &Output{
-		OutputID:  outputID,
-		MessageID: messageID,
-		Type:      iotago.OutputSigLockedSingleDeposit,
-		Address:   address,
-		Amount:    deposit.Amount,
+		outputID:   &outputID,
+		messageID:  messageID,
+		outputType: iotago.OutputSigLockedSingleDeposit,
+		address:    &address,
+		amount:     deposit.Amount,
 	}, nil
 }
 
 func (o *Output) UTXOKey() (key []byte) {
-	return byteutils.ConcatBytes(o.Address[:], o.OutputID[:])
+	return byteutils.ConcatBytes(o.address[:], o.outputID[:])
 }
 
 func (o *Output) kvStorableKey() (key []byte) {
-	return o.OutputID[:]
+	return o.outputID[:]
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
 	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, o.Amount)
-	return byteutils.ConcatBytes(o.MessageID.Slice(), []byte{o.Type}, o.Address[:], bytes)
+	binary.LittleEndian.PutUint64(bytes, o.amount)
+	return byteutils.ConcatBytes(o.messageID.Slice(), []byte{o.outputType}, o.address[:], bytes)
 }
 
 func (o *Output) kvStorableLoad(key []byte, value []byte) error {
@@ -101,12 +129,11 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
 	}
 
-	copy(o.OutputID[:], key[:iotago.TransactionIDLength+iotago.UInt16ByteSize])
-
-	o.MessageID = hornet.MessageIDFromBytes(value[:iotago.MessageHashLength])
-	o.Type = value[iotago.MessageHashLength]
-	copy(o.Address[:], value[iotago.MessageHashLength+iotago.OneByte:iotago.MessageHashLength+iotago.Ed25519AddressBytesLength])
-	o.Amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
+	copy(o.outputID[:], key[:iotago.TransactionIDLength+iotago.UInt16ByteSize])
+	o.messageID = hornet.MessageIDFromBytes(value[:iotago.MessageHashLength])
+	o.outputType = value[iotago.MessageHashLength]
+	copy(o.address[:], value[iotago.MessageHashLength+iotago.OneByte:iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength])
+	o.amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
 
 	return nil
 }

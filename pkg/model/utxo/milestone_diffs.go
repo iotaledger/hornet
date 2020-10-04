@@ -74,7 +74,12 @@ func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, 
 		var outputID iotago.UTXOInputID
 		copy(outputID[:], outputIDBytes)
 
-		outputs = append(outputs, &Output{OutputID: outputID})
+		output, err := ReadOutputForTransactionWithoutLocking(outputID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		outputs = append(outputs, output)
 	}
 
 	spentCount, err := marshalUtil.ReadUint32()
@@ -99,7 +104,12 @@ func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, 
 		var outputID iotago.UTXOInputID
 		copy(outputID[:], outputIDBytes)
 
-		spents = append(spents, &Spent{Address: address, OutputID: outputID})
+		spent, err := ReadSpentForAddressAndTransactionWithoutLocking(&address, &outputID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		spents = append(spents, spent)
 	}
 
 	return outputs, spents, nil

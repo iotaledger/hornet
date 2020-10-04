@@ -143,7 +143,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			if hasOutput {
 				// UTXO is in the current ledger mutation, so use it
 				inputOutputs = append(inputOutputs, output)
-				inputAmount += output.Amount
+				inputAmount += output.Amount()
 				continue
 			}
 
@@ -179,14 +179,14 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			unsignedTransactionBytes, err := unsignedTransaction.Serialize(iotago.DeSeriModeNoValidation)
-			if err := signature.Valid(unsignedTransactionBytes, &output.Address); err != nil {
+			if err := signature.Valid(unsignedTransactionBytes, output.Address()); err != nil {
 				// Invalid signature
 				conflicting = true
 				break
 			}
 
 			inputOutputs = append(inputOutputs, output)
-			inputAmount += output.Amount
+			inputAmount += output.Amount()
 		}
 
 		//Go through all deposits and generate unspent outputs
@@ -199,7 +199,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 					return err
 				}
 				depositOutputs = append(depositOutputs, output)
-				outputAmount += output.Amount
+				outputAmount += output.Amount()
 			}
 
 			// Check that the transaction is consuming and sending the same amount
@@ -220,13 +220,13 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 
 		// Save the inputs as spent
 		for _, input := range inputOutputs {
-			delete(wfConf.NewOutputs, string(input.OutputID[:]))
-			wfConf.NewSpents[string(input.OutputID[:])] = utxo.NewSpent(input, *signedTransactionHash, msIndex)
+			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
+			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, signedTransactionHash, msIndex)
 		}
 
 		// Add new outputs
 		for _, output := range depositOutputs {
-			wfConf.NewOutputs[string(output.OutputID[:])] = output
+			wfConf.NewOutputs[string(output.OutputID()[:])] = output
 		}
 
 		return nil
