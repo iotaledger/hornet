@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -15,62 +16,101 @@ import (
 type Spent struct {
 	kvStorable
 
-	Address  iotago.Ed25519Address
-	OutputID iotago.UTXOInputID
+	output *Output
 
-	Output *Output
+	targetTransactionID *iotago.SignedTransactionPayloadHash
+	confirmationIndex   milestone.Index
+}
 
-	TargetTransactionID iotago.SignedTransactionPayloadHash
-	ConfirmationIndex   milestone.Index
+func (s *Spent) Output() *Output {
+	return s.output
+}
+
+func (s *Spent) OutputID() *iotago.UTXOInputID {
+	return s.output.outputID
+}
+
+func (s *Spent) MessageID() *hornet.MessageID {
+	return s.output.messageID
+}
+
+func (s *Spent) OutputType() iotago.OutputType {
+	return s.output.outputType
+}
+
+func (s *Spent) Address() *iotago.Ed25519Address {
+	return s.output.address
+}
+
+func (s *Spent) Amount() uint64 {
+	return s.output.amount
+}
+
+func (s *Spent) TargetTransactionID() *iotago.SignedTransactionPayloadHash {
+	return s.targetTransactionID
+}
+
+func (s *Spent) ConfirmationIndex() milestone.Index {
+	return s.confirmationIndex
 }
 
 type Spents []*Spent
 
-func NewSpent(output *Output, targetTransactionID iotago.SignedTransactionPayloadHash, confirmationIndex milestone.Index) *Spent {
+func NewSpent(output *Output, targetTransactionID *iotago.SignedTransactionPayloadHash, confirmationIndex milestone.Index) *Spent {
 	return &Spent{
-		Address:             output.Address,
-		OutputID:            output.OutputID,
-		Output:              output,
-		TargetTransactionID: targetTransactionID,
-		ConfirmationIndex:   confirmationIndex,
+		output:              output,
+		targetTransactionID: targetTransactionID,
+		confirmationIndex:   confirmationIndex,
 	}
 }
 
 func (s *Spent) kvStorableKey() (key []byte) {
-	return byteutils.ConcatBytes(s.Address[:], s.OutputID[:])
+	return byteutils.ConcatBytes(s.output.address[:], s.output.outputID[:])
 }
 
 func (s *Spent) kvStorableValue() (value []byte) {
-	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(s.ConfirmationIndex))
-	return byteutils.ConcatBytes(s.TargetTransactionID[:], bytes)
+	bytes := make([]byte, iotago.UInt32ByteSize)
+	binary.LittleEndian.PutUint32(bytes, uint32(s.confirmationIndex))
+	return byteutils.ConcatBytes(s.targetTransactionID[:], bytes)
 }
 
 // UnmarshalBinary parses the binary encoded representation of the spent utxo.
 func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 
-	expectedKeyLength := iotago.Ed25519AddressBytesLength + iotago.SignedTransactionPayloadHashLength + 2
+	expectedKeyLength := iotago.Ed25519AddressBytesLength + iotago.SignedTransactionPayloadHashLength + iotago.UInt16ByteSize
 
 	if len(key) < expectedKeyLength {
 		return fmt.Errorf("not enough bytes in key to unmarshal object, expected: %d, got: %d", expectedKeyLength, len(key))
 	}
 
-	expectedValueLength := iotago.SignedTransactionPayloadHashLength + 4
+	expectedValueLength := iotago.SignedTransactionPayloadHashLength + iotago.UInt32ByteSize
 
 	if len(value) < expectedValueLength {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
 	}
 
-	copy(s.Address[:], key[:iotago.Ed25519AddressBytesLength])
-	copy(s.OutputID[:], key[iotago.Ed25519AddressBytesLength:iotago.Ed25519AddressBytesLength+iotago.TransactionIDLength+2])
+	outputID := key[iotago.Ed25519AddressBytesLength : iotago.Ed25519AddressBytesLength+iotago.SignedTransactionPayloadHashLength+iotago.UInt16ByteSize]
+	outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID)
+
+	outputValue, err := utxoStorage.Get(outputKey)
+	if err != nil {
+		return err
+	}
+
+	output := &Output{}
+	if err := output.kvStorableLoad(outputID, outputValue); err != nil {
+		return err
+	}
+
+	s.output = output
 
 	/*
-	   32 bytes            TargetTransactionID
-	   4 bytes uint32        ConfirmationIndex
+	   32 bytes				TargetTransactionID
+	   4 bytes uint32		ConfirmationIndex
 	*/
 
-	copy(s.TargetTransactionID[:], value[:iotago.SignedTransactionPayloadHashLength])
-	s.ConfirmationIndex = milestone.Index(binary.LittleEndian.Uint32(value[iotago.SignedTransactionPayloadHashLength : iotago.SignedTransactionPayloadHashLength+4]))
+	copy(s.targetTransactionID[:], value[:iotago.SignedTransactionPayloadHashLength])
+	s.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(value[iotago.SignedTransactionPayloadHashLength : iotago.SignedTransactionPayloadHashLength+iotago.UInt32ByteSize]))
 
 	return nil
 }
@@ -81,31 +121,23 @@ func spentOutputsForAddress(address *iotago.Ed25519Address) (Spents, error) {
 
 	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:])
 
+	var innerErr error
 	err := utxoStorage.Iterate(addressKeyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 
 		spent := &Spent{}
-		if err := spent.kvStorableLoad(key[1+iotago.Ed25519AddressBytesLength:], value); err != nil {
+		if err := spent.kvStorableLoad(key[1:], value); err != nil {
+			innerErr = err
 			return false
 		}
-
-		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[1+iotago.Ed25519AddressBytesLength:])
-
-		outputValue, err := utxoStorage.Get(outputKey)
-		if err != nil {
-			return false
-		}
-
-		output := &Output{}
-		if err := output.kvStorableLoad(outputKey[1:], outputValue); err != nil {
-			return false
-		}
-
-		spent.Output = output
 
 		spents = append(spents, spent)
 
 		return true
 	})
+
+	if innerErr != nil {
+		return nil, err
+	}
 
 	return spents, err
 }
@@ -134,9 +166,25 @@ func deleteSpentAndMarkUnspent(spent *Spent, mutations kvstore.BatchedMutations)
 		return err
 	}
 
-	return markAsUnspent(spent.Output, mutations)
+	return markAsUnspent(spent.output, mutations)
 }
 
 func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, spent.kvStorableKey()))
+}
+
+func ReadSpentForAddressAndTransactionWithoutLocking(address *iotago.Ed25519Address, outputID *iotago.UTXOInputID) (*Spent, error) {
+
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:], outputID[:])
+	value, err := utxoStorage.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	spent := &Spent{}
+	if err := spent.kvStorableLoad(key[1:], value); err != nil {
+		return nil, err
+	}
+
+	return spent, nil
 }

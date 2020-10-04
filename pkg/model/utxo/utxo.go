@@ -55,7 +55,7 @@ func PruneMilestoneIndex(msIndex milestone.Index) error {
 	mutations := utxoStorage.Batched()
 
 	for _, spent := range spents {
-		err = deleteOutput(&Output{OutputID: spent.OutputID}, mutations)
+		err = deleteOutput(spent.output, mutations)
 		if err != nil {
 			mutations.Cancel()
 			return err
@@ -172,7 +172,7 @@ func RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outp
 
 	// we have to store the spents as output and mark them as unspent
 	for _, spent := range newSpents {
-		if err := storeOutput(spent.Output, mutations); err != nil {
+		if err := storeOutput(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -208,7 +208,7 @@ func CheckLedgerState() error {
 	var total uint64 = 0
 
 	consumerFunc := func(output *Output) bool {
-		total += output.Amount
+		total += output.amount
 		return true
 	}
 
