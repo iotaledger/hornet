@@ -166,6 +166,11 @@ func run(_ *node.Plugin) {
 // initializes a gossip stream if the connection to the given peer is outbound.
 func initGossipStreamIfOutbound(p *p2p.Peer) {
 	conns := p2pplug.Host().Network().ConnsToPeer(p.ID)
+	if len(conns) == 0 {
+		// TODO: this means that the connection was terminated while
+		// the stream handler was still being executed
+		return
+	}
 	if conns[0].Stat().Direction != network.DirOutbound {
 		return
 	}
