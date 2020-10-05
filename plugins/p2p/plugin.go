@@ -189,6 +189,9 @@ func run(_ *node.Plugin) {
 		if err := PeeringService().Stop(); err != nil {
 			log.Error("unable to cleanly shutdown peering service: %s", err)
 		}
+		if err := Host().Peerstore().Close(); err != nil {
+			log.Error("unable to cleanly closing peer store: %s", err)
+		}
 	}, shutdown.PriorityPeeringService)
 
 	log.Infof("listening on: %s", p.Addrs())
