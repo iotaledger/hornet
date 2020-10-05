@@ -336,7 +336,7 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 
 	if ms != nil {
 
-		cachedMilestone := storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID())
+		cachedMilestone := storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
 
 		Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
 
