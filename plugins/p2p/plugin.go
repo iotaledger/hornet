@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -77,7 +78,10 @@ func Host() host.Host {
 		_, statPeerStorePathErr := os.Stat(peerStorePath)
 
 		// TODO: switch out with impl. using KVStore
-		badgerStore, err := badger.NewDatastore(peerStorePath, nil)
+		defaultOpts := badger.DefaultOptions
+		// needed under Windows otherwise peer store is 'corrupted' after a restart
+		defaultOpts.Truncate = runtime.GOOS == "windows"
+		badgerStore, err := badger.NewDatastore(peerStorePath, &defaultOpts)
 		if err != nil {
 			panic(fmt.Sprintf("unable to initialize data store for peer store: %s", err))
 		}
