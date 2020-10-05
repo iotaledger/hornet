@@ -119,14 +119,15 @@ func (msg *Message) GetUnsignedTransaction() *iotago.UnsignedTransaction {
 	return nil
 }
 
-func (msg *Message) GetUnsignedTransactionUTXOInputs() []iotago.UTXOInputID {
+func (msg *Message) GetUnsignedTransactionUTXOInputs() []*iotago.UTXOInputID {
 
-	var inputs []iotago.UTXOInputID
+	var inputs []*iotago.UTXOInputID
 	if unsignedTransaction := msg.GetUnsignedTransaction(); unsignedTransaction != nil {
 		for _, input := range unsignedTransaction.Inputs {
 			switch utxoInput := input.(type) {
 			case *iotago.UTXOInput:
-				inputs = append(inputs, utxoInput.ID())
+				id := utxoInput.ID()
+				inputs = append(inputs, &id)
 			default:
 				return nil
 			}

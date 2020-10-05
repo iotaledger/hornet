@@ -88,9 +88,9 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 
 	var outputID iotago.UTXOInputID
 	copy(outputID[:iotago.TransactionIDLength], txID[:])
-	bytes := make([]byte, 2)
+	bytes := make([]byte, iotago.UInt16ByteSize)
 	binary.LittleEndian.PutUint16(bytes, index)
-	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+2], bytes)
+	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+iotago.UInt16ByteSize], bytes)
 
 	return &Output{
 		outputID:   &outputID,
@@ -152,9 +152,9 @@ func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey()))
 }
 
-func ReadOutputForTransactionWithoutLocking(utxoInputId iotago.UTXOInputID) (*Output, error) {
+func ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {
 
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, utxoInputId[:])
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:])
 	value, err := utxoStorage.Get(key)
 	if err != nil {
 		return nil, err
@@ -165,4 +165,12 @@ func ReadOutputForTransactionWithoutLocking(utxoInputId iotago.UTXOInputID) (*Ou
 		return nil, err
 	}
 	return output, nil
+}
+
+func ReadOutputByOutputID(outputID *iotago.UTXOInputID) (*Output, error) {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return ReadOutputByOutputIDWithoutLocking(outputID)
 }

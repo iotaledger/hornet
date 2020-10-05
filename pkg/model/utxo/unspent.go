@@ -18,11 +18,11 @@ func deleteFromUnspent(output *Output, mutations kvstore.BatchedMutations) error
 	return mutations.Delete(key)
 }
 
-func IsOutputUnspent(utxoInputId iotago.UTXOInputID) (bool, error) {
+func IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	output, err := ReadOutputForTransactionWithoutLocking(utxoInputId)
+	output, err := ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return false, err
 	}
@@ -32,7 +32,7 @@ func IsOutputUnspent(utxoInputId iotago.UTXOInputID) (bool, error) {
 
 func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
 
-	var innerError error
+	var innerErr error
 
 	key := []byte{UTXOStoreKeyPrefixUnspent}
 	if len(address) > 0 {
@@ -48,13 +48,13 @@ func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iot
 
 		value, err := utxoStorage.Get(outputKey)
 		if err != nil {
-			innerError = err
+			innerErr = err
 			return false
 		}
 
 		output := &Output{}
 		if err := output.kvStorableLoad(outputKey[1:], value); err != nil {
-			innerError = err
+			innerErr = err
 			return false
 		}
 
@@ -63,7 +63,7 @@ func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iot
 		return err
 	}
 
-	return innerError
+	return innerErr
 }
 
 func ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
@@ -74,16 +74,47 @@ func ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Add
 	return ForEachUnspentOutputWithoutLocking(consumer, address...)
 }
 
-func UnspentOutputsForAddress(address *iotago.Ed25519Address) ([]*Output, error) {
+func UnspentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) ([]*Output, error) {
 
 	var outputs []*Output
 
+	i := 0
 	consumerFunc := func(output *Output) bool {
+		i++
+
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			return false
+		}
+
 		outputs = append(outputs, output)
 		return true
 	}
 
-	err := ForEachUnspentOutput(consumerFunc, address)
+	if err := ForEachUnspentOutput(consumerFunc, address); err != nil {
+		return nil, err
+	}
 
-	return outputs, err
+	return outputs, nil
+}
+
+func AddressBalance(address *iotago.Ed25519Address, maxFind ...int) (balance uint64, count int, err error) {
+
+	balance = 0
+	i := 0
+	consumerFunc := func(output *Output) bool {
+		i++
+
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			return false
+		}
+
+		balance += output.amount
+		return true
+	}
+
+	if err := ForEachUnspentOutput(consumerFunc, address); err != nil {
+		return 0, 0, err
+	}
+
+	return balance, i, nil
 }
