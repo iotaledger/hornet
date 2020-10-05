@@ -5,14 +5,17 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -23,6 +26,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/spammer"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
@@ -184,6 +188,15 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		return c.JSON(http.StatusOK, messageIDsResp)
 	})
 
+	routeGroup.POST(RouteMessages, func(c echo.Context) error {
+
+		messageMetaResp, err := sendMessage(c)
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusCreated, messageMetaResp)
+	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
 
@@ -307,9 +320,13 @@ func messageMetaByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
+	return messageMetaByMessageID(messageID)
+}
+
+func messageMetaByMessageID(messageID *hornet.MessageID) (*messageMetadataResponse, error) {
 	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageID.Hex())
 	}
 	defer cachedMsgMeta.Release(true)
 
@@ -330,7 +347,17 @@ func messageMetaByID(c echo.Context) (*messageMetadataResponse, error) {
 		ReferencedByMilestone: referencedByMilestone,
 	}
 
-	if !referenced {
+	if referenced {
+		inclusionState := "noTransaction"
+
+		if metadata.IsConflictingTx() {
+			inclusionState = "conflicting"
+		} else if metadata.IsIncludedTxInLedger() {
+			inclusionState = "included"
+		}
+
+		messageMetadataResponse.LedgerInclusionState = &inclusionState
+	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		lsmi := tangle.GetSolidMilestoneIndex()
 		ycri, ocri := dag.GetConeRootIndexes(cachedMsgMeta.Retain(), lsmi)
@@ -355,22 +382,12 @@ func messageMetaByID(c echo.Context) (*messageMetadataResponse, error) {
 
 		messageMetadataResponse.ShouldPromote = &shouldPromote
 		messageMetadataResponse.ShouldReattach = &shouldReattach
-	} else {
-		inclusionState := "noTransaction"
-
-		if metadata.IsConflictingTx() {
-			inclusionState = "conflicting"
-		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = "included"
-		}
-
-		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	}
 
 	return messageMetadataResponse, nil
 }
 
-func messageDataByID(c echo.Context) (*messageResponse, error) {
+func messageDataByID(c echo.Context) (*iotago.Message, error) {
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
@@ -385,15 +402,7 @@ func messageDataByID(c echo.Context) (*messageResponse, error) {
 	}
 	defer cachedMsg.Release(true)
 
-	data, err := cachedMsg.GetMessage().GetMessage().Serialize(iotago.DeSeriModeNoValidation)
-	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInternalError, "message serialization failed: %s, error: %w", messageIDHex, err)
-	}
-
-	return &messageResponse{
-		MessageID: cachedMsg.GetMessage().GetMessageID().Hex(),
-		Data:      hex.EncodeToString(data),
-	}, nil
+	return cachedMsg.GetMessage().GetMessage(), nil
 }
 
 func messageBytesByID(c echo.Context) ([]byte, error) {
@@ -462,6 +471,60 @@ func messageIDsByIndex(c echo.Context) (*messageIDsResponse, error) {
 		Count:      uint32(len(messageIDsHex)),
 		MessageIDs: messageIDsHex,
 	}, nil
+}
+
+func sendMessage(c echo.Context) (*messageMetadataResponse, error) {
+
+	msg := &iotago.Message{}
+
+	if err := c.Bind(msg); err != nil {
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+	}
+
+	message, err := tangle.NewMessage(msg)
+	if err != nil {
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+	}
+
+	messageIDLock := syncutils.Mutex{}
+
+	// search the ID of the sent message
+	messageID := message.GetMessageID()
+
+	// wgMessageProcessed waits until the message got processed
+	wgMessageProcessed := sync.WaitGroup{}
+	wgMessageProcessed.Add(1)
+
+	onMessageProcessed := events.NewClosure(func(msgID *hornet.MessageID) {
+		messageIDLock.Lock()
+		defer messageIDLock.Unlock()
+
+		if messageID == nil {
+			return
+		}
+
+		if *messageID != *msgID {
+			return
+		}
+
+		// message was processed
+		wgMessageProcessed.Done()
+
+		// we have to set the messageID to nil, because the event may be fired several times
+		messageID = nil
+	})
+
+	tangleplugin.Events.ProcessedMessage.Attach(onMessageProcessed)
+	defer tangleplugin.Events.ProcessedMessage.Detach(onMessageProcessed)
+
+	if err := gossip.Processor().SerializeAndEmit(message, iotago.DeSeriModePerformValidation); err != nil {
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+	}
+
+	// wait until the message got processed
+	wgMessageProcessed.Wait()
+
+	return messageMetaByMessageID(message.GetMessageID())
 }
 
 func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {

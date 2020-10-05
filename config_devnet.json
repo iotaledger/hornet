@@ -14,7 +14,7 @@
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
-      "bodyLengthBytes": 1000000,
+      "bodyLength": "1M",
       "maxResults": 1000
     }
   },
