@@ -74,7 +74,7 @@ func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, 
 		var outputID iotago.UTXOInputID
 		copy(outputID[:], outputIDBytes)
 
-		output, err := ReadOutputForTransactionWithoutLocking(outputID)
+		output, err := ReadOutputByOutputIDWithoutLocking(&outputID)
 		if err != nil {
 			return nil, nil, err
 		}

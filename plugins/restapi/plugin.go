@@ -147,9 +147,8 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 		switch errors.Cause(err) {
 
 		case echo.ErrNotFound:
-			// return error, if route is not there
-			c.JSON(http.StatusNotFound, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: http.StatusNotFound, Message: "not found"}})
-			return
+			statusCode = http.StatusNotFound
+			message = "not found"
 
 		case echo.ErrUnauthorized:
 			statusCode = http.StatusUnauthorized
@@ -181,7 +180,8 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 		}
 
 		message = fmt.Sprintf("%s, error: %+v", message, err)
-		c.String(statusCode, message)
+
+		c.JSON(statusCode, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: statusCode, Message: message}})
 	}
 
 	if !exclHealthCheckFromAuth {

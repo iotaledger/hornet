@@ -34,3 +34,63 @@ type tipsResponse struct {
 	Tip2 string `json:"tip2"`
 }
 
+type messageMetadataResponse struct {
+	MessageID string `json:"messageId"`
+	// The 1st parent the message references.
+	Parent1 string `json:"parent1"`
+	// The 2nd parent the message references.
+	Parent2               string  `json:"parent2"`
+	Solid                 bool    `json:"solid"`
+	ReferencedByMilestone *uint64 `json:"referencedByMilestone"`
+	LedgerInclusionState  *string `json:"ledgerInclusionState,omitempty"`
+	ShouldPromote         *bool   `json:"shouldPromote,omitempty"`
+	ShouldReattach        *bool   `json:"shouldReattach,omitempty"`
+}
+
+type messageResponse struct {
+	MessageID string
+	Data      string
+}
+
+type childrenResponse struct {
+	MessageID  string   `json:"messageId"`
+	MaxResults uint32   `json:"maxResults"`
+	Count      uint32   `json:"count"`
+	Children   []string `json:"children"`
+}
+
+type messageIDsResponse struct {
+	Index      string   `json:"index"`
+	MaxResults uint32   `json:"maxResults"`
+	Count      uint32   `json:"count"`
+	MessageIDs []string `json:"messageIds"`
+}
+
+type milestoneResponse struct {
+	Index     uint32 `json:"milestoneIndex"`
+	MessageID string `json:"messageId"`
+	Time      string `json:"timestamp"`
+}
+
+type outputResponse struct {
+	OutputID   string `json:"outputID"`
+	MessageID  string `json:"messageId"`
+	OutputType byte   `json:"outputType"`
+	Address    string `json:"address"`
+	Amount     uint64 `json:"amount"`
+}
+
+type addressOutputsResponse struct {
+	Address    string   `json:"address"`
+	MaxResults uint32   `json:"maxResults"`
+	Count      uint32   `json:"count"`
+	OutputIDs  []string `json:"outputIDs"`
+}
+
+type addressBalanceResponse struct {
+	Address    string `json:"address"`
+	MaxResults uint32 `json:"maxResults"`
+	Count      uint32 `json:"count"`
+	Balance    uint64 `json:"balance"`
+}
+
