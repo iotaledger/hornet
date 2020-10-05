@@ -44,7 +44,7 @@ var (
 // 		Stored without caching:
 //			- Tag								=> will be removed and added again if missing by receiving the msg
 //			- Address							=> will be removed and added again if missing by receiving the msg
-//			- UnconfirmedMessage 					=> will be removed at pruning anyway
+//			- UnreferencedMessage 				=> will be removed at pruning anyway
 //			- Milestone							=> will be removed and added again by receiving the msg
 //
 // Database:
@@ -104,8 +104,8 @@ func revalidateDatabase() error {
 		return err
 	}
 
-	// deletes all unconfirmed msgs that are left in the database (we do not need them since we deleted all unconfirmed msgs).
-	if err := cleanupUnconfirmedMsgs(); err != nil {
+	// deletes all unreferenced msgs that are left in the database (we do not need them since we deleted all unreferenced msgs).
+	if err := cleanupUnreferencedMsgs(); err != nil {
 		return err
 	}
 
@@ -175,7 +175,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 			log.Infof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteUnconfirmedMessages(msIndex)
+		tangle.DeleteUnreferencedMessages(msIndex)
 		/*
 			if err := tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 				panic(err)
@@ -185,7 +185,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		tangle.DeleteMilestone(msIndex)
 	}
 
-	tangle.FlushUnconfirmedMessagesStorage()
+	tangle.FlushUnreferencedMessagesStorage()
 	tangle.FlushMilestoneStorage()
 
 	log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
@@ -255,7 +255,7 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 	*/
 }
 
-// deletes all messages which are not confirmed, not solid or
+// deletes all messages which are not referenced, not solid or
 // their confirmation milestone is newer than the last local snapshot's milestone.
 func cleanupMessages(info *tangle.SnapshotInfo) error {
 
@@ -292,8 +292,8 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 			return true
 		}
 
-		// not confirmed or above snapshot index
-		if confirmed, by := storedTxMeta.GetConfirmed(); !confirmed || by > info.SnapshotIndex {
+		// not referenced or above snapshot index
+		if referenced, by := storedTxMeta.GetReferenced(); !referenced || by > info.SnapshotIndex {
 			messagesToDelete[messageID.MapKey()] = struct{}{}
 			return true
 		}
@@ -535,17 +535,17 @@ func cleanupAddresses() error {
 	*/
 }
 
-// deletes all unconfirmed msgs that are left in the database (we do not need them since we deleted all unconfirmed msgs).
-func cleanupUnconfirmedMsgs() error {
+// deletes all unreferenced msgs that are left in the database (we do not need them since we deleted all unreferenced msgs).
+func cleanupUnreferencedMsgs() error {
 
 	start := time.Now()
 
-	unconfirmedMilestoneIndexes := make(map[milestone.Index]struct{})
+	unreferencedMilestoneIndexes := make(map[milestone.Index]struct{})
 
 	lastStatusTime := time.Now()
-	var unconfirmedTxsCounter int64
-	tangle.ForEachUnconfirmedMessage(func(msIndex milestone.Index, messageID *hornet.MessageID) bool {
-		unconfirmedTxsCounter++
+	var unreferencedTxsCounter int64
+	tangle.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID *hornet.MessageID) bool {
+		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
@@ -554,22 +554,22 @@ func cleanupUnconfirmedMsgs() error {
 				return false
 			}
 
-			log.Infof("analyzed %d unconfirmed msgs", unconfirmedTxsCounter)
+			log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 		}
 
-		unconfirmedMilestoneIndexes[msIndex] = struct{}{}
+		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d unconfirmed msgs", unconfirmedTxsCounter)
+	log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 
 	if daemon.IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
-	total := len(unconfirmedMilestoneIndexes)
+	total := len(unreferencedMilestoneIndexes)
 	var deletionCounter int64
-	for msIndex := range unconfirmedMilestoneIndexes {
+	for msIndex := range unreferencedMilestoneIndexes {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -580,15 +580,15 @@ func cleanupUnconfirmedMsgs() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting unconfirmed msgs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			log.Infof("deleting unreferenced msgs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		tangle.DeleteUnconfirmedMessages(msIndex)
+		tangle.DeleteUnreferencedMessages(msIndex)
 	}
 
-	tangle.FlushUnconfirmedMessagesStorage()
+	tangle.FlushUnreferencedMessagesStorage()
 
-	log.Infof("deleting unconfirmed msgs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	log.Infof("deleting unreferenced msgs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

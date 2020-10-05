@@ -45,7 +45,7 @@ var (
 	ErrNotEnoughHistory                  = errors.New("not enough history.")
 	ErrNoPruningNeeded                   = errors.New("no pruning needed.")
 	ErrPruningAborted                    = errors.New("pruning was aborted.")
-	ErrUnconfirmedTxInSubtangle          = errors.New("unconfirmed msg in subtangle")
+	ErrUnreferencedTxInSubtangle         = errors.New("unreferenced msg in subtangle")
 	ErrInvalidBalance                    = errors.New("invalid balance! total does not match supply:")
 	ErrWrongCoordinatorPublicKeyDatabase = errors.New("configured coordinator public key does not match database information")
 

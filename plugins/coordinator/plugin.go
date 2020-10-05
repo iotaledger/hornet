@@ -93,7 +93,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedMessagesThreshold),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
 		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,

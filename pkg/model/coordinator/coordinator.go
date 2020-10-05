@@ -208,7 +208,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
 	defer func() {
-		// All releases are forced since the cone is confirmed and not needed anymore
+		// All releases are forced since the cone is referenced and not needed anymore
 
 		// release all messages at the end
 		for _, cachedMessage := range cachedMessages {
@@ -274,7 +274,7 @@ func (coo *Coordinator) Bootstrap() (*hornet.MessageID, error) {
 }
 
 // IssueCheckpoint tries to create and send a "checkpoint" to the network.
-// a checkpoint can contain multiple chained messages to reference big parts of the unconfirmed cone.
+// a checkpoint can contain multiple chained messages to reference big parts of the unreferenced cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
 func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID *hornet.MessageID, tips hornet.MessageIDs) (*hornet.MessageID, error) {

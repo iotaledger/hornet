@@ -62,7 +62,7 @@ func (te *TestEnvironment) configureCoordinator() {
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 
 	defer func() {
-		// all releases are forced since the cone is confirmed and not needed anymore
+		// all releases are forced since the cone is referenced and not needed anymore
 
 		// release all msg metadata at the end
 		for _, cachedMsgMeta := range cachedMsgMetas {
@@ -74,7 +74,7 @@ func (te *TestEnvironment) configureCoordinator() {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
-	require.Equal(te.testState, 3, conf.MessagesConfirmed)
+	require.Equal(te.testState, 3, conf.MessagesReferenced)
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
@@ -98,7 +98,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
 
 	defer func() {
-		// All releases are forced since the cone is confirmed and not needed anymore
+		// All releases are forced since the cone is referenced and not needed anymore
 
 		// Release all msg metadata at the end
 		for _, cachedMsgMeta := range cachedMsgMetas {

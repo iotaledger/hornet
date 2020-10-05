@@ -23,7 +23,7 @@ func runLiveFeed() {
 				return
 			}
 
-			if !msg.IsValue() {
+			if !msg.IsTransaction() {
 				select {
 				case <-newMessageNoValueRateLimiter.C:
 					hub.BroadcastMsg(&Msg{Type: MsgTypeTxZeroValue, Data: &LivefeedMessage{MessageID: msg.GetMessageID().Hex(), Value: 0}})

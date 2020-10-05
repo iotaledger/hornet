@@ -193,7 +193,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 					dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortBundle)
 				}
 				milestones = append(milestones, shortBundle)
-			} else if bndl.GetMessage().IsConfirmed() {
+			} else if bndl.GetMessage().IsReferenced() {
 				if bndl.GetMessage().IsConflicting() {
 					conflicting = append(conflicting, shortBundle)
 				} else if bndl.GetMessage().IsValueSpam() {

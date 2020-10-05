@@ -78,8 +78,8 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			cachedMessageMetas[cachedMetadataMapKey] = cachedMetadata.Retain()
 		}
 
-		// only traverse and process the message if it was not confirmed yet
-		return !cachedMetadata.GetMetadata().IsConfirmed(), nil
+		// only traverse and process the message if it was not referenced yet
+		return !cachedMetadata.GetMetadata().IsReferenced(), nil
 	}
 
 	// consumer
@@ -103,7 +103,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		message := cachedMessage.GetMessage()
 
 		// exclude message without transactions
-		if !message.IsValue() {
+		if !message.IsTransaction() {
 			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, message.GetMessageID())
 			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, message.GetMessageID())
 			return nil
@@ -124,13 +124,13 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 
 		inputs := message.GetUnsignedTransactionUTXOInputs()
 
-		// Go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
-		// Also sum up the amount required
+		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
+		// also sum up the amount required
 		var inputOutputs utxo.Outputs
 		var inputAmount uint64
 		for inputIndex, input := range inputs {
 
-			// Check if this input was already spent during the confirmation
+			// check if this input was already spent during the confirmation
 			_, hasSpent := wfConf.NewSpents[string(input[:])]
 			if hasSpent {
 				// UTXO already spent, so mark as conflicting
@@ -138,7 +138,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				break
 			}
 
-			// Check if this input was newly created during the confirmation
+			// check if this input was newly created during the confirmation
 			output, hasOutput := wfConf.NewOutputs[string(input[:])]
 			if hasOutput {
 				// UTXO is in the current ledger mutation, so use it
@@ -147,18 +147,18 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				continue
 			}
 
-			// Check current ledger for this input
-			output, err := utxo.ReadOutputForTransactionWithoutLocking(input)
+			// check current ledger for this input
+			output, err := utxo.ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
 				if err == kvstore.ErrKeyNotFound {
-					// Input not found, so mark as invalid tx
+					// input not found, so mark as invalid tx
 					conflicting = true
 					break
 				}
 				return err
 			}
 
-			// Check if this output is unspent
+			// check if this output is unspent
 			unspent, err := output.IsUnspentWithoutLocking()
 			if err != nil {
 				return err
@@ -170,17 +170,17 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				break
 			}
 
-			// Validate signature
+			// validate signature
 			signature := message.GetSignatureForInputIndex(uint16(inputIndex))
 			if signature == nil {
-				// No valid signature found for index
+				// no valid signature found for index
 				conflicting = true
 				break
 			}
 
 			unsignedTransactionBytes, err := unsignedTransaction.Serialize(iotago.DeSeriModeNoValidation)
 			if err := signature.Valid(unsignedTransactionBytes, output.Address()); err != nil {
-				// Invalid signature
+				// invalid signature
 				conflicting = true
 				break
 			}
@@ -189,7 +189,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			inputAmount += output.Amount()
 		}
 
-		//Go through all deposits and generate unspent outputs
+		// go through all deposits and generate unspent outputs
 		var outputAmount uint64
 		var depositOutputs utxo.Outputs
 		if !conflicting {
@@ -202,7 +202,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				outputAmount += output.Amount()
 			}
 
-			// Check that the transaction is consuming and sending the same amount
+			// check that the transaction is consuming and sending the same amount
 			if inputAmount != outputAmount {
 				conflicting = true
 			}
@@ -218,13 +218,13 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		// mark the given message to be part of milestone ledger by changing message inclusion set
 		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
-		// Save the inputs as spent
+		// save the inputs as spent
 		for _, input := range inputOutputs {
 			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
 			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, signedTransactionHash, msIndex)
 		}
 
-		// Add new outputs
+		// add new outputs
 		for _, output := range depositOutputs {
 			wfConf.NewOutputs[string(output.OutputID()[:])] = output
 		}
@@ -233,7 +233,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 	}
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
-	// If parent1 and parent2 of a message are both SEPs, are already processed or already confirmed,
+	// If parent1 and parent2 of a message are both SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
 	if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID,

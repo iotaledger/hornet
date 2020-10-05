@@ -39,7 +39,7 @@ var (
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
 )
 
-// isSolidEntryPoint checks whether any direct child of the given message was confirmed by a milestone which is above the target milestone.
+// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
 func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index) bool {
 
 	for _, childMessageID := range tangle.GetChildrenMessageIDs(messageID) {
@@ -50,11 +50,11 @@ func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index)
 			continue
 		}
 
-		confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
+		referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
 		cachedMsgMeta.Release(true) // meta -1
 
-		if confirmed && (at > targetIndex) {
-			// confirmed by a later milestone than targetIndex => solidEntryPoint
+		if referenced && (at > targetIndex) {
+			// referenced by a later milestone than targetIndex => solidEntryPoint
 			return true
 		}
 	}
@@ -62,7 +62,7 @@ func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index)
 	return false
 }
 
-// getMilestoneParents traverses a milestone and collects all messages that were confirmed by that milestone or newer.
+// getMilestoneParents traverses a milestone and collects all messages that were referenced by that milestone or newer.
 func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal <-chan struct{}) (hornet.MessageIDs, error) {
 
 	var parentMessageIDs hornet.MessageIDs
@@ -74,9 +74,9 @@ func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessa
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // msg +1
 			defer cachedMsgMeta.Release(true) // msg -1
-			// collect all msg that were confirmed by that milestone or newer
-			confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
-			return (confirmed && at >= milestoneIndex), nil
+			// collect all msg that were referenced by that milestone or newer
+			referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+			return (referenced && at >= milestoneIndex), nil
 		},
 		// consumer
 		func(cachedMsgMeta *tangle.CachedMetadata) error { // msg +1
@@ -167,10 +167,10 @@ func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan stru
 					return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.Hex())
 				}
 
-				confirmed, at := cachedMsgMeta.GetMetadata().GetConfirmed()
-				if !confirmed {
+				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				if !referenced {
 					cachedMsgMeta.Release(true)
-					return errors.Wrapf(ErrCritical, "solid entry point (%v) not confirmed!", parentMessageID.Hex())
+					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", parentMessageID.Hex())
 				}
 				cachedMsgMeta.Release(true)
 

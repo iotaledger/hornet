@@ -16,14 +16,14 @@ type ServerMetrics struct {
 	NewMessages atomic.Uint32
 	// The number of received messages which are already known.
 	KnownMessages atomic.Uint32
-	// The number of confirmed messages.
-	ConfirmedMessages atomic.Uint32
-	// The number of value messages.
-	ValueMessages atomic.Uint32
-	// The number of zero value messages.
-	NonValueMessages atomic.Uint32
-	// The number of conflicting messages.
-	ConflictingMessages atomic.Uint32
+	// The number of referenced messages.
+	ReferencedMessages atomic.Uint32
+	// The number of messages with a transaction payload.
+	IncludedTransactionMessages atomic.Uint32
+	// The number of messages without a transaction payload.
+	NoTransactionMessages atomic.Uint32
+	// The number of messages with conflicting transaction payloads.
+	ConflictingTransactionMessages atomic.Uint32
 	// The number of received invalid messages.
 	InvalidMessages atomic.Uint32
 	// The number of received invalid requests (both messages and milestones).

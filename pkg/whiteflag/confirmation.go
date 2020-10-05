@@ -16,7 +16,7 @@ type ConfirmedMilestoneStats struct {
 	Index                                       milestone.Index
 	ConfirmationTime                            int64
 	CachedMessages                              tangle.CachedMessages
-	MessagesConfirmed                           int
+	MessagesReferenced                          int
 	MessagesExcludedWithConflictingTransactions int
 	MessagesIncludedWithTransactions            int
 	MessagesExcludedWithoutTransactions         int
@@ -24,15 +24,15 @@ type ConfirmedMilestoneStats struct {
 	Total                                       time.Duration
 }
 
-// ConfirmMilestone traverses a milestone and collects all unconfirmed msg,
-// then the ledger diffs are calculated, the ledger state is checked and all msg are marked as confirmed.
+// ConfirmMilestone traverses a milestone and collects all unreferenced msg,
+// then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachConfirmedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
 	defer func() {
-		// All releases are forced since the cone is confirmed and not needed anymore
+		// All releases are forced since the cone is referenced and not needed anymore
 
 		// release all messages at the end
 		for _, cachedMsg := range cachedMessages {
@@ -138,14 +138,14 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	// confirm all included messages
 	for _, messageID := range mutations.MessagesIncludedWithTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
-			if !meta.GetMetadata().IsConfirmed() {
-				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
+			if !meta.GetMetadata().IsReferenced() {
+				meta.GetMetadata().SetReferenced(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-				conf.MessagesConfirmed++
+				conf.MessagesReferenced++
 				conf.MessagesIncludedWithTransactions++
-				metrics.SharedServerMetrics.ValueMessages.Inc()
-				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
-				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
+				metrics.SharedServerMetrics.IncludedTransactionMessages.Inc()
+				metrics.SharedServerMetrics.ReferencedMessages.Inc()
+				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
 			return nil, err
@@ -155,14 +155,15 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	// confirm all excluded messages with zero value
 	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
-			if !meta.GetMetadata().IsConfirmed() {
-				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
+			meta.GetMetadata().SetIsNoTransaction(true)
+			if !meta.GetMetadata().IsReferenced() {
+				meta.GetMetadata().SetReferenced(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-				conf.MessagesConfirmed++
+				conf.MessagesReferenced++
 				conf.MessagesExcludedWithoutTransactions++
-				metrics.SharedServerMetrics.NonValueMessages.Inc()
-				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
-				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
+				metrics.SharedServerMetrics.NoTransactionMessages.Inc()
+				metrics.SharedServerMetrics.ReferencedMessages.Inc()
+				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
 			return nil, err
@@ -172,15 +173,15 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	// confirm all conflicting messages
 	for _, messageID := range mutations.MessagesExcludedWithConflictingTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *tangle.CachedMetadata) {
-			meta.GetMetadata().SetConflicting(true)
-			if !meta.GetMetadata().IsConfirmed() {
-				meta.GetMetadata().SetConfirmed(true, milestoneIndex)
+			meta.GetMetadata().SetConflictingTx(true)
+			if !meta.GetMetadata().IsReferenced() {
+				meta.GetMetadata().SetReferenced(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-				conf.MessagesConfirmed++
+				conf.MessagesReferenced++
 				conf.MessagesExcludedWithConflictingTransactions++
-				metrics.SharedServerMetrics.ConflictingMessages.Inc()
-				metrics.SharedServerMetrics.ConfirmedMessages.Inc()
-				forEachConfirmedMessage(meta, milestoneIndex, confirmationTime)
+				metrics.SharedServerMetrics.ConflictingTransactionMessages.Inc()
+				metrics.SharedServerMetrics.ReferencedMessages.Inc()
+				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
 			return nil, err

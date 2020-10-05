@@ -9,7 +9,7 @@ var (
 	serverAllMessages               prometheus.Gauge
 	serverNewMessages               prometheus.Gauge
 	serverKnownMessages             prometheus.Gauge
-	serverConfirmedMessages         prometheus.Gauge
+	serverReferencedMessages        prometheus.Gauge
 	serverInvalidMessages           prometheus.Gauge
 	serverInvalidRequests           prometheus.Gauge
 	serverReceivedMessageRequests   prometheus.Gauge
@@ -37,9 +37,9 @@ func init() {
 		Name: "iota_server_known_messages",
 		Help: "Number of known messages.",
 	})
-	serverConfirmedMessages = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_server_confirmed_messages",
-		Help: "Number of confirmed messages.",
+	serverReferencedMessages = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_server_referenced_messages",
+		Help: "Number of referenced messages.",
 	})
 	serverInvalidMessages = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_invalid_messages",
@@ -93,7 +93,7 @@ func init() {
 	registry.MustRegister(serverAllMessages)
 	registry.MustRegister(serverNewMessages)
 	registry.MustRegister(serverKnownMessages)
-	registry.MustRegister(serverConfirmedMessages)
+	registry.MustRegister(serverReferencedMessages)
 	registry.MustRegister(serverInvalidMessages)
 	registry.MustRegister(serverInvalidRequests)
 	registry.MustRegister(serverReceivedMessageRequests)
@@ -114,7 +114,7 @@ func collectServer() {
 	serverAllMessages.Set(float64(metrics.SharedServerMetrics.Messages.Load()))
 	serverNewMessages.Set(float64(metrics.SharedServerMetrics.NewMessages.Load()))
 	serverKnownMessages.Set(float64(metrics.SharedServerMetrics.KnownMessages.Load()))
-	serverConfirmedMessages.Set(float64(metrics.SharedServerMetrics.ConfirmedMessages.Load()))
+	serverReferencedMessages.Set(float64(metrics.SharedServerMetrics.ReferencedMessages.Load()))
 	serverInvalidMessages.Set(float64(metrics.SharedServerMetrics.InvalidMessages.Load()))
 	serverInvalidRequests.Set(float64(metrics.SharedServerMetrics.InvalidRequests.Load()))
 	serverReceivedMessageRequests.Set(float64(metrics.SharedServerMetrics.ReceivedMessageRequests.Load()))

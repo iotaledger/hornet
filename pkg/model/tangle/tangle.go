@@ -92,7 +92,7 @@ func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 	configureMessageStorage(store, caches.Messages)
 	configureChildrenStorage(store, caches.Children)
 	configureMilestoneStorage(store, caches.Milestones)
-	configureUnconfirmedMessageStorage(store, caches.UnconfirmedMessages)
+	configureUnreferencedMessageStorage(store, caches.UnreferencedMessages)
 	configureIndexationStorage(store, caches.Indexations)
 	configureSnapshotStore(store)
 
@@ -104,7 +104,7 @@ func FlushStorages() {
 	FlushMessagesStorage()
 	FlushMessagesStorage()
 	FlushChildrenStorage()
-	FlushUnconfirmedMessagesStorage()
+	FlushUnreferencedMessagesStorage()
 }
 
 func ShutdownStorages() {
@@ -113,7 +113,7 @@ func ShutdownStorages() {
 	ShutdownMessagesStorage()
 	ShutdownMessagesStorage()
 	ShutdownChildrenStorage()
-	ShutdownUnconfirmedMessagesStorage()
+	ShutdownUnreferencedMessagesStorage()
 }
 
 func LoadInitialValuesFromDatabase() {

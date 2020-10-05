@@ -121,7 +121,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		conf := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
-		require.Equal(testState, 3, conf.MessagesConfirmed)                   // 3 for milestone
+		require.Equal(testState, 3, conf.MessagesReferenced)                  // 3 for milestone
 		require.Equal(testState, 3, conf.MessagesExcludedWithoutTransactions) // 3 for milestone
 		require.Equal(testState, 0, conf.MessagesIncludedWithTransactions)
 		require.Equal(testState, 0, conf.MessagesExcludedWithConflictingTransactions)

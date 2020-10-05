@@ -27,11 +27,11 @@ type ExplorerMessage struct {
 	MessageID        string `json:"message_id"`
 	Parent1MessageID string `json:"parent1_message_id"`
 	Parent2MessageID string `json:"parent2_message_id"`
-	Confirmed        struct {
+	Referenced       struct {
 		State       bool            `json:"state"`
 		Conflicting bool            `json:"conflicting"`
 		Milestone   milestone.Index `json:"milestone_index"`
-	} `json:"confirmed"`
+	} `json:"referenced"`
 	Children       []string        `json:"children"`
 	Solid          bool            `json:"solid"`
 	MWM            int             `json:"mwm"`
@@ -42,17 +42,17 @@ type ExplorerMessage struct {
 func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, error) {
 	defer cachedMsg.Release(true) // msg -1
 
-	confirmed, by := cachedMsg.GetMetadata().GetConfirmed()
-	conflicting := cachedMsg.GetMetadata().IsConflicting()
+	referenced, by := cachedMsg.GetMetadata().GetReferenced()
+	conflicting := cachedMsg.GetMetadata().IsConflictingTx()
 	t := &ExplorerMessage{
 		MessageID:        cachedMsg.GetMetadata().GetMessageID().Hex(),
 		Parent1MessageID: cachedMsg.GetMetadata().GetParent1MessageID().Hex(),
 		Parent2MessageID: cachedMsg.GetMetadata().GetParent2MessageID().Hex(),
-		Confirmed: struct {
+		Referenced: struct {
 			State       bool            `json:"state"`
 			Conflicting bool            `json:"conflicting"`
 			Milestone   milestone.Index `json:"milestone_index"`
-		}{confirmed, conflicting, by},
+		}{referenced, conflicting, by},
 		Solid: cachedMsg.GetMetadata().IsSolid(),
 	}
 
