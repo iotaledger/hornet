@@ -86,7 +86,7 @@ func (msg *Message) IsMilestone() bool {
 	return false
 }
 
-func (msg *Message) IsValue() bool {
+func (msg *Message) IsTransaction() bool {
 	switch msg.GetMessage().Payload.(type) {
 	case *iotago.SignedTransactionPayload:
 		return true

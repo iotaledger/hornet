@@ -23,10 +23,10 @@ var (
 type HeaviestSelector struct {
 	sync.Mutex
 
-	minHeaviestBranchUnconfirmedMessagesThreshold int
-	maxHeaviestBranchTipsPerCheckpoint            int
-	randomTipsPerCheckpoint                       int
-	heaviestBranchSelectionDeadline               time.Duration
+	minHeaviestBranchUnreferencedMessagesThreshold int
+	maxHeaviestBranchTipsPerCheckpoint             int
+	randomTipsPerCheckpoint                        int
+	heaviestBranchSelectionDeadline                time.Duration
 
 	trackedMessages map[string]*trackedMessage // map of all tracked messages
 	tips            *list.List                 // list of available tips
@@ -87,12 +87,12 @@ func (il *trackedMessagesList) removeTip(tip *trackedMessage) {
 }
 
 // New creates a new HeaviestSelector instance.
-func New(minHeaviestBranchUnconfirmedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
+func New(minHeaviestBranchUnreferencedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
 	s := &HeaviestSelector{
-		minHeaviestBranchUnconfirmedMessagesThreshold: minHeaviestBranchUnconfirmedMessagesThreshold,
-		maxHeaviestBranchTipsPerCheckpoint:            maxHeaviestBranchTipsPerCheckpoint,
-		randomTipsPerCheckpoint:                       randomTipsPerCheckpoint,
-		heaviestBranchSelectionDeadline:               heaviestBranchSelectionDeadline,
+		minHeaviestBranchUnreferencedMessagesThreshold: minHeaviestBranchUnreferencedMessagesThreshold,
+		maxHeaviestBranchTipsPerCheckpoint:             maxHeaviestBranchTipsPerCheckpoint,
+		randomTipsPerCheckpoint:                        randomTipsPerCheckpoint,
+		heaviestBranchSelectionDeadline:                heaviestBranchSelectionDeadline,
 	}
 	s.reset()
 	return s
@@ -158,9 +158,9 @@ func (s *HeaviestSelector) selectTip(tipsList *trackedMessagesList) (*trackedMes
 // only tips are considered that were present at the beginning of the SelectTips call,
 // to prevent attackers from creating heavier branches while we are searching the best tips.
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if
-// the current best tip is not below "UnconfirmedMessagesThreshold" before.
+// the current best tip is not below "UnreferencedMessagesThreshold" before.
 // a minimum amount of selected tips can be enforced, even if none of the heaviest branches matches the
-// "minHeaviestBranchUnconfirmedMessagesThreshold" criteria.
+// "minHeaviestBranchUnreferencedMessagesThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
 // the selection is canceled after a fixed deadline. in this case, it returns the current collected tips.
@@ -198,7 +198,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.MessageIDs, e
 			break
 		}
 
-		if (len(tips) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedMessagesThreshold)) || deadlineExceeded) {
+		if (len(tips) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnreferencedMessagesThreshold)) || deadlineExceeded) {
 			// minimum amount of tips reached and the heaviest tips do not confirm enough messages or the deadline was exceeded
 			// => no need to collect more
 			break

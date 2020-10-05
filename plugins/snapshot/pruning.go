@@ -26,13 +26,13 @@ func setIsPruning(value bool) {
 	statusLock.Unlock()
 }
 
-// pruneUnconfirmedMessages prunes all unconfirmed messages from the database for the given milestone
-func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
+// pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
+func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
 
 	messageIDsToDeleteMap := make(map[string]struct{})
 
-	// Check if message is still unconfirmed
-	for _, messageID := range tangle.GetUnconfirmedMessageIDs(targetIndex, true) {
+	// Check if message is still unreferenced
+	for _, messageID := range tangle.GetUnreferencedMessageIDs(targetIndex, true) {
 		messageIDMapKey := messageID.MapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
@@ -44,8 +44,8 @@ func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int,
 			continue
 		}
 
-		if cachedMsgMeta.GetMetadata().IsConfirmed() {
-			// message was already confirmed
+		if cachedMsgMeta.GetMetadata().IsReferenced() {
+			// message was already referenced
 			cachedMsgMeta.Release(true) // meta -1
 			continue
 		}
@@ -55,7 +55,7 @@ func pruneUnconfirmedMessages(targetIndex milestone.Index) (msgCountDeleted int,
 	}
 
 	msgCountDeleted = pruneMessages(messageIDsToDeleteMap)
-	tangle.DeleteUnconfirmedMessages(targetIndex)
+	tangle.DeleteUnreferencedMessages(targetIndex)
 
 	return msgCountDeleted, len(messageIDsToDeleteMap)
 }
@@ -153,8 +153,8 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	snapshotInfo.EntryPointIndex = targetIndex
 	tangle.SetSnapshotInfo(snapshotInfo)
 
-	// unconfirmed msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
-	pruneUnconfirmedMessages(snapshotInfo.PruningIndex)
+	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
+	pruneUnreferencedMessages(snapshotInfo.PruningIndex)
 
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
@@ -168,7 +168,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
 		ts := time.Now()
-		txCountDeleted, msgCountChecked := pruneUnconfirmedMessages(milestoneIndex)
+		txCountDeleted, msgCountChecked := pruneUnreferencedMessages(milestoneIndex)
 
 		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {

@@ -36,8 +36,8 @@ var (
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewMsgCount       uint32
-	oldConfirmedMsgCount uint32
+	oldNewMsgCount        uint32
+	oldReferencedMsgCount uint32
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone = milestone.Index(0)
@@ -51,7 +51,7 @@ type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
 	MPS                    float64         `json:"tps"`
 	CMPS                   float64         `json:"ctps"`
-	ConfirmationRate       float64         `json:"conf_rate"`
+	ReferencedRate         float64         `json:"referenced_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
 
@@ -370,7 +370,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}
 
 	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {
-		Events.MessageConfirmed.Trigger(msgMeta, index, confTime)
+		Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 	}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
 		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
@@ -382,9 +382,9 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		log.Panic(err)
 	}
 
-	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
+	log.Infof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
 		conf.Index,
-		conf.MessagesConfirmed,
+		conf.MessagesReferenced,
 		conf.MessagesIncludedWithTransactions,
 		conf.MessagesExcludedWithoutTransactions,
 		conf.MessagesExcludedWithConflictingTransactions,
@@ -406,7 +406,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 		if tangle.IsNodeSynced() && (conf.Index > firstSyncedMilestone+1) {
 			// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
-			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ConfirmationRate)
+			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ReferencedRate)
 			Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
 			ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CMPS)
@@ -444,20 +444,20 @@ func getConfirmedMilestoneMetric(cachedMilestone *tangle.CachedMilestone, milest
 	newMsgDiff := utils.GetUint32Diff(newNewMsgCount, oldNewMsgCount)
 	oldNewMsgCount = newNewMsgCount
 
-	newConfirmedMsgCount := metrics.SharedServerMetrics.ConfirmedMessages.Load()
-	confirmedMsgDiff := utils.GetUint32Diff(newConfirmedMsgCount, oldConfirmedMsgCount)
-	oldConfirmedMsgCount = newConfirmedMsgCount
+	newReferencedMsgCount := metrics.SharedServerMetrics.ReferencedMessages.Load()
+	referencedMsgDiff := utils.GetUint32Diff(newReferencedMsgCount, oldReferencedMsgCount)
+	oldReferencedMsgCount = newReferencedMsgCount
 
-	confRate := 0.0
+	referencedRate := 0.0
 	if newMsgDiff != 0 {
-		confRate = (float64(confirmedMsgDiff) / float64(newMsgDiff)) * 100.0
+		referencedRate = (float64(referencedMsgDiff) / float64(newMsgDiff)) * 100.0
 	}
 
 	metric := &ConfirmedMilestoneMetric{
 		MilestoneIndex:         milestoneIndexToSolidify,
 		MPS:                    float64(newMsgDiff) / timeDiff,
-		CMPS:                   float64(confirmedMsgDiff) / timeDiff,
-		ConfirmationRate:       confRate,
+		CMPS:                   float64(referencedMsgDiff) / timeDiff,
+		ReferencedRate:         referencedRate,
 		TimeSinceLastMilestone: timeDiff,
 	}
 

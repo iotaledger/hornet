@@ -80,9 +80,9 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 	)
 
 	// conf. and issuance rate
-	confRateChart := charts.NewLine()
-	confRateChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Confirmation Rate"},
+	referencedRateChart := charts.NewLine()
+	referencedRateChart.SetGlobalOptions(
+		charts.TitleOpts{Title: "Referenced Rate"},
 		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
 	)
 	issuanceRateChart := charts.NewBar()
@@ -91,7 +91,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
 	)
 	var confIssXAxis []string
-	var confRate []float64
+	var referencedRate []float64
 	var issuanceInterval []float64
 
 	// memory
@@ -184,7 +184,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 			}
 			confMetric := confMetrics[len(confMetrics)-1]
 			confIssXAxis = append(confIssXAxis, fmt.Sprintf("Ms %s", strconv.Itoa(int(confMetric.MilestoneIndex))))
-			confRate = append(confRate, confMetric.ConfirmationRate)
+			referencedRate = append(referencedRate, confMetric.ReferencedRate)
 			issuanceInterval = append(issuanceInterval, confMetric.TimeSinceLastMilestone)
 
 		case dashboard.MsgTypeDatabaseSizeMetric:
@@ -226,8 +226,8 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		AddYAxis("Incoming", incomingTPS).
 		AddYAxis("Outgoing", outgoingTPS)
 
-	confRateChart.AddXAxis(confIssXAxis).
-		AddYAxis("Conf. Rate %", confRate)
+	referencedRateChart.AddXAxis(confIssXAxis).
+		AddYAxis("Ref. Rate %", referencedRate)
 	issuanceRateChart.AddXAxis(confIssXAxis).
 		AddYAxis("Issuance Delta", issuanceInterval)
 
@@ -249,7 +249,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 
 	chartPage := charts.NewPage()
 	chartPage.PageTitle = n.targetName
-	chartPage.Add(tpsChart, memChart, dbSizeChart, memObjsChart, tipSelChart, confRateChart, issuanceRateChart)
+	chartPage.Add(tpsChart, memChart, dbSizeChart, memObjsChart, tipSelChart, referencedRateChart, issuanceRateChart)
 
 	var buf bytes.Buffer
 	if err := chartPage.Render(&buf); err != nil {

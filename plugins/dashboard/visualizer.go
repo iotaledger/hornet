@@ -26,7 +26,7 @@ type vertex struct {
 	Parent1MessageID string `json:"parent1_id"`
 	Parent2MessageID string `json:"parent2_2"`
 	IsSolid          bool   `json:"is_solid"`
-	IsConfirmed      bool   `json:"is_confirmed"`
+	IsReferenced     bool   `json:"is_referenced"`
 	IsMilestone      bool   `json:"is_milestone"`
 	IsTip            bool   `json:"is_tip"`
 }
@@ -64,7 +64,7 @@ func runVisualizer() {
 						Parent1MessageID: msg.GetParent1MessageID().Hex()[:VisualizerIdLength],
 						Parent2MessageID: msg.GetParent2MessageID().Hex()[:VisualizerIdLength],
 						IsSolid:          metadata.IsSolid(),
-						IsConfirmed:      metadata.IsConfirmed(),
+						IsReferenced:     metadata.IsReferenced(),
 						IsMilestone:      false,
 						IsTip:            false,
 					},

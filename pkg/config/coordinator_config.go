@@ -14,11 +14,11 @@ const (
 	// the maximum amount of known messages for milestone tipselection
 	// if this limit is exceeded, a new checkpoint is issued
 	CfgCoordinatorCheckpointsMaxTrackedMessages = "coordinator.checkpoints.maxTrackedMessages"
-	// the minimum threshold of unconfirmed messages in the heaviest branch for milestone tipselection
+	// the minimum threshold of unreferenced messages in the heaviest branch for milestone tipselection
 	// if the value falls below that threshold, no more heaviest branch tips are picked
-	CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedMessagesThreshold = "coordinator.tipsel.minHeaviestBranchUnconfirmedMessagesThreshold"
+	CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold = "coordinator.tipsel.minHeaviestBranchUnreferencedMessagesThreshold"
 	// the maximum amount of checkpoint messages with heaviest branch tips that are picked
-	// if the heaviest branch is not below "UnconfirmedMessagesThreshold" before
+	// if the heaviest branch is not below "UnreferencedMessagesThreshold" before
 	CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint = "coordinator.tipsel.maxHeaviestBranchTipsPerCheckpoint"
 	// the amount of checkpoint messages with random tips that are picked if a checkpoint is issued and at least
 	// one heaviest branch tip was found, otherwise no random tips will be picked
@@ -36,7 +36,7 @@ func init() {
 	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
 	configFlagSet.String(CfgCoordinatorMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
 	configFlagSet.Int(CfgCoordinatorCheckpointsMaxTrackedMessages, 10000, "maximum amount of known messages for milestone tipselection")
-	configFlagSet.Int(CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedMessagesThreshold, 20, "minimum threshold of unconfirmed messages in the heaviest branch")
+	configFlagSet.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold, 20, "minimum threshold of unreferenced messages in the heaviest branch")
 	configFlagSet.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint messages with heaviest branch tips")
 	configFlagSet.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint messages with random tips")
 	configFlagSet.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")

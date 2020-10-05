@@ -35,7 +35,7 @@ func NewMessageCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
 
-func MessageConfirmedCaller(handler interface{}, params ...interface{}) {
+func MessageReferencedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64))
 }
 
@@ -322,10 +322,10 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 		StoreIndexation(indexationPayload.Index, cachedMessage.GetMessage().GetMessageID()).Release(true)
 	}
 
-	// Store only non-requested messages, since all requested messages are confirmed by a milestone anyway
-	// This is only used to delete unconfirmed messages from the database at pruning
+	// Store only non-requested messages, since all requested messages are referenced by a milestone anyway
+	// This is only used to delete unreferenced messages from the database at pruning
 	if !requested {
-		StoreUnconfirmedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
+		StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
 	}
 
 	ms, err := CheckIfMilestone(message)

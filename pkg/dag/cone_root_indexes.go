@@ -41,7 +41,7 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 		}
 	}
 
-	// collect all parents in the cone that are not confirmed,
+	// collect all parents in the cone that are not referenced,
 	// are no solid entry points and have no recent calculation index
 	var outdatedMessageIDs hornet.MessageIDs
 
@@ -57,8 +57,8 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 		func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			// first check if the msg was confirmed => update ycri and ocri with the confirmation index
-			if confirmed, at := cachedMetadata.GetMetadata().GetConfirmed(); confirmed {
+			// first check if the msg was referenced => update ycri and ocri with the confirmation index
+			if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
 				updateIndexes(at, at)
 				return false, nil
 			}
@@ -68,7 +68,7 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 				return true, nil
 			}
 
-			// if the msg was not confirmed yet, but already contains recent (calculation index matches LSMI) information
+			// if the msg was not referenced yet, but already contains recent (calculation index matches LSMI) information
 			// about ycri and ocri, propagate that info
 			ycri, ocri, ci := cachedMetadata.GetMetadata().GetConeRootIndexes()
 			if ci == lsmi {
@@ -122,7 +122,7 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 }
 
 // UpdateConeRootIndexes updates the cone root indexes of the future cone of all given messages.
-// all the messages of the newly confirmed cone already have updated cone root indexes.
+// all the messages of the newly referenced cone already have updated cone root indexes.
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
