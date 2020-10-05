@@ -18,7 +18,7 @@ const (
 	// the HTTP basic auth salt used for hashing the password
 	CfgRestAPIBasicAuthPasswordSalt = "restAPI.basicAuth.passwordSalt"
 	// the maximum number of characters that the body of an API call may contain
-	CfgRestAPILimitsMaxBodyLengthBytes = "restAPI.limits.bodyLengthBytes"
+	CfgRestAPILimitsMaxBodyLength = "restAPI.limits.bodyLength"
 	// the maximum number of results that may be returned by an endpoint
 	CfgRestAPILimitsMaxResults = "restAPI.limits.maxResults"
 )
@@ -35,6 +35,6 @@ func init() {
 	configFlagSet.String(CfgRestAPIBasicAuthUsername, "", "the username of the HTTP basic auth")
 	configFlagSet.String(CfgRestAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a sha256 hash")
 	configFlagSet.String(CfgRestAPIBasicAuthPasswordSalt, "", "the HTTP basic auth salt used for hashing the password")
-	configFlagSet.Int(CfgRestAPILimitsMaxBodyLengthBytes, 1000000, "the maximum number of characters that the body of an API call may contain")
+	configFlagSet.String(CfgRestAPILimitsMaxBodyLength, "1M", "the maximum number of characters that the body of an API call may contain")
 	configFlagSet.Int(CfgRestAPILimitsMaxResults, 1000, "the maximum number of results that may be returned by an endpoint")
 }

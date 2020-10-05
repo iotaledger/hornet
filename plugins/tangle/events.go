@@ -22,7 +22,6 @@ var Events = pluginEvents{
 	ProcessedMessage:              events.NewEvent(tangle.MessageIDCaller),
 	MessageSolid:                  events.NewEvent(tangle.MessageMetadataCaller),
 	MessageReferenced:             events.NewEvent(tangle.MessageReferencedCaller),
-	MessageStored:                 events.NewEvent(tangle.MessageCaller),
 	ReceivedNewMilestone:          events.NewEvent(tangle.MilestoneCaller),
 	LatestMilestoneChanged:        events.NewEvent(tangle.MilestoneCaller),
 	LatestMilestoneIndexChanged:   events.NewEvent(milestone.IndexCaller),
@@ -41,7 +40,6 @@ type pluginEvents struct {
 	ProcessedMessage              *events.Event
 	MessageSolid                  *events.Event
 	MessageReferenced             *events.Event
-	MessageStored                 *events.Event
 	ReceivedNewMilestone          *events.Event
 	LatestMilestoneChanged        *events.Event
 	LatestMilestoneIndexChanged   *events.Event

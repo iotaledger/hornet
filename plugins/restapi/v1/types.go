@@ -47,11 +47,6 @@ type messageMetadataResponse struct {
 	ShouldReattach        *bool   `json:"shouldReattach,omitempty"`
 }
 
-type messageResponse struct {
-	MessageID string
-	Data      string
-}
-
 type childrenResponse struct {
 	MessageID  string   `json:"messageId"`
 	MaxResults uint32   `json:"maxResults"`

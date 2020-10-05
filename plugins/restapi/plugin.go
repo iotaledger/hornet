@@ -50,6 +50,7 @@ func configure(plugin *node.Plugin) {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(middleware.Gzip())
+	e.Use(middleware.BodyLimit(config.NodeConfig.GetString(config.CfgRestAPILimitsMaxBodyLength)))
 
 	// Load allowed remote access to specific HTTP REST routes
 	cfgPermittedRoutes := config.NodeConfig.GetStringSlice(config.CfgRestAPIPermittedRoutes)
