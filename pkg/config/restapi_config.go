@@ -27,7 +27,7 @@ func init() {
 	configFlagSet.String(CfgRestAPIBindAddress, "0.0.0.0:14265", "the bind address on which the REST API listens on")
 	configFlagSet.StringSlice(CfgRestAPIPermittedRoutes,
 		[]string{
-			"healthz",
+			"health",
 		}, "the allowed HTTP REST routes which can be called from non whitelisted addresses")
 	configFlagSet.StringSlice(CfgRestAPIWhitelistedAddresses, []string{}, "the whitelist of addresses which are allowed to access the REST API")
 	configFlagSet.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")

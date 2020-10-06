@@ -9,7 +9,7 @@
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
-      "healthz"
+      "health"
     ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14268",

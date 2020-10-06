@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	// The route for the healthz REST API call.
-	NodeAPIHealthzRoute = "/healthz"
+	// The route for the health REST API call.
+	NodeAPIHealthRoute = "/health"
 )
 
 var (
@@ -74,7 +74,7 @@ func configure(plugin *node.Plugin) {
 	exclHealthCheckFromAuth := config.NodeConfig.GetBool(config.CfgRestAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {
 		// Handle route without auth
-		setupHealthzRoute(e)
+		setupHealthRoute(e)
 	}
 
 	// set basic auth if enabled
@@ -187,7 +187,7 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 
 	if !exclHealthCheckFromAuth {
 		// Handle route with auth
-		setupHealthzRoute(e)
+		setupHealthRoute(e)
 	}
 
 	if config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {

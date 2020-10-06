@@ -8,9 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/plugins/webapi"
 )
 
 var (
@@ -125,6 +122,8 @@ func (api *WebAPI) do(method string, reqObj interface{}, resObj interface{}) err
 	return nil
 }
 
+/*
+
 // Neighbors returns the neighbors to which the node is connected to.
 func (api *WebAPI) Neighbors() ([]*peer.Info, error) {
 	res := &webapi.GetNeighborsReturn{}
@@ -136,7 +135,6 @@ func (api *WebAPI) Neighbors() ([]*peer.Info, error) {
 	return res.Neighbors, nil
 }
 
-/*
 func (api *WebAPI) Info() (*webapi.GetNodeInfoReturn, error) {
 	res := &webapi.GetNodeInfoReturn{}
 	if err := api.do(http.MethodPost, struct {

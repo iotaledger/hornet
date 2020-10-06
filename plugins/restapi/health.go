@@ -10,13 +10,13 @@ import (
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
-func setupHealthzRoute(e *echo.Echo) {
+func setupHealthRoute(e *echo.Echo) {
 
-	e.GET(NodeAPIHealthzRoute, func(c echo.Context) error {
+	e.GET(NodeAPIHealthRoute, func(c echo.Context) error {
 
 		if !networkWhitelisted(c) {
 			// network is not whitelisted, check if the route is permitted, otherwise deny it.
-			if _, permitted := permittedRoutes["healthz"]; !permitted {
+			if _, permitted := permittedRoutes["health"]; !permitted {
 				return common.ErrForbidden
 			}
 		}
