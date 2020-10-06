@@ -28,7 +28,7 @@ import (
 type BackPressureFunc func() bool
 
 // SendMessageFunc is a function which sends a message to the network.
-type SendMessageFunc = func(msg *tangle.Message, isMilestone bool) error
+type SendMessageFunc = func(msg *tangle.Message, msIndex ...milestone.Index) error
 
 var (
 	// ErrNoTipsGiven is returned when no tips were given to issue a checkpoint.
@@ -237,7 +237,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return fmt.Errorf("failed to create: %w", err)
 	}
 
-	if err := coo.sendMesssageFunc(milestoneMsg, true); err != nil {
+	if err := coo.sendMesssageFunc(milestoneMsg, newMilestoneIndex); err != nil {
 		return err
 	}
 
@@ -307,7 +307,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 			return nil, fmt.Errorf("failed to create: %w", err)
 		}
 
-		if err := coo.sendMesssageFunc(msg, false); err != nil {
+		if err := coo.sendMesssageFunc(msg); err != nil {
 			return nil, err
 		}
 
