@@ -118,7 +118,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	data, err := tangle.LoadRawMessageDataFromStorage(messageID)
+	data, err := tangle.ReadMessageBytesFromStore(messageID)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
 			return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
