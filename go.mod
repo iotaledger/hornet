@@ -6,7 +6,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/blang/vfs v1.0.0
-	github.com/cockroachdb/pebble v0.0.0-20200928201937-b5c5df0302e3
+	github.com/cockroachdb/pebble v0.0.0-20201002215106-ab86f22f2365
 	github.com/dchest/blake2b v1.0.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -23,7 +23,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20200928092608-af0f0dc4fd6f
+	github.com/iotaledger/hive.go v0.0.0-20201006164224-349fb9ba8cb9
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200925102649-583a1aaf4f3b
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
@@ -37,7 +37,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/prometheus/client_golang v1.7.1
-	github.com/shirou/gopsutil v2.20.8+incompatible
+	github.com/shirou/gopsutil v2.20.9+incompatible
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
@@ -49,6 +49,6 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.7.0
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/sys v0.0.0-20201005172224-997123666555 // indirect
-	gopkg.in/ini.v1 v1.61.0 // indirect
+	golang.org/x/sys v0.0.0-20201006155630-ac719f4daadf // indirect
+	gopkg.in/ini.v1 v1.62.0 // indirect
 )
