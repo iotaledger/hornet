@@ -6,7 +6,6 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -16,6 +15,7 @@ import (
 )
 
 var (
+	messageRealm    kvstore.KVStore
 	messagesStorage *objectstorage.ObjectStorage
 	metadataStorage *objectstorage.ObjectStorage
 )
@@ -163,8 +163,10 @@ func GetMessageStorageSize() int {
 
 func configureMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
+	messageRealm = store.WithRealm([]byte{StorePrefixMessages})
+
 	messagesStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixMessages}),
+		messageRealm,
 		messageFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -348,8 +350,8 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 	return cachedMessage, false
 }
 
-func LoadRawMessageDataFromStorage(messageID *hornet.MessageID) ([]byte, error) {
-	messageBytes, err := pebbleStore.Get(byteutils.ConcatBytes([]byte{StorePrefixMessages}, messageID.Slice()))
+func ReadMessageBytesFromStore(messageID *hornet.MessageID) ([]byte, error) {
+	messageBytes, err := messageRealm.Get(messageID.Slice())
 	if err != nil {
 		return nil, err
 	}
