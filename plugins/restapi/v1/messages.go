@@ -3,6 +3,7 @@ package v1
 import (
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -15,8 +16,14 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/restapi/common"
+	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+)
+
+var (
+	messageProcessedTimeout = 1 * time.Second
 )
 
 func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataResponse, error) {
@@ -207,9 +214,13 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	// ToDo: check PoW
 
+	msgProcessedChan := tangleplugin.RegisterMessageProcessedEvent(message.GetMessageID())
+
 	if err := gossip.Processor().SerializeAndEmit(message, iotago.DeSeriModePerformValidation); err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
+
+	utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout)
 
 	return &messageCreatedResponse{
 		MessageID: message.GetMessageID().Hex(),

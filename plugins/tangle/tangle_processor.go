@@ -11,11 +11,13 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 )
@@ -30,6 +32,10 @@ var (
 	lastOutgoingMPS uint32
 
 	startWaitGroup sync.WaitGroup
+
+	messageProcessedSyncEvent   = utils.NewSyncEvent()
+	messageSolidSyncEvent       = utils.NewSyncEvent()
+	milestoneConfirmedSyncEvent = utils.NewSyncEvent()
 )
 
 func configureTangleProcessor(_ *node.Plugin) {
@@ -175,6 +181,7 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
 	Events.ProcessedMessage.Trigger(incomingMsg.GetMessageID())
+	messageProcessedSyncEvent.Trigger(incomingMsg.GetMessageID().MapKey())
 
 	if request != nil {
 		// mark the received request as processed
@@ -189,6 +196,21 @@ func processIncomingTx(incomingMsg *tangle.Message, request *rqueue.Request, p *
 		// which should be solid given that the request queue is empty
 		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 	}
+}
+
+// RegisterMessageProcessedEvent returns a channel that gets closed when the message is processed.
+func RegisterMessageProcessedEvent(messageID *hornet.MessageID) chan struct{} {
+	return messageProcessedSyncEvent.RegisterEvent(messageID.MapKey())
+}
+
+// RegisterMessageSolidEvent returns a channel that gets closed when the message is marked as solid.
+func RegisterMessageSolidEvent(messageID *hornet.MessageID) chan struct{} {
+	return messageSolidSyncEvent.RegisterEvent(messageID.MapKey())
+}
+
+// RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.
+func RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
+	return milestoneConfirmedSyncEvent.RegisterEvent(msIndex)
 }
 
 func printStatus() {

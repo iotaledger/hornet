@@ -66,6 +66,7 @@ func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
 	cachedMetadata.GetMetadata().SetSolid(true)
 
 	Events.MessageSolid.Trigger(cachedMetadata)
+	messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().MapKey())
 }
 
 // solidQueueCheck traverses a milestone and checks if it is solid
@@ -374,6 +375,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
 		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
 		Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+		milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
 		Events.MilestoneConfirmed.Trigger(confirmation)
 	})
 
