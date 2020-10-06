@@ -6,6 +6,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
+// okResponseEnvelope defines the ok response schema for node API responses.
+type okResponseEnvelope struct {
+	Data interface{} `json:"data"`
+}
+
 // infoResponse defines the response of a node info REST API call.
 type infoResponse struct {
 	// The name of the node software.

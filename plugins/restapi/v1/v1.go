@@ -132,6 +132,11 @@ var (
 	ErrNodeNotSync = errors.New("node not synced")
 )
 
+// jsonResponse wraps the result into a "data" field and sends the JSON response with status code.
+func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
+	return c.JSON(statusCode, &okResponseEnvelope{Data: result})
+}
+
 func SetupApiRoutesV1(routeGroup *echo.Group) {
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
@@ -152,7 +157,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, infoResp)
+		return jsonResponse(c, http.StatusOK, infoResp)
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
@@ -163,7 +168,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			if err != nil {
 				return err
 			}
-			return c.JSON(http.StatusOK, tipsResp)
+			return jsonResponse(c, http.StatusOK, tipsResp)
 		})
 	}
 
@@ -173,7 +178,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, messageMetaResp)
+		return jsonResponse(c, http.StatusOK, messageMetaResp)
 	})
 
 	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
@@ -182,7 +187,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, messageResp)
+		return jsonResponse(c, http.StatusOK, messageResp)
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
@@ -202,7 +207,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, childrenResp)
+		return jsonResponse(c, http.StatusOK, childrenResp)
 	})
 
 	routeGroup.GET(RouteMessages, func(c echo.Context) error {
@@ -212,7 +217,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, messageIDsResp)
+		return jsonResponse(c, http.StatusOK, messageIDsResp)
 	})
 
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
@@ -221,8 +226,8 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		if err != nil {
 			return err
 		}
-
-		return c.JSON(http.StatusCreated, messageMetaResp)
+		c.Response().Header().Set(echo.HeaderLocation, messageMetaResp.MessageID)
+		return jsonResponse(c, http.StatusCreated, messageMetaResp)
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
@@ -232,7 +237,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, milestoneResp)
+		return jsonResponse(c, http.StatusOK, milestoneResp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
@@ -242,7 +247,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, outputResp)
+		return jsonResponse(c, http.StatusOK, outputResp)
 	})
 
 	routeGroup.GET(RouteAddressBalance, func(c echo.Context) error {
@@ -252,7 +257,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, addressBalanceResp)
+		return jsonResponse(c, http.StatusOK, addressBalanceResp)
 	})
 
 	routeGroup.GET(RouteAddressOutputs, func(c echo.Context) error {
@@ -262,7 +267,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, addressOutputsResp)
+		return jsonResponse(c, http.StatusOK, addressOutputsResp)
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
@@ -272,7 +277,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, outputIdsResp)
+		return jsonResponse(c, http.StatusOK, outputIdsResp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
@@ -282,7 +287,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, outputIdsResp)
+		return jsonResponse(c, http.StatusOK, outputIdsResp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
@@ -292,7 +297,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, outputIdsResp)
+		return jsonResponse(c, http.StatusOK, outputIdsResp)
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
@@ -302,7 +307,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, milestoneDiffResp)
+		return jsonResponse(c, http.StatusOK, milestoneDiffResp)
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
@@ -312,7 +317,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, requestsResp)
+		return jsonResponse(c, http.StatusOK, requestsResp)
 	})
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
@@ -322,6 +327,6 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, messsageConeResp)
+		return jsonResponse(c, http.StatusOK, messsageConeResp)
 	})
 }
