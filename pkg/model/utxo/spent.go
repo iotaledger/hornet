@@ -117,13 +117,19 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 	return nil
 }
 
-func forEachSpentOutputsForAddress(consumer SpentConsumer, address *iotago.Ed25519Address) error {
-
-	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:])
+func ForEachSpentOutputWithoutLocking(consumer SpentConsumer, address ...*iotago.Ed25519Address) error {
 
 	var innerErr error
 
-	if err := utxoStorage.Iterate(addressKeyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+	key := []byte{UTXOStoreKeyPrefixSpent}
+	if len(address) > 0 {
+		if len(address[0]) != iotago.Ed25519AddressBytesLength {
+			return ErrInvalidAddressSize
+		}
+		key = byteutils.ConcatBytes(key, address[0][:])
+	}
+
+	if err := utxoStorage.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
 
 		spent := &Spent{}
 		if err := spent.kvStorableLoad(key[1:], value); err != nil {
@@ -139,10 +145,15 @@ func forEachSpentOutputsForAddress(consumer SpentConsumer, address *iotago.Ed255
 	return innerErr
 }
 
-func SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spents, error) {
+func ForEachSpentOutput(consumer SpentConsumer, address ...*iotago.Ed25519Address) error {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
+
+	return ForEachSpentOutputWithoutLocking(consumer, address...)
+}
+
+func SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spents, error) {
 
 	var spents []*Spent
 
@@ -158,7 +169,7 @@ func SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spe
 		return true
 	}
 
-	if err := forEachSpentOutputsForAddress(consumerFunc, address); err != nil {
+	if err := ForEachSpentOutput(consumerFunc, address); err != nil {
 		return nil, err
 	}
 

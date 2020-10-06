@@ -6,6 +6,7 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -345,4 +346,12 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 	}
 
 	return cachedMessage, false
+}
+
+func LoadRawMessageDataFromStorage(messageID *hornet.MessageID) ([]byte, error) {
+	messageBytes, err := pebbleStore.Get(byteutils.ConcatBytes([]byte{StorePrefixMessages}, messageID.Slice()))
+	if err != nil {
+		return nil, err
+	}
+	return messageBytes, nil
 }

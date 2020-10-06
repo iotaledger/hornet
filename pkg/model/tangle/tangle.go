@@ -23,6 +23,7 @@ var (
 	dbDir string
 
 	pebbleInstance *pebbleDB.DB
+	pebbleStore    kvstore.KVStore
 
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
@@ -82,8 +83,9 @@ func ConfigureDatabases(directory string) {
 	dbDir = directory
 
 	pebbleInstance = getPebbleDB(directory, false)
+	pebbleStore = pebble.New(pebbleInstance)
 
-	ConfigureStorages(pebble.New(pebbleInstance), profile.LoadProfile().Caches)
+	ConfigureStorages(pebbleStore, profile.LoadProfile().Caches)
 }
 
 func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
