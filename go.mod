@@ -14,7 +14,6 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/gin-contrib/gzip v0.0.3 // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
@@ -24,7 +23,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201006164224-349fb9ba8cb9
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200925102649-583a1aaf4f3b
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201006194018-796fe99f19b9
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
@@ -50,5 +49,6 @@ require (
 	go.uber.org/atomic v1.7.0
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/sys v0.0.0-20201006155630-ac719f4daadf // indirect
+	golang.org/x/tools v0.0.0-20200917161530-60aba8ac75fb // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
