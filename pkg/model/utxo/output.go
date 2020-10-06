@@ -129,9 +129,12 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
 	}
 
+	o.outputID = &iotago.UTXOInputID{}
 	copy(o.outputID[:], key[:iotago.TransactionIDLength+iotago.UInt16ByteSize])
 	o.messageID = hornet.MessageIDFromBytes(value[:iotago.MessageHashLength])
 	o.outputType = value[iotago.MessageHashLength]
+
+	o.address = &iotago.Ed25519Address{}
 	copy(o.address[:], value[iotago.MessageHashLength+iotago.OneByte:iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength])
 	o.amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
 
@@ -150,6 +153,34 @@ func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
 
 func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey()))
+}
+
+func ForEachOutputWithoutLocking(consumer OutputConsumer) error {
+
+	var innerErr error
+
+	if err := utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
+
+		output := &Output{}
+		if err := output.kvStorableLoad(key[1:], value); err != nil {
+			innerErr = err
+			return false
+		}
+
+		return consumer(output)
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}
+
+func ForEachOutput(consumer OutputConsumer) error {
+
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return ForEachOutputWithoutLocking(consumer)
 }
 
 func ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {

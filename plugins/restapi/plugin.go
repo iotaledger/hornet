@@ -195,5 +195,5 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 		return
 	}
 
-	v1.SetupApiRoutesV1(e.Group("/v1"))
+	v1.SetupApiRoutesV1(e.Group("/api/v1"))
 }

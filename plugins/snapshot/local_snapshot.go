@@ -585,7 +585,9 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return err
 	}
 
-	utxo.CheckLedgerState()
+	if err := utxo.CheckLedgerState(); err != nil {
+		return err
+	}
 
 	ledgerIndex, err := utxo.ReadLedgerIndex()
 	if err != nil {
