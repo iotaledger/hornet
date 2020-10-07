@@ -111,6 +111,7 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 	   4 bytes uint32		ReferencedIndex
 	*/
 
+	s.targetTransactionID = &iotago.SignedTransactionPayloadHash{}
 	copy(s.targetTransactionID[:], value[:iotago.TransactionIDLength])
 	s.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(value[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt32ByteSize]))
 
