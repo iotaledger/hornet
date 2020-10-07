@@ -215,20 +215,27 @@ func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messag
 						continue
 					}
 
-					cachedParentTxMeta := tangle.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
-					if cachedParentTxMeta == nil {
-						// parent is missing => message is not solid
-						// do not walk the future cone if the current message is not solid
-						return false, nil
+					parentMsgMetaMapKey := parentMessageID.MapKey()
+
+					// load up msg metadata
+					cachedParentTxMeta, exists := cachedMsgMetas[parentMsgMetaMapKey]
+					if !exists {
+						cachedParentTxMeta = tangle.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
+						if cachedParentTxMeta == nil {
+							// parent is missing => message is not solid
+							// do not walk the future cone if the current message is not solid
+							return false, nil
+						}
+
+						// release the msg metadata at the end to speed up calculation
+						cachedMsgMetas[parentMsgMetaMapKey] = cachedParentTxMeta
 					}
 
 					if !cachedParentTxMeta.GetMetadata().IsSolid() {
 						// parent is not solid => message is not solid
 						// do not walk the future cone if the current message is not solid
-						cachedParentTxMeta.Release(true) // meta -1
 						return false, nil
 					}
-					cachedParentTxMeta.Release(true) // meta -1
 				}
 
 				// mark current message as solid
