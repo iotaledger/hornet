@@ -86,10 +86,11 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 		return nil, err
 	}
 
-	var outputID iotago.UTXOInputID
-	copy(outputID[:iotago.TransactionIDLength], txID[:])
 	bytes := make([]byte, iotago.UInt16ByteSize)
 	binary.LittleEndian.PutUint16(bytes, index)
+
+	var outputID iotago.UTXOInputID
+	copy(outputID[:iotago.TransactionIDLength], txID[:])
 	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+iotago.UInt16ByteSize], bytes)
 
 	return &Output{
@@ -142,7 +143,7 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 }
 
 func (o *Output) IsUnspentWithoutLocking() (bool, error) {
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, o.kvStorableKey())
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, o.UTXOKey())
 	return utxoStorage.Has(key)
 }
 
