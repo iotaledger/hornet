@@ -36,7 +36,7 @@
     "depth": 50,
     "intervalSynced": 200,
     "intervalUnsynced": 1000,
-    "path": "snapshots/alphanet2/export.bin",
+    "path": "snapshots/alphanet/export.bin",
     "downloadURLs": []
   },
   "pruning": {
