@@ -1,9 +1,7 @@
 package snapshot
 
 import (
-	"crypto/sha256"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -382,7 +380,8 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	}
 
 	go func() {
-		for msIndex, _ := utxo.ReadLedgerIndexWithoutLocking(); msIndex >= targetIndex; msIndex-- {
+		// targetIndex should not be included in the snapshot, because we only need the diff of targetIndex+1 to calculate the ledger index of targetIndex
+		for msIndex := ledgerMilestoneIndex; msIndex > targetIndex; msIndex-- {
 			newOutputs, newSpents, err := utxo.GetMilestoneDiffsWithoutLocking(msIndex)
 			if err != nil {
 				milestoneDiffProducerErrorChan <- err
@@ -443,31 +442,8 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
-	// re-read the local snapshot file to compute its hash.
-	// note that this step can only be done after the local snapshot file
-	// has been written since the ls file generation uses seeking.
-	lsFileHash, err := localSnapshotFileHash(filePath)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("created local snapshot for target index %d (sha256: %x), took %v", targetIndex, lsFileHash, time.Since(ts))
+	log.Infof("created local snapshot for target index %d, took %v", targetIndex, time.Since(ts))
 	return nil
-}
-
-// computes the sha256b hash of the given local snapshot file.
-func localSnapshotFileHash(filePath string) ([]byte, error) {
-	writtenLsFile, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open local snapshot file for hash computation: %w", err)
-	}
-	defer writtenLsFile.Close()
-
-	sha256Hash := sha256.New()
-	if _, err := io.Copy(sha256Hash, writtenLsFile); err != nil {
-		return nil, fmt.Errorf("unable to copy local snapshot file content for hash computation: %w", err)
-	}
-	return sha256Hash.Sum(nil), nil
 }
 
 func LoadFullSnapshotFromFile(filePath string) error {
