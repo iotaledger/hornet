@@ -56,7 +56,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	defer utxo.WriteUnlockLedger()
 	message := cachedMilestoneMessage.GetMessage()
 
-	ms, err := tangle.CheckIfMilestone(message)
+	ms, err := message.GetMilestone()
 	if err != nil {
 		return nil, err
 	}

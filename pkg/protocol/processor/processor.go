@@ -120,16 +120,11 @@ func (proc *Processor) Process(p *peer.Peer, msgType message.Type, data []byte) 
 	proc.wp.Submit(p, msgType, data)
 }
 
-// SerializeAndEmit serializes the given message and emits MessageProcessed and BroadcastMessage events.
-func (proc *Processor) SerializeAndEmit(msg *tangle.Message, deSeriMode iotago.DeSerializationMode) error {
-
-	msgData, err := msg.GetMessage().Serialize(deSeriMode)
-	if err != nil {
-		return err
-	}
+// Emit triggers MessageProcessed and BroadcastMessage events for the given message.
+func (proc *Processor) Emit(msg *tangle.Message) error {
 
 	proc.Events.MessageProcessed.Trigger(msg, (*rqueue.Request)(nil), (*peer.Peer)(nil))
-	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{MsgData: msgData})
+	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{MsgData: msg.GetData()})
 
 	return nil
 }

@@ -23,7 +23,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201006164224-349fb9ba8cb9
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201007102550-857c56746fc1
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201009091838-83eeea23b745
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
@@ -48,8 +48,7 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.7.0
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/sys v0.0.0-20201008064518-c1f3e3309c71 // indirect
+	golang.org/x/sys v0.0.0-20201009025420-dfb3f7c4e634 // indirect
 	golang.org/x/tools v0.0.0-20200917161530-60aba8ac75fb // indirect
-	gopkg.in/h2non/gock.v1 v1.0.15 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )

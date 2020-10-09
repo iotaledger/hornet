@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	messageRealm    kvstore.KVStore
 	messagesStorage *objectstorage.ObjectStorage
 	metadataStorage *objectstorage.ObjectStorage
 )
@@ -147,11 +146,7 @@ func (c *CachedMessage) Release(force ...bool) {
 func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
 		messageID: hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]),
-		message:   &iotago.Message{},
-	}
-
-	if _, err := msg.message.Deserialize(data, iotago.DeSeriModeNoValidation); err != nil {
-		return nil, err
+		data:      data,
 	}
 
 	return msg, nil
@@ -163,10 +158,8 @@ func GetMessageStorageSize() int {
 
 func configureMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
-	messageRealm = store.WithRealm([]byte{StorePrefixMessages})
-
 	messagesStorage = objectstorage.New(
-		messageRealm,
+		store.WithRealm([]byte{StorePrefixMessages}),
 		messageFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -331,7 +324,7 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 		StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
 	}
 
-	ms, err := CheckIfMilestone(message)
+	ms, err := message.GetMilestone()
 	if err != nil {
 		// Invalid milestone
 		Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("invalid milestone detected! Err: %w", err))
@@ -348,12 +341,4 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 	}
 
 	return cachedMessage, false
-}
-
-func ReadMessageBytesFromStore(messageID *hornet.MessageID) ([]byte, error) {
-	messageBytes, err := messageRealm.Get(messageID.Slice())
-	if err != nil {
-		return nil, err
-	}
-	return messageBytes, nil
 }

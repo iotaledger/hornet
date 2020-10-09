@@ -188,7 +188,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				branchBundles.Release()
 			}
 
-			if bndl.GetMessage().IsMilestone() {
+			if bndl.GetMessage().GetMilestone() {
 				if conf != nil && bndl.GetMessage().GetMilestoneIndex() == conf.MilestoneIndex {
 					dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortBundle)
 				}

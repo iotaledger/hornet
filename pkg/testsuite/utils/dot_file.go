@@ -21,7 +21,7 @@ func ShortenedHash(hash *hornet.MessageID) string {
 // ShortenedTag returns a shortened tag or milestone index for the given message.
 // this is used for the dot file.
 func ShortenedTag(cachedMessage *tangle.CachedMessage) string {
-	if cachedMessage.GetMessage().IsMilestone() {
+	if cachedMessage.GetMessage().GetMilestone() {
 		return fmt.Sprintf("%d", cachedMessage.GetMessage().GetMilestoneIndex())
 	}
 

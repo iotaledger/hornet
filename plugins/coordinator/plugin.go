@@ -12,8 +12,6 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -256,7 +254,7 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 		milestoneConfirmedEventChan = tangleplugin.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
-	if err := gossip.Processor().SerializeAndEmit(msg, iotago.DeSeriModePerformValidation); err != nil {
+	if err := gossip.Processor().Emit(msg); err != nil {
 		return err
 	}
 
