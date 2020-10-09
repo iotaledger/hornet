@@ -52,22 +52,14 @@ func (i *Indexation) ObjectStorageValue() (_ []byte) {
 	return nil
 }
 
-func CheckIfIndexation(msg *Message) (indexation *iotago.IndexationPayload) {
+func CheckIfIndexation(msg *Message) (indexation *iotago.Indexation) {
 
-	// check if the message contains an indexation payload
-	switch payload := msg.GetMessage().Payload.(type) {
-	case *iotago.IndexationPayload:
-		return payload
-	case *iotago.UnsignedTransaction:
-		// check optional payload of unsigned transaction payload
-		switch optionalPayload := payload.Payload.(type) {
-		case *iotago.IndexationPayload:
-			return optionalPayload
-		default:
-			// do nothing
-		}
-	default:
-		// do nothing
+	if msgIndexation := msg.GetIndexation(); msgIndexation != nil {
+		return msgIndexation
+	}
+
+	if txIndexation := msg.GetTransactionEssenceIndexation(); txIndexation != nil {
+		return txIndexation
 	}
 
 	return nil

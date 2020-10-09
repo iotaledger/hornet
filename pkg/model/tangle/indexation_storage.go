@@ -28,7 +28,7 @@ func (c *CachedIndexation) GetIndexation() *Indexation {
 func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Indexation{
 		indexationHash: hornet.MessageIDFromBytes(key[:IndexationHashLength]),
-		messageID:      hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength]),
+		messageID:      hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageIDLength]),
 	}, nil
 }
 
@@ -43,7 +43,7 @@ func configureIndexationStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		indexationFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.PartitionKey(IndexationHashLength, iotago.MessageHashLength),
+		objectstorage.PartitionKey(IndexationHashLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -67,7 +67,7 @@ func GetIndexMessageIDs(index string, maxFind ...int) hornet.MessageIDs {
 			return false
 		}
 
-		messageIDs = append(messageIDs, hornet.MessageIDFromBytes(key[IndexationHashLength:IndexationHashLength+iotago.MessageHashLength]))
+		messageIDs = append(messageIDs, hornet.MessageIDFromBytes(key[IndexationHashLength:IndexationHashLength+iotago.MessageIDLength]))
 		return true
 	}, false, indexationHash[:])
 
@@ -82,7 +82,7 @@ func ForEachMessageIDWithIndex(index string, consumer IndexConsumer, skipCache b
 	indexationHash := blake2b.Sum256([]byte(index))
 
 	indexationStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageHashLength]))
+		return consumer(hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageIDLength]))
 	}, skipCache, indexationHash[:])
 }
 

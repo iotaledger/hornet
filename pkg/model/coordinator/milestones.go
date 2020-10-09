@@ -32,7 +32,7 @@ func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *horn
 // createMilestone creates a signed milestone message.
 func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, mwm int, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
 
-	msPayload := &iotago.MilestonePayload{Index: uint64(index), Timestamp: uint64(time.Now().Unix()), InclusionMerkleProof: whiteFlagMerkleRootTreeHash}
+	msPayload := &iotago.Milestone{Index: uint64(index), Timestamp: uint64(time.Now().Unix()), InclusionMerkleProof: whiteFlagMerkleRootTreeHash}
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: msPayload}
 
 	err := msPayload.Sign(iotaMsg, privateKey)

@@ -14,7 +14,7 @@ func GetNullMessageID() *MessageID {
 }
 
 // MessageID is the array representation of a MessageID.
-type MessageID iotago.MessageHash
+type MessageID iotago.MessageID
 
 // Hex converts the MessageID to its hex string representation.
 func (h *MessageID) Hex() string {
@@ -39,7 +39,7 @@ func MessageIDFromHex(hexString string) (*MessageID, error) {
 		return nil, err
 	}
 
-	if len(b) != iotago.MessageHashLength {
+	if len(b) != iotago.MessageIDLength {
 		return nil, fmt.Errorf("unknown hash length (%d)", len(b))
 	}
 
@@ -52,7 +52,7 @@ func MessageIDFromHex(hexString string) (*MessageID, error) {
 // MessageIDFromMapKey creates a MessageID from a map key representation.
 func MessageIDFromMapKey(mapKey string) *MessageID {
 
-	if len(mapKey) != iotago.MessageHashLength {
+	if len(mapKey) != iotago.MessageIDLength {
 		panic(fmt.Sprintf("unknown hash length (%d)", len(mapKey)))
 	}
 
@@ -65,7 +65,7 @@ func MessageIDFromMapKey(mapKey string) *MessageID {
 // MessageIDFromBytes creates a MessageID from a byte slice.
 func MessageIDFromBytes(b []byte) *MessageID {
 
-	if len(b) != iotago.MessageHashLength {
+	if len(b) != iotago.MessageIDLength {
 		panic(fmt.Sprintf("unknown hash length (%d)", len(b)))
 	}
 

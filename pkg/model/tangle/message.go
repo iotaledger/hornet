@@ -24,7 +24,7 @@ type Message struct {
 
 func NewMessage(iotaMsg *iotago.Message) (*Message, error) {
 
-	msgHash, err := iotaMsg.Hash()
+	msgHash, err := iotaMsg.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Mess
 		return nil, err
 	}
 
-	msgHash, err := msg.Hash()
+	msgHash, err := msg.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (msg *Message) GetParent2MessageID() *hornet.MessageID {
 
 func (msg *Message) IsMilestone() bool {
 	switch ms := msg.GetMessage().Payload.(type) {
-	case *iotago.MilestonePayload:
+	case *iotago.Milestone:
 		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
 			return true
 		}
@@ -88,7 +88,7 @@ func (msg *Message) IsMilestone() bool {
 
 func (msg *Message) IsTransaction() bool {
 	switch msg.GetMessage().Payload.(type) {
-	case *iotago.SignedTransactionPayload:
+	case *iotago.Transaction:
 		return true
 	default:
 	}
@@ -96,22 +96,32 @@ func (msg *Message) IsTransaction() bool {
 	return false
 }
 
-func (msg *Message) GetSignedTransactionPayload() *iotago.SignedTransactionPayload {
+func (msg *Message) GetIndexation() *iotago.Indexation {
 
 	switch payload := msg.GetMessage().Payload.(type) {
-	case *iotago.SignedTransactionPayload:
+	case *iotago.Indexation:
 		return payload
 	default:
 		return nil
 	}
 }
 
-func (msg *Message) GetUnsignedTransaction() *iotago.UnsignedTransaction {
+func (msg *Message) GetTransaction() *iotago.Transaction {
 
-	if signedTransaction := msg.GetSignedTransactionPayload(); signedTransaction != nil {
-		switch unsignedTransaction := signedTransaction.Transaction.(type) {
-		case *iotago.UnsignedTransaction:
-			return unsignedTransaction
+	switch payload := msg.GetMessage().Payload.(type) {
+	case *iotago.Transaction:
+		return payload
+	default:
+		return nil
+	}
+}
+
+func (msg *Message) GetTransactionEssence() *iotago.TransactionEssence {
+
+	if transaction := msg.GetTransaction(); transaction != nil {
+		switch essence := transaction.Essence.(type) {
+		case *iotago.TransactionEssence:
+			return essence
 		default:
 			return nil
 		}
@@ -119,11 +129,24 @@ func (msg *Message) GetUnsignedTransaction() *iotago.UnsignedTransaction {
 	return nil
 }
 
-func (msg *Message) GetUnsignedTransactionUTXOInputs() []*iotago.UTXOInputID {
+func (msg *Message) GetTransactionEssenceIndexation() *iotago.Indexation {
+
+	if essence := msg.GetTransactionEssence(); essence != nil {
+		switch payload := essence.Payload.(type) {
+		case *iotago.Indexation:
+			return payload
+		default:
+			return nil
+		}
+	}
+	return nil
+}
+
+func (msg *Message) GetTransactionEssenceUTXOInputs() []*iotago.UTXOInputID {
 
 	var inputs []*iotago.UTXOInputID
-	if unsignedTransaction := msg.GetUnsignedTransaction(); unsignedTransaction != nil {
-		for _, input := range unsignedTransaction.Inputs {
+	if essence := msg.GetTransactionEssence(); essence != nil {
+		for _, input := range essence.Inputs {
 			switch utxoInput := input.(type) {
 			case *iotago.UTXOInput:
 				id := utxoInput.ID()
@@ -138,8 +161,8 @@ func (msg *Message) GetUnsignedTransactionUTXOInputs() []*iotago.UTXOInputID {
 
 func (msg *Message) GetSignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
 
-	if signedTransaction := msg.GetSignedTransactionPayload(); signedTransaction != nil {
-		switch unlockBlock := signedTransaction.UnlockBlocks[inputIndex].(type) {
+	if transaction := msg.GetTransaction(); transaction != nil {
+		switch unlockBlock := transaction.UnlockBlocks[inputIndex].(type) {
 		case *iotago.SignatureUnlockBlock:
 			switch signature := unlockBlock.Signature.(type) {
 			case *iotago.Ed25519Signature:

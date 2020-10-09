@@ -20,7 +20,7 @@ import (
 
 func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error) {
 
-	sigLockedSingleDeposit := &iotago.SigLockedSingleDeposit{
+	sigLockedSingleDeposit := &iotago.SigLockedSingleOutput{
 		Address: output.Address(),
 		Amount:  output.Amount(),
 	}

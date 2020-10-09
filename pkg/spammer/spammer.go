@@ -67,7 +67,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	messageString += fmt.Sprintf("\nTimestamp: %s", now.Format(time.RFC3339))
 	messageString += fmt.Sprintf("\nTipselection: %v", durationGTTA.Truncate(time.Microsecond))
 
-	iotaMsg := &iotago.Message{Version: 1, Parent1: *tips[0], Parent2: *tips[1], Payload: &iotago.IndexationPayload{Index: indexation, Data: []byte(messageString)}}
+	iotaMsg := &iotago.Message{Version: 1, Parent1: *tips[0], Parent2: *tips[1], Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)}}
 
 	msg, err := tangle.NewMessage(iotaMsg)
 	if err != nil {

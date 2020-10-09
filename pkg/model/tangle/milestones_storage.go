@@ -33,8 +33,8 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageHashLength]),
-		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageHashLength:iotago.MessageHashLength+iotago.UInt64ByteSize])), 0),
+		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageIDLength]),
+		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
 	}, nil
 }
 
