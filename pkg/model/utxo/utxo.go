@@ -2,8 +2,9 @@ package utxo
 
 import (
 	"encoding/binary"
-	"errors"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
 
@@ -98,7 +99,7 @@ func StoreLedgerIndex(msIndex milestone.Index) error {
 func ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
 	value, err := utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
 	if err != nil {
-		return 0, err
+		return 0, errors.Errorf("failed to load ledger milestone index: %w", err)
 	}
 
 	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
