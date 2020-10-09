@@ -77,7 +77,7 @@ type messageIDsByIndexResponse struct {
 type milestoneResponse struct {
 	Index     uint32 `json:"milestoneIndex"`
 	MessageID string `json:"messageId"`
-	Time      string `json:"timestamp"`
+	Time      int64  `json:"timestamp"`
 }
 
 type outputResponse struct {
