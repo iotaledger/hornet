@@ -54,19 +54,19 @@ var (
 
 	// RouteMessage is the route for getting message metadata by it's messageID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
-	RouteMessage = "/message/:" + ParameterMessageID
+	RouteMessage = "/messages/:" + ParameterMessageID
 
 	// RouteMessageData is the route for getting message raw data by it's messageID.
 	// GET returns message data (json).
-	RouteMessageData = "/message/:" + ParameterMessageID + "/data"
+	RouteMessageData = "/messages/:" + ParameterMessageID + "/data"
 
 	// RouteMessageBytes is the route for getting message raw data by it's messageID.
 	// GET returns raw message data (bytes).
-	RouteMessageBytes = "/message/:" + ParameterMessageID + "/raw"
+	RouteMessageBytes = "/messages/:" + ParameterMessageID + "/raw"
 
 	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by it's messageID.
 	// GET returns the message IDs of all children.
-	RouteMessageChildren = "/message/:" + ParameterMessageID + "/children"
+	RouteMessageChildren = "/messages/:" + ParameterMessageID + "/children"
 
 	// RouteMessages is the route for getting message IDs or creating new messages.
 	// GET with query parameter (mandatory) returns all message IDs that fit these filter criteria (query parameters: "index").
@@ -75,24 +75,24 @@ var (
 
 	// RouteMilestone is the route for getting a milestone by it's milestoneIndex.
 	// GET returns the milestone.
-	RouteMilestone = "/milestone/:" + ParameterMilestoneIndex
+	RouteMilestone = "/milestones/:" + ParameterMilestoneIndex
 
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
-	RouteOutput = "/output/:" + ParameterOutputID
+	RouteOutput = "/outputs/:" + ParameterOutputID
 
 	// RouteAddressBalance is the route for getting the total balance of all unspent outputs of an address.
 	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressBalance = "/address/:" + ParameterAddress
+	RouteAddressBalance = "/addresses/:" + ParameterAddress
 
 	// RouteAddressOutputs is the route for getting all output IDs for an address.
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
-	RouteAddressOutputs = "/address/:" + ParameterAddress + "/outputs"
+	RouteAddressOutputs = "/addresses/:" + ParameterAddress + "/outputs"
 
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
 	// DELETE deletes the peer.
-	RoutePeer = "/peer/:" + ParameterPeerID
+	RoutePeer = "/peers/:" + ParameterPeerID
 
 	// RoutePeers is the route for getting all peers of the node.
 	// GET returns a list of all peers.
@@ -122,7 +122,7 @@ var (
 	// RouteDebugMessageCone is the debug route for traversing a cone of a message.
 	// it traverses the parents of a message until they reference an older milestone than the start message.
 	// GET returns the path of this traversal and the "entry points".
-	RouteDebugMessageCone = "/debug/message-cone/:" + ParameterMessageID
+	RouteDebugMessageCone = "/debug/message-cones/:" + ParameterMessageID
 )
 
 var (
