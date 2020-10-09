@@ -69,7 +69,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *tips[0], Parent2: *tips[1], Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)}}
 
-	msg, err := tangle.NewMessage(iotaMsg)
+	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}

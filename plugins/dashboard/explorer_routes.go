@@ -76,13 +76,10 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	t.MWM = mwm
 
 	// check whether milestone
-	ms, err := tangle.CheckIfMilestone(cachedMsg.GetMessage())
+	ms, err := cachedMsg.GetMessage().GetMilestone()
 	if ms != nil {
 		t.IsMilestone = true
 		t.MilestoneIndex = milestone.Index(ms.Index)
-	}
-
-	if cachedMsg.GetMessage().IsMilestone() {
 	}
 
 	return t, nil

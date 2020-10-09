@@ -17,7 +17,7 @@ func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *horn
 
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: nil}
 
-	msg, err := tangle.NewMessage(iotaMsg)
+	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to finalize: %w", err)
 	}
@@ -46,7 +46,7 @@ func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, paren
 		return nil, fmt.Errorf("failed to sign: %w", err)
 	}
 
-	msg, err := tangle.NewMessage(iotaMsg)
+	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}

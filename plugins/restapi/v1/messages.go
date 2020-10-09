@@ -8,7 +8,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -125,15 +124,13 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	data, err := tangle.ReadMessageBytesFromStore(messageID)
-	if err != nil {
-		if err == kvstore.ErrKeyNotFound {
-			return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
-		}
-		return nil, errors.WithMessagef(common.ErrInternalError, "load message data failed: %s, error: %w", messageIDHex, err)
+	cachedMsg := tangle.GetCachedMessageOrNil(messageID)
+	if cachedMsg == nil {
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
+	defer cachedMsg.Release(true)
 
-	return data, nil
+	return cachedMsg.GetMessage().GetData(), nil
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
@@ -202,12 +199,12 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 		}
 
-		if _, err := msg.Deserialize(bytes, iotago.DeSeriModePerformValidation); err != nil {
+		if _, err := msg.Deserialize(bytes, iotago.DeSeriModeNoValidation); err != nil {
 			return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 		}
 	}
 
-	message, err := tangle.NewMessage(msg)
+	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
@@ -216,7 +213,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	msgProcessedChan := tangleplugin.RegisterMessageProcessedEvent(message.GetMessageID())
 
-	if err := gossip.Processor().SerializeAndEmit(message, iotago.DeSeriModePerformValidation); err != nil {
+	if err := gossip.Processor().Emit(message); err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 

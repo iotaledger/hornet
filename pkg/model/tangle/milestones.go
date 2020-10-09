@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/syncutils"
@@ -250,18 +248,4 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
 			return cachedMs
 		}
 	}
-}
-
-func CheckIfMilestone(msg *Message) (ms *iotago.Milestone, err error) {
-
-	switch ms := msg.GetMessage().Payload.(type) {
-	case *iotago.Milestone:
-		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
-			return ms, err
-		}
-		return ms, nil
-	default:
-	}
-
-	return nil, nil
 }

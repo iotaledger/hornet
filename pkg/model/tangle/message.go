@@ -2,7 +2,7 @@ package tangle
 
 import (
 	"fmt"
-	"log"
+	"sync"
 
 	iotago "github.com/iotaledger/iota.go"
 
@@ -19,71 +19,96 @@ type Message struct {
 	messageID *hornet.MessageID
 
 	// Value
-	message *iotago.Message
+	data        []byte
+	messageOnce sync.Once
+	message     *iotago.Message
 }
 
-func NewMessage(iotaMsg *iotago.Message) (*Message, error) {
+func NewMessage(iotaMsg *iotago.Message, deSeriMode iotago.DeSerializationMode) (*Message, error) {
+
+	data, err := iotaMsg.Serialize(deSeriMode)
+	if err != nil {
+		return nil, err
+	}
 
 	msgHash, err := iotaMsg.ID()
 	if err != nil {
 		return nil, err
 	}
-
 	messageID := hornet.MessageID(*msgHash)
 
-	return &Message{
-		messageID: &messageID,
-		message:   iotaMsg,
-	}, nil
+	msg := &Message{messageID: &messageID, data: data}
+
+	msg.messageOnce.Do(func() {
+		msg.message = iotaMsg
+	})
+
+	return msg, nil
 }
 
 func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Message, error) {
-	msg := &iotago.Message{}
-	if _, err := msg.Deserialize(data, deSeriMode); err != nil {
+
+	iotaMsg := &iotago.Message{}
+	if _, err := iotaMsg.Deserialize(data, deSeriMode); err != nil {
 		return nil, err
 	}
 
-	msgHash, err := msg.ID()
+	msgHash, err := iotaMsg.ID()
 	if err != nil {
 		return nil, err
 	}
-
 	messageID := hornet.MessageID(*msgHash)
 
-	return &Message{
-		messageID: &messageID,
-		message:   msg,
-	}, nil
+	msg := &Message{messageID: &messageID, data: data}
+
+	msg.messageOnce.Do(func() {
+		msg.message = iotaMsg
+	})
+
+	return msg, nil
 }
 
 func (msg *Message) GetMessageID() *hornet.MessageID {
 	return msg.messageID
 }
 
+func (msg *Message) GetData() []byte {
+	return msg.data
+}
+
 func (msg *Message) GetMessage() *iotago.Message {
+	msg.messageOnce.Do(func() {
+		iotaMsg := &iotago.Message{}
+		if _, err := iotaMsg.Deserialize(msg.data, iotago.DeSeriModeNoValidation); err != nil {
+			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.Hex(), err.Error()))
+		}
+
+		msg.message = iotaMsg
+	})
 	return msg.message
 }
 
 func (msg *Message) GetParent1MessageID() *hornet.MessageID {
-	parent1 := hornet.MessageID(msg.message.Parent1)
+	parent1 := hornet.MessageID(msg.GetMessage().Parent1)
 	return &parent1
 }
 
 func (msg *Message) GetParent2MessageID() *hornet.MessageID {
-	parent2 := hornet.MessageID(msg.message.Parent2)
+	parent2 := hornet.MessageID(msg.GetMessage().Parent2)
 	return &parent2
 }
 
-func (msg *Message) IsMilestone() bool {
+func (msg *Message) GetMilestone() (ms *iotago.Milestone, err error) {
 	switch ms := msg.GetMessage().Payload.(type) {
 	case *iotago.Milestone:
 		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
-			return true
+			return ms, err
 		}
+		return ms, nil
 	default:
 	}
 
-	return false
+	return nil, nil
 }
 
 func (msg *Message) IsTransaction() bool {
@@ -190,9 +215,5 @@ func (msg *Message) ObjectStorageKey() []byte {
 }
 
 func (msg *Message) ObjectStorageValue() (_ []byte) {
-	data, err := msg.message.Serialize(iotago.DeSeriModePerformValidation) //TODO: should we skip verification?
-	if err != nil {
-		log.Fatalf("Error serializing message: %v", err)
-	}
-	return data
+	return msg.data
 }
