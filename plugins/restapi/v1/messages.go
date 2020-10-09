@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -15,10 +16,12 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/gohornet/hornet/plugins/urts"
 )
 
 var (
@@ -204,12 +207,31 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
+	var emptyMessageID = hornet.MessageID{}
+	if bytes.Equal(msg.Parent1[:], emptyMessageID.Slice()) || bytes.Equal(msg.Parent2[:], emptyMessageID.Slice()) {
+
+		tips, err := urts.TipSelector.SelectNonLazyTips()
+
+		if err != nil {
+			if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+				return nil, errors.WithMessage(common.ErrServiceUnavailable, err.Error())
+			}
+			return nil, errors.WithMessage(common.ErrInternalError, err.Error())
+		}
+		msg.Parent1 = *tips[0]
+		msg.Parent2 = *tips[1]
+	}
+
+	if msg.Nonce == 0 {
+		//TODO: Do PoW
+	}
+
+	// ToDo: check PoW
+
 	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
-
-	// ToDo: check PoW
 
 	msgProcessedChan := tangleplugin.RegisterMessageProcessedEvent(message.GetMessageID())
 
