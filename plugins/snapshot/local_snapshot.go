@@ -280,7 +280,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	utxo.ReadLockLedger()
 	defer utxo.ReadUnlockLedger()
 
-	ledgerMilestoneIndex, err := utxo.ReadLedgerIndex()
+	ledgerMilestoneIndex, err := utxo.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return fmt.Errorf("unable to read current ledger index: %w", err)
 	}
