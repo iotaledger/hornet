@@ -37,6 +37,11 @@ var (
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
 )
 
+type solidEntryPoint struct {
+	messageID *hornet.MessageID
+	index     milestone.Index
+}
+
 // isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
 func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index) bool {
 
@@ -122,7 +127,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(solidEntryPointMessageID *hornet.MessageID, index milestone.Index) bool) error {
+func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -175,7 +180,7 @@ func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan stru
 				parentMessageIDMapKey := parentMessageID.MapKey()
 				if _, exists := solidEntryPoints[parentMessageIDMapKey]; !exists {
 					solidEntryPoints[parentMessageIDMapKey] = at
-					if !solidEntryPointConsumer(parentMessageID, at) {
+					if !solidEntryPointConsumer(&solidEntryPoint{messageID: parentMessageID, index: at}) {
 						return ErrSnapshotCreationWasAborted
 					}
 				}
@@ -314,8 +319,8 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 
 	go func() {
 		// calculate solid entry points for the target index
-		if err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID *hornet.MessageID, index milestone.Index) bool {
-			solidEntryPointProducerChan <- solidEntryPointMessageID
+		if err := forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *solidEntryPoint) bool {
+			solidEntryPointProducerChan <- sep.messageID
 			return true
 		}); err != nil {
 			solidEntryPointProducerErrorChan <- err
