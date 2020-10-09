@@ -49,8 +49,8 @@ type messageMetadataResponse struct {
 	Parent1 string `json:"parent1MessageId"`
 	// The 2nd parent the message references.
 	Parent2               string           `json:"parent2MessageId"`
-	Solid                 bool             `json:"solid"`
-	ReferencedByMilestone *milestone.Index `json:"referencedByMilestone"`
+	Solid                 bool             `json:"isSolid"`
+	ReferencedByMilestone *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
 	LedgerInclusionState  *string          `json:"ledgerInclusionState,omitempty"`
 	ShouldPromote         *bool            `json:"shouldPromote,omitempty"`
 	ShouldReattach        *bool            `json:"shouldReattach,omitempty"`
@@ -87,7 +87,7 @@ type outputResponse struct {
 	// The index of the output.
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
-	Spent bool `json:"spent"`
+	Spent bool `json:"isSpent"`
 	// The output in its serialized form.
 	RawOutput *json.RawMessage `json:"output"`
 }
