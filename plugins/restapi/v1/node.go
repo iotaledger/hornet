@@ -1,12 +1,10 @@
 package v1
 
 import (
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"strconv"
+	"strings"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -109,7 +107,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 	return &milestoneResponse{
 		Index:     uint32(cachedMilestone.GetMilestone().Index),
 		MessageID: cachedMilestone.GetMilestone().MessageID.Hex(),
-		Time:      cachedMilestone.GetMilestone().Timestamp.Format(time.RFC3339),
+		Time:      cachedMilestone.GetMilestone().Timestamp.Unix(),
 	}, nil
 
 }
