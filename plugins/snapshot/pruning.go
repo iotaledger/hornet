@@ -135,12 +135,17 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	defer setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
-	tangle.WriteLockSolidEntryPoints()
-	tangle.ResetSolidEntryPoints()
-	err := forEachSolidEntryPoint(targetIndex, abortSignal, func(solidEntryPointMessageID *hornet.MessageID, index milestone.Index) bool {
-		tangle.SolidEntryPointsAdd(solidEntryPointMessageID, index)
+	var solidEntryPoints []*solidEntryPoint
+	err := forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *solidEntryPoint) bool {
+		solidEntryPoints = append(solidEntryPoints, sep)
 		return true
 	})
+
+	tangle.WriteLockSolidEntryPoints()
+	tangle.ResetSolidEntryPoints()
+	for _, sep := range solidEntryPoints {
+		tangle.SolidEntryPointsAdd(sep.messageID, sep.index)
+	}
 	tangle.StoreSolidEntryPoints()
 	tangle.WriteUnlockSolidEntryPoints()
 
