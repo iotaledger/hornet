@@ -99,6 +99,10 @@ func StoreLedgerIndex(msIndex milestone.Index) error {
 func ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
 	value, err := utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
 	if err != nil {
+		if err == kvstore.ErrKeyNotFound {
+			// there is no ledger milestone yet => return 0
+			return 0, nil
+		}
 		return 0, errors.Errorf("failed to load ledger milestone index: %w", err)
 	}
 
