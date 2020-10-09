@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"bytes"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -208,7 +207,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	var emptyMessageID = hornet.MessageID{}
-	if bytes.Equal(msg.Parent1[:], emptyMessageID.Slice()) || bytes.Equal(msg.Parent2[:], emptyMessageID.Slice()) {
+	if msg.Parent1 == emptyMessageID || msg.Parent2 == emptyMessageID {
 
 		tips, err := urts.TipSelector.SelectNonLazyTips()
 
