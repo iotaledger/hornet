@@ -146,7 +146,7 @@ func (c *CachedMessage) Release(force ...bool) {
 
 func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
-		messageID: hornet.MessageIDFromBytes(key[:iotago.MessageHashLength]),
+		messageID: hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]),
 		message:   &iotago.Message{},
 	}
 

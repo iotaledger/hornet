@@ -30,7 +30,7 @@ func (c *CachedChild) GetChild() *Child {
 }
 
 func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	child := NewChild(hornet.MessageIDFromBytes(key[:iotago.MessageHashLength]), hornet.MessageIDFromBytes(key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength]))
+	child := NewChild(hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]), hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	return child, nil
 }
 
@@ -45,7 +45,7 @@ func configureChildrenStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 		childrenFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.PartitionKey(iotago.MessageHashLength, iotago.MessageHashLength),
+		objectstorage.PartitionKey(iotago.MessageIDLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -67,7 +67,7 @@ func GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...int) hornet.M
 			return false
 		}
 
-		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromBytes(key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength]))
+		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 		return true
 	}, false, messageID.Slice())
 
@@ -85,7 +85,7 @@ type ChildConsumer func(messageID *hornet.MessageID, childMessageID *hornet.Mess
 // ForEachChild loops over all children.
 func ForEachChild(consumer ChildConsumer, skipCache bool) {
 	childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(hornet.MessageIDFromBytes(key[:iotago.MessageHashLength]), hornet.MessageIDFromBytes(key[iotago.MessageHashLength:iotago.MessageHashLength+iotago.MessageHashLength]))
+		return consumer(hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]), hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	}, skipCache)
 }
 

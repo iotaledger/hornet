@@ -111,18 +111,18 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 
 		var conflicting bool
 
-		signedTransaction := message.GetSignedTransactionPayload()
-		signedTransactionHash, err := signedTransaction.Hash()
+		signedTransaction := message.GetTransaction()
+		signedTransactionHash, err := signedTransaction.ID()
 		if err != nil {
 			return err
 		}
 
-		unsignedTransaction := message.GetUnsignedTransaction()
+		unsignedTransaction := message.GetTransactionEssence()
 		if unsignedTransaction == nil {
 			return fmt.Errorf("no unsigned transaction found")
 		}
 
-		inputs := message.GetUnsignedTransactionUTXOInputs()
+		inputs := message.GetTransactionEssenceUTXOInputs()
 
 		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
 		// also sum up the amount required

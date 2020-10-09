@@ -117,7 +117,7 @@ func snapshotGen(args []string) error {
 
 		outputAdded = true
 
-		var nullMessageID [iotago.MessageHashLength]byte
+		var nullMessageID [iotago.MessageIDLength]byte
 		var nullOutputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
 
 		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: iotago.TokenSupply}, nil

@@ -213,8 +213,12 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/iotaledger/hive.go v0.0.0-20201006164224-349fb9ba8cb9 h1:DZovWSM2OpRvmvNiDsidMQ9PBS2tNhGfyIt011jDS9c=
 github.com/iotaledger/hive.go v0.0.0-20201006164224-349fb9ba8cb9/go.mod h1:h56kcBj+CYn3UEoCG6RJI5lVdYVJmhmeuIHOUgFCfEg=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200924093814-add1daca64b6 h1:alrkq+DHSchVnYzURlnTADihEJ5vLzX8CUeKSZaWH4w=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200924093814-add1daca64b6/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201006194018-796fe99f19b9 h1:a6eudLx1I7wO0OrUvAzYqfErOgk42OZXYsjBjbQ0hzg=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201006194018-796fe99f19b9/go.mod h1:Cay5zHtgtTofY6IfAdau2GwuwUdJMZjRrsJxq+JUzT0=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201007102550-857c56746fc1 h1:umDP+MeLnsPDSyUAyplPh/EOb/XyXxGHaW3Ux8NdqZ8=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201007102550-857c56746fc1/go.mod h1:Cay5zHtgtTofY6IfAdau2GwuwUdJMZjRrsJxq+JUzT0=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
@@ -565,6 +569,8 @@ golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200909081042-eff7692f9009/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201006155630-ac719f4daadf h1:Bg47KQy0JhTHuf4sLiQwTMKwUMfSDwgSGatrxGR7nLM=
 golang.org/x/sys v0.0.0-20201006155630-ac719f4daadf/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20201008064518-c1f3e3309c71 h1:ZPX6UakxrJCxWiyGWpXtFY+fp86Esy7xJT/jJCG8bgU=
+golang.org/x/sys v0.0.0-20201008064518-c1f3e3309c71/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=

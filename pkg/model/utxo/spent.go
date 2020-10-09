@@ -20,7 +20,7 @@ type Spent struct {
 
 	output *Output
 
-	targetTransactionID *iotago.SignedTransactionPayloadHash
+	targetTransactionID *iotago.TransactionID
 	confirmationIndex   milestone.Index
 }
 
@@ -48,7 +48,7 @@ func (s *Spent) Amount() uint64 {
 	return s.output.amount
 }
 
-func (s *Spent) TargetTransactionID() *iotago.SignedTransactionPayloadHash {
+func (s *Spent) TargetTransactionID() *iotago.TransactionID {
 	return s.targetTransactionID
 }
 
@@ -58,7 +58,7 @@ func (s *Spent) ConfirmationIndex() milestone.Index {
 
 type Spents []*Spent
 
-func NewSpent(output *Output, targetTransactionID *iotago.SignedTransactionPayloadHash, confirmationIndex milestone.Index) *Spent {
+func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirmationIndex milestone.Index) *Spent {
 	return &Spent{
 		output:              output,
 		targetTransactionID: targetTransactionID,
@@ -111,7 +111,7 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 	   4 bytes uint32		ReferencedIndex
 	*/
 
-	s.targetTransactionID = &iotago.SignedTransactionPayloadHash{}
+	s.targetTransactionID = &iotago.TransactionID{}
 	copy(s.targetTransactionID[:], value[:iotago.TransactionIDLength])
 	s.confirmationIndex = milestone.Index(binary.LittleEndian.Uint32(value[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt32ByteSize]))
 

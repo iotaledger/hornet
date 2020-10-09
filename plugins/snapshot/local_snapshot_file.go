@@ -19,13 +19,13 @@ const (
 	// The supported local snapshot file version.
 	SupportedFormatVersion byte = 1
 	// The length of a solid entry point hash.
-	SolidEntryPointHashLength = iotago.MessageHashLength
+	SolidEntryPointHashLength = iotago.MessageIDLength
 
 	// The offset of counters within a local snapshot file:
 	// version + type + timestamp + coo-pub-key + sep-ms-index + sep-ms-hash + ledger-ms-index + ledger-ms-hash
 	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + ed25519.PublicKeySize +
-		iotago.UInt32ByteSize + iotago.MilestonePayloadHashLength +
-		iotago.UInt32ByteSize + iotago.MilestonePayloadHashLength
+		iotago.UInt32ByteSize + iotago.MilestoneIDLength +
+		iotago.UInt32ByteSize + iotago.MilestoneIDLength
 )
 
 var (
@@ -50,7 +50,7 @@ const (
 // Output defines an output within a local snapshot.
 type Output struct {
 	// The message ID of the message that contained the transaction where this output was created.
-	MessageID [iotago.MessageHashLength]byte `json:"message_id"`
+	MessageID [iotago.MessageIDLength]byte `json:"message_id"`
 	// The transaction ID and the index of the output.
 	OutputID [iotago.TransactionIDLength + 2]byte `json:"output_id"`
 	// The underlying address to which this output deposits to.

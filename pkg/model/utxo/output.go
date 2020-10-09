@@ -48,23 +48,23 @@ func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, addres
 	return &Output{
 		outputID:   outputID,
 		messageID:  messageID,
-		outputType: iotago.OutputSigLockedSingleDeposit,
+		outputType: iotago.OutputSigLockedSingleOutput,
 		address:    address,
 		amount:     amount,
 	}
 }
 
-func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactionPayload, index uint16) (*Output, error) {
+func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
-	var deposit *iotago.SigLockedSingleDeposit
-	switch unsignedTx := transaction.Transaction.(type) {
-	case *iotago.UnsignedTransaction:
+	var deposit *iotago.SigLockedSingleOutput
+	switch unsignedTx := transaction.Essence.(type) {
+	case *iotago.TransactionEssence:
 		if len(unsignedTx.Outputs) < int(index) {
 			return nil, errors.New("deposit not found")
 		}
 		output := unsignedTx.Outputs[int(index)]
 		switch d := output.(type) {
-		case *iotago.SigLockedSingleDeposit:
+		case *iotago.SigLockedSingleOutput:
 			deposit = d
 		default:
 			return nil, errors.New("unsuported output type")
@@ -81,7 +81,7 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 		return nil, errors.New("unsupported deposit address")
 	}
 
-	txID, err := transaction.Hash()
+	txID, err := transaction.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.SignedTransactio
 	return &Output{
 		outputID:   &outputID,
 		messageID:  messageID,
-		outputType: iotago.OutputSigLockedSingleDeposit,
+		outputType: iotago.OutputSigLockedSingleOutput,
 		address:    address,
 		amount:     deposit.Amount,
 	}, nil
@@ -124,7 +124,7 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 		return fmt.Errorf("not enough bytes in key to unmarshal object, expected: %d, got: %d", expectedKeyLength, len(key))
 	}
 
-	expectedValueLength := iotago.MessageHashLength + iotago.OneByte + iotago.Ed25519AddressBytesLength + iotago.UInt64ByteSize
+	expectedValueLength := iotago.MessageIDLength + iotago.OneByte + iotago.Ed25519AddressBytesLength + iotago.UInt64ByteSize
 
 	if len(value) < expectedValueLength {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
@@ -132,12 +132,12 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 
 	o.outputID = &iotago.UTXOInputID{}
 	copy(o.outputID[:], key[:iotago.TransactionIDLength+iotago.UInt16ByteSize])
-	o.messageID = hornet.MessageIDFromBytes(value[:iotago.MessageHashLength])
-	o.outputType = value[iotago.MessageHashLength]
+	o.messageID = hornet.MessageIDFromBytes(value[:iotago.MessageIDLength])
+	o.outputType = value[iotago.MessageIDLength]
 
 	o.address = &iotago.Ed25519Address{}
-	copy(o.address[:], value[iotago.MessageHashLength+iotago.OneByte:iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength])
-	o.amount = binary.LittleEndian.Uint64(value[iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageHashLength+iotago.OneByte+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
+	copy(o.address[:], value[iotago.MessageIDLength+iotago.OneByte:iotago.MessageIDLength+iotago.OneByte+iotago.Ed25519AddressBytesLength])
+	o.amount = binary.LittleEndian.Uint64(value[iotago.MessageIDLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageIDLength+iotago.OneByte+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
 
 	return nil
 }
