@@ -84,6 +84,14 @@ func ConfigureDatabases(directory string) {
 	pebbleInstance = getPebbleDB(directory, false)
 
 	ConfigureStorages(pebble.New(pebbleInstance), profile.LoadProfile().Caches)
+
+	ledgerMilestoneIndex, err := utxo.ReadLedgerIndex()
+	if err != nil {
+		panic(err)
+	}
+
+	// set the solid milestone index based on the ledger milestone
+	SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
