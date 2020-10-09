@@ -52,13 +52,13 @@ var (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
-	// RouteMessage is the route for getting message metadata by it's messageID.
-	// GET returns message metadata (including info about "promotion/reattachment needed").
-	RouteMessage = "/messages/:" + ParameterMessageID
-
 	// RouteMessageData is the route for getting message raw data by it's messageID.
 	// GET returns message data (json).
-	RouteMessageData = "/messages/:" + ParameterMessageID + "/data"
+	RouteMessageData = "/messages/:" + ParameterMessageID
+
+	// RouteMessageMetadata is the route for getting message metadata by it's messageID.
+	// GET returns message metadata (including info about "promotion/reattachment needed").
+	RouteMessageMetadata = "/messages/:" + ParameterMessageID + "/metadata"
 
 	// RouteMessageBytes is the route for getting message raw data by it's messageID.
 	// GET returns raw message data (bytes).
@@ -172,7 +172,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		})
 	}
 
-	routeGroup.GET(RouteMessage, func(c echo.Context) error {
+	routeGroup.GET(RouteMessageMetadata, func(c echo.Context) error {
 
 		messageMetaResp, err := messageMetadataByID(c)
 		if err != nil {
