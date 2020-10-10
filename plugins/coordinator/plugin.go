@@ -320,7 +320,7 @@ func configureEvents() {
 			return
 		}
 
-		// propagate new cone root indexes to the future cone for URTS
+		// propagate new cone root indexes to the future cone for heaviest branch tipselection
 		dag.UpdateConeRootIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
