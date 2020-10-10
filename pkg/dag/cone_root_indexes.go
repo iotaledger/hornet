@@ -136,8 +136,11 @@ func UpdateConeRootIndexes(messageIDs hornet.MessageIDs, lsmi milestone.Index) {
 			// traversal stops if no more messages pass the given condition
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
+
 				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]
-				return !previouslyTraversed, nil
+
+				// only traverse this message if it was not traversed before and is solid
+				return !previouslyTraversed && cachedMsgMeta.GetMetadata().IsSolid(), nil
 			},
 			// consumer
 			func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
