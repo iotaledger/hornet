@@ -139,13 +139,13 @@ type addressOutputsResponse struct {
 	// The actual count of results that are returned.
 	Count uint32 `json:"count"`
 	// The output IDs (transaction hash + output index) of the outputs on this address.
-	OutputIDs []string `json:"outputIDs"`
+	OutputIDs []string `json:"outputIds"`
 }
 
 // outputIDsResponse defines the response of a GET debug outputs REST API call.
 type outputIDsResponse struct {
 	// The output IDs (transaction hash + output index) of the outputs.
-	OutputIDs []string `json:"outputIDs"`
+	OutputIDs []string `json:"outputIds"`
 }
 
 // outputIDsResponse defines the response of a GET debug milestone diff REST API call.
