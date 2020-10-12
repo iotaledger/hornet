@@ -220,9 +220,9 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 	}
 
 	return &messageConeResponse{
-		PathLength:       len(tanglePath),
-		EntryPointsCount: len(entryPoints),
-		Path:             tanglePath,
-		EntryPoints:      entryPoints,
+		ConeElementsCount: len(tanglePath),
+		EntryPointsCount:  len(entryPoints),
+		Cone:              tanglePath,
+		EntryPoints:       entryPoints,
 	}, nil
 }
