@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/libp2p/go-libp2p-core/peer"
 
 	iotago "github.com/iotaledger/iota.go"
 
@@ -28,7 +29,7 @@ var (
 )
 
 // New creates a new processor which parses messages.
-func NewMessageProcessor(requestQueue RequestQueue, peeringService *p2p.PeeringService, opts *Options) *MessageProcessor {
+func NewMessageProcessor(requestQueue RequestQueue, peeringService *p2p.Manager, opts *Options) *MessageProcessor {
 	proc := &MessageProcessor{
 		ps:           peeringService,
 		requestQueue: requestQueue,
@@ -76,6 +77,14 @@ func MessageProcessedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(msg *tangle.Message, request *Request, proto *Protocol))(params[0].(*tangle.Message), params[1].(*Request), params[2].(*Protocol))
 }
 
+// Broadcast defines a message which should be broadcasted.
+type Broadcast struct {
+	// The message data to broadcast.
+	MsgData []byte
+	// The IDs of the peers to exclude from broadcasting.
+	ExcludePeers map[peer.ID]struct{}
+}
+
 func BroadcastCaller(handler interface{}, params ...interface{}) {
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
@@ -91,7 +100,7 @@ type MessageProcessorEvents struct {
 // MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
 type MessageProcessor struct {
 	Events       MessageProcessorEvents
-	ps           *p2p.PeeringService
+	ps           *p2p.Manager
 	wp           *workerpool.WorkerPool
 	requestQueue RequestQueue
 	workUnits    *objectstorage.ObjectStorage
@@ -151,7 +160,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		metrics.SharedServerMetrics.InvalidRequests.Inc()
 
 		// drop the connection to the peer
-		proc.ps.RemovePeer(p.PeerID)
+		_= proc.ps.DisconnectPeer(p.PeerID)
 		return
 	}
 
@@ -236,7 +245,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		proc.ps.RemovePeer(p.PeerID)
+		_= proc.ps.DisconnectPeer(p.PeerID)
 
 		return
 	case wu.Is(Hashed):

@@ -166,7 +166,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		log.Warn(err)
 	}
 
-	peers := p2pplug.PeeringService().PeerSnapshots()
+	peers := p2pplug.Manager().PeerSnapshots()
 	for _, uri := range query.Uris {
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
@@ -224,5 +224,5 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 }
 
 func getNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	c.JSON(http.StatusOK, GetNeighborsReturn{Neighbors: p2pplug.PeeringService().PeerSnapshots()})
+	c.JSON(http.StatusOK, GetNeighborsReturn{Neighbors: p2pplug.Manager().PeerSnapshots()})
 }

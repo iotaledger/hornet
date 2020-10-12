@@ -286,7 +286,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		triggerSignal := (newMilestoneIndex == 0) && (solidifierMilestoneIndex == 0)
 		nextMilestoneSignal := newMilestoneIndex == tangle.GetSolidMilestoneIndex()+1
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((solidifierMilestoneIndex != 0) && (newMilestoneIndex < solidifierMilestoneIndex))
-		newMilestoneReqQueueEmptySignal := (solidifierMilestoneIndex == 0) && (newMilestoneIndex != 0) && gossip.Service().RequestQueue.Empty()
+		newMilestoneReqQueueEmptySignal := (solidifierMilestoneIndex == 0) && (newMilestoneIndex != 0) && gossip.RequestQueue().Empty()
 		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected || newMilestoneReqQueueEmptySignal) {
 			// Do not run solidifier
 			solidifierMilestoneIndexLock.RUnlock()

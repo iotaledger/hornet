@@ -70,7 +70,7 @@ func configureEvents() {
 	onCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32, target milestone.Index) {
 		log.Infof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
 		// prevent any requests in the queue above our next checkpoint
-		gossip.Service().RequestQueue.Filter(func(r *gossip2.Request) bool {
+		gossip.RequestQueue().Filter(func(r *gossip2.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 		requestMissingMilestoneParents := gossip.MemoizedRequestMissingMilestoneParents()
@@ -83,7 +83,7 @@ func configureEvents() {
 
 	onStart = events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Synchronizing to milestone %d", targetMsIndex)
-		gossip.Service().RequestQueue.Filter(func(r *gossip2.Request) bool {
+		gossip.RequestQueue().Filter(func(r *gossip2.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 		requestMissingMilestoneParents := gossip.MemoizedRequestMissingMilestoneParents()
@@ -99,12 +99,12 @@ func configureEvents() {
 
 	onDone = events.NewClosure(func(deltaSynced int, took time.Duration) {
 		log.Infof("Synchronized %d milestones in %v", deltaSynced, took)
-		gossip.Service().RequestQueue.Filter(nil)
+		gossip.RequestQueue().Filter(nil)
 	})
 }
 
 func attachEvents() {
-	gossip.Service().Events.Created.Attach(onGossipProtocolStreamCreated)
+	gossip.Service().Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 	tangleplugin.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
@@ -114,7 +114,7 @@ func attachEvents() {
 }
 
 func detachEvents() {
-	gossip.Service().Events.Created.Detach(onGossipProtocolStreamCreated)
+	gossip.Service().Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	tangleplugin.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)

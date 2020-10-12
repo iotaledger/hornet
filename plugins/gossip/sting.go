@@ -10,7 +10,7 @@ import (
 
 // sets up the event handlers which propagate STING messages.
 func addMessageEventHandlers(proto *gossip.Protocol) {
-	msgProc := Service().MessageProcessor
+	msgProc := MessageProcessor()
 
 	proto.Parser.Events.Received[gossip.MessageTypeMessage].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessages.Inc()

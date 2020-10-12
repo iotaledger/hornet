@@ -139,7 +139,7 @@ func collectPeers() {
 
 	gossipService := gossip.Service()
 
-	for _, peer := range p2pplug.PeeringService().PeerSnapshots() {
+	for _, peer := range p2pplug.Manager().PeerSnapshots() {
 		labels := prometheus.Labels{
 			"id":      peer.ID,
 			"address": peer.Addresses[0].String(),

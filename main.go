@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gohornet/hornet/plugins/p2p"
+	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -43,6 +44,7 @@ func main() {
 		plugins = append(plugins, []*node.Plugin{
 			pow.PLUGIN,
 			p2p.PLUGIN,
+			p2pdisc.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
 			warpsync.PLUGIN,

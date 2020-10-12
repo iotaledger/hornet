@@ -16,7 +16,7 @@ func init() {
 }
 
 func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
-	queued, pending, processing := gossip.Service().RequestQueue.Requests()
+	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
 
 	offset := 0

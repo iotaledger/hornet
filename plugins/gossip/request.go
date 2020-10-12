@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/iotaledger/hive.go/daemon"
 
 	"github.com/gohornet/hornet/pkg/dag"
@@ -30,7 +28,7 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 func runRequestWorkers() {
 	daemon.BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
-		rQueue := Service().RequestQueue
+		rQueue := RequestQueue()
 	requestQueueEnqueueLoop:
 		for {
 			select {
@@ -58,7 +56,7 @@ func runRequestWorkers() {
 
 	daemon.BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
 		gossipService := Service()
-		rQueue := gossipService.RequestQueue
+		rQueue := RequestQueue()
 		for {
 			select {
 			case <-shutdownSignal:
@@ -68,12 +66,7 @@ func runRequestWorkers() {
 				// drain request queue
 				for r := rQueue.Next(); r != nil; r = rQueue.Next() {
 					requested := false
-					p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
-						proto := gossipService.Protocol(p.ID)
-						if proto == nil {
-							return true
-						}
-
+					gossipService.ForEach(func(proto *gossip.Protocol) bool {
 						// we only send a request message if the peer actually has the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
 						if !proto.HasDataForMilestone(r.MilestoneIndex) {
@@ -86,15 +79,10 @@ func runRequestWorkers() {
 					})
 
 					if !requested {
-						// We have no neighbor that has the data for sure,
+						// we have no neighbor that has the data for sure,
 						// so we ask all neighbors that could have the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
-						p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
-							proto := gossipService.Protocol(p.ID)
-							if proto == nil {
-								return true
-							}
-
+						gossipService.ForEach(func(proto *gossip.Protocol) bool {
 							// we only send a request message if the peer could have the data
 							if !proto.CouldHaveDataForMilestone(r.MilestoneIndex) {
 								return true
@@ -112,7 +100,7 @@ func runRequestWorkers() {
 
 // adds the request to the request queue and signals the request to drain it.
 func enqueueAndSignal(r *gossip.Request) bool {
-	if !Service().RequestQueue.Enqueue(r) {
+	if !RequestQueue().Enqueue(r) {
 		return false
 	}
 

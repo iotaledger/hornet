@@ -341,8 +341,8 @@ func currentNodeStatus() *NodeStatus {
 
 	// node status
 	var requestedMilestone milestone.Index
-	peekedRequest := gossip.Service().RequestQueue.Peek()
-	queued, pending, processing := gossip.Service().RequestQueue.Size()
+	peekedRequest := gossip.RequestQueue().Peek()
+	queued, pending, processing := gossip.RequestQueue().Size()
 	if peekedRequest != nil {
 		requestedMilestone = peekedRequest.MilestoneIndex
 	}
@@ -352,7 +352,7 @@ func currentNodeStatus() *NodeStatus {
 	status.IsHealthy = tangleplugin.IsNodeHealthy()
 	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 
-	status.ConnectedPeersCount = p2pplug.PeeringService().ConnectedPeerCount()
+	status.ConnectedPeersCount = p2pplug.Manager().ConnectedCount()
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
@@ -363,7 +363,7 @@ func currentNodeStatus() *NodeStatus {
 	status.RequestQueueQueued = queued
 	status.RequestQueuePending = pending
 	status.RequestQueueProcessing = processing
-	status.RequestQueueAvgLatency = gossip.Service().RequestQueue.AvgLatency()
+	status.RequestQueueAvgLatency = gossip.RequestQueue().AvgLatency()
 
 	// cache metrics
 	status.Caches = &CachesMetric{
@@ -380,7 +380,7 @@ func currentNodeStatus() *NodeStatus {
 			Size: tangle.GetMessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
-			Size: gossip.Service().MessageProcessor.WorkUnitsSize(),
+			Size: gossip.MessageProcessor().WorkUnitsSize(),
 		},
 	}
 

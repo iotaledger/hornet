@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -15,7 +14,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 
@@ -25,8 +23,6 @@ import (
 )
 
 const (
-	// defines the send queue size of peers using the gossip protocol.
-	sendQueueSize = 1500
 	// defines the size of the read buffer for a gossip.Protocol stream.
 	readBufSize = 2048
 
@@ -43,70 +39,71 @@ var (
 	serviceOnce sync.Once
 	service     *gossip.Service
 
-	iotaGossipProtocolID protocol.ID
+	msgProcOnce sync.Once
+	msgProc     *gossip.MessageProcessor
+
+	rQueueOnce sync.Once
+	rQueue     gossip.RequestQueue
 )
 
-// Service returns the gossip.Service this plugin uses.
+// Service returns the gossip.Service instance.
 func Service() *gossip.Service {
 	serviceOnce.Do(func() {
-		rQueue := gossip.NewRequestQueue()
-		msgProc := gossip.NewMessageProcessor(rQueue, p2pplug.PeeringService(), &gossip.Options{
-			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
-			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
-		})
-		// TODO: fix relation between gossip.Service and gossip.BroadcastQueue
-		service = gossip.NewService(msgProc, p2pplug.PeeringService(), rQueue)
+		cooPubKey := config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)
+		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, cooPubKey[:5]))
+		service = gossip.NewService(iotaGossipProtocolID, p2pplug.Host(), p2pplug.Manager(),
+			gossip.WithLogger(logger.NewLogger("GossipService")),
+		)
 	})
 	return service
 }
 
+// MessageProcessor returns the gossip.MessageProcessor instance.
+func MessageProcessor() *gossip.MessageProcessor {
+	msgProcOnce.Do(func() {
+		RequestQueue()
+		msgProc = gossip.NewMessageProcessor(rQueue, p2pplug.Manager(), &gossip.Options{
+			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
+			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
+		})
+	})
+	return msgProc
+}
+
+// RequestQueue returns the gossip.RequestQueue instance.
+func RequestQueue() gossip.RequestQueue {
+	rQueueOnce.Do(func() {
+		rQueue = gossip.NewRequestQueue()
+	})
+	return rQueue
+}
+
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-
-	// instantiate gossip service
 	gossipService := Service()
-
-	// setup event handlers to instantiate/destroy gossip protocol streams
-	cooPubKey := config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)
-	iotaGossipProtocolID = protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, cooPubKey[:5]))
-
-	// handles inbound streams from remote peer
-	p2pplug.Host().SetStreamHandler(iotaGossipProtocolID, registerGossipProtocolStream)
-	peeringService := p2pplug.PeeringService()
-
-	// handles outbound stream creation
-	peeringService.Events.Connected.Attach(events.NewClosure(initGossipStreamIfOutbound))
-
-	// handles stream unregistering
-	peeringService.Events.Disconnected.Attach(events.NewClosure(unregisterGossipProtocolStream))
+	MessageProcessor()
 
 	// register event handlers for messages
-	gossipService.Events.Created.Attach(events.NewClosure(func(proto *gossip.Protocol) {
-		log.Infof("starting new gossip protocol stream with %s", proto.PeerID)
-
+	gossipService.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
 		addMessageEventHandlers(proto)
 
-		// send heartbeat and latest milestone request
-		if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
-			latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
-			syncedCount := gossipService.SynchronizedCount(latestMilestoneIndex)
-			connectedCount := peeringService.ConnectedPeerCount()
-			// TODO: overflow not handled for synced/connected
-			proto.SendHeartbeat(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
-			proto.SendLatestMilestoneRequest()
-		}
+		// stream close handler
+		protocolTerminated := make(chan struct{})
+		var readWriterBlock sync.WaitGroup
+		readWriterBlock.Add(2)
 
-		// reset the gossip protocol stream when the peer disconnects
-		disconnected := make(chan struct{})
-		p2pplug.PeeringService().Peer(proto.PeerID).Events.Disconnected.Attach(events.NewClosure(func() {
-			removeMessageEventHandlers(proto)
-			close(disconnected)
-			// a stream needs to be reset instead of Close() otherwise
-			// the Read() hangs forever.
-			_ = proto.Stream.Reset()
+		gossipService.Events.ProtocolTerminated.Attach(events.NewClosure(func(terminatedProto *gossip.Protocol) {
+			if terminatedProto != proto {
+				return
+			}
+			close(protocolTerminated)
+			// this ensures that the service only continues after the
+			// background workers have terminated
+			readWriterBlock.Wait()
 		}))
 
-		daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s", proto.PeerID), func(shutdownSignal <-chan struct{}) {
+		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s", proto.PeerID), func(shutdownSignal <-chan struct{}) {
+			defer readWriterBlock.Done()
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -121,10 +118,21 @@ func configure(plugin *node.Plugin) {
 			}
 		}, shutdown.PriorityPeerGossipProtocolRead)
 
-		daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s", proto.PeerID), func(shutdownSignal <-chan struct{}) {
+		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s", proto.PeerID), func(shutdownSignal <-chan struct{}) {
+			defer readWriterBlock.Done()
+			// send heartbeat and latest milestone request
+			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
+				latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+				syncedCount := gossipService.SynchronizedCount(latestMilestoneIndex)
+				connectedCount := p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown)
+				// TODO: overflow not handled for synced/connected
+				proto.SendHeartbeat(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendLatestMilestoneRequest()
+			}
+
 			for {
 				select {
-				case <-disconnected:
+				case <-protocolTerminated:
 					return
 				case <-shutdownSignal:
 					return
@@ -140,68 +148,52 @@ func configure(plugin *node.Plugin) {
 
 func run(_ *node.Plugin) {
 
-	daemon.BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
+	_ = daemon.BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
+		log.Info("Running GossipService")
+		service := Service()
+		service.Start(shutdownSignal)
+		log.Info("Stopped GossipService")
+	}, shutdown.PriorityGossipService)
+
+	_ = daemon.BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running BroadcastQueue")
-		Service().RunBroadcast(shutdownSignal)
+		broadcastQueue := make(chan *gossip.Broadcast)
+		onBroadcastMessage := events.NewClosure(func(b *gossip.Broadcast) {
+			broadcastQueue <- b
+		})
+		msgProc.Events.BroadcastMessage.Attach(onBroadcastMessage)
+		defer msgProc.Events.BroadcastMessage.Detach(onBroadcastMessage)
+	exit:
+		for {
+			select {
+			case <-shutdownSignal:
+				break exit
+			case b := <-broadcastQueue:
+				Service().ForEach(func(proto *gossip.Protocol) bool {
+					if _, excluded := b.ExcludePeers[proto.PeerID]; excluded {
+						return true
+					}
+
+					proto.SendMessage(b.MsgData)
+					return true
+				})
+			}
+		}
 		log.Info("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue)
 
-	daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
+	_ = daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
-		onBroadcastMessage := events.NewClosure(Service().Broadcast)
-		msgProc := Service().MessageProcessor
-		msgProc.Events.BroadcastMessage.Attach(onBroadcastMessage)
+		msgProc := MessageProcessor()
 		msgProc.Run(shutdownSignal)
-		msgProc.Events.BroadcastMessage.Detach(onBroadcastMessage)
 		log.Info("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 
-	daemon.BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
+	_ = daemon.BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(checkHeartbeats, 5*time.Second, shutdownSignal)
 	}, shutdown.PriorityHeartbeats)
 
 	runRequestWorkers()
-}
-
-// initializes a gossip stream if the connection to the given peer is outbound.
-func initGossipStreamIfOutbound(p *p2p.Peer) {
-	conns := p2pplug.Host().Network().ConnsToPeer(p.ID)
-	if len(conns) == 0 {
-		// TODO: this means that the connection was terminated while
-		// the stream handler was still being executed
-		return
-	}
-	if conns[0].Stat().Direction != network.DirOutbound {
-		return
-	}
-
-	log.Infof("starting protocol %s with %s", iotaGossipProtocolID, p.ID)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	stream, err := p2pplug.Host().NewStream(ctx, p.ID, iotaGossipProtocolID)
-	if err != nil {
-		log.Errorf("unable to start %s protocol with %s", iotaGossipProtocolID, p.ID)
-		// TODO: close connection?
-		return
-	}
-
-	registerGossipProtocolStream(stream)
-}
-
-// unregisters the gossip stream for the given peer
-func unregisterGossipProtocolStream(p *p2p.Peer) {
-	Service().Unregister(p.ID)
-}
-
-// inits the gossip.Protocol and registers it with the gossip.Service.
-func registerGossipProtocolStream(stream network.Stream) {
-	remotePeer := p2pplug.PeeringService().Peer(stream.Conn().RemotePeer())
-	proto := gossip.NewProtocol(remotePeer.ID, stream, sendQueueSize)
-	if !Service().Register(proto) {
-		log.Warn("%s wanted to initiate a gossip protocol stream while it already had one", remotePeer.ID)
-		return
-	}
-	Service().Events.Created.Trigger(proto)
 }
 
 // checkHeartbeats sends a heartbeat to each peer and also checks
@@ -215,20 +207,16 @@ func checkHeartbeats() {
 	})
 
 	//peerIDsToRemove := make(map[string]struct{})
-	peersToReconnect := make(map[peer.ID]*p2p.Peer)
+	peersToReconnect := make(map[peer.ID]struct{})
+	_ = peersToReconnect
 
-	// check if peers are alive by checking whether we received heartbeats lately
-	p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
-		proto := Service().Protocol(p.ID)
-		if proto == nil {
-			return true
-		}
+	/*
+		// check if peers are alive by checking whether we received heartbeats lately
+		Service().ForAll(func(proto *gossip.Protocol) bool {
+			if time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
+				return true
+			}
 
-		if time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
-			return true
-		}
-
-		/*
 			// TODO: re-introduce once p2p discovery is implemented
 			// peer is connected but doesn't seem to be alive
 			if p.Autopeering != nil {
@@ -237,23 +225,25 @@ func checkHeartbeats() {
 				log.Infof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
 				return true
 			}
-		*/
 
-		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-		log.Infof("closing connection to neighbor %s because we didn't receive heartbeats anymore", p.ID)
-		peersToReconnect[p.ID] = p
-		return true
-	})
+			// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
+			log.Infof("closing connection to neighbor %s because we didn't receive heartbeats anymore", proto.PeerID)
+			peersToReconnect[proto.PeerID] = struct{}{}
+			return true
+		})
 
-	/*
 		// TODO: re-introduce once p2p discovery is implemented
-			for peerIDToRemove := range peerIDsToRemove {
-				peering.Manager().Remove(peerIDToRemove)
-			}
-	*/
+		for peerIDToRemove := range peerIDsToRemove {
+			peering.Manager().Remove(peerIDToRemove)
+		}
 
-	for _, p := range peersToReconnect {
-		p.Disconnect()
-	}
+		for p := range peersToReconnect {
+			peer := p2pplug.Manager().Peer(p)
+			if peer != nil {
+				peer.Disconnect()
+			}
+		}
+
+	*/
 
 }

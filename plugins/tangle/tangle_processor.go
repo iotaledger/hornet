@@ -85,12 +85,12 @@ func runTangleProcessor(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
-		gossip.Service().MessageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
+		gossip.MessageProcessor().Events.MessageProcessed.Attach(onMsgProcessed)
 		receiveMsgWorkerPool.Start()
 		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ReceiveTx] ...")
-		gossip.Service().MessageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
+		gossip.MessageProcessor().Events.MessageProcessed.Detach(onMsgProcessed)
 		receiveMsgWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
@@ -177,13 +177,13 @@ func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, 
 
 	if request != nil {
 		// mark the received request as processed
-		gossip.Service().RequestQueue.Processed(incomingMsg.GetMessageID())
+		gossip.RequestQueue().Processed(incomingMsg.GetMessageID())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a message stemming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if !tangle.IsNodeSynced() && request != nil && gossip.Service().RequestQueue.Empty() {
+	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
@@ -192,12 +192,12 @@ func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, 
 
 func printStatus() {
 	var currentLowestMilestoneIndexInReqQ milestone.Index
-	if peekedRequest := gossip.Service().RequestQueue.Peek(); peekedRequest != nil {
+	if peekedRequest := gossip.RequestQueue().Peek(); peekedRequest != nil {
 		currentLowestMilestoneIndexInReqQ = peekedRequest.MilestoneIndex
 	}
 
-	queued, pending, processing := gossip.Service().RequestQueue.Size()
-	avgLatency := gossip.Service().RequestQueue.AvgLatency()
+	queued, pending, processing := gossip.RequestQueue().Size()
+	avgLatency := gossip.RequestQueue().AvgLatency()
 
 	println(
 		fmt.Sprintf(

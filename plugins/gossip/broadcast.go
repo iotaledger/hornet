@@ -16,14 +16,12 @@ func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
 	}
 
 	latestMilestoneIndex := tangle.GetSolidMilestoneIndex()
-	connectedCount := p2pplug.PeeringService().ConnectedPeerCount()
+	connectedCount := p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown)
 	syncedCount := Service().SynchronizedCount(latestMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
 	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
-	service := Service()
-	p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
-		proto := service.Protocol(p.ID)
+	Service().ForEach(func(proto *gossip.Protocol) bool {
 		if proto == nil {
 			return true
 		}
@@ -63,15 +61,9 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 		return requested
 	}
 
-	service := Service()
-
 	// send each ms request to a random peer who supports the message
 	for _, msIndex := range msIndexes {
-		p2pplug.PeeringService().ForAllConnected(func(p *p2p.Peer) bool {
-			proto := service.Protocol(p.ID)
-			if proto == nil {
-				return true
-			}
+		Service().ForEach(func(proto *gossip.Protocol) bool {
 			if !proto.HasDataForMilestone(msIndex) {
 				return true
 			}

@@ -112,7 +112,7 @@ func (wu *WorkUnit) punish() {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		p2pplug.PeeringService().RemovePeer(p.PeerID)
+		_ = p2pplug.Manager().DisconnectPeer(p.PeerID)
 	}
 }
 

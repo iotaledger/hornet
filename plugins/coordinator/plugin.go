@@ -295,7 +295,7 @@ func sendMessage(msg *tangle.Message, isMilestone bool) error {
 		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	}
 
-	if err := gossip.Service().MessageProcessor.SerializeAndEmit(msg, iotago.DeSeriModePerformValidation); err != nil {
+	if err := gossip.MessageProcessor().SerializeAndEmit(msg, iotago.DeSeriModePerformValidation); err != nil {
 		return err
 	}
 

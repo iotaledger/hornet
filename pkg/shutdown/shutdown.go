@@ -9,11 +9,14 @@ const (
 	PriorityMilestoneProcessor
 	PrioritySolidifierGossip
 	PriorityReceiveTxWorker
-	PriorityBroadcastQueue
 	PriorityMessageProcessor
 	PriorityPeerGossipProtocolWrite
 	PriorityPeerGossipProtocolRead
-	PriorityPeeringService
+	PriorityGossipService
+	PriorityBroadcastQueue
+	PriorityKademliaDHT
+	PriorityPeerDiscovery
+	PriorityP2PManager
 	PriorityHeartbeats
 	PriorityWarpSync
 	PriorityLocalSnapshots

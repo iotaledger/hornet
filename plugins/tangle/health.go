@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/p2p"
 	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
@@ -17,7 +18,7 @@ func IsNodeHealthy() bool {
 		return false
 	}
 
-	if p2pplug.PeeringService().ConnectedPeerCount() == 0 {
+	if p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
 		return false
 	}
 

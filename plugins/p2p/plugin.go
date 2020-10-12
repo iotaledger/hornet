@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 	badger "github.com/ipfs/go-ds-badger"
@@ -26,8 +24,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
-	"github.com/libp2p/go-libp2p-core/routing"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	libp2pquic "github.com/libp2p/go-libp2p-quic-transport"
 	"github.com/multiformats/go-multiaddr"
@@ -38,35 +34,22 @@ const (
 )
 
 var (
-	PLUGIN             = node.NewPlugin("P2P", node.Enabled, configure, run)
-	log                *logger.Logger
-	hostOnce           sync.Once
-	selfHost           host.Host
-	peeringService     *p2ppkg.PeeringService
-	peeringServiceOnce sync.Once
+	PLUGIN      = node.NewPlugin("P2P", node.Enabled, configure, run)
+	log         *logger.Logger
+	hostOnce    sync.Once
+	selfHost    host.Host
+	manager     *p2ppkg.Manager
+	managerOnce sync.Once
 )
 
-// PeeringService returns the PeeringService.
-func PeeringService() *p2ppkg.PeeringService {
-	peeringServiceOnce.Do(func() {
-		peeringService = p2ppkg.NewPeeringService(Host())
-
-		// init PeeringService with peers from the config
-		peerIDsStr := config.NodeConfig.GetStringSlice(config.CfgP2PPeers)
-		for i, peerIDStr := range peerIDsStr {
-			multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
-			if err != nil {
-				panic(fmt.Sprintf("unable to init PeeringService with peer multiaddr at pos %d: %s", i, err))
-			}
-			addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
-			if err != nil {
-				panic(fmt.Sprintf("unable to init PeeringService with peer address info at pos %d: %s", i, err))
-			}
-			peeringService.AddPeer(*addrInfo)
-		}
-
+// Manager returns the Manager.
+func Manager() *p2ppkg.Manager {
+	managerOnce.Do(func() {
+		manager = p2ppkg.NewManager(Host(),
+			p2ppkg.WithLogger(logger.NewLogger("P2P-Manager")),
+		)
 	})
-	return peeringService
+	return manager
 }
 
 // Host returns the host.Host instance of this node.
@@ -103,7 +86,6 @@ func Host() host.Host {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 		}
 
-		var idht *dht.IpfsDHT
 		staticPeers := config.NodeConfig.GetStringSlice(config.CfgP2PBindAddresses)
 
 		selfHost, err = libp2p.New(ctx,
@@ -118,11 +100,6 @@ func Host() host.Host {
 				time.Minute,
 			)),
 			libp2p.NATPortMap(),
-			libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-				idht, err = dht.New(ctx, h)
-				return idht, err
-			}),
-			libp2p.EnableAutoRelay(),
 		)
 
 		if err != nil {
@@ -135,52 +112,7 @@ func Host() host.Host {
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 	Host()
-
-	ps := PeeringService()
-
-	ps.Events.Added.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("added to peering service %s", ph.ID)
-	}))
-	ps.Events.Removed.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("removed from peering service %s", ph.ID)
-	}))
-	ps.Events.UpdatedAddrs.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("updated addresses for %s", ph.ID)
-	}))
-	ps.Events.UpdatedAddrs.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("updated addresses for %s", ph.ID)
-	}))
-	ps.Events.Connected.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		conns := Host().Network().ConnsToPeer(ph.ID)
-		connsAddrsStr := make([]string, len(conns))
-		for i, conn := range conns {
-			connsAddrsStr[i] = conn.RemoteMultiaddr().String()
-		}
-		log.Infof("connected %s, connection addrs: %s", ph.ID, strings.Join(connsAddrsStr, ","))
-	}))
-	ps.Events.Disconnected.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("disconnected %s", ph.ID)
-	}))
-	ps.Events.ClosedConnectionToUnknownPeer.Attach(events.NewClosure(func(peerID peer.ID) {
-		log.Infof("closed connection to unknown peer %s", peerID)
-	}))
-	ps.Events.Reconnecting.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("reconnecting to %s", ph.ID)
-	}))
-	ps.Events.Reconnected.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("reconnected to %s", ph.ID)
-	}))
-	ps.Events.ReconnectFailed.Attach(events.NewClosure(func(ph *p2ppkg.Peer) {
-		log.Infof("reconnect attempt failed to %s", ph.ID)
-	}))
-
-	ps.Events.ServiceStarted.Attach(events.NewClosure(func() {
-		log.Info("started peering service")
-	}))
-	ps.Events.ServiceStopped.Attach(events.NewClosure(func() {
-		log.Info("stopped peering service")
-	}))
-
+	Manager()
 	log.Infof("peer configured, ID: %s", Host().ID())
 }
 
@@ -188,19 +120,30 @@ func run(_ *node.Plugin) {
 	p := Host()
 
 	// register a daemon to disconnect all peers up on shutdown
-	daemon.BackgroundWorker("PeeringService", func(shutdownSignal <-chan struct{}) {
+	_ = daemon.BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
+		log.Infof("listening on: %s", p.Addrs())
+		go Manager().Start(shutdownSignal)
+		connectConfigKnownPeers()
 		<-shutdownSignal
-		if err := PeeringService().Stop(); err != nil {
-			log.Error("unable to cleanly shutdown peering service: %s", err)
-		}
 		if err := Host().Peerstore().Close(); err != nil {
 			log.Error("unable to cleanly closing peer store: %s", err)
 		}
-	}, shutdown.PriorityPeeringService)
+	}, shutdown.PriorityP2PManager)
+}
 
-	log.Infof("listening on: %s", p.Addrs())
-	if err := PeeringService().Start(); err != nil {
-		log.Errorf("unable to start PeeringService: %s", err)
+// connects to the peers defined in the config.
+func connectConfigKnownPeers() {
+	peerIDsStr := config.NodeConfig.GetStringSlice(config.CfgP2PPeers)
+	for i, peerIDStr := range peerIDsStr {
+		multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
+		if err != nil {
+			panic(fmt.Sprintf("invalid config peer address at pos %d: %s", i, err))
+		}
+		addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+		if err != nil {
+			panic(fmt.Sprintf("invalid config peer address info at pos %d: %s", i, err))
+		}
+		_ = manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown)
 	}
 }
 
