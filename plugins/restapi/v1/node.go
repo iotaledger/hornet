@@ -49,16 +49,16 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                          cli.AppName,
-		Version:                       cli.AppVersion,
-		IsHealthy:                     tangleplugin.IsNodeHealthy(),
-		CoordinatorPublicKey:          config.NodeConfig.GetString(config.CfgCoordinatorPublicKey),
-		LatestMilestoneMessageID:      latestMilestoneMessageID,
-		LatestMilestoneIndex:          latestMilestoneIndex,
-		LatestSolidMilestoneMessageID: solidMilestoneMessageID,
-		LatestSolidMilestoneIndex:     solidMilestoneIndex,
-		PruningIndex:                  pruningIndex,
-		Features:                      features,
+		Name:                     cli.AppName,
+		Version:                  cli.AppVersion,
+		IsHealthy:                tangleplugin.IsNodeHealthy(),
+		CoordinatorPublicKey:     config.NodeConfig.GetString(config.CfgCoordinatorPublicKey),
+		LatestMilestoneMessageID: latestMilestoneMessageID,
+		LatestMilestoneIndex:     latestMilestoneIndex,
+		SolidMilestoneMessageID:  solidMilestoneMessageID,
+		SolidMilestoneIndex:      solidMilestoneIndex,
+		PruningIndex:             pruningIndex,
+		Features:                 features,
 	}, nil
 }
 
