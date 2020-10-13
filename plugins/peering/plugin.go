@@ -88,9 +88,6 @@ func configure(plugin *node.Plugin) {
 
 	// register log event handlers
 	configureManagerEventHandlers()
-
-	// react to peer config changes
-	configurePeerConfigWatcher()
 }
 
 func configureManagerEventHandlers() {
@@ -145,8 +142,6 @@ func configureManagerEventHandlers() {
 }
 
 func run(_ *node.Plugin) {
-
-	runConfigWatcher()
 
 	peeringBindAddr := config.NodeConfig.GetString(config.CfgNetGossipBindAddress)
 	daemon.BackgroundWorker("Peering Server", func(shutdownSignal <-chan struct{}) {
