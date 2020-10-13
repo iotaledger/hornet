@@ -271,6 +271,46 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		return jsonResponse(c, http.StatusOK, addressOutputsResp)
 	})
 
+	routeGroup.GET(RoutePeer, func(c echo.Context) error {
+
+		peerResp, err := getPeer(c)
+		if err != nil {
+			return err
+		}
+
+		return jsonResponse(c, http.StatusOK, peerResp)
+	})
+
+	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
+
+		err := removePeer(c)
+		if err != nil {
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
+	})
+
+	routeGroup.GET(RoutePeers, func(c echo.Context) error {
+
+		peersResp, err := listPeers(c)
+		if err != nil {
+			return err
+		}
+
+		return jsonResponse(c, http.StatusOK, peersResp)
+	})
+
+	routeGroup.POST(RoutePeers, func(c echo.Context) error {
+
+		peerResp, err := addPeer(c)
+		if err != nil {
+			return err
+		}
+
+		return jsonResponse(c, http.StatusOK, peerResp)
+	})
+
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
 
 		outputIdsResp, err := debugOutputsIDs(c)
