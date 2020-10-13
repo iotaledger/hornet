@@ -201,10 +201,44 @@ type messageConeResponse struct {
 	EntryPoints []*entryPoint `json:"entryPoints"`
 }
 
-/*
-type addPeer struct {
-	Identity   string `json:"identity"`
-	Alias      string `json:"alias"`
-	PreferIPv6 bool   `json:"preferIPv6"`
+// addPeerRequest defines the request for a POST peer REST API call.
+type addPeerRequest struct {
+	// The libp2p multi address of the peer.
+	MultiAddress string `json:"multiAddress"`
+	// The alias of to iditify the peer.
+	Alias *string `json:"alias,omitempty"`
 }
-*/
+
+// peerResponse defines the response of a GET peer REST API call.
+type peerResponse struct {
+	// The libp2p multi address of the peer.
+	MultiAddress string `json:"multiAddress"`
+	// The alias of to iditify the peer.
+	Alias *string `json:"alias,omitempty"`
+	// The libp2p identifier of the peer.
+	ID string `json:"id"`
+	// The relation (static, autopeered) of the peer.
+	Relation string `json:"relation"`
+	// Whether the peer is connected.
+	Connected bool `json:"connected"`
+	// The gossip metrics of the peer.
+	GossipMetrics *peerGossipMetrics `json:"gossipMetrics,omitempty"`
+}
+
+// peerGossipMetrics defines the peer gossip metrics.
+type peerGossipMetrics struct {
+	// The total amount of sent packages.
+	SentPackets uint32 `json:"sentPackets"`
+	// The total amount of dropped sent packages.
+	DroppedSentPackets uint32 `json:"droppedSentPackets"`
+	// The total amount of received heartbeats.
+	ReceivedHeartbeats uint32 `json:"receivedHeartbeats"`
+	// The total amount of sent heartbeats.
+	SentHeartbeats uint32 `json:"sentHeartbeats"`
+	// The total amount of received messages.
+	ReceivedMessages uint32 `json:"receivedMessages"`
+	// The total amount of received new messages.
+	NewMessages uint32 `json:"newMessages"`
+	// The total amount of received known messages.
+	KnownMessages uint32 `json:"knownMessages"`
+}
