@@ -125,12 +125,11 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 	proc.wp.Submit(p, msgType, data)
 }
 
-
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
 func (proc *MessageProcessor) Emit(msg *tangle.Message) error {
 
-	proc.Events.MessageProcessed.Trigger(msg, (*rqueue.Request)(nil), (*peer.Peer)(nil))
-	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{MsgData: msg.GetData()})
+	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*p2p.Peer)(nil))
+	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.GetData()})
 
 	return nil
 }
@@ -156,7 +155,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		metrics.SharedServerMetrics.InvalidRequests.Inc()
 
 		// drop the connection to the peer
-		_= proc.ps.DisconnectPeer(p.PeerID)
+		_ = proc.ps.DisconnectPeer(p.PeerID)
 		return
 	}
 
@@ -241,7 +240,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_= proc.ps.DisconnectPeer(p.PeerID)
+		_ = proc.ps.DisconnectPeer(p.PeerID)
 
 		return
 	case wu.Is(Hashed):

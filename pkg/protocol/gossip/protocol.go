@@ -124,7 +124,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendMessageRequest sends a tangle.Message request message to the given peer.
-func (p *Protocol) SendMessageRequest(requestedMessageID hornet.Hash) {
+func (p *Protocol) SendMessageRequest(requestedMessageID *hornet.MessageID) {
 	txReqData, _ := NewMessageRequestMsg(requestedMessageID)
 	p.Enqueue(txReqData)
 }

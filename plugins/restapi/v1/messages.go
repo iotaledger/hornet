@@ -234,7 +234,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	msgProcessedChan := tangleplugin.RegisterMessageProcessedEvent(message.GetMessageID())
 
-	if err := gossip.Processor().Emit(message); err != nil {
+	if err := gossip.MessageProcessor().Emit(message); err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 
