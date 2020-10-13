@@ -1,6 +1,6 @@
 {
   "useProfile": "auto",
-  "httpAPI": {
+  "restAPI": {
     "basicAuth": {
       "enabled": false,
       "username": "",
@@ -8,29 +8,14 @@
       "passwordSalt": ""
     },
     "excludeHealthCheckFromAuth": false,
-    "permitRemoteAccess": [
-      "getNodeInfo",
-      "getBalances",
-      "checkConsistency",
-      "getTipInfo",
-      "getTransactionsToApprove",
-      "getInclusionStates",
-      "getNodeAPIConfiguration",
-      "broadcastTransactions",
-      "findTransactions",
-      "storeTransactions",
-      "getTrytes"
-    ],
     "permittedRoutes": [
-      "healthz"
+      "health"
     ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
-      "bodyLengthBytes": 1000000,
-      "findTransactions": 1000,
-      "getTrytes": 1000,
-      "requestsList": 1000
+      "bodyLength": "1M",
+      "maxResults": 1000
     }
   },
   "dashboard": {
@@ -48,20 +33,15 @@
     "path": "devnetdb"
   },
   "snapshots": {
-    "loadType": "local",
-    "local": {
-      "depth": 50,
-      "intervalSynced": 50,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/devnet/export.bin",
-      "downloadURLs": ["https://dbfiles.iota.org/devnet/hornet/latest-export.bin"]
-    },
-    "global": {
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 60480
-    }
+    "depth": 50,
+    "intervalSynced": 50,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/devnet/export.bin",
+    "downloadURLs": ["https://dbfiles.iota.org/devnet/hornet/latest-export.bin"]
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 60480
   },
   "coordinator": {
     "address": "GYISMBVRKSCEXXTUPBWTIHRCZIKIRPDYAHAYKMNTPZSCSDNADDWAEUNHKUERZCTVAYJCNFXGTNUH9OGTW",
@@ -75,7 +55,7 @@
       "maxTrackedMessages": 10000
     },
     "tipsel": {
-      "minHeaviestBranchUnconfirmedMessagesThreshold": 20,
+      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100
@@ -115,7 +95,7 @@
   },
   "node": {
     "alias": "",
-    "showAliasInGetNodeInfo": false,
+    "enableProofOfWork": false,
     "disablePlugins": [],
     "enablePlugins": []
   },

@@ -1,8 +1,6 @@
 package dag
 
 import (
-	"bytes"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -10,7 +8,7 @@ import (
 
 // UpdateOutdatedConeRootIndexes updates the cone root indexes of the given messages.
 // the "outdatedMessageIDs" should be ordered from oldest to latest to avoid recursion.
-func UpdateOutdatedConeRootIndexes(outdatedMessageIDs hornet.Hashes, lsmi milestone.Index) {
+func UpdateOutdatedConeRootIndexes(outdatedMessageIDs hornet.MessageIDs, lsmi milestone.Index) {
 	for _, outdatedMessageID := range outdatedMessageIDs {
 		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(outdatedMessageID)
 		if cachedMsgMeta == nil {
@@ -43,9 +41,9 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 		}
 	}
 
-	// collect all parents in the cone that are not confirmed,
+	// collect all parents in the cone that are not referenced,
 	// are no solid entry points and have no recent calculation index
-	var outdatedMessageIDs hornet.Hashes
+	var outdatedMessageIDs hornet.MessageIDs
 
 	startMessageID := cachedMsgMeta.GetMetadata().GetMessageID()
 
@@ -59,17 +57,18 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 		func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			// first check if the msg was confirmed => update ycri and ocri with the confirmation index
-			if confirmed, at := cachedMetadata.GetMetadata().GetConfirmed(); confirmed {
+			// first check if the msg was referenced => update ycri and ocri with the confirmation index
+			if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
 				updateIndexes(at, at)
 				return false, nil
 			}
 
-			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
+			if *startMessageID == *cachedMetadata.GetMetadata().GetMessageID() {
+				// do not update indexes for the start message
 				return true, nil
 			}
 
-			// if the msg was not confirmed yet, but already contains recent (calculation index matches LSMI) information
+			// if the msg was not referenced yet, but already contains recent (calculation index matches LSMI) information
 			// about ycri and ocri, propagate that info
 			ycri, ocri, ci := cachedMetadata.GetMetadata().GetConeRootIndexes()
 			if ci == lsmi {
@@ -83,7 +82,7 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 		func(cachedMetadata *tangle.CachedMetadata) error { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
+			if *startMessageID == *cachedMetadata.GetMetadata().GetMessageID() {
 				// skip the start message, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
@@ -95,7 +94,7 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID hornet.Hash) {
+		func(messageID *hornet.MessageID) {
 			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _ := tangle.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
@@ -123,11 +122,11 @@ func GetConeRootIndexes(cachedMsgMeta *tangle.CachedMetadata, lsmi milestone.Ind
 }
 
 // UpdateConeRootIndexes updates the cone root indexes of the future cone of all given messages.
-// all the messages of the newly confirmed cone already have updated cone root indexes.
+// all the messages of the newly referenced cone already have updated cone root indexes.
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
-func UpdateConeRootIndexes(messageIDs hornet.Hashes, lsmi milestone.Index) {
+func UpdateConeRootIndexes(messageIDs hornet.MessageIDs, lsmi milestone.Index) {
 	traversed := map[string]struct{}{}
 
 	// we update all messages in order from oldest to latest
@@ -137,13 +136,16 @@ func UpdateConeRootIndexes(messageIDs hornet.Hashes, lsmi milestone.Index) {
 			// traversal stops if no more messages pass the given condition
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())]
-				return !previouslyTraversed, nil
+
+				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]
+
+				// only traverse this message if it was not traversed before and is solid
+				return !previouslyTraversed && cachedMsgMeta.GetMetadata().IsSolid(), nil
 			},
 			// consumer
 			func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
-				traversed[string(cachedMsgMeta.GetMetadata().GetMessageID())] = struct{}{}
+				traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this message
 				GetConeRootIndexes(cachedMsgMeta.Retain(), lsmi) // meta pass +1

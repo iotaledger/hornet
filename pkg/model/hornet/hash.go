@@ -7,38 +7,79 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 )
 
-var (
-	// NullMessageID is the ID of the genesis message.
-	NullMessageID = Hash(make([]byte, iotago.MessageHashLength))
-)
-
-// Hash is the binary representation of a Hash.
-type Hash []byte
-
-// Hex converts the binary Hash to its hex string representation.
-func (h Hash) Hex() string {
-	if len(h) == iotago.MessageHashLength {
-		return hex.EncodeToString(h)
-	}
-
-	panic(fmt.Sprintf("Unknown hash length (%d)", len(h)))
+// GetNullMessageID returns the ID of the genesis message.
+func GetNullMessageID() *MessageID {
+	var nullMessageID MessageID
+	return &nullMessageID
 }
 
-// ID converts the binary Hash to an array representation.
-func (h Hash) ID() (id [iotago.MessageHashLength]byte) {
-	if len(h) == iotago.MessageHashLength {
-		copy(id[:], h[:iotago.MessageHashLength])
-		return
-	}
+// MessageID is the array representation of a MessageID.
+type MessageID iotago.MessageID
 
-	panic(fmt.Sprintf("Unknown hash length (%d)", len(h)))
+// Hex converts the MessageID to its hex string representation.
+func (h *MessageID) Hex() string {
+	return hex.EncodeToString(h[:])
 }
 
-// Hashes is a slice of Hash.
-type Hashes []Hash
+// Slice converts the MessageID array to a slice.
+func (h *MessageID) Slice() []byte {
+	return h[:]
+}
 
-// Hex converts the binary Hashes to their hex string representation.
-func (h Hashes) Hex() []string {
+// MapKey converts the MessageID to a string that can be used as a map key.
+func (h *MessageID) MapKey() string {
+	return string(h[:])
+}
+
+// MessageIDFromMapKey creates a MessageID from a hex string representation.
+func MessageIDFromHex(hexString string) (*MessageID, error) {
+
+	b, err := hex.DecodeString(hexString)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(b) != iotago.MessageIDLength {
+		return nil, fmt.Errorf("unknown hash length (%d)", len(b))
+	}
+
+	var messageID MessageID
+	copy(messageID[:], b)
+
+	return &messageID, nil
+}
+
+// MessageIDFromMapKey creates a MessageID from a map key representation.
+func MessageIDFromMapKey(mapKey string) *MessageID {
+
+	if len(mapKey) != iotago.MessageIDLength {
+		panic(fmt.Sprintf("unknown hash length (%d)", len(mapKey)))
+	}
+
+	var messageID MessageID
+	copy(messageID[:], []byte(mapKey))
+
+	return &messageID
+}
+
+// MessageIDFromBytes creates a MessageID from a byte slice.
+func MessageIDFromBytes(b []byte) *MessageID {
+
+	if len(b) != iotago.MessageIDLength {
+		panic(fmt.Sprintf("unknown hash length (%d)", len(b)))
+	}
+
+	var messageID MessageID
+	copy(messageID[:], b)
+
+	return &messageID
+}
+
+// MessageIDs is a slice of MessageID.
+type MessageIDs []*MessageID
+
+// Hex converts the MessageIDs to their hex string representation.
+func (h MessageIDs) Hex() []string {
 	var results []string
 	for _, hash := range h {
 		results = append(results, hash.Hex())

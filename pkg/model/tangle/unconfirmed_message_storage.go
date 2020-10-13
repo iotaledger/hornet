@@ -12,35 +12,35 @@ import (
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
-var unconfirmedMessagesStorage *objectstorage.ObjectStorage
+var unreferencedMessagesStorage *objectstorage.ObjectStorage
 
-type CachedUnconfirmedMessage struct {
+type CachedUnreferencedMessage struct {
 	objectstorage.CachedObject
 }
 
-type CachedUnconfirmedMessages []*CachedUnconfirmedMessage
+type CachedUnreferencedMessages []*CachedUnreferencedMessage
 
-func (cachedUnconfirmedMessages CachedUnconfirmedMessages) Release(force ...bool) {
-	for _, cachedUnconfirmedMessage := range cachedUnconfirmedMessages {
-		cachedUnconfirmedMessage.Release(force...)
+func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bool) {
+	for _, cachedUnreferencedMessage := range cachedUnreferencedMessages {
+		cachedUnreferencedMessage.Release(force...)
 	}
 }
 
-func (c *CachedUnconfirmedMessage) GetUnconfirmedMessage() *UnconfirmedMessage {
-	return c.Get().(*UnconfirmedMessage)
+func (c *CachedUnreferencedMessage) GetUnreferencedMessage() *UnreferencedMessage {
+	return c.Get().(*UnreferencedMessage)
 }
 
-func unconfirmedMessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 
-	unconfirmedTx := NewUnconfirmedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:36])
-	return unconfirmedTx, nil
+	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromBytes(key[4:36]))
+	return unreferencedTx, nil
 }
 
-func configureUnconfirmedMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func configureUnreferencedMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 
-	unconfirmedMessagesStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixUnconfirmedMessages}),
-		unconfirmedMessageFactory,
+	unreferencedMessagesStorage = objectstorage.New(
+		store.WithRealm([]byte{StorePrefixUnreferencedMessages}),
+		unreferencedMessageFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(4, 32),
@@ -54,62 +54,62 @@ func configureUnconfirmedMessageStorage(store kvstore.KVStore, opts profile.Cach
 	)
 }
 
-// GetUnconfirmedMessageIDs returns all message IDs of unconfirmed messages for that milestone.
-func GetUnconfirmedMessageIDs(msIndex milestone.Index, forceRelease bool) hornet.Hashes {
+// GetUnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
+func GetUnreferencedMessageIDs(msIndex milestone.Index, forceRelease bool) hornet.MessageIDs {
 
-	var unconfirmedMessageIDs hornet.Hashes
+	var unreferencedMessageIDs hornet.MessageIDs
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
-	unconfirmedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		unconfirmedMessageIDs = append(unconfirmedMessageIDs, hornet.Hash(key[4:36]))
+	unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromBytes(key[4:36]))
 		return true
 	}, false, key)
 
-	return unconfirmedMessageIDs
+	return unreferencedMessageIDs
 }
 
-// UnconfirmedMessageConsumer consumes the given unconfirmed message during looping through all unconfirmed messages in the persistence layer.
-type UnconfirmedMessageConsumer func(msIndex milestone.Index, messageID hornet.Hash) bool
+// UnreferencedMessageConsumer consumes the given unreferenced message during looping through all unreferenced messages in the persistence layer.
+type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID *hornet.MessageID) bool
 
-// ForEachUnconfirmedMessage loops over all unconfirmed messages.
-func ForEachUnconfirmedMessage(consumer UnconfirmedMessageConsumer, skipCache bool) {
-	unconfirmedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), key[4:36])
+// ForEachUnreferencedMessage loops over all unreferenced messages.
+func ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, skipCache bool) {
+	unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromBytes(key[4:36]))
 	}, skipCache)
 }
 
-// unconfirmedTx +1
-func StoreUnconfirmedMessage(msIndex milestone.Index, messageID hornet.Hash) *CachedUnconfirmedMessage {
-	unconfirmedTx := NewUnconfirmedMessage(msIndex, messageID)
-	return &CachedUnconfirmedMessage{CachedObject: unconfirmedMessagesStorage.Store(unconfirmedTx)}
+// unreferencedTx +1
+func StoreUnreferencedMessage(msIndex milestone.Index, messageID *hornet.MessageID) *CachedUnreferencedMessage {
+	unreferencedTx := NewUnreferencedMessage(msIndex, messageID)
+	return &CachedUnreferencedMessage{CachedObject: unreferencedMessagesStorage.Store(unreferencedTx)}
 }
 
-// DeleteUnconfirmedMessages deletes unconfirmed message entries.
-func DeleteUnconfirmedMessages(msIndex milestone.Index) int {
+// DeleteUnreferencedMessages deletes unreferenced message entries.
+func DeleteUnreferencedMessages(msIndex milestone.Index) int {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
 
 	var keysToDelete [][]byte
 
-	unconfirmedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+	unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
 	}, false, msIndexBytes)
 
 	for _, key := range keysToDelete {
-		unconfirmedMessagesStorage.Delete(key)
+		unreferencedMessagesStorage.Delete(key)
 	}
 
 	return len(keysToDelete)
 }
 
-func ShutdownUnconfirmedMessagesStorage() {
-	unconfirmedMessagesStorage.Shutdown()
+func ShutdownUnreferencedMessagesStorage() {
+	unreferencedMessagesStorage.Shutdown()
 }
 
-func FlushUnconfirmedMessagesStorage() {
-	unconfirmedMessagesStorage.Flush()
+func FlushUnreferencedMessagesStorage() {
+	unreferencedMessagesStorage.Flush()
 }

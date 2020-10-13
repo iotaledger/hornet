@@ -23,19 +23,19 @@ var (
 type HeaviestSelector struct {
 	sync.Mutex
 
-	minHeaviestBranchUnconfirmedMessagesThreshold int
-	maxHeaviestBranchTipsPerCheckpoint            int
-	randomTipsPerCheckpoint                       int
-	heaviestBranchSelectionDeadline               time.Duration
+	minHeaviestBranchUnreferencedMessagesThreshold int
+	maxHeaviestBranchTipsPerCheckpoint             int
+	randomTipsPerCheckpoint                        int
+	heaviestBranchSelectionDeadline                time.Duration
 
 	trackedMessages map[string]*trackedMessage // map of all tracked messages
 	tips            *list.List                 // list of available tips
 }
 
 type trackedMessage struct {
-	messageID hornet.Hash    // message ID of the corresponding message
-	tip       *list.Element  // pointer to the element in the tip list
-	refs      *bitset.BitSet // BitSet of all the referenced messages
+	messageID *hornet.MessageID // message ID of the corresponding message
+	tip       *list.Element     // pointer to the element in the tip list
+	refs      *bitset.BitSet    // BitSet of all the referenced messages
 }
 
 type trackedMessagesList struct {
@@ -83,16 +83,16 @@ func (il *trackedMessagesList) referenceTip(tip *trackedMessage) {
 
 // removeTip removes the tip from the map.
 func (il *trackedMessagesList) removeTip(tip *trackedMessage) {
-	delete(il.msgs, string(tip.messageID))
+	delete(il.msgs, tip.messageID.MapKey())
 }
 
 // New creates a new HeaviestSelector instance.
-func New(minHeaviestBranchUnconfirmedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
+func New(minHeaviestBranchUnreferencedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
 	s := &HeaviestSelector{
-		minHeaviestBranchUnconfirmedMessagesThreshold: minHeaviestBranchUnconfirmedMessagesThreshold,
-		maxHeaviestBranchTipsPerCheckpoint:            maxHeaviestBranchTipsPerCheckpoint,
-		randomTipsPerCheckpoint:                       randomTipsPerCheckpoint,
-		heaviestBranchSelectionDeadline:               heaviestBranchSelectionDeadline,
+		minHeaviestBranchUnreferencedMessagesThreshold: minHeaviestBranchUnreferencedMessagesThreshold,
+		maxHeaviestBranchTipsPerCheckpoint:             maxHeaviestBranchTipsPerCheckpoint,
+		randomTipsPerCheckpoint:                        randomTipsPerCheckpoint,
+		heaviestBranchSelectionDeadline:                heaviestBranchSelectionDeadline,
 	}
 	s.reset()
 	return s
@@ -158,13 +158,13 @@ func (s *HeaviestSelector) selectTip(tipsList *trackedMessagesList) (*trackedMes
 // only tips are considered that were present at the beginning of the SelectTips call,
 // to prevent attackers from creating heavier branches while we are searching the best tips.
 // "maxHeaviestBranchTipsPerCheckpoint" is the amount of tips that are collected if
-// the current best tip is not below "UnconfirmedMessagesThreshold" before.
+// the current best tip is not below "UnreferencedMessagesThreshold" before.
 // a minimum amount of selected tips can be enforced, even if none of the heaviest branches matches the
-// "minHeaviestBranchUnconfirmedMessagesThreshold" criteria.
+// "minHeaviestBranchUnreferencedMessagesThreshold" criteria.
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
 // the selection is cancelled after a fixed deadline. in this case, it returns the current collected tips.
-func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error) {
+func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.MessageIDs, error) {
 
 	// create a working list with the current tips to release the lock to allow faster iteration
 	// and to get a frozen view of the tangle, so an attacker can't
@@ -177,7 +177,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 		return nil, ErrNoTipsAvailable
 	}
 
-	var tips hornet.Hashes
+	var tips hornet.MessageIDs
 
 	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.heaviestBranchSelectionDeadline))
@@ -198,7 +198,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.Hashes, error
 			break
 		}
 
-		if (len(tips) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnconfirmedMessagesThreshold)) || deadlineExceeded) {
+		if (len(tips) > minRequiredTips) && ((count < uint(s.minHeaviestBranchUnreferencedMessagesThreshold)) || deadlineExceeded) {
 			// minimum amount of tips reached and the heaviest tips do not confirm enough messages or the deadline was exceeded
 			// => no need to collect more
 			break
@@ -237,12 +237,12 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *tangle.MessageMetadata) (t
 	defer s.Unlock()
 
 	// filter duplicate messages
-	if _, contains := s.trackedMessages[string(msgMeta.GetMessageID())]; contains {
+	if _, contains := s.trackedMessages[msgMeta.GetMessageID().MapKey()]; contains {
 		return
 	}
 
-	parent1Item := s.trackedMessages[string(msgMeta.GetParent1MessageID())]
-	parent2Item := s.trackedMessages[string(msgMeta.GetParent2MessageID())]
+	parent1Item := s.trackedMessages[msgMeta.GetParent1MessageID().MapKey()]
+	parent2Item := s.trackedMessages[msgMeta.GetParent2MessageID().MapKey()]
 
 	// compute the referenced messages
 	// all the known children in the HeaviestSelector are represented by a unique bit in a bitset.
@@ -256,7 +256,7 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *tangle.MessageMetadata) (t
 	if parent2Item != nil {
 		it.refs.InPlaceUnion(parent2Item.refs)
 	}
-	s.trackedMessages[string(it.messageID)] = it
+	s.trackedMessages[it.messageID.MapKey()] = it
 
 	// update tips
 	s.removeTip(parent1Item)
@@ -283,7 +283,7 @@ func (s *HeaviestSelector) tipsToList() *trackedMessagesList {
 	result := make(map[string]*trackedMessage)
 	for e := s.tips.Front(); e != nil; e = e.Next() {
 		tip := e.Value.(*trackedMessage)
-		result[string(tip.messageID)] = tip
+		result[tip.messageID.MapKey()] = tip
 	}
 	return &trackedMessagesList{msgs: result}
 }

@@ -112,7 +112,7 @@ var Profile8GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedMessages: CacheOpts{
+		UnreferencedMessages: CacheOpts{
 			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -173,7 +173,7 @@ var Profile4GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedMessages: CacheOpts{
+		UnreferencedMessages: CacheOpts{
 			CacheTimeMs: 500,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -234,7 +234,7 @@ var Profile2GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedMessages: CacheOpts{
+		UnreferencedMessages: CacheOpts{
 			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -295,7 +295,7 @@ var Profile1GB = &Profile{
 				MaxConsumerHoldTimeSec: 100,
 			},
 		},
-		UnconfirmedMessages: CacheOpts{
+		UnreferencedMessages: CacheOpts{
 			CacheTimeMs: 100,
 			LeakDetectionOptions: LeakDetectionOpts{
 				Enabled:                false,
@@ -326,7 +326,7 @@ type Caches struct {
 	Milestones             CacheOpts `mapstructure:"milestones"`
 	Messages               CacheOpts `mapstructure:"messages"`
 	IncomingMessagesFilter CacheOpts `mapstructure:"incomingMessagesFilter"`
-	UnconfirmedMessages    CacheOpts `mapstructure:"unconfirmedMessages"`
+	UnreferencedMessages   CacheOpts `mapstructure:"unreferencedMessages"`
 }
 
 type CacheOpts struct {

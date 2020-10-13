@@ -16,7 +16,7 @@ import (
 func hashPasswordAndSalt(args []string) error {
 
 	if len(args) > 0 {
-		return errors.New("too many arguments for 'pwdhash'")
+		return fmt.Errorf("too many arguments for '%s'", ToolPwdHash)
 	}
 
 	reader := bufio.NewReader(os.Stdin)

@@ -50,7 +50,7 @@ type TestEnvironment struct {
 	coo *coordinator.Coordinator
 
 	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID hornet.Hash
+	lastMilestoneMessageID *hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
@@ -84,7 +84,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 		cachedMessages:         make(tangle.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		powHandler:             pow.New(nil, "", 30*time.Second),
-		lastMilestoneMessageID: hornet.NullMessageID,
+		lastMilestoneMessageID: hornet.GetNullMessageID(),
 	}
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testState.Name()))
@@ -98,7 +98,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	}
 
 	// Move remaining supply to 999..999
-	balances[string(hornet.NullMessageID)] = consts.TotalSupply - sum
+	balances[hornet.GetNullMessageID().MapKey()] = consts.TotalSupply - sum
 
 	te.store = mapdb.NewMapDB()
 	te.configureStorages(te.store)
@@ -120,11 +120,11 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	te.VerifyLSMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		conf := te.IssueAndConfirmMilestoneOnTip(hornet.NullMessageID, false)
-		require.Equal(testState, 3, conf.MessagesConfirmed) // 3 for milestone
-		require.Equal(testState, 3, conf.MessagesZeroValue) // 3 for milestone
-		require.Equal(testState, 0, conf.MessagesValue)
-		require.Equal(testState, 0, conf.MessagesConflicting)
+		conf := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
+		require.Equal(testState, 3, conf.MessagesReferenced)                  // 3 for milestone
+		require.Equal(testState, 3, conf.MessagesExcludedWithoutTransactions) // 3 for milestone
+		require.Equal(testState, 0, conf.MessagesIncludedWithTransactions)
+		require.Equal(testState, 0, conf.MessagesExcludedWithConflictingTransactions)
 	}
 
 	return te

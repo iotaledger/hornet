@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"fmt"
 	"time"
 
@@ -29,14 +28,14 @@ func MessageMetadataCaller(handler interface{}, params ...interface{}) {
 }
 
 func MessageIDCaller(handler interface{}, params ...interface{}) {
-	handler.(func(messageID hornet.Hash))(params[0].(hornet.Hash))
+	handler.(func(messageID *hornet.MessageID))(params[0].(*hornet.MessageID))
 }
 
 func NewMessageCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
 
-func MessageConfirmedCaller(handler interface{}, params ...interface{}) {
+func MessageReferencedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64))
 }
 
@@ -146,12 +145,8 @@ func (c *CachedMessage) Release(force ...bool) {
 
 func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
-		messageID: key[:32],
-		message:   &iotago.Message{},
-	}
-
-	if _, err := msg.message.Deserialize(data, iotago.DeSeriModeNoValidation); err != nil {
-		return nil, err
+		messageID: hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]),
+		data:      data,
 	}
 
 	return msg, nil
@@ -191,14 +186,14 @@ func configureMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 }
 
 // msg +1
-func GetCachedMessageOrNil(messageID hornet.Hash) *CachedMessage {
-	cachedMsg := messagesStorage.Load(messageID) // msg +1
+func GetCachedMessageOrNil(messageID *hornet.MessageID) *CachedMessage {
+	cachedMsg := messagesStorage.Load(messageID.Slice()) // msg +1
 	if !cachedMsg.Exists() {
 		cachedMsg.Release(true) // msg -1
 		return nil
 	}
 
-	cachedMeta := metadataStorage.Load(messageID) // meta +1
+	cachedMeta := metadataStorage.Load(messageID.Slice()) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMsg.Release(true)  // msg -1
 		cachedMeta.Release(true) // meta -1
@@ -212,8 +207,8 @@ func GetCachedMessageOrNil(messageID hornet.Hash) *CachedMessage {
 }
 
 // metadata +1
-func GetCachedMessageMetadataOrNil(messageID hornet.Hash) *CachedMetadata {
-	cachedMeta := metadataStorage.Load(messageID) // meta +1
+func GetCachedMessageMetadataOrNil(messageID *hornet.MessageID) *CachedMetadata {
+	cachedMeta := metadataStorage.Load(messageID.Slice()) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMeta.Release(true) // metadata -1
 		return nil
@@ -222,8 +217,8 @@ func GetCachedMessageMetadataOrNil(messageID hornet.Hash) *CachedMetadata {
 }
 
 // GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func GetStoredMetadataOrNil(messageID hornet.Hash) *MessageMetadata {
-	storedMeta := metadataStorage.LoadObjectFromStore(messageID)
+func GetStoredMetadataOrNil(messageID *hornet.MessageID) *MessageMetadata {
+	storedMeta := metadataStorage.LoadObjectFromStore(messageID.Slice())
 	if storedMeta == nil {
 		return nil
 	}
@@ -231,13 +226,13 @@ func GetStoredMetadataOrNil(messageID hornet.Hash) *MessageMetadata {
 }
 
 // ContainsMessage returns if the given message exists in the cache/persistence layer.
-func ContainsMessage(messageID hornet.Hash) bool {
-	return messagesStorage.Contains(messageID)
+func ContainsMessage(messageID *hornet.MessageID) bool {
+	return messagesStorage.Contains(messageID.Slice())
 }
 
 // MessageExistsInStore returns if the given message exists in the persistence layer.
-func MessageExistsInStore(messageID hornet.Hash) bool {
-	return messagesStorage.ObjectExistsInStore(messageID)
+func MessageExistsInStore(messageID *hornet.MessageID) bool {
+	return messagesStorage.ObjectExistsInStore(messageID.Slice())
 }
 
 // msg +1
@@ -259,39 +254,39 @@ func StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdde
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedMeta = metadataStorage.Load(message.GetMessageID()) // meta +1
+		cachedMeta = metadataStorage.Load(message.GetMessageID().Slice()) // meta +1
 	}
 
 	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
 }
 
 // MessageIDConsumer consumes the given message ID during looping through all messages in the persistence layer.
-type MessageIDConsumer func(messageID hornet.Hash) bool
+type MessageIDConsumer func(messageID *hornet.MessageID) bool
 
 // ForEachMessageID loops over all message IDs.
 func ForEachMessageID(consumer MessageIDConsumer, skipCache bool) {
 	messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(messageID)
+		return consumer(hornet.MessageIDFromBytes(messageID))
 	}, skipCache)
 }
 
 // ForEachMessageMetadataMessageID loops over all message metadata message IDs.
 func ForEachMessageMetadataMessageID(consumer MessageIDConsumer, skipCache bool) {
 	metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(messageID)
+		return consumer(hornet.MessageIDFromBytes(messageID))
 	}, skipCache)
 }
 
 // DeleteMessage deletes the message and metadata in the cache/persistence layer.
-func DeleteMessage(messageID hornet.Hash) {
+func DeleteMessage(messageID *hornet.MessageID) {
 	// metadata has to be deleted before the msg, otherwise we could run into a data race in the object storage
-	metadataStorage.Delete(messageID)
-	messagesStorage.Delete(messageID)
+	metadataStorage.Delete(messageID.Slice())
+	messagesStorage.Delete(messageID.Slice())
 }
 
 // DeleteMessageMetadata deletes the metadata in the cache/persistence layer.
-func DeleteMessageMetadata(messageID hornet.Hash) {
-	metadataStorage.Delete(messageID)
+func DeleteMessageMetadata(messageID *hornet.MessageID) {
+	metadataStorage.Delete(messageID.Slice())
 }
 
 func ShutdownMessagesStorage() {
@@ -313,17 +308,23 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 	}
 
 	StoreChild(cachedMessage.GetMessage().GetParent1MessageID(), cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
-	if !bytes.Equal(cachedMessage.GetMessage().GetParent1MessageID(), cachedMessage.GetMessage().GetParent2MessageID()) {
+	if *cachedMessage.GetMessage().GetParent1MessageID() != *cachedMessage.GetMessage().GetParent2MessageID() {
 		StoreChild(cachedMessage.GetMessage().GetParent2MessageID(), cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
 	}
 
-	// Store only non-requested messages, since all requested messages are confirmed by a milestone anyway
-	// This is only used to delete unconfirmed messages from the database at pruning
-	if !requested {
-		StoreUnconfirmedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
+	indexationPayload := CheckIfIndexation(cachedMessage.GetMessage())
+	if indexationPayload != nil {
+		// store indexation if the message contains an indexation payload
+		StoreIndexation(indexationPayload.Index, cachedMessage.GetMessage().GetMessageID()).Release(true)
 	}
 
-	ms, err := CheckIfMilestone(message)
+	// Store only non-requested messages, since all requested messages are referenced by a milestone anyway
+	// This is only used to delete unreferenced messages from the database at pruning
+	if !requested {
+		StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
+	}
+
+	ms, err := message.GetMilestone()
 	if err != nil {
 		// Invalid milestone
 		Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("invalid milestone detected! Err: %w", err))
@@ -331,7 +332,7 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 
 	if ms != nil {
 
-		cachedMilestone := storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID())
+		cachedMilestone := storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
 
 		Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
 

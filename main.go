@@ -17,12 +17,12 @@ import (
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
-	"github.com/gohornet/hornet/plugins/webapi"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 		gracefulshutdown.PLUGIN,
 		profiling.PLUGIN,
 		database.PLUGIN,
-		webapi.PLUGIN,
+		restapi.PLUGIN,
 	}
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {

@@ -1,9 +1,7 @@
 package coordinator
 
 import (
-	"bytes"
 	"errors"
-	"sync"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -12,10 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-
-	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -26,6 +21,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/pow"
@@ -54,8 +50,8 @@ var (
 	selector *mselection.HeaviestSelector
 
 	lastCheckpointIndex     int
-	lastCheckpointMessageID hornet.Hash
-	lastMilestoneMessageID  hornet.Hash
+	lastCheckpointMessageID *hornet.MessageID
+	lastMilestoneMessageID  *hornet.MessageID
 
 	// Closures
 	onMessageSolid       *events.Closure
@@ -94,7 +90,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnconfirmedMessagesThreshold),
+		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
 		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
 		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
@@ -248,60 +244,27 @@ func run(plugin *node.Plugin) {
 
 }
 
-func sendMessage(msg *tangle.Message, isMilestone bool) error {
+func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 
-	messageIDLock := syncutils.Mutex{}
+	msgSolidEventChan := tangleplugin.RegisterMessageSolidEvent(msg.GetMessageID())
 
-	// search the ID of the milestone message
-	messageID := msg.GetMessageID()
+	var milestoneConfirmedEventChan chan struct{}
 
-	// wgMessageProcessed waits until the message got solid
-	wgMessageProcessed := sync.WaitGroup{}
-	wgMessageProcessed.Add(1)
-
-	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *tangle.MessageMetadata) { // metadata -1
-			messageIDLock.Lock()
-			defer messageIDLock.Unlock()
-
-			if messageID == nil {
-				return
-			}
-
-			if !bytes.Equal(messageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
-				return
-			}
-
-			// message is solid
-			wgMessageProcessed.Done()
-
-			// we have to set the messageID to nil, because the event may be fired several times
-			messageID = nil
-		})
-	})
-
-	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
-	defer tangleplugin.Events.MessageSolid.Detach(onMessageSolid)
-
-	if isMilestone {
-		// also wait for solid milestone changed event
-		wgMessageProcessed.Add(1)
-
-		onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
-			wgMessageProcessed.Done()
-		})
-
-		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	if len(msIndex) > 0 {
+		milestoneConfirmedEventChan = tangleplugin.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
-	if err := gossip.MessageProcessor().SerializeAndEmit(msg, iotago.DeSeriModePerformValidation); err != nil {
+	if err := gossip.MessageProcessor().Emit(msg); err != nil {
 		return err
 	}
 
 	// wait until the message is solid
-	// if it was a milestone, also wait until the solid milestone changed
-	wgMessageProcessed.Wait()
+	utils.WaitForChannelClosed(msgSolidEventChan)
+
+	if len(msIndex) > 0 {
+		// if it was a milestone, also wait until the milestone was confirmed
+		utils.WaitForChannelClosed(milestoneConfirmedEventChan)
+	}
 
 	return nil
 }
@@ -357,17 +320,17 @@ func configureEvents() {
 			return
 		}
 
-		// propagate new cone root indexes to the future cone for URTS
+		// propagate new cone root indexes to the future cone for heaviest branch tipselection
 		dag.UpdateConeRootIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 
-	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.Hash) {
+	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
 		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.Hex())
 	})
 
-	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID hornet.Hash) {
+	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID *hornet.MessageID) {
 		log.Infof("milestone issued (%d): %v", index, messageID.Hex())
 	})
 }

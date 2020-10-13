@@ -44,10 +44,10 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	// Confirming milestone at bundle C (bundle D and E are not included)
 	conf := te.IssueAndConfirmMilestoneOnTip(bundleC.GetMessage().GetTailHash(), true)
 
-	require.Equal(t, 4+4+4+3, conf.MessagesConfirmed) // 3 are for the milestone itself
-	require.Equal(t, 8, conf.MessagesValue)
-	require.Equal(t, 4, conf.MessagesConflicting)
-	require.Equal(t, 3, conf.MessagesZeroValue) // The milestone
+	require.Equal(t, 4+4+4+3, conf.MessagesReferenced) // 3 are for the milestone itself
+	require.Equal(t, 8, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 4, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 3, conf.MessagesExcludedWithoutTransactions) // The milestone
 
 	// Verify balances (seed, index, balance)
 	te.AssertAddressBalance(seed1, 0, 0)
@@ -62,10 +62,10 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Confirming milestone at bundle E
 	conf = te.IssueAndConfirmMilestoneOnTip(bundleE.GetMessage().GetTailHash(), true)
-	require.Equal(t, 4+4+3, conf.MessagesConfirmed) // 3 are for the milestone itself
-	require.Equal(t, 4, conf.MessagesValue)
-	require.Equal(t, 4, conf.MessagesConflicting)
-	require.Equal(t, 3, conf.MessagesZeroValue) // The milestone
+	require.Equal(t, 4+4+3, conf.MessagesReferenced) // 3 are for the milestone itself
+	require.Equal(t, 4, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 4, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 3, conf.MessagesExcludedWithoutTransactions) // The milestone
 
 	// Verify balances (seed, index, balance)
 	te.AssertAddressBalance(seed1, 0, 0)
@@ -95,10 +95,10 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 
 	// Confirming milestone include all msg up to bundle E. This should only include A, B and E
 	conf := te.IssueAndConfirmMilestoneOnTip(bundleE.GetMessage().GetTailHash(), true)
-	require.Equal(t, 3+3, conf.MessagesConfirmed) // A, B, E + 3 for Milestone
-	require.Equal(t, 3+3, conf.MessagesZeroValue) // 3 are for the milestone itself
-	require.Equal(t, 0, conf.MessagesValue)
-	require.Equal(t, 0, conf.MessagesConflicting)
+	require.Equal(t, 3+3, conf.MessagesReferenced)                  // A, B, E + 3 for Milestone
+	require.Equal(t, 3+3, conf.MessagesExcludedWithoutTransactions) // 3 are for the milestone itself
+	require.Equal(t, 0, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 
 	// Issue another bundle
 	bundleF := te.AttachAndStoreBundle(bundleD.GetMessage().GetTailHash(), bundleE.GetMessage().GetTailHash(), utils.ZeroValueTx(t, "F"))
@@ -106,8 +106,8 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	// Confirming milestone at bundle F. This should confirm D, C and F
 	conf = te.IssueAndConfirmMilestoneOnTip(bundleF.GetMessage().GetTailHash(), true)
 
-	require.Equal(t, 3+3, conf.MessagesConfirmed) // D, C, F + 3 for Milestone
-	require.Equal(t, 3+3, conf.MessagesZeroValue) // 3 are for the milestone itself
-	require.Equal(t, 0, conf.MessagesValue)
-	require.Equal(t, 0, conf.MessagesConflicting)
+	require.Equal(t, 3+3, conf.MessagesReferenced)                  // D, C, F + 3 for Milestone
+	require.Equal(t, 3+3, conf.MessagesExcludedWithoutTransactions) // 3 are for the milestone itself
+	require.Equal(t, 0, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 }

@@ -41,7 +41,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "unconfirmedMessages": {
+      "unreferencedMessages": {
         "cacheTimeMs": 100,
         "leakDetection": {
           "enabled": false,
@@ -101,7 +101,7 @@
           "maxConsumerHoldTimeSec": 30
         }
       },
-      "unconfirmedMessages": {
+      "unreferencedMessages": {
         "cacheTimeMs": 1500,
         "leakDetection": {
           "enabled": true,

@@ -1,11 +1,11 @@
 package utxo
 
 import (
-	"bytes"
 	"encoding/binary"
 	"sync"
 
-	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/kvstore"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -15,10 +15,16 @@ import (
 var (
 	utxoStorage kvstore.KVStore
 	utxoLock    sync.RWMutex
+
+	// Returned if the size of the given address is incorrect.
+	ErrInvalidAddressSize = errors.New("invalid address size")
+
+	// Returned if the sum of the output deposits is not equal the total supply of tokens.
+	ErrOutputsSumNotEqualTotalSupply = errors.New("accumulated output balance is not equal to total supply")
 )
 
 func ConfigureStorages(store kvstore.KVStore) {
-	configureOutputsStorage(store)
+	utxoStorage = store.WithRealm([]byte{StorePrefixUTXO})
 }
 
 func ReadLockLedger() {
@@ -37,186 +43,207 @@ func WriteUnlockLedger() {
 	utxoLock.Unlock()
 }
 
-func configureOutputsStorage(store kvstore.KVStore) {
-	utxoStorage = store.WithRealm([]byte{StorePrefixUTXO})
-}
-
-func ReadOutputForTransactionWithoutLocking(transactionID *iotago.SignedTransactionPayloadHash, outputIndex uint16) (*Output, error) {
-	ReadLockLedger()
-	defer ReadUnlockLedger()
-
-	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, outputIndex)
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, transactionID[:], bytes)
-	value, err := utxoStorage.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &Output{}
-	if err := output.kvStorableLoad(key[1:], value); err != nil {
-		return nil, err
-	}
-	return output, nil
-}
-
-func IsOutputUnspent(transactionID *iotago.SignedTransactionPayloadHash, outputIndex uint16) (bool, error) {
-	ReadLockLedger()
-	defer ReadUnlockLedger()
-
-	output, err := ReadOutputForTransactionWithoutLocking(transactionID, outputIndex)
-	if err != nil {
-		return false, err
-	}
-
-	return output.IsUnspentWithoutLocking()
-}
-
-func UnspentOutputsForAddress(address *iotago.Ed25519Address) ([]*Output, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
-
-	var outputs []*Output
-
-	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, address[:])
-
-	err := utxoStorage.IterateKeys(addressKeyPrefix, func(key kvstore.Key) bool {
-
-		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[33:])
-
-		value, err := utxoStorage.Get(outputKey)
-		if err != nil {
-			return false
-		}
-
-		output := &Output{}
-		if err := output.kvStorableLoad(outputKey[1:], value); err != nil {
-			return false
-		}
-
-		outputs = append(outputs, output)
-
-		return true
-	})
-
-	return outputs, err
-}
-
-func SpentOutputsForAddress(address *iotago.Ed25519Address) ([]*Spent, error) {
-
-	ReadLockLedger()
-	defer ReadUnlockLedger()
-
-	var spents []*Spent
-
-	addressKeyPrefix := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:])
-
-	err := utxoStorage.Iterate(addressKeyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-
-		spent := &Spent{}
-		if err := spent.kvStorableLoad(key[33:], value); err != nil {
-			return false
-		}
-
-		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[33:])
-
-		outputValue, err := utxoStorage.Get(outputKey)
-		if err != nil {
-			return false
-		}
-
-		output := &Output{}
-		if err := output.kvStorableLoad(outputKey[1:], outputValue); err != nil {
-			return false
-		}
-
-		spent.Output = output
-
-		spents = append(spents, spent)
-
-		return true
-	})
-
-	return spents, err
-}
-
-func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey())
-	return mutations.Set(key, output.kvStorableValue())
-}
-
-func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, output.UTXOKey())
-	return mutations.Set(key, []byte{})
-}
-
-func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
-
-	key := spent.kvStorableKey()
-	unspentKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, key)
-	spentKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, key)
-
-	mutations.Delete(unspentKey)
-
-	return mutations.Set(spentKey, spent.kvStorableValue())
-}
-
-func storeDiff(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent, mutations kvstore.BatchedMutations) error {
-
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, uint32(msIndex))
-
-	var value bytes.Buffer
-
-	outputCount := make([]byte, 4)
-	binary.LittleEndian.PutUint32(outputCount, uint32(len(newOutputs)))
-
-	value.Write(outputCount)
-	for _, output := range newOutputs {
-		value.Write(output.kvStorableKey())
-	}
-
-	spentCount := make([]byte, 4)
-	binary.LittleEndian.PutUint32(spentCount, uint32(len(newSpents)))
-
-	value.Write(spentCount)
-	for _, spent := range newSpents {
-		value.Write(spent.kvStorableKey())
-	}
-
-	return mutations.Set(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key), value.Bytes())
-}
-
-func ApplyConfirmation(msIndex milestone.Index, newOutputs []*Output, newSpents []*Spent) error {
+func PruneMilestoneIndex(msIndex milestone.Index) error {
 
 	WriteLockLedger()
 	defer WriteUnlockLedger()
 
-	mutation := utxoStorage.Batched()
+	_, spents, err := GetMilestoneDiffsWithoutLocking(msIndex)
+	if err != nil {
+		return err
+	}
 
-	for _, output := range newOutputs {
-		if err := storeOutput(output, mutation); err != nil {
-			mutation.Cancel()
+	mutations := utxoStorage.Batched()
+
+	for _, spent := range spents {
+		err = deleteOutput(spent.output, mutations)
+		if err != nil {
+			mutations.Cancel()
 			return err
 		}
-		if err := markAsUnspent(output, mutation); err != nil {
-			mutation.Cancel()
+
+		err = deleteSpent(spent, mutations)
+		if err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	err = deleteDiff(msIndex, mutations)
+	if err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	return mutations.Commit()
+}
+
+func storeLedgerIndex(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	value := make([]byte, 4)
+	binary.LittleEndian.PutUint32(value, uint32(msIndex))
+
+	return mutations.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
+}
+
+func StoreLedgerIndex(msIndex milestone.Index) error {
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	value := make([]byte, 4)
+	binary.LittleEndian.PutUint32(value, uint32(msIndex))
+
+	return utxoStorage.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
+}
+
+func ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
+	value, err := utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
+	if err != nil {
+		if err == kvstore.ErrKeyNotFound {
+			// there is no ledger milestone yet => return 0
+			return 0, nil
+		}
+		return 0, errors.Errorf("failed to load ledger milestone index: %w", err)
+	}
+
+	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
+}
+
+func ReadLedgerIndex() (milestone.Index, error) {
+	ReadLockLedger()
+	defer ReadUnlockLedger()
+
+	return ReadLedgerIndexWithoutLocking()
+}
+
+func ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+
+	mutations := utxoStorage.Batched()
+
+	for _, output := range newOutputs {
+		if err := storeOutput(output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+		if err := markAsUnspent(output, mutations); err != nil {
+			mutations.Cancel()
 			return err
 		}
 	}
 
 	for _, spent := range newSpents {
-		if err := storeSpentAndRemoveUnspent(spent, mutation); err != nil {
-			mutation.Cancel()
+		if err := storeSpentAndRemoveUnspent(spent, mutations); err != nil {
+			mutations.Cancel()
 			return err
 		}
 	}
 
-	if err := storeDiff(msIndex, newOutputs, newSpents, mutation); err != nil {
-		mutation.Cancel()
+	if err := storeDiff(msIndex, newOutputs, newSpents, mutations); err != nil {
+		mutations.Cancel()
 		return err
 	}
 
-	return mutation.Commit()
+	if err := storeLedgerIndex(msIndex, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	return mutations.Commit()
+}
+
+func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	return ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+}
+
+func RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+
+	mutations := utxoStorage.Batched()
+
+	// we have to delete the newOutputs of this milestone
+	for _, output := range newOutputs {
+		if err := deleteOutput(output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+		if err := deleteFromUnspent(output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	// we have to store the spents as output and mark them as unspent
+	for _, spent := range newSpents {
+		if err := storeOutput(spent.output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+
+		if err := deleteSpentAndMarkUnspent(spent, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	if err := deleteDiff(msIndex, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	if err := storeLedgerIndex(msIndex-1, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	return mutations.Commit()
+}
+
+func RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	return RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+}
+
+func CheckLedgerState() error {
+
+	var total uint64 = 0
+
+	consumerFunc := func(output *Output) bool {
+		total += output.amount
+		return true
+	}
+
+	if err := ForEachUnspentOutput(consumerFunc); err != nil {
+		return err
+	}
+
+	if total != iotago.TokenSupply {
+		return ErrOutputsSumNotEqualTotalSupply
+	}
+
+	return nil
+}
+
+func AddUnspentOutput(unspentOutput *Output) error {
+
+	WriteLockLedger()
+	defer WriteUnlockLedger()
+
+	mutations := utxoStorage.Batched()
+
+	if err := storeOutput(unspentOutput, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	if err := markAsUnspent(unspentOutput, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	return mutations.Commit()
 }

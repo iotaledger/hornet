@@ -125,16 +125,12 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 	proc.wp.Submit(p, msgType, data)
 }
 
-// SerializeAndEmit serializes the given message and emits MessageProcessed and BroadcastMessage events.
-func (proc *MessageProcessor) SerializeAndEmit(msg *tangle.Message, deSeriMode iotago.DeSerializationMode) error {
 
-	msgData, err := msg.GetMessage().Serialize(deSeriMode)
-	if err != nil {
-		return err
-	}
+// Emit triggers MessageProcessed and BroadcastMessage events for the given message.
+func (proc *MessageProcessor) Emit(msg *tangle.Message) error {
 
-	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
-	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msgData})
+	proc.Events.MessageProcessed.Trigger(msg, (*rqueue.Request)(nil), (*peer.Peer)(nil))
+	proc.Events.BroadcastMessage.Trigger(&bqueue.Broadcast{MsgData: msg.GetData()})
 
 	return nil
 }
@@ -197,7 +193,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMessage := tangle.GetCachedMessageOrNil(hornet.Hash(data)) // message +1
+	cachedMessage := tangle.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the requested message
 		return

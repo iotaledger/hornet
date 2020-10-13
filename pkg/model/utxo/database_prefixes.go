@@ -5,8 +5,9 @@ const (
 )
 
 const (
-	UTXOStoreKeyPrefixOutput         byte = 0
-	UTXOStoreKeyPrefixUnspent        byte = 1
-	UTXOStoreKeyPrefixSpent          byte = 2
-	UTXOStoreKeyPrefixMilestoneDiffs byte = 3
+	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
+	UTXOStoreKeyPrefixOutput               byte = 1
+	UTXOStoreKeyPrefixUnspent              byte = 2
+	UTXOStoreKeyPrefixSpent                byte = 3
+	UTXOStoreKeyPrefixMilestoneDiffs       byte = 4
 )

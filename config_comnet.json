@@ -1,6 +1,6 @@
 {
   "useProfile": "auto",
-  "httpAPI": {
+  "restAPI": {
     "basicAuth": {
       "enabled": false,
       "username": "",
@@ -8,29 +8,14 @@
       "passwordSalt": ""
     },
     "excludeHealthCheckFromAuth": false,
-    "permitRemoteAccess": [
-      "getNodeInfo",
-      "getBalances",
-      "checkConsistency",
-      "getTipInfo",
-      "getTransactionsToApprove",
-      "getInclusionStates",
-      "getNodeAPIConfiguration",
-      "broadcastTransactions",
-      "findTransactions",
-      "storeTransactions",
-      "getTrytes"
-    ],
     "permittedRoutes": [
-      "healthz"
+      "health"
     ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
-      "bodyLengthBytes": 1000000,
-      "findTransactions": 1000,
-      "getTrytes": 1000,
-      "requestsList": 1000
+      "bodyLength": "1M",
+      "maxResults": 1000
     }
   },
   "dashboard": {
@@ -48,24 +33,17 @@
     "path": "comnetdb"
   },
   "snapshots": {
-    "loadType": "local",
-    "local": {
-      "depth": 50,
-      "intervalSynced": 200,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/comnet/export.bin",
-      "downloadURLs": [
-        "https://ls.manapotion.io/comnet/export.bin"
-      ]
-    },
-    "global": {
-      "path": "snapshot.csv",
-      "index": 0
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 1000
-    }
+    "depth": 50,
+    "intervalSynced": 200,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/comnet/export.bin",
+    "downloadURLs": [
+      "https://ls.manapotion.io/comnet/export.bin"
+    ]
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 1000
   },
   "coordinator": {
     "address": "UOMFQOULWQLXQQHFMFRQQTRDKDHVMRFFEGZ9LDU9TFZZ9CHDLZSIAHA9MXNSLYOERCHDUVDFEEZAEOBEW",
@@ -79,7 +57,7 @@
       "maxTrackedMessages": 10000
     },
     "tipsel": {
-      "minHeaviestBranchUnconfirmedMessagesThreshold": 20,
+      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100
@@ -121,7 +99,7 @@
   },
   "node": {
     "alias": "",
-    "showAliasInGetNodeInfo": false,
+    "enableProofOfWork": false,
     "disablePlugins": [],
     "enablePlugins": []
   },

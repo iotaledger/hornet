@@ -1,7 +1,6 @@
 package tipselect
 
 import (
-	"bytes"
 	"errors"
 	"time"
 
@@ -22,7 +21,7 @@ import (
 type Score int
 
 // TipSelectionFunc is a function which performs a tipselection and returns two tips.
-type TipSelectionFunc = func() (hornet.Hashes, error)
+type TipSelectionFunc = func() (hornet.MessageIDs, error)
 
 // TipSelStats holds the stats for a tipselection run.
 type TipSelStats struct {
@@ -61,7 +60,7 @@ type Tip struct {
 	// Score is the score of the tip.
 	Score Score
 	// MessageID is the message ID of the tip.
-	MessageID hornet.Hash
+	MessageID *hornet.MessageID
 	// TimeFirstChild is the timestamp the tip was referenced for the first time by another message.
 	TimeFirstChild time.Time
 	// ChildrenCount is the amount the tip was referenced by other messages.
@@ -170,13 +169,14 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 	defer ts.tipsLock.Unlock()
 
 	messageID := messageMeta.GetMessageID()
+	messageIDMapKey := messageID.MapKey()
 
-	if _, exists := ts.nonLazyTipsMap[string(messageID)]; exists {
+	if _, exists := ts.nonLazyTipsMap[messageIDMapKey]; exists {
 		// tip already exists
 		return
 	}
 
-	if _, exists := ts.semiLazyTipsMap[string(messageID)]; exists {
+	if _, exists := ts.semiLazyTipsMap[messageIDMapKey]; exists {
 		// tip already exists
 		return
 	}
@@ -199,10 +199,10 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 
 	switch tip.Score {
 	case ScoreNonLazy:
-		ts.nonLazyTipsMap[string(messageID)] = tip
+		ts.nonLazyTipsMap[messageIDMapKey] = tip
 		metrics.SharedServerMetrics.TipsNonLazy.Add(1)
 	case ScoreSemiLazy:
-		ts.semiLazyTipsMap[string(messageID)] = tip
+		ts.semiLazyTipsMap[messageIDMapKey] = tip
 		metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
 	}
 
@@ -211,19 +211,19 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 	// the parents are the messages this tip approves
 	// remove them from the tip pool
 	parentMessageIDs := map[string]struct{}{
-		string(messageMeta.GetParent1MessageID()): {},
-		string(messageMeta.GetParent2MessageID()): {},
+		messageMeta.GetParent1MessageID().MapKey(): {},
+		messageMeta.GetParent2MessageID().MapKey(): {},
 	}
 
 	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAgeSeconds time.Duration) bool {
 		// if the amount of known tips is above the limit, remove the tip directly
 		if len(tipsMap) > retentionRulesTipsLimit {
-			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(parentTip.MessageID))
+			return ts.removeTipWithoutLocking(tipsMap, parentTip.MessageID)
 		}
 
 		// check if the maximum amount of children for this tip is reached
 		if parentTip.ChildrenCount.Add(1) >= maxChildren {
-			return ts.removeTipWithoutLocking(tipsMap, hornet.Hash(parentTip.MessageID))
+			return ts.removeTipWithoutLocking(tipsMap, parentTip.MessageID)
 		}
 
 		if maxReferencedTipAgeSeconds == time.Duration(0) {
@@ -260,9 +260,10 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 }
 
 // removeTipWithoutLocking removes the given message from the tipsMap without acquiring the lock.
-func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageID hornet.Hash) bool {
-	if tip, exists := tipsMap[string(messageID)]; exists {
-		delete(tipsMap, string(messageID))
+func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageID *hornet.MessageID) bool {
+	messageIDMapKey := messageID.MapKey()
+	if tip, exists := tipsMap[messageIDMapKey]; exists {
+		delete(tipsMap, messageIDMapKey)
 		ts.Events.TipRemoved.Trigger(tip)
 		return true
 	}
@@ -270,7 +271,7 @@ func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageI
 }
 
 // randomTipWithoutLocking picks a random tip from the pool and checks it's "own" score again without acquiring the lock.
-func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.Hash, error) {
+func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (*hornet.MessageID, error) {
 
 	if len(tipsMap) == 0 {
 		// no semi-/non-lazy tips available
@@ -296,7 +297,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 }
 
 // selectTipWithoutLocking selects a tip.
-func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.Hash, error) {
+func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (*hornet.MessageID, error) {
 
 	if !tangle.IsNodeSyncedWithThreshold() {
 		return nil, tangle.ErrNodeNotSynced
@@ -312,8 +313,8 @@ func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 }
 
 // SelectTips selects two tips.
-func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.Hashes, error) {
-	tips := hornet.Hashes{}
+func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, error) {
+	tips := hornet.MessageIDs{}
 
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
@@ -335,7 +336,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.Hashes, error
 			return nil, err
 		}
 
-		if !bytes.Equal(parent1, parent2) {
+		if *parent1 != *parent2 {
 			tips = append(tips, parent2)
 			return tips, nil
 		}
@@ -347,16 +348,16 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.Hashes, error
 }
 
 // SelectSemiLazyTips selects two semi-lazy tips.
-func (ts *TipSelector) SelectSemiLazyTips() (hornet.Hashes, error) {
+func (ts *TipSelector) SelectSemiLazyTips() (hornet.MessageIDs, error) {
 	return ts.selectTips(ts.semiLazyTipsMap)
 }
 
 // SelectNonLazyTips selects two non-lazy tips.
-func (ts *TipSelector) SelectNonLazyTips() (hornet.Hashes, error) {
+func (ts *TipSelector) SelectNonLazyTips() (hornet.MessageIDs, error) {
 	return ts.selectTips(ts.nonLazyTipsMap)
 }
 
-func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.Hashes, err error) {
+func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.MessageIDs, err error) {
 	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
 		// threshold was defined and reached, return semi-lazy tips for the spammer
 		tips, err = ts.SelectSemiLazyTips()
@@ -364,7 +365,7 @@ func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.Hashes,
 			return false, nil, err
 		}
 
-		if bytes.Equal(tips[0], tips[1]) {
+		if *tips[0] != *tips[1] {
 			// do not spam if the tip is equal since that would not reduce the semi lazy count
 			return false, nil, ErrNoTipsAvailable
 		}
@@ -448,7 +449,7 @@ func (ts *TipSelector) UpdateScores() int {
 				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
 			}
 			// add the tip to the semi-lazy tips map
-			ts.semiLazyTipsMap[string(tip.MessageID)] = tip
+			ts.semiLazyTipsMap[tip.MessageID.MapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
 			count--
@@ -474,7 +475,7 @@ func (ts *TipSelector) UpdateScores() int {
 				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
 			}
 			// add the tip to the non-lazy tips map
-			ts.nonLazyTipsMap[string(tip.MessageID)] = tip
+			ts.nonLazyTipsMap[tip.MessageID.MapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			metrics.SharedServerMetrics.TipsNonLazy.Add(1)
 			count--
@@ -485,7 +486,7 @@ func (ts *TipSelector) UpdateScores() int {
 }
 
 // calculateScore calculates the tip selection score of this message
-func (ts *TipSelector) calculateScore(messageID hornet.Hash, lsmi milestone.Index) Score {
+func (ts *TipSelector) calculateScore(messageID *hornet.MessageID, lsmi milestone.Index) Score {
 	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already

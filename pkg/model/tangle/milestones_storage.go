@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go"
+
+	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -30,7 +33,8 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.Hash(data[:32]),
+		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageIDLength]),
+		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
 	}, nil
 }
 
@@ -59,7 +63,7 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	Index     milestone.Index
-	MessageID hornet.Hash
+	MessageID *hornet.MessageID
 	Timestamp time.Time
 }
 
@@ -76,8 +80,13 @@ func (ms *Milestone) ObjectStorageKey() []byte {
 func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
 		32 byte message ID
+		8  byte timestamp
 	*/
-	return ms.MessageID
+
+	value := make([]byte, 8)
+	binary.LittleEndian.PutUint64(value, uint64(ms.Timestamp.Unix()))
+
+	return byteutils.ConcatBytes(ms.MessageID.Slice(), value)
 }
 
 // Cached Object
@@ -136,10 +145,11 @@ func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 }
 
 // milestone +1
-func storeMilestone(index milestone.Index, messageID hornet.Hash) *CachedMilestone {
+func storeMilestone(index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
 	milestone := &Milestone{
 		Index:     index,
 		MessageID: messageID,
+		Timestamp: timestamp,
 	}
 
 	// milestones should never exist in the database already, even with an unclean database

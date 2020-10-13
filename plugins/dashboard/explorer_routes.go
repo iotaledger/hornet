@@ -12,6 +12,7 @@ import (
 
 	"github.com/muxxer/iota.go/trinary"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
@@ -26,11 +27,11 @@ type ExplorerMessage struct {
 	MessageID        string `json:"message_id"`
 	Parent1MessageID string `json:"parent1_message_id"`
 	Parent2MessageID string `json:"parent2_message_id"`
-	Confirmed        struct {
+	Referenced       struct {
 		State       bool            `json:"state"`
 		Conflicting bool            `json:"conflicting"`
 		Milestone   milestone.Index `json:"milestone_index"`
-	} `json:"confirmed"`
+	} `json:"referenced"`
 	Children       []string        `json:"children"`
 	Solid          bool            `json:"solid"`
 	MWM            int             `json:"mwm"`
@@ -41,17 +42,17 @@ type ExplorerMessage struct {
 func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, error) {
 	defer cachedMsg.Release(true) // msg -1
 
-	confirmed, by := cachedMsg.GetMetadata().GetConfirmed()
-	conflicting := cachedMsg.GetMetadata().IsConflicting()
+	referenced, by := cachedMsg.GetMetadata().GetReferenced()
+	conflicting := cachedMsg.GetMetadata().IsConflictingTx()
 	t := &ExplorerMessage{
 		MessageID:        cachedMsg.GetMetadata().GetMessageID().Hex(),
 		Parent1MessageID: cachedMsg.GetMetadata().GetParent1MessageID().Hex(),
 		Parent2MessageID: cachedMsg.GetMetadata().GetParent2MessageID().Hex(),
-		Confirmed: struct {
+		Referenced: struct {
 			State       bool            `json:"state"`
 			Conflicting bool            `json:"conflicting"`
 			Milestone   milestone.Index `json:"milestone_index"`
-		}{confirmed, conflicting, by},
+		}{referenced, conflicting, by},
 		Solid: cachedMsg.GetMetadata().IsSolid(),
 	}
 
@@ -59,7 +60,8 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	t.Children = tangle.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
-	trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID())
+	// TODO:
+	trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID().Slice())
 	if err != nil {
 		return nil, err
 	}
@@ -74,13 +76,10 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	t.MWM = mwm
 
 	// check whether milestone
-	ms, err := tangle.CheckIfMilestone(cachedMsg.GetMessage())
+	ms, err := cachedMsg.GetMessage().GetMilestone()
 	if ms != nil {
 		t.IsMilestone = true
 		t.MilestoneIndex = milestone.Index(ms.Index)
-	}
-
-	if cachedMsg.GetMessage().IsMilestone() {
 	}
 
 	return t, nil
@@ -228,7 +227,7 @@ func findTransaction(msgID string) (*ExplorerMessage, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", msgID)
 	}
 
-	messageID, err := hex.DecodeString(msgID)
+	messageID, err := hornet.MessageIDFromHex(msgID)
 	if err != nil {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
 	}

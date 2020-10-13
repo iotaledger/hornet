@@ -1,6 +1,6 @@
 {
   "useProfile": "auto",
-  "httpAPI": {
+  "restAPI": {
     "basicAuth": {
       "enabled": false,
       "username": "",
@@ -8,29 +8,14 @@
       "passwordSalt": ""
     },
     "excludeHealthCheckFromAuth": false,
-    "permitRemoteAccess": [
-      "getNodeInfo",
-      "getBalances",
-      "checkConsistency",
-      "getTipInfo",
-      "getTransactionsToApprove",
-      "getInclusionStates",
-      "getNodeAPIConfiguration",
-      "broadcastTransactions",
-      "findTransactions",
-      "storeTransactions",
-      "getTrytes"
-    ],
     "permittedRoutes": [
-      "healthz"
+      "health"
     ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
-      "bodyLengthBytes": 1000000,
-      "findTransactions": 1000,
-      "getTrytes": 1000,
-      "requestsList": 1000
+      "bodyLength": "1M",
+      "maxResults": 1000
     }
   },
   "dashboard": {
@@ -44,25 +29,18 @@
     }
   },
   "snapshots": {
-    "loadType": "local",
-    "local": {
-      "intervalSynced": 50,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/mainnet/export.bin",
-      "downloadURLs": [
-        "https://ls.manapotion.io/export.bin",
-        "https://x-vps.com/export.bin",
-        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
-      ]
-    },
-    "global": {
-      "path": "snapshotMainnet.txt",
-      "index": 1050000
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 60480
-    }
+    "intervalSynced": 50,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/mainnet/export.bin",
+    "downloadURLs": [
+      "https://ls.manapotion.io/export.bin",
+      "https://x-vps.com/export.bin",
+      "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+    ]
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 60480
   },
   "network": {
     "preferIPv6": false,
@@ -86,7 +64,7 @@
   },
   "node": {
     "alias": "",
-    "showAliasInGetNodeInfo": false,
+    "enableProofOfWork": false,
     "disablePlugins": [],
     "enablePlugins": []
   },

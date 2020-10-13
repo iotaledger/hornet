@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
@@ -42,8 +43,6 @@ func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 		MaxOpenFiles:                16384,
 		MemTableSize:                64 << 20,
 		MemTableStopWritesThreshold: 4,
-		MinCompactionRate:           4 << 20, // 4 MB/s
-		MinFlushRate:                4 << 20, // 4 MB/s
 	}
 	opts.Experimental.L0SublevelCompactions = true
 
@@ -85,6 +84,7 @@ func ConfigureDatabases(directory string) {
 	pebbleInstance = getPebbleDB(directory, false)
 
 	ConfigureStorages(pebble.New(pebbleInstance), profile.LoadProfile().Caches)
+	loadSolidMilestoneFromDatabase()
 }
 
 func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
@@ -93,8 +93,11 @@ func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 	configureMessageStorage(store, caches.Messages)
 	configureChildrenStorage(store, caches.Children)
 	configureMilestoneStorage(store, caches.Milestones)
-	configureUnconfirmedMessageStorage(store, caches.UnconfirmedMessages)
+	configureUnreferencedMessageStorage(store, caches.UnreferencedMessages)
+	configureIndexationStorage(store, caches.Indexations)
 	configureSnapshotStore(store)
+
+	utxo.ConfigureStorages(store)
 }
 
 func FlushStorages() {
@@ -102,7 +105,7 @@ func FlushStorages() {
 	FlushMessagesStorage()
 	FlushMessagesStorage()
 	FlushChildrenStorage()
-	FlushUnconfirmedMessagesStorage()
+	FlushUnreferencedMessagesStorage()
 }
 
 func ShutdownStorages() {
@@ -111,12 +114,23 @@ func ShutdownStorages() {
 	ShutdownMessagesStorage()
 	ShutdownMessagesStorage()
 	ShutdownChildrenStorage()
-	ShutdownUnconfirmedMessagesStorage()
+	ShutdownUnreferencedMessagesStorage()
 }
 
 func LoadInitialValuesFromDatabase() {
 	loadSnapshotInfo()
 	loadSolidEntryPoints()
+}
+
+func loadSolidMilestoneFromDatabase() {
+
+	ledgerMilestoneIndex, err := utxo.ReadLedgerIndex()
+	if err != nil {
+		panic(err)
+	}
+
+	// set the solid milestone index based on the ledger milestone
+	SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func CloseDatabases() error {

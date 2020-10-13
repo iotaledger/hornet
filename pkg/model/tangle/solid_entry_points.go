@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 
 	"github.com/iotaledger/hive.go/syncutils"
@@ -13,7 +14,7 @@ import (
 
 type SolidEntryPoints struct {
 	entryPointsMap   map[string]milestone.Index
-	entryPointsSlice hornet.Hashes
+	entryPointsSlice hornet.MessageIDs
 
 	// Status
 	statusMutex syncutils.RWMutex
@@ -26,25 +27,26 @@ func NewSolidEntryPoints() *SolidEntryPoints {
 	}
 }
 
-func (s *SolidEntryPoints) Hashes() hornet.Hashes {
-	solidEntryPointCopy := make(hornet.Hashes, len(s.entryPointsSlice))
+func (s *SolidEntryPoints) Hashes() hornet.MessageIDs {
+	solidEntryPointCopy := make(hornet.MessageIDs, len(s.entryPointsSlice))
 	copy(solidEntryPointCopy, s.entryPointsSlice)
 	return solidEntryPointCopy
 }
 
-func (s *SolidEntryPoints) Contains(messageID hornet.Hash) bool {
-	_, exists := s.entryPointsMap[string(messageID)]
+func (s *SolidEntryPoints) Contains(messageID *hornet.MessageID) bool {
+	_, exists := s.entryPointsMap[messageID.MapKey()]
 	return exists
 }
 
-func (s *SolidEntryPoints) Index(messageID hornet.Hash) (milestone.Index, bool) {
-	index, exists := s.entryPointsMap[string(messageID)]
+func (s *SolidEntryPoints) Index(messageID *hornet.MessageID) (milestone.Index, bool) {
+	index, exists := s.entryPointsMap[messageID.MapKey()]
 	return index, exists
 }
 
-func (s *SolidEntryPoints) Add(messageID hornet.Hash, milestoneIndex milestone.Index) {
-	if _, exists := s.entryPointsMap[string(messageID)]; !exists {
-		s.entryPointsMap[string(messageID)] = milestoneIndex
+func (s *SolidEntryPoints) Add(messageID *hornet.MessageID, milestoneIndex milestone.Index) {
+	messageIDMapKey := messageID.MapKey()
+	if _, exists := s.entryPointsMap[messageIDMapKey]; !exists {
+		s.entryPointsMap[messageIDMapKey] = milestoneIndex
 		s.entryPointsSlice = append(s.entryPointsSlice, messageID)
 		s.SetModified(true)
 	}
@@ -52,7 +54,7 @@ func (s *SolidEntryPoints) Add(messageID hornet.Hash, milestoneIndex milestone.I
 
 func (s *SolidEntryPoints) Clear() {
 	s.entryPointsMap = make(map[string]milestone.Index)
-	s.entryPointsSlice = make(hornet.Hashes, 0)
+	s.entryPointsSlice = make(hornet.MessageIDs, 0)
 	s.SetModified(true)
 }
 
@@ -82,17 +84,17 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 		messageIDBuf := make([]byte, 32)
 		var msIndex uint32
 
-		err = binary.Read(bytesReader, binary.BigEndian, messageIDBuf)
+		err = binary.Read(bytesReader, binary.LittleEndian, messageIDBuf)
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
 
-		err = binary.Read(bytesReader, binary.BigEndian, &msIndex)
+		err = binary.Read(bytesReader, binary.LittleEndian, &msIndex)
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
 
-		s.Add(hornet.Hash(messageIDBuf), milestone.Index(msIndex))
+		s.Add(hornet.MessageIDFromBytes(messageIDBuf), milestone.Index(msIndex))
 	}
 
 	return s, nil
@@ -103,12 +105,12 @@ func (s *SolidEntryPoints) GetBytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 
 	for messageID, msIndex := range s.entryPointsMap {
-		err := binary.Write(buf, binary.BigEndian, []byte(messageID)[:32])
+		err := binary.Write(buf, binary.LittleEndian, []byte(messageID)[:32])
 		if err != nil {
 			return nil
 		}
 
-		err = binary.Write(buf, binary.BigEndian, uint32(msIndex))
+		err = binary.Write(buf, binary.LittleEndian, uint32(msIndex))
 		if err != nil {
 			return nil
 		}

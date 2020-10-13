@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"time"
@@ -37,8 +36,8 @@ var (
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewMsgCount       uint32
-	oldConfirmedMsgCount uint32
+	oldNewMsgCount        uint32
+	oldReferencedMsgCount uint32
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone = milestone.Index(0)
@@ -51,7 +50,7 @@ type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
 	MPS                    float64         `json:"tps"`
 	CMPS                   float64         `json:"ctps"`
-	ConfirmationRate       float64         `json:"conf_rate"`
+	ReferencedRate         float64         `json:"referenced_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
 
@@ -67,17 +66,18 @@ func markMessageAsSolid(cachedMetadata *tangle.CachedMetadata) {
 	cachedMetadata.GetMetadata().SetSolid(true)
 
 	Events.MessageSolid.Trigger(cachedMetadata)
+	messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().MapKey())
 }
 
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing msg are requested
 // Can be aborted with abortSignal
 // all cachedMsgMetas have to be released outside.
-func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID hornet.Hash, abortSignal chan struct{}) (solid bool, aborted bool) {
+func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal chan struct{}) (solid bool, aborted bool) {
 	ts := time.Now()
 
 	msgsChecked := 0
-	var messageIDsToSolidify hornet.Hashes
+	var messageIDsToSolidify hornet.MessageIDs
 	messageIDsToRequest := make(map[string]struct{})
 
 	// collect all msg to solidify by traversing the tangle
@@ -87,9 +87,10 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			if _, exists := cachedMessageMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())]; !exists {
+			cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().MapKey()
+			if _, exists := cachedMessageMetas[cachedMsgMetaMapKey]; !exists {
 				// release the msg metadata at the end to speed up calculation
-				cachedMessageMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
+				cachedMessageMetas[cachedMsgMetaMapKey] = cachedMsgMeta.Retain()
 			}
 
 			// if the msg is solid, there is no need to traverse its parents
@@ -108,9 +109,9 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 			return nil
 		},
 		// called on missing parents
-		func(parentMessageID hornet.Hash) error {
+		func(parentMessageID *hornet.MessageID) error {
 			// msg does not exist => request missing msg
-			messageIDsToRequest[string(parentMessageID)] = struct{}{}
+			messageIDsToRequest[parentMessageID.MapKey()] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -126,9 +127,9 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 	tCollect := time.Now()
 
 	if len(messageIDsToRequest) > 0 {
-		var messageIDs hornet.Hashes
+		var messageIDs hornet.MessageIDs
 		for messageID := range messageIDsToRequest {
-			messageIDs = append(messageIDs, hornet.Hash(messageID))
+			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
 		}
 		requested := gossip.RequestMultiple(messageIDs, milestoneIndex, true)
 		log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
@@ -138,7 +139,7 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
-		cachedMsgMeta, exists := cachedMessageMetas[string(messageID)]
+		cachedMsgMeta, exists := cachedMessageMetas[messageID.MapKey()]
 		if !exists {
 			log.Panicf("solidQueueCheck: Message not found: %v", messageID.Hex())
 		}
@@ -162,7 +163,7 @@ func solidQueueCheck(cachedMessageMetas map[string]*tangle.CachedMetadata, miles
 func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 
 	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
-	cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta
+	cachedMsgMetas[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = cachedMsgMeta
 
 	defer func() {
 		// release all msg metadata at the end
@@ -172,7 +173,7 @@ func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 		}
 	}()
 
-	messageIDs := hornet.Hashes{cachedMsgMeta.GetMetadata().GetMessageID()}
+	messageIDs := hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetMessageID()}
 
 	return solidifyFutureCone(cachedMsgMetas, messageIDs, nil)
 }
@@ -180,7 +181,7 @@ func solidifyFutureConeOfMsg(cachedMsgMeta *tangle.CachedMetadata) error {
 // solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
 // we have to walk the future cone, if a message became newly solid during the walk.
 // all cachedMsgMetas have to be released outside.
-func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messageIDs hornet.Hashes, abortSignal chan struct{}) error {
+func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messageIDs hornet.MessageIDs, abortSignal chan struct{}) error {
 
 	for _, messageID := range messageIDs {
 
@@ -191,19 +192,20 @@ func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messag
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				if _, exists := cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())]; !exists {
+				cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().MapKey()
+				if _, exists := cachedMsgMetas[cachedMsgMetaMapKey]; !exists {
 					// release the msg metadata at the end to speed up calculation
-					cachedMsgMetas[string(cachedMsgMeta.GetMetadata().GetMessageID())] = cachedMsgMeta.Retain()
+					cachedMsgMetas[cachedMsgMetaMapKey] = cachedMsgMeta.Retain()
 				}
 
-				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+				if cachedMsgMeta.GetMetadata().IsSolid() && *startMessageID != *cachedMsgMeta.GetMetadata().GetMessageID() {
 					// do not walk the future cone if the current message is already solid, except it was the startTx
 					return false, nil
 				}
 
 				// check if current message is solid by checking the solidity of its parents
-				parentMessageIDs := hornet.Hashes{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
-				if !bytes.Equal(cachedMsgMeta.GetMetadata().GetParent1MessageID(), cachedMsgMeta.GetMetadata().GetParent2MessageID()) {
+				parentMessageIDs := hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
+				if *cachedMsgMeta.GetMetadata().GetParent1MessageID() != *cachedMsgMeta.GetMetadata().GetParent2MessageID() {
 					parentMessageIDs = append(parentMessageIDs, cachedMsgMeta.GetMetadata().GetParent2MessageID())
 				}
 
@@ -213,20 +215,27 @@ func solidifyFutureCone(cachedMsgMetas map[string]*tangle.CachedMetadata, messag
 						continue
 					}
 
-					cachedParentTxMeta := tangle.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
-					if cachedParentTxMeta == nil {
-						// parent is missing => message is not solid
-						// do not walk the future cone if the current message is not solid
-						return false, nil
+					parentMsgMetaMapKey := parentMessageID.MapKey()
+
+					// load up msg metadata
+					cachedParentTxMeta, exists := cachedMsgMetas[parentMsgMetaMapKey]
+					if !exists {
+						cachedParentTxMeta = tangle.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
+						if cachedParentTxMeta == nil {
+							// parent is missing => message is not solid
+							// do not walk the future cone if the current message is not solid
+							return false, nil
+						}
+
+						// release the msg metadata at the end to speed up calculation
+						cachedMsgMetas[parentMsgMetaMapKey] = cachedParentTxMeta
 					}
 
 					if !cachedParentTxMeta.GetMetadata().IsSolid() {
 						// parent is not solid => message is not solid
 						// do not walk the future cone if the current message is not solid
-						cachedParentTxMeta.Release(true) // meta -1
 						return false, nil
 					}
-					cachedParentTxMeta.Release(true) // meta -1
 				}
 
 				// mark current message as solid
@@ -368,11 +377,12 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}
 
 	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {
-		Events.MessageConfirmed.Trigger(msgMeta, index, confTime)
+		Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 	}, func(confirmation *whiteflag.Confirmation) {
 		tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
 		Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
 		Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+		milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
 		Events.MilestoneConfirmed.Trigger(confirmation)
 	})
 
@@ -380,12 +390,12 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		log.Panic(err)
 	}
 
-	log.Infof("Milestone confirmed (%d): txsConfirmed: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
+	log.Infof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
 		conf.Index,
-		conf.MessagesConfirmed,
-		conf.MessagesValue,
-		conf.MessagesZeroValue,
-		conf.MessagesConflicting,
+		conf.MessagesReferenced,
+		conf.MessagesIncludedWithTransactions,
+		conf.MessagesExcludedWithoutTransactions,
+		conf.MessagesExcludedWithConflictingTransactions,
 		conf.Collecting.Truncate(time.Millisecond),
 		conf.Total.Truncate(time.Millisecond),
 	)
@@ -404,7 +414,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 
 		if tangle.IsNodeSynced() && (conf.Index > firstSyncedMilestone+1) {
 			// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
-			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ConfirmationRate)
+			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ReferencedRate)
 			Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
 			ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CMPS)
@@ -442,20 +452,20 @@ func getConfirmedMilestoneMetric(cachedMilestone *tangle.CachedMilestone, milest
 	newMsgDiff := utils.GetUint32Diff(newNewMsgCount, oldNewMsgCount)
 	oldNewMsgCount = newNewMsgCount
 
-	newConfirmedMsgCount := metrics.SharedServerMetrics.ConfirmedMessages.Load()
-	confirmedMsgDiff := utils.GetUint32Diff(newConfirmedMsgCount, oldConfirmedMsgCount)
-	oldConfirmedMsgCount = newConfirmedMsgCount
+	newReferencedMsgCount := metrics.SharedServerMetrics.ReferencedMessages.Load()
+	referencedMsgDiff := utils.GetUint32Diff(newReferencedMsgCount, oldReferencedMsgCount)
+	oldReferencedMsgCount = newReferencedMsgCount
 
-	confRate := 0.0
+	referencedRate := 0.0
 	if newMsgDiff != 0 {
-		confRate = (float64(confirmedMsgDiff) / float64(newMsgDiff)) * 100.0
+		referencedRate = (float64(referencedMsgDiff) / float64(newMsgDiff)) * 100.0
 	}
 
 	metric := &ConfirmedMilestoneMetric{
 		MilestoneIndex:         milestoneIndexToSolidify,
 		MPS:                    float64(newMsgDiff) / timeDiff,
-		CMPS:                   float64(confirmedMsgDiff) / timeDiff,
-		ConfirmationRate:       confRate,
+		CMPS:                   float64(referencedMsgDiff) / timeDiff,
+		ReferencedRate:         referencedRate,
 		TimeSinceLastMilestone: timeDiff,
 	}
 

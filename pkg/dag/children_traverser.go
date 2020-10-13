@@ -59,7 +59,7 @@ func (t *ChildrenTraverser) reset() {
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID hornet.Hash) error {
+func (t *ChildrenTraverser) Traverse(startMessageID *hornet.MessageID) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -71,7 +71,7 @@ func (t *ChildrenTraverser) Traverse(startMessageID hornet.Hash) error {
 
 	t.stack.PushFront(startMessageID)
 	if !t.walkAlreadyDiscovered {
-		t.discovered[string(startMessageID)] = struct{}{}
+		t.discovered[startMessageID.MapKey()] = struct{}{}
 	}
 
 	for t.stack.Len() > 0 {
@@ -95,19 +95,20 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(hornet.Hash)
+	currentMessageID := ele.Value.(*hornet.MessageID)
+	currentMessageIDMapKey := currentMessageID.MapKey()
 
 	// remove the message from the stack
 	t.stack.Remove(ele)
 
-	cachedMsgMeta, exists := t.cachedMsgMetas[string(currentMessageID)]
+	cachedMsgMeta, exists := t.cachedMsgMetas[currentMessageIDMapKey]
 	if !exists {
 		cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
 			return errors.Wrapf(tangle.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
 		}
-		t.cachedMsgMetas[string(currentMessageID)] = cachedMsgMeta
+		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
 	}
 
 	// check condition to decide if msg should be consumed and traversed
@@ -132,12 +133,13 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	for _, childMessageID := range tangle.GetChildrenMessageIDs(currentMessageID) {
 		if !t.walkAlreadyDiscovered {
-			if _, childDiscovered := t.discovered[string(childMessageID)]; childDiscovered {
+			childMessageIDMapKey := childMessageID.MapKey()
+			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {
 				// child was already discovered
 				continue
 			}
 
-			t.discovered[string(childMessageID)] = struct{}{}
+			t.discovered[childMessageIDMapKey] = struct{}{}
 		}
 
 		// traverse the child

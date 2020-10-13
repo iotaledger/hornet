@@ -1,7 +1,6 @@
 package dag
 
 import (
-	"bytes"
 	"container/list"
 	"fmt"
 	"sync"
@@ -68,7 +67,7 @@ func (t *ParentTraverser) reset() {
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) Traverse(startMessageID hornet.Hash, traverseSolidEntryPoints bool) error {
+func (t *ParentTraverser) Traverse(startMessageID *hornet.MessageID, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -95,7 +94,7 @@ func (t *ParentTraverser) Traverse(startMessageID hornet.Hash, traverseSolidEntr
 // Afterwards it traverses the parents (past cone) of the given parent2.
 // It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID hornet.Hash, parent2MessageID hornet.Hash, traverseSolidEntryPoints bool) error {
+func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -141,9 +140,10 @@ func (t *ParentTraverser) processStackParents() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(hornet.Hash)
+	currentMessageID := ele.Value.(*hornet.MessageID)
+	currentMessageIDMapKey := currentMessageID.MapKey()
 
-	if _, wasProcessed := t.processed[string(currentMessageID)]; wasProcessed {
+	if _, wasProcessed := t.processed[currentMessageIDMapKey]; wasProcessed {
 		// message was already processed
 		// remove the message from the stack
 		t.stack.Remove(ele)
@@ -158,20 +158,20 @@ func (t *ParentTraverser) processStackParents() error {
 
 		if !t.traverseSolidEntryPoints {
 			// remove the message from the stack, parent1 and parent2 are not traversed
-			t.processed[string(currentMessageID)] = struct{}{}
-			delete(t.checked, string(currentMessageID))
+			t.processed[currentMessageIDMapKey] = struct{}{}
+			delete(t.checked, currentMessageIDMapKey)
 			t.stack.Remove(ele)
 			return nil
 		}
 	}
 
-	cachedMetadata, exists := t.cachedMessageMetas[string(currentMessageID)]
+	cachedMetadata, exists := t.cachedMessageMetas[currentMessageIDMapKey]
 	if !exists {
 		cachedMetadata = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMetadata == nil {
 			// remove the message from the stack, parent1 and parent2 are not traversed
-			t.processed[string(currentMessageID)] = struct{}{}
-			delete(t.checked, string(currentMessageID))
+			t.processed[currentMessageIDMapKey] = struct{}{}
+			delete(t.checked, currentMessageIDMapKey)
 			t.stack.Remove(ele)
 
 			if t.onMissingParent == nil {
@@ -182,10 +182,10 @@ func (t *ParentTraverser) processStackParents() error {
 			// stop processing the stack if the caller returns an error
 			return t.onMissingParent(currentMessageID)
 		}
-		t.cachedMessageMetas[string(currentMessageID)] = cachedMetadata
+		t.cachedMessageMetas[currentMessageIDMapKey] = cachedMetadata
 	}
 
-	traverse, checkedBefore := t.checked[string(currentMessageID)]
+	traverse, checkedBefore := t.checked[currentMessageIDMapKey]
 	if !checkedBefore {
 		var err error
 
@@ -197,14 +197,14 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 
 		// mark the message as checked and remember the result of the traverse condition
-		t.checked[string(currentMessageID)] = traverse
+		t.checked[currentMessageIDMapKey] = traverse
 	}
 
 	if !traverse {
 		// remove the message from the stack, parent1 and parent2 are not traversed
 		// parent will not get consumed
-		t.processed[string(currentMessageID)] = struct{}{}
-		delete(t.checked, string(currentMessageID))
+		t.processed[currentMessageIDMapKey] = struct{}{}
+		delete(t.checked, currentMessageIDMapKey)
 		t.stack.Remove(ele)
 		return nil
 	}
@@ -212,13 +212,13 @@ func (t *ParentTraverser) processStackParents() error {
 	parent1MessageID := cachedMetadata.GetMetadata().GetParent1MessageID()
 	parent2MessageID := cachedMetadata.GetMetadata().GetParent2MessageID()
 
-	parentMessageIDs := hornet.Hashes{parent1MessageID}
-	if !bytes.Equal(parent1MessageID, parent2MessageID) {
+	parentMessageIDs := hornet.MessageIDs{parent1MessageID}
+	if *parent1MessageID != *parent2MessageID {
 		parentMessageIDs = append(parentMessageIDs, parent2MessageID)
 	}
 
 	for _, parentMessageID := range parentMessageIDs {
-		if _, parentProcessed := t.processed[string(parentMessageID)]; !parentProcessed {
+		if _, parentProcessed := t.processed[parentMessageID.MapKey()]; !parentProcessed {
 			// parent was not processed yet
 			// traverse this message
 			t.stack.PushFront(parentMessageID)
@@ -227,8 +227,8 @@ func (t *ParentTraverser) processStackParents() error {
 	}
 
 	// remove the message from the stack
-	t.processed[string(currentMessageID)] = struct{}{}
-	delete(t.checked, string(currentMessageID))
+	t.processed[currentMessageIDMapKey] = struct{}{}
+	delete(t.checked, currentMessageIDMapKey)
 	t.stack.Remove(ele)
 
 	if t.consumer != nil {
