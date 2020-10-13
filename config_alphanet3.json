@@ -1,6 +1,6 @@
 {
   "useProfile": "debug",
-  "httpAPI": {
+  "restAPI": {
     "basicAuth": {
       "enabled": false,
       "username": "",
@@ -8,29 +8,14 @@
       "passwordSalt": ""
     },
     "excludeHealthCheckFromAuth": false,
-    "permitRemoteAccess": [
-      "getNodeInfo",
-      "getBalances",
-      "checkConsistency",
-      "getTipInfo",
-      "getTransactionsToApprove",
-      "getInclusionStates",
-      "getNodeAPIConfiguration",
-      "broadcastTransactions",
-      "findTransactions",
-      "storeTransactions",
-      "getTrytes"
-    ],
     "permittedRoutes": [
-      "healthz"
+      "health"
     ],
     "whitelistedAddresses": [],
     "bindAddress": "0.0.0.0:14269",
     "limits": {
-      "bodyLengthBytes": 1000000,
-      "findTransactions": 1000,
-      "getTrytes": 1000,
-      "requestsList": 1000
+      "bodyLength": "1M",
+      "maxResults": 1000
     }
   },
   "dashboard": {
@@ -48,22 +33,15 @@
     "path": "alphanetdb3"
   },
   "snapshots": {
-    "loadType": "global",
-    "local": {
-      "depth": 50,
-      "intervalSynced": 200,
-      "intervalUnsynced": 1000,
-      "path": "snapshots/alphanet3/export.bin",
-      "downloadURLs": []
-    },
-    "global": {
-      "path": "snapshotAlphanet.txt",
-      "index": 0
-    },
-    "pruning": {
-      "enabled": true,
-      "delay": 60480
-    }
+    "depth": 50,
+    "intervalSynced": 200,
+    "intervalUnsynced": 1000,
+    "path": "snapshots/alphanet3/export.bin",
+    "downloadURLs": []
+  },
+  "pruning": {
+    "enabled": true,
+    "delay": 500
   },
   "coordinator": {
     "publicKey": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
