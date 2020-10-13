@@ -329,7 +329,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 		case connectPeerMsg := <-m.connectPeerChan:
 			err := m.connectPeer(connectPeerMsg.addrInfo, connectPeerMsg.peerRelation)
 			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("via connect: %w", err))
+				m.Events.Error.Trigger(fmt.Errorf("error connect to %s (%v): %w", connectPeerMsg.addrInfo.ID.ShortString(), connectPeerMsg.addrInfo.Addrs, err))
 			}
 			if errors.Is(err, ErrPeerInManagerAlready) {
 				m.updateRelation(connectPeerMsg.addrInfo.ID, connectPeerMsg.peerRelation)
@@ -340,7 +340,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			p := m.peers[disconnectPeerMsg.id]
 			disconnected, err := m.disconnectPeer(disconnectPeerMsg.id)
 			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("via disconnect: %w", err))
+				m.Events.Error.Trigger(fmt.Errorf("error disconnect %s: %w", disconnectPeerMsg.id.ShortString(), err))
 			}
 			if disconnected {
 				m.Events.Disconnected.Trigger(p)
@@ -350,7 +350,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 		case reconnectMsg := <-m.reconnectChan:
 			reconnect, err := m.reconnectPeer(reconnectMsg.id)
 			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("via reconnect: %w", err))
+				m.Events.Error.Trigger(fmt.Errorf("error reconnect %s: %w", reconnectMsg.id.ShortString(), err))
 				continue
 			}
 			if !reconnect {
@@ -582,8 +582,8 @@ func (m *Manager) registerLoggerOnEvents() {
 	m.Events.Connect.Attach(events.NewClosure(func(p *Peer) {
 		m.opts.Logger.Infof("connecting %s: %s", p.ID.ShortString(), p.Addrs)
 	}))
-	m.Events.Connected.Attach(events.NewClosure(func(p *Peer, _ network.Conn) {
-		m.opts.Logger.Infof("connected %s", p.ID.ShortString())
+	m.Events.Connected.Attach(events.NewClosure(func(p *Peer, conn network.Conn) {
+		m.opts.Logger.Infof("connected %s (%s)", p.ID.ShortString(), conn.Stat().Direction.String())
 	}))
 	m.Events.Disconnect.Attach(events.NewClosure(func(p *Peer) {
 		m.opts.Logger.Infof("disconnecting %s", p.ID.ShortString())
@@ -601,7 +601,7 @@ func (m *Manager) registerLoggerOnEvents() {
 		m.opts.Logger.Infof("updated relation of %s from '%s' to '%s'", p.ID.ShortString(), oldRel, p.Relation)
 	}))
 	m.Events.Error.Attach(events.NewClosure(func(err error) {
-		m.opts.Logger.Error(err)
+		m.opts.Logger.Warn(err)
 	}))
 }
 

@@ -150,8 +150,7 @@ func run(_ *node.Plugin) {
 
 	_ = daemon.BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running GossipService")
-		service := Service()
-		service.Start(shutdownSignal)
+		Service().Start(shutdownSignal)
 		log.Info("Stopped GossipService")
 	}, shutdown.PriorityGossipService)
 
@@ -184,8 +183,7 @@ func run(_ *node.Plugin) {
 
 	_ = daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
-		msgProc := MessageProcessor()
-		msgProc.Run(shutdownSignal)
+		MessageProcessor().Run(shutdownSignal)
 		log.Info("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 

@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newNode(ctx context.Context, t *testing.T) host.Host {
+func newNode(ctx context.Context, t require.TestingT) host.Host {
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, _ := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	h, err := libp2p.New(
@@ -257,4 +257,21 @@ func TestManagerEvents(t *testing.T) {
 	connectivity(t, node2Manager, node1.ID(), false, 10*time.Second)
 	require.True(t, reconnectingCalled)
 	require.True(t, reconnectedCalled)
+}
+
+func BenchmarkManager_ForEach(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	shutdownSignal := make(chan struct{})
+	defer close(shutdownSignal)
+	node1 := newNode(ctx, b)
+	node1Manager := p2p.NewManager(node1)
+	go node1Manager.Start(shutdownSignal)
+	time.Sleep(1 * time.Second)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		node1Manager.ForEach(func(p *p2p.Peer) bool {
+			return true
+		})
+	}
 }
