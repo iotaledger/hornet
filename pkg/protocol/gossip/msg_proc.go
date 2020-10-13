@@ -128,7 +128,7 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
 func (proc *MessageProcessor) Emit(msg *tangle.Message) error {
 
-	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*p2p.Peer)(nil))
+	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
 	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.GetData()})
 
 	return nil
