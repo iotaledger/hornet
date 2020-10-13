@@ -182,7 +182,7 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 
 		message = fmt.Sprintf("%s, error: %+v", message, err)
 
-		c.JSON(statusCode, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: statusCode, Message: message}})
+		c.JSON(statusCode, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: string(statusCode), Message: message}})
 	}
 
 	if !exclHealthCheckFromAuth {
