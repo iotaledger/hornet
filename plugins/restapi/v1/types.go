@@ -6,12 +6,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-// okResponseEnvelope defines the ok response schema for node API responses.
-type okResponseEnvelope struct {
-	// The response is encapsulated in the Data field.
-	Data interface{} `json:"data"`
-}
-
 // infoResponse defines the response of a GET info REST API call.
 type infoResponse struct {
 	// The name of the node software.
@@ -55,7 +49,7 @@ type messageMetadataResponse struct {
 	// Whether the message is solid.
 	Solid bool `json:"isSolid"`
 	// The milestone index that references this message.
-	ReferencedByMilestone *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
+	ReferencedByMilestoneIndex *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
 	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
 	// Whether the message should be promoted.
@@ -130,7 +124,7 @@ type addressBalanceResponse struct {
 	Balance uint64 `json:"balance"`
 }
 
-// outputResponse defines an output response.
+// addressOutputsResponse defines the response of a GET outputs by address REST API call.
 type addressOutputsResponse struct {
 	// The hex encoded address.
 	Address string `json:"address"`
@@ -207,3 +201,10 @@ type messageConeResponse struct {
 	EntryPoints []*entryPoint `json:"entryPoints"`
 }
 
+/*
+type addPeer struct {
+	Identity   string `json:"identity"`
+	Alias      string `json:"alias"`
+	PreferIPv6 bool   `json:"preferIPv6"`
+}
+*/

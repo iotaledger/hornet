@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 )
@@ -20,7 +21,7 @@ const (
 	waitForNodeSyncedTimeout = 2000 * time.Millisecond
 )
 
-var (
+const (
 	// ParameterMessageID is used to identify a message by it's ID.
 	ParameterMessageID = "messageID"
 
@@ -37,13 +38,13 @@ var (
 	ParameterPeerID = "peerID"
 )
 
-var (
+const (
 	QueryParamControlCmdPruneDatabase      = "prunedatabase"      // targetIndex || depth
 	QueryParamControlCmdCreateSnapshotFile = "createsnapshotfile" // targetIndex
 	QueryParamControlCmdTiggerSolidifier   = "triggersolidifier"
 )
 
-var (
+const (
 	// RouteInfo is the route for getting the node info.
 	// GET returns the node info.
 	RouteInfo = "/info"
@@ -52,7 +53,7 @@ var (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
-	// RouteMessageData is the route for getting message raw data by it's messageID.
+	// RouteMessageData is the route for getting message data by it's messageID.
 	// GET returns message data (json).
 	RouteMessageData = "/messages/:" + ParameterMessageID
 
@@ -134,7 +135,7 @@ var (
 
 // jsonResponse wraps the result into a "data" field and sends the JSON response with status code.
 func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
-	return c.JSON(statusCode, &okResponseEnvelope{Data: result})
+	return c.JSON(statusCode, &common.HTTPOkResponseEnvelope{Data: result})
 }
 
 func SetupApiRoutesV1(routeGroup *echo.Group) {
