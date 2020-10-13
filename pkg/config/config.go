@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/parameter"
-	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
@@ -34,9 +33,6 @@ var (
 	NodeConfig     = viper.New()
 	PeeringConfig  = viper.New()
 	ProfilesConfig = viper.New()
-
-	peeringConfigHotReloadAllowed = true
-	peeringConfigHotReloadLock    syncutils.Mutex
 
 	// a list of flags which should be printed via --help
 	nonHiddenFlags = map[string]struct{}{
@@ -117,32 +113,6 @@ func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
 	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
 	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
-}
-
-func AllowPeeringConfigHotReload() {
-	peeringConfigHotReloadLock.Lock()
-	defer peeringConfigHotReloadLock.Unlock()
-	peeringConfigHotReloadAllowed = true
-}
-
-func DenyPeeringConfigHotReload() {
-	peeringConfigHotReloadLock.Lock()
-	defer peeringConfigHotReloadLock.Unlock()
-	peeringConfigHotReloadAllowed = false
-}
-
-func AcquirePeeringConfigHotReload() bool {
-	peeringConfigHotReloadLock.Lock()
-	defer peeringConfigHotReloadLock.Unlock()
-
-	if !peeringConfigHotReloadAllowed {
-		// It is already denied
-		return false
-	}
-
-	// Deny it for other calls
-	peeringConfigHotReloadAllowed = false
-	return true
 }
 
 func hasFlag(name string) bool {
