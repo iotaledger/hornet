@@ -47,7 +47,7 @@ func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataRe
 		Parent1:               metadata.GetParent1MessageID().Hex(),
 		Parent2:               metadata.GetParent2MessageID().Hex(),
 		Solid:                 metadata.IsSolid(),
-		ReferencedByMilestone: referencedByMilestone,
+		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
 
 	if referenced {

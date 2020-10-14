@@ -6,12 +6,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-// okResponseEnvelope defines the ok response schema for node API responses.
-type okResponseEnvelope struct {
-	// The response is encapsulated in the Data field.
-	Data interface{} `json:"data"`
-}
-
 // infoResponse defines the response of a GET info REST API call.
 type infoResponse struct {
 	// The name of the node software.
@@ -55,7 +49,7 @@ type messageMetadataResponse struct {
 	// Whether the message is solid.
 	Solid bool `json:"isSolid"`
 	// The milestone index that references this message.
-	ReferencedByMilestone *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
+	ReferencedByMilestoneIndex *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
 	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
 	// Whether the message should be promoted.
@@ -130,7 +124,7 @@ type addressBalanceResponse struct {
 	Balance uint64 `json:"balance"`
 }
 
-// outputResponse defines an output response.
+// addressOutputsResponse defines the response of a GET outputs by address REST API call.
 type addressOutputsResponse struct {
 	// The hex encoded address.
 	Address string `json:"address"`
@@ -207,3 +201,44 @@ type messageConeResponse struct {
 	EntryPoints []*entryPoint `json:"entryPoints"`
 }
 
+// addPeerRequest defines the request for a POST peer REST API call.
+type addPeerRequest struct {
+	// The libp2p multi address of the peer.
+	MultiAddress string `json:"multiAddress"`
+	// The alias of to iditify the peer.
+	Alias *string `json:"alias,omitempty"`
+}
+
+// peerResponse defines the response of a GET peer REST API call.
+type peerResponse struct {
+	// The libp2p multi address of the peer.
+	MultiAddress string `json:"multiAddress"`
+	// The alias of to iditify the peer.
+	Alias *string `json:"alias,omitempty"`
+	// The libp2p identifier of the peer.
+	ID string `json:"id"`
+	// The relation (static, autopeered) of the peer.
+	Relation string `json:"relation"`
+	// Whether the peer is connected.
+	Connected bool `json:"connected"`
+	// The gossip metrics of the peer.
+	GossipMetrics *peerGossipMetrics `json:"gossipMetrics,omitempty"`
+}
+
+// peerGossipMetrics defines the peer gossip metrics.
+type peerGossipMetrics struct {
+	// The total amount of sent packages.
+	SentPackets uint32 `json:"sentPackets"`
+	// The total amount of dropped sent packages.
+	DroppedSentPackets uint32 `json:"droppedSentPackets"`
+	// The total amount of received heartbeats.
+	ReceivedHeartbeats uint32 `json:"receivedHeartbeats"`
+	// The total amount of sent heartbeats.
+	SentHeartbeats uint32 `json:"sentHeartbeats"`
+	// The total amount of received messages.
+	ReceivedMessages uint32 `json:"receivedMessages"`
+	// The total amount of received new messages.
+	NewMessages uint32 `json:"newMessages"`
+	// The total amount of received known messages.
+	KnownMessages uint32 `json:"knownMessages"`
+}

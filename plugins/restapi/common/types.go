@@ -2,7 +2,7 @@ package common
 
 // HTTPErrorResponse defines the error struct for the HTTPErrorResponseEnvelope.
 type HTTPErrorResponse struct {
-	Code    int    `json:"code"`
+	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -13,5 +13,6 @@ type HTTPErrorResponseEnvelope struct {
 
 // HTTPOkResponseEnvelope defines the ok response schema for node API responses.
 type HTTPOkResponseEnvelope struct {
+	// The response is encapsulated in the Data field.
 	Data interface{} `json:"data"`
 }

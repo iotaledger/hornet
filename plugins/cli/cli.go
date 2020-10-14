@@ -37,6 +37,7 @@ func getList(a []string) string {
 	return strings.Join(a, " ")
 }
 
+// ParseConfig parses the configuration and initializes the global logger.
 func ParseConfig() {
 	if err := config.FetchConfig(); err != nil {
 		panic(err)
@@ -48,6 +49,7 @@ func ParseConfig() {
 	}
 }
 
+// PrintConfig prints the loaded configuration, but hides sensitive information.
 func PrintConfig() {
 	config.PrintConfig([]string{config.CfgRestAPIBasicAuthPasswordHash, config.CfgRestAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 
@@ -60,11 +62,6 @@ func PrintConfig() {
 	if len(disablePlugins) > 0 {
 		fmt.Printf("\nThe following plugins are disabled: %s\n", getList(disablePlugins))
 	}
-}
-
-// HideConfigFlags hides all non essential flags from the help/usage text.
-func HideConfigFlags() {
-	config.HideConfigFlags()
 }
 
 // ParseFlags defines and parses the command-line flags from os.Args[1:].
@@ -81,7 +78,8 @@ func PrintVersion() {
 
 	if *help {
 		if !*helpFull {
-			HideConfigFlags()
+			// HideConfigFlags hides all non essential flags from the help/usage text.
+			config.HideConfigFlags()
 		}
 		flag.Usage()
 		os.Exit(0)
