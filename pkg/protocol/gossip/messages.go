@@ -13,9 +13,6 @@ var (
 func init() {
 	definitions := []*hiveproto.Definition{
 		tlv.HeaderMessageDefinition,
-		// TODO: circumvent this weird constraint
-		{ID: 1},
-		{ID: 2},
 		MilestoneRequestMessageDefinition,
 		MessageMessageDefinition,
 		MessageRequestMessageDefinition,

@@ -206,15 +206,14 @@ func checkHeartbeats() {
 
 	//peerIDsToRemove := make(map[string]struct{})
 	peersToReconnect := make(map[peer.ID]struct{})
-	_ = peersToReconnect
 
-	/*
-		// check if peers are alive by checking whether we received heartbeats lately
-		Service().ForAll(func(proto *gossip.Protocol) bool {
-			if time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
-				return true
-			}
+	// check if peers are alive by checking whether we received heartbeats lately
+	Service().ForEach(func(proto *gossip.Protocol) bool {
+		if time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
+			return true
+		}
 
+		/*
 			// TODO: re-introduce once p2p discovery is implemented
 			// peer is connected but doesn't seem to be alive
 			if p.Autopeering != nil {
@@ -223,25 +222,25 @@ func checkHeartbeats() {
 				log.Infof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
 				return true
 			}
+		*/
 
-			// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-			log.Infof("closing connection to neighbor %s because we didn't receive heartbeats anymore", proto.PeerID)
-			peersToReconnect[proto.PeerID] = struct{}{}
-			return true
-		})
+		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
+		log.Infof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID)
+		peersToReconnect[proto.PeerID] = struct{}{}
+		return true
+	})
 
+	/*
 		// TODO: re-introduce once p2p discovery is implemented
 		for peerIDToRemove := range peerIDsToRemove {
 			peering.Manager().Remove(peerIDToRemove)
 		}
-
-		for p := range peersToReconnect {
-			peer := p2pplug.Manager().Peer(p)
-			if peer != nil {
-				peer.Disconnect()
-			}
-		}
-
 	*/
 
+	for p := range peersToReconnect {
+		conns := p2pplug.Host().Network().ConnsToPeer(p)
+		for _, conn := range conns {
+			_ = conn.Close()
+		}
+	}
 }

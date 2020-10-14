@@ -51,9 +51,12 @@ var defaultServiceOptions = []ServiceOption{
 
 // ServiceOptions define options for a Service.
 type ServiceOptions struct {
-	SendQueueSize        int
+	// The size of the send queue buffer.
+	SendQueueSize int
+	// Timeout for connecting a stream.
 	StreamConnectTimeout time.Duration
-	Logger               *logger.Logger
+	// The logger to use to log events.
+	Logger *logger.Logger
 }
 
 // applies the given ServiceOption.
@@ -120,7 +123,7 @@ func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts
 
 // Service handles ongoing gossip streams.
 type Service struct {
-	// Events happening arounda Service.
+	// Events happening around a Service.
 	Events   ServiceEvents
 	host     host.Host
 	protocol protocol.ID
@@ -149,8 +152,7 @@ func (s *Service) Protocol(id peer.ID) *Protocol {
 // This function must not call any methods on Service.
 type ProtocolForEachFunc func(proto *Protocol) bool
 
-// ForEach calls the given PeerForEachFunc on each Peer.
-// Optionally only loops over the peers with the given filter relation.
+// ForEach calls the given ProtocolForEachFunc on each Protocol.
 func (s *Service) ForEach(f ProtocolForEachFunc) {
 	back := make(chan struct{})
 	s.forEachChan <- &foreachmsg{f: f, back: back}

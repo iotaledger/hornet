@@ -48,6 +48,18 @@ const (
 	PeerRelationDiscovered PeerRelation = "discovered"
 )
 
+// ManagerState represents the state in which the Manager is in.
+type ManagerState string
+
+const (
+	// ManagerStateStarted means that the Manager has been started.
+	ManagerStateStarted ManagerState = "started"
+	// ManagerStateStopping means that the Manager is halting its operation.
+	ManagerStateStopping ManagerState = "stopping"
+	// ManagerStateStopped means tha the Manager has halted its operation.
+	ManagerStateStopped ManagerState = "stopped"
+)
+
 // ManagerEvents are events happening around a Manager.
 // No methods on Manager must be called from within the event handlers.
 type ManagerEvents struct {
@@ -67,6 +79,8 @@ type ManagerEvents struct {
 	Reconnected *events.Event
 	// Fired when the relation to a peer has been updated.
 	RelationUpdated *events.Event
+	// Fired when the Manager's state changes.
+	StateChange *events.Event
 	// Fired when internal error happens.
 	Error *events.Event
 }
@@ -74,6 +88,11 @@ type ManagerEvents struct {
 // PeerCaller gets called with a Peer.
 func PeerCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*Peer))(params[0].(*Peer))
+}
+
+// ManagerStateCaller gets called with a ManagerState.
+func ManagerStateCaller(handler interface{}, params ...interface{}) {
+	handler.(func(ManagerState))(params[0].(ManagerState))
 }
 
 // PeerDurationCaller gets called with a Peer and a time.Duration.
@@ -98,8 +117,11 @@ var defaultManagerOptions = []ManagerOption{
 
 // ManagerOptions define options for a Manager.
 type ManagerOptions struct {
-	Logger                  *logger.Logger
-	ReconnectInterval       time.Duration
+	// The logger to use to log events.
+	Logger *logger.Logger
+	// The static reconnect interval.
+	ReconnectInterval time.Duration
+	// The randomized jitter applied to the reconnect interval.
 	ReconnectIntervalJitter time.Duration
 }
 
@@ -122,9 +144,8 @@ func WithManagerReconnectInterval(interval time.Duration, jitter time.Duration) 
 	}
 }
 
-// applies the given ServiceOption.
+// applies the given ManagerOption.
 func (mo *ManagerOptions) apply(opts ...ManagerOption) {
-	mo.Logger = nil
 	for _, opt := range opts {
 		opt(mo)
 	}
@@ -153,6 +174,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 			Reconnecting:       events.NewEvent(PeerCaller),
 			Reconnected:        events.NewEvent(PeerCaller),
 			RelationUpdated:    events.NewEvent(PeerRelationCaller),
+			StateChange:        events.NewEvent(ManagerStateCaller),
 			Error:              events.NewEvent(events.ErrorCaller),
 		},
 		host:               host,
@@ -199,15 +221,20 @@ type Manager struct {
 func (m *Manager) Start(shutdownSignal <-chan struct{}) {
 	// manage libp2p network events
 	m.host.Network().Notify((*netNotifiee)(m))
+
+	m.Events.StateChange.Trigger(ManagerStateStarted)
+
 	// run the event loop machinery
 	m.eventLoop(shutdownSignal)
 
+	m.Events.StateChange.Trigger(ManagerStateStopping)
 	for _, conn := range m.host.Network().Conns() {
 		_ = conn.Close()
 	}
 
 	// de-register libp2p network events
 	m.host.Network().StopNotify((*netNotifiee)(m))
+	m.Events.StateChange.Trigger(ManagerStateStopped)
 }
 
 // ConnectPeer connects to the given peer.
@@ -618,6 +645,9 @@ func (m *Manager) registerLoggerOnEvents() {
 	}))
 	m.Events.RelationUpdated.Attach(events.NewClosure(func(p *Peer, oldRel PeerRelation) {
 		m.opts.Logger.Infof("updated relation of %s from '%s' to '%s'", p.ID.ShortString(), oldRel, p.Relation)
+	}))
+	m.Events.StateChange.Attach(events.NewClosure(func(mngState ManagerState) {
+		m.opts.Logger.Info(mngState)
 	}))
 	m.Events.Error.Attach(events.NewClosure(func(err error) {
 		m.opts.Logger.Warn(err)

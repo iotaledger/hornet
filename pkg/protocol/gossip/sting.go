@@ -23,10 +23,10 @@ const MinimumVersion = 1
 const FeatureSetName = "Chrysalis-Pt2"
 
 const (
-	MessageTypeMilestoneRequest message.Type = 3
-	MessageTypeMessage          message.Type = 4
-	MessageTypeMessageRequest   message.Type = 5
-	MessageTypeHeartbeat        message.Type = 6
+	MessageTypeMilestoneRequest message.Type = 1
+	MessageTypeMessage          message.Type = 2
+	MessageTypeMessageRequest   message.Type = 3
+	MessageTypeHeartbeat        message.Type = 4
 )
 
 const (

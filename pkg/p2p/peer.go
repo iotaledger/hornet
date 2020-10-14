@@ -30,7 +30,6 @@ type Peer struct {
 
 	connectedEventCalled bool
 	reconnectTimer       *time.Timer
-	nextReconnectDelay   time.Duration
 }
 
 // Info returns a snapshot of the peer in time of calling Info().

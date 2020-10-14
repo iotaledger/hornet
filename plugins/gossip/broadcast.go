@@ -22,9 +22,6 @@ func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
 	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
 	Service().ForEach(func(proto *gossip.Protocol) bool {
-		if proto == nil {
-			return true
-		}
 		if filter != nil && !filter(proto) {
 			return true
 		}
