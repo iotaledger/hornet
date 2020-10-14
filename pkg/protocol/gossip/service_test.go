@@ -43,17 +43,17 @@ func TestServiceEvents(t *testing.T) {
 	cfg.Set("logger.disableStacktrace", true)
 	require.NoError(t, logger.InitGlobalLogger(cfg))
 
-	reconnectOpt := p2p.WithReconnectInterval(1*time.Second, 500*time.Millisecond)
+	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
 	node1 := newNode(ctx, t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
-	node1Manager := p2p.NewManager(node1, p2p.WithLogger(node1Logger), reconnectOpt)
+	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
 	go node1Manager.Start(shutdownSignal)
 	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()}
 
 	node2 := newNode(ctx, t)
 	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
-	node2Manager := p2p.NewManager(node2, p2p.WithLogger(node2Logger), reconnectOpt)
+	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
 	go node2Manager.Start(shutdownSignal)
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 

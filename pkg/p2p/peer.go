@@ -3,26 +3,30 @@ package p2p
 import (
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 )
 
 // NewPeer creates a new Peer.
-func NewPeer(id peer.ID, relation PeerRelation, addrs []multiaddr.Multiaddr) *Peer {
+func NewPeer(id peer.ID, relation PeerRelation, addrs []multiaddr.Multiaddr, alias string) *Peer {
 	return &Peer{
 		ID:       id,
 		Relation: relation,
 		Addrs:    addrs,
+		Alias:    alias,
 	}
 }
 
 // Peer is a remote peer in the network.
 type Peer struct {
-	ID       peer.ID
-	Conn     network.Conn
+	// The ID of the peer.
+	ID peer.ID
+	// The relation to the peer.
 	Relation PeerRelation
-	Addrs    []multiaddr.Multiaddr
+	// The addresses under which the peer was added.
+	Addrs []multiaddr.Multiaddr
+	// The alias of the peer for better recognizing it.
+	Alias string
 
 	connectedEventCalled bool
 	reconnectTimer       *time.Timer
@@ -41,12 +45,18 @@ func (p *Peer) Info() *PeerSnapshot {
 
 // PeerSnapshot acts as a static snapshot of information about a peer.
 type PeerSnapshot struct {
-	Peer               *Peer                 `json:"-"`
-	ID                 string                `json:"address"`
-	Addresses          []multiaddr.Multiaddr `json:"addresses"`
-	Alias              string                `json:"alias,omitempty"`
-	PreferIPv6         bool                  `json:"-"`
-	SentPackets        uint32                `json:"sentPackets"`
-	DroppedSentPackets uint32                `json:"droppedSentPackets"`
-	Connected          bool                  `json:"connected"`
+	// The instance of the peer.
+	Peer *Peer `json:"-"`
+	// The ID of the peer.
+	ID string `json:"address"`
+	// The addresses of the peer.
+	Addresses []multiaddr.Multiaddr `json:"addresses"`
+	// The alias of the peer.
+	Alias string `json:"alias,omitempty"`
+	// The amount of sent packets to the peer.
+	SentPackets uint32 `json:"sentPackets"`
+	// The amount of dropped packets.
+	DroppedSentPackets uint32 `json:"droppedSentPackets"`
+	// Whether the peer is connected.
+	Connected bool `json:"connected"`
 }

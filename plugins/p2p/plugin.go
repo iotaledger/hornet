@@ -46,7 +46,7 @@ var (
 func Manager() *p2ppkg.Manager {
 	managerOnce.Do(func() {
 		manager = p2ppkg.NewManager(Host(),
-			p2ppkg.WithLogger(logger.NewLogger("P2P-Manager")),
+			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
 		)
 	})
 	return manager
@@ -86,11 +86,11 @@ func Host() host.Host {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 		}
 
-		staticPeers := config.NodeConfig.GetStringSlice(config.CfgP2PBindAddresses)
+		bindAddrs := config.NodeConfig.GetStringSlice(config.CfgP2PBindAddresses)
 
 		selfHost, err = libp2p.New(ctx,
 			libp2p.Identity(prvKey),
-			libp2p.ListenAddrStrings(staticPeers...),
+			libp2p.ListenAddrStrings(bindAddrs...),
 			libp2p.Peerstore(peerStore),
 			libp2p.Transport(libp2pquic.NewTransport),
 			libp2p.DefaultTransports,

@@ -38,7 +38,7 @@ func TestManager(t *testing.T) {
 	shutdownSignal := make(chan struct{})
 	defer close(shutdownSignal)
 
-	reconnectOpt := p2p.WithReconnectInterval(1*time.Second, 500*time.Millisecond)
+	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
 	cfg := viper.GetViper()
 	cfg.Set("logger.disableStacktrace", true)
@@ -46,25 +46,25 @@ func TestManager(t *testing.T) {
 
 	node1 := newNode(ctx, t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
-	node1Manager := p2p.NewManager(node1, p2p.WithLogger(node1Logger), reconnectOpt)
+	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
 	go node1Manager.Start(shutdownSignal)
 	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()}
 
 	node2 := newNode(ctx, t)
 	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
-	node2Manager := p2p.NewManager(node2, p2p.WithLogger(node2Logger), reconnectOpt)
+	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
 	go node2Manager.Start(shutdownSignal)
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 
 	node3 := newNode(ctx, t)
 	node3Logger := logger.NewLogger(fmt.Sprintf("node3/%s", node3.ID().ShortString()))
-	node3Manager := p2p.NewManager(node3, p2p.WithLogger(node3Logger), reconnectOpt)
+	node3Manager := p2p.NewManager(node3, p2p.WithManagerLogger(node3Logger), reconnectOpt)
 	go node3Manager.Start(shutdownSignal)
 	node3AddrInfo := &peer.AddrInfo{ID: node3.ID(), Addrs: node3.Addrs()}
 
 	node4 := newNode(ctx, t)
 	node4Logger := logger.NewLogger(fmt.Sprintf("node4/%s", node4.ID().ShortString()))
-	node4Manager := p2p.NewManager(node4, p2p.WithLogger(node4Logger), reconnectOpt)
+	node4Manager := p2p.NewManager(node4, p2p.WithManagerLogger(node4Logger), reconnectOpt)
 	go node4Manager.Start(shutdownSignal)
 	node4AddrInfo := &peer.AddrInfo{ID: node4.ID(), Addrs: node4.Addrs()}
 
@@ -77,7 +77,8 @@ func TestManager(t *testing.T) {
 	require.True(t, errors.Is(node1Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown), p2p.ErrCantConnectToItself))
 
 	// connect to each other
-	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
+	node2AliasOnNode1 := "Node 2"
+	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown, node2AliasOnNode1)
 	go node2Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown)
 	go node2Manager.ConnectPeer(node3AddrInfo, p2p.PeerRelationUnknown)
 
@@ -96,6 +97,11 @@ func TestManager(t *testing.T) {
 	// but not for node 2<->3
 	require.False(t, node2.ConnManager().IsProtected(node3.ID(), p2p.KnownPeerConnectivityProtectionTag))
 	require.False(t, node3.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
+
+	// check alias
+	node1Manager.Call(node2.ID(), func(p *p2p.Peer) {
+		require.Equal(t, node2AliasOnNode1, p.Alias)
+	})
 
 	// disconnect node 1 from 2
 	require.Nil(t, node1Manager.DisconnectPeer(node2.ID()))
@@ -176,18 +182,18 @@ func TestManagerEvents(t *testing.T) {
 	cfg.Set("logger.disableStacktrace", true)
 	require.NoError(t, logger.InitGlobalLogger(cfg))
 
-	reconnectOpt := p2p.WithReconnectInterval(1*time.Second, 500*time.Millisecond)
+	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
 	node1 := newNode(ctx, t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
-	node1Manager := p2p.NewManager(node1, p2p.WithLogger(node1Logger), reconnectOpt)
+	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
 	go node1Manager.Start(shutdownSignal)
 	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()}
 	_ = node1AddrInfo
 
 	node2 := newNode(ctx, t)
 	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
-	node2Manager := p2p.NewManager(node2, p2p.WithLogger(node2Logger), reconnectOpt)
+	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
 	go node2Manager.Start(shutdownSignal)
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 

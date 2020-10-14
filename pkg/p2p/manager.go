@@ -43,6 +43,9 @@ const (
 	// PeerRelationUnknown is a relation to an unknown peer.
 	// Connections to such peers do not have to be retained.
 	PeerRelationUnknown PeerRelation = "unknown"
+	// PeerRelationDiscovered is a relation to a discovered peer.
+	// Connections to such peers do not have to be retained.
+	PeerRelationDiscovered PeerRelation = "discovered"
 )
 
 // ManagerEvents are events happening around a Manager.
@@ -90,7 +93,7 @@ func PeerRelationCaller(handler interface{}, params ...interface{}) {
 
 // the default options applied to the Manager.
 var defaultManagerOptions = []ManagerOption{
-	WithReconnectInterval(30*time.Second, 1*time.Second),
+	WithManagerReconnectInterval(30*time.Second, 1*time.Second),
 }
 
 // ManagerOptions define options for a Manager.
@@ -103,16 +106,16 @@ type ManagerOptions struct {
 // ManagerOption is a function setting a ManagerOptions option.
 type ManagerOption func(opts *ManagerOptions)
 
-// WithLogger enables logging within the Manager.
-func WithLogger(logger *logger.Logger) ManagerOption {
+// WithManagerLogger enables logging within the Manager.
+func WithManagerLogger(logger *logger.Logger) ManagerOption {
 	return func(opts *ManagerOptions) {
 		opts.Logger = logger
 	}
 }
 
-// WithReconnectInterval defines the re-connect interval for peers
+// WithManagerReconnectInterval defines the re-connect interval for peers
 // to which the Manager wants to keep a connection open to.
-func WithReconnectInterval(interval time.Duration, jitter time.Duration) ManagerOption {
+func WithManagerReconnectInterval(interval time.Duration, jitter time.Duration) ManagerOption {
 	return func(opts *ManagerOptions) {
 		opts.ReconnectInterval = interval
 		opts.ReconnectIntervalJitter = jitter
@@ -209,9 +212,14 @@ func (m *Manager) Start(shutdownSignal <-chan struct{}) {
 
 // ConnectPeer connects to the given peer.
 // If the peer is considered "known", then its connection is protected from trimming.
-func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation) error {
+// Optionally an alias for the peer can be defined to better identify it afterwards.
+func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation, alias ...string) error {
+	var al string
+	if len(alias) > 0 {
+		al = alias[0]
+	}
 	back := make(chan error)
-	m.connectPeerChan <- &connectpeermsg{addrInfo: addrInfo, peerRelation: peerRelation, back: back}
+	m.connectPeerChan <- &connectpeermsg{addrInfo: addrInfo, peerRelation: peerRelation, back: back, alias: al}
 	return <-back
 }
 
@@ -282,6 +290,7 @@ func (m *Manager) Call(id peer.ID, f PeerFunc) {
 type connectpeermsg struct {
 	addrInfo     *peer.AddrInfo
 	peerRelation PeerRelation
+	alias        string
 	back         chan error
 }
 
@@ -327,12 +336,13 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			return
 
 		case connectPeerMsg := <-m.connectPeerChan:
-			err := m.connectPeer(connectPeerMsg.addrInfo, connectPeerMsg.peerRelation)
+			err := m.connectPeer(connectPeerMsg.addrInfo, connectPeerMsg.peerRelation, connectPeerMsg.alias)
 			if err != nil {
 				m.Events.Error.Trigger(fmt.Errorf("error connect to %s (%v): %w", connectPeerMsg.addrInfo.ID.ShortString(), connectPeerMsg.addrInfo.Addrs, err))
 			}
 			if errors.Is(err, ErrPeerInManagerAlready) {
 				m.updateRelation(connectPeerMsg.addrInfo.ID, connectPeerMsg.peerRelation)
+				m.updateAlias(connectPeerMsg.addrInfo.ID, connectPeerMsg.alias)
 			}
 			connectPeerMsg.back <- err
 
@@ -401,7 +411,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 
 // connects to the given peer if it isn't already connected and if its relation is PeerRelationKnown,
 // then the connection to the peer is further protected from trimming.
-func (m *Manager) connectPeer(addrInfo *peer.AddrInfo, relation PeerRelation) error {
+func (m *Manager) connectPeer(addrInfo *peer.AddrInfo, relation PeerRelation, alias string) error {
 	if _, has := m.peers[addrInfo.ID]; has {
 		return ErrPeerInManagerAlready
 	}
@@ -410,7 +420,7 @@ func (m *Manager) connectPeer(addrInfo *peer.AddrInfo, relation PeerRelation) er
 		return ErrCantConnectToItself
 	}
 
-	p := NewPeer(addrInfo.ID, relation, addrInfo.Addrs)
+	p := NewPeer(addrInfo.ID, relation, addrInfo.Addrs, alias)
 	if p.Relation == PeerRelationKnown {
 		m.host.ConnManager().Protect(addrInfo.ID, KnownPeerConnectivityProtectionTag)
 	}
@@ -451,6 +461,15 @@ func (m *Manager) updateRelation(id peer.ID, newRelation PeerRelation) {
 		m.host.ConnManager().Protect(id, KnownPeerConnectivityProtectionTag)
 	}
 	m.Events.RelationUpdated.Trigger(p, oldRelation)
+}
+
+// updates the alias of the given peer.
+func (m *Manager) updateAlias(id peer.ID, alias string) {
+	p, has := m.peers[id]
+	if !has {
+		return
+	}
+	p.Alias = alias
 }
 
 // schedules the reconnect timer for a reconnect attempt to the given peer,
@@ -533,7 +552,7 @@ func (m *Manager) addPeerAsUnknownIfAbsent(conn network.Conn) {
 	if _, has := m.peers[conn.RemotePeer()]; !has {
 		// add unknown peer to manager
 		addrs := []multiaddr.Multiaddr{conn.RemoteMultiaddr()}
-		m.peers[conn.RemotePeer()] = NewPeer(conn.RemotePeer(), PeerRelationUnknown, addrs)
+		m.peers[conn.RemotePeer()] = NewPeer(conn.RemotePeer(), PeerRelationUnknown, addrs, "")
 	}
 }
 
