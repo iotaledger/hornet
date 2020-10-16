@@ -28,6 +28,7 @@ const (
 
 	heartbeatSentInterval   = 30 * time.Second
 	heartbeatReceiveTimeout = 100 * time.Second
+	checkHeartbeatsInterval = 5 * time.Second
 
 	iotaGossipProtocolIDTemplate = "/iota-gossip/%s/1.0.0"
 )
@@ -89,21 +90,15 @@ func configure(plugin *node.Plugin) {
 
 		// stream close handler
 		protocolTerminated := make(chan struct{})
-		var readWriterBlock sync.WaitGroup
-		readWriterBlock.Add(2)
 
 		gossipService.Events.ProtocolTerminated.Attach(events.NewClosure(func(terminatedProto *gossip.Protocol) {
 			if terminatedProto != proto {
 				return
 			}
 			close(protocolTerminated)
-			// this ensures that the service only continues after the
-			// background workers have terminated
-			readWriterBlock.Wait()
 		}))
 
-		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s", proto.PeerID), func(shutdownSignal <-chan struct{}) {
-			defer readWriterBlock.Done()
+		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -118,8 +113,7 @@ func configure(plugin *node.Plugin) {
 			}
 		}, shutdown.PriorityPeerGossipProtocolRead)
 
-		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s", proto.PeerID), func(shutdownSignal <-chan struct{}) {
-			defer readWriterBlock.Done()
+		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
@@ -209,6 +203,10 @@ func checkHeartbeats() {
 
 	// check if peers are alive by checking whether we received heartbeats lately
 	Service().ForEach(func(proto *gossip.Protocol) bool {
+		// give a new connection some time to send a heartbeat
+		if time.Since(proto.Stream.Stat().Opened) <= checkHeartbeatsInterval {
+			return true
+		}
 		if time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
 			return true
 		}
