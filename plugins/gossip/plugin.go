@@ -182,7 +182,7 @@ func run(_ *node.Plugin) {
 	}, shutdown.PriorityMessageProcessor)
 
 	_ = daemon.BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(checkHeartbeats, 5*time.Second, shutdownSignal)
+		timeutil.Ticker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
 	}, shutdown.PriorityHeartbeats)
 
 	runRequestWorkers()
