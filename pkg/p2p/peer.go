@@ -8,9 +8,9 @@ import (
 )
 
 // NewPeer creates a new Peer.
-func NewPeer(id peer.ID, relation PeerRelation, addrs []multiaddr.Multiaddr, alias string) *Peer {
+func NewPeer(peerID peer.ID, relation PeerRelation, addrs []multiaddr.Multiaddr, alias string) *Peer {
 	return &Peer{
-		ID:       id,
+		ID:       peerID,
 		Relation: relation,
 		Addrs:    addrs,
 		Alias:    alias,

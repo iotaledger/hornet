@@ -252,16 +252,16 @@ func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation
 
 // DisconnectPeer disconnects the given peer.
 // If the peer is considered "known", then its connection is unprotected from future trimming.
-func (m *Manager) DisconnectPeer(id peer.ID) error {
+func (m *Manager) DisconnectPeer(peerID peer.ID) error {
 	back := make(chan error)
-	m.disconnectPeerChan <- &disconnectpeermsg{id: id, back: back}
+	m.disconnectPeerChan <- &disconnectpeermsg{peerID: peerID, back: back}
 	return <-back
 }
 
 // IsConnected tells whether there is a connection to the given peer.
-func (m *Manager) IsConnected(id peer.ID) bool {
+func (m *Manager) IsConnected(peerID peer.ID) bool {
 	back := make(chan bool)
-	m.isConnectedReqChan <- &isconnectedrequestmsg{id: id, back: back}
+	m.isConnectedReqChan <- &isconnectedrequestmsg{peerID: peerID, back: back}
 	return <-back
 }
 
@@ -308,9 +308,9 @@ type PeerFunc func(p *Peer)
 
 // Call calls the given PeerFunc synchronized within the Manager's event loop, if the peer exists.
 // PeerFunc must not call any function on Manager.
-func (m *Manager) Call(id peer.ID, f PeerFunc) {
+func (m *Manager) Call(peerID peer.ID, f PeerFunc) {
 	back := make(chan struct{})
-	m.callChan <- &callmsg{id: id, f: f, back: back}
+	m.callChan <- &callmsg{peerID: peerID, f: f, back: back}
 	<-back
 }
 
@@ -327,17 +327,17 @@ type connectionmsg struct {
 }
 
 type disconnectpeermsg struct {
-	id   peer.ID
-	back chan error
+	peerID peer.ID
+	back   chan error
 }
 
 type isconnectedrequestmsg struct {
-	id   peer.ID
-	back chan bool
+	peerID peer.ID
+	back   chan bool
 }
 
 type reconnectmsg struct {
-	id peer.ID
+	peerID peer.ID
 }
 
 type foreachmsg struct {
@@ -347,9 +347,9 @@ type foreachmsg struct {
 }
 
 type callmsg struct {
-	id   peer.ID
-	f    PeerFunc
-	back chan struct{}
+	peerID peer.ID
+	f      PeerFunc
+	back   chan struct{}
 }
 
 // runs the Manager's event loop, we do operations on the Manager in this way,
@@ -374,10 +374,10 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			connectPeerMsg.back <- err
 
 		case disconnectPeerMsg := <-m.disconnectPeerChan:
-			p := m.peers[disconnectPeerMsg.id]
-			disconnected, err := m.disconnectPeer(disconnectPeerMsg.id)
+			p := m.peers[disconnectPeerMsg.peerID]
+			disconnected, err := m.disconnectPeer(disconnectPeerMsg.peerID)
 			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("error disconnect %s: %w", disconnectPeerMsg.id.ShortString(), err))
+				m.Events.Error.Trigger(fmt.Errorf("error disconnect %s: %w", disconnectPeerMsg.peerID.ShortString(), err))
 			}
 			if disconnected {
 				m.Events.Disconnected.Trigger(p)
@@ -385,18 +385,18 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			disconnectPeerMsg.back <- err
 
 		case reconnectMsg := <-m.reconnectChan:
-			reconnect, err := m.reconnectPeer(reconnectMsg.id)
+			reconnect, err := m.reconnectPeer(reconnectMsg.peerID)
 			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("error reconnect %s: %w", reconnectMsg.id.ShortString(), err))
+				m.Events.Error.Trigger(fmt.Errorf("error reconnect %s: %w", reconnectMsg.peerID.ShortString(), err))
 				continue
 			}
 			if !reconnect {
 				continue
 			}
-			m.Events.Reconnected.Trigger(m.peers[reconnectMsg.id])
+			m.Events.Reconnected.Trigger(m.peers[reconnectMsg.peerID])
 
 		case isConnectedReqMsg := <-m.isConnectedReqChan:
-			connected := m.isConnected(isConnectedReqMsg.id)
+			connected := m.isConnected(isConnectedReqMsg.peerID)
 			isConnectedReqMsg.back <- connected
 
 		case connectedMsg := <-m.connectedChan:
@@ -430,7 +430,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			forEachMsg.back <- struct{}{}
 
 		case callMsg := <-m.callChan:
-			m.call(callMsg.id, callMsg.f)
+			m.call(callMsg.peerID, callMsg.f)
 			callMsg.back <- struct{}{}
 		}
 	}
@@ -460,21 +460,21 @@ func (m *Manager) connectPeer(addrInfo *peer.AddrInfo, relation PeerRelation, al
 
 // disconnects and removes the given peer from the Manager.
 // also clears the protection state of the peer.
-func (m *Manager) disconnectPeer(id peer.ID) (bool, error) {
-	p, has := m.peers[id]
+func (m *Manager) disconnectPeer(peerID peer.ID) (bool, error) {
+	p, has := m.peers[peerID]
 	if !has {
 		return false, nil
 	}
-	m.host.ConnManager().Unprotect(id, KnownPeerConnectivityProtectionTag)
-	delete(m.peers, id)
+	m.host.ConnManager().Unprotect(peerID, KnownPeerConnectivityProtectionTag)
+	delete(m.peers, peerID)
 	m.Events.Disconnect.Trigger(p)
-	return true, m.host.Network().ClosePeer(id)
+	return true, m.host.Network().ClosePeer(peerID)
 }
 
 // updates the relation to the given peer to the given new relation.
 // if the new relation is PeerRelationKnown, then the peer will be protected from trimming.
-func (m *Manager) updateRelation(id peer.ID, newRelation PeerRelation) {
-	p := m.peers[id]
+func (m *Manager) updateRelation(peerID peer.ID, newRelation PeerRelation) {
+	p := m.peers[peerID]
 	if p.Relation == newRelation {
 		return
 	}
@@ -485,14 +485,14 @@ func (m *Manager) updateRelation(id peer.ID, newRelation PeerRelation) {
 		p.reconnectTimer.Stop()
 		p.reconnectTimer = nil
 	case PeerRelationKnown:
-		m.host.ConnManager().Protect(id, KnownPeerConnectivityProtectionTag)
+		m.host.ConnManager().Protect(peerID, KnownPeerConnectivityProtectionTag)
 	}
 	m.Events.RelationUpdated.Trigger(p, oldRelation)
 }
 
 // updates the alias of the given peer but only if it is empty.
-func (m *Manager) updateAlias(id peer.ID, alias string) {
-	p, has := m.peers[id]
+func (m *Manager) updateAlias(peerID peer.ID, alias string) {
+	p, has := m.peers[peerID]
 	if !has {
 		return
 	}
@@ -504,8 +504,8 @@ func (m *Manager) updateAlias(id peer.ID, alias string) {
 
 // schedules the reconnect timer for a reconnect attempt to the given peer,
 // if the peer's relation is PeerRelationKnown.
-func (m *Manager) scheduleReconnectIfKnown(id peer.ID) {
-	p, has := m.peers[id]
+func (m *Manager) scheduleReconnectIfKnown(peerID peer.ID) {
+	p, has := m.peers[peerID]
 	if !has {
 		return
 	}
@@ -521,14 +521,14 @@ func (m *Manager) scheduleReconnectIfKnown(id peer.ID) {
 
 	delay := m.opts.reconnectDelay()
 	p.reconnectTimer = time.AfterFunc(delay, func() {
-		m.reconnectChan <- &reconnectmsg{id: id}
+		m.reconnectChan <- &reconnectmsg{peerID: peerID}
 	})
 	m.Events.ScheduledReconnect.Trigger(p, delay)
 }
 
 // resets the reconnect timer for the given peer.
-func (m *Manager) resetReconnect(id peer.ID) {
-	p, has := m.peers[id]
+func (m *Manager) resetReconnect(peerID peer.ID) {
+	p, has := m.peers[peerID]
 	if !has {
 		return
 	}
@@ -542,8 +542,8 @@ func (m *Manager) resetReconnect(id peer.ID) {
 
 // reconnect peer does a connection attempt to the given peer but only
 // if its relation is PeerRelationKnown.
-func (m *Manager) reconnectPeer(id peer.ID) (bool, error) {
-	p, has := m.peers[id]
+func (m *Manager) reconnectPeer(peerID peer.ID) (bool, error) {
+	p, has := m.peers[peerID]
 	if !has {
 		return false, nil
 	}
@@ -553,7 +553,7 @@ func (m *Manager) reconnectPeer(id peer.ID) (bool, error) {
 	}
 
 	m.Events.Reconnecting.Trigger(p)
-	return true, m.connect(peer.AddrInfo{ID: id, Addrs: p.Addrs})
+	return true, m.connect(peer.AddrInfo{ID: peerID, Addrs: p.Addrs})
 }
 
 // connect does an actual connection attempt to the given peer.
@@ -587,20 +587,20 @@ func (m *Manager) addPeerAsUnknownIfAbsent(conn network.Conn) {
 }
 
 // removes an unknown peer if it has no more connections.
-func (m *Manager) cleanupPeerIfUnknown(id peer.ID) {
-	p, has := m.peers[id]
+func (m *Manager) cleanupPeerIfUnknown(peerID peer.ID) {
+	p, has := m.peers[peerID]
 	if has && p.Relation == PeerRelationUnknown &&
-		len(m.host.Network().ConnsToPeer(id)) == 0 {
-		delete(m.peers, id)
+		len(m.host.Network().ConnsToPeer(peerID)) == 0 {
+		delete(m.peers, peerID)
 	}
 }
 
 // checks whether the given peer is connected.
-func (m *Manager) isConnected(id peer.ID) bool {
-	if _, has := m.peers[id]; !has {
+func (m *Manager) isConnected(peerID peer.ID) bool {
+	if _, has := m.peers[peerID]; !has {
 		return false
 	}
-	return m.host.Network().Connectedness(id) == network.Connected
+	return m.host.Network().Connectedness(peerID) == network.Connected
 }
 
 // calls the given PeerForEachFunc on each Peer.
@@ -616,8 +616,8 @@ func (m *Manager) forEach(f PeerForEachFunc, filter ...PeerRelation) {
 }
 
 // calls the given PeerFunc if the given peer exists.
-func (m *Manager) call(id peer.ID, f PeerFunc) {
-	p, has := m.peers[id]
+func (m *Manager) call(peerID peer.ID, f PeerFunc) {
+	p, has := m.peers[peerID]
 	if !has {
 		return
 	}

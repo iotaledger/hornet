@@ -99,8 +99,8 @@ func TestManager(t *testing.T) {
 	require.False(t, node3.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
 
 	// check alias
-	node1Manager.Call(node2.ID(), func(p *p2p.Peer) {
-		require.Equal(t, node2AliasOnNode1, p.Alias)
+	node1Manager.Call(node2.ID(), func(peer *p2p.Peer) {
+		require.Equal(t, node2AliasOnNode1, peer.Alias)
 	})
 
 	// disconnect node 1 from 2
@@ -152,12 +152,12 @@ func TestManager(t *testing.T) {
 	connectivity(t, node1Manager, node2.ID(), false)
 	connectivity(t, node2Manager, node1.ID(), false)
 
-	node2Manager.ForEach(func(p *p2p.Peer) bool {
-		require.Equal(t, node1.ID(), p.ID)
+	node2Manager.ForEach(func(peer *p2p.Peer) bool {
+		require.Equal(t, node1.ID(), peer.ID)
 		return true
 	}, p2p.PeerRelationKnown)
-	node2Manager.ForEach(func(p *p2p.Peer) bool {
-		require.True(t, p.ID == node3.ID() || p.ID == node4.ID())
+	node2Manager.ForEach(func(peer *p2p.Peer) bool {
+		require.True(t, peer.ID == node3.ID() || peer.ID == node4.ID())
 		return true
 	}, p2p.PeerRelationUnknown)
 }
@@ -198,10 +198,10 @@ func TestManagerEvents(t *testing.T) {
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 
 	var connectCalled, connectedCalled bool
-	node1Manager.Events.Connect.Attach(events.NewClosure(func(p *p2p.Peer) {
+	node1Manager.Events.Connect.Attach(events.NewClosure(func(peer *p2p.Peer) {
 		connectCalled = true
 	}))
-	node1Manager.Events.Connected.Attach(events.NewClosure(func(p *p2p.Peer, _ network.Conn) {
+	node1Manager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, _ network.Conn) {
 		connectedCalled = true
 	}))
 
@@ -214,10 +214,10 @@ func TestManagerEvents(t *testing.T) {
 	}, 4*time.Second, 10*time.Millisecond)
 
 	var disconnectCalled, disconnectedCalled bool
-	node1Manager.Events.Disconnect.Attach(events.NewClosure(func(p *p2p.Peer) {
+	node1Manager.Events.Disconnect.Attach(events.NewClosure(func(peer *p2p.Peer) {
 		disconnectCalled = true
 	}))
-	node1Manager.Events.Disconnected.Attach(events.NewClosure(func(p *p2p.Peer) {
+	node1Manager.Events.Disconnected.Attach(events.NewClosure(func(peer *p2p.Peer) {
 		disconnectedCalled = true
 	}))
 
@@ -235,9 +235,9 @@ func TestManagerEvents(t *testing.T) {
 
 	var relationUpdatedCalled bool
 	var updatedRelation, oldRelation p2p.PeerRelation
-	node1Manager.Events.RelationUpdated.Attach(events.NewClosure(func(p *p2p.Peer, oldRel p2p.PeerRelation) {
+	node1Manager.Events.RelationUpdated.Attach(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
 		relationUpdatedCalled = true
-		updatedRelation = p.Relation
+		updatedRelation = peer.Relation
 		oldRelation = oldRel
 	}))
 
@@ -247,10 +247,10 @@ func TestManagerEvents(t *testing.T) {
 	require.Equal(t, p2p.PeerRelationUnknown, oldRelation)
 
 	var reconnectingCalled, reconnectedCalled bool
-	node1Manager.Events.Reconnecting.Attach(events.NewClosure(func(p *p2p.Peer) {
+	node1Manager.Events.Reconnecting.Attach(events.NewClosure(func(peer *p2p.Peer) {
 		reconnectingCalled = true
 	}))
-	node1Manager.Events.Reconnected.Attach(events.NewClosure(func(p *p2p.Peer) {
+	node1Manager.Events.Reconnected.Attach(events.NewClosure(func(peer *p2p.Peer) {
 		reconnectedCalled = true
 	}))
 
@@ -276,7 +276,7 @@ func BenchmarkManager_ForEach(b *testing.B) {
 	time.Sleep(1 * time.Second)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		node1Manager.ForEach(func(p *p2p.Peer) bool {
+		node1Manager.ForEach(func(peer *p2p.Peer) bool {
 			return true
 		})
 	}
