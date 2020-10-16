@@ -267,7 +267,7 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 		milestoneConfirmedEventChan = tangleplugin.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
-	if err := gossip.Processor().Emit(msg); err != nil {
+	if err := gossip.MessageProcessor().Emit(msg); err != nil {
 		return err
 	}
 

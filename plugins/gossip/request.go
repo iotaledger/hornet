@@ -3,15 +3,13 @@ package gossip
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hive.go/daemon"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/helpers"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -19,7 +17,7 @@ var (
 	requestQueueEnqueueSignal      = make(chan struct{}, 2)
 	enqueuePendingRequestsInterval = 1500 * time.Millisecond
 	discardRequestsOlderThan       = 10 * time.Second
-	requestBackpressureSignals     [](func() bool)
+	requestBackpressureSignals     []func() bool
 )
 
 func AddRequestBackpressureSignal(reqFunc func() bool) {
@@ -29,7 +27,7 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 func runRequestWorkers() {
 	daemon.BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
-
+		rQueue := RequestQueue()
 	requestQueueEnqueueLoop:
 		for {
 			select {
@@ -44,7 +42,7 @@ func runRequestWorkers() {
 				}
 
 				// always fire the signal if something is in the queue, otherwise the sting request is not kicking in
-				queued := requestQueue.EnqueuePending(discardRequestsOlderThan)
+				queued := rQueue.EnqueuePending(discardRequestsOlderThan)
 				if queued > 0 {
 					select {
 					case requestQueueEnqueueSignal <- struct{}{}:
@@ -56,6 +54,8 @@ func runRequestWorkers() {
 	}, shutdown.PriorityRequestsProcessor)
 
 	daemon.BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
+		gossipService := Service()
+		rQueue := RequestQueue()
 		for {
 			select {
 			case <-shutdownSignal:
@@ -63,31 +63,31 @@ func runRequestWorkers() {
 			case <-requestQueueEnqueueSignal:
 
 				// drain request queue
-				for r := RequestQueue().Next(); r != nil; r = RequestQueue().Next() {
+				for r := rQueue.Next(); r != nil; r = rQueue.Next() {
 					requested := false
-					manager.ForAllConnected(func(p *peer.Peer) bool {
+					gossipService.ForEach(func(proto *gossip.Protocol) bool {
 						// we only send a request message if the peer actually has the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
-						if !p.HasDataFor(r.MilestoneIndex) {
+						if !proto.HasDataForMilestone(r.MilestoneIndex) {
 							return true
 						}
 
-						helpers.SendMessageRequest(p, r.MessageID)
+						proto.SendMessageRequest(r.MessageID)
 						requested = true
 						return false
 					})
 
 					if !requested {
-						// We have no neighbor that has the data for sure,
+						// we have no neighbor that has the data for sure,
 						// so we ask all neighbors that could have the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
-						manager.ForAllConnected(func(p *peer.Peer) bool {
+						gossipService.ForEach(func(proto *gossip.Protocol) bool {
 							// we only send a request message if the peer could have the data
-							if !p.CouldHaveDataFor(r.MilestoneIndex) {
+							if !proto.CouldHaveDataForMilestone(r.MilestoneIndex) {
 								return true
 							}
 
-							helpers.SendMessageRequest(p, r.MessageID)
+							proto.SendMessageRequest(r.MessageID)
 							return true
 						})
 					}
@@ -98,7 +98,7 @@ func runRequestWorkers() {
 }
 
 // adds the request to the request queue and signals the request to drain it.
-func enqueueAndSignal(r *rqueue.Request) bool {
+func enqueueAndSignal(r *gossip.Request) bool {
 	if !RequestQueue().Enqueue(r) {
 		return false
 	}
@@ -124,7 +124,7 @@ func Request(messageID *hornet.MessageID, msIndex milestone.Index, preventDiscar
 		return false
 	}
 
-	r := &rqueue.Request{
+	r := &gossip.Request{
 		MessageID:      messageID,
 		MilestoneIndex: msIndex,
 	}

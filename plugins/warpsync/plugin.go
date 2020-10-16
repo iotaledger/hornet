@@ -6,13 +6,10 @@ import (
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
-	"github.com/gohornet/hornet/pkg/protocol/warpsync"
+	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
+	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
-	peeringplugin "github.com/gohornet/hornet/plugins/peering"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -23,9 +20,9 @@ import (
 var (
 	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure, run)
 	log      *logger.Logger
-	warpSync *warpsync.WarpSync
+	warpSync *gossip2.WarpSync
 
-	onPeerConnected                 *events.Closure
+	onGossipProtocolStreamCreated   *events.Closure
 	onSolidMilestoneIndexChanged    *events.Closure
 	onMilestoneSolidificationFailed *events.Closure
 	onCheckpointUpdated             *events.Closure
@@ -36,14 +33,13 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-	warpSync = warpsync.New(config.NodeConfig.GetInt(config.CfgWarpSyncAdvancementRange))
+	warpSync = gossip2.NewWarpSync(config.NodeConfig.GetInt(config.CfgWarpSyncAdvancementRange))
 
 	configureEvents()
 }
 
 func run(plugin *node.Plugin) {
-
-	daemon.BackgroundWorker("WarpSync[Events]", func(shutdownSignal <-chan struct{}) {
+	daemon.BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
@@ -52,8 +48,8 @@ func run(plugin *node.Plugin) {
 
 func configureEvents() {
 
-	onPeerConnected = events.NewClosure(func(p *peer.Peer) {
-		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *sting.Heartbeat) {
+	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossippkg.Protocol) {
+		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip2.Heartbeat) {
 			warpSync.UpdateCurrent(tangle.GetSolidMilestoneIndex())
 			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
@@ -74,7 +70,7 @@ func configureEvents() {
 	onCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32, target milestone.Index) {
 		log.Infof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
 		// prevent any requests in the queue above our next checkpoint
-		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
+		gossip.RequestQueue().Filter(func(r *gossip2.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 		requestMissingMilestoneParents := gossip.MemoizedRequestMissingMilestoneParents()
@@ -87,7 +83,7 @@ func configureEvents() {
 
 	onStart = events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
 		log.Infof("Synchronizing to milestone %d", targetMsIndex)
-		gossip.RequestQueue().Filter(func(r *rqueue.Request) bool {
+		gossip.RequestQueue().Filter(func(r *gossip2.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 		requestMissingMilestoneParents := gossip.MemoizedRequestMissingMilestoneParents()
@@ -108,7 +104,7 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	peeringplugin.Manager().Events.PeerConnected.Attach(onPeerConnected)
+	gossip.Service().Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 	tangleplugin.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
@@ -118,7 +114,7 @@ func attachEvents() {
 }
 
 func detachEvents() {
-	peeringplugin.Manager().Events.PeerConnected.Detach(onPeerConnected)
+	gossip.Service().Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
 	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	tangleplugin.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)

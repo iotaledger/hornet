@@ -9,12 +9,14 @@ const (
 	PriorityMilestoneProcessor
 	PrioritySolidifierGossip
 	PriorityReceiveTxWorker
-	PriorityCurlHasher
-	PriorityBroadcastQueue
 	PriorityMessageProcessor
-	PriorityPeerSendQueue
-	PriorityPeeringTCPServer
-	PriorityPeerReconnecter
+	PriorityPeerGossipProtocolWrite
+	PriorityPeerGossipProtocolRead
+	PriorityGossipService
+	PriorityBroadcastQueue
+	PriorityKademliaDHT
+	PriorityPeerDiscovery
+	PriorityP2PManager
 	PriorityHeartbeats
 	PriorityWarpSync
 	PriorityLocalSnapshots
@@ -25,7 +27,6 @@ const (
 	PriorityMetricsPublishers
 	PrioritySpammer
 	PriorityStatusReport
-	PriorityAutopeering
 	PriorityCoordinator
 	PriorityUpdateCheck
 	PriorityPrometheus

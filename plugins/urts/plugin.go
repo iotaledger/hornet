@@ -65,7 +65,9 @@ func run(_ *node.Plugin) {
 			case <-time.After(time.Second):
 				ts := time.Now()
 				removedTipCount := TipSelector.CleanUpReferencedTips()
-				log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+				_ = ts
+				_= removedTipCount
+				//log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 			}
 		}
 	}, shutdown.PriorityTipselection)

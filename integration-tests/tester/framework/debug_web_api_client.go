@@ -125,7 +125,7 @@ func (api *WebAPI) do(method string, reqObj interface{}, resObj interface{}) err
 /*
 
 // Neighbors returns the neighbors to which the node is connected to.
-func (api *WebAPI) Neighbors() ([]*peer.Info, error) {
+func (api *WebAPI) Neighbors() ([]*p2p.Info, error) {
 	res := &webapi.GetNeighborsReturn{}
 	if err := api.do(http.MethodPost, struct {
 		Command string `json:"command"`

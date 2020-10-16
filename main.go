@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/gohornet/hornet/plugins/p2p"
+	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/toolset"
-	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/curl"
@@ -14,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/peering"
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
@@ -38,17 +38,16 @@ func main() {
 		gracefulshutdown.PLUGIN,
 		profiling.PLUGIN,
 		database.PLUGIN,
-		curl.PLUGIN,
-		autopeering.PLUGIN,
 		restapi.PLUGIN,
 	}
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		plugins = append(plugins, []*node.Plugin{
 			pow.PLUGIN,
+			p2p.PLUGIN,
+			p2pdisc.PLUGIN,
 			gossip.PLUGIN,
 			tangle.PLUGIN,
-			peering.PLUGIN,
 			warpsync.PLUGIN,
 			urts.PLUGIN,
 			metrics.PLUGIN,
