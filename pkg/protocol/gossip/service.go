@@ -325,7 +325,7 @@ func (s *Service) closeUnwantedStream(stream network.Stream) {
 // handles the automatic creation of a protocol instance if the given peer
 // was connected outbound and its peer relation allows it.
 func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) (*Protocol, error) {
-	// close if there is already one
+	// don't create a new protocol if one is already ongoing
 	if _, ongoing := s.streams[peer.ID]; ongoing {
 		return nil, nil
 	}
