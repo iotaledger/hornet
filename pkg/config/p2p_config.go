@@ -9,7 +9,7 @@ const (
 	CfgP2PConnMngHighWatermark = "p2p.connectionManager.highWatermark"
 	// Defines the low watermark to use within the connection manager.
 	CfgP2PConnMngLowWatermark = "p2p.connectionManager.lowWatermark"
-	// Defines the  static peers this node should retain a connection to.
+	// Defines the static peers this node should retain a connection to.
 	CfgP2PPeers = "p2p.peers"
 )
 
