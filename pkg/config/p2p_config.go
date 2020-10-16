@@ -2,7 +2,7 @@ package config
 
 const (
 	// Defines the bind addresses of this node.
-	CfgP2PBindAddresses = "p2p.bindAddresses"
+	CfgP2PBindAddresses = "p2p.bindMultiAddresses"
 	// Defines the path to the peerstore.
 	CfgP2PPeerStorePath = "p2p.peerStore.path"
 	// Defines the high watermark to use within the connection manager.
