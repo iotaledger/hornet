@@ -606,10 +606,8 @@ func (m *Manager) isConnected(id peer.ID) bool {
 // calls the given PeerForEachFunc on each Peer.
 func (m *Manager) forEach(f PeerForEachFunc, filter ...PeerRelation) {
 	for _, p := range m.peers {
-		if len(filter) > 0 {
-			if p.Relation != filter[0] {
-				continue
-			}
+		if len(filter) > 0 && p.Relation != filter[0] {
+			continue
 		}
 		if !f(p) {
 			break
