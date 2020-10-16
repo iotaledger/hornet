@@ -43,15 +43,16 @@ func StreamCancelCaller(handler interface{}, params ...interface{}) {
 	handler.(func(network.Stream, StreamCancelReason))(params[0].(network.Stream), params[1].(StreamCancelReason))
 }
 
+// StreamCancelReason is a reason for a gossip stream cancellation.
 type StreamCancelReason string
 
 const (
 	// StreamCancelReasonDuplicated defines a stream cancellation because
 	// it would lead to a duplicated ongoing stream.
-	StreamCancelReasonDuplicated = "duplicated stream"
+	StreamCancelReasonDuplicated StreamCancelReason = "duplicated stream"
 	// StreamCancelReasonUnknownPeer defines a stream cancellation because
 	// the relation to the other peer is insufficient.
-	StreamCancelReasonInsufficientPeerRelation = "insufficient peer relation"
+	StreamCancelReasonInsufficientPeerRelation StreamCancelReason = "insufficient peer relation"
 )
 
 const (
