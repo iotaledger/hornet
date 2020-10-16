@@ -38,6 +38,22 @@ func StreamCaller(handler interface{}, params ...interface{}) {
 	handler.(func(network.Stream))(params[0].(network.Stream))
 }
 
+// StreamCancelCaller gets called with a network.Stream and its cancel reason.
+func StreamCancelCaller(handler interface{}, params ...interface{}) {
+	handler.(func(network.Stream, StreamCancelReason))(params[0].(network.Stream), params[1].(StreamCancelReason))
+}
+
+type StreamCancelReason string
+
+const (
+	// StreamCancelReasonDuplicated defines a stream cancellation because
+	// it would lead to a duplicated ongoing stream.
+	StreamCancelReasonDuplicated = "duplicated stream"
+	// StreamCancelReasonUnknownPeer defines a stream cancellation because
+	// the relation to the other peer is insufficient.
+	StreamCancelReasonInsufficientPeerRelation = "insufficient peer relation"
+)
+
 const (
 	defaultSendQueueSize        = 1000
 	defaultStreamConnectTimeout = 4 * time.Second
@@ -99,7 +115,7 @@ func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts
 		Events: ServiceEvents{
 			ProtocolStarted:        events.NewEvent(ProtocolCaller),
 			ProtocolTerminated:     events.NewEvent(ProtocolCaller),
-			InboundStreamCancelled: events.NewEvent(StreamCaller),
+			InboundStreamCancelled: events.NewEvent(StreamCancelCaller),
 			Error:                  events.NewEvent(events.ErrorCaller),
 		},
 		host:                host,
@@ -273,6 +289,7 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 	remotePeerID := stream.Conn().RemotePeer()
 	// close if there is already one
 	if _, ongoing := s.streams[remotePeerID]; ongoing {
+		s.Events.InboundStreamCancelled.Trigger(stream, StreamCancelReasonDuplicated)
 		s.closeUnwantedStream(stream)
 		return nil
 	}
@@ -287,7 +304,7 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 	})
 
 	if !ok {
-		s.Events.InboundStreamCancelled.Trigger(stream)
+		s.Events.InboundStreamCancelled.Trigger(stream, StreamCancelReasonInsufficientPeerRelation)
 		s.closeUnwantedStream(stream)
 		return nil
 	}
@@ -421,9 +438,9 @@ func (s *Service) registerLoggerOnEvents() {
 	s.Events.ProtocolTerminated.Attach(events.NewClosure(func(proto *Protocol) {
 		s.opts.Logger.Infof("terminated protocol with %s", proto.PeerID.ShortString())
 	}))
-	s.Events.InboundStreamCancelled.Attach(events.NewClosure(func(stream network.Stream) {
+	s.Events.InboundStreamCancelled.Attach(events.NewClosure(func(stream network.Stream, reason StreamCancelReason) {
 		remotePeer := stream.Conn().RemotePeer().ShortString()
-		s.opts.Logger.Infof("cancelled inbound protocol stream from %s", remotePeer)
+		s.opts.Logger.Infof("cancelled inbound protocol stream from %s: %s", remotePeer, reason)
 	}))
 	s.Events.Error.Attach(events.NewClosure(func(err error) {
 		s.opts.Logger.Error(err)
