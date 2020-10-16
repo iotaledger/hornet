@@ -203,11 +203,10 @@ func checkHeartbeats() {
 
 	// check if peers are alive by checking whether we received heartbeats lately
 	Service().ForEach(func(proto *gossip.Protocol) bool {
-		// give a new connection some time to send a heartbeat
-		if time.Since(proto.Stream.Stat().Opened) <= checkHeartbeatsInterval {
-			return true
-		}
-		if time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
+
+		// use a grace period before the heartbeat check is applied
+		if time.Since(proto.Stream.Stat().Opened) <= checkHeartbeatsInterval ||
+			time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
 			return true
 		}
 
