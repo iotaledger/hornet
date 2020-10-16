@@ -490,10 +490,13 @@ func (m *Manager) updateRelation(id peer.ID, newRelation PeerRelation) {
 	m.Events.RelationUpdated.Trigger(p, oldRelation)
 }
 
-// updates the alias of the given peer.
+// updates the alias of the given peer but only if it is empty.
 func (m *Manager) updateAlias(id peer.ID, alias string) {
 	p, has := m.peers[id]
 	if !has {
+		return
+	}
+	if len(p.Alias) != 0 {
 		return
 	}
 	p.Alias = alias
