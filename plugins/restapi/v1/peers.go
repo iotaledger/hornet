@@ -4,8 +4,6 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-
-	"github.com/gohornet/hornet/plugins/peering"
 )
 
 func getPeer(c echo.Context) (*peerResponse, error) {
@@ -18,8 +16,9 @@ func getPeer(c echo.Context) (*peerResponse, error) {
 func removePeer(c echo.Context) error {
 
 	peerID := strings.ToLower(c.Param(ParameterPeerID))
-
-	return peering.Manager().Remove(peerID)
+	_ = peerID
+	return nil
+	//return p2pplug.Manager().DisconnectPeer(peerID)
 }
 
 func listPeers(c echo.Context) ([]*peerResponse, error) {

@@ -5,9 +5,13 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/p2p"
+	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
+	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/libp2p/go-libp2p-core/network"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -21,14 +25,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/peering"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -277,16 +277,16 @@ type MemMetrics struct {
 
 // PeerMetric represents metrics of a peer.
 type PeerMetric struct {
-	Identity         string                `json:"identity"`
-	Alias            string                `json:"alias,omitempty"`
-	OriginAddr       string                `json:"origin_addr"`
-	ConnectionOrigin peer.ConnectionOrigin `json:"connection_origin"`
-	ProtocolVersion  uint16                `json:"protocol_version"`
-	BytesRead        uint64                `json:"bytes_read"`
-	BytesWritten     uint64                `json:"bytes_written"`
-	Heartbeat        *sting.Heartbeat      `json:"heartbeat"`
-	Info             *peer.Info            `json:"info"`
-	Connected        bool                  `json:"connected"`
+	Identity         string             `json:"identity"`
+	Alias            string             `json:"alias,omitempty"`
+	OriginAddr       string             `json:"origin_addr"`
+	ConnectionOrigin network.Direction  `json:"connection_origin"`
+	ProtocolVersion  uint16             `json:"protocol_version"`
+	BytesRead        uint64             `json:"bytes_read"`
+	BytesWritten     uint64             `json:"bytes_written"`
+	Heartbeat        *gossip2.Heartbeat `json:"heartbeat"`
+	Info             *p2p.PeerSnapshot  `json:"info"`
+	Connected        bool               `json:"connected"`
 }
 
 // CachesMetric represents cache metrics.
@@ -304,28 +304,30 @@ type Cache struct {
 }
 
 func peerMetrics() []*PeerMetric {
-	infos := peering.Manager().PeerInfos()
-	var stats []*PeerMetric
-	for _, info := range infos {
-		m := &PeerMetric{
-			OriginAddr: info.DomainWithPort,
-			Info:       info,
+	/*
+		infos := peering.Manager().PeerSnapshots()
+		var stats []*PeerMetric
+		for _, info := range infos {
+			m := &PeerMetric{
+				OriginAddr: info.DomainWithPort,
+				Info:       info,
+			}
+			if info.Peer != nil && info.Peer.Protocol != nil {
+				m.Identity = info.Peer.ID
+				m.Alias = info.Alias
+				m.ConnectionOrigin = info.Peer.ConnectionOrigin
+				m.ProtocolVersion = info.Peer.Protocol.Version
+				m.BytesRead = info.Peer.Conn.BytesRead()
+				m.BytesWritten = info.Peer.Conn.BytesWritten()
+				m.Heartbeat = info.Peer.LatestHeartbeat
+				m.Connected = info.Connected
+			} else {
+				m.Identity = info.ID
+			}
+			stats = append(stats, m)
 		}
-		if info.Peer != nil && info.Peer.Protocol != nil {
-			m.Identity = info.Peer.ID
-			m.Alias = info.Alias
-			m.ConnectionOrigin = info.Peer.ConnectionOrigin
-			m.ProtocolVersion = info.Peer.Protocol.Version
-			m.BytesRead = info.Peer.Conn.BytesRead()
-			m.BytesWritten = info.Peer.Conn.BytesWritten()
-			m.Heartbeat = info.Peer.LatestHeartbeat
-			m.Connected = info.Connected
-		} else {
-			m.Identity = info.Address
-		}
-		stats = append(stats, m)
-	}
-	return stats
+	*/
+	return nil
 }
 
 func currentSyncStatus() *SyncStatus {
@@ -347,13 +349,10 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = cli.AppVersion
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	if !node.IsSkipped(autopeering.PLUGIN) {
-		status.AutopeeringID = autopeering.ID
-	}
 	status.IsHealthy = tangleplugin.IsNodeHealthy()
 	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
 
-	status.ConnectedPeersCount = peering.Manager().ConnectedPeerCount()
+	status.ConnectedPeersCount = p2pplug.Manager().ConnectedCount()
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
@@ -381,7 +380,7 @@ func currentNodeStatus() *NodeStatus {
 			Size: tangle.GetMessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
-			Size: gossip.Processor().WorkUnitsSize(),
+			Size: gossip.MessageProcessor().WorkUnitsSize(),
 		},
 	}
 

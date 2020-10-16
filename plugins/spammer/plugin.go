@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -23,7 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
+	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/urts"
 )
@@ -72,7 +73,7 @@ func configure(plugin *node.Plugin) {
 
 	// helper function to send the message to the network
 	sendMessage := func(msg *tangle.Message) error {
-		if err := gossip.Processor().Emit(msg); err != nil {
+		if err := gossip.MessageProcessor().Emit(msg); err != nil {
 			return err
 		}
 
@@ -231,7 +232,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						continue
 					}
 
-					if checkPeersConnected && peering.Manager().ConnectedPeerCount() == 0 {
+					if checkPeersConnected && p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

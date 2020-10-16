@@ -1,9 +1,8 @@
 package prometheus
 
 import (
-	"net"
-
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/gohornet/hornet/plugins/gossip"
+	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -138,27 +137,30 @@ func collectPeers() {
 	peersDroppedSentPackets.Reset()
 	peersConnected.Reset()
 
-	for _, peer := range peering.Manager().PeerInfos() {
-		address, port, _ := net.SplitHostPort(peer.Address)
+	gossipService := gossip.Service()
+
+	for _, peer := range p2pplug.Manager().PeerSnapshots() {
 		labels := prometheus.Labels{
-			"address":        address,
-			"port":           port,
-			"domain":         peer.Domain,
-			"alias":          peer.Alias,
-			"type":           peer.ConnectionType,
-			"autopeering_id": peer.AutopeeringID,
+			"id":      peer.ID,
+			"address": peer.Addresses[0].String(),
+			"alias":   peer.Alias,
 		}
 
-		peersAllMessages.With(labels).Set(float64(peer.ReceivedMessages))
-		peersNewMessages.With(labels).Set(float64(peer.NewMessages))
-		peersKnownMessages.With(labels).Set(float64(peer.KnownMessages))
-		peersReceivedMessageRequests.With(labels).Set(float64(peer.ReceivedMessageReq))
-		peersReceivedMilestoneRequests.With(labels).Set(float64(peer.ReceivedMilestoneReq))
-		peersReceivedHeartbeats.With(labels).Set(float64(peer.ReceivedHeartbeats))
-		peersSentMessages.With(labels).Set(float64(peer.SentMessages))
-		peersSentMessageRequests.With(labels).Set(float64(peer.SentMessageReq))
-		peersSentMilestoneRequests.With(labels).Set(float64(peer.SentMilestoneReq))
-		peersSentHeartbeats.With(labels).Set(float64(peer.SentHeartbeats))
+		gossipProto := gossipService.Protocol(peer.Peer.ID)
+		if gossipProto == nil {
+			continue
+		}
+
+		peersAllMessages.With(labels).Set(float64(gossipProto.Metrics.ReceivedMessages.Load()))
+		peersNewMessages.With(labels).Set(float64(gossipProto.Metrics.NewMessages.Load()))
+		peersKnownMessages.With(labels).Set(float64(gossipProto.Metrics.KnownMessages.Load()))
+		peersReceivedMessageRequests.With(labels).Set(float64(gossipProto.Metrics.ReceivedMessageRequests.Load()))
+		peersReceivedMilestoneRequests.With(labels).Set(float64(gossipProto.Metrics.ReceivedMilestoneRequests.Load()))
+		peersReceivedHeartbeats.With(labels).Set(float64(gossipProto.Metrics.ReceivedHeartbeats.Load()))
+		peersSentMessages.With(labels).Set(float64(gossipProto.Metrics.SentMessages.Load()))
+		peersSentMessageRequests.With(labels).Set(float64(gossipProto.Metrics.SentMessageRequests.Load()))
+		peersSentMilestoneRequests.With(labels).Set(float64(gossipProto.Metrics.SentMilestoneRequests.Load()))
+		peersSentHeartbeats.With(labels).Set(float64(gossipProto.Metrics.SentHeartbeats.Load()))
 		peersDroppedSentPackets.With(labels).Set(float64(peer.DroppedSentPackets))
 		peersConnected.With(labels).Set(0)
 		if peer.Connected {

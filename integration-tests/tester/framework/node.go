@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/peering/peer"
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/iotaledger/hive.go/identity"
 	"github.com/muxxer/iota.go/api"
 	"github.com/muxxer/iota.go/bundle"
@@ -35,7 +35,7 @@ type Node struct {
 	// The DockerContainer that this peer is running in
 	*DockerContainer
 	// The Neighbors of the peer.
-	neighbors []*peer.Info
+	neighbors []*p2p.Info
 }
 
 // newNode creates a new instance of Node with the given information.
@@ -88,8 +88,8 @@ func (p *Node) TotalNeighbors() int {
 }
 
 // SetNeighbors sets the neighbors of the peer accordingly.
-func (p *Node) SetNeighbors(peers []*peer.Info) {
-	p.neighbors = make([]*peer.Info, len(peers))
+func (p *Node) SetNeighbors(peers []*p2p.Info) {
+	p.neighbors = make([]*p2p.Info, len(peers))
 	copy(p.neighbors, peers)
 }
 
