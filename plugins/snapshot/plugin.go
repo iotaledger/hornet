@@ -33,7 +33,7 @@ var (
 	forceLoadingSnapshot = pflag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgLocalSnapshotsDownloadURLs)
+	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgSnapshotsDownloadURLs)
 	ErrSnapshotDownloadWasAborted        = errors.New("snapshot download was aborted")
 	ErrSnapshotDownloadNoValidSource     = errors.New("no valid source found, snapshot download not possible")
 	ErrSnapshotImportWasAborted          = errors.New("snapshot import was aborted")
@@ -67,13 +67,13 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsDepth))
+	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
-		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgLocalSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
+		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
-	snapshotIntervalSynced = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalSynced))
-	snapshotIntervalUnsynced = milestone.Index(config.NodeConfig.GetInt(config.CfgLocalSnapshotsIntervalUnsynced))
+	snapshotIntervalSynced = milestone.Index(config.NodeConfig.GetInt(config.CfgSnapshotsIntervalSynced))
+	snapshotIntervalUnsynced = milestone.Index(config.NodeConfig.GetInt(config.CfgSnapshotsIntervalUnsynced))
 
 	pruningEnabled = config.NodeConfig.GetBool(config.CfgPruningEnabled)
 	pruningDelay = milestone.Index(config.NodeConfig.GetInt(config.CfgPruningDelay))
@@ -116,7 +116,7 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	path := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
+	path := config.NodeConfig.GetString(config.CfgSnapshotsPath)
 	if path == "" {
 		log.Fatal(ErrNoSnapshotSpecified.Error())
 	}
@@ -127,7 +127,7 @@ func configure(plugin *node.Plugin) {
 			log.Fatalf("could not create snapshot dir '%s'", path)
 		}
 
-		urls := config.NodeConfig.GetStringSlice(config.CfgLocalSnapshotsDownloadURLs)
+		urls := config.NodeConfig.GetStringSlice(config.CfgSnapshotsDownloadURLs)
 		if len(urls) == 0 {
 			log.Fatal(ErrNoSnapshotDownloadURL.Error())
 		}
@@ -178,7 +178,7 @@ func run(_ *node.Plugin) {
 				localSnapshotLock.Lock()
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
-					localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
+					localSnapshotPath := config.NodeConfig.GetString(config.CfgSnapshotsPath)
 					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))

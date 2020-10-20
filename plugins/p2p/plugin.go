@@ -3,6 +3,8 @@ package p2p
 
 import (
 	"context"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,13 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/config"
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	badger "github.com/ipfs/go-ds-badger"
+	"github.com/multiformats/go-multiaddr"
+
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -26,11 +24,23 @@ import (
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	libp2pquic "github.com/libp2p/go-libp2p-quic-transport"
-	"github.com/multiformats/go-multiaddr"
+
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/node"
+
+	"github.com/gohornet/hornet/pkg/config"
+	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 const (
 	pubKeyFileName = "key.pub"
+)
+
+var (
+	ErrNoPrivKeyFound = errors.New("no private key found")
 )
 
 var (
@@ -47,6 +57,7 @@ func Manager() *p2ppkg.Manager {
 	managerOnce.Do(func() {
 		manager = p2ppkg.NewManager(Host(),
 			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
+			p2ppkg.WithManagerReconnectInterval(time.Duration(config.NodeConfig.GetInt(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
 		)
 	})
 	return manager
@@ -86,7 +97,7 @@ func Host() host.Host {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 		}
 
-		bindAddrs := config.NodeConfig.GetStringSlice(config.CfgP2PBindAddresses)
+		bindAddrs := config.NodeConfig.GetStringSlice(config.CfgP2PBindMultiAddresses)
 
 		selfHost, err = libp2p.New(ctx,
 			libp2p.Identity(prvKey),
@@ -158,13 +169,40 @@ func loadOrCreateIdentity(peerStoreIsNew bool, peerStorePath string, peerStore p
 	return loadExistingIdentity(pubKeyFilePath, peerStore)
 }
 
+func loadIdentityFromConfig() (crypto.PrivKey, error) {
+	if identityPrivKey := config.NodeConfig.GetString(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
+		prvKey, err := utils.ParseEd25519PrivateKeyFromString(identityPrivKey)
+		if err != nil {
+			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", config.CfgP2PIdentityPrivKey)
+		}
+
+		sk, _, err := crypto.KeyPairFromStdKey(prvKey)
+		if err != nil {
+			return nil, fmt.Errorf("unable to load Ed25519 key pair for peer identity: %w", err)
+		}
+
+		return sk, nil
+	}
+
+	return nil, ErrNoPrivKeyFound
+}
+
 // creates a new Ed25519 based identity and saves the public key
 // as a separate file next to the peer store data.
 func createIdentity(pubKeyFilePath string) (crypto.PrivKey, error) {
+
 	log.Info("generating a new peer identity...")
-	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+
+	sk, err := loadIdentityFromConfig()
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate Ed25519 key pair for peer identity: %w", err)
+		if err != ErrNoPrivKeyFound {
+			return nil, err
+		}
+
+		sk, _, err = crypto.GenerateKeyPair(crypto.Ed25519, -1)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate Ed25519 key pair for peer identity: %w", err)
+		}
 	}
 
 	// even though the crypto.PrivKey is going to get stored
@@ -201,5 +239,23 @@ func loadExistingIdentity(pubKeyFilePath string, peerStore peerstore.Peerstore) 
 	peerID, err := peer.IDFromPublicKey(pubKey)
 
 	// retrieve this node's private key from the peer store
-	return peerStore.PrivKey(peerID), nil
+	storedPrivKey := peerStore.PrivKey(peerID)
+
+	// load an optional private key from the config and compare it to the stored private key
+	sk, err := loadIdentityFromConfig()
+	if err != nil {
+		if err != ErrNoPrivKeyFound {
+			return nil, err
+		}
+
+		return storedPrivKey, nil
+	}
+
+	if !storedPrivKey.Equals(sk) {
+		storedPrivKeyBytes, _ := storedPrivKey.Bytes()
+		configPrivKeyBytes, _ := sk.Bytes()
+		return nil, fmt.Errorf("stored Ed25519 private key (%s) for peer identity doesn't match private key in config (%s)", hex.EncodeToString(storedPrivKeyBytes[:]), hex.EncodeToString(configPrivKeyBytes[:]))
+	}
+
+	return storedPrivKey, nil
 }

@@ -140,11 +140,9 @@ func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
 
 func SetupApiRoutesV1(routeGroup *echo.Group) {
 
-	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
-		// Check for features
-		if config.NodeConfig.GetBool(config.CfgNodeEnableProofOfWork) {
-			features = append(features, "PoW")
-		}
+	// Check for features
+	if config.NodeConfig.GetBool(config.CfgNodeEnableProofOfWork) {
+		features = append(features, "PoW")
 	}
 
 	// only handle spammer api calls if the spammer plugin is enabled

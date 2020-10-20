@@ -9,12 +9,7 @@ import (
 )
 
 const (
-	// The seed of the genesis wallet.
-	GenesisSeed = "BCPCHOJNIRZDMNDFSEEBIBGFQRGZL9PRXJQBSGHQAKCTYXBSDQEQIJ9STDFHFKMVSAZOHKSVIUBSZYBUC"
-	// The first address of the genesis wallet.
-	GenesisAddress = "9QJKPJPYTNPF9AFCLGLMAGXOR9ZIPYTRISKOGJPM9ZKKDXGRXWFJZMQTETDJJOGYEVRMLAOECBPWTUZ9B"
-
-	// The default web API port of every node.
+	// The default REST API port of every node.
 	WebAPIPort = 14265
 
 	autopeeringMaxTries = 50
@@ -37,7 +32,7 @@ const (
 )
 
 var (
-	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "webapi"}
+	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "restapi"}
 	disabledPluginsPeer      = []string{}
 )
 
@@ -52,7 +47,7 @@ func DefaultConfig() *NodeConfig {
 		Network:     DefaultNetworkConfig(),
 		Snapshot:    DefaultSnapshotConfig(),
 		Coordinator: DefaultCoordinatorConfig(),
-		WebAPI:      DefaultWebAPIConfig(),
+		WebAPI:      DefaultRestAPIConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
@@ -65,7 +60,7 @@ func DefaultConfig() *NodeConfig {
 	return cfg
 }
 
-// NodeConfig defines the config of a Hornet node.
+// NodeConfig defines the config of a HORNET node.
 type NodeConfig struct {
 	// The name of this node.
 	Name string
@@ -78,7 +73,7 @@ type NodeConfig struct {
 	// Network config.
 	Network NetworkConfig
 	// Web API config.
-	WebAPI WebAPIConfig
+	WebAPI RestAPIConfig
 	// Snapshot config.
 	Snapshot SnapshotConfig
 	// Coordinator config.
@@ -96,7 +91,7 @@ func (cfg *NodeConfig) AsCoo() {
 	cfg.Coordinator.Bootstrap = true
 	cfg.Coordinator.RunAsCoo = true
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Coordinator")
-	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_SEED=%s", cfg.Coordinator.Seed))
+	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_PRV_KEY=%s", cfg.Coordinator.PrivateKey))
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -114,82 +109,97 @@ func (cfg *NodeConfig) CLIFlags() []string {
 
 // NetworkConfig defines the network specific configuration.
 type NetworkConfig struct {
-	// The seed for the autopeering identity.
-	AutopeeringSeed string
-	// The list of entry nodes.
-	EntryNodes []string
-	// Whether to run the node as entry node.
-	RunAsEntryNode bool
-	// The static peers for this node.
-	StaticPeers []string
-	// Whether to accept any connection.
-	AcceptAnyConnection bool
-	// Max. amount of connected peers via AcceptAnyConnection.
-	MaxPeers int
+	// the private key used to derive the node identity.
+	IdentityPrivKey string
+	// the bind addresses of this node.
+	BindMultiAddresses []string
+	// the path to the peerstore.
+	PeerStorePath string
+	// the high watermark to use within the connection manager.
+	ConnMngHighWatermark int
+	// the low watermark to use within the connection manager.
+	ConnMngLowWatermark int
+	// the static peers this node should retain a connection to.
+	Peers []string
+	// aliases of the static peers.
+	PeerAliases []string
+	// number of seconds to wait before trying to reconnect to a disconnected peer.
+	ReconnectIntervalSeconds int
+	// the maximum amount of unknown peers a gossip protocol connection is established to
+	GossipUnknownPeersLimit int
 }
 
 // CLIFlags returns the config as CLI flags.
 func (netConfig *NetworkConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgNetAutopeeringSeed, netConfig.AutopeeringSeed),
-		fmt.Sprintf("--%s=%s", config.CfgNetAutopeeringEntryNodes, strings.Join(netConfig.EntryNodes, ",")),
-		fmt.Sprintf("--%s=%v", config.CfgNetAutopeeringRunAsEntryNode, netConfig.RunAsEntryNode),
-		fmt.Sprintf("--%s=%v", config.CfgPeeringAcceptAnyConnection, netConfig.AcceptAnyConnection),
-		fmt.Sprintf("--%s=%d", config.CfgPeeringMaxPeers, netConfig.MaxPeers),
-		fmt.Sprintf("--%s=%s", config.CfgPeersList, strings.Join(netConfig.StaticPeers, ",")),
+		fmt.Sprintf("--%s=%s", config.CfgP2PIdentityPrivKey, netConfig.IdentityPrivKey),
+		fmt.Sprintf("--%s=%s", config.CfgP2PBindMultiAddresses, strings.Join(netConfig.BindMultiAddresses, ",")),
+		fmt.Sprintf("--%s=%s", config.CfgP2PPeerStorePath, netConfig.PeerStorePath),
+		fmt.Sprintf("--%s=%d", config.CfgP2PConnMngHighWatermark, netConfig.ConnMngHighWatermark),
+		fmt.Sprintf("--%s=%d", config.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
+		fmt.Sprintf("--%s=%s", config.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
+		fmt.Sprintf("--%s=%s", config.CfgP2PPeerAliases, strings.Join(netConfig.PeerAliases, ",")),
+		fmt.Sprintf("--%s=%d", config.CfgP2PReconnectIntervalSeconds, netConfig.ReconnectIntervalSeconds),
+		fmt.Sprintf("--%s=%d", config.CfgP2PGossipUnknownPeersLimit, netConfig.GossipUnknownPeersLimit),
 	}
 }
 
 // DefaultNetworkConfig returns the default network config.
 func DefaultNetworkConfig() NetworkConfig {
 	return NetworkConfig{
-		AutopeeringSeed: "",
-		EntryNodes:      []string{},
+		IdentityPrivKey:          "",
+		BindMultiAddresses:       []string{"/ip4/127.0.0.1/tcp/15600"},
+		PeerStorePath:            "./p2pstore",
+		ConnMngHighWatermark:     10,
+		ConnMngLowWatermark:      5,
+		Peers:                    []string{},
+		PeerAliases:              []string{},
+		ReconnectIntervalSeconds: 10,
+		GossipUnknownPeersLimit:  4,
 	}
 }
 
-// WebAPIConfig defines the web API specific configuration.
-type WebAPIConfig struct {
-	// The bind address for the web API.
+// RestAPIConfig defines the REST API specific configuration.
+type RestAPIConfig struct {
+	// The bind address for the REST API.
 	BindAddress string
-	// Explicit permitted API calls.
-	PermittedAPICalls []string
+	// Explicit permitted REST API routes.
+	PermittedRoutes []string
 }
 
 // CLIFlags returns the config as CLI flags.
-func (webAPIConfig *WebAPIConfig) CLIFlags() []string {
+func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgRestAPIBindAddress, webAPIConfig.BindAddress),
-		//fmt.Sprintf("--%s=%s", config.CfgRestAPIPermitRemoteAccess, strings.Join(webAPIConfig.PermittedAPICalls, ",")),
+		fmt.Sprintf("--%s=%s", config.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", config.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
 	}
 }
 
-// DefaultWebAPIConfig returns the default web API config.
-func DefaultWebAPIConfig() WebAPIConfig {
-	return WebAPIConfig{
+// DefaultRestAPIConfig returns the default REST API config.
+func DefaultRestAPIConfig() RestAPIConfig {
+	return RestAPIConfig{
 		BindAddress: "0.0.0.0:14265",
-		PermittedAPICalls: []string{
-			"getNodeInfo",
-			"attachToTangle",
-			"getBalances",
-			"checkConsistency",
-			"getTransactionsToApprove",
-			"getInclusionStates",
-			"getNodeInfo",
-			"getLedgerDiff",
-			"getLedgerDiffExt",
-			"getLedgerState",
-			"addNeighbors",
-			"removeNeighbors",
-			"getNeighbors",
-			"attachToTangle",
-			"pruneDatabase",
-			"createSnapshotFile",
-			"getNodeAPIConfiguration",
-			"broadcastTransactions",
-			"findTransactions",
-			"storeTransactions",
-			"getTrytes",
+		PermittedRoutes: []string{
+			"/health",
+			"/api/v1/info",
+			"/api/v1/tips",
+			"/api/v1/messages/*",
+			"/api/v1/messages/*/metadata",
+			"/api/v1/messages/*/raw",
+			"/api/v1/messages/*/children",
+			"/api/v1/messages",
+			"/api/v1/milestones/*",
+			"/api/v1/outputs/*",
+			"/api/v1/addresses/*",
+			"/api/v1/addresses/*/outputs",
+			"/api/v1/peers/*",
+			"/api/v1/peers",
+			"/api/v1/debug/outputs",
+			"/api/v1/debug/outputs/unspent",
+			"/api/v1/debug/outputs/spent",
+			"/api/v1/debug/ms-diff/*",
+			"/api/v1/debug/requests",
+			"/api/v1/debug/message-cones/*",
 		},
 	}
 }
@@ -222,33 +232,21 @@ func DefaultPluginConfig() PluginConfig {
 
 // SnapshotConfig defines snapshot specific configuration.
 type SnapshotConfig struct {
-	// The load type of the snapshot.
-	LoadType string
-	// The path to the global snapshot file.
-	GlobalSnapshotFilePath string
-	// The index of the global snapshot.
-	GlobalSnapshotIndex int
-	// The path to the local snapshot file.
-	LocalSnapshotFilePath string
+	// The path to the snapshot file.
+	SnapshotFilePath string
 }
 
 // CLIFlags returns the config as CLI flags.
 func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
-		//fmt.Sprintf("--%s=%s", config.CfgSnapshotLoadType, snapshotConfig.LoadType),
-		//fmt.Sprintf("--%s=%s", config.CfgGlobalSnapshotPath, snapshotConfig.GlobalSnapshotFilePath),
-		//fmt.Sprintf("--%s=%d", config.CfgGlobalSnapshotIndex, snapshotConfig.GlobalSnapshotIndex),
-		fmt.Sprintf("--%s=%s", config.CfgLocalSnapshotsPath, snapshotConfig.LocalSnapshotFilePath),
+		fmt.Sprintf("--%s=%s", config.CfgSnapshotsPath, snapshotConfig.SnapshotFilePath),
 	}
 }
 
 // DefaultSnapshotConfig returns the default snapshot config.
 func DefaultSnapshotConfig() SnapshotConfig {
 	return SnapshotConfig{
-		LoadType:               "global",
-		GlobalSnapshotFilePath: "/assets/snapshot.csv",
-		GlobalSnapshotIndex:    0,
-		LocalSnapshotFilePath:  "",
+		SnapshotFilePath: "/assets/snapshot.bin",
 	}
 }
 
@@ -258,10 +256,10 @@ type CoordinatorConfig struct {
 	RunAsCoo bool
 	// Whether to run the coordinator in bootstrap node.
 	Bootstrap bool
-	// The coo Merkle root address.
-	Address string
-	// The coo seed.
-	Seed string
+	// The coo public key.
+	PublicKey string
+	// The coo private key.
+	PrivateKey string
 	// The MWM/PoW difficulty to use.
 	MWM int
 	// The interval in which to issue new milestones.
@@ -273,7 +271,7 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMWM, cooConfig.MWM),
-		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKey, cooConfig.Address),
+		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKey, cooConfig.PublicKey),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
 	}
 }
@@ -283,8 +281,8 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 	return CoordinatorConfig{
 		RunAsCoo:                false,
 		Bootstrap:               false,
-		Address:                 "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
-		Seed:                    "MFKHXRCTTRSPATPMAGFCSSIBJXDWNCLBQJPMHQGMGJEWYJNUXSXAGVSUJK9BMCAFEDNTXHDWWVVNILDRG",
+		PublicKey:               "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+		PrivateKey:              "651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 		MWM:                     1,
 		IssuanceIntervalSeconds: 10,
 	}

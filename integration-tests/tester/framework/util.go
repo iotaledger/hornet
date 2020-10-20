@@ -3,13 +3,15 @@ package framework
 import (
 	"bufio"
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 )
 
-// getWebAPIBaseURL returns the web API base url for the given IP.
-func getWebAPIBaseURL(hostname string) string {
+// getNodeAPIBaseURL returns the web API base url for the given IP.
+func getNodeAPIBaseURL(hostname string) string {
 	return fmt.Sprintf("http://%s:%d", hostname, WebAPIPort)
 }
 
@@ -76,4 +78,21 @@ func createContainerLogFile(name string, logs io.ReadCloser) error {
 	}
 
 	return nil
+}
+
+func randEd25519PrivateKey() ed25519.PrivateKey {
+	seed := randEd25519Seed()
+	return ed25519.NewKeyFromSeed(seed[:])
+}
+
+func randEd25519Seed() [ed25519.SeedSize]byte {
+	var b [ed25519.SeedSize]byte
+	read, err := rand.Read(b[:])
+	if read != ed25519.SeedSize {
+		panic(fmt.Sprintf("could not read %d required bytes from secure RNG", ed25519.SeedSize))
+	}
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

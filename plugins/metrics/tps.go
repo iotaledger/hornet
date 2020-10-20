@@ -6,28 +6,28 @@ import (
 )
 
 var (
-	lastIncomingTxCnt    uint32
-	lastIncomingNewTxCnt uint32
-	lastOutgoingTxCnt    uint32
+	lastIncomingMsgCnt    uint32
+	lastIncomingNewMsgCnt uint32
+	lastOutgoingMsgCnt    uint32
 )
 
-// measures the TPS values
-func measureTPS() {
-	incomingTxCnt := metrics.SharedServerMetrics.Messages.Load()
-	incomingNewTxCnt := metrics.SharedServerMetrics.NewMessages.Load()
-	outgoingTxCnt := metrics.SharedServerMetrics.SentMessages.Load()
+// measures the MPS values
+func measureMPS() {
+	incomingMsgCnt := metrics.SharedServerMetrics.Messages.Load()
+	incomingNewMsgCnt := metrics.SharedServerMetrics.NewMessages.Load()
+	outgoingMsgCnt := metrics.SharedServerMetrics.SentMessages.Load()
 
-	tpsMetrics := &TPSMetrics{
-		Incoming: utils.GetUint32Diff(incomingTxCnt, lastIncomingTxCnt),
-		New:      utils.GetUint32Diff(incomingNewTxCnt, lastIncomingNewTxCnt),
-		Outgoing: utils.GetUint32Diff(outgoingTxCnt, lastOutgoingTxCnt),
+	mpsMetrics := &MPSMetrics{
+		Incoming: utils.GetUint32Diff(incomingMsgCnt, lastIncomingMsgCnt),
+		New:      utils.GetUint32Diff(incomingNewMsgCnt, lastIncomingNewMsgCnt),
+		Outgoing: utils.GetUint32Diff(outgoingMsgCnt, lastOutgoingMsgCnt),
 	}
 
 	// store the new counters
-	lastIncomingTxCnt = incomingTxCnt
-	lastIncomingNewTxCnt = incomingNewTxCnt
-	lastOutgoingTxCnt = outgoingTxCnt
+	lastIncomingMsgCnt = incomingMsgCnt
+	lastIncomingNewMsgCnt = incomingNewMsgCnt
+	lastOutgoingMsgCnt = outgoingMsgCnt
 
 	// trigger events for outside listeners
-	Events.TPSMetricsUpdated.Trigger(tpsMetrics)
+	Events.MPSMetricsUpdated.Trigger(mpsMetrics)
 }

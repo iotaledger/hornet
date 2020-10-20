@@ -1,4 +1,4 @@
-# Hornet in Docker
+# HORNET in Docker
 
 _Table of contents_
 
@@ -52,11 +52,11 @@ mkdir snapshots/mainnet && chown 39999:39999 snapshots -R
 
 ### Docker Compose
 
-Note: Follow this step only if you want to run Hornet via docker-compose.
+Note: Follow this step only if you want to run HORNET via docker-compose.
 
 If you are using an architecture other than amd64/x86_64 edit the `docker-compose.yml` file and set the correct architecture where noted.
 
-The following command will build the image and run Hornet:
+The following command will build the image and run HORNET:
 
 ```sh
 docker-compose up
@@ -102,7 +102,7 @@ Use CTRL-c to gracefully end the process.
 
 ## Build Specific Version
 
-By default the Dockerfile builds the image using Hornet's latest version. To build an image with a specific version you can pass it via the build argument `TAG`, e.g.:
+By default the Dockerfile builds the image using HORNET's latest version. To build an image with a specific version you can pass it via the build argument `TAG`, e.g.:
 
 ```sh
 docker build -f docker/Dockerfile -t hornet:v0.3.0 --build-arg TAG=v0.3.0 .

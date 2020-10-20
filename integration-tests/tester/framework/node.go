@@ -7,16 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/identity"
-	"github.com/muxxer/iota.go/api"
-	"github.com/muxxer/iota.go/bundle"
-	"github.com/muxxer/iota.go/checksum"
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/trinary"
+	iotago "github.com/iotaledger/iota.go"
 )
 
-// Node represents a Hornet node inside the Docker network.
+// Node represents a HORNET node inside the Docker network.
 type Node struct {
 	// Name of the node derived from the container and hostname.
 	Name string
@@ -24,35 +18,31 @@ type Node struct {
 	IP string
 	// The configuration with which the node was started.
 	Config *NodeConfig
-	// The autopeering identity of the peer.
-	*identity.Identity
+	// The libp2p identifier of the peer.
+	ID string
 	// The iota.go web API instance used to communicate with the node.
-	WebAPI *api.API
+	NodeAPI *iotago.NodeAPI
 	// The more specific web API providing more information for debugging purposes.
-	DebugWebAPI *WebAPI
+	DebugNodeAPI *DebugNodeAPI
 	// The profiler instance.
 	Profiler
 	// The DockerContainer that this peer is running in
 	*DockerContainer
-	// The Neighbors of the peer.
-	neighbors []*p2p.Info
+	// The Peers of the peer.
+	peers []*iotago.PeerResponse
 }
 
 // newNode creates a new instance of Node with the given information.
 // dockerContainer needs to be started in order to determine the container's (and therefore peer's) IP correctly.
-func newNode(name string, identity *identity.Identity, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
+func newNode(name string, id string, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
 	// after container is started we can get its IP
 	ip, err := dockerContainer.IP(network.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{URI: getWebAPIBaseURL(ip)})
-	if err != nil {
-		return nil, fmt.Errorf("can't instantiate Web API: %w", err)
-	}
-
-	testWebAPI := NewWebAPI(getWebAPIBaseURL(ip))
+	nodeAPI := iotago.NewNodeAPI(getNodeAPIBaseURL(ip))
+	debugNodeAPI := NewDebugNodeAPI(getNodeAPIBaseURL(ip))
 
 	return &Node{
 		Name: name,
@@ -66,84 +56,64 @@ func newNode(name string, identity *identity.Identity, cfg *NodeConfig, dockerCo
 		},
 		IP:              ip,
 		Config:          cfg,
-		Identity:        identity,
-		WebAPI:          iotaAPI,
-		DebugWebAPI:     testWebAPI,
+		ID:              id,
+		NodeAPI:         nodeAPI,
+		DebugNodeAPI:    debugNodeAPI,
 		DockerContainer: dockerContainer,
 	}, nil
 }
 
 func (p *Node) String() string {
-	return fmt.Sprintf("Node:{%s, %s, %s, %d}", p.Name, p.ID().String(), p.APIURI(), p.TotalNeighbors())
+	return fmt.Sprintf("Node:{%s, %s, %s, %d}", p.Name, p.ID, p.APIURI(), p.TotalPeers())
 }
 
 // APIURI returns the URL under which this node's web API is accessible.
 func (p *Node) APIURI() string {
-	return getWebAPIBaseURL(p.Name)
+	return getNodeAPIBaseURL(p.Name)
 }
 
-// TotalNeighbors returns the total number of neighbors the peer has.
-func (p *Node) TotalNeighbors() int {
-	return len(p.neighbors)
+// TotalPeers returns the total number of peers the peer has.
+func (p *Node) TotalPeers() int {
+	return len(p.peers)
 }
 
-// SetNeighbors sets the neighbors of the peer accordingly.
-func (p *Node) SetNeighbors(peers []*p2p.Info) {
-	p.neighbors = make([]*p2p.Info, len(peers))
-	copy(p.neighbors, peers)
+// SetPeers sets the peers of the peer accordingly.
+func (p *Node) SetPeers(peers []*iotago.PeerResponse) {
+	p.peers = make([]*iotago.PeerResponse, len(peers))
+	copy(p.peers, peers)
 }
 
 // Spam spams zero value transactions on the node.
 // Returns the number of spammed transactions.
-func (p *Node) Spam(dur time.Duration, depth int, parallelism int, batchSize ...int) (int32, error) {
-	targetAddr, err := checksum.AddChecksum(consts.NullHashTrytes, true, consts.AddressChecksumTrytesSize)
-	if err != nil {
-		return 0, err
-	}
-	spamTransfer := []bundle.Transfer{{Address: targetAddr}}
-	bndl, err := p.WebAPI.PrepareTransfers(consts.NullHashTrytes, spamTransfer, api.PrepareTransfersOptions{})
-	if err != nil {
-		return 0, err
-	}
+func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 
-	batch := 20
-	if len(batchSize) > 0 {
-		batch = batchSize[0]
-	}
+	start := time.Now()
+	end := start.Add(dur)
 
-	s := time.Now()
-	end := s.Add(dur)
-	var spammed int32
 	var wg sync.WaitGroup
 	wg.Add(parallelism)
+
+	var spamErr error
+	var spammed int32
 	for j := 0; j < parallelism; j++ {
+
 		time.Sleep(250 * time.Millisecond)
+
 		go func() {
 			defer wg.Done()
 			for time.Now().Before(end) {
 
-				// we use batching for increased throughput
-				toSend := make([]trinary.Trytes, batch)
-				for i := 0; i < batch; i++ {
-					tips, err := p.WebAPI.GetTransactionsToApprove(uint64(depth))
-					if err != nil {
-						return
-					}
-					readyTx, err := p.WebAPI.AttachToTangle(tips.TrunkTransaction, tips.BranchTransaction, uint64(p.Config.Coordinator.MWM), bndl)
-					if err != nil {
-						return
-					}
-					toSend[i] = readyTx[0]
-				}
+				txCount := atomic.AddInt32(&spammed, 1)
+				iotaMsg := &iotago.Message{Payload: &iotago.Indexation{Index: "SPAM", Data: []byte(fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339)))}}
 
-				if _, err = p.WebAPI.BroadcastTransactions(toSend...); err != nil {
+				if _, err := p.NodeAPI.SubmitMessage(iotaMsg); err != nil {
+					spamErr = err
 					return
 				}
-
-				atomic.AddInt32(&spammed, int32(batch))
 			}
 		}()
 	}
 	wg.Wait()
-	return spammed, nil
+
+	return spammed, spamErr
 }

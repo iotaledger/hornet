@@ -33,10 +33,9 @@ func (te *TestEnvironment) storeTransaction(msg *transaction.Message) *tangle.Ca
 	return cachedMsg
 }
 
-// StoreBundle adds all messages of the bundle to the storage layer and solidifies them.
+// StoreMessage adds the message to the storage layer and solidifies it.
 func (te *TestEnvironment) StoreMessage(msg *tangle.Message, isMilestone bool) *tangle.CachedMessage {
 
-	var tailTx *hornet.MessageID
 	var hashes hornet.MessageIDs
 
 	// Store all messages in the database

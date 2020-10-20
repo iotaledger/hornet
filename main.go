@@ -5,7 +5,6 @@ import (
 	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/toolset"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/coordinator"
@@ -38,24 +37,19 @@ func main() {
 		profiling.PLUGIN,
 		database.PLUGIN,
 		restapi.PLUGIN,
-	}
-
-	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
-		plugins = append(plugins, []*node.Plugin{
-			pow.PLUGIN,
-			p2p.PLUGIN,
-			p2pdisc.PLUGIN,
-			gossip.PLUGIN,
-			tangle.PLUGIN,
-			warpsync.PLUGIN,
-			urts.PLUGIN,
-			metrics.PLUGIN,
-			snapshot.PLUGIN,
-			dashboard.PLUGIN,
-			spammer.PLUGIN,
-			coordinator.PLUGIN,
-			prometheus.PLUGIN,
-		}...)
+		pow.PLUGIN,
+		p2p.PLUGIN,
+		p2pdisc.PLUGIN,
+		gossip.PLUGIN,
+		tangle.PLUGIN,
+		warpsync.PLUGIN,
+		urts.PLUGIN,
+		metrics.PLUGIN,
+		snapshot.PLUGIN,
+		dashboard.PLUGIN,
+		spammer.PLUGIN,
+		coordinator.PLUGIN,
+		prometheus.PLUGIN,
 	}
 
 	node.Run(node.Plugins(plugins...))

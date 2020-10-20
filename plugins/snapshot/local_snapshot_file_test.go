@@ -15,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/plugins/snapshot"
-	"github.com/iotaledger/iota.go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -277,8 +276,8 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func rand32ByteHash() [iota.TransactionIDLength]byte {
-	var h [iota.TransactionIDLength]byte
+func rand32ByteHash() [iotago.TransactionIDLength]byte {
+	var h [iotago.TransactionIDLength]byte
 	b := randBytes(32)
 	copy(h[:], b)
 	return h

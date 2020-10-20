@@ -2,6 +2,8 @@ package framework
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/rand"
@@ -10,8 +12,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/iotaledger/hive.go/crypto/ed25519"
-	"github.com/iotaledger/hive.go/identity"
 )
 
 type NetworkType byte
@@ -23,7 +23,7 @@ const (
 	NetworkTypeStatic
 )
 
-// Network is a network consisting out of Hornet nodes.
+// Network is a network consisting out of HORNET nodes.
 type Network struct {
 	// The ID of the network.
 	ID string
@@ -52,7 +52,7 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesNotOnlineInTime); err != nil {
 				return err
 			}
-			if _, err := node.WebAPI.GetNodeInfo(); err != nil {
+			if _, err := node.NodeAPI.Info(); err != nil {
 				continue
 			}
 			break
@@ -69,11 +69,11 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {
 				return err
 			}
-			info, err := node.DebugWebAPI.Info()
+			info, err := node.NodeAPI.Info()
 			if err != nil {
 				continue
 			}
-			if info.IsSynced {
+			if info.IsHealthy {
 				break
 			}
 		}
@@ -81,33 +81,30 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 	return nil
 }
 
-// CreateNode creates a new Hornet node in the network and returns it.
+// CreateNode creates a new HORNET node in the network and returns it.
 func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
 	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameReplica, len(n.Nodes)))
 
 	// create identity
-	publicKey, privateKey, err := ed25519.GenerateKey()
-	if err != nil {
-		return nil, err
-	}
-	seed := privateKey.Seed().String()
+	privateKey := randEd25519PrivateKey()
+	publicKey := privateKey.Public().(ed25519.PublicKey)
 
 	cfg.Name = name
-	cfg.Network.AutopeeringSeed = seed
+	cfg.Network.IdentityPrivKey = hex.EncodeToString(privateKey[:])
 
 	// create Docker container
 	container := NewDockerContainer(n.dockerClient)
-	if err = container.CreateNodeContainer(cfg); err != nil {
+	if err := container.CreateNodeContainer(cfg); err != nil {
 		return nil, err
 	}
-	if err = container.ConnectToNetwork(n.ID); err != nil {
+	if err := container.ConnectToNetwork(n.ID); err != nil {
 		return nil, err
 	}
-	if err = container.Start(); err != nil {
+	if err := container.Start(); err != nil {
 		return nil, err
 	}
 
-	peer, err := newNode(name, identity.New(publicKey), cfg, container, n)
+	peer, err := newNode(name, hex.EncodeToString(publicKey[:]), cfg, container, n)
 	if err != nil {
 		return nil, err
 	}
@@ -243,15 +240,17 @@ func (n *Network) TakeHeapSnapshots() error {
 }
 
 // SpamZeroVal starts spamming zero value messages on all nodes for the given duration.
-func (n *Network) SpamZeroVal(dur time.Duration, parallelism int, batchSize ...int) error {
+func (n *Network) SpamZeroVal(dur time.Duration, parallelism int) error {
 	log.Printf("spamming zero value messages on all nodes")
+
 	var wg sync.WaitGroup
 	wg.Add(len(n.Nodes))
+
 	var spamErr error
 	for _, n := range n.Nodes {
 		go func(n *Node) {
 			defer wg.Done()
-			if _, err := n.Spam(dur, 1, parallelism, batchSize...); err != nil {
+			if _, err := n.Spam(dur, parallelism); err != nil {
 				spamErr = err
 			}
 		}(n)
