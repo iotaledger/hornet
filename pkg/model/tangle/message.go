@@ -111,6 +111,18 @@ func (msg *Message) GetMilestone() (ms *iotago.Milestone, err error) {
 	return nil, nil
 }
 
+func (msg *Message) IsMilestone() bool {
+	switch ms := msg.GetMessage().Payload.(type) {
+	case *iotago.Milestone:
+		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
+			return true
+		}
+	default:
+	}
+
+	return false
+}
+
 func (msg *Message) IsTransaction() bool {
 	switch msg.GetMessage().Payload.(type) {
 	case *iotago.Transaction:

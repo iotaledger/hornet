@@ -264,7 +264,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.UpdateState(Hashing)
 	wu.processingLock.Unlock()
 
-	// build Hornet representation of the message
+	// build HORNET representation of the message
 	msg, err := tangle.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)

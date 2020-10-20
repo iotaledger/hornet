@@ -1,23 +1,44 @@
 package gossip_test
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/muxxer/iota.go/trinary"
+	iotago "github.com/iotaledger/iota.go"
 	"github.com/stretchr/testify/assert"
 )
+
+func randBytes(length int) []byte {
+	var b []byte
+	for i := 0; i < length; i++ {
+		b = append(b, byte(rand.Intn(256)))
+	}
+	return b
+}
+
+func rand32ByteHash() [iotago.TransactionIDLength]byte {
+	var h [iotago.TransactionIDLength]byte
+	b := randBytes(32)
+	copy(h[:], b)
+	return h
+}
+
+func randMessageID() *hornet.MessageID {
+	messageID := hornet.MessageID(rand32ByteHash())
+	return &messageID
+}
 
 func TestRequestQueue(t *testing.T) {
 	q := gossip.NewRequestQueue()
 
 	var (
-		hashA = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("A"))
-		hashB = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("B"))
-		hashZ = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("Z"))
-		hashC = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("C"))
-		hashD = hornet.MessageIDFromBytes(trinary.MustTrytesToBytes("D"))
+		hashA = randMessageID()
+		hashB = randMessageID()
+		hashZ = randMessageID()
+		hashC = randMessageID()
+		hashD = randMessageID()
 	)
 
 	requests := []*gossip.Request{

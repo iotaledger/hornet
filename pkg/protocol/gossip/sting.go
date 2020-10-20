@@ -60,7 +60,7 @@ var (
 	}
 
 	// The heartbeat packet containing the current latest solid, pruned and latest milestone index,
-	// number of connected neighbors and number of synced neighbors.
+	// number of connected peers and number of synced peers.
 	HeartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,
 		MaxBytesLength: HeartbeatMilestoneIndexBytesLength*3 + 2,
@@ -106,7 +106,7 @@ func NewMessageRequestMsg(requestedMessageID *hornet.MessageID) ([]byte, error) 
 }
 
 // NewHeartbeatMsg creates a new heartbeat message.
-func NewHeartbeatMsg(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) ([]byte, error) {
+func NewHeartbeatMsg(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedPeers uint8, syncedPeers uint8) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
@@ -124,11 +124,11 @@ func NewHeartbeatMsg(solidMilestoneIndex milestone.Index, prunedMilestoneIndex m
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.LittleEndian, connectedNeighbors); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, connectedPeers); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.LittleEndian, syncedNeighbors); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, syncedPeers); err != nil {
 		return nil, err
 	}
 

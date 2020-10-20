@@ -190,10 +190,5 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 		setupHealthRoute(e)
 	}
 
-	if config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
-		// do not setup additional routes if the nodes is an entry node
-		return
-	}
-
 	v1.SetupApiRoutesV1(e.Group("/api/v1"))
 }

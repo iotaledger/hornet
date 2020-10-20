@@ -29,22 +29,35 @@ const (
 	contentTypeJSON = "application/json"
 )
 
-// NewWebAPI returns a new web API instance.
-func NewWebAPI(baseURL string, httpClient ...http.Client) *WebAPI {
+// NewDebugNodeAPI returns a new debug node API instance.
+func NewDebugNodeAPI(baseURL string, httpClient ...http.Client) *DebugNodeAPI {
 	if len(httpClient) > 0 {
-		return &WebAPI{baseURL: baseURL, httpClient: httpClient[0]}
+		return &DebugNodeAPI{baseURL: baseURL, httpClient: httpClient[0]}
 	}
-	return &WebAPI{baseURL: baseURL}
+	return &DebugNodeAPI{baseURL: baseURL}
 }
 
-// WebAPI is an API wrapper over the web API.
-type WebAPI struct {
+// DebugNodeAPI is an API wrapper over the debug node API.
+type DebugNodeAPI struct {
 	httpClient http.Client
 	baseURL    string
 }
 
-type errorresponse struct {
-	Error string `json:"error"`
+// HTTPErrorResponse defines the error struct for the HTTPErrorResponseEnvelope.
+type HTTPErrorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// HTTPErrorResponseEnvelope defines the error response schema for node API responses.
+type HTTPErrorResponseEnvelope struct {
+	Error HTTPErrorResponse `json:"error"`
+}
+
+// HTTPOkResponseEnvelope defines the ok response schema for node API responses.
+type HTTPOkResponseEnvelope struct {
+	// The response is encapsulated in the Data field.
+	Data interface{} `json:"data"`
 }
 
 func interpretBody(res *http.Response, decodeTo interface{}) error {
@@ -58,7 +71,7 @@ func interpretBody(res *http.Response, decodeTo interface{}) error {
 		return json.Unmarshal(resBody, decodeTo)
 	}
 
-	errRes := &errorresponse{}
+	errRes := &HTTPErrorResponseEnvelope{}
 	if err := json.Unmarshal(resBody, errRes); err != nil {
 		return fmt.Errorf("unable to read error from response body: %w", err)
 	}
@@ -79,7 +92,7 @@ func interpretBody(res *http.Response, decodeTo interface{}) error {
 	return fmt.Errorf("%w: %s", ErrUnknownError, errRes.Error)
 }
 
-func (api *WebAPI) do(method string, reqObj interface{}, resObj interface{}) error {
+func (api *DebugNodeAPI) do(method string, reqObj interface{}, resObj interface{}) error {
 	// marshal request object
 	var data []byte
 	if reqObj != nil {
@@ -122,32 +135,7 @@ func (api *WebAPI) do(method string, reqObj interface{}, resObj interface{}) err
 	return nil
 }
 
-/*
-
-// Neighbors returns the neighbors to which the node is connected to.
-func (api *WebAPI) Neighbors() ([]*p2p.Info, error) {
-	res := &webapi.GetNeighborsReturn{}
-	if err := api.do(http.MethodPost, struct {
-		Command string `json:"command"`
-	}{Command: "getNeighbors"}, res); err != nil {
-		return nil, err
-	}
-	return res.Neighbors, nil
-}
-
-func (api *WebAPI) Info() (*webapi.GetNodeInfoReturn, error) {
-	res := &webapi.GetNodeInfoReturn{}
-	if err := api.do(http.MethodPost, struct {
-		Command string `json:"command"`
-	}{Command: "getNodeInfo"}, res); err != nil {
-		return nil, err
-	}
-	return res, nil
-
-}
-*/
-
 // BaseURL returns the baseURL of the API.
-func (api *WebAPI) BaseURL() string {
+func (api *DebugNodeAPI) BaseURL() string {
 	return api.baseURL
 }

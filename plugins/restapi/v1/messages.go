@@ -24,6 +24,8 @@ import (
 )
 
 var (
+	MessageVersion byte = 1
+
 	messageProcessedTimeout = 1 * time.Second
 )
 
@@ -43,10 +45,10 @@ func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataRe
 	}
 
 	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:             metadata.GetMessageID().Hex(),
-		Parent1:               metadata.GetParent1MessageID().Hex(),
-		Parent2:               metadata.GetParent2MessageID().Hex(),
-		Solid:                 metadata.IsSolid(),
+		MessageID:                  metadata.GetMessageID().Hex(),
+		Parent1:                    metadata.GetParent1MessageID().Hex(),
+		Parent2:                    metadata.GetParent2MessageID().Hex(),
+		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
 
@@ -204,6 +206,10 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		if _, err := msg.Deserialize(bytes, iotago.DeSeriModeNoValidation); err != nil {
 			return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 		}
+	}
+
+	if msg.Version == 0 {
+		msg.Version = MessageVersion
 	}
 
 	var emptyMessageID = hornet.MessageID{}

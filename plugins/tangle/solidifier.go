@@ -49,8 +49,8 @@ var (
 
 type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
-	MPS                    float64         `json:"tps"`
-	CMPS                   float64         `json:"ctps"`
+	MPS                    float64         `json:"mps"`
+	CMPS                   float64         `json:"cmps"`
 	ReferencedRate         float64         `json:"referenced_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
@@ -401,10 +401,10 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		conf.Total.Truncate(time.Millisecond),
 	)
 
-	var ctpsMessage string
+	var cmpsMessage string
 	if metric, err := getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), conf.Index); err == nil {
 		if tangle.IsNodeSynced() {
-			// Only trigger the metrics event if the node is sync (otherwise the TPS and conf.rate is wrong)
+			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if firstSyncedMilestone == 0 {
 				firstSyncedMilestone = conf.Index
 			}
@@ -414,15 +414,15 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		}
 
 		if tangle.IsNodeSynced() && (conf.Index > firstSyncedMilestone+1) {
-			// Ignore the first two milestones after node was sync (otherwise the TPS and conf.rate is wrong)
-			ctpsMessage = fmt.Sprintf(", %0.2f TPS, %0.2f CTPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ReferencedRate)
+			// Ignore the first two milestones after node was sync (otherwise the MPS and conf.rate is wrong)
+			cmpsMessage = fmt.Sprintf(", %0.2f MPS, %0.2f CMPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ReferencedRate)
 			Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
-			ctpsMessage = fmt.Sprintf(", %0.2f CTPS", metric.CMPS)
+			cmpsMessage = fmt.Sprintf(", %0.2f CMPS", metric.CMPS)
 		}
 	}
 
-	log.Infof("New solid milestone: %d%s", conf.Index, ctpsMessage)
+	log.Infof("New solid milestone: %d%s", conf.Index, cmpsMessage)
 
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)

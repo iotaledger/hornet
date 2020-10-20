@@ -14,7 +14,8 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/muxxer/iota.go/consts"
+
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -98,7 +99,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	}
 
 	// Move remaining supply to 999..999
-	balances[hornet.GetNullMessageID().MapKey()] = consts.TotalSupply - sum
+	balances[hornet.GetNullMessageID().MapKey()] = iotago.TokenSupply - sum
 
 	te.store = mapdb.NewMapDB()
 	te.configureStorages(te.store)

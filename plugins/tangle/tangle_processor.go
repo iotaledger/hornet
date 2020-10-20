@@ -64,10 +64,10 @@ func runTangleProcessor(_ *node.Plugin) {
 		receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
-	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
-		lastIncomingMPS = tpsMetrics.Incoming
-		lastNewMPS = tpsMetrics.New
-		lastOutgoingMPS = tpsMetrics.Outgoing
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricsplugin.MPSMetrics) {
+		lastIncomingMPS = mpsMetrics.Incoming
+		lastNewMPS = mpsMetrics.New
+		lastOutgoingMPS = mpsMetrics.Outgoing
 	})
 
 	onReceivedValidMilestone := events.NewClosure(func(cachedMilestone *tangle.CachedMilestone) {
@@ -83,10 +83,10 @@ func runTangleProcessor(_ *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
-		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
+		metricsplugin.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		startWaitGroup.Done()
 		<-shutdownSignal
-		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
+		metricsplugin.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
@@ -227,7 +227,7 @@ func printStatus() {
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"LSMI/LMI: %d/%d, "+
-				"TPS (in/new/out): %05d/%05d/%05d, "+
+				"MPS (in/new/out): %05d/%05d/%05d, "+
 				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,

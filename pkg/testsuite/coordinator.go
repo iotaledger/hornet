@@ -12,12 +12,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	utils2 "github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 const (
-	cooSeed    = "WMC9IZAXFW9WQHSJDFUROTNVZPSCDJAQJCTPPAIDFKHVOGPONPQUGDEGWNLSEPZYXOPKQKGKDDINIVOCY"
-	cooAddress = "WZZQHXUDONRBBIUBCNGNCULQWMLHW9VWEESGFTMWVDVGDTO9EBFGSQXNYPAAFUOI9WIGALDNTSSGNW9ZC"
+	cooPrivateKey = "651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
+	cooPublicKey  = "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
 
 	mwm            = 1
 	merkleHashFunc = crypto.BLAKE2b_512
@@ -31,24 +32,39 @@ func (te *TestEnvironment) configureCoordinator() {
 		cachedMessage := te.StoreMessage(msg, true) // no need to release, since we remember all the messages for later cleanup
 
 		if isMilestone {
-			tangle.SetLatestMilestoneIndex(cachedMessage.GetMessage().GetMilestoneIndex())
+			ms, err := msg.GetMilestone()
+			if err != nil {
+				panic(err)
+			}
+			tangle.SetLatestMilestoneIndex(milestone.Index(ms.Index))
 		}
 
 		return nil
 	}
 
-	var err error
-	te.coo, err = coordinator.New(cooSeed, mwm, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc, merkleHashFunc)
+	cooPrivKey, err := utils2.ParseEd25519PrivateKeyFromString(cooPrivateKey)
+	if err != nil {
+		panic(err)
+
+	}
+
+	cooPubKey, err := utils2.ParseEd25519PublicKeyFromString(cooPublicKey)
+	if err != nil {
+		panic(err)
+
+	}
+
+	te.coo, err = coordinator.New(cooPrivKey, mwm, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc, merkleHashFunc)
 	require.NoError(te.testState, err)
 	require.NotNil(te.testState, te.coo)
 
 	te.coo.InitState(true, 0)
 
 	// save snapshot info
-	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.GetNullMessageID(), 0, 0, 0, time.Now().Unix())
+	tangle.SetSnapshotMilestone(cooPubKey, hornet.GetNullMessageID(), 0, 0, 0, time.Now())
 
 	// configure Milestones
-	tangle.ConfigureMilestones(hornet.HashFromAddressTrytes(cooAddress), int(cooSecLevel), merkleTreeDepth, merkleHashFunc)
+	tangle.ConfigureMilestones(cooPubKey, merkleHashFunc)
 
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.testState, err)

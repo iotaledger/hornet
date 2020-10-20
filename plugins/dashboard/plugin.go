@@ -37,8 +37,8 @@ const (
 	MsgTypeSyncStatus byte = iota
 	// MsgTypeNodeStatus is the type of the NodeStatus message.
 	MsgTypeNodeStatus
-	// MsgTypeTPSMetric is the type of the messages per second (MPS) metric message.
-	MsgTypeTPSMetric
+	// MsgTypeMPSMetric is the type of the messages per second (MPS) metric message.
+	MsgTypeMPSMetric
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
 	// MsgTypeTxZeroValue is the type of the zero value Tx message.
@@ -136,8 +136,8 @@ func run(_ *node.Plugin) {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	onTPSMetricsUpdated := events.NewClosure(func(tpsMetrics *metricsplugin.TPSMetrics) {
-		hub.BroadcastMsg(&Msg{Type: MsgTypeTPSMetric, Data: tpsMetrics})
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricsplugin.MPSMetrics) {
+		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
@@ -160,13 +160,13 @@ func run(_ *node.Plugin) {
 
 	daemon.BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		metricsplugin.Events.TPSMetricsUpdated.Attach(onTPSMetricsUpdated)
+		metricsplugin.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		tangleplugin.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		metricsplugin.Events.TPSMetricsUpdated.Detach(onTPSMetricsUpdated)
+		metricsplugin.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 		tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 		tangleplugin.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)

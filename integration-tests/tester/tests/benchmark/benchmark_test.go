@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNetworkBenchmark boots up a statically peered network and then graphs TPS, CPU and memory profiles
+// TestNetworkBenchmark boots up a statically peered network and then graphs MPS, CPU and memory profiles
 // while the network is sustaining a high inflow of transactions.
 func TestNetworkBenchmark(t *testing.T) {
 	n, err := f.CreateStaticNetwork("test_benchmark", framework.DefaultStaticPeeringLayout)
@@ -25,7 +25,7 @@ func TestNetworkBenchmark(t *testing.T) {
 	benchmarkDuration := 30 * time.Second
 
 	go func() {
-		assert.NoError(t, n.SpamZeroVal(benchmarkDuration, runtime.NumCPU(), 50))
+		assert.NoError(t, n.SpamZeroVal(benchmarkDuration, runtime.NumCPU()))
 	}()
 	go func() {
 		assert.NoError(t, n.TakeCPUProfiles(benchmarkDuration))

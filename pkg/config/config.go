@@ -110,9 +110,6 @@ func FetchConfig() error {
 
 func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
-	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
-	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
-	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
 }
 
 func hasFlag(name string) bool {

@@ -2,7 +2,7 @@
 
 TEST_NAMES='common autopeering benchmark'
 
-echo "Build Hornet image"
+echo "Build HORNET image"
 docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
 
 echo "Pull additional Docker images"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -81,11 +82,11 @@ func (n *StaticNetwork) ConnectNodes() error {
 			if alreadyPeered := n.layout[peerIndex][i]; alreadyPeered {
 				continue
 			}
-			uri := fmt.Sprintf("tcp://%s:15600", peer.IP)
+			multiAddress := fmt.Sprintf("/ip4/%s/tcp/15600/p2p/%s", peer.IP, peer.ID)
 			n.layout[i][peerIndex] = true
 			n.layout[peerIndex][i] = true
-			if _, err := node.WebAPI.AddNeighbors(uri); err != nil {
-				return fmt.Errorf("%w: couldn't add peer %v", err, uri)
+			if _, err := node.NodeAPI.AddPeer(multiAddress); err != nil {
+				return fmt.Errorf("%w: couldn't add peer %v", err, multiAddress)
 			}
 			log.Printf("connected %s with %s", node.IP, peer.IP)
 		}
@@ -103,29 +104,29 @@ func (n *StaticNetwork) ConnectNodes() error {
 // AwaitPeering awaits until all nodes are peered according to the peering layout.
 func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 	log.Println("verifying peering...")
-	for nodeID, layoutNeighbors := range n.layout {
+	for nodeID, layoutPeers := range n.layout {
 		node := n.Nodes[nodeID]
 		for {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotPeerInTime); err != nil {
 				return err
 			}
 
-			neighbors, err := node.DebugWebAPI.Neighbors()
+			peers, err := node.NodeAPI.Peers()
 			if err != nil {
 				continue
 			}
 
 			var peered int
-			for layoutNeighbor := range layoutNeighbors {
+			for layoutNeighbor := range layoutPeers {
 				layoutNode := n.Nodes[layoutNeighbor]
-				for _, neighbor := range neighbors {
-					if neighbor.ID == fmt.Sprintf("%s:15600", layoutNode.IP) {
+				for _, peer := range peers {
+					if strings.Contains(peer.MultiAddress, layoutNode.ID) {
 						peered++
 					}
 				}
 			}
 
-			if peered == len(layoutNeighbors) {
+			if peered == len(layoutPeers) {
 				break
 			}
 		}
