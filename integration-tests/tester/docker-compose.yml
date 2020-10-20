@@ -3,7 +3,7 @@ version: "3.5"
 services:
   tester:
     container_name: tester
-    image: golang:1.15.2
+    image: golang:1.15.3
     working_dir: /tmp/hornet/integration-tests/tester
     command: /tmp/assets/entrypoint.sh
     environment:
