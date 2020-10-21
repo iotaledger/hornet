@@ -51,9 +51,8 @@
       "intervalUnsynced": 1000,
       "path": "snapshots/mainnet/export.bin",
       "downloadURLs": [
-        "https://ls.manapotion.io/export.bin",
-        "https://x-vps.com/export.bin",
-        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin",
+        "https://x-vps.com/export.bin"
       ]
     },
     "global": {
