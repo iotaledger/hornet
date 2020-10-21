@@ -163,6 +163,9 @@ func run(plugin *node.Plugin) {
 
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+		// wait until all background workers of the tangle plugin are started
+		tangleplugin.WaitForTangleProcessorStartup()
+
 		attachEvents()
 
 		// bootstrap the network if not done yet
