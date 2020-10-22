@@ -86,7 +86,6 @@ func configure(plugin *node.Plugin) {
 		config.NodeConfig.GetString(config.CfgSpammerIndex),
 		config.NodeConfig.GetString(config.CfgSpammerIndexSemiLazy),
 		urts.TipSelector.SelectSpammerTips,
-		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		pow.Handler(),
 		sendMessage,
 	)

@@ -260,8 +260,6 @@ type CoordinatorConfig struct {
 	PublicKey string
 	// The coo private key.
 	PrivateKey string
-	// The MWM/PoW difficulty to use.
-	MWM int
 	// The interval in which to issue new milestones.
 	IssuanceIntervalSeconds int
 }
@@ -270,8 +268,7 @@ type CoordinatorConfig struct {
 func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMWM, cooConfig.MWM),
-		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKey, cooConfig.PublicKey),
+		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKeyRanges, cooConfig.PublicKey),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
 	}
 }
@@ -283,7 +280,6 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		Bootstrap:               false,
 		PublicKey:               "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 		PrivateKey:              "651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-		MWM:                     1,
 		IssuanceIntervalSeconds: 10,
 	}
 }

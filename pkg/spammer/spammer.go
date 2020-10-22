@@ -26,20 +26,18 @@ type Spammer struct {
 	index           string
 	indexSemiLazy   string
 	tipselFunc      SpammerTipselFunc
-	mwm             int
 	powHandler      *pow.Handler
 	sendMessageFunc SendMessageFunc
 }
 
 // New creates a new spammer instance.
-func New(message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, mwm int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) *Spammer {
+func New(message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) *Spammer {
 
 	return &Spammer{
 		message:         message,
 		index:           index,
 		indexSemiLazy:   indexSemiLazy,
 		tipselFunc:      tipselFunc,
-		mwm:             mwm,
 		powHandler:      powHandler,
 		sendMessageFunc: sendMessageFunc,
 	}
@@ -69,16 +67,16 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *tips[0], Parent2: *tips[1], Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)}}
 
+	timeStart = time.Now()
+	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
+		return time.Duration(0), time.Duration(0), err
+	}
+	durationPOW := time.Since(timeStart)
+
 	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
-
-	timeStart = time.Now()
-	if err := s.powHandler.DoPoW(msg, s.mwm, shutdownSignal, 1); err != nil {
-		return time.Duration(0), time.Duration(0), err
-	}
-	durationPOW := time.Since(timeStart)
 
 	if err := s.sendMessageFunc(msg); err != nil {
 		return time.Duration(0), time.Duration(0), err

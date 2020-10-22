@@ -84,7 +84,7 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 		Milestones:             make(tangle.CachedMessages, 0),
 		cachedMessages:         make(tangle.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		powHandler:             pow.New(nil, "", 30*time.Second),
+		powHandler:             pow.New(nil, 1, "", 30*time.Second),
 		lastMilestoneMessageID: hornet.GetNullMessageID(),
 	}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -228,7 +229,9 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Nonce == 0 {
-		//TODO: Do PoW
+		if err := pow.Handler().DoPoW(msg, nil, 1); err != nil {
+			return nil, err
+		}
 	}
 
 	// ToDo: check PoW
