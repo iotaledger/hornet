@@ -108,7 +108,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	coo, err := coordinator.New(
 		privateKey,
-		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
 		powHandler,

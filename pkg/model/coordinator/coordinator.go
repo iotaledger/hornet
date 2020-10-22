@@ -49,7 +49,6 @@ type Coordinator struct {
 
 	// config options
 	privateKey              ed25519.PrivateKey
-	minWeightMagnitude      int
 	stateFilePath           string
 	milestoneIntervalSec    int
 	powHandler              *pow.Handler
@@ -89,7 +88,7 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(privateKey ed25519.PrivateKey, minWeightMagnitude int, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
+func New(privateKey ed25519.PrivateKey, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
 	if len(privateKey) != ed25519.PrivateKeySize {
 		return nil, errors.New("wrong private key length")
@@ -97,7 +96,6 @@ func New(privateKey ed25519.PrivateKey, minWeightMagnitude int, stateFilePath st
 
 	result := &Coordinator{
 		privateKey:              privateKey,
-		minWeightMagnitude:      minWeightMagnitude,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
 		powHandler:              powHandler,
@@ -227,7 +225,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return err
 	}
 
-	milestoneMsg, err := createMilestone(coo.privateKey, newMilestoneIndex, parent1MessageID, parent2MessageID, coo.minWeightMagnitude, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneMsg, err := createMilestone(coo.privateKey, newMilestoneIndex, parent1MessageID, parent2MessageID, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return err
 	}
@@ -291,7 +289,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	}
 
 	for i, tip := range tips {
-		msg, err := createCheckpoint(tip, lastCheckpointMessageID, coo.minWeightMagnitude, coo.powHandler)
+		msg, err := createCheckpoint(tip, lastCheckpointMessageID, coo.powHandler)
 		if err != nil {
 			return nil, err
 		}

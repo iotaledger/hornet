@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	iotago "github.com/iotaledger/iota.go"
 	"github.com/muxxer/iota.go/pow"
 
 	"github.com/iotaledger/hive.go/logger"
@@ -14,6 +15,8 @@ import (
 // or uses local PoW if no API key was specified or the connection failed.
 type Handler struct {
 	log *logger.Logger
+
+	mwm int
 
 	//powsrvClient       *powsrvio.PowClient
 	powsrvLock         syncutils.RWMutex
@@ -27,7 +30,7 @@ type Handler struct {
 }
 
 // New creates a new PoW handler instance.
-func New(log *logger.Logger, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
+func New(log *logger.Logger, mwm int, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
 
 	// Get the fastest available local PoW func
 	localPoWType, localPoWFunc := pow.GetFastestProofOfWorkUnsyncImpl()
@@ -47,6 +50,7 @@ func New(log *logger.Logger, powsrvAPIKey string, powsrvInitCooldown time.Durati
 
 	return &Handler{
 		log: log,
+		mwm: mwm,
 		//powsrvClient:       powsrvClient,
 		powsrvInitCooldown: powsrvInitCooldown,
 		powsrvLastInit:     time.Time{},
@@ -146,7 +150,7 @@ func (h *Handler) GetPoWType() string {
 
 // DoPoW calculates the PoW
 // Either with the fastest available local PoW function or with the help of powsrv.io (optional, POWSRV_API_KEY env var must be available)
-func (h *Handler) DoPoW(msg *tangle.Message, mwm int, shutdownSignal <-chan struct{}, parallelism ...int) (err error) {
+func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, parallelism ...int) (err error) {
 
 	select {
 	case <-shutdownSignal:

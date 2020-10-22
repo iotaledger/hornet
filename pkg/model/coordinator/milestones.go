@@ -13,16 +13,17 @@ import (
 )
 
 // createCheckpoint creates a checkpoint message.
-func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, mwm int, powHandler *pow.Handler) (*tangle.Message, error) {
+func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, powHandler *pow.Handler) (*tangle.Message, error) {
 
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: nil}
 
-	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	err := powHandler.DoPoW(iotaMsg, nil, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = doPow(msg, mwm, powHandler); err != nil {
+	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	if err != nil {
 		return nil, err
 	}
 
