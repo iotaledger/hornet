@@ -47,30 +47,15 @@ func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, paren
 		return nil, err
 	}
 
+	err = powHandler.DoPoW(iotaMsg, nil, 1)
+	if err != nil {
+		return nil, err
+	}
+
 	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = doPow(msg, mwm, powHandler); err != nil {
-		return nil, err
-	}
-
 	return msg, nil
-}
-
-// doPow calculates the message nonce and the hash.
-func doPow(msg *tangle.Message, mwm int, powHandler *pow.Handler) error {
-
-	msg.GetMessage().Nonce = 0
-
-	/*
-		ToDo:
-		nonce, err := powHandler.DoPoW(trytes, mwm)
-		if err != nil {
-			return err
-		}
-	*/
-
-	return nil
 }

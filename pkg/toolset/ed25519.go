@@ -7,7 +7,8 @@ import (
 
 	"crypto/ed25519"
 
-	"github.com/dchest/blake2b"
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -53,7 +54,7 @@ func generateEd25519Address(args []string) error {
 		return fmt.Errorf("can't decode ED25519_PUB_KEY: %v", err)
 	}
 
-	addr := blake2b.Sum256(pubKey)
+	addr := iotago.AddressFromEd25519PubKey(pubKey)
 
 	fmt.Println("Your ed25519 address: ", hex.EncodeToString(addr[:]))
 	return nil

@@ -176,7 +176,7 @@ func loadIdentityFromConfig() (crypto.PrivKey, error) {
 			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", config.CfgP2PIdentityPrivKey)
 		}
 
-		sk, _, err := crypto.KeyPairFromStdKey(prvKey)
+		sk, _, err := crypto.KeyPairFromStdKey(&prvKey)
 		if err != nil {
 			return nil, fmt.Errorf("unable to load Ed25519 key pair for peer identity: %w", err)
 		}
