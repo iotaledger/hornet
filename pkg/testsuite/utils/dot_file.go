@@ -4,38 +4,36 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
-// ShortenedHash returns a shortened trinary hash for the given hash.
+// ShortenedHash returns a shortened hex encoded hash for the given hash.
 // this is used for the dot file.
 func ShortenedHash(hash *hornet.MessageID) string {
-	trytes := hash.Hex()
-	return trytes[0:4] + "..." + trytes[77:81]
+	hexHash := hash.Hex()
+	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 
-// ShortenedTag returns a shortened tag or milestone index for the given message.
+// ShortenedIndex returns a shortened index or milestone index for the given message.
 // this is used for the dot file.
-func ShortenedTag(cachedMessage *tangle.CachedMessage) string {
-	if cachedMessage.GetMessage().GetMilestone() {
-		return fmt.Sprintf("%d", cachedMessage.GetMessage().GetMilestoneIndex())
+func ShortenedIndex(cachedMessage *tangle.CachedMessage) string {
+	defer cachedMessage.Release(true)
+
+	if cachedMessage.GetMessage().IsMilestone() {
+		ms, _ := cachedMessage.GetMessage().GetMilestone()
+		return fmt.Sprintf("%d", ms.Index)
 	}
 
-	tail := cachedMessage.GetMessage().GetTail()
-	defer tail.Release(true)
+	indexation := cachedMessage.GetMessage().GetIndexation()
 
-	tag := tail.GetTransaction().Tx.Tag
-
-	// Cut the tags at the first 9 or at max length 4
-	tagLength := strings.IndexByte(tag, '9')
-	if tagLength == -1 || tagLength > 4 || tagLength == 0 {
-		tagLength = 4
+	index := indexation.Index
+	if len(index) > 4 {
+		index = index[:4]
 	}
-	return tag[0:tagLength]
+	return index
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.

@@ -28,14 +28,11 @@ const (
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator() {
 
-	storeMessageFunc := func(msg *tangle.Message, isMilestone bool) error {
-		cachedMessage := te.StoreMessage(msg, true) // no need to release, since we remember all the messages for later cleanup
+	storeMessageFunc := func(msg *tangle.Message, msIndex ...milestone.Index) error {
+		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
 
-		if isMilestone {
-			ms, err := msg.GetMilestone()
-			if err != nil {
-				panic(err)
-			}
+		if cachedMessage.GetMessage().IsMilestone() {
+			ms, _ := msg.GetMilestone()
 			tangle.SetLatestMilestoneIndex(milestone.Index(ms.Index))
 		}
 
@@ -54,7 +51,7 @@ func (te *TestEnvironment) configureCoordinator() {
 
 	}
 
-	te.coo, err = coordinator.New(cooPrivKey, mwm, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc, merkleHashFunc)
+	te.coo, err = coordinator.New(cooPrivKey, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc, merkleHashFunc)
 	require.NoError(te.testState, err)
 	require.NotNil(te.testState, te.coo)
 

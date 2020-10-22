@@ -1,89 +1,139 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ed25519"
 
-	"github.com/muxxer/iota.go/address"
-	"github.com/muxxer/iota.go/api"
-	"github.com/muxxer/iota.go/bundle"
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/pow"
-	"github.com/muxxer/iota.go/transaction"
-	"github.com/muxxer/iota.go/trinary"
+	iotago "github.com/iotaledger/iota.go"
+	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/pow"
 )
 
-// GenerateAddress generates an address for the given seed and index with medium security.
-func GenerateAddress(t *testing.T, seed trinary.Trytes, index uint64) *hornet.MessageID {
-	seedAddress, err := address.GenerateAddress(seed, index, consts.SecurityLevelMedium, false)
+var (
+	pathString = "44'/4218'/0'/%d'"
+)
+
+// GenerateHDWalletKeyPair calculates an ed25519 key pair by using slip10.
+func GenerateHDWalletKeyPair(t *testing.T, seed []byte, index uint64) (ed25519.PrivateKey, ed25519.PublicKey) {
+
+	path, err := bip32path.ParsePath(fmt.Sprintf(pathString, index))
 	require.NoError(t, err)
 
-	return hornet.HashFromAddressTrytes(seedAddress)
+	curve := slip10.Ed25519()
+	key, err := slip10.DeriveKeyFromPath(seed, curve, path)
+	require.NoError(t, err)
+
+	pubKey, privKey := slip10.Ed25519Key(key)
+	return privKey, pubKey
 }
 
-// ZeroValueTx creates a zero value transaction to a random address with the given tag.
-func ZeroValueTx(t *testing.T, tag trinary.Trytes) []trinary.Trytes {
-
-	var b tangle.Message
-	entry := bundle.BundleEntry{
-		Address:                   utils.RandomKerlHashTrytesInsecure(),
-		Value:                     0,
-		Tag:                       tag,
-		Timestamp:                 uint64(time.Now().UnixNano() / int64(time.Second)),
-		Length:                    uint64(1),
-		SignatureMessageFragments: []trinary.Trytes{trinary.MustPad("", consts.SignatureMessageFragmentSizeInTrytes)},
-	}
-	b, err := bundle.Finalize(bundle.AddEntry(b, entry))
-	require.NoError(t, err)
-
-	return transaction.MustFinalTransactionTrytes(b)
+// GenerateHDWalletAddress calculates an ed25519 address by using slip10.
+func GenerateHDWalletAddress(t *testing.T, seed []byte, index uint64) iotago.Ed25519Address {
+	_, pubKey := GenerateHDWalletKeyPair(t, seed, index)
+	return iotago.AddressFromEd25519PubKey(pubKey)
 }
 
-// ValueTx creates a value transaction with the given tag from an input seed index to an address created by a given output seed and index.
-func ValueTx(t *testing.T, tag trinary.Trytes, fromSeed trinary.Trytes, fromIndex uint64, balance uint64, toSeed trinary.Trytes, toIndex uint64, value uint64) []trinary.Trytes {
+// MsgWithIndexation creates a zero value transaction to a random address with the given tag.
+func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string) *tangle.Message {
 
-	_, powFunc := pow.GetFastestProofOfWorkImpl()
-	iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
-		LocalProofOfWorkFunc: powFunc,
-	})
-	require.NoError(t, err)
-
-	fromAddress, err := address.GenerateAddresses(fromSeed, fromIndex, 2, consts.SecurityLevelMedium, true)
-	require.NoError(t, err)
-
-	toAddress, err := address.GenerateAddress(toSeed, toIndex, consts.SecurityLevelMedium, true)
-	require.NoError(t, err)
-
-	fmt.Println("Send", value, "from", fromAddress[0], "to", toAddress, "and remaining", balance-value, "to", fromAddress[1])
-
-	transfers := bundle.Transfers{
-		{
-			Address: toAddress,
-			Value:   value,
-			Tag:     tag,
-		},
+	msg := &iotago.Message{
+		Version: iotago.MessageVersion,
+		Parent1: *parent1,
+		Parent2: *parent2,
+		Payload: &iotago.Indexation{Index: indexation, Data: nil},
 	}
 
-	inputs := []api.Input{
-		{
-			Address:  fromAddress[0],
-			Security: consts.SecurityLevelMedium,
-			KeyIndex: fromIndex,
-			Balance:  balance,
-		},
-	}
-
-	prepTransferOpts := api.PrepareTransfersOptions{Inputs: inputs, RemainderAddress: &fromAddress[1]}
-
-	trytes, err := iotaAPI.PrepareTransfers(fromSeed, transfers, prepTransferOpts)
+	err := pow.Handler().DoPoW(msg, nil, 1)
 	require.NoError(t, err)
 
-	return trytes
+	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	require.NoError(t, err)
+
+	return message
+}
+
+// MsgWithValueTx creates a value transaction with the given tag from an input seed index to an address created by a given output seed and index.
+func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, inputUTXOs []*iotago.UTXOInput, fromSeed []byte, fromIndices []uint64, balances []uint64,
+	toRemainderIndex uint64, toSeed []byte, toIndex uint64, value uint64) (message *tangle.Message, remainderUTXOInput *iotago.UTXOInput, sentToUTXOInput *iotago.UTXOInput) {
+
+	require.Equal(t, len(inputUTXOs), len(fromIndices))
+	require.Equal(t, len(inputUTXOs), len(balances))
+
+	msg := &iotago.Message{
+		Version: iotago.MessageVersion,
+		Parent1: *parent1,
+		Parent2: *parent2,
+	}
+
+	var totalInputBalance uint64
+	for _, balance := range balances {
+		totalInputBalance += balance
+	}
+
+	builder := iotago.NewTransactionBuilder()
+
+	addressKeys := []iotago.AddressKeys{}
+	for i, inputUTXO := range inputUTXOs {
+		inputPrivateKey, inputPublicKey := GenerateHDWalletKeyPair(t, fromSeed, fromIndices[i])
+		inputAddr := iotago.AddressFromEd25519PubKey(inputPublicKey)
+		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: &inputAddr, Input: inputUTXO})
+		addressKeys = append(addressKeys, iotago.AddressKeys{Address: &inputAddr, Keys: inputPrivateKey})
+	}
+
+	inputAddrSigner := iotago.NewInMemoryAddressSigner(addressKeys...)
+
+	_, remainderPublicKey := GenerateHDWalletKeyPair(t, fromSeed, toRemainderIndex)
+	remainderAddr := iotago.AddressFromEd25519PubKey(remainderPublicKey)
+
+	if totalInputBalance != value {
+		// there is a remander
+		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: &remainderAddr, Amount: totalInputBalance - value})
+	}
+
+	_, outputPublicKey := GenerateHDWalletKeyPair(t, toSeed, toIndex)
+	outputAddr := iotago.AddressFromEd25519PubKey(outputPublicKey)
+	builder.AddOutput(&iotago.SigLockedSingleOutput{Address: &outputAddr, Amount: value})
+	builder.AddIndexationPayload(&iotago.Indexation{Index: indexation, Data: nil})
+
+	tx, err := builder.Build(inputAddrSigner)
+	require.NoError(t, err)
+
+	transactionID, err := tx.ID()
+	require.NoError(t, err)
+
+	// search the output indexes
+	txEssence := tx.Essence.(*iotago.TransactionEssence)
+	for i, output := range txEssence.Outputs {
+		sigLockedSingleOutput := output.(*iotago.SigLockedSingleOutput)
+		ed25519Address := sigLockedSingleOutput.Address.(*iotago.Ed25519Address)
+
+		if bytes.Equal(ed25519Address[:], remainderAddr[:]) {
+			remainderUTXOInput = &iotago.UTXOInput{TransactionID: *transactionID, TransactionOutputIndex: uint16(i)}
+			continue
+		}
+
+		if bytes.Equal(ed25519Address[:], outputAddr[:]) {
+			sentToUTXOInput = &iotago.UTXOInput{TransactionID: *transactionID, TransactionOutputIndex: uint16(i)}
+		}
+	}
+
+	msg.Payload = tx
+
+	err = pow.Handler().DoPoW(msg, nil, 1)
+	require.NoError(t, err)
+
+	message, err = tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	require.NoError(t, err)
+
+	fmt.Println(fmt.Sprintf("Send %d iota to %s and remaining %d iota to %s", value, outputAddr.Bech32(iotago.PrefixTestnet), totalInputBalance-value, remainderAddr.Bech32(iotago.PrefixTestnet)))
+
+	return message, remainderUTXOInput, sentToUTXOInput
 }
