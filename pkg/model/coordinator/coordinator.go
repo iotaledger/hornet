@@ -51,6 +51,7 @@ type Coordinator struct {
 	privateKey              ed25519.PrivateKey
 	stateFilePath           string
 	milestoneIntervalSec    int
+	mwm                     int
 	powHandler              *pow.Handler
 	sendMesssageFunc        SendMessageFunc
 	milestoneMerkleHashFunc crypto.Hash
@@ -88,7 +89,7 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(privateKey ed25519.PrivateKey, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
+func New(privateKey ed25519.PrivateKey, stateFilePath string, milestoneIntervalSec int, mwm int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
 	if len(privateKey) != ed25519.PrivateKeySize {
 		return nil, errors.New("wrong private key length")
@@ -98,6 +99,7 @@ func New(privateKey ed25519.PrivateKey, stateFilePath string, milestoneIntervalS
 		privateKey:              privateKey,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
+		mwm:                     mwm,
 		powHandler:              powHandler,
 		sendMesssageFunc:        sendMessageFunc,
 		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
@@ -225,7 +227,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return err
 	}
 
-	milestoneMsg, err := createMilestone(coo.privateKey, newMilestoneIndex, parent1MessageID, parent2MessageID, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneMsg, err := createMilestone(coo.privateKey, newMilestoneIndex, parent1MessageID, parent2MessageID, coo.mwm, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return err
 	}

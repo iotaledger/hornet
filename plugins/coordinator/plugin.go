@@ -110,6 +110,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		privateKey,
 		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
+		config.NodeConfig.GetInt(config.CfgCoordinatorMWM),
 		powHandler,
 		sendMessage,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),

@@ -31,6 +31,7 @@ comnetdb/
 devnetdb/
 alphanetdb/
 alphanetdb2/
+p2pstore/
 
 # snapshot dir
 snapshots/
@@ -44,3 +45,4 @@ integration-tests/logs/*.profile
 # coordinator files
 coordinator.tree
 coordinator.state
+
