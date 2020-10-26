@@ -8,31 +8,29 @@ import (
 
 	"github.com/gohornet/hornet/pkg/utils"
 	flag "github.com/spf13/pflag"
-	"github.com/spf13/viper"
 
-	"github.com/iotaledger/hive.go/parameter"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 var (
 	// default
-	defaultConfigName         = "config"
-	defaultPeeringConfigName  = "peering"
-	defaultProfilesConfigName = "profiles"
+	defaultConfigName         = "config.json"
+	defaultPeeringConfigName  = "peering.json"
+	defaultProfilesConfigName = "profiles.json"
 
 	// FlagSets
 	configFlagSet  = flag.NewFlagSet("", flag.ContinueOnError)
 	peeringFlagSet = flag.NewFlagSet("", flag.ContinueOnError)
 
 	// flags
-	configName         = flag.StringP("config", "c", defaultConfigName, "Filename of the config file without the file extension")
-	peeringConfigName  = flag.StringP("peeringConfig", "n", defaultPeeringConfigName, "Filename of the peering config file without the file extension")
-	profilesConfigName = flag.String("profilesConfig", defaultProfilesConfigName, "Filename of the profiles config file without the file extension")
-	configDirPath      = flag.StringP("config-dir", "d", ".", "Path to the directory containing the config file")
+	configFilePath   = flag.StringP("config", "c", defaultConfigName, "file path of the config file")
+	peeringFilePath  = flag.StringP("peeringConfig", "n", defaultPeeringConfigName, "file path of the peering config file")
+	profilesFilePath = flag.String("profilesConfig", defaultProfilesConfigName, "file path of the profiles config file")
 
-	// Viper
-	NodeConfig     = viper.New()
-	PeeringConfig  = viper.New()
-	ProfilesConfig = viper.New()
+	// Configurations
+	NodeConfig     = configuration.New()
+	PeeringConfig  = configuration.New()
+	ProfilesConfig = configuration.New()
 
 	// a list of flags which should be printed via --help
 	nonHiddenFlags = map[string]struct{}{
@@ -40,7 +38,6 @@ var (
 		"config-dir":          {},
 		"node.disablePlugins": {},
 		"node.enablePlugins":  {},
-		"overwriteCooAddress": {},
 		"peeringConfig":       {},
 		"profilesConfig":      {},
 		"useProfile":          {},
@@ -72,36 +69,42 @@ func ParseFlags() {
 	flag.Parse()
 }
 
-// FetchConfig fetches config values from a dir defined via CLI flag --config-dir (or the current working dir if not set).
-//
-// It automatically reads in a single config file starting with "config" (can be changed via the --config CLI flag)
-// and ending with: .json, .toml, .yaml or .yml (in this sequence).
+// FetchConfig fetches all config values (order: default, files, env, flags).
 func FetchConfig() error {
 
-	// replace dots with underscores in env
-	dotReplacer := strings.NewReplacer(".", "_")
-	NodeConfig.SetEnvKeyReplacer(dotReplacer)
-	PeeringConfig.SetEnvKeyReplacer(dotReplacer)
-	ProfilesConfig.SetEnvKeyReplacer(dotReplacer)
+	if err := NodeConfig.LoadFile(*configFilePath); err != nil {
+		if hasFlag(defaultConfigName) {
+			// if a file was explicitly specified, raise the error
+			return err
+		}
+		fmt.Printf("No config file found via '%s'. Loading default settings.", *configFilePath)
+	}
 
-	// ensure that envs are read in too
-	viper.AutomaticEnv()
-	NodeConfig.AutomaticEnv()
-	PeeringConfig.AutomaticEnv()
-	ProfilesConfig.AutomaticEnv()
+	if err := PeeringConfig.LoadFile(*peeringFilePath); err != nil {
+		if hasFlag(defaultPeeringConfigName) {
+			// if a file was explicitly specified, raise the error
+			return err
+		}
+		fmt.Printf("No peering config file found via '%s'. Loading default settings.", *peeringFilePath)
+	}
 
-	err := parameter.LoadConfigFile(NodeConfig, *configDirPath, *configName, configFlagSet, !hasFlag(defaultConfigName), true)
-	if err != nil {
+	if err := ProfilesConfig.LoadFile(*profilesFilePath); err != nil {
+		if hasFlag(defaultProfilesConfigName) {
+			// if a file was explicitly specified, raise the error
+			return err
+		}
+		fmt.Printf("No profiles config file found via '%s'. Loading default settings.", *profilesFilePath)
+	}
+
+	if err := NodeConfig.LoadEnvironmentVars(""); err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(PeeringConfig, *configDirPath, *peeringConfigName, peeringFlagSet, !hasFlag(defaultPeeringConfigName), true)
-	if err != nil {
+	if err := NodeConfig.LoadFlagSet(configFlagSet); err != nil {
 		return err
 	}
 
-	err = parameter.LoadConfigFile(ProfilesConfig, *configDirPath, *profilesConfigName, nil, !hasFlag(defaultProfilesConfigName), true)
-	if err != nil {
+	if err := PeeringConfig.LoadFlagSet(peeringFlagSet); err != nil {
 		return err
 	}
 
@@ -109,7 +112,7 @@ func FetchConfig() error {
 }
 
 func PrintConfig(ignoreSettingsAtPrint ...[]string) {
-	parameter.PrintConfig(NodeConfig, ignoreSettingsAtPrint...)
+	NodeConfig.Print(ignoreSettingsAtPrint...)
 }
 
 func hasFlag(name string) bool {
@@ -137,23 +140,27 @@ func LoadStringFromEnvironment(name string) (string, error) {
 	return str, nil
 }
 
-// LoadEd25519PrivateKeyFromEnvironment loads an ed25519 private key from the given environment variable.
-func LoadEd25519PrivateKeyFromEnvironment(name string) (ed25519.PrivateKey, error) {
+// LoadEd25519PrivateKeysFromEnvironment loads ed25519 private keys from the given environment variable.
+func LoadEd25519PrivateKeysFromEnvironment(name string) ([]ed25519.PrivateKey, error) {
 
-	key, exists := os.LookupEnv(name)
+	keys, exists := os.LookupEnv(name)
 	if !exists {
 		return nil, fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	if len(key) == 0 {
+	if len(keys) == 0 {
 		return nil, fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	privateKey, err := utils.ParseEd25519PrivateKeyFromString(key)
-	if err != nil {
-		return nil, fmt.Errorf("environment variable '%s' contains an invalid private key", name)
+	var privateKeys []ed25519.PrivateKey
+	for _, key := range strings.Split(keys, ",") {
+		privateKey, err := utils.ParseEd25519PrivateKeyFromString(key)
+		if err != nil {
+			return nil, fmt.Errorf("environment variable '%s' contains an invalid private key '%s'", name, key)
 
+		}
+		privateKeys = append(privateKeys, privateKey)
 	}
 
-	return privateKey, nil
+	return privateKeys, nil
 }

@@ -1,10 +1,12 @@
 package v1
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
+	"encoding/hex"
 	"strconv"
 	"strings"
+
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -20,25 +22,25 @@ import (
 func info() (*infoResponse, error) {
 
 	// latest milestone index
-	latestMilestoneMessageID := hornet.GetNullMessageID().Hex()
+	latestMilestoneID := hornet.GetNullMessageID().Hex()
 	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
 
 	// latest milestone message ID
-	cachedLatestMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneIndex)
-	if cachedLatestMilestoneMsg != nil {
-		latestMilestoneMessageID = cachedLatestMilestoneMsg.GetMessage().GetMessageID().Hex()
-		cachedLatestMilestoneMsg.Release(true)
+	cachedLatestMilestone := tangle.GetCachedMilestoneOrNil(latestMilestoneIndex)
+	if cachedLatestMilestone != nil {
+		latestMilestoneID = hex.EncodeToString(cachedLatestMilestone.GetMilestone().MilestoneID[:])
+		cachedLatestMilestone.Release(true)
 	}
 
 	// solid milestone index
-	solidMilestoneMessageID := hornet.GetNullMessageID().Hex()
+	solidMilestoneID := hornet.GetNullMessageID().Hex()
 	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
 
 	// solid milestone message ID
-	cachedSolidMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(solidMilestoneIndex)
-	if cachedSolidMilestoneMsg != nil {
-		solidMilestoneMessageID = cachedSolidMilestoneMsg.GetMessage().GetMessageID().Hex()
-		cachedSolidMilestoneMsg.Release(true)
+	cachedSolidMilestone := tangle.GetCachedMilestoneOrNil(solidMilestoneIndex)
+	if cachedSolidMilestone != nil {
+		solidMilestoneID = hex.EncodeToString(cachedSolidMilestone.GetMilestone().MilestoneID[:])
+		cachedSolidMilestone.Release(true)
 	}
 
 	// pruning index
@@ -49,16 +51,16 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                     cli.AppName,
-		Version:                  cli.AppVersion,
-		IsHealthy:                tangleplugin.IsNodeHealthy(),
-		CoordinatorPublicKey:     config.NodeConfig.GetString(config.CfgCoordinatorPublicKey),
-		LatestMilestoneMessageID: latestMilestoneMessageID,
-		LatestMilestoneIndex:     latestMilestoneIndex,
-		SolidMilestoneMessageID:  solidMilestoneMessageID,
-		SolidMilestoneIndex:      solidMilestoneIndex,
-		PruningIndex:             pruningIndex,
-		Features:                 features,
+		Name:                 cli.AppName,
+		Version:              cli.AppVersion,
+		IsHealthy:            tangleplugin.IsNodeHealthy(),
+		NetworkID:            config.NodeConfig.Int(config.CfgCoordinatorNetworkID),
+		LatestMilestoneID:    latestMilestoneID,
+		LatestMilestoneIndex: latestMilestoneIndex,
+		SolidMilestoneID:     solidMilestoneID,
+		SolidMilestoneIndex:  solidMilestoneIndex,
+		PruningIndex:         pruningIndex,
+		Features:             features,
 	}, nil
 }
 
@@ -105,9 +107,9 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 	defer cachedMilestone.Release(true)
 
 	return &milestoneResponse{
-		Index:     uint32(cachedMilestone.GetMilestone().Index),
-		MessageID: cachedMilestone.GetMilestone().MessageID.Hex(),
-		Time:      cachedMilestone.GetMilestone().Timestamp.Unix(),
+		Index:       uint32(cachedMilestone.GetMilestone().Index),
+		MilestoneID: hex.EncodeToString(cachedMilestone.GetMilestone().MilestoneID[:]),
+		Time:        cachedMilestone.GetMilestone().Timestamp.Unix(),
 	}, nil
 
 }

@@ -10,8 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/muxxer/iota.go/trinary"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -61,22 +59,24 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 
 	// compute mwm
 	// TODO:
-	trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID().Slice())
-	if err != nil {
-		return nil, err
-	}
-	var mwm int
-	for i := len(trits) - 1; i >= 0; i-- {
-		if trits[i] == 0 {
-			mwm++
-			continue
+	/*
+		trits, err := trinary.BytesToTrits(cachedMsg.GetMessage().GetMessageID().Slice())
+		if err != nil {
+			return nil, err
 		}
-		break
-	}
-	t.MWM = mwm
+		var mwm int
+		for i := len(trits) - 1; i >= 0; i-- {
+			if trits[i] == 0 {
+				mwm++
+				continue
+			}
+			break
+		}
+	*/
+	t.MWM = 14
 
 	// check whether milestone
-	ms, err := cachedMsg.GetMessage().GetMilestone()
+	ms := cachedMsg.GetMessage().GetMilestone()
 	if ms != nil {
 		t.IsMilestone = true
 		t.MilestoneIndex = milestone.Index(ms.Index)
@@ -168,9 +168,11 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 		}
 
 		// check for valid trytes
-		if err := trinary.ValidTrytes(search); err != nil {
-			return c.JSON(http.StatusOK, result)
-		}
+		/*
+			if err := trinary.ValidTrytes(search); err != nil {
+				return c.JSON(http.StatusOK, result)
+			}
+		*/
 
 		// tag query
 		if len(search) == 27 {

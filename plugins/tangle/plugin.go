@@ -7,11 +7,11 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/iotaledger/hive.go/daemon"
@@ -54,14 +54,17 @@ func configure(plugin *node.Plugin) {
 		tangle.MarkDatabaseCorrupted()
 	})
 
-	cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
-	if err != nil {
-		log.Fatal(err.Error())
+	keyManager := keymanager.New()
+	for _, keyRange := range config.CoordinatorPublicKeyRanges() {
+		if err := keyManager.AddKeyRange(keyRange.Key, keyRange.StartIndex, keyRange.EndIndex); err != nil {
+			log.Panicf("can't load public key ranges: %w", err)
+		}
 	}
 
 	tangle.ConfigureMilestones(
-		cooPublicKey,
-		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		keyManager,
+		config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()
@@ -72,7 +75,7 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.GetBool(config.CfgDatabaseDebug) {
+	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.Bool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {

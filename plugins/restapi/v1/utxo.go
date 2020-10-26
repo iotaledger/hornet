@@ -90,7 +90,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	maxResults := config.NodeConfig.GetInt(config.CfgRestAPILimitsMaxResults)
+	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	balance, count, err := utxo.AddressBalance(&address, maxResults)
 	if err != nil {
@@ -122,7 +122,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	maxResults := config.NodeConfig.GetInt(config.CfgRestAPILimitsMaxResults)
+	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	unspentOutputs, err := utxo.UnspentOutputsForAddress(&address, maxResults)
 	if err != nil {

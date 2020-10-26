@@ -98,29 +98,14 @@ func (msg *Message) GetParent2MessageID() *hornet.MessageID {
 	return &parent2
 }
 
-func (msg *Message) GetMilestone() (ms *iotago.Milestone, err error) {
+func (msg *Message) GetMilestone() (ms *iotago.Milestone) {
 	switch ms := msg.GetMessage().Payload.(type) {
 	case *iotago.Milestone:
-		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
-			return ms, err
-		}
-		return ms, nil
+		return ms
 	default:
 	}
 
-	return nil, nil
-}
-
-func (msg *Message) IsMilestone() bool {
-	switch ms := msg.GetMessage().Payload.(type) {
-	case *iotago.Milestone:
-		if err := ms.VerifySignature(msg.GetMessage(), coordinatorPublicKey); err != nil {
-			return true
-		}
-	default:
-	}
-
-	return false
+	return nil
 }
 
 func (msg *Message) IsTransaction() bool {

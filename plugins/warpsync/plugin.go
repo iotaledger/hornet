@@ -33,7 +33,7 @@ var (
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
-	warpSync = gossip2.NewWarpSync(config.NodeConfig.GetInt(config.CfgWarpSyncAdvancementRange))
+	warpSync = gossip2.NewWarpSync(config.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
 
 	configureEvents()
 }

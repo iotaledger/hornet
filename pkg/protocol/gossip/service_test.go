@@ -8,6 +8,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/libp2p/go-libp2p"
@@ -15,7 +16,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +39,7 @@ func TestServiceEvents(t *testing.T) {
 	shutdownSignal := make(chan struct{})
 	defer close(shutdownSignal)
 
-	cfg := viper.GetViper()
+	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
 	require.NoError(t, logger.InitGlobalLogger(cfg))
 

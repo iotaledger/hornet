@@ -91,7 +91,7 @@ func (cfg *NodeConfig) AsCoo() {
 	cfg.Coordinator.Bootstrap = true
 	cfg.Coordinator.RunAsCoo = true
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Coordinator")
-	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_PRV_KEY=%s", cfg.Coordinator.PrivateKey))
+	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.Coordinator.PrivateKeys, ",")))
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -256,10 +256,10 @@ type CoordinatorConfig struct {
 	RunAsCoo bool
 	// Whether to run the coordinator in bootstrap node.
 	Bootstrap bool
-	// The coo public key.
-	PublicKey string
-	// The coo private key.
-	PrivateKey string
+	// The id of the network (1=mainnet).
+	NetworkID int
+	// The coo private keys.
+	PrivateKeys []string
 	// The interval in which to issue new milestones.
 	IssuanceIntervalSeconds int
 }
@@ -268,7 +268,7 @@ type CoordinatorConfig struct {
 func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--%s=%s", config.CfgCoordinatorPublicKeyRanges, cooConfig.PublicKey),
+		fmt.Sprintf("--%s=%d", config.CfgCoordinatorNetworkID, cooConfig.NetworkID),
 		fmt.Sprintf("--%s=%d", config.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
 	}
 }
@@ -276,10 +276,11 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 // DefaultCoordinatorConfig returns the default coordinator config.
 func DefaultCoordinatorConfig() CoordinatorConfig {
 	return CoordinatorConfig{
-		RunAsCoo:                false,
-		Bootstrap:               false,
-		PublicKey:               "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-		PrivateKey:              "651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+		RunAsCoo:  false,
+		Bootstrap: false,
+		NetworkID: 2,
+		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
 		IssuanceIntervalSeconds: 10,
 	}
 }

@@ -11,12 +11,19 @@ import (
 
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 const (
 	isNodeSyncedWithinThreshold = 2
 )
+
+type CoordinatorPublicKey struct {
+	StartIndex milestone.Index
+	EndIndex   milestone.Index
+	PublicKey  ed25519.PublicKey
+}
 
 var (
 	solidMilestoneIndex   milestone.Index
@@ -29,7 +36,8 @@ var (
 	waitForNodeSyncedChannelsLock syncutils.Mutex
 	waitForNodeSyncedChannels     []chan struct{}
 
-	coordinatorPublicKey               ed25519.PublicKey
+	keyManager                         *keymanager.KeyManager
+	milestonePublicKeyCount            int
 	coordinatorMilestoneMerkleHashFunc crypto.Hash
 
 	ErrInvalidMilestone = errors.New("invalid milestone")
@@ -39,9 +47,14 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMsg *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
-func ConfigureMilestones(cooPublicKey ed25519.PublicKey, cooMilestoneMerkleHashFunc crypto.Hash) {
-	coordinatorPublicKey = cooPublicKey
+func ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int, cooMilestoneMerkleHashFunc crypto.Hash) {
+	keyManager = cooKeyManager
+	milestonePublicKeyCount = cooMilestonePublicKeyCount
 	coordinatorMilestoneMerkleHashFunc = cooMilestoneMerkleHashFunc
+}
+
+func KeyManager() *keymanager.KeyManager {
+	return keyManager
 }
 
 func GetMilestoneMerkleHashFunc() crypto.Hash {

@@ -9,13 +9,11 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -260,11 +258,11 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	defer cachedTargetMilestone.Release(true) // milestone -1
 
 	header := &FileHeader{
-		Version:              SupportedFormatVersion,
-		Type:                 Full,
-		CoordinatorPublicKey: snapshotInfo.CoordinatorPublicKey,
-		SEPMilestoneIndex:    milestone.Index(targetIndex),
-		SEPMilestoneHash:     *cachedTargetMilestone.GetMilestone().MessageID,
+		Version:           SupportedFormatVersion,
+		Type:              Full,
+		NetworkID:         snapshotInfo.NetworkID,
+		SEPMilestoneIndex: milestone.Index(targetIndex),
+		SEPMilestoneHash:  *cachedTargetMilestone.GetMilestone().MessageID,
 	}
 
 	// build temp file path
@@ -561,11 +559,6 @@ func LoadFullSnapshotFromFile(filePath string) error {
 
 	log.Infof("imported local snapshot file, took %v", time.Since(s))
 
-	cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
-	if err != nil {
-		return err
-	}
-
 	if err := utxo.CheckLedgerState(); err != nil {
 		return err
 	}
@@ -579,7 +572,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, lsHeader.SEPMilestoneIndex)
 	}
 
-	tangle.SetSnapshotMilestone(cooPublicKey, &lsHeader.SEPMilestoneHash, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
+	tangle.SetSnapshotMilestone(lsHeader.NetworkID, &lsHeader.SEPMilestoneHash, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
 	tangle.SetSolidMilestoneIndex(lsHeader.SEPMilestoneIndex, false)
 
 	return nil

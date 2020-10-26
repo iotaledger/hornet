@@ -78,10 +78,6 @@ func runTangleProcessor(_ *node.Plugin) {
 		}
 	})
 
-	onReceivedInvalidMilestone := events.NewClosure(func(err error) {
-		log.Info(err)
-	})
-
 	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
 		metricsplugin.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		startWaitGroup.Done()
@@ -105,12 +101,10 @@ func runTangleProcessor(_ *node.Plugin) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		processValidMilestoneWorkerPool.Start()
 		tangle.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
-		tangle.Events.ReceivedInvalidMilestone.Attach(onReceivedInvalidMilestone)
 		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		tangle.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
-		tangle.Events.ReceivedInvalidMilestone.Detach(onReceivedInvalidMilestone)
 		processValidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)

@@ -28,7 +28,7 @@ func init() {
 
 func collectData() {
 	dataSizes.Reset()
-	dbSize, err := directorySize(config.NodeConfig.GetString(config.CfgDatabasePath))
+	dbSize, err := directorySize(config.NodeConfig.String(config.CfgDatabasePath))
 	if err == nil {
 		dataSizes.WithLabelValues("database").Set(float64(dbSize))
 	}

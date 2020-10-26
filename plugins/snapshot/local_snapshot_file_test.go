@@ -1,7 +1,6 @@
 package snapshot_test
 
 import (
-	"crypto/ed25519"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
@@ -46,12 +45,10 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 
 	testCases := []test{
 		func() test {
-			randomCooPubKey := rand32ByteHash()
-
 			originHeader := &snapshot.FileHeader{
 				Type:                 snapshot.Full,
 				Version:              snapshot.SupportedFormatVersion,
-				CoordinatorPublicKey: randomCooPubKey[:ed25519.PublicKeySize],
+				NetworkID:            1,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
@@ -93,12 +90,10 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			return t
 		}(),
 		func() test {
-			randomCooPubKey := rand32ByteHash()
-
 			originHeader := &snapshot.FileHeader{
 				Type:                 snapshot.Delta,
 				Version:              snapshot.SupportedFormatVersion,
-				CoordinatorPublicKey: randomCooPubKey[:ed25519.PublicKeySize],
+				NetworkID:            1,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}

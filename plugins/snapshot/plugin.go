@@ -1,7 +1,6 @@
 package snapshot
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -29,7 +27,6 @@ var (
 	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
 	log    *logger.Logger
 
-	overwriteCooAddress  = pflag.Bool("overwriteCooAddress", false, "apply new coordinator address from config file to database")
 	forceLoadingSnapshot = pflag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
@@ -67,16 +64,16 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	snapshotDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgSnapshotsDepth))
+	snapshotDepth = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
-	snapshotIntervalSynced = milestone.Index(config.NodeConfig.GetInt(config.CfgSnapshotsIntervalSynced))
-	snapshotIntervalUnsynced = milestone.Index(config.NodeConfig.GetInt(config.CfgSnapshotsIntervalUnsynced))
+	snapshotIntervalSynced = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsIntervalSynced))
+	snapshotIntervalUnsynced = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsIntervalUnsynced))
 
-	pruningEnabled = config.NodeConfig.GetBool(config.CfgPruningEnabled)
-	pruningDelay = milestone.Index(config.NodeConfig.GetInt(config.CfgPruningDelay))
+	pruningEnabled = config.NodeConfig.Bool(config.CfgPruningEnabled)
+	pruningDelay = milestone.Index(config.NodeConfig.Int(config.CfgPruningDelay))
 	pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
 	if pruningDelay < pruningDelayMin {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
@@ -87,25 +84,6 @@ func configure(plugin *node.Plugin) {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
-		cooPublicKey, err := utils.ParseEd25519PublicKeyFromString(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey))
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-
-		// Check coordinator address in database
-		if !snapshotInfo.CoordinatorPublicKey.Equal(cooPublicKey) {
-			if !*overwriteCooAddress {
-				snapshotCooPublicKey := snapshotInfo.CoordinatorPublicKey[:]
-				configCooPublicKey := cooPublicKey[:]
-
-				log.Panic(errors.Wrapf(ErrWrongCoordinatorPublicKeyDatabase, "%v != %v", hex.EncodeToString(snapshotCooPublicKey), hex.EncodeToString(configCooPublicKey)))
-			}
-
-			// Overwrite old coordinator address
-			snapshotInfo.CoordinatorPublicKey = cooPublicKey
-			tangle.SetSnapshotInfo(snapshotInfo)
-		}
-
 		if !*forceLoadingSnapshot {
 			// If we don't enforce loading of a snapshot,
 			// we can check the ledger state of current database and start the node.
@@ -116,7 +94,7 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	path := config.NodeConfig.GetString(config.CfgSnapshotsPath)
+	path := config.NodeConfig.String(config.CfgSnapshotsPath)
 	if path == "" {
 		log.Fatal(ErrNoSnapshotSpecified.Error())
 	}
@@ -127,7 +105,7 @@ func configure(plugin *node.Plugin) {
 			log.Fatalf("could not create snapshot dir '%s'", path)
 		}
 
-		urls := config.NodeConfig.GetStringSlice(config.CfgSnapshotsDownloadURLs)
+		urls := config.NodeConfig.Strings(config.CfgSnapshotsDownloadURLs)
 		if len(urls) == 0 {
 			log.Fatal(ErrNoSnapshotDownloadURL.Error())
 		}
@@ -178,7 +156,7 @@ func run(_ *node.Plugin) {
 				localSnapshotLock.Lock()
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
-					localSnapshotPath := config.NodeConfig.GetString(config.CfgSnapshotsPath)
+					localSnapshotPath := config.NodeConfig.String(config.CfgSnapshotsPath)
 					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))

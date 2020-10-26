@@ -31,11 +31,14 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 }
 
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	return &Milestone{
+	m := &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageIDLength]),
-		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
-	}, nil
+		MessageID: hornet.MessageIDFromBytes(data[iotago.MilestoneIDLength : iotago.MilestoneIDLength+iotago.MessageIDLength]),
+		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MilestoneIDLength+iotago.MessageIDLength:iotago.MilestoneIDLength+iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
+	}
+
+	copy(m.MilestoneID[:], data[:iotago.MilestoneIDLength])
+	return m, nil
 }
 
 func GetMilestoneStorageSize() int {
@@ -62,9 +65,10 @@ func configureMilestoneStorage(store kvstore.KVStore, opts profile.CacheOpts) {
 type Milestone struct {
 	objectstorage.StorableObjectFlags
 
-	Index     milestone.Index
-	MessageID *hornet.MessageID
-	Timestamp time.Time
+	Index       milestone.Index
+	MilestoneID *iotago.MilestoneID
+	MessageID   *hornet.MessageID
+	Timestamp   time.Time
 }
 
 // ObjectStorage interface
@@ -79,6 +83,7 @@ func (ms *Milestone) ObjectStorageKey() []byte {
 
 func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
+		32 byte milestone ID
 		32 byte message ID
 		8  byte timestamp
 	*/
@@ -86,7 +91,7 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	value := make([]byte, 8)
 	binary.LittleEndian.PutUint64(value, uint64(ms.Timestamp.Unix()))
 
-	return byteutils.ConcatBytes(ms.MessageID.Slice(), value)
+	return byteutils.ConcatBytes(ms.MilestoneID[:], ms.MessageID.Slice(), value)
 }
 
 // Cached Object
@@ -145,11 +150,12 @@ func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 }
 
 // milestone +1
-func storeMilestone(index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
+func storeMilestone(milestoneID *iotago.MilestoneID, index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
 	milestone := &Milestone{
-		Index:     index,
-		MessageID: messageID,
-		Timestamp: timestamp,
+		MilestoneID: milestoneID,
+		Index:       index,
+		MessageID:   messageID,
+		Timestamp:   timestamp,
 	}
 
 	// milestones should never exist in the database already, even with an unclean database

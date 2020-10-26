@@ -32,10 +32,10 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	if config.NodeConfig.GetBool(config.CfgPrometheusGoMetrics) {
+	if config.NodeConfig.Bool(config.CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())
 	}
-	if config.NodeConfig.GetBool(config.CfgPrometheusProcessMetrics) {
+	if config.NodeConfig.Bool(config.CfgPrometheusProcessMetrics) {
 		registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	}
 }
@@ -50,9 +50,9 @@ type fileservicediscovery struct {
 }
 
 func writeFileServiceDiscoveryFile() {
-	path := config.NodeConfig.GetString(config.CfgPrometheusFileServiceDiscoveryPath)
+	path := config.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryPath)
 	d := []fileservicediscovery{{
-		Targets: []string{config.NodeConfig.GetString(config.CfgPrometheusFileServiceDiscoveryTarget)},
+		Targets: []string{config.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryTarget)},
 		Labels:  make(map[string]string),
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
@@ -72,7 +72,7 @@ func writeFileServiceDiscoveryFile() {
 func run(plugin *node.Plugin) {
 	log.Info("Starting Prometheus exporter ...")
 
-	if config.NodeConfig.GetBool(config.CfgPrometheusFileServiceDiscoveryEnabled) {
+	if config.NodeConfig.Bool(config.CfgPrometheusFileServiceDiscoveryEnabled) {
 		writeFileServiceDiscoveryFile()
 	}
 
@@ -91,13 +91,13 @@ func run(plugin *node.Plugin) {
 					EnableOpenMetrics: true,
 				},
 			)
-			if config.NodeConfig.GetBool(config.CfgPrometheusPromhttpMetrics) {
+			if config.NodeConfig.Bool(config.CfgPrometheusPromhttpMetrics) {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}
 			handler.ServeHTTP(c.Writer, c.Request)
 		})
 
-		bindAddr := config.NodeConfig.GetString(config.CfgPrometheusBindAddress)
+		bindAddr := config.NodeConfig.String(config.CfgPrometheusBindAddress)
 		server = &http.Server{Addr: bindAddr, Handler: engine}
 
 		go func() {

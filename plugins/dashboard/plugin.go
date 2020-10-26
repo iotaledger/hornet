@@ -108,11 +108,11 @@ func run(_ *node.Plugin) {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if config.NodeConfig.GetBool(config.CfgDashboardBasicAuthEnabled) {
+	if config.NodeConfig.Bool(config.CfgDashboardBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := config.NodeConfig.GetString(config.CfgDashboardBasicAuthUsername)
-		expectedPasswordHash := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordHash)
-		passwordSalt := config.NodeConfig.GetString(config.CfgDashboardBasicAuthPasswordSalt)
+		expectedUsername := config.NodeConfig.String(config.CfgDashboardBasicAuthUsername)
+		expectedPasswordHash := config.NodeConfig.String(config.CfgDashboardBasicAuthPasswordHash)
+		passwordSalt := config.NodeConfig.String(config.CfgDashboardBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
 			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", config.CfgDashboardBasicAuthUsername)
@@ -132,7 +132,7 @@ func run(_ *node.Plugin) {
 	}
 
 	setupRoutes(e)
-	bindAddr := config.NodeConfig.GetString(config.CfgDashboardBindAddress)
+	bindAddr := config.NodeConfig.String(config.CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
@@ -350,7 +350,7 @@ func currentNodeStatus() *NodeStatus {
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = tangleplugin.IsNodeHealthy()
-	status.NodeAlias = config.NodeConfig.GetString(config.CfgNodeAlias)
+	status.NodeAlias = config.NodeConfig.String(config.CfgNodeAlias)
 
 	status.ConnectedPeersCount = p2pplug.Manager().ConnectedCount()
 

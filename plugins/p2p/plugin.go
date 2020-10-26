@@ -57,7 +57,7 @@ func Manager() *p2ppkg.Manager {
 	managerOnce.Do(func() {
 		manager = p2ppkg.NewManager(Host(),
 			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-			p2ppkg.WithManagerReconnectInterval(time.Duration(config.NodeConfig.GetInt(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
+			p2ppkg.WithManagerReconnectInterval(time.Duration(config.NodeConfig.Int(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
 		)
 	})
 	return manager
@@ -68,7 +68,7 @@ func Host() host.Host {
 	hostOnce.Do(func() {
 		ctx := context.Background()
 
-		peerStorePath := config.NodeConfig.GetString(config.CfgP2PPeerStorePath)
+		peerStorePath := config.NodeConfig.String(config.CfgP2PPeerStorePath)
 		_, statPeerStorePathErr := os.Stat(peerStorePath)
 
 		// TODO: switch out with impl. using KVStore
@@ -97,7 +97,7 @@ func Host() host.Host {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 		}
 
-		bindAddrs := config.NodeConfig.GetStringSlice(config.CfgP2PBindMultiAddresses)
+		bindAddrs := config.NodeConfig.Strings(config.CfgP2PBindMultiAddresses)
 
 		selfHost, err = libp2p.New(ctx,
 			libp2p.Identity(prvKey),
@@ -106,8 +106,8 @@ func Host() host.Host {
 			libp2p.Transport(libp2pquic.NewTransport),
 			libp2p.DefaultTransports,
 			libp2p.ConnectionManager(connmgr.NewConnManager(
-				config.NodeConfig.GetInt(config.CfgP2PConnMngLowWatermark),
-				config.NodeConfig.GetInt(config.CfgP2PConnMngHighWatermark),
+				config.NodeConfig.Int(config.CfgP2PConnMngLowWatermark),
+				config.NodeConfig.Int(config.CfgP2PConnMngHighWatermark),
 				time.Minute,
 			)),
 			libp2p.NATPortMap(),
@@ -144,7 +144,7 @@ func run(_ *node.Plugin) {
 
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
-	peerIDsStr := config.NodeConfig.GetStringSlice(config.CfgP2PPeers)
+	peerIDsStr := config.NodeConfig.Strings(config.CfgP2PPeers)
 	for i, peerIDStr := range peerIDsStr {
 		multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
 		if err != nil {
@@ -170,7 +170,7 @@ func loadOrCreateIdentity(peerStoreIsNew bool, peerStorePath string, peerStore p
 }
 
 func loadIdentityFromConfig() (crypto.PrivKey, error) {
-	if identityPrivKey := config.NodeConfig.GetString(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
+	if identityPrivKey := config.NodeConfig.String(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
 		prvKey, err := utils.ParseEd25519PrivateKeyFromString(identityPrivKey)
 		if err != nil {
 			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", config.CfgP2PIdentityPrivKey)
