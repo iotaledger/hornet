@@ -111,15 +111,15 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 
 		var conflicting bool
 
-		signedTransaction := message.GetTransaction()
-		signedTransactionHash, err := signedTransaction.ID()
+		transaction := message.GetTransaction()
+		transactionID, err := transaction.ID()
 		if err != nil {
 			return err
 		}
 
-		unsignedTransaction := message.GetTransactionEssence()
-		if unsignedTransaction == nil {
-			return fmt.Errorf("no unsigned transaction found")
+		transactionEssence := message.GetTransactionEssence()
+		if transactionEssence == nil {
+			return fmt.Errorf("no transaction transactionEssence found")
 		}
 
 		inputs := message.GetTransactionEssenceUTXOInputs()
@@ -178,7 +178,10 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				break
 			}
 
-			unsignedTransactionBytes, err := unsignedTransaction.Serialize(iotago.DeSeriModeNoValidation)
+			unsignedTransactionBytes, err := transactionEssence.Serialize(iotago.DeSeriModeNoValidation)
+			if err != nil {
+				return err
+			}
 			if err := signature.Valid(unsignedTransactionBytes, output.Address()); err != nil {
 				// invalid signature
 				conflicting = true
@@ -193,8 +196,8 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		var outputAmount uint64
 		var depositOutputs utxo.Outputs
 		if !conflicting {
-			for i := 0; i < len(unsignedTransaction.Outputs); i++ {
-				output, err := utxo.NewOutput(message.GetMessageID(), signedTransaction, uint16(i))
+			for i := 0; i < len(transactionEssence.Outputs); i++ {
+				output, err := utxo.NewOutput(message.GetMessageID(), transaction, uint16(i))
 				if err != nil {
 					return err
 				}
@@ -221,7 +224,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		// save the inputs as spent
 		for _, input := range inputOutputs {
 			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
-			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, signedTransactionHash, msIndex)
+			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, transactionID, msIndex)
 		}
 
 		// add new outputs
