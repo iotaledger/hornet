@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/iotaledger/hive.go/kvstore"
 
 	"github.com/gohornet/hornet/pkg/dag"
@@ -117,18 +115,17 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			return err
 		}
 
-		transactionEssence := message.GetTransactionEssence()
-		if transactionEssence == nil {
-			return fmt.Errorf("no transaction transactionEssence found")
+		// Verify transaction syntax
+		if err := transaction.SyntacticallyValidate(); err != nil {
+			// We do not mark as conflicting here but error out, because the message should not be part of a sane tangle if the syntax is wrong
+			return err
 		}
 
 		inputs := message.GetTransactionEssenceUTXOInputs()
 
 		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
-		// also sum up the amount required
-		var inputOutputs utxo.Outputs
-		var inputAmount uint64
-		for inputIndex, input := range inputs {
+		inputOutputs := utxo.Outputs{}
+		for _, input := range inputs {
 
 			// check if this input was already spent during the confirmation
 			_, hasSpent := wfConf.NewSpents[string(input[:])]
@@ -143,12 +140,11 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			if hasOutput {
 				// UTXO is in the current ledger mutation, so use it
 				inputOutputs = append(inputOutputs, output)
-				inputAmount += output.Amount()
 				continue
 			}
 
 			// check current ledger for this input
-			output, err := utxo.ReadOutputByOutputIDWithoutLocking(input)
+			output, err = utxo.ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
 				if err == kvstore.ErrKeyNotFound {
 					// input not found, so mark as invalid tx
@@ -170,44 +166,29 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 				break
 			}
 
-			// validate signature
-			signature := message.GetSignatureForInputIndex(uint16(inputIndex))
-			if signature == nil {
-				// no valid signature found for index
-				conflicting = true
-				break
-			}
-
-			unsignedTransactionBytes, err := transactionEssence.Serialize(iotago.DeSeriModeNoValidation)
-			if err != nil {
-				return err
-			}
-			if err := signature.Valid(unsignedTransactionBytes, output.Address()); err != nil {
-				// invalid signature
-				conflicting = true
-				break
-			}
-
 			inputOutputs = append(inputOutputs, output)
-			inputAmount += output.Amount()
+		}
+
+		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
+		if err := transaction.SemanticallyValidate(inputOutputs.InputToOutputMapping()); err != nil {
+			conflicting = true
 		}
 
 		// go through all deposits and generate unspent outputs
-		var outputAmount uint64
-		var depositOutputs utxo.Outputs
+		depositOutputs := utxo.Outputs{}
 		if !conflicting {
+
+			transactionEssence := message.GetTransactionEssence()
+			if transactionEssence == nil {
+				return fmt.Errorf("no transaction transactionEssence found")
+			}
+
 			for i := 0; i < len(transactionEssence.Outputs); i++ {
 				output, err := utxo.NewOutput(message.GetMessageID(), transaction, uint16(i))
 				if err != nil {
 					return err
 				}
 				depositOutputs = append(depositOutputs, output)
-				outputAmount += output.Amount()
-			}
-
-			// check that the transaction is consuming and sending the same amount
-			if inputAmount != outputAmount {
-				conflicting = true
 			}
 		}
 
