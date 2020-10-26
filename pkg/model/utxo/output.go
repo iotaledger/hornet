@@ -44,6 +44,18 @@ func (o *Output) Amount() uint64 {
 
 type Outputs []*Output
 
+func (o Outputs) InputToOutputMapping() iotago.InputToOutputMapping {
+
+	mapping := iotago.InputToOutputMapping{}
+	for _, output := range o {
+		mapping[*output.outputID] = iotago.SigLockedSingleOutput{
+			Address: output.address,
+			Amount:  output.amount,
+		}
+	}
+	return mapping
+}
+
 func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, address *iotago.Ed25519Address, amount uint64) *Output {
 	return &Output{
 		outputID:   outputID,
