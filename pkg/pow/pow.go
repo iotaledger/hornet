@@ -4,12 +4,14 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
+
 	iotago "github.com/iotaledger/iota.go"
-	"github.com/muxxer/iota.go/pow"
 
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 )
+
+type ProofOfWorkFunc func(message *iotago.Message, mwm byte, parallelism ...int) (uint64, error)
 
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
 // or uses local PoW if no API key was specified or the connection failed.
@@ -25,15 +27,21 @@ type Handler struct {
 	powsrvConnected    bool
 	powsrvErrorHandled bool
 
-	localPoWFunc pow.ProofOfWorkFunc
+	localPoWFunc ProofOfWorkFunc
 	localPowType string
 }
 
 // New creates a new PoW handler instance.
 func New(log *logger.Logger, mwm int, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
 
+	// ToDo:
 	// Get the fastest available local PoW func
-	localPoWType, localPoWFunc := pow.GetFastestProofOfWorkUnsyncImpl()
+	//localPoWType, localPoWFunc := pow.GetFastestProofOfWorkUnsyncImpl()
+
+	localPoWType := "local"
+	localPoWFunc := func(message *iotago.Message, mwm byte, parallelism ...int) (uint64, error) {
+		return 0, nil
+	}
 
 	//var powsrvClient *powsrvio.PowClient
 

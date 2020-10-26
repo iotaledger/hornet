@@ -47,10 +47,10 @@ func init() {
 }
 
 func parseParameters() {
-	for _, pluginName := range config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins) {
+	for _, pluginName := range config.NodeConfig.Strings(config.CfgNodeDisablePlugins) {
 		node.DisabledPlugins[strings.ToLower(pluginName)] = true
 	}
-	for _, pluginName := range config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins) {
+	for _, pluginName := range config.NodeConfig.Strings(config.CfgNodeEnablePlugins) {
 		node.EnabledPlugins[strings.ToLower(pluginName)] = true
 	}
 }
@@ -78,7 +78,7 @@ func configure(plugin *node.Plugin) {
 
 	checkLatestVersion()
 
-	if config.NodeConfig.GetString(config.CfgProfileUseProfile) == config.AutoProfileName {
+	if config.NodeConfig.String(config.CfgProfileUseProfile) == config.AutoProfileName {
 		log.Infof("Profile mode 'auto', Using profile '%s'", profile.LoadProfile().Name)
 	} else {
 		log.Infof("Using profile '%s'", profile.LoadProfile().Name)

@@ -1,7 +1,6 @@
 package database
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -76,46 +75,10 @@ func pruneMilestone(milestoneIndex milestone.Index) {
 	tangle.DeleteMilestone(milestoneIndex)
 }
 
-func deleteInvalidMilestones() {
-
-	invalidMilestoneBundles := []hornet.Hash{
-		hornet.HashFromHashTrytes("JVYIDMDDFISYRAMQL9W9YQTDSWKVOLHOISWTFDVNNQGZAQUYLWMYYMLXQQCVVVXJWHWG9ULP9QEJJUQDC"),
-		hornet.HashFromHashTrytes("RKAZMTNNOOZGEIS9SYUVLFRRRRFWALTHSSKZPVNQPSCIX9CYHTIJXNWBXVQECJYLJKY99YMWIBBJXILXC"),
-	}
-
-	txsToCheck := map[string]struct{}{}
-
-	invalidMilestonesIndexes := []milestone.Index{2272660, 2272661}
-	for _, invalidMilestonesIndex := range invalidMilestonesIndexes {
-		cachedMs := tangle.GetMilestoneOrNil(invalidMilestonesIndex)
-		if cachedMs == nil {
-			continue
-		}
-
-		for _, bundleHash := range invalidMilestoneBundles {
-			if !bytes.Equal(cachedMs.GetBundle().GetBundleHash(), bundleHash) {
-				continue
-			}
-
-			// invalid milestone detected
-			for _, txHash := range cachedMs.GetBundle().GetTxHashes() {
-				txsToCheck[string(txHash)] = struct{}{}
-			}
-
-			log.Warnf("Deleting invalid milestone %d (%s)", invalidMilestonesIndex, bundleHash.Trytes())
-			pruneMilestone(invalidMilestonesIndex)
-		}
-
-		cachedMs.Release(true)
-	}
-
-	pruneTransactions(txsToCheck)
-}
-
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath))
+	tangle.ConfigureDatabases(config.NodeConfig.String(config.CfgDatabasePath))
 
 	deleteInvalidMilestones()
 

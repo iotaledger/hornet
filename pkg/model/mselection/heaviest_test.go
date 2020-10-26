@@ -13,10 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/muxxer/iota.go/consts"
-	"github.com/muxxer/iota.go/transaction"
-	"github.com/muxxer/iota.go/trinary"
 )
 
 const (

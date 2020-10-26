@@ -32,7 +32,7 @@ func Handler() *powpackage.Handler {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		handler = powpackage.New(log, config.NodeConfig.GetInt(config.CfgCoordinatorMWM), powsrvAPIKey, powsrvInitCooldown)
+		handler = powpackage.New(log, config.NodeConfig.Int(config.CfgCoordinatorMWM), powsrvAPIKey, powsrvInitCooldown)
 
 	})
 	return handler

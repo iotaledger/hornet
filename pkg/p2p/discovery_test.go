@@ -13,7 +13,7 @@ func TestDiscoveryService(t *testing.T) {
 
 		reconnectOpt := p2p.WithManagerReconnectInterval(2*time.Second, 500*time.Millisecond)
 
-		cfg := viper.GetViper()
+		cfg := configuration.New()
 		cfg.Set("logger.disableStacktrace", true)
 		require.NoError(t, logger.InitGlobalLogger(cfg))
 

@@ -50,7 +50,7 @@ var (
 // Service returns the gossip.Service instance.
 func Service() *gossip.Service {
 	serviceOnce.Do(func() {
-		cooPubKey := config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)
+		cooPubKey := config.NodeConfig.String(config.CfgCoordinatorPublicKeyRanges)
 		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, cooPubKey[:5]))
 		service = gossip.NewService(iotaGossipProtocolID, p2pplug.Host(), p2pplug.Manager(),
 			gossip.WithLogger(logger.NewLogger("GossipService")),
@@ -64,7 +64,7 @@ func MessageProcessor() *gossip.MessageProcessor {
 	msgProcOnce.Do(func() {
 		RequestQueue()
 		msgProc = gossip.NewMessageProcessor(rQueue, p2pplug.Manager(), &gossip.Options{
-			ValidMWM:          config.NodeConfig.GetUint64(config.CfgCoordinatorMWM),
+			ValidMWM:          uint64(config.NodeConfig.Int64(config.CfgCoordinatorMWM)),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
 		})
 	})

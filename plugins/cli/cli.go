@@ -53,8 +53,8 @@ func ParseConfig() {
 func PrintConfig() {
 	config.PrintConfig([]string{config.CfgRestAPIBasicAuthPasswordHash, config.CfgRestAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 
-	enablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins)
-	disablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins)
+	enablePlugins := config.NodeConfig.Strings(config.CfgNodeEnablePlugins)
+	disablePlugins := config.NodeConfig.Strings(config.CfgNodeDisablePlugins)
 
 	if len(enablePlugins) > 0 {
 		fmt.Printf("\nThe following plugins are enabled: %s\n", getList(enablePlugins))

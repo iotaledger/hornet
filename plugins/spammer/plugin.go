@@ -82,9 +82,9 @@ func configure(plugin *node.Plugin) {
 	}
 
 	spammerInstance = spammer.New(
-		config.NodeConfig.GetString(config.CfgSpammerMessage),
-		config.NodeConfig.GetString(config.CfgSpammerIndex),
-		config.NodeConfig.GetString(config.CfgSpammerIndexSemiLazy),
+		config.NodeConfig.String(config.CfgSpammerMessage),
+		config.NodeConfig.String(config.CfgSpammerIndex),
+		config.NodeConfig.String(config.CfgSpammerIndexSemiLazy),
 		urts.TipSelector.SelectSpammerTips,
 		pow.Handler(),
 		sendMessage,
@@ -104,7 +104,7 @@ func run(_ *node.Plugin) {
 	}, shutdown.PrioritySpammer)
 
 	// automatically start the spammer on node startup if the flag is set
-	if config.NodeConfig.GetBool(config.CfgSpammerAutostart) {
+	if config.NodeConfig.Bool(config.CfgSpammerAutostart) {
 		Start(nil, nil)
 	}
 }
@@ -120,9 +120,9 @@ func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := config.NodeConfig.GetFloat64(config.CfgSpammerMPSRateLimit)
-	cpuMaxUsageCfg := config.NodeConfig.GetFloat64(config.CfgSpammerCPUMaxUsage)
-	spammerWorkerCount := config.NodeConfig.GetInt(config.CfgSpammerWorkers)
+	mpsRateLimitCfg := config.NodeConfig.Float64(config.CfgSpammerMPSRateLimit)
+	cpuMaxUsageCfg := config.NodeConfig.Float64(config.CfgSpammerCPUMaxUsage)
+	spammerWorkerCount := config.NodeConfig.Int(config.CfgSpammerWorkers)
 	checkPeersConnected := node.IsSkipped(coordinator.PLUGIN)
 
 	if mpsRateLimit != nil {

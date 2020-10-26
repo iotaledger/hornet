@@ -40,7 +40,7 @@ var (
 )
 
 func indexRoute(e echo.Context) error {
-	if config.NodeConfig.GetBool(config.CfgDashboardDevMode) {
+	if config.NodeConfig.Bool(config.CfgDashboardDevMode) {
 		res, err := http.Get("http://127.0.0.1:9090/")
 		if err != nil {
 			return err
@@ -51,7 +51,7 @@ func indexRoute(e echo.Context) error {
 		}
 		return e.HTMLBlob(http.StatusOK, devIndexHTML)
 	}
-	theme := config.NodeConfig.GetString(config.CfgDashboardTheme)
+	theme := config.NodeConfig.String(config.CfgDashboardTheme)
 	indexHTML, err := appBox.Find("index.html")
 	if theme == "light" {
 		indexHTML, err = appBox.Find("index_light.html")
@@ -75,7 +75,7 @@ func setupRoutes(e *echo.Echo) {
 
 	e.Pre(enforceMaxOneDotPerURL)
 
-	if config.NodeConfig.GetBool(config.CfgDashboardDevMode) {
+	if config.NodeConfig.Bool(config.CfgDashboardDevMode) {
 		e.Static("/assets", "./plugins/dashboard/frontend/src/assets")
 	} else {
 		// load assets from packr: either from within the binary or actual disk

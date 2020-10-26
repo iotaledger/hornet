@@ -22,7 +22,7 @@ var (
 // is set to 'auto' or the one specified in the config.
 func LoadProfile() *Profile {
 	once.Do(func() {
-		profileName := strings.ToLower(config.NodeConfig.GetString(config.CfgProfileUseProfile))
+		profileName := strings.ToLower(config.NodeConfig.String(config.CfgProfileUseProfile))
 		if profileName == config.AutoProfileName {
 			v, err := mem.VirtualMemory()
 			if err != nil {
@@ -57,10 +57,10 @@ func LoadProfile() *Profile {
 			profile.Name = "1gb"
 		default:
 			p := &Profile{}
-			if !config.ProfilesConfig.IsSet(profileName) {
+			if !config.ProfilesConfig.Exists(profileName) {
 				panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
 			}
-			if err := config.ProfilesConfig.UnmarshalKey(profileName, p); err != nil {
+			if err := config.ProfilesConfig.Unmarshal(profileName, p); err != nil {
 				panic(err)
 			}
 			p.Name = profileName

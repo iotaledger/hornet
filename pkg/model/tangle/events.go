@@ -5,13 +5,11 @@ import (
 )
 
 var Events = packageEvents{
-	ReceivedValidMilestone:   events.NewEvent(MilestoneCaller),
-	ReceivedInvalidMilestone: events.NewEvent(events.ErrorCaller),
-	AddressSpent:             events.NewEvent(events.StringCaller),
+	ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
+	AddressSpent:           events.NewEvent(events.StringCaller),
 }
 
 type packageEvents struct {
-	ReceivedValidMilestone   *events.Event
-	ReceivedInvalidMilestone *events.Event
-	AddressSpent             *events.Event
+	ReceivedValidMilestone *events.Event
+	AddressSpent           *events.Event
 }

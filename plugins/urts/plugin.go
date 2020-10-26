@@ -32,19 +32,19 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	TipSelector = tipselect.New(
-		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
-		config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
-		config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth),
+		config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
+		config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
+		config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth),
 
-		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
-		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
-		config.NodeConfig.GetUint32(config.CfgTipSelNonLazy+config.CfgTipSelMaxChildren),
-		config.NodeConfig.GetInt(config.CfgTipSelNonLazy+config.CfgTipSelSpammerTipsThreshold),
+		config.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
+		time.Duration(time.Second*time.Duration(config.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
+		uint32(config.NodeConfig.Int64(config.CfgTipSelNonLazy+config.CfgTipSelMaxChildren)),
+		config.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelSpammerTipsThreshold),
 
-		config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
-		time.Duration(time.Second*time.Duration(config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
-		config.NodeConfig.GetUint32(config.CfgTipSelSemiLazy+config.CfgTipSelMaxChildren),
-		config.NodeConfig.GetInt(config.CfgTipSelSemiLazy+config.CfgTipSelSpammerTipsThreshold),
+		config.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
+		time.Duration(time.Second*time.Duration(config.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds))),
+		uint32(config.NodeConfig.Int64(config.CfgTipSelSemiLazy+config.CfgTipSelMaxChildren)),
+		config.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelSpammerTipsThreshold),
 	)
 
 	configureEvents()

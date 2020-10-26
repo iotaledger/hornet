@@ -56,10 +56,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 	defer utxo.WriteUnlockLedger()
 	message := cachedMilestoneMessage.GetMessage()
 
-	ms, err := message.GetMilestone()
-	if err != nil {
-		return nil, err
-	}
+	ms := message.GetMilestone()
 
 	if ms == nil {
 		return nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.GetMessageID().Hex())

@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/snapshot"
 )
 
@@ -19,10 +19,9 @@ func snapshotGen(args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [MINT_ADDRESS] [COO_PUB_KEY] [OUTPUT_FILE_PATH]", ToolSnapGen))
+		println(fmt.Sprintf("	%s [MINT_ADDRESS] [OUTPUT_FILE_PATH]", ToolSnapGen))
 		println()
 		println("	[MINT_ADDRESS] 	   - the initial ed25519 address all the tokens will be minted to")
-		println("	[COO_PUB_KEY] 	   - the public key of the coordinator of the network")
 		println("	[OUTPUT_FILE_PATH] - the file path to the generated snapshot file")
 	}
 
@@ -34,15 +33,10 @@ func snapshotGen(args []string) error {
 
 	if len(args) == 1 {
 		printUsage()
-		return errors.New("COO_PUB_KEY missing")
-	}
-
-	if len(args) == 2 {
-		printUsage()
 		return errors.New("OUTPUT_FILE_PATH missing")
 	}
 
-	if len(args) > 3 {
+	if len(args) > 2 {
 		printUsage()
 		return fmt.Errorf("too many arguments for '%s'", ToolSnapGen)
 	}
@@ -61,12 +55,6 @@ func snapshotGen(args []string) error {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	// parse pubkey
-	cooPubKey, err := utils.ParseEd25519PublicKeyFromString(args[1])
-	if err != nil {
-		return fmt.Errorf("can't decode ED25519_PUB_KEY: %v", err)
-	}
-
 	// check filepath
 	outputFilePath := args[2]
 	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
@@ -82,12 +70,21 @@ func snapshotGen(args []string) error {
 		return fmt.Errorf("unable to create snapshot file: %w", err)
 	}
 
+	networkID := make([]byte, 1)
+
+	// 1 is reserved for mainnet
+	for networkID[0] <= 1 {
+		if _, err := rand.Read(networkID); err != nil {
+			return fmt.Errorf("unable to create network ID: %w", err)
+		}
+	}
+
 	// create snapshot file
 	targetIndex := 0
 	header := &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 snapshot.Full,
-		CoordinatorPublicKey: cooPubKey,
+		NetworkID:            networkID[0],
 		SEPMilestoneIndex:    milestone.Index(targetIndex),
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 	}

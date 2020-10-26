@@ -72,15 +72,15 @@ func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataRe
 		shouldPromote := false
 		shouldReattach := false
 
-		if (lsmi - ocri) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth)) {
+		if (lsmi - ocri) > milestone.Index(config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth)) {
 			// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 			shouldPromote = false
 			shouldReattach = true
-		} else if (lsmi - ycri) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
+		} else if (lsmi - ycri) > milestone.Index(config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
 			// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
-		} else if (lsmi - ocri) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
+		} else if (lsmi - ocri) > milestone.Index(config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
 			// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
@@ -146,7 +146,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	maxResults := config.NodeConfig.GetInt(config.CfgRestAPILimitsMaxResults)
+	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	childrenMessageIDsHex := []string{}
 	for _, childrenMessageID := range tangle.GetChildrenMessageIDs(messageID, maxResults) {
@@ -168,7 +168,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 		return nil, errors.WithMessage(common.ErrInvalidParameter, "query parameter index empty")
 	}
 
-	maxResults := config.NodeConfig.GetInt(config.CfgRestAPILimitsMaxResults)
+	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	messageIDsHex := []string{}
 	for _, messageID := range tangle.GetIndexMessageIDs(index, maxResults) {

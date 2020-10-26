@@ -21,6 +21,6 @@ func run(_ *node.Plugin) {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 
-	bindAddr := config.NodeConfig.GetString(config.CfgProfilingBindAddress)
+	bindAddr := config.NodeConfig.String(config.CfgProfilingBindAddress)
 	go http.ListenAndServe(bindAddr, nil) // pprof Server for Debbuging Mutexes
 }

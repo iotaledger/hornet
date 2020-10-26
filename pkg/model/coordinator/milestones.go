@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-	"crypto/ed25519"
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -31,18 +30,12 @@ func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *horn
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(privateKey ed25519.PrivateKey, index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, mwm int, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
+func createMilestone(milestoneSignFunc iotago.MilestoneSigningFunc, index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
 
-	msPayload := &iotago.Milestone{Index: uint64(index), Timestamp: uint64(time.Now().Unix()), InclusionMerkleProof: whiteFlagMerkleRootTreeHash}
+	msPayload := &iotago.Milestone{Index: uint32(index), Timestamp: uint64(time.Now().Unix()), InclusionMerkleProof: whiteFlagMerkleRootTreeHash}
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: msPayload}
 
-	err := msPayload.Sign(iotaMsg, privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to finalize: %w", err)
-	}
-
-	pubKey := privateKey.Public().(ed25519.PublicKey)
-	err = msPayload.VerifySignature(iotaMsg, pubKey)
+	err := msPayload.Sign(milestoneSignFunc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign: %w", err)
 	}

@@ -141,7 +141,7 @@ func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
 func SetupApiRoutesV1(routeGroup *echo.Group) {
 
 	// Check for features
-	if config.NodeConfig.GetBool(config.CfgNodeEnableProofOfWork) {
+	if config.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
 

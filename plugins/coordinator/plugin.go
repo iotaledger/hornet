@@ -83,7 +83,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, ErrDatabaseTainted
 	}
 
-	privateKey, err := config.LoadEd25519PrivateKeyFromEnvironment("COO_PRV_KEY")
+	privateKeys, err := config.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +100,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-		config.NodeConfig.GetInt(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+		config.NodeConfig.Int(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
+		config.NodeConfig.Int(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		config.NodeConfig.Int(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+		time.Duration(config.NodeConfig.Int(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
 
 	nextCheckpointSignal = make(chan struct{})
@@ -112,23 +112,21 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
 
-	maxTrackedMessages = config.NodeConfig.GetInt(config.CfgCoordinatorCheckpointsMaxTrackedMessages)
+	maxTrackedMessages = config.NodeConfig.Int(config.CfgCoordinatorCheckpointsMaxTrackedMessages)
 
-	belowMaxDepth = milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth))
+	belowMaxDepth = milestone.Index(config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth))
 
 	coo, err := coordinator.New(
-		privateKey,
-		config.NodeConfig.GetString(config.CfgCoordinatorStateFilePath),
-		config.NodeConfig.GetInt(config.CfgCoordinatorIntervalSeconds),
+		privateKeys,
+		tangle.KeyManager(),
+		config.NodeConfig.String(config.CfgCoordinatorStateFilePath),
+		config.NodeConfig.Int(config.CfgCoordinatorIntervalSeconds),
+		config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
 		powHandler,
 		sendMessage,
-		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.GetString(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := coo.CheckPublicKey(config.NodeConfig.GetString(config.CfgCoordinatorPublicKey)); err != nil {
 		return nil, err
 	}
 

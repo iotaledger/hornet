@@ -174,8 +174,8 @@ type FileHeader struct {
 	Version byte
 	// Type denotes the type of this local snapshot.
 	Type Type
-	// CoordinatorPublicKey is the coo public key of the network used to generate the snapshot.
-	CoordinatorPublicKey ed25519.PublicKey
+	// The id of the network (1=mainnet).
+	NetworkID byte
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
 	// The hash of the milestone of the SEPs.
@@ -220,8 +220,8 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 		return fmt.Errorf("unable to write LS timestamp: %w", err)
 	}
 
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.CoordinatorPublicKey[:ed25519.PublicKeySize]); err != nil {
-		return fmt.Errorf("unable to write LS COO public key: %w", err)
+	if err := binary.Write(writeSeeker, binary.LittleEndian, header.NetworkID); err != nil {
+		return fmt.Errorf("unable to write LS network ID: %w", err)
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.SEPMilestoneIndex); err != nil {
@@ -350,9 +350,8 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS timestamp: %w", err)
 	}
 
-	readHeader.CoordinatorPublicKey = make(ed25519.PublicKey, ed25519.PublicKeySize)
-	if _, err := io.ReadFull(reader, readHeader.CoordinatorPublicKey); err != nil {
-		return fmt.Errorf("unable to read LS COO public key: %w", err)
+	if err := binary.Read(reader, binary.LittleEndian, readHeader.NetworkID); err != nil {
+		return fmt.Errorf("unable to read LS network ID: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPMilestoneIndex); err != nil {

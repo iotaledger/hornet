@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"fmt"
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -324,20 +323,38 @@ func AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index,
 		StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
 	}
 
-	ms, err := message.GetMilestone()
-	if err != nil {
-		// Invalid milestone
-		Events.ReceivedInvalidMilestone.Trigger(fmt.Errorf("invalid milestone detected! Err: %w", err))
-	}
-
+	ms := message.GetMilestone()
 	if ms != nil {
+		valid := true
 
-		cachedMilestone := storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+		if message.message.Parent1 != ms.Parent1 || message.message.Parent2 != ms.Parent2 {
+			// parents in message and payload have to be equal
+			valid = false
+		}
 
-		Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
+		if valid {
+			if err := ms.VerifySignatures(milestonePublicKeyCount, keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
+				valid = false
+			}
+		}
 
-		// Force release to store milestones without caching
-		cachedMilestone.Release(true) // milestone +-0
+		var milestoneID *iotago.MilestoneID
+		if valid {
+			var err error
+			milestoneID, err = ms.ID()
+			if err != nil {
+				valid = false
+			}
+		}
+
+		if valid {
+			cachedMilestone := storeMilestone(milestoneID, milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+
+			Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
+
+			// Force release to store milestones without caching
+			cachedMilestone.Release(true) // milestone +-0
+		}
 	}
 
 	return cachedMessage, false

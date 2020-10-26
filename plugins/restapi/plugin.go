@@ -50,10 +50,10 @@ func configure(plugin *node.Plugin) {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(middleware.Gzip())
-	e.Use(middleware.BodyLimit(config.NodeConfig.GetString(config.CfgRestAPILimitsMaxBodyLength)))
+	e.Use(middleware.BodyLimit(config.NodeConfig.String(config.CfgRestAPILimitsMaxBodyLength)))
 
 	// Load allowed remote access to specific HTTP REST routes
-	cfgPermittedRoutes := config.NodeConfig.GetStringSlice(config.CfgRestAPIPermittedRoutes)
+	cfgPermittedRoutes := config.NodeConfig.Strings(config.CfgRestAPIPermittedRoutes)
 	if len(cfgPermittedRoutes) > 0 {
 		for _, route := range cfgPermittedRoutes {
 			permittedRoutes[strings.ToLower(route)] = struct{}{}
@@ -61,7 +61,7 @@ func configure(plugin *node.Plugin) {
 	}
 
 	// load whitelisted addresses
-	whitelist := append([]string{"127.0.0.1", "::1"}, config.NodeConfig.GetStringSlice(config.CfgRestAPIWhitelistedAddresses)...)
+	whitelist := append([]string{"127.0.0.1", "::1"}, config.NodeConfig.Strings(config.CfgRestAPIWhitelistedAddresses)...)
 	for _, entry := range whitelist {
 		_, ipnet, err := cnet.ParseCIDROrIP(entry)
 		if err != nil {
@@ -71,18 +71,18 @@ func configure(plugin *node.Plugin) {
 		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
 
-	exclHealthCheckFromAuth := config.NodeConfig.GetBool(config.CfgRestAPIExcludeHealthCheckFromAuth)
+	exclHealthCheckFromAuth := config.NodeConfig.Bool(config.CfgRestAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {
 		// Handle route without auth
 		setupHealthRoute(e)
 	}
 
 	// set basic auth if enabled
-	if config.NodeConfig.GetBool(config.CfgRestAPIBasicAuthEnabled) {
+	if config.NodeConfig.Bool(config.CfgRestAPIBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := config.NodeConfig.GetString(config.CfgRestAPIBasicAuthUsername)
-		expectedPasswordHash := config.NodeConfig.GetString(config.CfgRestAPIBasicAuthPasswordHash)
-		passwordSalt := config.NodeConfig.GetString(config.CfgRestAPIBasicAuthPasswordSalt)
+		expectedUsername := config.NodeConfig.String(config.CfgRestAPIBasicAuthUsername)
+		expectedPasswordHash := config.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordHash)
+		passwordSalt := config.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
 			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", config.CfgRestAPIBasicAuthUsername)
@@ -112,7 +112,7 @@ func run(_ *node.Plugin) {
 
 		log.Info("Starting REST-API server ... done")
 
-		bindAddr := config.NodeConfig.GetString(config.CfgRestAPIBindAddress)
+		bindAddr := config.NodeConfig.String(config.CfgRestAPIBindAddress)
 		server = &http.Server{Addr: bindAddr, Handler: e}
 
 		go func() {

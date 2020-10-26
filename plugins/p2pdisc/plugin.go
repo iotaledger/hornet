@@ -23,10 +23,10 @@ var (
 // DiscoveryService returns the DiscoveryService instance.
 func DiscoveryService() *p2p.DiscoveryService {
 	discoveryServiceOnce.Do(func() {
-		rendezvousPoint := config.NodeConfig.GetString(config.CfgP2PDiscRendezvousPoint)
-		discoveryIntervalSec := config.NodeConfig.GetDuration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
-		routingTableRefreshPeriodSec := config.NodeConfig.GetDuration(config.CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
-		maxDiscoveredPeerCount := config.NodeConfig.GetInt(config.CfgP2PDiscMaxDiscoveredPeerConns)
+		rendezvousPoint := config.NodeConfig.String(config.CfgP2PDiscRendezvousPoint)
+		discoveryIntervalSec := config.NodeConfig.Duration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
+		routingTableRefreshPeriodSec := config.NodeConfig.Duration(config.CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
+		maxDiscoveredPeerCount := config.NodeConfig.Int(config.CfgP2PDiscMaxDiscoveredPeerConns)
 
 		discoveryService = p2p.NewDiscoveryService(p2pplug.Host(), p2pplug.Manager(),
 			p2p.WithDiscoveryServiceAdvertiseInterval(discoveryIntervalSec),
@@ -46,8 +46,8 @@ func configure(plugin *node.Plugin) {
 
 func run(_ *node.Plugin) {
 	_ = daemon.BackgroundWorker("P2PDiscovery", func(shutdownSignal <-chan struct{}) {
-		rendezvousPoint := config.NodeConfig.GetString(config.CfgP2PDiscRendezvousPoint)
-		discoveryIntervalSec := config.NodeConfig.GetDuration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
+		rendezvousPoint := config.NodeConfig.String(config.CfgP2PDiscRendezvousPoint)
+		discoveryIntervalSec := config.NodeConfig.Duration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
 		log.Infof("started peer discovery task with %d secs interval using '%s' as rendezvous point", discoveryIntervalSec, rendezvousPoint)
 		DiscoveryService().Start(shutdownSignal)
 	}, shutdown.PriorityPeerDiscovery)
