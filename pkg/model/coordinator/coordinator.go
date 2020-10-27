@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"crypto/ed25519"
-
 	_ "golang.org/x/crypto/blake2b" // import implementation
 
 	"github.com/pkg/errors"
@@ -16,9 +14,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	iotago "github.com/iotaledger/iota.go"
-
-	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -48,9 +43,9 @@ type Events struct {
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
+	signerProvider MilestoneSignerProvider
+
 	// config options
-	privateKeys              []ed25519.PrivateKey
-	keyManger                *keymanager.KeyManager
 	stateFilePath            string
 	milestoneIntervalSec     int
 	milestonePublicKeysCount int
@@ -91,27 +86,15 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(privateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager, stateFilePath string, milestoneIntervalSec int, milestonePublicKeysCount int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
-
-	if len(privateKeys) == 0 {
-		return nil, errors.New("no private keys given")
-	}
-
-	for _, privateKey := range privateKeys {
-		if len(privateKey) != ed25519.PrivateKeySize {
-			return nil, errors.New("wrong private key length")
-		}
-	}
+func New(signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
 	result := &Coordinator{
-		privateKeys:              privateKeys,
-		keyManger:                keyManager,
-		stateFilePath:            stateFilePath,
-		milestoneIntervalSec:     milestoneIntervalSec,
-		milestonePublicKeysCount: milestonePublicKeysCount,
-		powHandler:               powHandler,
-		sendMesssageFunc:         sendMessageFunc,
-		milestoneMerkleHashFunc:  milestoneMerkleHashFunc,
+		signerProvider:          signerProvider,
+		stateFilePath:           stateFilePath,
+		milestoneIntervalSec:    milestoneIntervalSec,
+		powHandler:              powHandler,
+		sendMesssageFunc:        sendMessageFunc,
+		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
@@ -219,20 +202,8 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return err
 	}
 
-	keyPairs := coo.keyManger.GetKeyPairsForMilestoneIndex(newMilestoneIndex, coo.privateKeys, coo.milestonePublicKeysCount)
-	pubKeys := []iotago.MilestonePublicKey{}
-	for pubKey := range keyPairs {
-		pubKeys = append(pubKeys, pubKey)
-	}
-
-	milestoneSignFunc := iotago.InMemoryEd25519MilestoneSigner(keyPairs)
-
-	milestoneMsg, err := createMilestone(newMilestoneIndex, parent1MessageID, parent2MessageID, pubKeys, milestoneSignFunc, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneMsg, err := createMilestone(newMilestoneIndex, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
-		return err
-	}
-
-	if err = milestoneMsg.GetMilestone().VerifySignatures(coo.milestonePublicKeysCount, coo.keyManger.GetPublicKeysSetForMilestoneIndex(newMilestoneIndex)); err != nil {
 		return err
 	}
 
