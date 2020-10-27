@@ -30,7 +30,11 @@ func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *horn
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, pubKeys []iotago.MilestonePublicKey, milestoneSignFunc iotago.MilestoneSigningFunc, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
+func createMilestone(index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, signerProvider MilestoneSignerProvider, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
+
+	milestoneIndexSigner := signerProvider.MilestoneIndexSigner(index)
+	pubKeys := milestoneIndexSigner.PublicKeys()
+
 	msPayload, err := iotago.NewMilestone(uint32(index), uint64(time.Now().Unix()), *parent1MessageID, *parent2MessageID, whiteFlagMerkleRootTreeHash, pubKeys)
 	if err != nil {
 		return nil, err
@@ -38,7 +42,11 @@ func createMilestone(index milestone.Index, parent1MessageID *hornet.MessageID, 
 
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: msPayload}
 
-	if err := msPayload.Sign(milestoneSignFunc); err != nil {
+	if err := msPayload.Sign(milestoneIndexSigner.SigningFunc()); err != nil {
+		return nil, err
+	}
+
+	if err = msPayload.VerifySignatures(signerProvider.PublicKeysCount(), milestoneIndexSigner.PublicKeysSet()); err != nil {
 		return nil, err
 	}
 

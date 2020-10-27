@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"crypto/ed25519"
 	"errors"
 	"time"
 
@@ -116,12 +117,22 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	belowMaxDepth = milestone.Index(config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth))
 
+	if len(privateKeys) == 0 {
+		return nil, errors.New("no private keys given")
+	}
+
+	for _, privateKey := range privateKeys {
+		if len(privateKey) != ed25519.PrivateKeySize {
+			return nil, errors.New("wrong private key length")
+		}
+	}
+
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, tangle.KeyManager(), config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount))
+
 	coo, err := coordinator.New(
-		privateKeys,
-		tangle.KeyManager(),
+		inMemoryEd25519MilestoneSignerProvider,
 		config.NodeConfig.String(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.Int(config.CfgCoordinatorIntervalSeconds),
-		config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
 		powHandler,
 		sendMessage,
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
