@@ -1,8 +1,6 @@
 package coordinator
 
 import (
-	"bytes"
-	"sort"
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -33,30 +31,18 @@ func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *horn
 
 // createMilestone creates a signed milestone message.
 func createMilestone(index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, pubKeys []iotago.MilestonePublicKey, milestoneSignFunc iotago.MilestoneSigningFunc, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
-
-	// Sort the pubKeys by lexical order
-	sort.Slice(pubKeys, func(i int, j int) bool {
-		return bytes.Compare(pubKeys[i][:], pubKeys[j][:]) < 0
-	})
-
-	msPayload := &iotago.Milestone{
-		Index:                uint32(index),
-		Timestamp:            uint64(time.Now().Unix()),
-		Parent1:              *parent1MessageID,
-		Parent2:              *parent2MessageID,
-		InclusionMerkleProof: whiteFlagMerkleRootTreeHash,
-		PublicKeys:           pubKeys,
+	msPayload, err := iotago.NewMilestone(uint32(index), uint64(time.Now().Unix()), *parent1MessageID, *parent2MessageID, whiteFlagMerkleRootTreeHash, pubKeys)
+	if err != nil {
+		return nil, err
 	}
 
 	iotaMsg := &iotago.Message{Version: 1, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: msPayload}
 
-	err := msPayload.Sign(milestoneSignFunc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign: %w", err)
+	if err := msPayload.Sign(milestoneSignFunc); err != nil {
+		return nil, err
 	}
 
-	err = powHandler.DoPoW(iotaMsg, nil, 1)
-	if err != nil {
+	if err := powHandler.DoPoW(iotaMsg, nil, 1); err != nil {
 		return nil, err
 	}
 
