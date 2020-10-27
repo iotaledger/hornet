@@ -325,8 +325,8 @@ github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod
 github.com/iotaledger/hive.go v0.0.0-20201026194603-90676fed31f9 h1:iRZdsjS3upMCTjZPhdhZkUTq8vqAtwOLHxnyumS3a44=
 github.com/iotaledger/hive.go v0.0.0-20201026194603-90676fed31f9/go.mod h1:xqn2tIsuGgEU68fgTiR5SH6tD1hxRwznLfvgR0ZEPUs=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200924093814-add1daca64b6/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
-github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201021224023-2a4acfedcc71 h1:KMil39P3KsEBnWWLGKVy5x15LULXCt0/U8A7pEBiezE=
-github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201021224023-2a4acfedcc71/go.mod h1:Cay5zHtgtTofY6IfAdau2GwuwUdJMZjRrsJxq+JUzT0=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201027095256-4d5f5beeeedf h1:1531DA47sAAGhRtpQflMpEtkXtNidz8oOEll4hD0pn0=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201027095256-4d5f5beeeedf/go.mod h1:Cay5zHtgtTofY6IfAdau2GwuwUdJMZjRrsJxq+JUzT0=
 github.com/ipfs/go-cid v0.0.1/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.2/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.3/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
@@ -1160,8 +1160,8 @@ golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200909081042-eff7692f9009/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20201026173827-119d4633e4d1 h1:/DtoiOYKoQCcIFXQjz07RnWNPRCbqmSXSpgEzhC9ZHM=
-golang.org/x/sys v0.0.0-20201026173827-119d4633e4d1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20201027090413-e1471140ff15 h1:jH270o3J8h3I5RGuPBIfh6kxma3dWyu3aB6qth8WpkM=
+golang.org/x/sys v0.0.0-20201027090413-e1471140ff15/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
