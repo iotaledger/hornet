@@ -44,7 +44,18 @@
     "delay": 500
   },
   "coordinator": {
-    "publicKey": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+    "publicKeyRanges": [
+      {
+        "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+        "start": 0,
+        "end": 0
+      }
+    ],
     "mwm": 1,
     "stateFilePath": "coordinator.state",
     "intervalSeconds": 10,

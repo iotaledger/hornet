@@ -48,7 +48,7 @@ func (o Outputs) InputToOutputMapping() iotago.InputToOutputMapping {
 
 	mapping := iotago.InputToOutputMapping{}
 	for _, output := range o {
-		mapping[*output.outputID] = iotago.SigLockedSingleOutput{
+		mapping[*output.outputID] = &iotago.SigLockedSingleOutput{
 			Address: output.address,
 			Amount:  output.amount,
 		}

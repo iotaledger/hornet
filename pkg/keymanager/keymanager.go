@@ -49,7 +49,8 @@ func (k *KeyManager) GetPublicKeysForMilestoneIndex(msIndex milestone.Index) []*
 
 	for _, pubKeyRange := range k.keyRanges {
 		if pubKeyRange.StartIndex <= msIndex {
-			if pubKeyRange.EndIndex >= msIndex {
+			if pubKeyRange.EndIndex >= msIndex || pubKeyRange.StartIndex == pubKeyRange.EndIndex {
+				// startIndex == endIndex means the key is valid forever
 				pubKeys = append(pubKeys, pubKeyRange.PublicKey)
 			}
 			continue

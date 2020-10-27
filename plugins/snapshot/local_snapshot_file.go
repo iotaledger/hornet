@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -22,8 +21,8 @@ const (
 	SolidEntryPointHashLength = iotago.MessageIDLength
 
 	// The offset of counters within a local snapshot file:
-	// version + type + timestamp + coo-pub-key + sep-ms-index + sep-ms-hash + ledger-ms-index + ledger-ms-hash
-	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + ed25519.PublicKeySize +
+	// version + type + timestamp + network-id + sep-ms-index + sep-ms-hash + ledger-ms-index + ledger-ms-hash
+	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.OneByte +
 		iotago.UInt32ByteSize + iotago.MilestoneIDLength +
 		iotago.UInt32ByteSize + iotago.MilestoneIDLength
 )
@@ -175,7 +174,7 @@ type FileHeader struct {
 	// Type denotes the type of this local snapshot.
 	Type Type
 	// The id of the network (1=mainnet).
-	NetworkID byte
+	NetworkID uint8
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
 	// The hash of the milestone of the SEPs.
@@ -350,7 +349,7 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS timestamp: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, readHeader.NetworkID); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.NetworkID); err != nil {
 		return fmt.Errorf("unable to read LS network ID: %w", err)
 	}
 

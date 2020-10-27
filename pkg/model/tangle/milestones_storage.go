@@ -31,14 +31,15 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 }
 
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	m := &Milestone{
-		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.MessageIDFromBytes(data[iotago.MilestoneIDLength : iotago.MilestoneIDLength+iotago.MessageIDLength]),
-		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MilestoneIDLength+iotago.MessageIDLength:iotago.MilestoneIDLength+iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
-	}
+	var milestoneID iotago.MilestoneID
+	copy(milestoneID[:], data[:iotago.MilestoneIDLength])
 
-	copy(m.MilestoneID[:], data[:iotago.MilestoneIDLength])
-	return m, nil
+	return &Milestone{
+		Index:       milestoneIndexFromDatabaseKey(key),
+		MilestoneID: &milestoneID,
+		MessageID:   hornet.MessageIDFromBytes(data[iotago.MilestoneIDLength : iotago.MilestoneIDLength+iotago.MessageIDLength]),
+		Timestamp:   time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MilestoneIDLength+iotago.MessageIDLength:iotago.MilestoneIDLength+iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
+	}, nil
 }
 
 func GetMilestoneStorageSize() int {

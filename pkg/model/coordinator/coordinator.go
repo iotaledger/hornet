@@ -219,9 +219,15 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return err
 	}
 
-	milestoneSignFunc := iotago.InMemoryEd25519MilestoneSigner(coo.keyManger.GetKeyPairsForMilestoneIndex(newMilestoneIndex, coo.privateKeys, coo.milestonePublicKeysCount))
+	keyPairs := coo.keyManger.GetKeyPairsForMilestoneIndex(newMilestoneIndex, coo.privateKeys, coo.milestonePublicKeysCount)
+	pubKeys := []iotago.MilestonePublicKey{}
+	for pubKey := range keyPairs {
+		pubKeys = append(pubKeys, pubKey)
+	}
 
-	milestoneMsg, err := createMilestone(milestoneSignFunc, newMilestoneIndex, parent1MessageID, parent2MessageID, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneSignFunc := iotago.InMemoryEd25519MilestoneSigner(keyPairs)
+
+	milestoneMsg, err := createMilestone(newMilestoneIndex, parent1MessageID, parent2MessageID, pubKeys, milestoneSignFunc, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return err
 	}
