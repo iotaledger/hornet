@@ -262,7 +262,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		Type:              Full,
 		NetworkID:         snapshotInfo.NetworkID,
 		SEPMilestoneIndex: milestone.Index(targetIndex),
-		SEPMilestoneHash:  *cachedTargetMilestone.GetMilestone().MessageID,
+		SEPMilestoneID:    cachedTargetMilestone.GetMilestone().MilestoneID,
 	}
 
 	// build temp file path
@@ -288,11 +288,10 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		return errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
 
-	ledgerMilestoneMessageID := *cachedMilestone.GetMilestone().MessageID
-	cachedMilestone.Release(true)
-
 	header.LedgerMilestoneIndex = ledgerMilestoneIndex
-	header.LedgerMilestoneHash = ledgerMilestoneMessageID
+	header.LedgerMilestoneID = cachedMilestone.GetMilestone().MilestoneID
+
+	cachedMilestone.Release(true)
 
 	//
 	// solid entry points
@@ -437,7 +436,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 			}
 		*/
 
-		snapshotInfo.MilestoneMessageID = cachedTargetMilestone.GetMilestone().MessageID
+		snapshotInfo.MilestoneID = cachedTargetMilestone.GetMilestone().MilestoneID
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = cachedTargetMilestone.GetMilestone().Timestamp
 		tangle.SetSnapshotInfo(snapshotInfo)
@@ -572,7 +571,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, lsHeader.SEPMilestoneIndex)
 	}
 
-	tangle.SetSnapshotMilestone(lsHeader.NetworkID, &lsHeader.SEPMilestoneHash, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
+	tangle.SetSnapshotMilestone(lsHeader.NetworkID, lsHeader.SEPMilestoneID, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
 	tangle.SetSolidMilestoneIndex(lsHeader.SEPMilestoneIndex, false)
 
 	return nil
