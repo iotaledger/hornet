@@ -1,6 +1,8 @@
 package coordinator
 
 import (
+	"bytes"
+	"sort"
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -32,8 +34,10 @@ func createCheckpoint(parent1MessageID *hornet.MessageID, parent2MessageID *horn
 // createMilestone creates a signed milestone message.
 func createMilestone(index milestone.Index, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, pubKeys []iotago.MilestonePublicKey, milestoneSignFunc iotago.MilestoneSigningFunc, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*tangle.Message, error) {
 
-	// ToDo: sort
-	//sort.Sort(iotago.SortedSerializables(pubKeys))
+	// Sort the pubKeys by lexical order
+	sort.Slice(pubKeys, func(i int, j int) bool {
+		return bytes.Compare(pubKeys[i][:], pubKeys[j][:]) < 0
+	})
 
 	msPayload := &iotago.Milestone{
 		Index:                uint32(index),
