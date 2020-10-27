@@ -15,7 +15,7 @@ type infoResponse struct {
 	// Whether the node is healthy.
 	IsHealthy bool `json:"isHealthy"`
 	// The id of the network (1=mainnet).
-	NetworkID int `json:"networkID"`
+	NetworkID uint8 `json:"networkID"`
 	// The hex encoded ID of the latest known milestone.
 	LatestMilestoneID string `json:"latestMilestoneId"`
 	// The latest known milestone index.

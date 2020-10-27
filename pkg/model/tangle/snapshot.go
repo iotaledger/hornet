@@ -22,7 +22,7 @@ var (
 )
 
 type SnapshotInfo struct {
-	NetworkID          byte
+	NetworkID          uint8
 	MilestoneMessageID *hornet.MessageID
 	SnapshotIndex      milestone.Index
 	EntryPointIndex    milestone.Index

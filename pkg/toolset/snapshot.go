@@ -56,7 +56,7 @@ func snapshotGen(args []string) error {
 	copy(address[:], addressBytes)
 
 	// check filepath
-	outputFilePath := args[2]
+	outputFilePath := args[1]
 	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
 		return errors.New("OUTPUT_FILE_PATH already exists")
 	}

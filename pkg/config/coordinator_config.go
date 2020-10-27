@@ -13,8 +13,6 @@ const (
 	CfgCoordinatorPublicKeyRangesJSON = "publicKeyRanges"
 	// the ed25519 public key of the coordinator in hex representation
 	CfgCoordinatorPublicKeyRanges = "coordinator.publicKeyRanges"
-	// the id of the network (1=mainnet)
-	CfgCoordinatorNetworkID = "coordinator.networkID"
 	// the minimum weight magnitude is the difficulty used by the network for proof of work.
 	CfgCoordinatorMWM = "coordinator.mwm"
 	// the path to the state file of the coordinator
@@ -42,10 +40,9 @@ const (
 )
 
 type PublicKeyRange struct {
-	//Key        ed25519.PublicKey `json:"key"`
-	Key        string          `json:"key","koanf:"key"`
-	StartIndex milestone.Index `json:"start","koanf:"start"`
-	EndIndex   milestone.Index `json:"end","koanf:"end"`
+	Key        string          `json:"key" koanf:"key"`
+	StartIndex milestone.Index `json:"start" koanf:"start"`
+	EndIndex   milestone.Index `json:"end" koanf:"end"`
 }
 
 type PublicKeyRanges []*PublicKeyRange
@@ -64,7 +61,6 @@ func init() {
 		panic(err)
 	}
 
-	configFlagSet.Int(CfgCoordinatorNetworkID, 1, "the id of the network (1=mainnet)")
 	configFlagSet.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the difficulty used by the network for proof of work.")
 	configFlagSet.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
 	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
@@ -87,7 +83,7 @@ func CoordinatorPublicKeyRanges() PublicKeyRanges {
 		}
 	} else {
 		// load from config or default value
-		if err := NodeConfig.Unmarshal(CfgCoordinatorPublicKeyRanges, r); err != nil {
+		if err := NodeConfig.Unmarshal(CfgCoordinatorPublicKeyRanges, &r); err != nil {
 			panic(err)
 		}
 	}

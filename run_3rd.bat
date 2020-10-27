@@ -1,5 +1,5 @@
 del /f /q /s alphanetdb3
-go run -tags "pow_avx" main.go -c config_alphanet3 ^
+go run -tags "pow_avx" main.go -c config_alphanet3.json ^
 --profiling.bindAddress="127.0.0.1:6262" ^
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15602" ^
 --p2p.peerStore.path="./p2pstore3" ^

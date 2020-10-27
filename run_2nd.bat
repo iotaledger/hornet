@@ -1,5 +1,5 @@
 del /f /q /s alphanetdb2
-go run -tags "pow_avx" main.go -c config_alphanet2 ^
+go run -tags "pow_avx" main.go -c config_alphanet2.json ^
 --profiling.bindAddress="127.0.0.1:6161" ^
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15601" ^
 --p2p.peerStore.path="./p2pstore2" ^

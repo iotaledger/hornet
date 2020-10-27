@@ -30,7 +30,7 @@ const (
 	heartbeatReceiveTimeout = 100 * time.Second
 	checkHeartbeatsInterval = 5 * time.Second
 
-	iotaGossipProtocolIDTemplate = "/iota-gossip/%s/1.0.0"
+	iotaGossipProtocolIDTemplate = "/iota-gossip/%d/1.0.0"
 )
 
 var (
@@ -50,8 +50,10 @@ var (
 // Service returns the gossip.Service instance.
 func Service() *gossip.Service {
 	serviceOnce.Do(func() {
-		cooPubKey := config.NodeConfig.String(config.CfgCoordinatorPublicKeyRanges)
-		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, cooPubKey[:5]))
+		// ToDo: Issa scam! Snapshot info is not yet known here (because snapshot is loaded afterwards)
+		//networkID := tangle.GetSnapshotInfo().NetworkID)
+		var networkID uint8 = 1
+		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
 		service = gossip.NewService(iotaGossipProtocolID, p2pplug.Host(), p2pplug.Manager(),
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 		)
