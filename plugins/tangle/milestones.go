@@ -1,6 +1,8 @@
 package tangle
 
 import (
+	"encoding/hex"
+
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -28,7 +30,7 @@ func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
 	milestoneSolidifierWorkerPool.TrySubmit(msIndex, false)
 
 	if msIndex > solidMsIndex {
-		log.Infof("Valid milestone detected! Index: %d, MilestoneMessageID: %v", msIndex, cachedMilestone.GetMilestone().MessageID.Hex())
+		log.Infof("Valid milestone detected! Index: %d, MilestoneID: %v", msIndex, hex.EncodeToString(cachedMilestone.GetMilestone().MilestoneID[:]))
 
 		// request parent1 and parent2
 		gossip.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
@@ -36,7 +38,7 @@ func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
 		pruningIndex := tangle.GetSnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {
 			// this should not happen. we didn't request it and it should be filtered because of timestamp
-			log.Warnf("Synced too far back! Index: %d (%v), PruningIndex: %d", msIndex, cachedMilestone.GetMilestone().MessageID.Hex(), pruningIndex)
+			log.Warnf("Synced too far back! Index: %d (%v), PruningIndex: %d", msIndex, hex.EncodeToString(cachedMilestone.GetMilestone().MilestoneID[:]), pruningIndex)
 		}
 	}
 }

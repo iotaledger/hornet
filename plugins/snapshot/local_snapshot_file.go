@@ -177,12 +177,12 @@ type FileHeader struct {
 	NetworkID uint8
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
-	// The hash of the milestone of the SEPs.
-	SEPMilestoneHash hornet.MessageID
+	// The ID of the milestone of the SEPs.
+	SEPMilestoneID *iotago.MilestoneID
 	// The milestone index of the ledger data within the local snapshot.
 	LedgerMilestoneIndex milestone.Index
-	// The hash of the ledger milestone.
-	LedgerMilestoneHash hornet.MessageID
+	// The ID of the ledger milestone.
+	LedgerMilestoneID *iotago.MilestoneID
 }
 
 // ReadFileHeader is a FileHeader but with additional content read from the local snapshot.
@@ -227,7 +227,7 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 		return fmt.Errorf("unable to write LS SEPs milestone index: %w", err)
 	}
 
-	if _, err := writeSeeker.Write(header.SEPMilestoneHash[:]); err != nil {
+	if _, err := writeSeeker.Write(header.SEPMilestoneID[:]); err != nil {
 		return fmt.Errorf("unable to write LS SEPs milestone hash: %w", err)
 	}
 
@@ -235,7 +235,7 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 		return fmt.Errorf("unable to write LS ledger milestone index: %w", err)
 	}
 
-	if _, err := writeSeeker.Write(header.LedgerMilestoneHash[:]); err != nil {
+	if _, err := writeSeeker.Write(header.LedgerMilestoneID[:]); err != nil {
 		return fmt.Errorf("unable to write LS ledger milestone hash: %w", err)
 	}
 
@@ -357,7 +357,8 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
 	}
 
-	if _, err := io.ReadFull(reader, readHeader.SEPMilestoneHash[:]); err != nil {
+	readHeader.SEPMilestoneID = &iotago.MilestoneID{}
+	if _, err := io.ReadFull(reader, readHeader.SEPMilestoneID[:]); err != nil {
 		return fmt.Errorf("unable to read LS SEPs milestone hash: %w", err)
 	}
 
@@ -365,7 +366,8 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS ledger milestone index: %w", err)
 	}
 
-	if _, err := io.ReadFull(reader, readHeader.LedgerMilestoneHash[:]); err != nil {
+	readHeader.LedgerMilestoneID = &iotago.MilestoneID{}
+	if _, err := io.ReadFull(reader, readHeader.LedgerMilestoneID[:]); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone hash: %w", err)
 	}
 

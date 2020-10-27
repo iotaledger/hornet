@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -9,8 +10,8 @@ import (
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -22,13 +23,13 @@ var (
 )
 
 type SnapshotInfo struct {
-	NetworkID          uint8
-	MilestoneMessageID *hornet.MessageID
-	SnapshotIndex      milestone.Index
-	EntryPointIndex    milestone.Index
-	PruningIndex       milestone.Index
-	Timestamp          time.Time
-	Metadata           bitmask.BitMask
+	NetworkID       uint8
+	MilestoneID     *iotago.MilestoneID
+	SnapshotIndex   milestone.Index
+	EntryPointIndex milestone.Index
+	PruningIndex    milestone.Index
+	Timestamp       time.Time
+	Metadata        bitmask.BitMask
 }
 
 func loadSnapshotInfo() {
@@ -43,7 +44,7 @@ func loadSnapshotInfo() {
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, info.MilestoneMessageID.Hex(), info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
+	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, hex.EncodeToString(info.MilestoneID[:]), info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
 	}
 }
 
@@ -60,10 +61,12 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 		return nil, err
 	}
 
-	milestoneMessageID, err := marshalUtil.ReadBytes(32)
+	milestoneID := &iotago.MilestoneID{}
+	milestoneIDBytes, err := marshalUtil.ReadBytes(32)
 	if err != nil {
 		return nil, err
 	}
+	copy(milestoneID[:], milestoneIDBytes[:32])
 
 	snapshotIndex, err := marshalUtil.ReadUint32()
 	if err != nil {
@@ -91,13 +94,13 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	}
 
 	return &SnapshotInfo{
-		NetworkID:          networkID,
-		MilestoneMessageID: hornet.MessageIDFromBytes(milestoneMessageID),
-		SnapshotIndex:      milestone.Index(snapshotIndex),
-		EntryPointIndex:    milestone.Index(entryPointIndex),
-		PruningIndex:       milestone.Index(pruningIndex),
-		Timestamp:          time.Unix(int64(timestamp), 0),
-		Metadata:           bitmask.BitMask(metadata),
+		NetworkID:       networkID,
+		MilestoneID:     milestoneID,
+		SnapshotIndex:   milestone.Index(snapshotIndex),
+		EntryPointIndex: milestone.Index(entryPointIndex),
+		PruningIndex:    milestone.Index(pruningIndex),
+		Timestamp:       time.Unix(int64(timestamp), 0),
+		Metadata:        bitmask.BitMask(metadata),
 	}, nil
 }
 
@@ -105,7 +108,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	marshalUtil := marshalutil.New()
 
 	marshalUtil.WriteByte(i.NetworkID)
-	marshalUtil.WriteBytes(i.MilestoneMessageID[:32])
+	marshalUtil.WriteBytes(i.MilestoneID[:32])
 	marshalUtil.WriteUint32(uint32(i.SnapshotIndex))
 	marshalUtil.WriteUint32(uint32(i.EntryPointIndex))
 	marshalUtil.WriteUint32(uint32(i.PruningIndex))
@@ -115,23 +118,23 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return marshalUtil.Bytes()
 }
 
-func SetSnapshotMilestone(networkID byte, milestoneMessageID *hornet.MessageID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
+func SetSnapshotMilestone(networkID byte, milestoneID *iotago.MilestoneID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
 	SnapshotIndex: %d (%v)
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, networkID, snapshotIndex, milestoneMessageID.Hex(), entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
+	Timestamp: %v`, networkID, snapshotIndex, hex.EncodeToString(milestoneID[:]), entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
 
 	sn := &SnapshotInfo{
-		NetworkID:          networkID,
-		MilestoneMessageID: milestoneMessageID,
-		SnapshotIndex:      snapshotIndex,
-		EntryPointIndex:    entryPointIndex,
-		PruningIndex:       pruningIndex,
-		Timestamp:          timestamp,
-		Metadata:           bitmask.BitMask(0),
+		NetworkID:       networkID,
+		MilestoneID:     milestoneID,
+		SnapshotIndex:   snapshotIndex,
+		EntryPointIndex: entryPointIndex,
+		PruningIndex:    pruningIndex,
+		Timestamp:       timestamp,
+		Metadata:        bitmask.BitMask(0),
 	}
 
 	SetSnapshotInfo(sn)

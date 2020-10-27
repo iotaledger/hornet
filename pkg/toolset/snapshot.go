@@ -89,8 +89,8 @@ func snapshotGen(args []string) error {
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 	}
 
-	header.SEPMilestoneHash = *hornet.GetNullMessageID()
-	header.LedgerMilestoneHash = *hornet.GetNullMessageID()
+	header.SEPMilestoneID = &iotago.MilestoneID{}
+	header.LedgerMilestoneID = &iotago.MilestoneID{}
 
 	// solid entry points
 	// add "NullMessageID" as sole entry point

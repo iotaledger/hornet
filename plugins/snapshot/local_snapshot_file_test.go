@@ -53,8 +53,11 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
 
-			originHeader.SEPMilestoneHash = hornet.MessageID(rand32ByteHash())
-			originHeader.LedgerMilestoneHash = hornet.MessageID(rand32ByteHash())
+			sepMilestoneID := rand32ByteHash()
+			ledgerMilestoneID := rand32ByteHash()
+
+			originHeader.SEPMilestoneID = &sepMilestoneID
+			originHeader.LedgerMilestoneID = &ledgerMilestoneID
 
 			originTimestamp := uint64(time.Now().Unix())
 
@@ -98,8 +101,11 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
 
-			originHeader.SEPMilestoneHash = hornet.MessageID(rand32ByteHash())
-			originHeader.LedgerMilestoneHash = hornet.MessageID(rand32ByteHash())
+			sepMilestoneID := rand32ByteHash()
+			ledgerMilestoneID := rand32ByteHash()
+
+			originHeader.SEPMilestoneID = &sepMilestoneID
+			originHeader.LedgerMilestoneID = &ledgerMilestoneID
 
 			originTimestamp := uint64(time.Now().Unix())
 
