@@ -96,10 +96,21 @@ func FetchConfig() error {
 		fmt.Printf("No profiles config file found via '%s'. Loading default settings.", *profilesFilePath)
 	}
 
+	// load the flags to set the default values
+	if err := NodeConfig.LoadFlagSet(configFlagSet); err != nil {
+		return err
+	}
+
+	if err := PeeringConfig.LoadFlagSet(peeringFlagSet); err != nil {
+		return err
+	}
+
+	// load the env vars after default values from flags were set (otherwise the env vars are not added because the keys don't exist)
 	if err := NodeConfig.LoadEnvironmentVars(""); err != nil {
 		return err
 	}
 
+	// load the flags again to overwrite env vars that were also set via command line
 	if err := NodeConfig.LoadFlagSet(configFlagSet); err != nil {
 		return err
 	}
