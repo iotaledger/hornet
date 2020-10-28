@@ -144,7 +144,7 @@ func run(_ *node.Plugin) {
 
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
-	peerIDsStr := config.NodeConfig.Strings(config.CfgP2PPeers)
+	peerIDsStr := config.PeeringConfig.Strings(config.CfgP2PPeers)
 	for i, peerIDStr := range peerIDsStr {
 		multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
 		if err != nil {
