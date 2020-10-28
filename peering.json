@@ -1,11 +1,8 @@
 {
-  "acceptAnyConnection": false,
-  "maxPeers": 5,
-  "peers": [
-    {
-      "identity": "example.neighbor.com:15600",
-      "alias": "Example Peer",
-      "preferIPv6": false
-    }
-  ]
+  "p2p": {
+    "peers": [
+    ],
+    "peerAliases": [
+    ]
+  }
 }

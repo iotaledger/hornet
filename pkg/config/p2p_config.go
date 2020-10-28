@@ -25,7 +25,7 @@ func init() {
 	configFlagSet.String(CfgP2PPeerStorePath, "./p2pstore", "the path to the peer store")
 	configFlagSet.Int(CfgP2PConnMngHighWatermark, 10, "defines the threshold up on which connections count truncates to the lower watermark")
 	configFlagSet.Int(CfgP2PConnMngLowWatermark, 5, "defines the minimum connections count to hold after the high watermark was reached")
-	configFlagSet.StringSlice(CfgP2PPeers, []string{}, "the static peers this node should retain a connection to")
-	configFlagSet.StringSlice(CfgP2PPeerAliases, []string{}, "the aliases of the static peers (must be the same amount like \"p2p.peers\")")
+	peeringFlagSet.StringSlice(CfgP2PPeers, []string{}, "the static peers this node should retain a connection to")
+	peeringFlagSet.StringSlice(CfgP2PPeerAliases, []string{}, "the aliases of the static peers (must be the same amount like \"p2p.peers\")")
 	configFlagSet.Int(CfgP2PReconnectIntervalSeconds, 30, "the number of seconds to wait before trying to reconnect to a disconnected peer")
 }
