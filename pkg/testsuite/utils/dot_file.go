@@ -22,8 +22,8 @@ func ShortenedHash(hash *hornet.MessageID) string {
 func ShortenedIndex(cachedMessage *tangle.CachedMessage) string {
 	defer cachedMessage.Release(true)
 
-	if cachedMessage.GetMessage().IsMilestone() {
-		ms, _ := cachedMessage.GetMessage().GetMilestone()
+	ms := cachedMessage.GetMessage().GetMilestone()
+	if ms != nil {
 		return fmt.Sprintf("%d", ms.Index)
 	}
 

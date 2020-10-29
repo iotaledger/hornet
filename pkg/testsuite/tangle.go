@@ -23,7 +23,8 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message) *tangle.CachedMessa
 	require.False(te.testState, alreadyAdded)
 
 	// Solidify msg if not a milestone
-	if !msg.IsMilestone() {
+	ms := msg.GetMilestone()
+	if ms == nil {
 		cachedMsg.GetMetadata().SetSolid(true)
 		require.True(te.testState, cachedMsg.GetMetadata().IsSolid())
 	}
@@ -138,9 +139,8 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			cachedMessageParent2.Release(true)
 		}
 
-		if message.IsMilestone() {
-			ms, _ := message.GetMilestone()
-
+		ms := message.GetMilestone()
+		if ms != nil {
 			if conf != nil && milestone.Index(ms.Index) == conf.MilestoneIndex {
 				dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortIndex)
 			}

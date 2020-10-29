@@ -31,8 +31,8 @@ func (te *TestEnvironment) configureCoordinator() {
 	storeMessageFunc := func(msg *tangle.Message, msIndex ...milestone.Index) error {
 		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
 
-		if cachedMessage.GetMessage().IsMilestone() {
-			ms, _ := msg.GetMilestone()
+		ms := cachedMessage.GetMessage().GetMilestone()
+		if ms != nil {
 			tangle.SetLatestMilestoneIndex(milestone.Index(ms.Index))
 		}
 
