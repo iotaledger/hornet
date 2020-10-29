@@ -18,7 +18,8 @@ type SpentConsumer func(spent *Spent) bool
 type Spent struct {
 	kvStorable
 
-	output *Output
+	outputID *iotago.UTXOInputID
+	output   *Output
 
 	targetTransactionID *iotago.TransactionID
 	confirmationIndex   milestone.Index
@@ -76,7 +77,6 @@ func (s *Spent) kvStorableValue() (value []byte) {
 	return byteutils.ConcatBytes(s.targetTransactionID[:], bytes)
 }
 
-// UnmarshalBinary parses the binary encoded representation of the spent utxo.
 func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 
 	expectedKeyLength := iotago.Ed25519AddressBytesLength + iotago.TransactionIDLength + iotago.UInt16ByteSize
@@ -91,20 +91,8 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
 	}
 
-	outputID := key[iotago.Ed25519AddressBytesLength : iotago.Ed25519AddressBytesLength+iotago.TransactionIDLength+iotago.UInt16ByteSize]
-	outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID)
-
-	outputValue, err := utxoStorage.Get(outputKey)
-	if err != nil {
-		return err
-	}
-
-	output := &Output{}
-	if err := output.kvStorableLoad(outputID, outputValue); err != nil {
-		return err
-	}
-
-	s.output = output
+	s.outputID = &iotago.UTXOInputID{}
+	copy(s.outputID[:], key[iotago.Ed25519AddressBytesLength:iotago.Ed25519AddressBytesLength+iotago.TransactionIDLength+iotago.UInt16ByteSize])
 
 	/*
 	   32 bytes				TargetTransactionID
@@ -118,7 +106,24 @@ func (s *Spent) kvStorableLoad(key []byte, value []byte) error {
 	return nil
 }
 
-func ForEachSpentOutputWithoutLocking(consumer SpentConsumer, address ...*iotago.Ed25519Address) error {
+func (u *Manager) loadOutputOfSpent(s *Spent) error {
+
+	outputValue, err := u.utxoStorage.Get(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, s.outputID[:]))
+	if err != nil {
+		return err
+	}
+
+	output := &Output{}
+	if err := output.kvStorableLoad(s.outputID[:], outputValue); err != nil {
+		return err
+	}
+
+	s.output = output
+
+	return nil
+}
+
+func (u *Manager) ForEachSpentOutputWithoutLocking(consumer SpentConsumer, address ...*iotago.Ed25519Address) error {
 
 	var innerErr error
 
@@ -130,10 +135,15 @@ func ForEachSpentOutputWithoutLocking(consumer SpentConsumer, address ...*iotago
 		key = byteutils.ConcatBytes(key, address[0][:])
 	}
 
-	if err := utxoStorage.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := u.utxoStorage.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
 
 		spent := &Spent{}
 		if err := spent.kvStorableLoad(key[1:], value); err != nil {
+			innerErr = err
+			return false
+		}
+
+		if err := u.loadOutputOfSpent(spent); err != nil {
 			innerErr = err
 			return false
 		}
@@ -146,15 +156,15 @@ func ForEachSpentOutputWithoutLocking(consumer SpentConsumer, address ...*iotago
 	return innerErr
 }
 
-func ForEachSpentOutput(consumer SpentConsumer, address ...*iotago.Ed25519Address) error {
+func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, address ...*iotago.Ed25519Address) error {
 
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
 
-	return ForEachSpentOutputWithoutLocking(consumer, address...)
+	return u.ForEachSpentOutputWithoutLocking(consumer, address...)
 }
 
-func SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spents, error) {
+func (u *Manager) SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spents, error) {
 
 	var spents []*Spent
 
@@ -170,7 +180,7 @@ func SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spe
 		return true
 	}
 
-	if err := ForEachSpentOutput(consumerFunc, address); err != nil {
+	if err := u.ForEachSpentOutput(consumerFunc, address); err != nil {
 		return nil, err
 	}
 
@@ -200,16 +210,20 @@ func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, spent.kvStorableKey()))
 }
 
-func ReadSpentForAddressAndTransactionWithoutLocking(address *iotago.Ed25519Address, outputID *iotago.UTXOInputID) (*Spent, error) {
+func (u *Manager) ReadSpentForAddressAndTransactionWithoutLocking(address *iotago.Ed25519Address, outputID *iotago.UTXOInputID) (*Spent, error) {
 
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, address[:], outputID[:])
-	value, err := utxoStorage.Get(key)
+	value, err := u.utxoStorage.Get(key)
 	if err != nil {
 		return nil, err
 	}
 
 	spent := &Spent{}
 	if err := spent.kvStorableLoad(key[1:], value); err != nil {
+		return nil, err
+	}
+
+	if err := u.loadOutputOfSpent(spent); err != nil {
 		return nil, err
 	}
 

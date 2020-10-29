@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 
 	pebbleDB "github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
@@ -23,9 +24,20 @@ var (
 	dbDir string
 
 	pebbleInstance *pebbleDB.DB
+	pebbleStore    kvstore.KVStore
 
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
+
+	utxoOnce    sync.Once
+	utxoManager *utxo.Manager
 )
+
+func UTXO() *utxo.Manager {
+	utxoOnce.Do(func() {
+		utxoManager = utxo.New(pebbleStore)
+	})
+	return utxoManager
+}
 
 func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 
@@ -82,8 +94,9 @@ func ConfigureDatabases(directory string) {
 	dbDir = directory
 
 	pebbleInstance = getPebbleDB(directory, false)
+	pebbleStore = pebble.New(pebbleInstance)
 
-	ConfigureStorages(pebble.New(pebbleInstance), profile.LoadProfile().Caches)
+	ConfigureStorages(pebbleStore, profile.LoadProfile().Caches)
 	loadSolidMilestoneFromDatabase()
 }
 
@@ -97,7 +110,7 @@ func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
 	configureIndexationStorage(store, caches.Indexations)
 	configureSnapshotStore(store)
 
-	utxo.ConfigureStorages(store)
+	UTXO()
 }
 
 func FlushStorages() {
@@ -124,7 +137,7 @@ func LoadInitialValuesFromDatabase() {
 
 func loadSolidMilestoneFromDatabase() {
 
-	ledgerMilestoneIndex, err := utxo.ReadLedgerIndex()
+	ledgerMilestoneIndex, err := UTXO().ReadLedgerIndex()
 	if err != nil {
 		panic(err)
 	}

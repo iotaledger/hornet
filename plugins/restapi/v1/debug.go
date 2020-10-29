@@ -26,7 +26,7 @@ func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := utxo.ForEachOutput(outputConsumerFunc)
+	err := tangle.UTXO().ForEachOutput(outputConsumerFunc)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading unspent outputs failed, error: %w", err)
 	}
@@ -44,7 +44,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := utxo.ForEachUnspentOutput(outputConsumerFunc)
+	err := tangle.UTXO().ForEachUnspentOutput(outputConsumerFunc)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading unspent outputs failed, error: %w", err)
 	}
@@ -63,7 +63,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := utxo.ForEachSpentOutput(spentConsumerFunc)
+	err := tangle.UTXO().ForEachSpentOutput(spentConsumerFunc)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading spent outputs failed, error: %w", err)
 	}
@@ -81,7 +81,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
 	}
 
-	diffOutputs, diffSpents, err := utxo.GetMilestoneDiffs(milestone.Index(msIndex))
+	diffOutputs, diffSpents, err := tangle.UTXO().GetMilestoneDiffs(milestone.Index(msIndex))
 
 	outputs := []*outputResponse{}
 	spents := []*outputResponse{}

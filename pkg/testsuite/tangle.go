@@ -9,7 +9,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -48,14 +47,14 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 func (te *TestEnvironment) AssertAddressBalance(seed []byte, index uint64, balance uint64) {
 	address := utils.GenerateHDWalletAddress(te.testState, seed, index)
 
-	addrBalance, _, err := utxo.AddressBalance(&address)
+	addrBalance, _, err := tangle.UTXO().AddressBalance(&address)
 	require.NoError(te.testState, err)
 	require.Equal(te.testState, balance, addrBalance)
 }
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.
 func (te *TestEnvironment) AssertTotalSupplyStillValid() {
-	err := utxo.CheckLedgerState()
+	err := tangle.UTXO().CheckLedgerState()
 	require.NoError(te.testState, err)
 }
 

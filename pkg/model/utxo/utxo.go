@@ -13,9 +13,6 @@ import (
 )
 
 var (
-	utxoStorage kvstore.KVStore
-	utxoLock    sync.RWMutex
-
 	// Returned if the size of the given address is incorrect.
 	ErrInvalidAddressSize = errors.New("invalid address size")
 
@@ -23,37 +20,44 @@ var (
 	ErrOutputsSumNotEqualTotalSupply = errors.New("accumulated output balance is not equal to total supply")
 )
 
-func ConfigureStorages(store kvstore.KVStore) {
-	utxoStorage = store.WithRealm([]byte{StorePrefixUTXO})
+type Manager struct {
+	utxoStorage kvstore.KVStore
+	utxoLock    sync.RWMutex
 }
 
-func ReadLockLedger() {
-	utxoLock.RLock()
+func New(store kvstore.KVStore) *Manager {
+	return &Manager{
+		utxoStorage: store.WithRealm([]byte{StorePrefixUTXO}),
+	}
 }
 
-func ReadUnlockLedger() {
-	utxoLock.RUnlock()
+func (u *Manager) ReadLockLedger() {
+	u.utxoLock.RLock()
 }
 
-func WriteLockLedger() {
-	utxoLock.Lock()
+func (u *Manager) ReadUnlockLedger() {
+	u.utxoLock.RUnlock()
 }
 
-func WriteUnlockLedger() {
-	utxoLock.Unlock()
+func (u *Manager) WriteLockLedger() {
+	u.utxoLock.Lock()
 }
 
-func PruneMilestoneIndex(msIndex milestone.Index) error {
+func (u *Manager) WriteUnlockLedger() {
+	u.utxoLock.Unlock()
+}
 
-	WriteLockLedger()
-	defer WriteUnlockLedger()
+func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index) error {
 
-	_, spents, err := GetMilestoneDiffsWithoutLocking(msIndex)
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
+
+	_, spents, err := u.GetMilestoneDiffsWithoutLocking(msIndex)
 	if err != nil {
 		return err
 	}
 
-	mutations := utxoStorage.Batched()
+	mutations := u.utxoStorage.Batched()
 
 	for _, spent := range spents {
 		err = deleteOutput(spent.output, mutations)
@@ -86,18 +90,18 @@ func storeLedgerIndex(msIndex milestone.Index, mutations kvstore.BatchedMutation
 	return mutations.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
 }
 
-func StoreLedgerIndex(msIndex milestone.Index) error {
-	WriteLockLedger()
-	defer WriteUnlockLedger()
+func (u *Manager) StoreLedgerIndex(msIndex milestone.Index) error {
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
 
 	value := make([]byte, 4)
 	binary.LittleEndian.PutUint32(value, uint32(msIndex))
 
-	return utxoStorage.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
+	return u.utxoStorage.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
 }
 
-func ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
-	value, err := utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
+func (u *Manager) ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
+	value, err := u.utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
 			// there is no ledger milestone yet => return 0
@@ -109,16 +113,16 @@ func ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
 	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
 }
 
-func ReadLedgerIndex() (milestone.Index, error) {
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+func (u *Manager) ReadLedgerIndex() (milestone.Index, error) {
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
 
-	return ReadLedgerIndexWithoutLocking()
+	return u.ReadLedgerIndexWithoutLocking()
 }
 
-func ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
-	mutations := utxoStorage.Batched()
+	mutations := u.utxoStorage.Batched()
 
 	for _, output := range newOutputs {
 		if err := storeOutput(output, mutations); err != nil {
@@ -151,17 +155,17 @@ func ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs
 	return mutations.Commit()
 }
 
-func ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
-	WriteLockLedger()
-	defer WriteUnlockLedger()
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
 
-	return ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+	return u.ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
 }
 
-func RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
 
-	mutations := utxoStorage.Batched()
+	mutations := u.utxoStorage.Batched()
 
 	// we have to delete the newOutputs of this milestone
 	for _, output := range newOutputs {
@@ -201,14 +205,14 @@ func RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outp
 	return mutations.Commit()
 }
 
-func RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
-	WriteLockLedger()
-	defer WriteUnlockLedger()
+func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
 
-	return RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
 }
 
-func CheckLedgerState() error {
+func (u *Manager) CheckLedgerState() error {
 
 	var total uint64 = 0
 
@@ -217,7 +221,7 @@ func CheckLedgerState() error {
 		return true
 	}
 
-	if err := ForEachUnspentOutput(consumerFunc); err != nil {
+	if err := u.ForEachUnspentOutput(consumerFunc); err != nil {
 		return err
 	}
 
@@ -228,12 +232,12 @@ func CheckLedgerState() error {
 	return nil
 }
 
-func AddUnspentOutput(unspentOutput *Output) error {
+func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 
-	WriteLockLedger()
-	defer WriteUnlockLedger()
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
 
-	mutations := utxoStorage.Batched()
+	mutations := u.utxoStorage.Batched()
 
 	if err := storeOutput(unspentOutput, mutations); err != nil {
 		mutations.Cancel()

@@ -154,11 +154,6 @@ func (o *Output) kvStorableLoad(key []byte, value []byte) error {
 	return nil
 }
 
-func (o *Output) IsUnspentWithoutLocking() (bool, error) {
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, o.UTXOKey())
-	return utxoStorage.Has(key)
-}
-
 func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey())
 	return mutations.Set(key, output.kvStorableValue())
@@ -168,11 +163,11 @@ func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey()))
 }
 
-func ForEachOutputWithoutLocking(consumer OutputConsumer) error {
+func (u *Manager) ForEachOutputWithoutLocking(consumer OutputConsumer) error {
 
 	var innerErr error
 
-	if err := utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
 
 		output := &Output{}
 		if err := output.kvStorableLoad(key[1:], value); err != nil {
@@ -188,18 +183,18 @@ func ForEachOutputWithoutLocking(consumer OutputConsumer) error {
 	return innerErr
 }
 
-func ForEachOutput(consumer OutputConsumer) error {
+func (u *Manager) ForEachOutput(consumer OutputConsumer) error {
 
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
 
-	return ForEachOutputWithoutLocking(consumer)
+	return u.ForEachOutputWithoutLocking(consumer)
 }
 
-func ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {
+func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {
 
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:])
-	value, err := utxoStorage.Get(key)
+	value, err := u.utxoStorage.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -211,10 +206,10 @@ func ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, 
 	return output, nil
 }
 
-func ReadOutputByOutputID(outputID *iotago.UTXOInputID) (*Output, error) {
+func (u *Manager) ReadOutputByOutputID(outputID *iotago.UTXOInputID) (*Output, error) {
 
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
 
-	return ReadOutputByOutputIDWithoutLocking(outputID)
+	return u.ReadOutputByOutputIDWithoutLocking(outputID)
 }

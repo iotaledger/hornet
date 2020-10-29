@@ -275,10 +275,10 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
 	}
 
-	utxo.ReadLockLedger()
-	defer utxo.ReadUnlockLedger()
+	tangle.UTXO().ReadLockLedger()
+	defer tangle.UTXO().ReadUnlockLedger()
 
-	ledgerMilestoneIndex, err := utxo.ReadLedgerIndexWithoutLocking()
+	ledgerMilestoneIndex, err := tangle.UTXO().ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return fmt.Errorf("unable to read current ledger index: %w", err)
 	}
@@ -349,7 +349,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	}
 
 	go func() {
-		if err := utxo.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
+		if err := tangle.UTXO().ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
 			outputProducerChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
 			return true
 		}); err != nil {
@@ -384,7 +384,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	go func() {
 		// targetIndex should not be included in the snapshot, because we only need the diff of targetIndex+1 to calculate the ledger index of targetIndex
 		for msIndex := ledgerMilestoneIndex; msIndex > targetIndex; msIndex-- {
-			newOutputs, newSpents, err := utxo.GetMilestoneDiffsWithoutLocking(msIndex)
+			newOutputs, newSpents, err := tangle.UTXO().GetMilestoneDiffsWithoutLocking(msIndex)
 			if err != nil {
 				milestoneDiffProducerErrorChan <- err
 				close(milestoneDiffProducerChan)
@@ -466,7 +466,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		lsHeader = header
 		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
 
-		if err := utxo.StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
+		if err := tangle.UTXO().StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
 			return err
 		}
 
@@ -492,7 +492,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 			outputID := iotago.UTXOInputID(output.OutputID)
 			messageID := hornet.MessageID(output.MessageID)
 
-			return utxo.AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, addr, output.Amount))
+			return tangle.UTXO().AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, addr, output.Amount))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -531,17 +531,17 @@ func LoadFullSnapshotFromFile(filePath string) error {
 			}
 		}
 
-		ledgerIndex, err := utxo.ReadLedgerIndex()
+		ledgerIndex, err := tangle.UTXO().ReadLedgerIndex()
 		if err != nil {
 			return err
 		}
 
 		if ledgerIndex == msDiff.MilestoneIndex {
-			return utxo.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+			return tangle.UTXO().RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
 		}
 
 		if ledgerIndex == msDiff.MilestoneIndex+1 {
-			return utxo.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+			return tangle.UTXO().ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
 		}
 
 		return ErrWrongMilestoneDiffIndex
@@ -558,11 +558,11 @@ func LoadFullSnapshotFromFile(filePath string) error {
 
 	log.Infof("imported local snapshot file, took %v", time.Since(s))
 
-	if err := utxo.CheckLedgerState(); err != nil {
+	if err := tangle.UTXO().CheckLedgerState(); err != nil {
 		return err
 	}
 
-	ledgerIndex, err := utxo.ReadLedgerIndex()
+	ledgerIndex, err := tangle.UTXO().ReadLedgerIndex()
 	if err != nil {
 		return err
 	}

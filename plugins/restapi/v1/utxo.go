@@ -14,6 +14,7 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
@@ -56,7 +57,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	output, err := utxo.ReadOutputByOutputID(&outputID)
+	output, err := tangle.UTXO().ReadOutputByOutputID(&outputID)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
 			return nil, errors.WithMessagef(common.ErrInvalidParameter, "output not found: %s", outputIDParam)
@@ -65,7 +66,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading output failed: %s, error: %w", outputIDParam, err)
 	}
 
-	unspent, err := utxo.IsOutputUnspent(&outputID)
+	unspent, err := tangle.UTXO().IsOutputUnspent(&outputID)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading spent status failed: %s, error: %w", outputIDParam, err)
 	}
@@ -92,7 +93,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
 	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
-	balance, count, err := utxo.AddressBalance(&address, maxResults)
+	balance, count, err := tangle.UTXO().AddressBalance(&address, maxResults)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading address balance failed: %s, error: %w", address, err)
 	}
@@ -124,7 +125,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
 	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
-	unspentOutputs, err := utxo.UnspentOutputsForAddress(&address, maxResults)
+	unspentOutputs, err := tangle.UTXO().UnspentOutputsForAddress(&address, maxResults)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading unspent outputs failed: %s, error: %w", address, err)
 	}
@@ -138,7 +139,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
 
-		spents, err := utxo.SpentOutputsForAddress(&address, maxResults-len(outputIDs))
+		spents, err := tangle.UTXO().SpentOutputsForAddress(&address, maxResults-len(outputIDs))
 		if err != nil {
 			return nil, errors.WithMessagef(common.ErrInternalError, "reading spent outputs failed: %s, error: %w", address, err)
 		}

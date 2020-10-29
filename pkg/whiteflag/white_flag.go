@@ -144,7 +144,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			// check current ledger for this input
-			output, err = utxo.ReadOutputByOutputIDWithoutLocking(input)
+			output, err = tangle.UTXO().ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
 				if err == kvstore.ErrKeyNotFound {
 					// input not found, so mark as invalid tx
@@ -155,7 +155,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			// check if this output is unspent
-			unspent, err := output.IsUnspentWithoutLocking()
+			unspent, err := tangle.UTXO().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return err
 			}

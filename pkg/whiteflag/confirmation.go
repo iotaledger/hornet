@@ -52,8 +52,8 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		cachedMessages[cachedMilestoneMessageMapKey] = cachedMilestoneMessage.Retain()
 	}
 
-	utxo.WriteLockLedger()
-	defer utxo.WriteUnlockLedger()
+	tangle.UTXO().WriteLockLedger()
+	defer tangle.UTXO().WriteUnlockLedger()
 	message := cachedMilestoneMessage.GetMessage()
 
 	ms := message.GetMilestone()
@@ -98,7 +98,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		newSpents = append(newSpents, spent)
 	}
 
-	err = utxo.ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents)
+	err = tangle.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents)
 	if err != nil {
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
