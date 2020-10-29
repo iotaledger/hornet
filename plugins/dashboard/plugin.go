@@ -123,11 +123,15 @@ func run(_ *node.Plugin) {
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username == expectedUsername &&
-				basicauth.VerifyPassword(password, passwordSalt, expectedPasswordHash) {
-				return true, nil
+			if username != expectedUsername {
+				return false, nil
 			}
-			return false, nil
+
+			if valid, _ := basicauth.VerifyPassword([]byte(password), []byte(passwordSalt), []byte(expectedPasswordHash)); !valid {
+				return false, nil
+			}
+
+			return true, nil
 		}))
 	}
 

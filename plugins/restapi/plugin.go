@@ -14,7 +14,6 @@ import (
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
-	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
@@ -93,11 +93,15 @@ func configure(plugin *node.Plugin) {
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username == expectedUsername &&
-				basicauth.VerifyPassword(password, passwordSalt, expectedPasswordHash) {
-				return true, nil
+			if username != expectedUsername {
+				return false, nil
 			}
-			return false, nil
+
+			if valid, _ := basicauth.VerifyPassword([]byte(password), []byte(passwordSalt), []byte(expectedPasswordHash)); !valid {
+				return false, nil
+			}
+
+			return true, nil
 		}))
 	}
 
