@@ -2,7 +2,9 @@ package tangle
 
 import (
 	"os"
+	"time"
 
+	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
@@ -121,7 +123,7 @@ func run(plugin *node.Plugin) {
 
 	// create a background worker that prints a status message every second
 	daemon.BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
-		//timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
+		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
 }
 
