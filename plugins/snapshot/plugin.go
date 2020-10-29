@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
@@ -87,7 +86,7 @@ func configure(plugin *node.Plugin) {
 		if !*forceLoadingSnapshot {
 			// If we don't enforce loading of a snapshot,
 			// we can check the ledger state of current database and start the node.
-			if err := utxo.CheckLedgerState(); err != nil {
+			if err := tangle.UTXO().CheckLedgerState(); err != nil {
 				log.Fatal(err.Error())
 			}
 			return

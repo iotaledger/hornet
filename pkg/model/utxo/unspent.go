@@ -18,19 +18,24 @@ func deleteFromUnspent(output *Output, mutations kvstore.BatchedMutations) error
 	return mutations.Delete(key)
 }
 
-func IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, output.UTXOKey())
+	return u.utxoStorage.Has(key)
+}
 
-	output, err := ReadOutputByOutputIDWithoutLocking(outputID)
+func (u *Manager) IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
+
+	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return false, err
 	}
 
-	return output.IsUnspentWithoutLocking()
+	return u.IsOutputUnspentWithoutLocking(output)
 }
 
-func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
+func (u *Manager) ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
 
 	var innerErr error
 
@@ -42,11 +47,11 @@ func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iot
 		key = byteutils.ConcatBytes(key, address[0][:])
 	}
 
-	if err := utxoStorage.IterateKeys(key, func(key kvstore.Key) bool {
+	if err := u.utxoStorage.IterateKeys(key, func(key kvstore.Key) bool {
 
 		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, key[1+iotago.Ed25519AddressBytesLength:])
 
-		value, err := utxoStorage.Get(outputKey)
+		value, err := u.utxoStorage.Get(outputKey)
 		if err != nil {
 			innerErr = err
 			return false
@@ -66,15 +71,15 @@ func ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address ...*iot
 	return innerErr
 }
 
-func ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
+func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, address ...*iotago.Ed25519Address) error {
 
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
 
-	return ForEachUnspentOutputWithoutLocking(consumer, address...)
+	return u.ForEachUnspentOutputWithoutLocking(consumer, address...)
 }
 
-func UnspentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) ([]*Output, error) {
+func (u *Manager) UnspentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) ([]*Output, error) {
 
 	var outputs []*Output
 
@@ -90,14 +95,14 @@ func UnspentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) ([
 		return true
 	}
 
-	if err := ForEachUnspentOutput(consumerFunc, address); err != nil {
+	if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
 		return nil, err
 	}
 
 	return outputs, nil
 }
 
-func AddressBalance(address *iotago.Ed25519Address, maxFind ...int) (balance uint64, count int, err error) {
+func (u *Manager) AddressBalance(address *iotago.Ed25519Address, maxFind ...int) (balance uint64, count int, err error) {
 
 	balance = 0
 	i := 0
@@ -112,7 +117,7 @@ func AddressBalance(address *iotago.Ed25519Address, maxFind ...int) (balance uin
 		return true
 	}
 
-	if err := ForEachUnspentOutput(consumerFunc, address); err != nil {
+	if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
 		return 0, 0, err
 	}
 

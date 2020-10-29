@@ -9,7 +9,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/database"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -63,7 +62,7 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func pruneMilestone(milestoneIndex milestone.Index) error {
 
-	err := utxo.PruneMilestoneIndex(milestoneIndex)
+	err := tangle.UTXO().PruneMilestoneIndex(milestoneIndex)
 	if err != nil {
 		return err
 	}

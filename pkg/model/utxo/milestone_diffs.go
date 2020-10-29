@@ -45,12 +45,12 @@ func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) err
 	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
 }
 
-func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, error) {
+func (u *Manager) GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, error) {
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
-	value, err := utxoStorage.Get(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
+	value, err := u.utxoStorage.Get(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -74,7 +74,7 @@ func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, 
 		var outputID iotago.UTXOInputID
 		copy(outputID[:], outputIDBytes)
 
-		output, err := ReadOutputByOutputIDWithoutLocking(&outputID)
+		output, err := u.ReadOutputByOutputIDWithoutLocking(&outputID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -104,7 +104,7 @@ func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, 
 		var outputID iotago.UTXOInputID
 		copy(outputID[:], outputIDBytes)
 
-		spent, err := ReadSpentForAddressAndTransactionWithoutLocking(&address, &outputID)
+		spent, err := u.ReadSpentForAddressAndTransactionWithoutLocking(&address, &outputID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -115,9 +115,9 @@ func GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, 
 	return outputs, spents, nil
 }
 
-func GetMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
-	ReadLockLedger()
-	defer ReadUnlockLedger()
+func (u *Manager) GetMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
 
-	return GetMilestoneDiffsWithoutLocking(msIndex)
+	return u.GetMilestoneDiffsWithoutLocking(msIndex)
 }
