@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/config"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 const (
@@ -28,7 +29,7 @@ var (
 func Handler() *powpackage.Handler {
 	handlerOnce.Do(func() {
 		// init the pow handler with all possible settings
-		powsrvAPIKey, err := config.LoadStringFromEnvironment("POWSRV_API_KEY")
+		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
