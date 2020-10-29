@@ -84,7 +84,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, ErrDatabaseTainted
 	}
 
-	privateKeys, err := config.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
+	privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
 	if err != nil {
 		return nil, err
 	}
