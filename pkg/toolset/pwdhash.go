@@ -1,16 +1,16 @@
 package toolset
 
 import (
-	"bufio"
-	"crypto/sha256"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/gohornet/hornet/pkg/basicauth"
 )
 
 func hashPasswordAndSalt(args []string) error {
@@ -18,8 +18,6 @@ func hashPasswordAndSalt(args []string) error {
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolPwdHash)
 	}
-
-	reader := bufio.NewReader(os.Stdin)
 
 	// get terminal state to be able to restore it in case of an interrupt
 	originalTerminalState, err := terminal.GetState(int(syscall.Stdin))
@@ -38,32 +36,29 @@ func hashPasswordAndSalt(args []string) error {
 	}()
 
 	fmt.Print("Enter a password: ")
-	bytePassword, err := terminal.ReadPassword(0)
+	password, err := terminal.ReadPassword(0)
 	if err != nil {
 		return err
 	}
-	password := string(bytePassword)
 
 	fmt.Print("\nRe-enter your password: ")
-	bytePasswordReenter, err := terminal.ReadPassword(0)
+	passwordReenter, err := terminal.ReadPassword(0)
 	if err != nil {
 		return err
 	}
-	if password != string(bytePasswordReenter) {
+
+	if !bytes.Equal(password, passwordReenter) {
 		return errors.New("re-entered password doesn't match")
 	}
 
-	fmt.Print("\nEnter a salt: ")
-	salt, err := reader.ReadString('\n')
+	passwordSalt, err := basicauth.SaltGenerator(32)
 	if err != nil {
 		return err
 	}
 
-	salt = strings.TrimSuffix(salt, "\n")
+	passwordKey, err := basicauth.GetPasswordKey(password, passwordSalt)
 
-	hash := sha256.Sum256(append([]byte(password), []byte(salt)...))
-
-	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %s\n", hash, salt)
+	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %s\n", passwordKey, passwordSalt)
 
 	return nil
 }
