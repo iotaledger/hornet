@@ -145,16 +145,30 @@ func run(_ *node.Plugin) {
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
 	peerIDsStr := config.PeeringConfig.Strings(config.CfgP2PPeers)
+
+	peerAliases := config.PeeringConfig.Strings(config.CfgP2PPeerAliases)
+	applyAliases := true
+	if len(peerIDsStr) != len(peerAliases) {
+		log.Warnf("won't apply peer aliases: you must define aliases for all defined static peers (got %d aliases, %d peers).", len(peerAliases), len(peerIDsStr))
+		applyAliases = false
+	}
+
 	for i, peerIDStr := range peerIDsStr {
 		multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
 		if err != nil {
 			panic(fmt.Sprintf("invalid config peer address at pos %d: %s", i, err))
 		}
+
 		addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 		if err != nil {
 			panic(fmt.Sprintf("invalid config peer address info at pos %d: %s", i, err))
 		}
-		_ = manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown)
+
+		var alias string
+		if applyAliases {
+			alias = peerAliases[i]
+		}
+		_ = manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
 	}
 }
 
