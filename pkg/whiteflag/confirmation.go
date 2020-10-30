@@ -27,7 +27,7 @@ type ConfirmedMilestoneStats struct {
 // ConfirmMilestone traverses a milestone and collects all unreferenced msg,
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
@@ -40,7 +40,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		}
 	}()
 
-	cachedMilestoneMessage := tangle.GetCachedMessageOrNil(milestoneMessageID)
+	cachedMilestoneMessage := tangleObj.GetCachedMessageOrNil(milestoneMessageID)
 	if cachedMilestoneMessage == nil {
 		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.Hex())
 	}
@@ -52,8 +52,8 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		cachedMessages[cachedMilestoneMessageMapKey] = cachedMilestoneMessage.Retain()
 	}
 
-	tangle.UTXO().WriteLockLedger()
-	defer tangle.UTXO().WriteUnlockLedger()
+	tangleObj.UTXO().WriteLockLedger()
+	defer tangleObj.UTXO().WriteUnlockLedger()
 	message := cachedMilestoneMessage.GetMessage()
 
 	ms := message.GetMilestone()
@@ -66,7 +66,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 
 	ts := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(milestoneIndex, cachedMessageMetas, cachedMessages, tangle.GetMilestoneMerkleHashFunc(), message.GetParent1MessageID(), message.GetParent2MessageID())
+	mutations, err := ComputeWhiteFlagMutations(tangleObj, milestoneIndex, cachedMessageMetas, cachedMessages, tangleObj.GetMilestoneMerkleHashFunc(), message.GetParent1MessageID(), message.GetParent2MessageID())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
@@ -98,7 +98,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		newSpents = append(newSpents, spent)
 	}
 
-	err = tangle.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents)
+	err = tangleObj.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents)
 	if err != nil {
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
@@ -107,7 +107,7 @@ func ConfirmMilestone(cachedMessageMetas map[string]*tangle.CachedMetadata, mile
 		messageIDMapKey := messageID.MapKey()
 		cachedMsgMeta, exists := cachedMessageMetas[messageIDMapKey]
 		if !exists {
-			cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+			cachedMsgMeta = tangleObj.GetCachedMessageMetadataOrNil(messageID) // meta +1
 			if cachedMsgMeta == nil {
 				return nil, fmt.Errorf("confirmMilestone: Message not found: %v", messageID.Hex())
 			}

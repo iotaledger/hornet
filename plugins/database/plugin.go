@@ -1,6 +1,7 @@
 package database
 
 import (
+	"sync"
 	"time"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -12,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -20,85 +22,39 @@ var (
 	log    *logger.Logger
 
 	garbageCollectionLock syncutils.Mutex
+
+	tangleOnce sync.Once
+	tangleObj  *tangle.Tangle
 )
 
-// pruneTransactions prunes the approvers, bundles, bundle txs, addresses, tags and transaction metadata from the database
-func pruneTransactions(txsToCheckMap map[string]struct{}) int {
+func Tangle() *tangle.Tangle {
+	tangleOnce.Do(func() {
+		tangleObj = tangle.New(config.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
+	})
 
-	txsToDeleteMap := make(map[string]struct{})
-
-	for txHashToCheck := range txsToCheckMap {
-
-		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHashToCheck)) // tx +1
-		if cachedTxMeta == nil {
-			log.Warnf("pruneTransactions: Transaction not found: %s", txHashToCheck)
-			continue
-		}
-
-		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTxMeta.GetMetadata()) {
-			txsToDeleteMap[txToRemove] = struct{}{}
-		}
-		// since it gets loaded below again it doesn't make sense to force release here
-		cachedTxMeta.Release() // tx -1
-	}
-
-	for txHashToDelete := range txsToDeleteMap {
-
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToDelete)) // tx +1
-		if cachedTx == nil {
-			continue
-		}
-
-		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) { // tx -1
-			// Delete the reference in the approvees
-			tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
-			tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())
-
-			tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
-			tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
-			tangle.DeleteApprovers(tx.GetTxHash())
-			tangle.DeleteTransaction(tx.GetTxHash())
-		})
-	}
-
-	return len(txsToDeleteMap)
-}
-
-// pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func pruneMilestone(milestoneIndex milestone.Index) {
-
-	// state diffs
-	if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
-		log.Warn(err)
-	}
-
-	tangle.DeleteMilestone(milestoneIndex)
+	return tangleObj
 }
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	tangle.ConfigureDatabases(config.NodeConfig.String(config.CfgDatabasePath))
-
-	deleteInvalidMilestones()
-
-	if !tangle.IsCorrectDatabaseVersion() {
-		if !tangle.UpdateDatabaseVersion() {
+	if !Tangle().IsCorrectDatabaseVersion() {
+		if !Tangle().UpdateDatabaseVersion() {
 			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 		}
 	}
 
 	daemon.BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		tangle.MarkDatabaseHealthy()
+		Tangle().MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")
-		tangle.CloseDatabases()
+		Tangle().CloseDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 }
 
 func RunGarbageCollection() {
-	if tangle.DatabaseSupportsCleanup() {
+	if Tangle().DatabaseSupportsCleanup() {
 
 		garbageCollectionLock.Lock()
 		defer garbageCollectionLock.Unlock()
@@ -111,7 +67,7 @@ func RunGarbageCollection() {
 			Start: start,
 		})
 
-		err := tangle.CleanupDatabases()
+		err := Tangle().CleanupDatabases()
 
 		end := time.Now()
 

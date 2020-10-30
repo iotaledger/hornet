@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
@@ -52,7 +53,7 @@ func runVisualizer() {
 
 	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglepackage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *tanglepackage.Message, metadata *tanglepackage.MessageMetadata) { // msg -1
-			if !tanglepackage.IsNodeSyncedWithThreshold() {
+			if !database.Tangle().IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -76,7 +77,7 @@ func runVisualizer() {
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tanglepackage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *tanglepackage.MessageMetadata) { // metadata -1
 
-			if !tanglepackage.IsNodeSyncedWithThreshold() {
+			if !database.Tangle().IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -94,7 +95,7 @@ func runVisualizer() {
 	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *tanglepackage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if !tanglepackage.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -110,7 +111,7 @@ func runVisualizer() {
 
 	// show checkpoints as milestones in the coordinator node
 	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
-		if !tanglepackage.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -125,7 +126,7 @@ func runVisualizer() {
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if !tanglepackage.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -146,7 +147,7 @@ func runVisualizer() {
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
-		if !tanglepackage.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -162,7 +163,7 @@ func runVisualizer() {
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		if !tanglepackage.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 

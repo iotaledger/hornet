@@ -5,10 +5,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/iotaledger/hive.go/daemon"
@@ -50,7 +50,7 @@ func configureEvents() {
 
 	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossippkg.Protocol) {
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip2.Heartbeat) {
-			warpSync.UpdateCurrent(tangle.GetSolidMilestoneIndex())
+			warpSync.UpdateCurrent(database.Tangle().GetSolidMilestoneIndex())
 			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
 	})

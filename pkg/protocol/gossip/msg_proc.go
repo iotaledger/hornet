@@ -29,8 +29,9 @@ var (
 )
 
 // New creates a new processor which parses messages.
-func NewMessageProcessor(requestQueue RequestQueue, peeringService *p2p.Manager, opts *Options) *MessageProcessor {
+func NewMessageProcessor(tangle *tangle.Tangle, requestQueue RequestQueue, peeringService *p2p.Manager, opts *Options) *MessageProcessor {
 	proc := &MessageProcessor{
+		tangle:       tangle,
 		ps:           peeringService,
 		requestQueue: requestQueue,
 		Events: MessageProcessorEvents{
@@ -99,6 +100,7 @@ type MessageProcessorEvents struct {
 
 // MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
 type MessageProcessor struct {
+	tangle       *tangle.Tangle
 	Events       MessageProcessorEvents
 	ps           *p2p.Manager
 	wp           *workerpool.WorkerPool
@@ -161,10 +163,10 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 
 	// peers can request the latest milestone we know
 	if msIndex == LatestMilestoneRequestIndex {
-		msIndex = tangle.GetLatestMilestoneIndex()
+		msIndex = proc.tangle.GetLatestMilestoneIndex()
 	}
 
-	cachedMessage := tangle.GetMilestoneCachedMessageOrNil(msIndex) // message +1
+	cachedMessage := proc.tangle.GetMilestoneCachedMessageOrNil(msIndex) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the wanted milestone
 		return
@@ -192,7 +194,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMessage := tangle.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
+	cachedMessage := proc.tangle.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the requested message
 		return
@@ -252,7 +254,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			return
 		}
 
-		if tangle.ContainsMessage(wu.msg.GetMessageID()) {
+		if proc.tangle.ContainsMessage(wu.msg.GetMessageID()) {
 			metrics.SharedServerMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 			return
@@ -299,7 +301,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.UpdateState(Hashed)
 
 	// check the existence of the message before broadcasting it
-	containsTx := tangle.ContainsMessage(msg.GetMessageID())
+	containsTx := proc.tangle.ContainsMessage(msg.GetMessageID())
 
 	proc.Events.MessageProcessed.Trigger(msg, request, p)
 

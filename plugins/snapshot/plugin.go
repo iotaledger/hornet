@@ -16,8 +16,8 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
@@ -81,12 +81,12 @@ func configure(plugin *node.Plugin) {
 
 	gossip.AddRequestBackpressureSignal(isSnapshottingOrPruning)
 
-	snapshotInfo := tangle.GetSnapshotInfo()
+	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo != nil {
 		if !*forceLoadingSnapshot {
 			// If we don't enforce loading of a snapshot,
 			// we can check the ledger state of current database and start the node.
-			if err := tangle.UTXO().CheckLedgerState(); err != nil {
+			if err := database.Tangle().UTXO().CheckLedgerState(); err != nil {
 				log.Fatal(err.Error())
 			}
 			return
@@ -118,7 +118,7 @@ func configure(plugin *node.Plugin) {
 	}
 
 	if err := LoadFullSnapshotFromFile(path); err != nil {
-		tangle.MarkDatabaseCorrupted()
+		database.Tangle().MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}
 }
@@ -186,7 +186,7 @@ func PruneDatabaseByDepth(depth milestone.Index) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
-	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+	solidMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
 
 	if solidMilestoneIndex <= depth {
 		// Not enough history

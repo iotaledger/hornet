@@ -17,6 +17,7 @@ import (
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 )
@@ -100,11 +101,11 @@ func runTangleProcessor(_ *node.Plugin) {
 	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		processValidMilestoneWorkerPool.Start()
-		tangle.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
+		database.Tangle().Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		startWaitGroup.Done()
 		<-shutdownSignal
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
-		tangle.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
+		database.Tangle().Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
 		processValidMilestoneWorkerPool.StopAndWait()
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
@@ -132,11 +133,11 @@ func IsReceiveTxWorkerPoolBusy() bool {
 
 func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
 
-	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
-	isNodeSyncedWithThreshold := tangle.IsNodeSyncedWithThreshold()
+	latestMilestoneIndex := database.Tangle().GetLatestMilestoneIndex()
+	isNodeSyncedWithThreshold := database.Tangle().IsNodeSyncedWithThreshold()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // msg +1
+	cachedMsg, alreadyAdded := database.Tangle().AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // msg +1
 
 	// Release shouldn't be forced, to cache the latest messages
 	defer cachedMsg.Release(!isNodeSyncedWithThreshold) // msg -1
@@ -155,7 +156,7 @@ func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, 
 			gossip.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
-		solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+		solidMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = solidMilestoneIndex
 		}
@@ -184,7 +185,7 @@ func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, 
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a message stemming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if !tangle.IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
+	if !database.Tangle().IsNodeSynced() && request != nil && gossip.RequestQueue().Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
@@ -226,8 +227,8 @@ func printStatus() {
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			receiveMsgWorkerPool.GetPendingQueueSize(),
-			tangle.GetSolidMilestoneIndex(),
-			tangle.GetLatestMilestoneIndex(),
+			database.Tangle().GetSolidMilestoneIndex(),
+			database.Tangle().GetLatestMilestoneIndex(),
 			lastIncomingMPS,
 			lastNewMPS,
 			lastOutgoingMPS,

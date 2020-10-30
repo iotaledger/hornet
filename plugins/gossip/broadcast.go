@@ -2,24 +2,24 @@ package gossip
 
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/plugins/database"
 	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.
 func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
-	snapshotInfo := tangle.GetSnapshotInfo()
+	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return
 	}
 
-	latestMilestoneIndex := tangle.GetSolidMilestoneIndex()
+	latestMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
 	connectedCount := p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown)
 	syncedCount := Service().SynchronizedCount(latestMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
-	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, tangle.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, database.Tangle().GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
 	Service().ForEach(func(proto *gossip.Protocol) bool {
 		if filter != nil && !filter(proto) {
@@ -36,7 +36,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	var requested int
 
 	// make sure we only request what we don't have
-	startingPoint := tangle.GetSolidMilestoneIndex()
+	startingPoint := database.Tangle().GetSolidMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}
@@ -44,7 +44,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := startingPoint + milestone.Index(i)
 		// only request if we do not have the milestone
-		if !tangle.ContainsMilestone(toReq) {
+		if !database.Tangle().ContainsMilestone(toReq) {
 			requested++
 			msIndexes = append(msIndexes, toReq)
 			continue

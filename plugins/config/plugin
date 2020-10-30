@@ -1,0 +1,36 @@
+package config
+
+import (
+	"sync"
+
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/node"
+
+	configpkg "github.com/gohornet/hornet/pkg/config"
+)
+
+var (
+	PLUGIN = node.NewPlugin("Configuration", node.Enabled, configure, run)
+	log    *logger.Logger
+
+	configOnce sync.Once
+	config     *configpkg.Configuration
+)
+
+func Config() *configpkg.Configuration {
+	configOnce.Do(func() {
+		config = configpkg.New()
+	})
+	return config
+}
+
+func init() {
+	Config()
+}
+
+func configure(plugin *node.Plugin) {
+	log = logger.NewLogger(plugin.Name)
+}
+
+func run(plugin *node.Plugin) {
+}

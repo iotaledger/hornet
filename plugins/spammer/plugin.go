@@ -23,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/gohornet/hornet/plugins/pow"
@@ -226,7 +227,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !tangle.IsNodeSyncedWithThreshold() {
+					if !database.Tangle().IsNodeSyncedWithThreshold() {
 						time.Sleep(time.Second)
 						continue
 					}

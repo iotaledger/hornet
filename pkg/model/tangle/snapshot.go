@@ -9,16 +9,12 @@ import (
 
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 var (
-	snapshot *SnapshotInfo
-	mutex    syncutils.RWMutex
-
 	ErrParseSnapshotInfoFailed = errors.New("Parsing of snapshot info failed")
 )
 
@@ -32,12 +28,12 @@ type SnapshotInfo struct {
 	Metadata        bitmask.BitMask
 }
 
-func loadSnapshotInfo() {
-	info, err := readSnapshotInfo()
+func (t *Tangle) loadSnapshotInfo() {
+	info, err := t.readSnapshotInfo()
 	if err != nil {
 		panic(err)
 	}
-	snapshot = info
+	t.snapshot = info
 	if info != nil {
 		println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
@@ -118,7 +114,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return marshalUtil.Bytes()
 }
 
-func SetSnapshotMilestone(networkID byte, milestoneID *iotago.MilestoneID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
+func (t *Tangle) SetSnapshotMilestone(networkID byte, milestoneID *iotago.MilestoneID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
@@ -137,23 +133,23 @@ func SetSnapshotMilestone(networkID byte, milestoneID *iotago.MilestoneID, snaps
 		Metadata:        bitmask.BitMask(0),
 	}
 
-	SetSnapshotInfo(sn)
+	t.SetSnapshotInfo(sn)
 }
 
-func SetSnapshotInfo(sn *SnapshotInfo) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (t *Tangle) SetSnapshotInfo(sn *SnapshotInfo) {
+	t.snapshotMutex.Lock()
+	defer t.snapshotMutex.Unlock()
 
-	err := storeSnapshotInfo(sn)
+	err := t.storeSnapshotInfo(sn)
 	if err != nil {
 		panic(err)
 	}
-	snapshot = sn
+	t.snapshot = sn
 }
 
-func GetSnapshotInfo() *SnapshotInfo {
-	mutex.RLock()
-	defer mutex.RUnlock()
+func (t *Tangle) GetSnapshotInfo() *SnapshotInfo {
+	t.snapshotMutex.RLock()
+	defer t.snapshotMutex.RUnlock()
 
-	return snapshot
+	return t.snapshot
 }

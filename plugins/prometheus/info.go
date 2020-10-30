@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -86,13 +86,13 @@ func init() {
 
 func collectInfo() {
 	// Latest milestone index
-	lmi := tangle.GetLatestMilestoneIndex()
+	lmi := database.Tangle().GetLatestMilestoneIndex()
 	infoMilestoneIndex.Set(float64(lmi))
 	infoMilestone.Reset()
 	infoMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(lmi))).Set(1)
 
 	// Latest milestone message ID
-	cachedLatestMilestone := tangle.GetCachedMilestoneOrNil(lmi)
+	cachedLatestMilestone := database.Tangle().GetCachedMilestoneOrNil(lmi)
 	if cachedLatestMilestone != nil {
 		infoMilestone.Reset()
 		infoMilestone.WithLabelValues(cachedLatestMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
@@ -100,13 +100,13 @@ func collectInfo() {
 	}
 
 	// Solid milestone index
-	smi := tangle.GetSolidMilestoneIndex()
+	smi := database.Tangle().GetSolidMilestoneIndex()
 	infoSolidMilestoneIndex.Set(float64(smi))
 	infoSolidMilestone.Reset()
 	infoSolidMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(smi))).Set(1)
 
 	// Solid milestone message ID
-	cachedSolidMilestone := tangle.GetCachedMilestoneOrNil(smi)
+	cachedSolidMilestone := database.Tangle().GetCachedMilestoneOrNil(smi)
 	if cachedSolidMilestone != nil {
 		infoSolidMilestone.Reset()
 		infoSolidMilestone.WithLabelValues(cachedSolidMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
@@ -114,7 +114,7 @@ func collectInfo() {
 	}
 
 	// Snapshot index and Pruning index
-	snapshotInfo := tangle.GetSnapshotInfo()
+	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo != nil {
 		infoSnapshotIndex.Set(float64(snapshotInfo.SnapshotIndex))
 		infoPruningIndex.Set(float64(snapshotInfo.PruningIndex))

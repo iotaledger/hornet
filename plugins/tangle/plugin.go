@@ -44,7 +44,7 @@ func init() {
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	tangle.LoadInitialValuesFromDatabase()
+	database.Tangle().LoadInitialValuesFromDatabase()
 
 	updateSyncedAtStartup = *syncedAtStartup
 
@@ -53,7 +53,7 @@ func configure(plugin *node.Plugin) {
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
 	daemon.BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
-		tangle.MarkDatabaseCorrupted()
+		database.Tangle().MarkDatabaseCorrupted()
 	})
 
 	keyManager := keymanager.New()
@@ -63,7 +63,7 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	tangle.ConfigureMilestones(
+	database.Tangle().ConfigureMilestones(
 		keyManager,
 		config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
 		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
@@ -77,7 +77,7 @@ func configure(plugin *node.Plugin) {
 
 func run(plugin *node.Plugin) {
 
-	if tangle.IsDatabaseCorrupted() && !config.NodeConfig.Bool(config.CfgDatabaseDebug) {
+	if database.Tangle().IsDatabaseCorrupted() && !config.NodeConfig.Bool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {
@@ -107,17 +107,17 @@ func run(plugin *node.Plugin) {
 		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
-		tangle.ShutdownStorages()
+		database.Tangle().ShutdownStorages()
 		log.Info("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase)
 
 	// set latest known milestone from database
-	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < tangle.GetSolidMilestoneIndex() {
-		latestMilestoneFromDatabase = tangle.GetSolidMilestoneIndex()
+	latestMilestoneFromDatabase := database.Tangle().SearchLatestMilestoneIndexInStore()
+	if latestMilestoneFromDatabase < database.Tangle().GetSolidMilestoneIndex() {
+		latestMilestoneFromDatabase = database.Tangle().GetSolidMilestoneIndex()
 	}
-	tangle.SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
+	database.Tangle().SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
 
 	runTangleProcessor(plugin)
 
@@ -147,7 +147,7 @@ func configureEvents() {
 		// Force release possible here, since processIncomingTx still holds a reference
 		defer cachedMsg.Release(true) // msg -1
 
-		if tangle.IsNodeSyncedWithThreshold() {
+		if database.Tangle().IsNodeSyncedWithThreshold() {
 			solidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
 		}
 	})

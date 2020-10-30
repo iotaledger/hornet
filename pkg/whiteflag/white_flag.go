@@ -55,7 +55,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make(hornet.MessageIDs, 0),
@@ -89,7 +89,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 		// load up message
 		cachedMessage, exists := cachedMessages[cachedMetadataMapKey]
 		if !exists {
-			cachedMessage = tangle.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
+			cachedMessage = tangleObj.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
 				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 			}
@@ -144,7 +144,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			// check current ledger for this input
-			output, err = tangle.UTXO().ReadOutputByOutputIDWithoutLocking(input)
+			output, err = tangleObj.UTXO().ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
 				if err == kvstore.ErrKeyNotFound {
 					// input not found, so mark as invalid tx
@@ -155,7 +155,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 			}
 
 			// check if this output is unspent
-			unspent, err := tangle.UTXO().IsOutputUnspentWithoutLocking(output)
+			unspent, err := tangleObj.UTXO().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return err
 			}
@@ -220,7 +220,7 @@ func ComputeWhiteFlagMutations(msIndex milestone.Index, cachedMessageMetas map[s
 	// If parent1 and parent2 of a message are both SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
-	if err := dag.TraverseParent1AndParent2(parent1MessageID, parent2MessageID,
+	if err := dag.TraverseParent1AndParent2(tangleObj, parent1MessageID, parent2MessageID,
 		condition,
 		consumer,
 		// called on missing parents

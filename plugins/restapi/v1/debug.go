@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
@@ -26,7 +27,7 @@ func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := tangle.UTXO().ForEachOutput(outputConsumerFunc)
+	err := database.Tangle().UTXO().ForEachOutput(outputConsumerFunc)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading unspent outputs failed, error: %w", err)
 	}
@@ -44,7 +45,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := tangle.UTXO().ForEachUnspentOutput(outputConsumerFunc)
+	err := database.Tangle().UTXO().ForEachUnspentOutput(outputConsumerFunc)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading unspent outputs failed, error: %w", err)
 	}
@@ -63,7 +64,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := tangle.UTXO().ForEachSpentOutput(spentConsumerFunc)
+	err := database.Tangle().UTXO().ForEachSpentOutput(spentConsumerFunc)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading spent outputs failed, error: %w", err)
 	}
@@ -81,7 +82,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
 	}
 
-	diffOutputs, diffSpents, err := tangle.UTXO().GetMilestoneDiffs(milestone.Index(msIndex))
+	diffOutputs, diffSpents, err := database.Tangle().UTXO().GetMilestoneDiffs(milestone.Index(msIndex))
 
 	outputs := []*outputResponse{}
 	spents := []*outputResponse{}
@@ -119,7 +120,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 		debugReqs = append(debugReqs, &request{
 			MessageID:        req.MessageID.Hex(),
 			Type:             "queued",
-			MessageExists:    tangle.ContainsMessage(req.MessageID),
+			MessageExists:    database.Tangle().ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -129,7 +130,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 		debugReqs = append(debugReqs, &request{
 			MessageID:        req.MessageID.Hex(),
 			Type:             "pending",
-			MessageExists:    tangle.ContainsMessage(req.MessageID),
+			MessageExists:    database.Tangle().ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -139,7 +140,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 		debugReqs = append(debugReqs, &request{
 			MessageID:        req.MessageID.Hex(),
 			Type:             "processing",
-			MessageExists:    tangle.ContainsMessage(req.MessageID),
+			MessageExists:    database.Tangle().ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -158,7 +159,7 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	cachedStartMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	cachedStartMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -170,11 +171,11 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 
 	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.GetMetadata().GetReferenced()
 
-	entryPointIndex := tangle.GetSnapshotInfo().EntryPointIndex
+	entryPointIndex := database.Tangle().GetSnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}
 	tanglePath := []*messageWithParents{}
 
-	if err := dag.TraverseParents(messageID,
+	if err := dag.TraverseParents(database.Tangle(), messageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1

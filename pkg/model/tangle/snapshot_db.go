@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"encoding/binary"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -10,26 +11,24 @@ import (
 )
 
 var (
-	snapshotStore kvstore.KVStore
-
 	snapshotMilestoneIndexKey = "snapshotMilestoneIndex"
 )
 
-func configureSnapshotStore(store kvstore.KVStore) {
-	snapshotStore = store.WithRealm([]byte{StorePrefixSnapshot})
+func (t *Tangle) configureSnapshotStore(store kvstore.KVStore) {
+	t.snapshotStore = store.WithRealm([]byte{StorePrefixSnapshot})
 }
 
-func storeSnapshotInfo(snapshot *SnapshotInfo) error {
+func (t *Tangle) storeSnapshotInfo(snapshot *SnapshotInfo) error {
 
-	if err := snapshotStore.Set([]byte("snapshotInfo"), snapshot.GetBytes()); err != nil {
+	if err := t.snapshotStore.Set([]byte("snapshotInfo"), snapshot.GetBytes()); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot info")
 	}
 
 	return nil
 }
 
-func readSnapshotInfo() (*SnapshotInfo, error) {
-	value, err := snapshotStore.Get([]byte("snapshotInfo"))
+func (t *Tangle) readSnapshotInfo() (*SnapshotInfo, error) {
+	value, err := t.snapshotStore.Get([]byte("snapshotInfo"))
 	if err != nil {
 		if err != kvstore.ErrKeyNotFound {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
@@ -44,10 +43,10 @@ func readSnapshotInfo() (*SnapshotInfo, error) {
 	return info, nil
 }
 
-func storeSolidEntryPoints(points *SolidEntryPoints) error {
+func (t *Tangle) storeSolidEntryPoints(points *SolidEntryPoints) error {
 	if points.IsModified() {
 
-		if err := snapshotStore.Set([]byte("solidEntryPoints"), points.GetBytes()); err != nil {
+		if err := t.snapshotStore.Set([]byte("solidEntryPoints"), points.GetBytes()); err != nil {
 			return errors.Wrap(NewDatabaseError(err), "failed to store solid entry points")
 		}
 
@@ -57,8 +56,8 @@ func storeSolidEntryPoints(points *SolidEntryPoints) error {
 	return nil
 }
 
-func readSolidEntryPoints() (*SolidEntryPoints, error) {
-	value, err := snapshotStore.Get([]byte("solidEntryPoints"))
+func (t *Tangle) readSolidEntryPoints() (*SolidEntryPoints, error) {
+	value, err := t.snapshotStore.Get([]byte("solidEntryPoints"))
 	if err != nil {
 		if err != kvstore.ErrKeyNotFound {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve solid entry points")

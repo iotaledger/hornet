@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/plugins/database"
 )
 
 const (
@@ -55,7 +56,7 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	}
 
 	// Children
-	t.Children = tangle.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
+	t.Children = database.Tangle().GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
 	// TODO:
@@ -215,7 +216,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 }
 
 func findMilestone(index milestone.Index) (*ExplorerMessage, error) {
-	cachedMsg := tangle.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMsg := database.Tangle().GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
@@ -234,7 +235,7 @@ func findTransaction(msgID string) (*ExplorerMessage, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
 	}
 
-	cachedMsg := tangle.GetCachedMessageOrNil(messageID) // msg +1
+	cachedMsg := database.Tangle().GetCachedMessageOrNil(messageID) // msg +1
 	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "msg %s unknown", msgID)
 	}
@@ -255,7 +256,7 @@ func findIndex(tag string) (*ExplorerTag, error) {
 			return nil, errors.Wrapf(ErrInvalidParameter, "tag invalid length: %s", tag)
 		}
 
-		txHashes := tangle.GetTagHashes(hornet.HashFromTagTrytes(tag), true, MaxTagResults)
+		txHashes := database.Tangle().GetTagHashes(hornet.HashFromTagTrytes(tag), true, MaxTagResults)
 		if len(txHashes) == 0 {
 			return nil, errors.Wrapf(ErrNotFound, "tag %s unknown", tag)
 		}
@@ -264,7 +265,7 @@ func findIndex(tag string) (*ExplorerTag, error) {
 		if len(txHashes) != 0 {
 			for i := 0; i < len(txHashes); i++ {
 				txHash := txHashes[i]
-				cachedMsg := tangle.GetCachedMessageOrNil(txHash) // msg +1
+				cachedMsg := database.Tangle().GetCachedMessageOrNil(txHash) // msg +1
 				if cachedMsg == nil {
 					return nil, errors.Wrapf(ErrNotFound, "msg %s not found but associated to tag %s", txHash.Trytes(), tag)
 				}
@@ -293,13 +294,13 @@ func findAddress(messageID string, valueOnly bool) (*ExplorerAddress, error) {
 
 	/*
 		ToDo:
-		txHashes := tangle.GetTransactionHashesForAddress(addr, valueOnly, true, MaxTransactionsForAddressResults)
+		txHashes := database.Tangle().GetTransactionHashesForAddress(addr, valueOnly, true, MaxTransactionsForAddressResults)
 
 		msgs := make([]*ExplorerMessage, 0, len(txHashes))
 		if len(txHashes) != 0 {
 			for i := 0; i < len(txHashes); i++ {
 				txHash := txHashes[i]
-				cachedMsg := tangle.GetCachedMessageOrNil(txHash) // msg +1
+				cachedMsg := database.Tangle().GetCachedMessageOrNil(txHash) // msg +1
 				if cachedMsg == nil {
 					return nil, errors.Wrapf(ErrNotFound, "msg %s not found but associated to address %s", txHash, messageID)
 				}
@@ -315,7 +316,7 @@ func findAddress(messageID string, valueOnly bool) (*ExplorerAddress, error) {
 
 	/*
 		// Todo
-		balance, _, err := tangle.GetBalanceForAddress(addr)
+		balance, _, err := database.Tangle().GetBalanceForAddress(addr)
 		if err != nil {
 			return nil, err
 		}
