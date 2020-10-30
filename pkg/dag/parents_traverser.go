@@ -12,6 +12,8 @@ import (
 type ParentTraverser struct {
 	cachedMessageMetas map[string]*tangle.CachedMetadata
 
+	tangle *tangle.Tangle
+
 	// stack holding the ordered msg to process
 	stack *list.List
 
@@ -33,9 +35,10 @@ type ParentTraverser struct {
 }
 
 // NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
+func NewParentTraverser(tangle *tangle.Tangle, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
 
 	return &ParentTraverser{
+		tangle:            tangle,
 		condition:         condition,
 		consumer:          consumer,
 		onMissingParent:   onMissingParent,
@@ -151,7 +154,7 @@ func (t *ParentTraverser) processStackParents() error {
 	}
 
 	// check if the message is a solid entry point
-	if tangle.SolidEntryPointsContain(currentMessageID) {
+	if t.tangle.SolidEntryPointsContain(currentMessageID) {
 		if t.onSolidEntryPoint != nil {
 			t.onSolidEntryPoint(currentMessageID)
 		}
@@ -167,7 +170,7 @@ func (t *ParentTraverser) processStackParents() error {
 
 	cachedMetadata, exists := t.cachedMessageMetas[currentMessageIDMapKey]
 	if !exists {
-		cachedMetadata = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
+		cachedMetadata = t.tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMetadata == nil {
 			// remove the message from the stack, parent1 and parent2 are not traversed
 			t.processed[currentMessageIDMapKey] = struct{}{}

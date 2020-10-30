@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/cli"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -22,10 +23,10 @@ func info() (*infoResponse, error) {
 
 	// latest milestone index
 	latestMilestoneID := hornet.GetNullMessageID().Hex()
-	latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+	latestMilestoneIndex := database.Tangle().GetLatestMilestoneIndex()
 
 	// latest milestone message ID
-	cachedLatestMilestone := tangle.GetCachedMilestoneOrNil(latestMilestoneIndex)
+	cachedLatestMilestone := database.Tangle().GetCachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
 		latestMilestoneID = hex.EncodeToString(cachedLatestMilestone.GetMilestone().MilestoneID[:])
 		cachedLatestMilestone.Release(true)
@@ -33,10 +34,10 @@ func info() (*infoResponse, error) {
 
 	// solid milestone index
 	solidMilestoneID := hornet.GetNullMessageID().Hex()
-	solidMilestoneIndex := tangle.GetSolidMilestoneIndex()
+	solidMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
 
 	// solid milestone message ID
-	cachedSolidMilestone := tangle.GetCachedMilestoneOrNil(solidMilestoneIndex)
+	cachedSolidMilestone := database.Tangle().GetCachedMilestoneOrNil(solidMilestoneIndex)
 	if cachedSolidMilestone != nil {
 		solidMilestoneID = hex.EncodeToString(cachedSolidMilestone.GetMilestone().MilestoneID[:])
 		cachedSolidMilestone.Release(true)
@@ -44,7 +45,7 @@ func info() (*infoResponse, error) {
 
 	// pruning index
 	var pruningIndex milestone.Index
-	snapshotInfo := tangle.GetSnapshotInfo()
+	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo != nil {
 		pruningIndex = snapshotInfo.PruningIndex
 	}
@@ -99,7 +100,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
 	}
 
-	cachedMilestone := tangle.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
+	cachedMilestone := database.Tangle().GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "milestone not found: %d", msIndex)
 	}

@@ -31,13 +31,13 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range tangle.GetUnreferencedMessageIDs(targetIndex, true) {
+	for _, messageID := range database.Tangle().GetUnreferencedMessageIDs(targetIndex, true) {
 		messageIDMapKey := messageID.MapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
 		}
 
-		cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
@@ -54,7 +54,7 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 	}
 
 	msgCountDeleted = pruneMessages(messageIDsToDeleteMap)
-	tangle.DeleteUnreferencedMessages(targetIndex)
+	database.Tangle().DeleteUnreferencedMessages(targetIndex)
 
 	return msgCountDeleted, len(messageIDsToDeleteMap)
 }
@@ -62,12 +62,12 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func pruneMilestone(milestoneIndex milestone.Index) error {
 
-	err := tangle.UTXO().PruneMilestoneIndex(milestoneIndex)
+	err := database.Tangle().UTXO().PruneMilestoneIndex(milestoneIndex)
 	if err != nil {
 		return err
 	}
 
-	tangle.DeleteMilestone(milestoneIndex)
+	database.Tangle().DeleteMilestone(milestoneIndex)
 
 	return nil
 }
@@ -77,26 +77,26 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		cachedMsg := tangle.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
+		cachedMsg := database.Tangle().GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
 
 		cachedMsg.ConsumeMessage(func(msg *tangle.Message) { // msg -1
 			// Delete the reference in the parents
-			tangle.DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
-			tangle.DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
+			database.Tangle().DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
+			database.Tangle().DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
 
 			// delete all children of this message
-			tangle.DeleteChildren(msg.GetMessageID())
+			database.Tangle().DeleteChildren(msg.GetMessageID())
 
 			indexationPayload := tangle.CheckIfIndexation(msg)
 			if indexationPayload != nil {
 				// delete indexation if the message contains an indexation payload
-				tangle.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
+				database.Tangle().DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
 			}
 
-			tangle.DeleteMessage(msg.GetMessageID())
+			database.Tangle().DeleteMessage(msg.GetMessageID())
 		})
 	}
 
@@ -105,7 +105,7 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
 
-	snapshotInfo := tangle.GetSnapshotInfo()
+	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo == nil {
 		log.Panic("No snapshotInfo found!")
 	}
@@ -140,13 +140,13 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		return true
 	})
 
-	tangle.WriteLockSolidEntryPoints()
-	tangle.ResetSolidEntryPoints()
+	database.Tangle().WriteLockSolidEntryPoints()
+	database.Tangle().ResetSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		tangle.SolidEntryPointsAdd(sep.messageID, sep.index)
+		database.Tangle().SolidEntryPointsAdd(sep.messageID, sep.index)
 	}
-	tangle.StoreSolidEntryPoints()
-	tangle.WriteUnlockSolidEntryPoints()
+	database.Tangle().StoreSolidEntryPoints()
+	database.Tangle().WriteUnlockSolidEntryPoints()
 
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
-	tangle.SetSnapshotInfo(snapshotInfo)
+	database.Tangle().SetSnapshotInfo(snapshotInfo)
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
 	pruneUnreferencedMessages(snapshotInfo.PruningIndex)
@@ -174,7 +174,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		ts := time.Now()
 		txCountDeleted, msgCountChecked := pruneUnreferencedMessages(milestoneIndex)
 
-		cachedMs := tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMs := database.Tangle().GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
 			// Milestone not found, pruning impossible
 			log.Warnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
@@ -183,7 +183,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 		messageIDsToDeleteMap := make(map[string]struct{})
 
-		err := dag.TraverseParents(cachedMs.GetMilestone().MessageID,
+		err := dag.TraverseParents(database.Tangle(), cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // msg +1
@@ -221,7 +221,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		txCountDeleted += pruneMessages(messageIDsToDeleteMap)
 
 		snapshotInfo.PruningIndex = milestoneIndex
-		tangle.SetSnapshotInfo(snapshotInfo)
+		database.Tangle().SetSnapshotInfo(snapshotInfo)
 
 		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
 

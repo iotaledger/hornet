@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"crypto"
 	"errors"
 	"os"
 	"path/filepath"
@@ -9,9 +10,14 @@ import (
 	pebbleDB "github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
 
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -21,23 +27,8 @@ const (
 )
 
 var (
-	dbDir string
-
-	pebbleInstance *pebbleDB.DB
-	pebbleStore    kvstore.KVStore
-
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
-
-	utxoOnce    sync.Once
-	utxoManager *utxo.Manager
 )
-
-func UTXO() *utxo.Manager {
-	utxoOnce.Do(func() {
-		utxoManager = utxo.New(pebbleStore)
-	})
-	return utxoManager
-}
 
 func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 
@@ -89,92 +80,152 @@ func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 	return db
 }
 
-func ConfigureDatabases(directory string) {
+type Tangle struct {
+	dbDir string
 
-	dbDir = directory
+	pebbleInstance *pebbleDB.DB
+	pebbleStore    kvstore.KVStore
 
-	pebbleInstance = getPebbleDB(directory, false)
-	pebbleStore = pebble.New(pebbleInstance)
+	healthStore kvstore.KVStore
 
-	ConfigureStorages(pebbleStore, profile.LoadProfile().Caches)
-	loadSolidMilestoneFromDatabase()
+	childrenStorage             *objectstorage.ObjectStorage
+	indexationStorage           *objectstorage.ObjectStorage
+	messagesStorage             *objectstorage.ObjectStorage
+	metadataStorage             *objectstorage.ObjectStorage
+	milestoneStorage            *objectstorage.ObjectStorage
+	unreferencedMessagesStorage *objectstorage.ObjectStorage
+
+	snapshotStore kvstore.KVStore
+
+	solidEntryPoints     *SolidEntryPoints
+	solidEntryPointsLock sync.RWMutex
+
+	snapshot      *SnapshotInfo
+	snapshotMutex syncutils.RWMutex
+
+	solidMilestoneIndex   milestone.Index
+	solidMilestoneLock    syncutils.RWMutex
+	latestMilestoneIndex  milestone.Index
+	latestMilestoneLock   syncutils.RWMutex
+	isNodeSynced          bool
+	isNodeSyncedThreshold bool
+
+	waitForNodeSyncedChannelsLock syncutils.Mutex
+	waitForNodeSyncedChannels     []chan struct{}
+
+	keyManager                         *keymanager.KeyManager
+	milestonePublicKeyCount            int
+	coordinatorMilestoneMerkleHashFunc crypto.Hash
+
+	Events *packageEvents
+
+	utxoOnce    sync.Once
+	utxoManager *utxo.Manager
 }
 
-func ConfigureStorages(store kvstore.KVStore, caches profile.Caches) {
+func New(directory string, cachesProfile *profile.Caches) *Tangle {
 
-	configureHealthStore(store)
-	configureMessageStorage(store, caches.Messages)
-	configureChildrenStorage(store, caches.Children)
-	configureMilestoneStorage(store, caches.Milestones)
-	configureUnreferencedMessageStorage(store, caches.UnreferencedMessages)
-	configureIndexationStorage(store, caches.Indexations)
-	configureSnapshotStore(store)
+	pebbleInstance := getPebbleDB(directory, false)
+	pebbleStore := pebble.New(pebbleInstance)
 
-	UTXO()
+	t := &Tangle{
+		dbDir:          directory,
+		pebbleInstance: pebbleInstance,
+		pebbleStore:    pebbleStore,
+		Events: &packageEvents{
+			ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
+			AddressSpent:           events.NewEvent(events.StringCaller),
+		},
+	}
+
+	t.ConfigureStorages(pebbleStore, cachesProfile)
+	t.loadSolidMilestoneFromDatabase()
+
+	return t
 }
 
-func FlushStorages() {
-	FlushMilestoneStorage()
-	FlushMessagesStorage()
-	FlushMessagesStorage()
-	FlushChildrenStorage()
-	FlushUnreferencedMessagesStorage()
+func (t *Tangle) UTXO() *utxo.Manager {
+	t.utxoOnce.Do(func() {
+		t.utxoManager = utxo.New(t.pebbleStore)
+	})
+	return t.utxoManager
 }
 
-func ShutdownStorages() {
+func (t *Tangle) ConfigureStorages(store kvstore.KVStore, caches *profile.Caches) {
 
-	ShutdownMilestoneStorage()
-	ShutdownMessagesStorage()
-	ShutdownMessagesStorage()
-	ShutdownChildrenStorage()
-	ShutdownUnreferencedMessagesStorage()
+	t.configureHealthStore(store)
+	t.configureMessageStorage(store, caches.Messages)
+	t.configureChildrenStorage(store, caches.Children)
+	t.configureMilestoneStorage(store, caches.Milestones)
+	t.configureUnreferencedMessageStorage(store, caches.UnreferencedMessages)
+	t.configureIndexationStorage(store, caches.Indexations)
+	t.configureSnapshotStore(store)
+
+	t.UTXO()
 }
 
-func LoadInitialValuesFromDatabase() {
-	loadSnapshotInfo()
-	loadSolidEntryPoints()
+func (t *Tangle) FlushStorages() {
+	t.FlushMilestoneStorage()
+	t.FlushMessagesStorage()
+	t.FlushMessagesStorage()
+	t.FlushChildrenStorage()
+	t.FlushUnreferencedMessagesStorage()
 }
 
-func loadSolidMilestoneFromDatabase() {
+func (t *Tangle) ShutdownStorages() {
 
-	ledgerMilestoneIndex, err := UTXO().ReadLedgerIndex()
+	t.ShutdownMilestoneStorage()
+	t.ShutdownMessagesStorage()
+	t.ShutdownMessagesStorage()
+	t.ShutdownChildrenStorage()
+	t.ShutdownUnreferencedMessagesStorage()
+}
+
+func (t *Tangle) LoadInitialValuesFromDatabase() {
+	t.loadSnapshotInfo()
+	t.loadSolidEntryPoints()
+}
+
+func (t *Tangle) loadSolidMilestoneFromDatabase() {
+
+	ledgerMilestoneIndex, err := t.UTXO().ReadLedgerIndex()
 	if err != nil {
 		panic(err)
 	}
 
 	// set the solid milestone index based on the ledger milestone
-	SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
+	t.SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
-func CloseDatabases() error {
+func (t *Tangle) CloseDatabases() error {
 
-	if err := pebbleInstance.Flush(); err != nil {
+	if err := t.pebbleInstance.Flush(); err != nil {
 		return err
 	}
 
-	if err := pebbleInstance.Close(); err != nil {
+	if err := t.pebbleInstance.Close(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func DatabaseSupportsCleanup() bool {
+func (t *Tangle) DatabaseSupportsCleanup() bool {
 	// Bolt does not support cleaning up anything
 	return false
 }
 
-func CleanupDatabases() error {
+func (t *Tangle) CleanupDatabases() error {
 	// Bolt does not support cleaning up anything
 	return ErrNothingToCleanUp
 }
 
 // GetDatabaseSize returns the size of the database.
-func GetDatabaseSize() (int64, error) {
+func (t *Tangle) GetDatabaseSize() (int64, error) {
 
 	var size int64
 
-	err := filepath.Walk(dbDir, func(_ string, info os.FileInfo, err error) error {
+	err := filepath.Walk(t.dbDir, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

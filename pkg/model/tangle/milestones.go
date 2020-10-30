@@ -9,8 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
@@ -26,20 +24,6 @@ type CoordinatorPublicKey struct {
 }
 
 var (
-	solidMilestoneIndex   milestone.Index
-	solidMilestoneLock    syncutils.RWMutex
-	latestMilestoneIndex  milestone.Index
-	latestMilestoneLock   syncutils.RWMutex
-	isNodeSynced          bool
-	isNodeSyncedThreshold bool
-
-	waitForNodeSyncedChannelsLock syncutils.Mutex
-	waitForNodeSyncedChannels     []chan struct{}
-
-	keyManager                         *keymanager.KeyManager
-	milestonePublicKeyCount            int
-	coordinatorMilestoneMerkleHashFunc crypto.Hash
-
 	ErrInvalidMilestone = errors.New("invalid milestone")
 )
 
@@ -47,77 +31,77 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMsg *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
-func ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int, cooMilestoneMerkleHashFunc crypto.Hash) {
-	keyManager = cooKeyManager
-	milestonePublicKeyCount = cooMilestonePublicKeyCount
-	coordinatorMilestoneMerkleHashFunc = cooMilestoneMerkleHashFunc
+func (t *Tangle) ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int, cooMilestoneMerkleHashFunc crypto.Hash) {
+	t.keyManager = cooKeyManager
+	t.milestonePublicKeyCount = cooMilestonePublicKeyCount
+	t.coordinatorMilestoneMerkleHashFunc = cooMilestoneMerkleHashFunc
 }
 
-func KeyManager() *keymanager.KeyManager {
-	return keyManager
+func (t *Tangle) KeyManager() *keymanager.KeyManager {
+	return t.keyManager
 }
 
-func GetMilestoneMerkleHashFunc() crypto.Hash {
-	return coordinatorMilestoneMerkleHashFunc
+func (t *Tangle) GetMilestoneMerkleHashFunc() crypto.Hash {
+	return t.coordinatorMilestoneMerkleHashFunc
 }
 
-func ResetMilestoneIndexes() {
-	solidMilestoneLock.Lock()
-	latestMilestoneLock.Lock()
-	defer solidMilestoneLock.Unlock()
-	defer latestMilestoneLock.Unlock()
+func (t *Tangle) ResetMilestoneIndexes() {
+	t.solidMilestoneLock.Lock()
+	t.latestMilestoneLock.Lock()
+	defer t.solidMilestoneLock.Unlock()
+	defer t.latestMilestoneLock.Unlock()
 
-	solidMilestoneIndex = 0
-	latestMilestoneIndex = 0
+	t.solidMilestoneIndex = 0
+	t.latestMilestoneIndex = 0
 }
 
 // GetMilestoneOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
 // message +1
-func GetMilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
+func (t *Tangle) GetMilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
-	cachedMs := GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+	cachedMs := t.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 	if cachedMs == nil {
 		return nil
 	}
 	defer cachedMs.Release(true) // milestone -1
 
-	return GetCachedMessageOrNil(cachedMs.GetMilestone().MessageID)
+	return t.GetCachedMessageOrNil(cachedMs.GetMilestone().MessageID)
 }
 
 // IsNodeSynced returns whether the node is synced.
-func IsNodeSynced() bool {
-	return isNodeSynced
+func (t *Tangle) IsNodeSynced() bool {
+	return t.isNodeSynced
 }
 
 // IsNodeSyncedWithThreshold returns whether the node is synced within a certain threshold.
-func IsNodeSyncedWithThreshold() bool {
-	return isNodeSyncedThreshold
+func (t *Tangle) IsNodeSyncedWithThreshold() bool {
+	return t.isNodeSyncedThreshold
 }
 
 // WaitForNodeSynced waits at most "timeout" duration for the node to become fully sync.
 // if it is not at least synced within threshold, it will return false immediately.
 // this is used to avoid small glitches of IsNodeSynced when the sync state is important,
 // but a new milestone came in lately.
-func WaitForNodeSynced(timeout time.Duration) bool {
+func (t *Tangle) WaitForNodeSynced(timeout time.Duration) bool {
 
-	if !isNodeSyncedThreshold {
+	if !t.isNodeSyncedThreshold {
 		// node is not even synced within threshold, and therefore it is unsync
 		return false
 	}
 
-	if isNodeSynced {
+	if t.isNodeSynced {
 		// node is synced, no need to wait
 		return true
 	}
 
 	// create a channel that gets closed if the node got synced
-	waitForNodeSyncedChannelsLock.Lock()
+	t.waitForNodeSyncedChannelsLock.Lock()
 	waitForNodeSyncedChan := make(chan struct{})
-	waitForNodeSyncedChannels = append(waitForNodeSyncedChannels, waitForNodeSyncedChan)
-	waitForNodeSyncedChannelsLock.Unlock()
+	t.waitForNodeSyncedChannels = append(t.waitForNodeSyncedChannels, waitForNodeSyncedChan)
+	t.waitForNodeSyncedChannelsLock.Unlock()
 
 	// check again after the channel was created
-	if isNodeSynced {
+	if t.isNodeSynced {
 		// node is synced, no need to wait
 		return true
 	}
@@ -131,117 +115,117 @@ func WaitForNodeSynced(timeout time.Duration) bool {
 	case <-ctx.Done():
 	}
 
-	return isNodeSynced
+	return t.isNodeSynced
 }
 
 // The node is synced if LMI != 0 and LSMI == LMI.
-func updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
+func (t *Tangle) updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 {
-		isNodeSynced = false
-		isNodeSyncedThreshold = false
+		t.isNodeSynced = false
+		t.isNodeSyncedThreshold = false
 		return
 	}
 
-	isNodeSynced = latestSolidIndex == latestIndex
-	if isNodeSynced {
+	t.isNodeSynced = latestSolidIndex == latestIndex
+	if t.isNodeSynced {
 		// if the node is sync, signal all waiting routines at the end
 		defer func() {
-			waitForNodeSyncedChannelsLock.Lock()
-			defer waitForNodeSyncedChannelsLock.Unlock()
+			t.waitForNodeSyncedChannelsLock.Lock()
+			defer t.waitForNodeSyncedChannelsLock.Unlock()
 
 			// signal all routines that are waiting
-			for _, channel := range waitForNodeSyncedChannels {
+			for _, channel := range t.waitForNodeSyncedChannels {
 				close(channel)
 			}
 
 			// create an empty slice for new signals
-			waitForNodeSyncedChannels = make([]chan struct{}, 0)
+			t.waitForNodeSyncedChannels = make([]chan struct{}, 0)
 		}()
 	}
 
 	// catch overflow
 	if latestIndex < isNodeSyncedWithinThreshold {
-		isNodeSyncedThreshold = true
+		t.isNodeSyncedThreshold = true
 		return
 	}
 
-	isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - isNodeSyncedWithinThreshold)
+	t.isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - isNodeSyncedWithinThreshold)
 }
 
 // SetSolidMilestoneIndex sets the solid milestone index.
-func SetSolidMilestoneIndex(index milestone.Index, updateSynced ...bool) {
-	solidMilestoneLock.Lock()
-	if solidMilestoneIndex > index {
-		panic(fmt.Sprintf("current solid milestone (%d) is newer than (%d)", solidMilestoneIndex, index))
+func (t *Tangle) SetSolidMilestoneIndex(index milestone.Index, updateSynced ...bool) {
+	t.solidMilestoneLock.Lock()
+	if t.solidMilestoneIndex > index {
+		panic(fmt.Sprintf("current solid milestone (%d) is newer than (%d)", t.solidMilestoneIndex, index))
 	}
-	solidMilestoneIndex = index
-	solidMilestoneLock.Unlock()
+	t.solidMilestoneIndex = index
+	t.solidMilestoneLock.Unlock()
 
 	if len(updateSynced) > 0 && !updateSynced[0] {
 		// always call updateNodeSynced if parameter is not given.
 		return
 	}
 
-	updateNodeSynced(index, GetLatestMilestoneIndex())
+	t.updateNodeSynced(index, t.GetLatestMilestoneIndex())
 }
 
 // OverwriteSolidMilestoneIndex is used to set older solid milestones (revalidation).
-func OverwriteSolidMilestoneIndex(index milestone.Index) {
-	solidMilestoneLock.Lock()
-	solidMilestoneIndex = index
-	solidMilestoneLock.Unlock()
+func (t *Tangle) OverwriteSolidMilestoneIndex(index milestone.Index) {
+	t.solidMilestoneLock.Lock()
+	t.solidMilestoneIndex = index
+	t.solidMilestoneLock.Unlock()
 
-	if isNodeSynced {
-		updateNodeSynced(index, GetLatestMilestoneIndex())
+	if t.isNodeSynced {
+		t.updateNodeSynced(index, t.GetLatestMilestoneIndex())
 	}
 }
 
 // GetSolidMilestoneIndex returns the latest solid milestone index.
-func GetSolidMilestoneIndex() milestone.Index {
-	solidMilestoneLock.RLock()
-	defer solidMilestoneLock.RUnlock()
+func (t *Tangle) GetSolidMilestoneIndex() milestone.Index {
+	t.solidMilestoneLock.RLock()
+	defer t.solidMilestoneLock.RUnlock()
 
-	return solidMilestoneIndex
+	return t.solidMilestoneIndex
 }
 
 // SetLatestMilestoneIndex sets the latest milestone index.
-func SetLatestMilestoneIndex(index milestone.Index, updateSynced ...bool) bool {
+func (t *Tangle) SetLatestMilestoneIndex(index milestone.Index, updateSynced ...bool) bool {
 
-	latestMilestoneLock.Lock()
+	t.latestMilestoneLock.Lock()
 
-	if latestMilestoneIndex >= index {
+	if t.latestMilestoneIndex >= index {
 		// current LMI is bigger than new LMI => abort
-		latestMilestoneLock.Unlock()
+		t.latestMilestoneLock.Unlock()
 		return false
 	}
 
-	latestMilestoneIndex = index
-	latestMilestoneLock.Unlock()
+	t.latestMilestoneIndex = index
+	t.latestMilestoneLock.Unlock()
 
 	if len(updateSynced) > 0 && !updateSynced[0] {
 		// always call updateNodeSynced if parameter is not given
 		return true
 	}
 
-	updateNodeSynced(GetSolidMilestoneIndex(), index)
+	t.updateNodeSynced(t.GetSolidMilestoneIndex(), index)
 
 	return true
 }
 
 // GetLatestMilestoneIndex returns the latest milestone index.
-func GetLatestMilestoneIndex() milestone.Index {
-	latestMilestoneLock.RLock()
-	defer latestMilestoneLock.RUnlock()
+func (t *Tangle) GetLatestMilestoneIndex() milestone.Index {
+	t.latestMilestoneLock.RLock()
+	defer t.latestMilestoneLock.RUnlock()
 
-	return latestMilestoneIndex
+	return t.latestMilestoneIndex
 }
 
 // message +1
-func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
-	lmi := GetLatestMilestoneIndex()
+func (t *Tangle) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
+	lmi := t.GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
-		lmi = GetSolidMilestoneIndex() + 100
+		lmi = t.GetSolidMilestoneIndex() + 100
 	}
 
 	if index == 4294967295 {
@@ -256,7 +240,7 @@ func FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
 			return nil
 		}
 
-		cachedMs := GetCachedMilestoneOrNil(index) // milestone +1
+		cachedMs := t.GetCachedMilestoneOrNil(index) // milestone +1
 		if cachedMs != nil {
 			return cachedMs
 		}

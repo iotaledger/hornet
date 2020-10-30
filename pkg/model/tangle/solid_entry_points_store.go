@@ -1,8 +1,6 @@
 package tangle
 
 import (
-	"sync"
-
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -10,85 +8,82 @@ import (
 )
 
 var (
-	solidEntryPoints     *SolidEntryPoints
-	solidEntryPointsLock sync.RWMutex
-
 	ErrSolidEntryPointsAlreadyInitialized = errors.New("solidEntryPoints already initialized")
 	ErrSolidEntryPointsNotInitialized     = errors.New("solidEntryPoints not initialized")
 )
 
-func ReadLockSolidEntryPoints() {
-	solidEntryPointsLock.RLock()
+func (t *Tangle) ReadLockSolidEntryPoints() {
+	t.solidEntryPointsLock.RLock()
 }
 
-func ReadUnlockSolidEntryPoints() {
-	solidEntryPointsLock.RUnlock()
+func (t *Tangle) ReadUnlockSolidEntryPoints() {
+	t.solidEntryPointsLock.RUnlock()
 }
 
-func WriteLockSolidEntryPoints() {
-	solidEntryPointsLock.Lock()
+func (t *Tangle) WriteLockSolidEntryPoints() {
+	t.solidEntryPointsLock.Lock()
 }
 
-func WriteUnlockSolidEntryPoints() {
-	solidEntryPointsLock.Unlock()
+func (t *Tangle) WriteUnlockSolidEntryPoints() {
+	t.solidEntryPointsLock.Unlock()
 }
 
-func loadSolidEntryPoints() {
-	WriteLockSolidEntryPoints()
-	defer WriteUnlockSolidEntryPoints()
+func (t *Tangle) loadSolidEntryPoints() {
+	t.WriteLockSolidEntryPoints()
+	defer t.WriteUnlockSolidEntryPoints()
 
-	if solidEntryPoints != nil {
+	if t.solidEntryPoints != nil {
 		panic(ErrSolidEntryPointsAlreadyInitialized)
 	}
 
-	points, err := readSolidEntryPoints()
+	points, err := t.readSolidEntryPoints()
 	if points != nil && err == nil {
-		solidEntryPoints = points
+		t.solidEntryPoints = points
 	} else {
-		solidEntryPoints = NewSolidEntryPoints()
+		t.solidEntryPoints = NewSolidEntryPoints()
 	}
 }
 
-func SolidEntryPointsContain(messageID *hornet.MessageID) bool {
-	ReadLockSolidEntryPoints()
-	defer ReadUnlockSolidEntryPoints()
+func (t *Tangle) SolidEntryPointsContain(messageID *hornet.MessageID) bool {
+	t.ReadLockSolidEntryPoints()
+	defer t.ReadUnlockSolidEntryPoints()
 
-	if solidEntryPoints == nil {
+	if t.solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	return solidEntryPoints.Contains(messageID)
+	return t.solidEntryPoints.Contains(messageID)
 }
 
-func SolidEntryPointsIndex(messageID *hornet.MessageID) (milestone.Index, bool) {
-	ReadLockSolidEntryPoints()
-	defer ReadUnlockSolidEntryPoints()
+func (t *Tangle) SolidEntryPointsIndex(messageID *hornet.MessageID) (milestone.Index, bool) {
+	t.ReadLockSolidEntryPoints()
+	defer t.ReadUnlockSolidEntryPoints()
 
-	if solidEntryPoints == nil {
+	if t.solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	return solidEntryPoints.Index(messageID)
-}
-
-// WriteLockSolidEntryPoints must be held while entering this function
-func SolidEntryPointsAdd(messageID *hornet.MessageID, milestoneIndex milestone.Index) {
-	if solidEntryPoints == nil {
-		panic(ErrSolidEntryPointsNotInitialized)
-	}
-	solidEntryPoints.Add(messageID, milestoneIndex)
+	return t.solidEntryPoints.Index(messageID)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
-func ResetSolidEntryPoints() {
-	if solidEntryPoints == nil {
+func (t *Tangle) SolidEntryPointsAdd(messageID *hornet.MessageID, milestoneIndex milestone.Index) {
+	if t.solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	solidEntryPoints.Clear()
+	t.solidEntryPoints.Add(messageID, milestoneIndex)
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
-func StoreSolidEntryPoints() {
-	if solidEntryPoints == nil {
+func (t *Tangle) ResetSolidEntryPoints() {
+	if t.solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	storeSolidEntryPoints(solidEntryPoints)
+	t.solidEntryPoints.Clear()
+}
+
+// WriteLockSolidEntryPoints must be held while entering this function
+func (t *Tangle) StoreSolidEntryPoints() {
+	if t.solidEntryPoints == nil {
+		panic(ErrSolidEntryPointsNotInitialized)
+	}
+	t.storeSolidEntryPoints(t.solidEntryPoints)
 }

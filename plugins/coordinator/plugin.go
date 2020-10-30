@@ -24,6 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/pow"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
@@ -80,7 +81,7 @@ func configure(plugin *node.Plugin) {
 
 func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
-	if tangle.IsDatabaseTainted() {
+	if database.Tangle().IsDatabaseTainted() {
 		return nil, ErrDatabaseTainted
 	}
 
@@ -117,9 +118,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		}
 	}
 
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, tangle.KeyManager(), config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount))
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, database.Tangle().KeyManager(), config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount))
 
 	coo, err := coordinator.New(
+		database.Tangle(),
 		inMemoryEd25519MilestoneSignerProvider,
 		config.NodeConfig.String(config.CfgCoordinatorStateFilePath),
 		config.NodeConfig.Int(config.CfgCoordinatorIntervalSeconds),
@@ -281,9 +283,9 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 func isBelowMaxDepth(cachedMsgMeta *tangle.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	lsmi := tangle.GetSolidMilestoneIndex()
+	lsmi := database.Tangle().GetSolidMilestoneIndex()
 
-	_, ocri := dag.GetConeRootIndexes(cachedMsgMeta.Retain(), lsmi) // meta +1
+	_, ocri := dag.GetConeRootIndexes(database.Tangle(), cachedMsgMeta.Retain(), lsmi) // meta +1
 
 	// if the OCRI to LSMI delta is over belowMaxDepth, then the tip is invalid.
 	return (lsmi - ocri) > belowMaxDepth
@@ -324,12 +326,12 @@ func configureEvents() {
 		ts := time.Now()
 
 		// do not propagate during syncing, because it is not needed at all
-		if !tangle.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 
 		// propagate new cone root indexes to the future cone for heaviest branch tipselection
-		dag.UpdateConeRootIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		dag.UpdateConeRootIndexes(database.Tangle(), confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})

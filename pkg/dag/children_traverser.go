@@ -13,6 +13,8 @@ import (
 type ChildrenTraverser struct {
 	cachedMsgMetas map[string]*tangle.CachedMetadata
 
+	tangle *tangle.Tangle
+
 	// stack holding the ordered msg to process
 	stack *list.List
 
@@ -28,9 +30,10 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
+func NewChildrenTraverser(tangle *tangle.Tangle, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
 
 	return &ChildrenTraverser{
+		tangle:                tangle,
 		condition:             condition,
 		consumer:              consumer,
 		walkAlreadyDiscovered: walkAlreadyDiscovered,
@@ -103,7 +106,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	cachedMsgMeta, exists := t.cachedMsgMetas[currentMessageIDMapKey]
 	if !exists {
-		cachedMsgMeta = tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
+		cachedMsgMeta = t.tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
 			return errors.Wrapf(tangle.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
@@ -131,7 +134,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	for _, childMessageID := range tangle.GetChildrenMessageIDs(currentMessageID) {
+	for _, childMessageID := range t.tangle.GetChildrenMessageIDs(currentMessageID) {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.MapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {

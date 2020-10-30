@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/plugins/database"
 	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -65,7 +65,7 @@ func Service() *gossip.Service {
 func MessageProcessor() *gossip.MessageProcessor {
 	msgProcOnce.Do(func() {
 		RequestQueue()
-		msgProc = gossip.NewMessageProcessor(rQueue, p2pplug.Manager(), &gossip.Options{
+		msgProc = gossip.NewMessageProcessor(database.Tangle(), rQueue, p2pplug.Manager(), &gossip.Options{
 			ValidMWM:          uint64(config.NodeConfig.Int64(config.CfgCoordinatorMWM)),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
 		})
@@ -117,12 +117,12 @@ func configure(plugin *node.Plugin) {
 
 		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			// send heartbeat and latest milestone request
-			if snapshotInfo := tangle.GetSnapshotInfo(); snapshotInfo != nil {
-				latestMilestoneIndex := tangle.GetLatestMilestoneIndex()
+			if snapshotInfo := database.Tangle().GetSnapshotInfo(); snapshotInfo != nil {
+				latestMilestoneIndex := database.Tangle().GetLatestMilestoneIndex()
 				syncedCount := gossipService.SynchronizedCount(latestMilestoneIndex)
 				connectedCount := p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown)
 				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(tangle.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendHeartbeat(database.Tangle().GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
 			}
 

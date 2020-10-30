@@ -17,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/restapi/common"
@@ -31,7 +32,7 @@ var (
 )
 
 func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataResponse, error) {
-	cachedMsgMeta := tangle.GetCachedMessageMetadataOrNil(messageID)
+	cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageID.Hex())
 	}
@@ -65,8 +66,8 @@ func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataRe
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		lsmi := tangle.GetSolidMilestoneIndex()
-		ycri, ocri := dag.GetConeRootIndexes(cachedMsgMeta.Retain(), lsmi)
+		lsmi := database.Tangle().GetSolidMilestoneIndex()
+		ycri, ocri := dag.GetConeRootIndexes(database.Tangle(), cachedMsgMeta.Retain(), lsmi)
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
@@ -112,7 +113,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	cachedMsg := tangle.GetCachedMessageOrNil(messageID)
+	cachedMsg := database.Tangle().GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -129,7 +130,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	cachedMsg := tangle.GetCachedMessageOrNil(messageID)
+	cachedMsg := database.Tangle().GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -149,7 +150,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	childrenMessageIDsHex := []string{}
-	for _, childrenMessageID := range tangle.GetChildrenMessageIDs(messageID, maxResults) {
+	for _, childrenMessageID := range database.Tangle().GetChildrenMessageIDs(messageID, maxResults) {
 		childrenMessageIDsHex = append(childrenMessageIDsHex, childrenMessageID.Hex())
 	}
 
@@ -171,7 +172,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	messageIDsHex := []string{}
-	for _, messageID := range tangle.GetIndexMessageIDs(index, maxResults) {
+	for _, messageID := range database.Tangle().GetIndexMessageIDs(index, maxResults) {
 		messageIDsHex = append(messageIDsHex, messageID.Hex())
 	}
 

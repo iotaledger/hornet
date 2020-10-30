@@ -7,6 +7,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/p2p"
 	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/plugins/database"
 	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -24,7 +25,6 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/cli"
 	"github.com/gohornet/hornet/plugins/gossip"
@@ -191,7 +191,7 @@ func run(_ *node.Plugin) {
 }
 
 func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
-	cachedMs := tangle.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMs := database.Tangle().GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
@@ -335,7 +335,7 @@ func peerMetrics() []*PeerMetric {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{LSMI: tangle.GetSolidMilestoneIndex(), LMI: tangle.GetLatestMilestoneIndex()}
+	return &SyncStatus{LSMI: database.Tangle().GetSolidMilestoneIndex(), LMI: database.Tangle().GetLatestMilestoneIndex()}
 }
 
 func currentNodeStatus() *NodeStatus {
@@ -358,7 +358,7 @@ func currentNodeStatus() *NodeStatus {
 
 	status.ConnectedPeersCount = p2pplug.Manager().ConnectedCount()
 
-	snapshotInfo := tangle.GetSnapshotInfo()
+	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
@@ -372,16 +372,16 @@ func currentNodeStatus() *NodeStatus {
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: tangle.GetChildrenStorageSize(),
+			Size: database.Tangle().GetChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
 		Milestones: Cache{
-			Size: tangle.GetMilestoneStorageSize(),
+			Size: database.Tangle().GetMilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: tangle.GetMessageStorageSize(),
+			Size: database.Tangle().GetMessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
 			Size: gossip.MessageProcessor().WorkUnitsSize(),

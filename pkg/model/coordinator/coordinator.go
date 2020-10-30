@@ -43,6 +43,7 @@ type Events struct {
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
+	tangle         *tangle.Tangle
 	signerProvider MilestoneSignerProvider
 
 	// config options
@@ -86,9 +87,10 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
+func New(tangle *tangle.Tangle, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
 	result := &Coordinator{
+		tangle:                  tangle,
 		signerProvider:          signerProvider,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
@@ -110,7 +112,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 	_, err := os.Stat(coo.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
 
-	latestMilestoneFromDatabase := tangle.SearchLatestMilestoneIndexInStore()
+	latestMilestoneFromDatabase := coo.tangle.SearchLatestMilestoneIndexInStore()
 
 	if bootstrap {
 		if stateFileExists {
@@ -128,13 +130,13 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 
 		if startIndex == 1 {
 			// if we bootstrap a network, NullMessageID has to be set as a solid entry point
-			tangle.SolidEntryPointsAdd(hornet.GetNullMessageID(), startIndex)
+			coo.tangle.SolidEntryPointsAdd(hornet.GetNullMessageID(), startIndex)
 		}
 
 		latestMilestoneMessageID := hornet.GetNullMessageID()
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
-			cachedMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
+			cachedMilestoneMsg := coo.tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 			if cachedMilestoneMsg == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
@@ -166,7 +168,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedMilestoneMsg := tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
+	cachedMilestoneMsg := coo.tangle.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 	if cachedMilestoneMsg == nil {
 		return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 	}
@@ -197,7 +199,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 	}()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(newMilestoneIndex, cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, parent1MessageID, parent2MessageID)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.tangle, newMilestoneIndex, cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, parent1MessageID, parent2MessageID)
 	if err != nil {
 		return err
 	}
@@ -261,7 +263,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !tangle.IsNodeSynced() {
+	if !coo.tangle.IsNodeSynced() {
 		return nil, tangle.ErrNodeNotSynced
 	}
 
@@ -290,7 +292,7 @@ func (coo *Coordinator) IssueMilestone(parent1MessageID *hornet.MessageID, paren
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !tangle.IsNodeSynced() {
+	if !coo.tangle.IsNodeSynced() {
 		// return a non-critical error to not kill the database
 		return nil, tangle.ErrNodeNotSynced, nil
 	}

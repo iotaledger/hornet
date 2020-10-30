@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/database"
 )
@@ -38,7 +37,7 @@ func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 }
 
 func currentDatabaseSize() *DBSizeMetric {
-	dbSize, err := tangle.GetDatabaseSize()
+	dbSize, err := database.Tangle().GetDatabaseSize()
 	if err != nil {
 		log.Warnf("error in GetDatabaseSize: %w", err)
 		return nil

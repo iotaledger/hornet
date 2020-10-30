@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/gohornet/hornet/plugins/database"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -32,6 +33,8 @@ func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	TipSelector = tipselect.New(
+		database.Tangle(),
+
 		config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
 		config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
 		config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth),
@@ -75,7 +78,7 @@ func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *tangle.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
-			if !tangle.IsNodeSyncedWithThreshold() {
+			if !database.Tangle().IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -85,13 +88,13 @@ func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		// do not propagate during syncing, because it is not needed at all
-		if !tangle.IsNodeSyncedWithThreshold() {
+		if !database.Tangle().IsNodeSyncedWithThreshold() {
 			return
 		}
 
 		// propagate new cone root indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateConeRootIndexes(confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		dag.UpdateConeRootIndexes(database.Tangle(), confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()

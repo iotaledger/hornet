@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/iotaledger/hive.go/daemon"
 
 	"github.com/gohornet/hornet/pkg/dag"
@@ -116,11 +117,11 @@ func enqueueAndSignal(r *gossip.Request) bool {
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
 func Request(messageID *hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
-	if tangle.SolidEntryPointsContain(messageID) {
+	if database.Tangle().SolidEntryPointsContain(messageID) {
 		return false
 	}
 
-	if tangle.ContainsMessage(messageID) {
+	if database.Tangle().ContainsMessage(messageID) {
 		return false
 	}
 
@@ -151,7 +152,7 @@ func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, pr
 	cachedMsg.ConsumeMetadata(func(metadata *tangle.MessageMetadata) {
 		messageID := metadata.GetMessageID()
 
-		if tangle.SolidEntryPointsContain(messageID) {
+		if database.Tangle().SolidEntryPointsContain(messageID) {
 			return
 		}
 
@@ -169,7 +170,7 @@ func RequestMilestoneParents(cachedMilestone *tangle.CachedMilestone) bool {
 
 	msIndex := cachedMilestone.GetMilestone().Index
 
-	cachedMilestoneMsgMeta := tangle.GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
+	cachedMilestoneMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
 	if cachedMilestoneMsgMeta == nil {
 		panic("milestone metadata doesn't exist")
 	}
@@ -195,7 +196,7 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
 
-		cachedMs := tangle.GetCachedMilestoneOrNil(ms) // milestone +1
+		cachedMs := database.Tangle().GetCachedMilestoneOrNil(ms) // milestone +1
 		if cachedMs == nil {
 			log.Panicf("milestone %d wasn't found", ms)
 		}
@@ -203,7 +204,7 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 		milestoneMessageID := cachedMs.GetMilestone().MessageID
 		cachedMs.Release(true) // message -1
 
-		dag.TraverseParents(milestoneMessageID,
+		dag.TraverseParents(database.Tangle(), milestoneMessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1

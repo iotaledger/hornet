@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	tanglemodel "github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -19,7 +20,7 @@ func runLiveFeed() {
 
 	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		cachedMsg.ConsumeMessage(func(msg *tanglemodel.Message) {
-			if !tanglemodel.IsNodeSyncedWithThreshold() {
+			if !database.Tangle().IsNodeSyncedWithThreshold() {
 				return
 			}
 
