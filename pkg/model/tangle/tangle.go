@@ -81,13 +81,17 @@ func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 }
 
 type Tangle struct {
-	dbDir string
 
+	// database
+	databaseDir    string
 	pebbleInstance *pebbleDB.DB
 	pebbleStore    kvstore.KVStore
 
-	healthStore kvstore.KVStore
+	// kv storages
+	healthStore   kvstore.KVStore
+	snapshotStore kvstore.KVStore
 
+	// object storages
 	childrenStorage             *objectstorage.ObjectStorage
 	indexationStorage           *objectstorage.ObjectStorage
 	messagesStorage             *objectstorage.ObjectStorage
@@ -95,41 +99,46 @@ type Tangle struct {
 	milestoneStorage            *objectstorage.ObjectStorage
 	unreferencedMessagesStorage *objectstorage.ObjectStorage
 
-	snapshotStore kvstore.KVStore
-
+	// solid entry points
 	solidEntryPoints     *SolidEntryPoints
 	solidEntryPointsLock sync.RWMutex
 
+	// snapshot info
 	snapshot      *SnapshotInfo
 	snapshotMutex syncutils.RWMutex
 
-	solidMilestoneIndex   milestone.Index
-	solidMilestoneLock    syncutils.RWMutex
-	latestMilestoneIndex  milestone.Index
-	latestMilestoneLock   syncutils.RWMutex
-	isNodeSynced          bool
-	isNodeSyncedThreshold bool
+	// milestones
+	solidMilestoneIndex  milestone.Index
+	solidMilestoneLock   syncutils.RWMutex
+	latestMilestoneIndex milestone.Index
+	latestMilestoneLock  syncutils.RWMutex
 
+	// node synced
+	isNodeSynced                  bool
+	isNodeSyncedThreshold         bool
 	waitForNodeSyncedChannelsLock syncutils.Mutex
 	waitForNodeSyncedChannels     []chan struct{}
 
+	// milestones
 	keyManager                         *keymanager.KeyManager
 	milestonePublicKeyCount            int
 	coordinatorMilestoneMerkleHashFunc crypto.Hash
 
-	Events *packageEvents
-
+	// utxo
 	utxoOnce    sync.Once
 	utxoManager *utxo.Manager
+
+	// events
+	Events *packageEvents
 }
 
-func New(directory string, cachesProfile *profile.Caches) *Tangle {
+func New(databaseDirectory string, cachesProfile *profile.Caches) *Tangle {
 
-	pebbleInstance := getPebbleDB(directory, false)
+	pebbleInstance := getPebbleDB(databaseDirectory, false)
 	pebbleStore := pebble.New(pebbleInstance)
 
 	t := &Tangle{
-		dbDir:          directory,
+		databaseDir:    databaseDirectory,
 		pebbleInstance: pebbleInstance,
 		pebbleStore:    pebbleStore,
 		Events: &packageEvents{
@@ -225,7 +234,7 @@ func (t *Tangle) GetDatabaseSize() (int64, error) {
 
 	var size int64
 
-	err := filepath.Walk(t.dbDir, func(_ string, info os.FileInfo, err error) error {
+	err := filepath.Walk(t.databaseDir, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
