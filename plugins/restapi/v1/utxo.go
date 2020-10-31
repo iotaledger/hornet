@@ -75,6 +75,11 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 }
 
 func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
+
+	if !database.Tangle().WaitForNodeSynced(waitForNodeSyncedTimeout) {
+		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
+	}
+
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
 
 	// ToDo: accept bech32 input
@@ -107,6 +112,11 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 }
 
 func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
+
+	if !database.Tangle().WaitForNodeSynced(waitForNodeSyncedTimeout) {
+		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
+	}
+
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
 
 	// ToDo: accept bech32 input
