@@ -26,12 +26,22 @@ import (
 )
 
 var (
-	MessageVersion byte = 1
-
 	messageProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataResponse, error) {
+func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
+
+	if !database.Tangle().IsNodeSyncedWithThreshold() {
+		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
+	}
+
+	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
+
+	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	if err != nil {
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+	}
+
 	cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageID.Hex())
@@ -92,17 +102,6 @@ func messageMetadataByMessageID(messageID *hornet.MessageID) (*messageMetadataRe
 	}
 
 	return messageMetadataResponse, nil
-}
-
-func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
-	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
-	}
-
-	return messageMetadataByMessageID(messageID)
 }
 
 func messageByID(c echo.Context) (*iotago.Message, error) {
@@ -186,6 +185,10 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
+	if !database.Tangle().IsNodeSyncedWithThreshold() {
+		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
+	}
+
 	msg := &iotago.Message{}
 
 	contentType := c.Request().Header.Get(echo.HeaderContentType)
@@ -211,7 +214,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Version == 0 {
-		msg.Version = MessageVersion
+		msg.Version = iotago.MessageVersion
 	}
 
 	var emptyMessageID = hornet.MessageID{}

@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	// ToDo: add checks if node is synced
 	waitForNodeSyncedTimeout = 2000 * time.Millisecond
 )
 
