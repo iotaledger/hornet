@@ -82,7 +82,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 			if alreadyPeered := n.layout[peerIndex][i]; alreadyPeered {
 				continue
 			}
-			multiAddress := fmt.Sprintf("/ip4/%s/tcp/15600/p2p/%s", peer.IP, peer.ID)
+			multiAddress := fmt.Sprintf("/ip4/%s/tcp/15600/p2p/%s", peer.IP, peer.ID.String())
 			n.layout[i][peerIndex] = true
 			n.layout[peerIndex][i] = true
 			if _, err := node.NodeAPI.AddPeer(multiAddress); err != nil {
@@ -120,7 +120,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 			for layoutNeighbor := range layoutPeers {
 				layoutNode := n.Nodes[layoutNeighbor]
 				for _, peer := range peers {
-					if strings.Contains(peer.MultiAddress, layoutNode.ID) {
+					if strings.Contains(peer.MultiAddress, layoutNode.ID.String()) {
 						peered++
 					}
 				}
