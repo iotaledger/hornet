@@ -103,7 +103,7 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 	return len(messageIDsToDeleteMap)
 }
 
-func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
+func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
 
 	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -112,7 +112,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	if snapshotInfo.SnapshotIndex < SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1 {
 		// Not enough history
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1, targetIndex)
+		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", SolidEntryPointCheckThresholdPast+AdditionalPruningThreshold+1, targetIndex)
 	}
 
 	targetIndexMax := snapshotInfo.SnapshotIndex - SolidEntryPointCheckThresholdPast - AdditionalPruningThreshold - 1
@@ -122,12 +122,12 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	if snapshotInfo.PruningIndex >= targetIndex {
 		// no pruning needed
-		return errors.Wrapf(ErrNoPruningNeeded, "pruning index: %d, target index: %d", snapshotInfo.PruningIndex, targetIndex)
+		return 0, errors.Wrapf(ErrNoPruningNeeded, "pruning index: %d, target index: %d", snapshotInfo.PruningIndex, targetIndex)
 	}
 
 	if snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1 > targetIndex {
 		// we prune in "AdditionalPruningThreshold" steps to recalculate the solidEntryPoints
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1, targetIndex)
+		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", snapshotInfo.EntryPointIndex+AdditionalPruningThreshold+1, targetIndex)
 	}
 
 	setIsPruning(true)
@@ -149,7 +149,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	database.Tangle().WriteUnlockSolidEntryPoints()
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// we have to set the new solid entry point index.
@@ -165,7 +165,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 		select {
 		case <-abortSignal:
 			// Stop pruning the next milestone
-			return ErrPruningAborted
+			return 0, ErrPruningAborted
 		default:
 		}
 
@@ -230,5 +230,5 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 
 	database.RunGarbageCollection()
 
-	return nil
+	return targetIndex, nil
 }
