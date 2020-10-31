@@ -36,8 +36,6 @@ var (
 	log    *logger.Logger
 
 	server               *http.Server
-	permittedRoutes      = make(map[string]struct{})
-	whitelistedNetworks  []net.IPNet
 	e                    *echo.Echo
 	serverShutdownSignal <-chan struct{}
 )
@@ -52,17 +50,9 @@ func configure(plugin *node.Plugin) {
 	e.Use(middleware.Gzip())
 	e.Use(middleware.BodyLimit(config.NodeConfig.String(config.CfgRestAPILimitsMaxBodyLength)))
 
-	// Load allowed remote access to specific HTTP REST routes
-	cfgPermittedRoutes := config.NodeConfig.Strings(config.CfgRestAPIPermittedRoutes)
-	if len(cfgPermittedRoutes) > 0 {
-		for _, route := range cfgPermittedRoutes {
-			permittedRoutes[strings.ToLower(route)] = struct{}{}
-		}
-	}
-
-	// load whitelisted addresses
-	whitelist := append([]string{"127.0.0.1", "::1"}, config.NodeConfig.Strings(config.CfgRestAPIWhitelistedAddresses)...)
-	for _, entry := range whitelist {
+	// load whitelisted networks
+	var whitelistedNetworks []net.IPNet
+	for _, entry := range config.NodeConfig.Strings(config.CfgRestAPIWhitelistedAddresses) {
 		_, ipnet, err := cnet.ParseCIDROrIP(entry)
 		if err != nil {
 			log.Warnf("Invalid whitelist address: %s", entry)
@@ -70,6 +60,14 @@ func configure(plugin *node.Plugin) {
 		}
 		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
 	}
+
+	permittedRoutes := make(map[string]struct{})
+	// load allowed remote access to specific HTTP REST routes
+	for _, route := range config.NodeConfig.Strings(config.CfgRestAPIPermittedRoutes) {
+		permittedRoutes[strings.ToLower(route)] = struct{}{}
+	}
+
+	e.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
 
 	exclHealthCheckFromAuth := config.NodeConfig.Bool(config.CfgRestAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {

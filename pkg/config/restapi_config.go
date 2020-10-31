@@ -30,17 +30,17 @@ func init() {
 			"/health",
 			"/api/v1/info",
 			"/api/v1/tips",
-			"/api/v1/messages/*",
-			"/api/v1/messages/*/metadata",
-			"/api/v1/messages/*/raw",
-			"/api/v1/messages/*/children",
+			"/api/v1/messages/:messageID",
+			"/api/v1/messages/:messageID/metadata",
+			"/api/v1/messages/:messageID/raw",
+			"/api/v1/messages/:messageID/children",
 			"/api/v1/messages",
-			"/api/v1/milestones/*",
-			"/api/v1/outputs/*",
-			"/api/v1/addresses/*",
-			"/api/v1/addresses/*/outputs",
+			"/api/v1/milestones/:milestoneIndex",
+			"/api/v1/outputs/:outputID",
+			"/api/v1/addresses/:address",
+			"/api/v1/addresses/:address/outputs",
 		}, "the allowed HTTP REST routes which can be called from non whitelisted addresses")
-	configFlagSet.StringSlice(CfgRestAPIWhitelistedAddresses, []string{}, "the whitelist of addresses which are allowed to access the REST API")
+	configFlagSet.StringSlice(CfgRestAPIWhitelistedAddresses, []string{"127.0.0.1", "::1"}, "the whitelist of addresses which are allowed to access the REST API")
 	configFlagSet.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
 	configFlagSet.Bool(CfgRestAPIBasicAuthEnabled, false, "whether to use HTTP basic auth for the REST API")
 	configFlagSet.String(CfgRestAPIBasicAuthUsername, "", "the username of the HTTP basic auth")
