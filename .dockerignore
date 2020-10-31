@@ -1,15 +1,50 @@
-latest-export.bin
-export.bin
-export_comnet.bin
-.github
-.git
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IDE related files
+.vscode/
+
+# Git related files
+.github/
+.git/
+
+# Docker related files
 docker/
-mainnetdb/
-comnetdb/
-snapshot/
-README.md
 .dockerignore
 docker-compose.yml
-layer*.csv
+
+# dist packages
+dist/
+
+# OSX related files
+.DS_Store
+/hornet
+
+# Database directory
+alphanetdb*/
+comnetdb*/
+devnetdb*/
+mainnetdb*/
+p2pstore*/
+
+# snapshot dir
+snapshots/
+
+# log files
+hornet.log
+integration-tests/logs/*.log
+integration-tests/logs/*.html
+integration-tests/logs/*.profile
+
+# coordinator files
 coordinator.state
-coordinator.tree
