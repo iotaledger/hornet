@@ -9,9 +9,22 @@
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
-      "health"
+      "/health",
+      "/api/v1/info",
+      "/api/v1/tips",
+      "/api/v1/messages/:messageID",
+      "/api/v1/messages/:messageID/metadata",
+      "/api/v1/messages/:messageID/raw",
+      "/api/v1/messages/:messageID/children",
+      "/api/v1/messages",
+      "/api/v1/milestones/:milestoneIndex",
+      "/api/v1/outputs/:outputID",
+      "/api/v1/addresses/:address",
+      "/api/v1/addresses/:address/outputs",
+      "/api/v1/peers/:peerID",
+      "/api/v1/peers"
     ],
-    "whitelistedAddresses": [],
+    "whitelistedAddresses": ["127.0.0.1", "::1"],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
       "bodyLength": "1M",

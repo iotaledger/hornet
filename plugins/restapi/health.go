@@ -13,13 +13,6 @@ func setupHealthRoute(e *echo.Echo) {
 
 	e.GET(NodeAPIHealthRoute, func(c echo.Context) error {
 
-		if !networkWhitelisted(c) {
-			// network is not whitelisted, check if the route is permitted, otherwise deny it.
-			if _, permitted := permittedRoutes[NodeAPIHealthRoute]; !permitted {
-				return common.ErrForbidden
-			}
-		}
-
 		// node mode
 		if !tangle.IsNodeHealthy() {
 			c.NoContent(http.StatusServiceUnavailable)
