@@ -53,6 +53,13 @@ const (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
+	// RouteSpammer is the route for controlling the integrated spammer.
+	// GET returns the tips.
+	// query parameters: "cmd" (start, stop)
+	//					 "mpsRateLimit" (optional)
+	//					 "cpuMaxUsage" (optional)
+	RouteSpammer = "/spammer"
+
 	// RouteMessageData is the route for getting message data by it's messageID.
 	// GET returns message data (json).
 	RouteMessageData = "/messages/:" + ParameterMessageID
@@ -145,11 +152,6 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		features = append(features, "PoW")
 	}
 
-	// only handle spammer api calls if the spammer plugin is enabled
-	if !node.IsSkipped(spammer.PLUGIN) {
-		//setupSpammerRoute(routeGroup)
-	}
-
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 
 		infoResp, err := info()
@@ -168,6 +170,18 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 				return err
 			}
 			return jsonResponse(c, http.StatusOK, tipsResp)
+		})
+	}
+
+	// only handle spammer api calls if the Spammer plugin is enabled
+	if !node.IsSkipped(spammer.PLUGIN) {
+		routeGroup.GET(RouteSpammer, func(c echo.Context) error {
+
+			response, err := executeSpammerCommand(c)
+			if err != nil {
+				return err
+			}
+			return jsonResponse(c, http.StatusOK, response)
 		})
 	}
 
