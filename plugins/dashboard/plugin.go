@@ -281,16 +281,16 @@ type MemMetrics struct {
 
 // PeerMetric represents metrics of a peer.
 type PeerMetric struct {
-	Identity         string             `json:"identity"`
-	Alias            string             `json:"alias,omitempty"`
-	OriginAddr       string             `json:"origin_addr"`
-	ConnectionOrigin network.Direction  `json:"connection_origin"`
-	ProtocolVersion  uint16             `json:"protocol_version"`
-	BytesRead        uint64             `json:"bytes_read"`
-	BytesWritten     uint64             `json:"bytes_written"`
-	Heartbeat        *gossip2.Heartbeat `json:"heartbeat"`
-	Info             *p2p.PeerSnapshot  `json:"info"`
-	Connected        bool               `json:"connected"`
+	Identity         string                `json:"identity"`
+	Alias            string                `json:"alias,omitempty"`
+	OriginAddr       string                `json:"origin_addr"`
+	ConnectionOrigin network.Direction     `json:"connection_origin"`
+	ProtocolVersion  uint16                `json:"protocol_version"`
+	BytesRead        uint64                `json:"bytes_read"`
+	BytesWritten     uint64                `json:"bytes_written"`
+	Heartbeat        *gossip2.Heartbeat    `json:"heartbeat"`
+	Info             *p2p.PeerInfoSnapshot `json:"info"`
+	Connected        bool                  `json:"connected"`
 }
 
 // CachesMetric represents cache metrics.
@@ -309,7 +309,7 @@ type Cache struct {
 
 func peerMetrics() []*PeerMetric {
 	/*
-		infos := peering.Manager().PeerSnapshots()
+		infos := peering.Manager().PeerInfoSnapshots()
 		var stats []*PeerMetric
 		for _, info := range infos {
 			m := &PeerMetric{

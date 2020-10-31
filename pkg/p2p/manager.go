@@ -291,11 +291,21 @@ func (m *Manager) ConnectedCount(relation ...PeerRelation) int {
 	return count
 }
 
-// PeerSnapshots returns snapshots of information of peers known to the Manager.
-func (m *Manager) PeerSnapshots() []*PeerSnapshot {
-	infos := make([]*PeerSnapshot, 0)
+// PeerInfoSnapshot returns a snapshot of information of a peer with given id.
+// If the peer is not known to the Manager, result is nil.
+func (m *Manager) PeerInfoSnapshot(id peer.ID) *PeerInfoSnapshot {
+	var info *PeerInfoSnapshot
+	m.Call(id, func(peer *Peer) {
+		info = peer.InfoSnapshot()
+	})
+	return info
+}
+
+// PeerInfoSnapshots returns snapshots of information of peers known to the Manager.
+func (m *Manager) PeerInfoSnapshots() []*PeerInfoSnapshot {
+	infos := make([]*PeerInfoSnapshot, 0)
 	m.ForEach(func(p *Peer) bool {
-		info := p.Info()
+		info := p.InfoSnapshot()
 		info.Connected = m.host.Network().Connectedness(p.ID) == network.Connected
 		infos = append(infos, info)
 		return true
