@@ -4,10 +4,10 @@ import (
 	"sync"
 	"time"
 
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
@@ -28,7 +28,7 @@ func DiscoveryService() *p2p.DiscoveryService {
 		routingTableRefreshPeriodSec := config.NodeConfig.Duration(config.CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
 		maxDiscoveredPeerCount := config.NodeConfig.Int(config.CfgP2PDiscMaxDiscoveredPeerConns)
 
-		discoveryService = p2p.NewDiscoveryService(p2pplug.Host(), p2pplug.Manager(),
+		discoveryService = p2p.NewDiscoveryService(p2pcore.Host(), p2pcore.Manager(),
 			p2p.WithDiscoveryServiceAdvertiseInterval(discoveryIntervalSec),
 			p2p.WithDiscoveryServiceRendezvousPoint(rendezvousPoint),
 			p2p.WithDiscoveryServiceMaxDiscoveredPeers(maxDiscoveredPeerCount),

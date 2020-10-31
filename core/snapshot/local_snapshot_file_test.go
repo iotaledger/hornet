@@ -11,9 +11,9 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/blang/vfs/memfs"
+	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/plugins/snapshot"
 	"github.com/stretchr/testify/require"
 )
 

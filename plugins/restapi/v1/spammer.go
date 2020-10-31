@@ -40,7 +40,7 @@ func executeSpammerCommand(c echo.Context) (string, error) {
 			}
 			cpuMaxUsage = &cpuMaxUsageParsed
 		}
-		
+
 		usedMpsRateLimit, usedCPUMaxUsage, err := spammer.Start(mpsRateLimit, cpuMaxUsage)
 		if err != nil {
 			return "", errors.WithMessagef(common.ErrInternalError, "starting spammer failed: %w", err)

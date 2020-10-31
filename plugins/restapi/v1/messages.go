@@ -10,6 +10,10 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/core/pow"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -17,11 +21,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/restapi/common"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -245,7 +245,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 
-	msgProcessedChan := tangleplugin.RegisterMessageProcessedEvent(message.GetMessageID())
+	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
 
 	if err := gossip.MessageProcessor().Emit(message); err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)

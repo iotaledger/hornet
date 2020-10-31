@@ -5,6 +5,8 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	tanglepackage "github.com/gohornet/hornet/pkg/model/tangle"
@@ -12,8 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 

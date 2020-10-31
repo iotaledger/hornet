@@ -10,6 +10,9 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	metricscore "github.com/gohornet/hornet/core/metrics"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -17,9 +20,6 @@ import (
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
 )
 
 var (
@@ -65,7 +65,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricsplugin.MPSMetrics) {
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricscore.MPSMetrics) {
 		lastIncomingMPS = mpsMetrics.Incoming
 		lastNewMPS = mpsMetrics.New
 		lastOutgoingMPS = mpsMetrics.Outgoing
@@ -80,10 +80,10 @@ func runTangleProcessor(_ *node.Plugin) {
 	})
 
 	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
-		metricsplugin.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		metricscore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		startWaitGroup.Done()
 		<-shutdownSignal
-		metricsplugin.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		metricscore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
 
 	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {

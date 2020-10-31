@@ -3,9 +3,9 @@ package tangle
 import (
 	"time"
 
+	"github.com/gohornet/hornet/core/database"
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/plugins/database"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
 const (
@@ -18,7 +18,7 @@ func IsNodeHealthy() bool {
 		return false
 	}
 
-	if p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
+	if p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
 		return false
 	}
 

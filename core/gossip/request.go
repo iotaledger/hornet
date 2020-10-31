@@ -3,8 +3,8 @@ package gossip
 import (
 	"time"
 
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/plugins/database"
 	"github.com/iotaledger/hive.go/daemon"
 
 	"github.com/gohornet/hornet/pkg/dag"

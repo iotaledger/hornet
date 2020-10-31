@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/core/database"
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/plugins/database"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -54,7 +54,7 @@ func Service() *gossip.Service {
 		//networkID := tangle.GetSnapshotInfo().NetworkID)
 		var networkID uint8 = 1
 		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
-		service = gossip.NewService(iotaGossipProtocolID, p2pplug.Host(), p2pplug.Manager(),
+		service = gossip.NewService(iotaGossipProtocolID, p2pcore.Host(), p2pcore.Manager(),
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(config.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
 		)
@@ -66,7 +66,7 @@ func Service() *gossip.Service {
 func MessageProcessor() *gossip.MessageProcessor {
 	msgProcOnce.Do(func() {
 		RequestQueue()
-		msgProc = gossip.NewMessageProcessor(database.Tangle(), rQueue, p2pplug.Manager(), &gossip.Options{
+		msgProc = gossip.NewMessageProcessor(database.Tangle(), rQueue, p2pcore.Manager(), &gossip.Options{
 			ValidMWM:          uint64(config.NodeConfig.Int64(config.CfgCoordinatorMWM)),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
 		})
@@ -121,7 +121,7 @@ func configure(plugin *node.Plugin) {
 			if snapshotInfo := database.Tangle().GetSnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := database.Tangle().GetLatestMilestoneIndex()
 				syncedCount := gossipService.SynchronizedCount(latestMilestoneIndex)
-				connectedCount := p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown)
+				connectedCount := p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown)
 				// TODO: overflow not handled for synced/connected
 				proto.SendHeartbeat(database.Tangle().GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
@@ -238,7 +238,7 @@ func checkHeartbeats() {
 	*/
 
 	for p := range peersToReconnect {
-		conns := p2pplug.Host().Network().ConnsToPeer(p)
+		conns := p2pcore.Host().Network().ConnsToPeer(p)
 		for _, conn := range conns {
 			_ = conn.Close()
 		}

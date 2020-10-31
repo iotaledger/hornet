@@ -125,7 +125,6 @@ type Tangle struct {
 	coordinatorMilestoneMerkleHashFunc crypto.Hash
 
 	// utxo
-	utxoOnce    sync.Once
 	utxoManager *utxo.Manager
 
 	// events
@@ -136,11 +135,13 @@ func New(databaseDirectory string, cachesProfile *profile.Caches) *Tangle {
 
 	pebbleInstance := getPebbleDB(databaseDirectory, false)
 	pebbleStore := pebble.New(pebbleInstance)
+	utxoManager := utxo.New(pebbleStore)
 
 	t := &Tangle{
 		databaseDir:    databaseDirectory,
 		pebbleInstance: pebbleInstance,
 		pebbleStore:    pebbleStore,
+		utxoManager:    utxoManager,
 		Events: &packageEvents{
 			ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
 			AddressSpent:           events.NewEvent(events.StringCaller),
@@ -154,9 +155,6 @@ func New(databaseDirectory string, cachesProfile *profile.Caches) *Tangle {
 }
 
 func (t *Tangle) UTXO() *utxo.Manager {
-	t.utxoOnce.Do(func() {
-		t.utxoManager = utxo.New(t.pebbleStore)
-	})
 	return t.utxoManager
 }
 

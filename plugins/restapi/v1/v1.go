@@ -10,10 +10,10 @@ import (
 
 	"github.com/iotaledger/hive.go/node"
 
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/spammer"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -351,7 +351,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 
 	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
 
-		tangleplugin.TriggerSolidifier()
+		tanglecore.TriggerSolidifier()
 
 		return jsonResponse(c, http.StatusOK, "solidifier triggered")
 	})

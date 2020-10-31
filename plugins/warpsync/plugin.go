@@ -3,14 +3,14 @@ package warpsync
 import (
 	"time"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -93,7 +93,7 @@ func configureEvents() {
 		// that we should manually kick start the milestone solidifier.
 		if msRequested != int(advRange) {
 			log.Info("Manually starting solidifier, as some milestones are already in the database")
-			tangleplugin.TriggerSolidifier()
+			tanglecore.TriggerSolidifier()
 		}
 	})
 
@@ -105,8 +105,8 @@ func configureEvents() {
 
 func attachEvents() {
 	gossip.Service().Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
-	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-	tangleplugin.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
+	tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	tanglecore.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
 	warpSync.Events.Start.Attach(onStart)
@@ -115,8 +115,8 @@ func attachEvents() {
 
 func detachEvents() {
 	gossip.Service().Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
-	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-	tangleplugin.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
+	tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	tanglecore.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
 	warpSync.Events.Start.Detach(onStart)

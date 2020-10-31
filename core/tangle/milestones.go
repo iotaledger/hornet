@@ -5,9 +5,9 @@ import (
 
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
 )
 
 var (

@@ -8,14 +8,14 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/cli"
+	"github.com/gohornet/hornet/core/database"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/cli"
-	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/restapi/common"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -53,7 +53,7 @@ func info() (*infoResponse, error) {
 	return &infoResponse{
 		Name:                 cli.AppName,
 		Version:              cli.AppVersion,
-		IsHealthy:            tangleplugin.IsNodeHealthy(),
+		IsHealthy:            tanglecore.IsNodeHealthy(),
 		NetworkID:            snapshotInfo.NetworkID,
 		LatestMilestoneID:    latestMilestoneID,
 		LatestMilestoneIndex: latestMilestoneIndex,

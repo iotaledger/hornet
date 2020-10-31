@@ -16,6 +16,10 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 	"go.uber.org/atomic"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	p2pcore "github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -23,10 +27,6 @@ import (
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
-	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -232,7 +232,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						continue
 					}
 
-					if checkPeersConnected && p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
+					if checkPeersConnected && p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

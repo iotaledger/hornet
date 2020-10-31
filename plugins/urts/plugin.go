@@ -8,14 +8,14 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
 
+	"github.com/gohornet/hornet/core/database"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/gohornet/hornet/plugins/database"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 var (
@@ -104,11 +104,11 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	tangleplugin.Events.MessageSolid.Attach(onMessageSolid)
-	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	tanglecore.Events.MessageSolid.Attach(onMessageSolid)
+	tanglecore.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 }
 
 func detachEvents() {
-	tangleplugin.Events.MessageSolid.Detach(onMessageSolid)
-	tangleplugin.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	tanglecore.Events.MessageSolid.Detach(onMessageSolid)
+	tanglecore.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 }

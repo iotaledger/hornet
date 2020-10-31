@@ -1,11 +1,11 @@
 package gossip
 
 import (
+	"github.com/gohornet/hornet/core/database"
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/plugins/database"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.
@@ -16,7 +16,7 @@ func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
 	}
 
 	latestMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
-	connectedCount := p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown)
+	connectedCount := p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown)
 	syncedCount := Service().SynchronizedCount(latestMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
 	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, database.Tangle().GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))

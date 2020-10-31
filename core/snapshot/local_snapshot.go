@@ -9,13 +9,13 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/core/database"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/plugins/database"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
@@ -442,7 +442,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		snapshotInfo.Timestamp = cachedTargetMilestone.GetMilestone().Timestamp
 		database.Tangle().SetSnapshotInfo(snapshotInfo)
 
-		tanglePlugin.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
+		tanglecore.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
 	log.Infof("created local snapshot for target index %d, took %v", targetIndex, time.Since(ts))

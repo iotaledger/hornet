@@ -5,12 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/database"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/database"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
@@ -225,7 +225,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 
 		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
 
-		tanglePlugin.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
+		tanglecore.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}
 
 	database.RunGarbageCollection()
