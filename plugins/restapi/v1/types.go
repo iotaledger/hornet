@@ -243,3 +243,17 @@ type peerGossipMetrics struct {
 	// The total amount of received known messages.
 	KnownMessages uint32 `json:"knownMessages"`
 }
+
+// pruneDatabaseResponse defines the response of a prune database REST API call.
+type pruneDatabaseResponse struct {
+	// The index of the snapshot.
+	Index milestone.Index `json:"index"`
+}
+
+// createSnapshotResponse defines the response of a create snapshot REST API call.
+type createSnapshotResponse struct {
+	// The index of the snapshot.
+	Index milestone.Index `json:"index"`
+	// The file path of the snapshot file.
+	FilePath string `json:"filePath"`
+}
