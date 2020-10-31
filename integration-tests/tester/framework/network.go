@@ -2,7 +2,6 @@ package framework
 
 import (
 	"context"
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -12,6 +11,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 type NetworkType byte
@@ -86,11 +87,18 @@ func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
 	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameReplica, len(n.Nodes)))
 
 	// create identity
-	privateKey := randEd25519PrivateKey()
-	publicKey := privateKey.Public().(ed25519.PublicKey)
+	privateKey, publicKey, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKeyBytes, err := privateKey.Raw()
+	if err != nil {
+		return nil, err
+	}
 
 	cfg.Name = name
-	cfg.Network.IdentityPrivKey = hex.EncodeToString(privateKey[:])
+	cfg.Network.IdentityPrivKey = hex.EncodeToString(privateKeyBytes)
 
 	// create Docker container
 	container := NewDockerContainer(n.dockerClient)
@@ -104,7 +112,13 @@ func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	peer, err := newNode(name, hex.EncodeToString(publicKey[:]), cfg, container, n)
+	// Obtain Peer ID from public key
+	pid, err := peer.IDFromPublicKey(publicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	peer, err := newNode(name, pid, cfg, container, n)
 	if err != nil {
 		return nil, err
 	}

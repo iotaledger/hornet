@@ -8,6 +8,7 @@ import (
 	"time"
 
 	iotago "github.com/iotaledger/iota.go"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // Node represents a HORNET node inside the Docker network.
@@ -19,7 +20,7 @@ type Node struct {
 	// The configuration with which the node was started.
 	Config *NodeConfig
 	// The libp2p identifier of the peer.
-	ID string
+	ID peer.ID
 	// The iota.go web API instance used to communicate with the node.
 	NodeAPI *iotago.NodeAPI
 	// The more specific web API providing more information for debugging purposes.
@@ -34,7 +35,7 @@ type Node struct {
 
 // newNode creates a new instance of Node with the given information.
 // dockerContainer needs to be started in order to determine the container's (and therefore peer's) IP correctly.
-func newNode(name string, id string, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
+func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
 	// after container is started we can get its IP
 	ip, err := dockerContainer.IP(network.Name)
 	if err != nil {

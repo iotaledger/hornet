@@ -175,13 +175,13 @@ func (n *AutopeeredNetwork) createPumba(pumbaContainerName string, targetContain
 func (n *AutopeeredNetwork) createPartition(peers []*Node) (*Partition, error) {
 	peersMap := make(map[string]*Node)
 	for _, peer := range peers {
-		peersMap[peer.ID] = peer
+		peersMap[peer.ID.String()] = peer
 	}
 
 	// block all traffic to all other peers except in the current partition
 	var targetIPs []string
 	for _, peer := range n.Nodes {
-		if _, ok := peersMap[peer.ID]; ok {
+		if _, ok := peersMap[peer.ID.String()]; ok {
 			continue
 		}
 		targetIPs = append(targetIPs, peer.IP)
