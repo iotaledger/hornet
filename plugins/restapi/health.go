@@ -5,7 +5,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/tangle"
 )
 
