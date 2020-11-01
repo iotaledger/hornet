@@ -4,9 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -16,8 +15,8 @@ import (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Database", node.Enabled, configure, run)
-	log    *logger.Logger
+	CoreModule *node.CoreModule
+	log        *logger.Logger
 
 	garbageCollectionLock syncutils.Mutex
 
@@ -33,8 +32,12 @@ func Tangle() *tangle.Tangle {
 	return tangleObj
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func init() {
+	CoreModule = node.NewCoreModule("Database", configure, run)
+}
+
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 
 	if !Tangle().IsCorrectDatabaseVersion() {
 		if !Tangle().UpdateDatabaseVersion() {
@@ -42,7 +45,7 @@ func configure(plugin *node.Plugin) {
 		}
 	}
 
-	daemon.BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		Tangle().MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")
@@ -85,6 +88,6 @@ func RunGarbageCollection() {
 	}
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 	// do nothing
 }

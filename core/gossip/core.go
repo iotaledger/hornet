@@ -7,12 +7,11 @@ import (
 
 	"github.com/gohornet/hornet/core/database"
 	p2pcore "github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -34,8 +33,8 @@ const (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Gossip", node.Enabled, configure, run)
-	log    *logger.Logger
+	CoreModule *node.CoreModule
+	log        *logger.Logger
 
 	serviceOnce sync.Once
 	service     *gossip.Service
@@ -82,8 +81,12 @@ func RequestQueue() gossip.RequestQueue {
 	return rQueue
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func init() {
+	CoreModule = node.NewCoreModule("Gossip", configure, run)
+}
+
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 	gossipService := Service()
 	MessageProcessor()
 
@@ -101,7 +104,7 @@ func configure(plugin *node.Plugin) {
 			close(protocolTerminated)
 		}))
 
-		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		_ = CoreModule.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -116,7 +119,7 @@ func configure(plugin *node.Plugin) {
 			}
 		}, shutdown.PriorityPeerGossipProtocolRead)
 
-		_ = daemon.BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		_ = CoreModule.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := database.Tangle().GetSnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := database.Tangle().GetLatestMilestoneIndex()
@@ -143,15 +146,15 @@ func configure(plugin *node.Plugin) {
 	}))
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 
-	_ = daemon.BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
+	_ = CoreModule.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running GossipService")
 		Service().Start(shutdownSignal)
 		log.Info("Stopped GossipService")
 	}, shutdown.PriorityGossipService)
 
-	_ = daemon.BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
+	_ = CoreModule.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running BroadcastQueue")
 		broadcastQueue := make(chan *gossip.Broadcast)
 		onBroadcastMessage := events.NewClosure(func(b *gossip.Broadcast) {
@@ -178,13 +181,13 @@ func run(_ *node.Plugin) {
 		log.Info("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue)
 
-	_ = daemon.BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
+	_ = CoreModule.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
 		MessageProcessor().Run(shutdownSignal)
 		log.Info("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 
-	_ = daemon.BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
+	_ = CoreModule.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
 	}, shutdown.PriorityHeartbeats)
 

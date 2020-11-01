@@ -8,10 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/core/database"
@@ -23,8 +22,8 @@ import (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Snapshot", node.Enabled, configure, run)
-	log    *logger.Logger
+	CoreModule *node.CoreModule
+	log        *logger.Logger
 
 	forceLoadingSnapshot = pflag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
 
@@ -60,8 +59,12 @@ var (
 	isPruning      bool
 )
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func init() {
+	CoreModule = node.NewCoreModule("Snapshot", configure, run)
+}
+
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 
 	snapshotDepth = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
@@ -129,7 +132,7 @@ func isSnapshottingOrPruning() bool {
 	return isSnapshotting || isPruning
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 
 	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		select {
@@ -138,7 +141,7 @@ func run(_ *node.Plugin) {
 		}
 	})
 
-	daemon.BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting LocalSnapshots ... done")
 
 		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)

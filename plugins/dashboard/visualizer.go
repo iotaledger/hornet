@@ -1,9 +1,7 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/tangle"
@@ -178,7 +176,7 @@ func runVisualizer() {
 		)
 	})
 
-	daemon.BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
 		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		tangle.Events.MessageSolid.Attach(onMessageSolid)
@@ -193,7 +191,7 @@ func runVisualizer() {
 		defer tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 
 		// check if URTS plugin is enabled
-		if !node.IsSkipped(urts.PLUGIN) {
+		if !Plugin.Node.IsSkipped(urts.Plugin) {
 			urts.TipSelector.Events.TipAdded.Attach(onTipAdded)
 			defer urts.TipSelector.Events.TipAdded.Detach(onTipAdded)
 			urts.TipSelector.Events.TipRemoved.Attach(onTipRemoved)

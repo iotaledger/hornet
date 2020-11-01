@@ -25,9 +25,8 @@ import (
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	libp2pquic "github.com/libp2p/go-libp2p-quic-transport"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
@@ -44,7 +43,7 @@ var (
 )
 
 var (
-	PLUGIN      = node.NewPlugin("P2P", node.Enabled, configure, run)
+	CoreModule  *node.CoreModule
 	log         *logger.Logger
 	hostOnce    sync.Once
 	selfHost    host.Host
@@ -120,18 +119,22 @@ func Host() host.Host {
 	return selfHost
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func init() {
+	CoreModule = node.NewCoreModule("P2P", configure, run)
+}
+
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 	Host()
 	Manager()
 	log.Infof("peer configured, ID: %s", Host().ID())
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 	p := Host()
 
 	// register a daemon to disconnect all peers up on shutdown
-	_ = daemon.BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
+	_ = CoreModule.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
 		log.Infof("listening on: %s", p.Addrs())
 		go Manager().Start(shutdownSignal)
 		connectConfigKnownPeers()

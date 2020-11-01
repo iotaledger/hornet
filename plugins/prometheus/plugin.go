@@ -11,23 +11,25 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
-// PLUGIN Prometheus
 var (
-	PLUGIN = node.NewPlugin("Prometheus", node.Disabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	server   *http.Server
 	registry = prometheus.NewRegistry()
 	collects []func()
 )
+
+func init() {
+	Plugin = node.NewPlugin("Prometheus", node.Disabled, configure, run)
+}
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
@@ -76,7 +78,7 @@ func run(plugin *node.Plugin) {
 		writeFileServiceDiscoveryFile()
 	}
 
-	daemon.BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Prometheus exporter ... done")
 
 		engine := gin.New()

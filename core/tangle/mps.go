@@ -1,4 +1,4 @@
-package metrics
+package tangle
 
 import (
 	"github.com/gohornet/hornet/pkg/metrics"

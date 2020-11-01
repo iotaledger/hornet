@@ -7,21 +7,24 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 )
 
 // the maximum amount of time to wait for background processes to terminate. After that the process is killed.
 const waitToKillTimeInSeconds = 300
 
 var (
-	PLUGIN = node.NewPlugin("Graceful Shutdown", node.Enabled, configure, run)
-	log    *logger.Logger
+	CoreModule *node.CoreModule
+	log        *logger.Logger
 )
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func init() {
+	CoreModule = node.NewCoreModule("Graceful Shutdown", configure, run)
+}
+
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 
 	gracefulStop := make(chan os.Signal)
 
@@ -40,7 +43,7 @@ func configure(plugin *node.Plugin) {
 
 				if secondsSinceStart <= waitToKillTimeInSeconds {
 					processList := ""
-					runningBackgroundWorkers := daemon.GetRunningBackgroundWorkers()
+					runningBackgroundWorkers := coreModule.Daemon().GetRunningBackgroundWorkers()
 					if len(runningBackgroundWorkers) >= 1 {
 						processList = "(" + strings.Join(runningBackgroundWorkers, ", ") + ") "
 					}
@@ -52,10 +55,10 @@ func configure(plugin *node.Plugin) {
 			}
 		}()
 
-		daemon.ShutdownAndWait()
+		CoreModule.Daemon().ShutdownAndWait()
 	}()
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 	// nothing
 }

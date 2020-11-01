@@ -3,7 +3,6 @@ package dashboard
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 
 	"github.com/gohornet/hornet/core/database"
@@ -47,7 +46,7 @@ func runLiveFeed() {
 		}
 	})
 
-	daemon.BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
 		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)

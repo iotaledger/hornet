@@ -8,6 +8,12 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
+type MPSMetrics struct {
+	Incoming uint32 `json:"incoming"`
+	New      uint32 `json:"new"`
+	Outgoing uint32 `json:"outgoing"`
+}
+
 func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{}) {
 	handler.(func(metric *ConfirmedMilestoneMetric))(params[0].(*ConfirmedMilestoneMetric))
 }
@@ -16,7 +22,12 @@ func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(confirmation *whiteflag.Confirmation))(params[0].(*whiteflag.Confirmation))
 }
 
+func MPSMetricsCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*MPSMetrics))(params[0].(*MPSMetrics))
+}
+
 var Events = pluginEvents{
+	MPSMetricsUpdated:             events.NewEvent(MPSMetricsCaller),
 	ReceivedNewMessage:            events.NewEvent(tangle.NewMessageCaller),
 	ReceivedKnownMessage:          events.NewEvent(tangle.MessageCaller),
 	ProcessedMessage:              events.NewEvent(tangle.MessageIDCaller),
@@ -35,6 +46,7 @@ var Events = pluginEvents{
 }
 
 type pluginEvents struct {
+	MPSMetricsUpdated             *events.Event
 	ReceivedNewMessage            *events.Event
 	ReceivedKnownMessage          *events.Event
 	ProcessedMessage              *events.Event

@@ -7,10 +7,8 @@ import (
 
 	"github.com/tcnksm/go-latest"
 
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
@@ -30,34 +28,17 @@ var (
 )
 
 var (
-	PLUGIN = node.NewPlugin("CLI", node.Enabled, configure, run)
-	log    *logger.Logger
+	CoreModule *node.CoreModule
+	log        *logger.Logger
 )
 
-func onAddPlugin(name string, status int) {
-	AddPluginStatus(node.GetPluginIdentifier(name), status)
-}
-
 func init() {
-	for name, plugin := range node.GetPlugins() {
-		onAddPlugin(name, plugin.Status)
-	}
-
-	node.Events.AddPlugin.Attach(events.NewClosure(onAddPlugin))
+	CoreModule = node.NewCoreModule("CLI", configure, run)
 }
 
-func parseParameters() {
-	for _, pluginName := range config.NodeConfig.Strings(config.CfgNodeDisablePlugins) {
-		node.DisabledPlugins[strings.ToLower(pluginName)] = true
-	}
-	for _, pluginName := range config.NodeConfig.Strings(config.CfgNodeEnablePlugins) {
-		node.EnabledPlugins[strings.ToLower(pluginName)] = true
-	}
-}
+func configure(coreModule *node.CoreModule) {
 
-func configure(plugin *node.Plugin) {
-
-	log = logger.NewLogger(plugin.Name)
+	log = logger.NewLogger(coreModule.Name)
 
 	githubTag = &latest.GithubTag{
 		Owner:             "gohornet",
@@ -66,7 +47,7 @@ func configure(plugin *node.Plugin) {
 		TagFilterFunc:     includeVersionInCheck,
 	}
 
-	fmt.Printf(`
+	fmt.Printf("\n\n"+`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
               ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
@@ -122,10 +103,10 @@ func checkLatestVersion() {
 	}
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 
 	// create a background worker that checks for latest version every hour
-	daemon.BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
 	}, shutdown.PriorityUpdateCheck)
 }

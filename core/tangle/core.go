@@ -15,15 +15,14 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 )
 
 var (
-	PLUGIN                = node.NewPlugin("Tangle", node.Enabled, configure, run)
+	CoreModule            *node.CoreModule
 	log                   *logger.Logger
 	updateSyncedAtStartup bool
 
@@ -39,10 +38,11 @@ var (
 
 func init() {
 	flag.CommandLine.MarkHidden("syncedAtStartup")
+	CoreModule = node.NewCoreModule("Tangle", configure, run)
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 
 	database.Tangle().LoadInitialValuesFromDatabase()
 
@@ -52,7 +52,7 @@ func configure(plugin *node.Plugin) {
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	daemon.BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
 		database.Tangle().MarkDatabaseCorrupted()
 	})
 
@@ -70,12 +70,12 @@ func configure(plugin *node.Plugin) {
 	)
 
 	configureEvents()
-	configureTangleProcessor(plugin)
+	configureTangleProcessor()
 
 	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
 }
 
-func run(plugin *node.Plugin) {
+func run(coreModule *node.CoreModule) {
 
 	if database.Tangle().IsDatabaseCorrupted() && !config.NodeConfig.Bool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
@@ -96,13 +96,13 @@ func run(plugin *node.Plugin) {
 	attachHeartbeatEvents()
 	detachHeartbeatEvents()
 
-	daemon.BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
 		attachSolidifierGossipEvents()
 		<-shutdownSignal
 		detachSolidifierGossipEvents()
 	}, shutdown.PrioritySolidifierGossip)
 
-	daemon.BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		abortMilestoneSolidification()
 
@@ -119,12 +119,17 @@ func run(plugin *node.Plugin) {
 	}
 	database.Tangle().SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
 
-	runTangleProcessor(plugin)
+	runTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	daemon.BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
+
+	// create a background worker that "measures" the MPS value every second
+	CoreModule.Daemon().BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
+		timeutil.Ticker(measureMPS, 1*time.Second, shutdownSignal)
+	}, shutdown.PriorityMetricsUpdater)
 }
 
 func configureEvents() {

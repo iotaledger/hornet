@@ -17,9 +17,8 @@ import (
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
@@ -32,7 +31,7 @@ var (
 )
 
 var (
-	PLUGIN = node.NewPlugin("RestAPI", node.Enabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	server               *http.Server
@@ -40,6 +39,9 @@ var (
 	serverShutdownSignal <-chan struct{}
 )
 
+func init() {
+	Plugin = node.NewPlugin("RestAPI", node.Enabled, configure, run)
+}
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
@@ -109,7 +111,7 @@ func configure(plugin *node.Plugin) {
 func run(_ *node.Plugin) {
 	log.Info("Starting REST-API server ...")
 
-	daemon.BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
 		serverShutdownSignal = shutdownSignal
 
 		log.Info("Starting REST-API server ... done")
@@ -192,5 +194,5 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 		setupHealthRoute(e)
 	}
 
-	v1.SetupApiRoutesV1(e.Group("/api/v1"))
+	v1.SetupApiRoutesV1(Plugin, e.Group("/api/v1"))
 }

@@ -4,9 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/pkg/config"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
@@ -19,7 +18,7 @@ const (
 )
 
 var (
-	PLUGIN      = node.NewPlugin("PoW", node.Enabled, configure, run)
+	CoreModule  *node.CoreModule
 	log         *logger.Logger
 	handler     *powpackage.Handler
 	handlerOnce sync.Once
@@ -39,17 +38,21 @@ func Handler() *powpackage.Handler {
 	return handler
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func init() {
+	CoreModule = node.NewCoreModule("PoW", configure, run)
+}
+
+func configure(coreModule *node.CoreModule) {
+	log = logger.NewLogger(coreModule.Name)
 
 	// init pow handler
 	Handler()
 }
 
-func run(_ *node.Plugin) {
+func run(_ *node.CoreModule) {
 
 	// close the PoW handler on shutdown
-	daemon.BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting PoW Handler ... done")
 		<-shutdownSignal
 		log.Info("Stopping PoW Handler ...")

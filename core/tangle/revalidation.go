@@ -4,8 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
-
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -139,7 +137,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return false
 			}
 
@@ -156,7 +154,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		return true
 	}, true)
 
-	if daemon.IsStopped() {
+	if CoreModule.Daemon().IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
@@ -168,7 +166,7 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
@@ -210,7 +208,7 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if daemon.IsStopped() {
+				if CoreModule.Daemon().IsStopped() {
 					return false
 				}
 
@@ -227,7 +225,7 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 			return true
 		}, true)
 
-		if daemon.IsStopped() {
+		if CoreModule.Daemon().IsStopped() {
 			return tangle.ErrOperationAborted
 		}
 
@@ -239,7 +237,7 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if daemon.IsStopped() {
+				if CoreModule.Daemon().IsStopped() {
 					return tangle.ErrOperationAborted
 				}
 
@@ -272,7 +270,7 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return false
 			}
 
@@ -303,7 +301,7 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 	}, true)
 	log.Infof("analyzed %d messages", txsCounter)
 
-	if daemon.IsStopped() {
+	if CoreModule.Daemon().IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
@@ -315,7 +313,7 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
@@ -348,7 +346,7 @@ func cleanupMessageMetadata() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return false
 			}
 
@@ -364,7 +362,7 @@ func cleanupMessageMetadata() error {
 	}, true)
 	log.Infof("analyzed %d message metadata", metadataCounter)
 
-	if daemon.IsStopped() {
+	if CoreModule.Daemon().IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
@@ -376,7 +374,7 @@ func cleanupMessageMetadata() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
@@ -414,7 +412,7 @@ func cleanupChildren() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return false
 			}
 
@@ -437,7 +435,7 @@ func cleanupChildren() error {
 	}, true)
 	log.Infof("analyzed %d children", childCounter)
 
-	if daemon.IsStopped() {
+	if CoreModule.Daemon().IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
@@ -449,7 +447,7 @@ func cleanupChildren() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 
@@ -489,7 +487,7 @@ func cleanupAddresses() error {
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if daemon.IsStopped() {
+				if CoreModule.Daemon().IsStopped() {
 					return false
 				}
 
@@ -505,7 +503,7 @@ func cleanupAddresses() error {
 		}, true)
 		log.Infof("analyzed %d addresses", addressesCounter)
 
-		if daemon.IsStopped() {
+		if CoreModule.Daemon().IsStopped() {
 			return tangle.ErrOperationAborted
 		}
 
@@ -517,7 +515,7 @@ func cleanupAddresses() error {
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if daemon.IsStopped() {
+				if CoreModule.Daemon().IsStopped() {
 					return tangle.ErrOperationAborted
 				}
 
@@ -551,7 +549,7 @@ func cleanupUnreferencedMsgs() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return false
 			}
 
@@ -564,7 +562,7 @@ func cleanupUnreferencedMsgs() error {
 	}, true)
 	log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 
-	if daemon.IsStopped() {
+	if CoreModule.Daemon().IsStopped() {
 		return tangle.ErrOperationAborted
 	}
 
@@ -576,7 +574,7 @@ func cleanupUnreferencedMsgs() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if daemon.IsStopped() {
+			if CoreModule.Daemon().IsStopped() {
 				return tangle.ErrOperationAborted
 			}
 

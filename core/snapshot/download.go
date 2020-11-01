@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/iotaledger/hive.go/daemon"
 )
 
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
@@ -25,7 +24,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += uint64(n)
 
-	if daemon.IsStopped() {
+	if CoreModule.Daemon().IsStopped() {
 		return n, ErrSnapshotDownloadWasAborted
 	}
 

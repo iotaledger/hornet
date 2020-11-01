@@ -14,15 +14,13 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/network"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
 
 	"github.com/gohornet/hornet/core/cli"
 	"github.com/gohornet/hornet/core/gossip"
-	metricscore "github.com/gohornet/hornet/core/metrics"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
@@ -77,7 +75,7 @@ const (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Dashboard", node.Enabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	nodeStartAt = time.Now()
@@ -89,6 +87,10 @@ var (
 
 	cachedMilestoneMetrics []*tanglecore.ConfirmedMilestoneMetric
 )
+
+func init() {
+	Plugin = node.NewPlugin("Dashboard", node.Enabled, configure, run)
+}
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
@@ -140,7 +142,7 @@ func run(_ *node.Plugin) {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricscore.MPSMetrics) {
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tanglecore.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
@@ -162,15 +164,15 @@ func run(_ *node.Plugin) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tanglecore.ConfirmedMilestoneMetric{metric}})
 	})
 
-	daemon.BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		metricscore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		tanglecore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		tanglecore.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		tanglecore.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		metricscore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		tanglecore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 		tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 		tanglecore.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		tanglecore.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)

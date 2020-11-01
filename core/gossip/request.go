@@ -5,7 +5,6 @@ import (
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hive.go/daemon"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -26,7 +25,7 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 }
 
 func runRequestWorkers() {
-	daemon.BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
 		rQueue := RequestQueue()
 	requestQueueEnqueueLoop:
@@ -54,7 +53,7 @@ func runRequestWorkers() {
 		}
 	}, shutdown.PriorityRequestsProcessor)
 
-	daemon.BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
 		gossipService := Service()
 		rQueue := RequestQueue()
 		for {

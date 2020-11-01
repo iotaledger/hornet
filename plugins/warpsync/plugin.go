@@ -8,17 +8,16 @@ import (
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/node"
 	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 )
 
 var (
-	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure, run)
+	Plugin   *node.Plugin
 	log      *logger.Logger
 	warpSync *gossip2.WarpSync
 
@@ -31,6 +30,9 @@ var (
 	onDone                          *events.Closure
 )
 
+func init() {
+	Plugin = node.NewPlugin("WarpSync", node.Enabled, configure, run)
+}
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 	warpSync = gossip2.NewWarpSync(config.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
@@ -39,7 +41,7 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(plugin *node.Plugin) {
-	daemon.BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()

@@ -5,14 +5,11 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
-	metricscore "github.com/gohornet/hornet/core/metrics"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -38,7 +35,7 @@ var (
 	milestoneConfirmedSyncEvent = utils.NewSyncEvent()
 )
 
-func configureTangleProcessor(_ *node.Plugin) {
+func configureTangleProcessor() {
 
 	receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
 		processIncomingTx(task.Param(0).(*tangle.Message), task.Param(1).(*gossippkg.Request), task.Param(2).(*gossippkg.Protocol))
@@ -56,7 +53,7 @@ func configureTangleProcessor(_ *node.Plugin) {
 	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
 }
 
-func runTangleProcessor(_ *node.Plugin) {
+func runTangleProcessor() {
 	log.Info("Starting TangleProcessor ...")
 
 	startWaitGroup.Add(4)
@@ -65,7 +62,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricscore.MPSMetrics) {
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *MPSMetrics) {
 		lastIncomingMPS = mpsMetrics.Incoming
 		lastNewMPS = mpsMetrics.New
 		lastOutgoingMPS = mpsMetrics.Outgoing
@@ -79,14 +76,14 @@ func runTangleProcessor(_ *node.Plugin) {
 		}
 	})
 
-	daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
-		metricscore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+	CoreModule.Daemon().BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+		Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		startWaitGroup.Done()
 		<-shutdownSignal
-		metricscore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
 
-	daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		gossip.MessageProcessor().Events.MessageProcessed.Attach(onMsgProcessed)
 		receiveMsgWorkerPool.Start()
@@ -98,7 +95,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
 
-	daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		processValidMilestoneWorkerPool.Start()
 		database.Tangle().Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
@@ -110,7 +107,7 @@ func runTangleProcessor(_ *node.Plugin) {
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
 
-	daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
+	CoreModule.Daemon().BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		milestoneSolidifierWorkerPool.Start()
 		startWaitGroup.Done()

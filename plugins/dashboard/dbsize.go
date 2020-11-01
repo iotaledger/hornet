@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 
@@ -64,7 +63,7 @@ func runDatabaseSizeCollector() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 
-	daemon.BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
 		database.Events.DatabaseCleanup.Attach(onDatabaseCleanup)
 		defer database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
 

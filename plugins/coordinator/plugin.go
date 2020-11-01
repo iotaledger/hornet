@@ -7,10 +7,9 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/core/database"
@@ -36,7 +35,7 @@ func init() {
 }
 
 var (
-	PLUGIN = node.NewPlugin("Coordinator", node.Disabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	bootstrap  = flag.Bool("cooBootstrap", false, "bootstrap the network")
@@ -63,6 +62,10 @@ var (
 
 	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
 )
+
+func init() {
+	Plugin = node.NewPlugin("Coordinator", node.Disabled, configure, run)
+}
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
@@ -143,7 +146,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 func run(plugin *node.Plugin) {
 
 	// create a background worker that signals to issue new milestones
-	daemon.BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
 
 		timeutil.Ticker(func() {
 			// issue next milestone
@@ -157,7 +160,7 @@ func run(plugin *node.Plugin) {
 	}, shutdown.PriorityCoordinator)
 
 	// create a background worker that issues milestones
-	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		// wait until all background workers of the tangle plugin are started
 		tanglecore.WaitForTangleProcessorStartup()
 

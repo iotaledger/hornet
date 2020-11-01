@@ -14,7 +14,6 @@ import (
 
 	"github.com/iotaledger/hive.go/websockethub"
 
-	"github.com/gohornet/hornet/core/metrics"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/dashboard"
@@ -158,7 +157,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		switch m.Type {
 
 		case dashboard.MsgTypeMPSMetric:
-			mpsMetric := &metrics.MPSMetrics{}
+			mpsMetric := &tanglecore.MPSMetrics{}
 			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: mpsMetric}); err != nil {
 				return err
 			}

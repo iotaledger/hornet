@@ -3,10 +3,9 @@ package urts
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 
 	"github.com/gohornet/hornet/core/database"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
@@ -19,7 +18,7 @@ import (
 )
 
 var (
-	PLUGIN = node.NewPlugin("URTS", node.Enabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	TipSelector *tipselect.TipSelector
@@ -29,6 +28,9 @@ var (
 	onMilestoneConfirmed *events.Closure
 )
 
+func init() {
+	Plugin = node.NewPlugin("URTS", node.Enabled, configure, run)
+}
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
@@ -54,13 +56,13 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(_ *node.Plugin) {
-	daemon.BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
 	}, shutdown.PriorityTipselection)
 
-	daemon.BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
 		for {
 			select {
 			case <-shutdownSignal:
