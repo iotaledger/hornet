@@ -87,9 +87,13 @@ func addPeer(c echo.Context) (*peerResponse, error) {
 		alias = *request.Alias
 	}
 
-	if err := p2pplug.Manager().ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias); err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "can't connect to peer, error: %w", err)
+	// error is ignored, because the peer is added to the known peers and protected from trimming
+	_ = p2pplug.Manager().ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
+
+	info := p2pplug.Manager().PeerInfoSnapshot(addrInfo.ID)
+	if info == nil {
+		return nil, errors.WithMessagef(common.ErrInvalidParameter, "peer not found, peerID: %s", addrInfo.ID.String())
 	}
 
-	return nil, nil
+	return wrapInfoSnapshot(info), nil
 }
