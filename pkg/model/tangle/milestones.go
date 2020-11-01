@@ -28,7 +28,7 @@ var (
 )
 
 func MilestoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsg *CachedMilestone))(params[0].(*CachedMilestone).Retain())
+	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
 func (t *Tangle) ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int, cooMilestoneMerkleHashFunc crypto.Hash) {

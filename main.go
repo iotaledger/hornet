@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/gracefulshutdown"
 	"github.com/gohornet/hornet/plugins/metrics"
+	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
@@ -48,6 +49,7 @@ func main() {
 		snapshot.PLUGIN,
 		dashboard.PLUGIN,
 		spammer.PLUGIN,
+		mqtt.PLUGIN,
 		coordinator.PLUGIN,
 		prometheus.PLUGIN,
 	}
