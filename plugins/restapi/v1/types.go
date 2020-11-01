@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/multiformats/go-multiaddr"
 )
 
 // infoResponse defines the response of a GET info REST API call.
@@ -205,18 +206,18 @@ type messageConeResponse struct {
 type addPeerRequest struct {
 	// The libp2p multi address of the peer.
 	MultiAddress string `json:"multiAddress"`
-	// The alias of to iditify the peer.
+	// The alias of the peer.
 	Alias *string `json:"alias,omitempty"`
 }
 
 // peerResponse defines the response of a GET peer REST API call.
 type peerResponse struct {
-	// The libp2p multi address of the peer.
-	MultiAddress string `json:"multiAddress"`
-	// The alias of to iditify the peer.
-	Alias *string `json:"alias,omitempty"`
 	// The libp2p identifier of the peer.
 	ID string `json:"id"`
+	// The libp2p multi addresses of the peer.
+	MultiAddress []multiaddr.Multiaddr `json:"multiAddresses"`
+	// The alias of the peer.
+	Alias *string `json:"alias,omitempty"`
 	// The relation (static, autopeered) of the peer.
 	Relation string `json:"relation"`
 	// Whether the peer is connected.
@@ -241,4 +242,18 @@ type peerGossipMetrics struct {
 	NewMessages uint32 `json:"newMessages"`
 	// The total amount of received known messages.
 	KnownMessages uint32 `json:"knownMessages"`
+}
+
+// pruneDatabaseResponse defines the response of a prune database REST API call.
+type pruneDatabaseResponse struct {
+	// The index of the snapshot.
+	Index milestone.Index `json:"index"`
+}
+
+// createSnapshotResponse defines the response of a create snapshot REST API call.
+type createSnapshotResponse struct {
+	// The index of the snapshot.
+	Index milestone.Index `json:"index"`
+	// The file path of the snapshot file.
+	FilePath string `json:"filePath"`
 }

@@ -13,11 +13,11 @@ import (
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/spammer"
+	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
 const (
-	// ToDo: add checks if node is synced
 	waitForNodeSyncedTimeout = 2000 * time.Millisecond
 )
 
@@ -39,12 +39,6 @@ const (
 )
 
 const (
-	QueryParamControlCmdPruneDatabase      = "prunedatabase"      // targetIndex || depth
-	QueryParamControlCmdCreateSnapshotFile = "createsnapshotfile" // targetIndex
-	QueryParamControlCmdTiggerSolidifier   = "triggersolidifier"
-)
-
-const (
 	// RouteInfo is the route for getting the node info.
 	// GET returns the node info.
 	RouteInfo = "/info"
@@ -52,6 +46,13 @@ const (
 	// RouteTips is the route for getting two tips.
 	// GET returns the tips.
 	RouteTips = "/tips"
+
+	// RouteSpammer is the route for controlling the integrated spammer.
+	// GET returns the tips.
+	// query parameters: "cmd" (start, stop)
+	//					 "mpsRateLimit" (optional)
+	//					 "cpuMaxUsage" (optional)
+	RouteSpammer = "/spammer"
 
 	// RouteMessageData is the route for getting message data by it's messageID.
 	// GET returns message data (json).
@@ -100,6 +101,18 @@ const (
 	// POST adds a new peer.
 	RoutePeers = "/peers"
 
+	// RouteControlDatabasePrune is the control route to manually prune the database.
+	// GET prunes the database. (query parameters: "index" || "depth")
+	RouteControlDatabasePrune = "/control/database/prune"
+
+	// RouteControlSnapshotCreate is the control route to manually create a snapshot file.
+	// GET creates a snapshot. (query parameters: "index")
+	RouteControlSnapshotCreate = "/control/snapshots/create"
+
+	// RouteDebugSolidifer is the debug route to manually trigger the solidifier.
+	// GET triggers the solidifier.
+	RouteDebugSolidifer = "/debug/solidifer"
+
 	// RouteDebugOutputs is the debug route for getting all output IDs.
 	// GET returns the outputIDs for all outputs.
 	RouteDebugOutputs = "/debug/outputs"
@@ -145,138 +158,145 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 		features = append(features, "PoW")
 	}
 
-	// only handle spammer api calls if the spammer plugin is enabled
-	if !node.IsSkipped(spammer.PLUGIN) {
-		//setupSpammerRoute(routeGroup)
-	}
-
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 
-		infoResp, err := info()
+		resp, err := info()
 		if err != nil {
 			return err
 		}
-		return jsonResponse(c, http.StatusOK, infoResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
 	if !node.IsSkipped(urts.PLUGIN) {
 		routeGroup.GET(RouteTips, func(c echo.Context) error {
 
-			tipsResp, err := tips(c)
+			resp, err := tips(c)
 			if err != nil {
 				return err
 			}
-			return jsonResponse(c, http.StatusOK, tipsResp)
+			return jsonResponse(c, http.StatusOK, resp)
+		})
+	}
+
+	// only handle spammer api calls if the Spammer plugin is enabled
+	if !node.IsSkipped(spammer.PLUGIN) {
+		routeGroup.GET(RouteSpammer, func(c echo.Context) error {
+
+			resp, err := executeSpammerCommand(c)
+			if err != nil {
+				return err
+			}
+			return jsonResponse(c, http.StatusOK, resp)
 		})
 	}
 
 	routeGroup.GET(RouteMessageMetadata, func(c echo.Context) error {
 
-		messageMetaResp, err := messageMetadataByID(c)
+		resp, err := messageMetadataByID(c)
 		if err != nil {
 			return err
 		}
-		return jsonResponse(c, http.StatusOK, messageMetaResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
 
-		messageResp, err := messageByID(c)
+		resp, err := messageByID(c)
 		if err != nil {
 			return err
 		}
-		return jsonResponse(c, http.StatusOK, messageResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
 
-		messageBytes, err := messageBytesByID(c)
+		resp, err := messageBytesByID(c)
 		if err != nil {
 			return err
 		}
 
-		return c.Blob(http.StatusOK, echo.MIMEOctetStream, messageBytes)
+		return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
 	})
 
 	routeGroup.GET(RouteMessageChildren, func(c echo.Context) error {
 
-		childrenResp, err := childrenIDsByID(c)
+		resp, err := childrenIDsByID(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, childrenResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessages, func(c echo.Context) error {
 
-		messageIDsResp, err := messageIDsByIndex(c)
+		resp, err := messageIDsByIndex(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, messageIDsResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
 
-		messageMetaResp, err := sendMessage(c)
+		resp, err := sendMessage(c)
 		if err != nil {
 			return err
 		}
-		c.Response().Header().Set(echo.HeaderLocation, messageMetaResp.MessageID)
-		return jsonResponse(c, http.StatusCreated, messageMetaResp)
+		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
+		return jsonResponse(c, http.StatusCreated, resp)
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
 
-		milestoneResp, err := milestoneByIndex(c)
+		resp, err := milestoneByIndex(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, milestoneResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
 
-		outputResp, err := outputByID(c)
+		resp, err := outputByID(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, outputResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBalance, func(c echo.Context) error {
 
-		addressBalanceResp, err := balanceByAddress(c)
+		resp, err := balanceByAddress(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, addressBalanceResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressOutputs, func(c echo.Context) error {
 
-		addressOutputsResp, err := outputsIDsByAddress(c)
+		resp, err := outputsIDsByAddress(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, addressOutputsResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
 
-		peerResp, err := getPeer(c)
+		resp, err := getPeer(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, peerResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
@@ -291,81 +311,108 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 
 	routeGroup.GET(RoutePeers, func(c echo.Context) error {
 
-		peersResp, err := listPeers(c)
+		resp, err := listPeers(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, peersResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
 
-		peerResp, err := addPeer(c)
+		resp, err := addPeer(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, peerResp)
+		return jsonResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
+
+		resp, err := pruneDatabase(c)
+		if err != nil {
+			return err
+		}
+
+		return jsonResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
+
+		resp, err := createSnapshot(c)
+		if err != nil {
+			return err
+		}
+
+		return jsonResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
+
+		tangleplugin.TriggerSolidifier()
+
+		return jsonResponse(c, http.StatusOK, "solidifier triggered")
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
 
-		outputIdsResp, err := debugOutputsIDs(c)
+		resp, err := debugOutputsIDs(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, outputIdsResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
 
-		outputIdsResp, err := debugUnspentOutputsIDs(c)
+		resp, err := debugUnspentOutputsIDs(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, outputIdsResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
 
-		outputIdsResp, err := debugSpentOutputsIDs(c)
+		resp, err := debugSpentOutputsIDs(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, outputIdsResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
 
-		milestoneDiffResp, err := debugMilestoneDiff(c)
+		resp, err := debugMilestoneDiff(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, milestoneDiffResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
 
-		requestsResp, err := debugRequests(c)
+		resp, err := debugRequests(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, requestsResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
 
-		messsageConeResp, err := debugMessageCone(c)
+		resp, err := debugMessageCone(c)
 		if err != nil {
 			return err
 		}
 
-		return jsonResponse(c, http.StatusOK, messsageConeResp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 }

@@ -171,7 +171,7 @@ func run(_ *node.Plugin) {
 						continue
 					}
 
-					if err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
+					if _, err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
 						log.Debugf("pruning aborted: %v", err.Error())
 					}
 				}
@@ -182,7 +182,7 @@ func run(_ *node.Plugin) {
 	}, shutdown.PriorityLocalSnapshots)
 }
 
-func PruneDatabaseByDepth(depth milestone.Index) error {
+func PruneDatabaseByDepth(depth milestone.Index) (milestone.Index, error) {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
@@ -190,13 +190,13 @@ func PruneDatabaseByDepth(depth milestone.Index) error {
 
 	if solidMilestoneIndex <= depth {
 		// Not enough history
-		return ErrNotEnoughHistory
+		return 0, ErrNotEnoughHistory
 	}
 
 	return pruneDatabase(solidMilestoneIndex-depth, nil)
 }
 
-func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
+func PruneDatabaseByTargetIndex(targetIndex milestone.Index) (milestone.Index, error) {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 

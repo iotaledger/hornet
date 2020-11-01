@@ -32,9 +32,9 @@ type Peer struct {
 	reconnectTimer       *time.Timer
 }
 
-// Info returns a snapshot of the peer in time of calling Info().
-func (p *Peer) Info() *PeerSnapshot {
-	info := &PeerSnapshot{
+// InfoSnapshot returns a snapshot of the peer in time of calling Info().
+func (p *Peer) InfoSnapshot() *PeerInfoSnapshot {
+	info := &PeerInfoSnapshot{
 		Peer:      p,
 		ID:        p.ID.String(),
 		Addresses: p.Addrs,
@@ -42,8 +42,8 @@ func (p *Peer) Info() *PeerSnapshot {
 	return info
 }
 
-// PeerSnapshot acts as a static snapshot of information about a peer.
-type PeerSnapshot struct {
+// PeerInfoSnapshot acts as a static snapshot of information about a peer.
+type PeerInfoSnapshot struct {
 	// The instance of the peer.
 	Peer *Peer `json:"-"`
 	// The ID of the peer.
