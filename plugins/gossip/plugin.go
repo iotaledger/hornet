@@ -56,6 +56,7 @@ func Service() *gossip.Service {
 		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
 		service = gossip.NewService(iotaGossipProtocolID, p2pplug.Host(), p2pplug.Manager(),
 			gossip.WithLogger(logger.NewLogger("GossipService")),
+			gossip.WithUnknownPeersLimit(config.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
 		)
 	})
 	return service
