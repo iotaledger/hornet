@@ -53,6 +53,9 @@ const (
 	// StreamCancelReasonUnknownPeer defines a stream cancellation because
 	// the relation to the other peer is insufficient.
 	StreamCancelReasonInsufficientPeerRelation StreamCancelReason = "insufficient peer relation"
+	// StreamCancelNoUnknownPeerSlotAvailable defines a stream cancellation
+	// because no more unknown peers slot were available.
+	StreamCancelNoUnknownPeerSlotAvailable StreamCancelReason = "no unknown peer slot available"
 )
 
 const (
@@ -64,6 +67,7 @@ const (
 var defaultServiceOptions = []ServiceOption{
 	WithSendQueueSize(defaultSendQueueSize),
 	WithStreamConnectTimeout(defaultStreamConnectTimeout),
+	WithUnknownPeersLimit(0),
 }
 
 // ServiceOptions define options for a Service.
@@ -74,6 +78,8 @@ type ServiceOptions struct {
 	StreamConnectTimeout time.Duration
 	// The logger to use to log events.
 	Logger *logger.Logger
+	// The amount of unknown peers to allow to have a gossip stream with.
+	UnknownPeersLimit int
 }
 
 // applies the given ServiceOption.
@@ -104,6 +110,14 @@ func WithLogger(logger *logger.Logger) ServiceOption {
 	}
 }
 
+// WithUnknownPeersLimit defines how many peers with an unknown relation
+// are allowed to have an ongoing gossip protocol stream.
+func WithUnknownPeersLimit(limit int) ServiceOption {
+	return func(opts *ServiceOptions) {
+		opts.UnknownPeersLimit = limit
+	}
+}
+
 // ServiceOption is a function setting a ServiceOptions option.
 type ServiceOption func(opts *ServiceOptions)
 
@@ -124,6 +138,7 @@ func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts
 		streams:             make(map[peer.ID]*Protocol),
 		manager:             manager,
 		opts:                srvOpts,
+		unknownPeers:        map[peer.ID]struct{}{},
 		inboundStreamChan:   make(chan network.Stream),
 		connectedChan:       make(chan *connectionmsg),
 		disconnectedChan:    make(chan *connectionmsg),
@@ -147,6 +162,8 @@ type Service struct {
 	streams  map[peer.ID]*Protocol
 	manager  *p2p.Manager
 	opts     *ServiceOptions
+	// the amount of unknown peers with which a gossip stream is ongoing.
+	unknownPeers map[peer.ID]struct{}
 	// event loop channels
 	inboundStreamChan   chan network.Stream
 	connectedChan       chan *connectionmsg
@@ -295,19 +312,31 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 		return nil
 	}
 
-	// close if the relation to the peer is unknown
-	var ok bool
+	// close if the relation to the peer is unknown and no slot is available
+	var hasKnownRelation bool
 	s.manager.Call(remotePeerID, func(peer *p2p.Peer) {
 		if peer.Relation == p2p.PeerRelationUnknown {
 			return
 		}
-		ok = true
+		hasKnownRelation = true
 	})
 
-	if !ok {
-		s.Events.InboundStreamCancelled.Trigger(stream, StreamCancelReasonInsufficientPeerRelation)
+	var cancelReason StreamCancelReason
+	switch {
+	case !hasKnownRelation && s.opts.UnknownPeersLimit == 0:
+		cancelReason = StreamCancelReasonInsufficientPeerRelation
+	case !hasKnownRelation && len(s.unknownPeers) == s.opts.UnknownPeersLimit:
+		cancelReason = StreamCancelNoUnknownPeerSlotAvailable
+	}
+
+	if len(cancelReason) > 0 {
+		s.Events.InboundStreamCancelled.Trigger(stream, cancelReason)
 		s.closeUnwantedStream(stream)
 		return nil
+	}
+
+	if !hasKnownRelation {
+		s.unknownPeers[remotePeerID] = struct{}{}
 	}
 
 	return s.registerProtocol(remotePeerID, stream)
@@ -335,6 +364,13 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) (*Protocol,
 	// aka, handleInboundStream will be called for this connection
 	if conn.Stat().Direction != network.DirOutbound {
 		return nil, nil
+	}
+
+	if peer.Relation == p2p.PeerRelationUnknown {
+		if len(s.unknownPeers) == s.opts.UnknownPeersLimit {
+			return nil, nil
+		}
+		s.unknownPeers[peer.ID] = struct{}{}
 	}
 
 	stream, err := s.openStream(peer.ID)
@@ -381,6 +417,7 @@ func (s *Service) deregisterProtocol(peerID peer.ID) (bool, error) {
 // closes the stream for the given peer and fires the appropriate events.
 func (s *Service) closeStream(peerID peer.ID) {
 	proto := s.streams[peerID]
+	delete(s.unknownPeers, peerID)
 	reset, err := s.deregisterProtocol(peerID)
 	if err != nil {
 		s.Events.Error.Trigger(err)
@@ -393,14 +430,23 @@ func (s *Service) closeStream(peerID peer.ID) {
 
 // handles updates to the relation to a given peer: if the peer's relation
 // is no longer unknown, a gossip protocol stream is started. likewise, if the
-// relation is "downgraded" to unknown, the ongoing stream is closed.
+// relation is "downgraded" to unknown, the ongoing stream is closed if no more
+// unknown peer slots are available.
 func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation) (*Protocol, error) {
 	newRel := peer.Relation
 
-	// close the stream
+	// close the stream if no more unknown peer slots are available
 	if newRel == p2p.PeerRelationUnknown {
-		_, err := s.deregisterProtocol(peer.ID)
-		return nil, err
+		if len(s.unknownPeers) == s.opts.UnknownPeersLimit {
+			_, err := s.deregisterProtocol(peer.ID)
+			return nil, err
+		}
+		s.unknownPeers[peer.ID] = struct{}{}
+	}
+
+	// clean up slot
+	if oldRel == p2p.PeerRelationUnknown {
+		delete(s.unknownPeers, peer.ID)
 	}
 
 	if _, ongoing := s.streams[peer.ID]; ongoing {
