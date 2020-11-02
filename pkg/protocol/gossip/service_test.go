@@ -51,7 +51,7 @@ func TestServiceEvents(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	require.NoError(t, logger.InitGlobalLogger(cfg))
+	_ = logger.InitGlobalLogger(cfg)
 
 	mngOpts := []p2p.ManagerOption{
 		p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond),
@@ -160,7 +160,7 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	require.NoError(t, logger.InitGlobalLogger(cfg))
+	_ = logger.InitGlobalLogger(cfg)
 
 	mngOpts := []p2p.ManagerOption{
 		p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond),
