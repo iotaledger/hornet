@@ -23,8 +23,12 @@ var (
 
 	garbageCollectionLock syncutils.Mutex
 
-	tangleObj *tangle.Tangle
+	deps dependencies
 )
+
+type dependencies struct {
+	Tangle *tangle.Tangle
+}
 
 func init() {
 	CoreModule = node.NewCoreModule("Database", configure, run)
@@ -51,30 +55,30 @@ func init() {
 func configure(c *dig.Container) {
 	log = logger.NewLogger(CoreModule.Name)
 
-	if err := c.Invoke(func(tangle *tangle.Tangle) error {
-		tangleObj = tangle
+	if err := c.Invoke(func(cDeps dependencies) error {
+		deps = cDeps
 		return nil
 	}); err != nil {
 		panic(err)
 	}
 
-	if !tangleObj.IsCorrectDatabaseVersion() {
-		if !tangleObj.UpdateDatabaseVersion() {
+	if !deps.Tangle.IsCorrectDatabaseVersion() {
+		if !deps.Tangle.UpdateDatabaseVersion() {
 			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 		}
 	}
 
 	CoreModule.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		tangleObj.MarkDatabaseHealthy()
+		deps.Tangle.MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")
-		tangleObj.CloseDatabases()
+		deps.Tangle.CloseDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 }
 
 func RunGarbageCollection() {
-	if tangleObj.DatabaseSupportsCleanup() {
+	if deps.Tangle.DatabaseSupportsCleanup() {
 
 		garbageCollectionLock.Lock()
 		defer garbageCollectionLock.Unlock()
@@ -87,7 +91,7 @@ func RunGarbageCollection() {
 			Start: start,
 		})
 
-		err := tangleObj.CleanupDatabases()
+		err := deps.Tangle.CleanupDatabases()
 
 		end := time.Now()
 
