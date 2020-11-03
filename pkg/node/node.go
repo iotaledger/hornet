@@ -106,12 +106,12 @@ func (n *Node) init() {
 	})
 
 	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
-		coreModule.Events.Init.Trigger(coreModule, n.container)
+		coreModule.Events.Init.Trigger(n.container)
 		return true
 	})
 
 	n.ForEachPlugin(func(plugin *Plugin) bool {
-		plugin.Events.Init.Trigger(plugin)
+		plugin.Events.Init.Trigger(n.container)
 		return true
 	})
 }
@@ -122,7 +122,7 @@ func (n *Node) configure() {
 		coreModule.wg = n.wg
 		coreModule.Node = n
 
-		coreModule.Events.Configure.Trigger(coreModule)
+		coreModule.Events.Configure.Trigger(n.container)
 		n.Logger.Infof("Loading core module: %s ... done", coreModule.Name)
 
 		return true
@@ -143,7 +143,7 @@ func (n *Node) execute() {
 	n.Logger.Info("Executing core modules ...")
 
 	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
-		coreModule.Events.Run.Trigger(coreModule)
+		coreModule.Events.Run.Trigger(n.container)
 		n.Logger.Infof("Starting core module: %s ... done", coreModule.Name)
 		return true
 	})

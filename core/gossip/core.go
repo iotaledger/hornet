@@ -61,15 +61,15 @@ func init() {
 		type msgprocdependencies struct {
 			dig.In
 
-			tangle *tangle.Tangle
-			rQueue gossip.RequestQueue
-			mng    *p2p.Manager
-			config *configuration.Configuration `name:"nodeConfig"`
+			Tangle       *tangle.Tangle
+			RequestQueue gossip.RequestQueue
+			Manager      *p2p.Manager
+			NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 		}
 
 		if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
-			return gossip.NewMessageProcessor(deps.tangle, deps.rQueue, deps.mng, &gossip.Options{
-				ValidMWM:          uint64(deps.config.Int64(config.CfgCoordinatorMWM)),
+			return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
+				ValidMWM:          uint64(deps.NodeConfig.Int64(config.CfgCoordinatorMWM)),
 				WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
 			})
 		}); err != nil {
@@ -79,9 +79,9 @@ func init() {
 		type servicedeps struct {
 			dig.In
 
-			host   host.Host
-			mng    *p2p.Manager
-			config *configuration.Configuration `name:"nodeConfig"`
+			Host       host.Host
+			Manager    *p2p.Manager
+			NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		}
 
 		if err := c.Provide(func(deps servicedeps) *gossip.Service {
@@ -90,9 +90,9 @@ func init() {
 			//networkID := tangle.GetSnapshotInfo().NetworkID)
 			var networkID uint8 = 1
 			iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
-			return gossip.NewService(iotaGossipProtocolID, deps.host, deps.mng,
+			return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
 				gossip.WithLogger(logger.NewLogger("GossipService")),
-				gossip.WithUnknownPeersLimit(deps.config.Int(config.CfgP2PGossipUnknownPeersLimit)),
+				gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
 			)
 		}); err != nil {
 			panic(err)

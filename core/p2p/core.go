@@ -95,7 +95,7 @@ func init() {
 
 			// load up the previously generated identity or create a new one
 			isPeerStoreNew := os.IsNotExist(statPeerStorePathErr)
-			prvKey, err := loadOrCreateIdentity(isPeerStoreNew, peerStorePath, peerStore)
+			prvKey, err := loadOrCreateIdentity(deps.NodeConfig, isPeerStoreNew, peerStorePath, peerStore)
 			if err != nil {
 				panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 			}
@@ -128,14 +128,14 @@ func init() {
 		type mngdeps struct {
 			dig.In
 
-			host   host.Host
-			config *configuration.Configuration `name:"nodeConfig"`
+			Host   host.Host
+			Config *configuration.Configuration `name:"nodeConfig"`
 		}
 
 		if err := c.Provide(func(deps mngdeps) *p2ppkg.Manager {
-			return p2ppkg.NewManager(deps.host,
+			return p2ppkg.NewManager(deps.Host,
 				p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-				p2ppkg.WithManagerReconnectInterval(time.Duration(deps.config.Int(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
+				p2ppkg.WithManagerReconnectInterval(time.Duration(deps.Config.Int(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
 			)
 		}); err != nil {
 			panic(err)
@@ -199,17 +199,17 @@ func connectConfigKnownPeers() {
 
 // creates a new Ed25519 based key pair or loads up the existing identity
 // by reading the public key file from disk.
-func loadOrCreateIdentity(peerStoreIsNew bool, peerStorePath string, peerStore peerstore.Peerstore) (crypto.PrivKey, error) {
+func loadOrCreateIdentity(nodeConfig *configuration.Configuration, peerStoreIsNew bool, peerStorePath string, peerStore peerstore.Peerstore) (crypto.PrivKey, error) {
 	pubKeyFilePath := path.Join(peerStorePath, pubKeyFileName)
 	if peerStoreIsNew {
-		return createIdentity(pubKeyFilePath)
+		return createIdentity(nodeConfig, pubKeyFilePath)
 	}
 
-	return loadExistingIdentity(pubKeyFilePath, peerStore)
+	return loadExistingIdentity(nodeConfig, pubKeyFilePath, peerStore)
 }
 
-func loadIdentityFromConfig() (crypto.PrivKey, error) {
-	if identityPrivKey := deps.NodeConfig.String(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
+func loadIdentityFromConfig(nodeConfig *configuration.Configuration) (crypto.PrivKey, error) {
+	if identityPrivKey := nodeConfig.String(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
 		prvKey, err := utils.ParseEd25519PrivateKeyFromString(identityPrivKey)
 		if err != nil {
 			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", config.CfgP2PIdentityPrivKey)
@@ -228,11 +228,11 @@ func loadIdentityFromConfig() (crypto.PrivKey, error) {
 
 // creates a new Ed25519 based identity and saves the public key
 // as a separate file next to the peer store data.
-func createIdentity(pubKeyFilePath string) (crypto.PrivKey, error) {
+func createIdentity(nodeConfig *configuration.Configuration, pubKeyFilePath string) (crypto.PrivKey, error) {
 
 	log.Info("generating a new peer identity...")
 
-	sk, err := loadIdentityFromConfig()
+	sk, err := loadIdentityFromConfig(nodeConfig)
 	if err != nil {
 		if err != ErrNoPrivKeyFound {
 			return nil, err
@@ -264,7 +264,7 @@ func createIdentity(pubKeyFilePath string) (crypto.PrivKey, error) {
 
 // loads an existing identity by reading in the public key from the public key identity file
 // and then retrieving the associated private key from the given Peerstore.
-func loadExistingIdentity(pubKeyFilePath string, peerStore peerstore.Peerstore) (crypto.PrivKey, error) {
+func loadExistingIdentity(nodeConfig *configuration.Configuration, pubKeyFilePath string, peerStore peerstore.Peerstore) (crypto.PrivKey, error) {
 	log.Infof("retrieving existing peer identity from %s", pubKeyFilePath)
 	existingPubKeyBytes, err := ioutil.ReadFile(pubKeyFilePath)
 	if err != nil {
@@ -281,7 +281,7 @@ func loadExistingIdentity(pubKeyFilePath string, peerStore peerstore.Peerstore) 
 	storedPrivKey := peerStore.PrivKey(peerID)
 
 	// load an optional private key from the config and compare it to the stored private key
-	sk, err := loadIdentityFromConfig()
+	sk, err := loadIdentityFromConfig(nodeConfig)
 	if err != nil {
 		if err != ErrNoPrivKeyFound {
 			return nil, err

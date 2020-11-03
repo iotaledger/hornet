@@ -39,9 +39,9 @@ func NewPlugin(name string, status int, callbacks ...PluginCallback) *Plugin {
 		Name:   name,
 		Status: status,
 		Events: pluginEvents{
-			Init:      events.NewEvent(pluginCaller),
-			Configure: events.NewEvent(pluginCaller),
-			Run:       events.NewEvent(pluginCaller),
+			Init:      events.NewEvent(containerCaller),
+			Configure: events.NewEvent(containerCaller),
+			Run:       events.NewEvent(containerCaller),
 		},
 	}
 

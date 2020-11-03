@@ -27,9 +27,9 @@ func NewCoreModule(name string, callbacks ...CoreModuleCallback) *CoreModule {
 	coreModule := &CoreModule{
 		Name: name,
 		Events: coreModuleEvents{
-			Init:      events.NewEvent(coreModuleCaller),
-			Configure: events.NewEvent(coreModuleCaller),
-			Run:       events.NewEvent(coreModuleCaller),
+			Init:      events.NewEvent(containerCaller),
+			Configure: events.NewEvent(containerCaller),
+			Run:       events.NewEvent(containerCaller),
 		},
 	}
 

@@ -2,6 +2,7 @@ package node
 
 import (
 	"github.com/iotaledger/hive.go/events"
+	"go.uber.org/dig"
 )
 
 type coreModuleEvents struct {
@@ -16,10 +17,6 @@ type pluginEvents struct {
 	Run       *events.Event
 }
 
-func coreModuleCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*CoreModule))(params[0].(*CoreModule))
-}
-
-func pluginCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*Plugin))(params[0].(*Plugin))
+func containerCaller(handler interface{}, params ...interface{}) {
+	handler.(func(container *dig.Container))(params[0].(*dig.Container))
 }

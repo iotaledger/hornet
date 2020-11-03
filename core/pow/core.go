@@ -27,7 +27,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	handler *powpackage.Handler
+	Handler *powpackage.Handler
 }
 
 func init() {
@@ -68,7 +68,7 @@ func run(_ *dig.Container) {
 		log.Info("Starting PoW Handler ... done")
 		<-shutdownSignal
 		log.Info("Stopping PoW Handler ...")
-		deps.handler.Close()
+		deps.Handler.Close()
 		log.Info("Stopping PoW Handler ... done")
 	}, shutdown.PriorityPoWHandler)
 }

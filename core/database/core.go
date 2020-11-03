@@ -34,13 +34,14 @@ type dependencies struct {
 func init() {
 	CoreModule = node.NewCoreModule("Database", configure, run)
 
-	CoreModule.Events.Init.Attach(events.NewClosure(func(_ *node.CoreModule, c *dig.Container) {
+	CoreModule.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
 		type tangledeps struct {
-			config *configuration.Configuration `name:"nodeConfig"`
+			dig.In
+			NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		}
 
 		if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-			return tangle.New(deps.config.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
+			return tangle.New(deps.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
 		}); err != nil {
 			panic(err)
 		}

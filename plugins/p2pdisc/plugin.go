@@ -32,17 +32,17 @@ func init() {
 	Plugin.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
 		type discdeps struct {
 			dig.In
-			host    host.Host
-			manager *p2p.Manager
-			config  *configuration.Configuration `name:"nodeConfig"`
+			Host       host.Host
+			Manager    *p2p.Manager
+			NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		}
 		if err := c.Provide(func(deps discdeps) *p2p.DiscoveryService {
-			rendezvousPoint := deps.config.String(config.CfgP2PDiscRendezvousPoint)
-			discoveryIntervalSec := deps.config.Duration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
-			routingTableRefreshPeriodSec := deps.config.Duration(config.CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
-			maxDiscoveredPeerCount := deps.config.Int(config.CfgP2PDiscMaxDiscoveredPeerConns)
+			rendezvousPoint := deps.NodeConfig.String(config.CfgP2PDiscRendezvousPoint)
+			discoveryIntervalSec := deps.NodeConfig.Duration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
+			routingTableRefreshPeriodSec := deps.NodeConfig.Duration(config.CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
+			maxDiscoveredPeerCount := deps.NodeConfig.Int(config.CfgP2PDiscMaxDiscoveredPeerConns)
 
-			return p2p.NewDiscoveryService(deps.host, deps.manager,
+			return p2p.NewDiscoveryService(deps.Host, deps.Manager,
 				p2p.WithDiscoveryServiceAdvertiseInterval(discoveryIntervalSec),
 				p2p.WithDiscoveryServiceRendezvousPoint(rendezvousPoint),
 				p2p.WithDiscoveryServiceMaxDiscoveredPeers(maxDiscoveredPeerCount),

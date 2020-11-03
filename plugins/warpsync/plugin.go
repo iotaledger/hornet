@@ -37,7 +37,7 @@ type dependencies struct {
 	dig.In
 	Tangle       *tangle.Tangle
 	RequestQueue gossip.RequestQueue
-	Service      gossip.Service
+	Service      *gossip.Service
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -46,8 +46,12 @@ func init() {
 }
 func configure(c *dig.Container) {
 	log = logger.NewLogger(Plugin.Name)
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
 	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
-
 	configureEvents()
 }
 
