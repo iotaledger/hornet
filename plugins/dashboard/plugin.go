@@ -5,31 +5,29 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/core/database"
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
 	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/plugins/database"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/network"
 
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
 
+	"github.com/gohornet/hornet/core/cli"
+	"github.com/gohornet/hornet/core/gossip"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/cli"
-	"github.com/gohornet/hornet/plugins/gossip"
-	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
@@ -77,7 +75,7 @@ const (
 )
 
 var (
-	PLUGIN = node.NewPlugin("Dashboard", node.Enabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	nodeStartAt = time.Now()
@@ -87,8 +85,12 @@ var (
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
-	cachedMilestoneMetrics []*tangleplugin.ConfirmedMilestoneMetric
+	cachedMilestoneMetrics []*tanglecore.ConfirmedMilestoneMetric
 )
+
+func init() {
+	Plugin = node.NewPlugin("Dashboard", node.Enabled, configure, run)
+}
 
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
@@ -140,7 +142,7 @@ func run(_ *node.Plugin) {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *metricsplugin.MPSMetrics) {
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tanglecore.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
@@ -154,26 +156,26 @@ func run(_ *node.Plugin) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
-	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tangleplugin.ConfirmedMilestoneMetric) {
+	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tanglecore.ConfirmedMilestoneMetric) {
 		cachedMilestoneMetrics = append(cachedMilestoneMetrics, metric)
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
 		}
-		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangleplugin.ConfirmedMilestoneMetric{metric}})
+		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tanglecore.ConfirmedMilestoneMetric{metric}})
 	})
 
-	daemon.BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		metricsplugin.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		tangleplugin.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		tangleplugin.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
+		tanglecore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		tanglecore.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		tanglecore.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		metricsplugin.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-		tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-		tangleplugin.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
-		tangleplugin.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
+		tanglecore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		tanglecore.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		tanglecore.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
 		log.Info("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
@@ -353,10 +355,10 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = cli.AppVersion
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.IsHealthy = tangleplugin.IsNodeHealthy()
+	status.IsHealthy = tanglecore.IsNodeHealthy()
 	status.NodeAlias = config.NodeConfig.String(config.CfgNodeAlias)
 
-	status.ConnectedPeersCount = p2pplug.Manager().ConnectedCount()
+	status.ConnectedPeersCount = p2pcore.Manager().ConnectedCount()
 
 	snapshotInfo := database.Tangle().GetSnapshotInfo()
 	if snapshotInfo != nil {

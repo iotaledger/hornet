@@ -3,22 +3,21 @@ package warpsync
 import (
 	"time"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/node"
 	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 )
 
 var (
-	PLUGIN   = node.NewPlugin("WarpSync", node.Enabled, configure, run)
+	Plugin   *node.Plugin
 	log      *logger.Logger
 	warpSync *gossip2.WarpSync
 
@@ -31,6 +30,9 @@ var (
 	onDone                          *events.Closure
 )
 
+func init() {
+	Plugin = node.NewPlugin("WarpSync", node.Enabled, configure, run)
+}
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 	warpSync = gossip2.NewWarpSync(config.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
@@ -39,7 +41,7 @@ func configure(plugin *node.Plugin) {
 }
 
 func run(plugin *node.Plugin) {
-	daemon.BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
@@ -93,7 +95,7 @@ func configureEvents() {
 		// that we should manually kick start the milestone solidifier.
 		if msRequested != int(advRange) {
 			log.Info("Manually starting solidifier, as some milestones are already in the database")
-			tangleplugin.TriggerSolidifier()
+			tanglecore.TriggerSolidifier()
 		}
 	})
 
@@ -105,8 +107,8 @@ func configureEvents() {
 
 func attachEvents() {
 	gossip.Service().Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
-	tangleplugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-	tangleplugin.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
+	tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	tanglecore.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
 	warpSync.Events.Start.Attach(onStart)
@@ -115,8 +117,8 @@ func attachEvents() {
 
 func detachEvents() {
 	gossip.Service().Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
-	tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-	tangleplugin.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
+	tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	tanglecore.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
 	warpSync.Events.Start.Detach(onStart)

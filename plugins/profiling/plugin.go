@@ -6,12 +6,16 @@ import (
 	"runtime"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/iotaledger/hive.go/node"
+	"github.com/gohornet/hornet/pkg/node"
 )
 
 var (
-	PLUGIN = node.NewPlugin("Profiling", node.Enabled, configure, run)
+	Plugin *node.Plugin
 )
+
+func init() {
+	Plugin = node.NewPlugin("Profiling", node.Enabled, configure, run)
+}
 
 func configure(_ *node.Plugin) {
 	// nothing

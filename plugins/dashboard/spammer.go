@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -19,7 +18,7 @@ func runSpammerMetricWorker() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
 	})
 
-	daemon.BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
 		spammerplugin.Events.SpamPerformed.Attach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
 		<-shutdownSignal

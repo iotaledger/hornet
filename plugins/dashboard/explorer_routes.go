@@ -10,10 +10,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/database"
 )
 
 const (

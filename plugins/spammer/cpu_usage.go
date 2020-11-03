@@ -8,8 +8,6 @@ import (
 
 	"github.com/shirou/gopsutil/cpu"
 
-	"github.com/iotaledger/hive.go/daemon"
-
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
@@ -27,7 +25,7 @@ var (
 func cpuUsageUpdater() {
 	go func() {
 		for {
-			if daemon.IsStopped() {
+			if Plugin.Daemon().IsStopped() {
 				return
 			}
 

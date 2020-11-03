@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/gohornet/hornet/plugins/tangle"
+	"github.com/gohornet/hornet/core/tangle"
 )
 
 func setupHealthRoute(e *echo.Echo) {

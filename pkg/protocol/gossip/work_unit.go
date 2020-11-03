@@ -5,10 +5,10 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/libp2p/go-libp2p-core/peer"
 
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.
@@ -112,7 +112,7 @@ func (wu *WorkUnit) punish() {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_ = p2pplug.Manager().DisconnectPeer(p.PeerID)
+		_ = p2pcore.Manager().DisconnectPeer(p.PeerID)
 	}
 }
 

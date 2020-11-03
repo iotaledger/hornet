@@ -9,13 +9,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
 

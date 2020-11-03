@@ -3,10 +3,10 @@ package prometheus
 import (
 	"strconv"
 
+	"github.com/gohornet/hornet/core/cli"
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/plugins/cli"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

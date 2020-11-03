@@ -10,9 +10,9 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/plugins/snapshot"
 )
 
 func snapshotGen(args []string) error {
