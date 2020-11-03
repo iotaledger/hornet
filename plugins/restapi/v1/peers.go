@@ -7,8 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
 
+	p2pcore "github.com/gohornet/hornet/core/p2p"
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
 
@@ -38,7 +38,7 @@ func getPeer(c echo.Context) (*peerResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid peerID, error: %w", err)
 	}
 
-	info := p2pplug.Manager().PeerInfoSnapshot(peerID)
+	info := p2pcore.Manager().PeerInfoSnapshot(peerID)
 	if info == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "peer not found, peerID: %s", peerID.String())
 	}
@@ -51,13 +51,13 @@ func removePeer(c echo.Context) error {
 	if err != nil {
 		return errors.WithMessagef(common.ErrInvalidParameter, "invalid peerID, error: %w", err)
 	}
-	return p2pplug.Manager().DisconnectPeer(peerID)
+	return p2pcore.Manager().DisconnectPeer(peerID)
 }
 
 func listPeers(c echo.Context) ([]*peerResponse, error) {
 	var results []*peerResponse
 
-	for _, info := range p2pplug.Manager().PeerInfoSnapshots() {
+	for _, info := range p2pcore.Manager().PeerInfoSnapshots() {
 		results = append(results, wrapInfoSnapshot(info))
 	}
 
@@ -88,9 +88,9 @@ func addPeer(c echo.Context) (*peerResponse, error) {
 	}
 
 	// error is ignored, because the peer is added to the known peers and protected from trimming
-	_ = p2pplug.Manager().ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
+	_ = p2pcore.Manager().ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
 
-	info := p2pplug.Manager().PeerInfoSnapshot(addrInfo.ID)
+	info := p2pcore.Manager().PeerInfoSnapshot(addrInfo.ID)
 	if info == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "peer not found, peerID: %s", addrInfo.ID.String())
 	}

@@ -13,9 +13,9 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/plugins/database"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
 

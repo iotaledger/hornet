@@ -15,7 +15,7 @@ builds:
     env:
       - CGO_ENABLED=1
     ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
     flags:
       - -tags=pow_avx
     main: main.go
@@ -30,7 +30,7 @@ builds:
       - CGO_ENABLED=1
       - CC=aarch64-linux-musl-gcc
     ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
     flags:
       - -tags=pow_arm_c128
@@ -47,7 +47,7 @@ builds:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
     ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
     flags:
       - -tags=pow_avx
     main: main.go
@@ -61,7 +61,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
     main: main.go
     goos:
       - darwin

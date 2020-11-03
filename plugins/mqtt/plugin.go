@@ -1,18 +1,17 @@
 package mqtt
 
 import (
-	"github.com/iotaledger/hive.go/daemon"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/tangle"
 )
 
 const (
@@ -21,7 +20,7 @@ const (
 )
 
 var (
-	PLUGIN = node.NewPlugin("MQTT", node.Disabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	newLatestMilestoneWorkerPool *workerpool.WorkerPool
@@ -32,6 +31,9 @@ var (
 	mqttBroker *mqttpkg.Broker
 )
 
+func init() {
+	Plugin = node.NewPlugin("MQTT", node.Disabled, configure, run)
+}
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
@@ -86,7 +88,7 @@ func run(plugin *node.Plugin) {
 		cachedMs.Release(true)
 	})
 
-	daemon.BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
 			log.Infof("Starting MQTT Broker (port %s) ... done", mqttBroker.GetConfig().Port)
@@ -105,7 +107,7 @@ func run(plugin *node.Plugin) {
 		log.Info("Stopping MQTT Broker ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
-	daemon.BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT Events ... done")
 
 		tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)

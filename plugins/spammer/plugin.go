@@ -7,15 +7,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"go.uber.org/atomic"
 
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	p2pcore "github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -23,15 +26,11 @@ import (
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	p2pplug "github.com/gohornet/hornet/plugins/p2p"
-	"github.com/gohornet/hornet/plugins/pow"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
 var (
-	PLUGIN = node.NewPlugin("Spammer", node.Disabled, configure, run)
+	Plugin *node.Plugin
 	log    *logger.Logger
 
 	spammerInstance *spammer.Spammer
@@ -58,11 +57,15 @@ var (
 	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
 )
 
+func init() {
+	Plugin = node.NewPlugin("Spammer", node.Disabled, configure, run)
+}
+
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
 	// do not enable the spammer if URTS is disabled
-	if node.IsSkipped(urts.PLUGIN) {
+	if Plugin.Node.IsSkipped(urts.Plugin) {
 		plugin.Status = node.Disabled
 		return
 	}
@@ -95,12 +98,12 @@ func configure(plugin *node.Plugin) {
 func run(_ *node.Plugin) {
 
 	// do not enable the spammer if URTS is disabled
-	if node.IsSkipped(urts.PLUGIN) {
+	if Plugin.Node.IsSkipped(urts.Plugin) {
 		return
 	}
 
 	// create a background worker that "measures" the spammer averages values every second
-	daemon.BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
+	Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
 	}, shutdown.PrioritySpammer)
 
@@ -124,7 +127,7 @@ func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 	mpsRateLimitCfg := config.NodeConfig.Float64(config.CfgSpammerMPSRateLimit)
 	cpuMaxUsageCfg := config.NodeConfig.Float64(config.CfgSpammerCPUMaxUsage)
 	spammerWorkerCount := config.NodeConfig.Int(config.CfgSpammerWorkers)
-	checkPeersConnected := node.IsSkipped(coordinator.PLUGIN)
+	checkPeersConnected := Plugin.Node.IsSkipped(coordinator.Plugin)
 
 	if mpsRateLimit != nil {
 		mpsRateLimitCfg = *mpsRateLimit
@@ -170,7 +173,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 		rateLimitAbortSignal = make(chan struct{})
 
 		// create a background worker that fills rateLimitChannel every second
-		daemon.BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
+		Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
 			done := make(chan struct{})
 			currentProcessID := processID.Load()
@@ -199,7 +202,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 	spammerCnt := atomic.NewInt32(0)
 	for i := 0; i < spammerWorkerCount; i++ {
-		daemon.BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
+		Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
 			spammerIndex := spammerCnt.Inc()
 			currentProcessID := processID.Load()
@@ -232,7 +235,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						continue
 					}
 
-					if checkPeersConnected && p2pplug.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
+					if checkPeersConnected && p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

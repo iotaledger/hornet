@@ -8,12 +8,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/iotaledger/hive.go/node"
-
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/spammer"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -151,7 +150,7 @@ func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
 	return c.JSON(statusCode, &common.HTTPOkResponseEnvelope{Data: result})
 }
 
-func SetupApiRoutesV1(routeGroup *echo.Group) {
+func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 
 	// Check for features
 	if config.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
@@ -168,7 +167,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
-	if !node.IsSkipped(urts.PLUGIN) {
+	if !plugin.Node.IsSkipped(urts.Plugin) {
 		routeGroup.GET(RouteTips, func(c echo.Context) error {
 
 			resp, err := tips(c)
@@ -180,7 +179,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 	}
 
 	// only handle spammer api calls if the Spammer plugin is enabled
-	if !node.IsSkipped(spammer.PLUGIN) {
+	if !plugin.Node.IsSkipped(spammer.Plugin) {
 		routeGroup.GET(RouteSpammer, func(c echo.Context) error {
 
 			resp, err := executeSpammerCommand(c)
@@ -351,7 +350,7 @@ func SetupApiRoutesV1(routeGroup *echo.Group) {
 
 	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
 
-		tangleplugin.TriggerSolidifier()
+		tanglecore.TriggerSolidifier()
 
 		return jsonResponse(c, http.StatusOK, "solidifier triggered")
 	})
