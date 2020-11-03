@@ -21,16 +21,26 @@ import (
 
 const protocolID = "/iota/abcdf/1.0.0"
 
-func newNode(ctx context.Context, t *testing.T) host.Host {
+func newNode(name string, ctx context.Context, t *testing.T, shutdownSignal chan struct{}, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption) (
+	host.Host, *logger.Logger, *p2p.Manager, *gossip.Service, peer.AddrInfo,
+) {
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, _ := crypto.GenerateKeyPair(crypto.Ed25519, -1)
-	h, err := libp2p.New(
+	n, err := libp2p.New(
 		ctx,
 		libp2p.Identity(sk),
 		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
 	)
 	require.NoError(t, err)
-	return h
+
+	nLogger := logger.NewLogger(fmt.Sprintf("%s/%s", name, n.ID().ShortString()))
+
+	nManager := p2p.NewManager(n, append(mngOpts, p2p.WithManagerLogger(nLogger))...)
+	go nManager.Start(shutdownSignal)
+
+	service := gossip.NewService(protocolID, n, nManager, append(srvOpts, gossip.WithLogger(nLogger))...)
+	go service.Start(shutdownSignal)
+	return n, nLogger, nManager, service, peer.AddrInfo{ID: n.ID(), Addrs: n.Addrs()}
 }
 
 func TestServiceEvents(t *testing.T) {
@@ -41,34 +51,23 @@ func TestServiceEvents(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	require.NoError(t, logger.InitGlobalLogger(cfg))
+	_ = logger.InitGlobalLogger(cfg)
 
-	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
+	mngOpts := []p2p.ManagerOption{
+		p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond),
+	}
+	var srvOpts []gossip.ServiceOption
 
-	node1 := newNode(ctx, t)
-	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
-	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
-	go node1Manager.Start(shutdownSignal)
-	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()}
-
-	node2 := newNode(ctx, t)
-	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
-	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
-	go node2Manager.Start(shutdownSignal)
-	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
-
-	node1Service := gossip.NewService(protocolID, node1, node1Manager, gossip.WithLogger(node1Logger))
-	node2Service := gossip.NewService(protocolID, node2, node2Manager, gossip.WithLogger(node2Logger))
-	go node1Service.Start(shutdownSignal)
-	go node2Service.Start(shutdownSignal)
+	node1, _, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, shutdownSignal, mngOpts, srvOpts)
+	node2, _, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, shutdownSignal, mngOpts, srvOpts)
 
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())
 
 	// connect node 1 and 2 to each other
-	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
+	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
 	time.Sleep(100 * time.Millisecond)
-	go node2Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown)
+	go node2Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationKnown)
 
 	// should eventually both be connected to each other
 	connectivity(t, node1Manager, node2.ID(), false, 10*time.Second)
@@ -131,7 +130,7 @@ func TestServiceEvents(t *testing.T) {
 		protocolTerminatedCalled1 = true
 	}))
 
-	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
+	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
 	// should eventually both be connected to each other
 	connectivity(t, node1Manager, node2.ID(), false, 10*time.Second)
 	connectivity(t, node2Manager, node1.ID(), false, 10*time.Second)
@@ -153,6 +152,80 @@ func connectivity(t *testing.T, source *p2p.Manager, target peer.ID, disconnecte
 	}, dur, 100*time.Millisecond)
 }
 
-func TestCommunication(t *testing.T) {
+func TestWithUnknownPeersLimit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	shutdownSignal := make(chan struct{})
+	defer close(shutdownSignal)
 
+	cfg := configuration.New()
+	cfg.Set("logger.disableStacktrace", true)
+	_ = logger.InitGlobalLogger(cfg)
+
+	mngOpts := []p2p.ManagerOption{
+		p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond),
+	}
+	srvOpts := []gossip.ServiceOption{
+		gossip.WithUnknownPeersLimit(1),
+	}
+
+	node1, _, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, shutdownSignal, mngOpts, srvOpts)
+	node2, _, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, shutdownSignal, mngOpts, srvOpts)
+	node3, _, node3Manager, node3Service, _ := newNode("node3", ctx, t, shutdownSignal, mngOpts, srvOpts)
+
+	fmt.Println("node 1", node1.ID().ShortString())
+	fmt.Println("node 2", node2.ID().ShortString())
+	fmt.Println("node 3", node3.ID().ShortString())
+
+	var protocolStartedCalled1, protocolStartedCalled2 bool
+	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
+		protocolStartedCalled1 = true
+	}))
+	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
+		protocolStartedCalled2 = true
+	}))
+
+	// connect node 1 and 2 to each other
+	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationUnknown)
+	time.Sleep(100 * time.Millisecond)
+	go node2Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationUnknown)
+
+	// should eventually both be connected to each other
+	connectivity(t, node1Manager, node2.ID(), false, 10*time.Second)
+	connectivity(t, node2Manager, node1.ID(), false, 10*time.Second)
+
+	// and because both peers allow one unknown peer in the gossip service,
+	// gossip protocol streams should have been instantiated
+	require.Eventually(t, func() bool {
+		return node1Service.Protocol(node2.ID()) != nil
+	}, 10*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool {
+		return node2Service.Protocol(node1.ID()) != nil
+	}, 10*time.Second, 10*time.Millisecond)
+
+	require.True(t, protocolStartedCalled1)
+	require.True(t, protocolStartedCalled2)
+
+	// now lets verify that node 3 can't build a gossip stream to neither node 1 and 2 since both
+	// have their available slots filled
+	var node3ProtocolTerminated int
+	node3Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(proto *gossip.Protocol) {
+		node3ProtocolTerminated++
+	}))
+
+	// reset
+	protocolStartedCalled1, protocolStartedCalled2 = false, false
+
+	go node3Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationUnknown)
+	go node3Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationUnknown)
+
+	// no protocols should have been started on node 1 and 2
+	require.Never(t, func() bool {
+		return protocolStartedCalled1 && protocolStartedCalled2
+	}, 4*time.Second, 10*time.Millisecond)
+
+	// 2 protocols should have been terminated on node 3
+	require.Eventually(t, func() bool {
+		return 2 == node3ProtocolTerminated
+	}, 4*time.Second, 10*time.Millisecond)
 }
