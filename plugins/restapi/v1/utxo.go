@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/restapi/common"
@@ -57,7 +56,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	output, err := database.Tangle().UTXO().ReadOutputByOutputID(&outputID)
+	output, err := deps.UTXO.ReadOutputByOutputID(&outputID)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
 			return nil, errors.WithMessagef(common.ErrInvalidParameter, "output not found: %s", outputIDParam)
@@ -66,7 +65,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading output failed: %s, error: %w", outputIDParam, err)
 	}
 
-	unspent, err := database.Tangle().UTXO().IsOutputUnspent(&outputID)
+	unspent, err := deps.UTXO.IsOutputUnspent(&outputID)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading spent status failed: %s, error: %w", outputIDParam, err)
 	}
@@ -76,7 +75,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 
 func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
-	if !database.Tangle().WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.Tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -96,9 +95,9 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
-	balance, count, err := database.Tangle().UTXO().AddressBalance(&address, maxResults)
+	balance, count, err := deps.UTXO.AddressBalance(&address, maxResults)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading address balance failed: %s, error: %w", address, err)
 	}
@@ -113,7 +112,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
 func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
-	if !database.Tangle().WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.Tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -133,9 +132,9 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
-	unspentOutputs, err := database.Tangle().UTXO().UnspentOutputsForAddress(&address, maxResults)
+	unspentOutputs, err := deps.UTXO.UnspentOutputsForAddress(&address, maxResults)
 	if err != nil {
 		return nil, errors.WithMessagef(common.ErrInternalError, "reading unspent outputs failed: %s, error: %w", address, err)
 	}
@@ -149,7 +148,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
 
-		spents, err := database.Tangle().UTXO().SpentOutputsForAddress(&address, maxResults-len(outputIDs))
+		spents, err := deps.UTXO.SpentOutputsForAddress(&address, maxResults-len(outputIDs))
 		if err != nil {
 			return nil, errors.WithMessagef(common.ErrInternalError, "reading spent outputs failed: %s, error: %w", address, err)
 		}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
+	"go.uber.org/dig"
 )
 
 type Node struct {
@@ -16,6 +17,7 @@ type Node struct {
 	coreModules     []*CoreModule
 	pluginsMap      map[string]*Plugin
 	plugins         []*Plugin
+	container       *dig.Container
 	Logger          *logger.Logger
 	options         *NodeOptions
 }
@@ -33,6 +35,7 @@ func New(optionalOptions ...NodeOption) *Node {
 		coreModules:     make([]*CoreModule, 0),
 		pluginsMap:      make(map[string]*Plugin),
 		plugins:         make([]*Plugin, 0),
+		container:       dig.New(dig.DeferAcyclicVerification()),
 		options:         nodeOpts,
 	}
 
@@ -103,7 +106,7 @@ func (n *Node) init() {
 	})
 
 	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
-		coreModule.Events.Init.Trigger(coreModule)
+		coreModule.Events.Init.Trigger(coreModule, n.container)
 		return true
 	})
 
@@ -129,7 +132,7 @@ func (n *Node) configure() {
 		plugin.wg = n.wg
 		plugin.Node = n
 
-		plugin.Events.Configure.Trigger(plugin)
+		plugin.Events.Configure.Trigger(n.container)
 		n.Logger.Infof("Loading plugin: %s ... done", plugin.Name)
 
 		return true
@@ -148,7 +151,7 @@ func (n *Node) execute() {
 	n.Logger.Info("Executing plugins ...")
 
 	n.ForEachPlugin(func(plugin *Plugin) bool {
-		plugin.Events.Run.Trigger(plugin)
+		plugin.Events.Run.Trigger(n.container)
 		n.Logger.Infof("Starting plugin: %s ... done", plugin.Name)
 		return true
 	})

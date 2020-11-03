@@ -5,15 +5,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
@@ -57,25 +60,40 @@ var (
 	statusLock     syncutils.RWMutex
 	isSnapshotting bool
 	isPruning      bool
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	Tangle     *tangle.Tangle
+	UTXO       *utxo.Manager
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+}
 
 func init() {
 	CoreModule = node.NewCoreModule("Snapshot", configure, run)
 }
 
-func configure(coreModule *node.CoreModule) {
-	log = logger.NewLogger(coreModule.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(CoreModule.Name)
 
-	snapshotDepth = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsDepth))
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
+
+	snapshotDepth = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
-	snapshotIntervalSynced = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsIntervalSynced))
-	snapshotIntervalUnsynced = milestone.Index(config.NodeConfig.Int(config.CfgSnapshotsIntervalUnsynced))
+	snapshotIntervalSynced = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsIntervalSynced))
+	snapshotIntervalUnsynced = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsIntervalUnsynced))
 
-	pruningEnabled = config.NodeConfig.Bool(config.CfgPruningEnabled)
-	pruningDelay = milestone.Index(config.NodeConfig.Int(config.CfgPruningDelay))
+	pruningEnabled = deps.NodeConfig.Bool(config.CfgPruningEnabled)
+	pruningDelay = milestone.Index(deps.NodeConfig.Int(config.CfgPruningDelay))
 	pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
 	if pruningDelay < pruningDelayMin {
 		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
@@ -84,19 +102,19 @@ func configure(coreModule *node.CoreModule) {
 
 	gossip.AddRequestBackpressureSignal(isSnapshottingOrPruning)
 
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		if !*forceLoadingSnapshot {
 			// If we don't enforce loading of a snapshot,
 			// we can check the ledger state of current database and start the node.
-			if err := database.Tangle().UTXO().CheckLedgerState(); err != nil {
+			if err := deps.UTXO.CheckLedgerState(); err != nil {
 				log.Fatal(err.Error())
 			}
 			return
 		}
 	}
 
-	path := config.NodeConfig.String(config.CfgSnapshotsPath)
+	path := deps.NodeConfig.String(config.CfgSnapshotsPath)
 	if path == "" {
 		log.Fatal(ErrNoSnapshotSpecified.Error())
 	}
@@ -107,7 +125,7 @@ func configure(coreModule *node.CoreModule) {
 			log.Fatalf("could not create snapshot dir '%s'", path)
 		}
 
-		urls := config.NodeConfig.Strings(config.CfgSnapshotsDownloadURLs)
+		urls := deps.NodeConfig.Strings(config.CfgSnapshotsDownloadURLs)
 		if len(urls) == 0 {
 			log.Fatal(ErrNoSnapshotDownloadURL.Error())
 		}
@@ -121,7 +139,7 @@ func configure(coreModule *node.CoreModule) {
 	}
 
 	if err := LoadFullSnapshotFromFile(path); err != nil {
-		database.Tangle().MarkDatabaseCorrupted()
+		deps.Tangle.MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}
 }
@@ -132,7 +150,7 @@ func isSnapshottingOrPruning() bool {
 	return isSnapshotting || isPruning
 }
 
-func run(_ *node.CoreModule) {
+func run(_ *dig.Container) {
 
 	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		select {
@@ -158,7 +176,7 @@ func run(_ *node.CoreModule) {
 				localSnapshotLock.Lock()
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
-					localSnapshotPath := config.NodeConfig.String(config.CfgSnapshotsPath)
+					localSnapshotPath := deps.NodeConfig.String(config.CfgSnapshotsPath)
 					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
@@ -189,7 +207,7 @@ func PruneDatabaseByDepth(depth milestone.Index) (milestone.Index, error) {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
-	solidMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
+	solidMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
 
 	if solidMilestoneIndex <= depth {
 		// Not enough history

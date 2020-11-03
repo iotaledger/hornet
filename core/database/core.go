@@ -1,12 +1,15 @@
 package database
 
 import (
-	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -20,42 +23,58 @@ var (
 
 	garbageCollectionLock syncutils.Mutex
 
-	tangleOnce sync.Once
-	tangleObj  *tangle.Tangle
+	tangleObj *tangle.Tangle
 )
-
-func Tangle() *tangle.Tangle {
-	tangleOnce.Do(func() {
-		tangleObj = tangle.New(config.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
-	})
-
-	return tangleObj
-}
 
 func init() {
 	CoreModule = node.NewCoreModule("Database", configure, run)
+
+	CoreModule.Events.Init.Attach(events.NewClosure(func(_ *node.CoreModule, c *dig.Container) {
+		type tangledeps struct {
+			config *configuration.Configuration `name:"nodeConfig"`
+		}
+
+		if err := c.Provide(func(params tangledeps) *tangle.Tangle {
+			return tangle.New(params.config.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
+		}); err != nil {
+			panic(err)
+		}
+
+		if err := c.Provide(func(tangle *tangle.Tangle) *utxo.Manager {
+			return tangle.UTXO()
+		}); err != nil {
+			panic(err)
+		}
+	}))
 }
 
-func configure(coreModule *node.CoreModule) {
-	log = logger.NewLogger(coreModule.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(CoreModule.Name)
 
-	if !Tangle().IsCorrectDatabaseVersion() {
-		if !Tangle().UpdateDatabaseVersion() {
+	if err := c.Invoke(func(tangle *tangle.Tangle) error {
+		tangleObj = tangle
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+
+	if !tangleObj.IsCorrectDatabaseVersion() {
+		if !tangleObj.UpdateDatabaseVersion() {
 			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 		}
 	}
 
 	CoreModule.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		Tangle().MarkDatabaseHealthy()
+		tangleObj.MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")
-		Tangle().CloseDatabases()
+		tangleObj.CloseDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 }
 
 func RunGarbageCollection() {
-	if Tangle().DatabaseSupportsCleanup() {
+	if tangleObj.DatabaseSupportsCleanup() {
 
 		garbageCollectionLock.Lock()
 		defer garbageCollectionLock.Unlock()
@@ -68,7 +87,7 @@ func RunGarbageCollection() {
 			Start: start,
 		})
 
-		err := Tangle().CleanupDatabases()
+		err := tangleObj.CleanupDatabases()
 
 		end := time.Now()
 
@@ -88,6 +107,6 @@ func RunGarbageCollection() {
 	}
 }
 
-func run(_ *node.CoreModule) {
+func run(_ *dig.Container) {
 	// do nothing
 }

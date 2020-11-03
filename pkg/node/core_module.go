@@ -5,9 +5,10 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"go.uber.org/dig"
 )
 
-type CoreModuleCallback = func(coreModule *CoreModule)
+type CoreModuleCallback = func(container *dig.Container)
 
 type CoreModule struct {
 	Node   *Node

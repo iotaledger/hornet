@@ -48,6 +48,7 @@ require (
 	github.com/willf/bitset v1.1.11
 	github.com/wollac/iota-crypto-demo v0.0.0-20201031183512-398e22f20835
 	go.uber.org/atomic v1.7.0
+	go.uber.org/dig v1.10.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
 	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 // indirect
 	golang.org/x/tools v0.0.0-20201031021630-582c62ec74d0 // indirect

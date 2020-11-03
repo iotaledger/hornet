@@ -8,8 +8,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
@@ -25,19 +30,36 @@ var (
 	server   *http.Server
 	registry = prometheus.NewRegistry()
 	collects []func()
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
+	Tangle       *tangle.Tangle
+	Service      *gossip.Service
+	Manager      *p2p.Manager
+	RequestQueue gossip.RequestQueue
+}
 
 func init() {
 	Plugin = node.NewPlugin("Prometheus", node.Disabled, configure, run)
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(Plugin.Name)
 
-	if config.NodeConfig.Bool(config.CfgPrometheusGoMetrics) {
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
+
+	if deps.NodeConfig.Bool(config.CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())
 	}
-	if config.NodeConfig.Bool(config.CfgPrometheusProcessMetrics) {
+	if deps.NodeConfig.Bool(config.CfgPrometheusProcessMetrics) {
 		registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	}
 }
@@ -52,9 +74,9 @@ type fileservicediscovery struct {
 }
 
 func writeFileServiceDiscoveryFile() {
-	path := config.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryPath)
+	path := deps.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryPath)
 	d := []fileservicediscovery{{
-		Targets: []string{config.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryTarget)},
+		Targets: []string{deps.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryTarget)},
 		Labels:  make(map[string]string),
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
@@ -71,10 +93,10 @@ func writeFileServiceDiscoveryFile() {
 	log.Infof("Wrote 'file service discovery' content to %s", path)
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *dig.Container) {
 	log.Info("Starting Prometheus exporter ...")
 
-	if config.NodeConfig.Bool(config.CfgPrometheusFileServiceDiscoveryEnabled) {
+	if deps.NodeConfig.Bool(config.CfgPrometheusFileServiceDiscoveryEnabled) {
 		writeFileServiceDiscoveryFile()
 	}
 
@@ -93,13 +115,13 @@ func run(plugin *node.Plugin) {
 					EnableOpenMetrics: true,
 				},
 			)
-			if config.NodeConfig.Bool(config.CfgPrometheusPromhttpMetrics) {
+			if deps.NodeConfig.Bool(config.CfgPrometheusPromhttpMetrics) {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}
 			handler.ServeHTTP(c.Writer, c.Request)
 		})
 
-		bindAddr := config.NodeConfig.String(config.CfgPrometheusBindAddress)
+		bindAddr := deps.NodeConfig.String(config.CfgPrometheusBindAddress)
 		server = &http.Server{Addr: bindAddr, Handler: engine}
 
 		go func() {

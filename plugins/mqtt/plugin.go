@@ -1,15 +1,16 @@
 package mqtt
 
 import (
+	"github.com/gohornet/hornet/core/tangle"
+	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
+	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
-	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
@@ -29,13 +30,27 @@ var (
 	wasSyncBefore = false
 
 	mqttBroker *mqttpkg.Broker
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	Tangle     *tanglepkg.Tangle
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+}
 
 func init() {
 	Plugin = node.NewPlugin("MQTT", node.Disabled, configure, run)
 }
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(Plugin.Name)
+
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone))
@@ -47,7 +62,7 @@ func configure(plugin *node.Plugin) {
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	mqttConfigFile := config.NodeConfig.String(config.CfgMQTTConfig)
+	mqttConfigFile := deps.NodeConfig.String(config.CfgMQTTConfig)
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(mqttConfigFile)
@@ -56,7 +71,7 @@ func configure(plugin *node.Plugin) {
 	}
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *dig.Container) {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
 
@@ -75,7 +90,7 @@ func run(plugin *node.Plugin) {
 
 	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *tanglepkg.CachedMilestone) {
 		if !wasSyncBefore {
-			if !database.Tangle().IsNodeSyncedWithThreshold() {
+			if !deps.Tangle.IsNodeSyncedWithThreshold() {
 				cachedMs.Release(true)
 				return
 			}

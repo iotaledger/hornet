@@ -10,11 +10,13 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"sync"
 	"time"
 
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	badger "github.com/ipfs/go-ds-badger"
 	"github.com/multiformats/go-multiaddr"
+	"go.uber.org/dig"
 
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
@@ -43,103 +45,123 @@ var (
 )
 
 var (
-	CoreModule  *node.CoreModule
-	log         *logger.Logger
-	hostOnce    sync.Once
-	selfHost    host.Host
-	manager     *p2ppkg.Manager
-	managerOnce sync.Once
+	CoreModule *node.CoreModule
+	log        *logger.Logger
+	deps       dependencies
 )
 
-// Manager returns the Manager.
-func Manager() *p2ppkg.Manager {
-	managerOnce.Do(func() {
-		manager = p2ppkg.NewManager(Host(),
-			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-			p2ppkg.WithManagerReconnectInterval(time.Duration(config.NodeConfig.Int(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
-		)
-	})
-	return manager
-}
-
-// Host returns the host.Host instance of this node.
-func Host() host.Host {
-	hostOnce.Do(func() {
-		ctx := context.Background()
-
-		peerStorePath := config.NodeConfig.String(config.CfgP2PPeerStorePath)
-		_, statPeerStorePathErr := os.Stat(peerStorePath)
-
-		// TODO: switch out with impl. using KVStore
-		defaultOpts := badger.DefaultOptions
-		// needed under Windows otherwise peer store is 'corrupted' after a restart
-		defaultOpts.Truncate = runtime.GOOS == "windows"
-		badgerStore, err := badger.NewDatastore(peerStorePath, &defaultOpts)
-		if err != nil {
-			panic(fmt.Sprintf("unable to initialize data store for peer store: %s", err))
-		}
-
-		// also takes care of this node's identity key pair
-		peerStore, err := pstoreds.NewPeerstore(ctx, badgerStore, pstoreds.DefaultOpts())
-		if err != nil {
-			panic(fmt.Sprintf("unable to initialize peer store: %s", err))
-		}
-
-		// make sure nobody copies around the peer store since it contains the
-		// private key of the node
-		log.Infof("never share your %s folder as it contains your node's private key!", peerStorePath)
-
-		// load up the previously generated identity or create a new one
-		isPeerStoreNew := os.IsNotExist(statPeerStorePathErr)
-		prvKey, err := loadOrCreateIdentity(isPeerStoreNew, peerStorePath, peerStore)
-		if err != nil {
-			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
-		}
-
-		bindAddrs := config.NodeConfig.Strings(config.CfgP2PBindMultiAddresses)
-
-		selfHost, err = libp2p.New(ctx,
-			libp2p.Identity(prvKey),
-			libp2p.ListenAddrStrings(bindAddrs...),
-			libp2p.Peerstore(peerStore),
-			libp2p.Transport(libp2pquic.NewTransport),
-			libp2p.DefaultTransports,
-			libp2p.ConnectionManager(connmgr.NewConnManager(
-				config.NodeConfig.Int(config.CfgP2PConnMngLowWatermark),
-				config.NodeConfig.Int(config.CfgP2PConnMngHighWatermark),
-				time.Minute,
-			)),
-			libp2p.NATPortMap(),
-		)
-
-		if err != nil {
-			panic(fmt.Sprintf("unable to initialize peer: %s", err))
-		}
-	})
-	return selfHost
+type dependencies struct {
+	dig.In
+	Manager       *p2ppkg.Manager
+	Host          host.Host
+	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+	PeeringConfig *configuration.Configuration `name:"peeringConfig"`
 }
 
 func init() {
 	CoreModule = node.NewCoreModule("P2P", configure, run)
+	CoreModule.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
+		type hostdeps struct {
+			dig.In
+
+			NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		}
+
+		if err := c.Provide(func(deps hostdeps) (host.Host, error) {
+
+			ctx := context.Background()
+
+			peerStorePath := deps.NodeConfig.String(config.CfgP2PPeerStorePath)
+			_, statPeerStorePathErr := os.Stat(peerStorePath)
+
+			// TODO: switch out with impl. using KVStore
+			defaultOpts := badger.DefaultOptions
+			// needed under Windows otherwise peer store is 'corrupted' after a restart
+			defaultOpts.Truncate = runtime.GOOS == "windows"
+			badgerStore, err := badger.NewDatastore(peerStorePath, &defaultOpts)
+			if err != nil {
+				panic(fmt.Sprintf("unable to initialize data store for peer store: %s", err))
+			}
+
+			// also takes care of this node's identity key pair
+			peerStore, err := pstoreds.NewPeerstore(ctx, badgerStore, pstoreds.DefaultOpts())
+			if err != nil {
+				panic(fmt.Sprintf("unable to initialize peer store: %s", err))
+			}
+
+			// make sure nobody copies around the peer store since it contains the
+			// private key of the node
+			log.Infof("never share your %s folder as it contains your node's private key!", peerStorePath)
+
+			// load up the previously generated identity or create a new one
+			isPeerStoreNew := os.IsNotExist(statPeerStorePathErr)
+			prvKey, err := loadOrCreateIdentity(isPeerStoreNew, peerStorePath, peerStore)
+			if err != nil {
+				panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
+			}
+
+			bindAddrs := deps.NodeConfig.Strings(config.CfgP2PBindMultiAddresses)
+
+			createdHost, err := libp2p.New(ctx,
+				libp2p.Identity(prvKey),
+				libp2p.ListenAddrStrings(bindAddrs...),
+				libp2p.Peerstore(peerStore),
+				libp2p.Transport(libp2pquic.NewTransport),
+				libp2p.DefaultTransports,
+				libp2p.ConnectionManager(connmgr.NewConnManager(
+					deps.NodeConfig.Int(config.CfgP2PConnMngLowWatermark),
+					deps.NodeConfig.Int(config.CfgP2PConnMngHighWatermark),
+					time.Minute,
+				)),
+				libp2p.NATPortMap(),
+			)
+
+			if err != nil {
+				return nil, fmt.Errorf("unable to initialize peer: %w", err)
+			}
+
+			return createdHost, nil
+		}); err != nil {
+			panic(err)
+		}
+
+		type mngdeps struct {
+			dig.In
+
+			host   host.Host
+			config *configuration.Configuration `name:"nodeConfig"`
+		}
+
+		if err := c.Provide(func(deps mngdeps) *p2ppkg.Manager {
+			return p2ppkg.NewManager(deps.host,
+				p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
+				p2ppkg.WithManagerReconnectInterval(time.Duration(deps.config.Int(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
+			)
+		}); err != nil {
+			panic(err)
+		}
+	}))
 }
 
-func configure(coreModule *node.CoreModule) {
-	log = logger.NewLogger(coreModule.Name)
-	Host()
-	Manager()
-	log.Infof("peer configured, ID: %s", Host().ID())
+func configure(c *dig.Container) {
+	log = logger.NewLogger(CoreModule.Name)
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
+	log.Infof("peer configured, ID: %s", deps.Host.ID())
 }
 
-func run(_ *node.CoreModule) {
-	p := Host()
+func run(_ *dig.Container) {
 
 	// register a daemon to disconnect all peers up on shutdown
 	_ = CoreModule.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
-		log.Infof("listening on: %s", p.Addrs())
-		go Manager().Start(shutdownSignal)
+		log.Infof("listening on: %s", deps.Host.Addrs())
+		go deps.Manager.Start(shutdownSignal)
 		connectConfigKnownPeers()
 		<-shutdownSignal
-		if err := Host().Peerstore().Close(); err != nil {
+		if err := deps.Host.Peerstore().Close(); err != nil {
 			log.Error("unable to cleanly closing peer store: %s", err)
 		}
 	}, shutdown.PriorityP2PManager)
@@ -147,9 +169,9 @@ func run(_ *node.CoreModule) {
 
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
-	peerIDsStr := config.PeeringConfig.Strings(config.CfgP2PPeers)
+	peerIDsStr := deps.PeeringConfig.Strings(config.CfgP2PPeers)
+	peerAliases := deps.PeeringConfig.Strings(config.CfgP2PPeerAliases)
 
-	peerAliases := config.PeeringConfig.Strings(config.CfgP2PPeerAliases)
 	applyAliases := true
 	if len(peerIDsStr) != len(peerAliases) {
 		log.Warnf("won't apply peer aliases: you must define aliases for all defined static peers (got %d aliases, %d peers).", len(peerAliases), len(peerIDsStr))
@@ -171,7 +193,7 @@ func connectConfigKnownPeers() {
 		if applyAliases {
 			alias = peerAliases[i]
 		}
-		_ = manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
+		_ = deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
 	}
 }
 
@@ -187,7 +209,7 @@ func loadOrCreateIdentity(peerStoreIsNew bool, peerStorePath string, peerStore p
 }
 
 func loadIdentityFromConfig() (crypto.PrivKey, error) {
-	if identityPrivKey := config.NodeConfig.String(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
+	if identityPrivKey := deps.NodeConfig.String(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
 		prvKey, err := utils.ParseEd25519PrivateKeyFromString(identityPrivKey)
 		if err != nil {
 			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", config.CfgP2PIdentityPrivKey)

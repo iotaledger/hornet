@@ -6,6 +6,7 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
+	"go.uber.org/dig"
 )
 
 const (
@@ -13,7 +14,7 @@ const (
 	Enabled
 )
 
-type PluginCallback = func(plugin *Plugin)
+type PluginCallback = func(c *dig.Container)
 
 type Plugin struct {
 	Node   *Node

@@ -4,7 +4,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
+	"go.uber.org/dig"
 
 	"github.com/labstack/echo/v4"
 
@@ -143,17 +151,37 @@ var (
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	Tangle           *tangle.Tangle
+	Manager          *p2p.Manager
+	RequestQueue     gossip.RequestQueue
+	UTXO             *utxo.Manager
+	PoWHandler       *pow.Handler
+	MessageProcessor *gossip.MessageProcessor
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	TipSelector *tipselect.TipSelector
+}
 
 // jsonResponse wraps the result into a "data" field and sends the JSON response with status code.
 func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
 	return c.JSON(statusCode, &common.HTTPOkResponseEnvelope{Data: result})
 }
 
-func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
+func SetupApiRoutesV1(c *dig.Container, plugin *node.Plugin, routeGroup *echo.Group) {
+
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
 
 	// Check for features
-	if config.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
+	if deps.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
 

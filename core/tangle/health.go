@@ -3,8 +3,6 @@ package tangle
 import (
 	"time"
 
-	"github.com/gohornet/hornet/core/database"
-	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
@@ -14,17 +12,17 @@ const (
 
 // IsNodeHealthy returns whether the node is synced, has active neighbors and its latest milestone is not too old.
 func IsNodeHealthy() bool {
-	if !database.Tangle().IsNodeSyncedWithThreshold() {
+	if !deps.Tangle.IsNodeSyncedWithThreshold() {
 		return false
 	}
 
-	if p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
+	if deps.Manager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
 		return false
 	}
 
 	// latest milestone timestamp
-	lmi := database.Tangle().GetLatestMilestoneIndex()
-	cachedLatestMilestone := database.Tangle().GetCachedMilestoneOrNil(lmi) // milestone +1
+	lmi := deps.Tangle.GetLatestMilestoneIndex()
+	cachedLatestMilestone := deps.Tangle.GetCachedMilestoneOrNil(lmi) // milestone +1
 	if cachedLatestMilestone == nil {
 		return false
 	}

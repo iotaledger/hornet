@@ -5,16 +5,16 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hive.go/configuration"
 	flag "github.com/spf13/pflag"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/core/pow"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -61,20 +61,36 @@ var (
 	onIssuedMilestone    *events.Closure
 
 	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	Tangle           *tangle.Tangle
+	PoWHandler       *powpackage.Handler
+	MessageProcessor *gossip.MessageProcessor
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+}
 
 func init() {
 	Plugin = node.NewPlugin("Coordinator", node.Disabled, configure, run)
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(Plugin.Name)
+
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
 
 	// set the node as synced at startup, so the coo plugin can select tips
 	tanglecore.SetUpdateSyncedAtStartup(true)
 
 	var err error
-	coo, err = initCoordinator(*bootstrap, *startIndex, pow.Handler())
+	coo, err = initCoordinator(*bootstrap, *startIndex, deps.PoWHandler)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -84,7 +100,7 @@ func configure(plugin *node.Plugin) {
 
 func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
-	if database.Tangle().IsDatabaseTainted() {
+	if deps.Tangle.IsDatabaseTainted() {
 		return nil, ErrDatabaseTainted
 	}
 
@@ -95,10 +111,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
-		config.NodeConfig.Int(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
-		config.NodeConfig.Int(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-		config.NodeConfig.Int(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(config.NodeConfig.Int(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+		deps.NodeConfig.Int(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
+		deps.NodeConfig.Int(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		deps.NodeConfig.Int(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+		time.Duration(deps.NodeConfig.Int(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
 
 	nextCheckpointSignal = make(chan struct{})
@@ -107,9 +123,9 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
 
-	maxTrackedMessages = config.NodeConfig.Int(config.CfgCoordinatorCheckpointsMaxTrackedMessages)
+	maxTrackedMessages = deps.NodeConfig.Int(config.CfgCoordinatorCheckpointsMaxTrackedMessages)
 
-	belowMaxDepth = milestone.Index(config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth))
+	belowMaxDepth = milestone.Index(deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth))
 
 	if len(privateKeys) == 0 {
 		return nil, errors.New("no private keys given")
@@ -121,16 +137,16 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		}
 	}
 
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, database.Tangle().KeyManager(), config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount))
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Tangle.KeyManager(), deps.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount))
 
 	coo, err := coordinator.New(
-		database.Tangle(),
+		deps.Tangle,
 		inMemoryEd25519MilestoneSignerProvider,
-		config.NodeConfig.String(config.CfgCoordinatorStateFilePath),
-		config.NodeConfig.Int(config.CfgCoordinatorIntervalSeconds),
+		deps.NodeConfig.String(config.CfgCoordinatorStateFilePath),
+		deps.NodeConfig.Int(config.CfgCoordinatorIntervalSeconds),
 		powHandler,
 		sendMessage,
-		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 	if err != nil {
 		return nil, err
@@ -143,7 +159,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	return coo, nil
 }
 
-func run(plugin *node.Plugin) {
+func run(_ *dig.Container) {
 
 	// create a background worker that signals to issue new milestones
 	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
@@ -267,7 +283,7 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 		milestoneConfirmedEventChan = tanglecore.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
-	if err := gossip.MessageProcessor().Emit(msg); err != nil {
+	if err := deps.MessageProcessor.Emit(msg); err != nil {
 		return err
 	}
 
@@ -286,9 +302,9 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 func isBelowMaxDepth(cachedMsgMeta *tangle.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	lsmi := database.Tangle().GetSolidMilestoneIndex()
+	lsmi := deps.Tangle.GetSolidMilestoneIndex()
 
-	_, ocri := dag.GetConeRootIndexes(database.Tangle(), cachedMsgMeta.Retain(), lsmi) // meta +1
+	_, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMsgMeta.Retain(), lsmi) // meta +1
 
 	// if the OCRI to LSMI delta is over belowMaxDepth, then the tip is invalid.
 	return (lsmi - ocri) > belowMaxDepth
@@ -329,12 +345,12 @@ func configureEvents() {
 		ts := time.Now()
 
 		// do not propagate during syncing, because it is not needed at all
-		if !database.Tangle().IsNodeSyncedWithThreshold() {
+		if !deps.Tangle.IsNodeSyncedWithThreshold() {
 			return
 		}
 
 		// propagate new cone root indexes to the future cone for heaviest branch tipselection
-		dag.UpdateConeRootIndexes(database.Tangle(), confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		dag.UpdateConeRootIndexes(deps.Tangle, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})

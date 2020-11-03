@@ -9,16 +9,17 @@ import (
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"go.uber.org/atomic"
+	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
-	p2pcore "github.com/gohornet/hornet/core/p2p"
-	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -55,18 +56,36 @@ var (
 
 	// ErrSpammerDisabled is returned if the spammer plugin is disabled.
 	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	MessageProcessor *gossip.MessageProcessor
+	Tangle           *tangle.Tangle
+	PowHandler       *pow.Handler
+	Manager          *p2p.Manager
+	TipSelector      *tipselect.TipSelector
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+}
 
 func init() {
 	Plugin = node.NewPlugin("Spammer", node.Disabled, configure, run)
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(Plugin.Name)
+
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
 
 	// do not enable the spammer if URTS is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
-		plugin.Status = node.Disabled
+		Plugin.Status = node.Disabled
 		return
 	}
 
@@ -77,7 +96,7 @@ func configure(plugin *node.Plugin) {
 
 	// helper function to send the message to the network
 	sendMessage := func(msg *tangle.Message) error {
-		if err := gossip.MessageProcessor().Emit(msg); err != nil {
+		if err := deps.MessageProcessor.Emit(msg); err != nil {
 			return err
 		}
 
@@ -86,16 +105,16 @@ func configure(plugin *node.Plugin) {
 	}
 
 	spammerInstance = spammer.New(
-		config.NodeConfig.String(config.CfgSpammerMessage),
-		config.NodeConfig.String(config.CfgSpammerIndex),
-		config.NodeConfig.String(config.CfgSpammerIndexSemiLazy),
-		urts.TipSelector.SelectSpammerTips,
-		pow.Handler(),
+		deps.NodeConfig.String(config.CfgSpammerMessage),
+		deps.NodeConfig.String(config.CfgSpammerIndex),
+		deps.NodeConfig.String(config.CfgSpammerIndexSemiLazy),
+		deps.TipSelector.SelectSpammerTips,
+		deps.PowHandler,
 		sendMessage,
 	)
 }
 
-func run(_ *node.Plugin) {
+func run(_ *dig.Container) {
 
 	// do not enable the spammer if URTS is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
@@ -108,7 +127,7 @@ func run(_ *node.Plugin) {
 	}, shutdown.PrioritySpammer)
 
 	// automatically start the spammer on node startup if the flag is set
-	if config.NodeConfig.Bool(config.CfgSpammerAutostart) {
+	if deps.NodeConfig.Bool(config.CfgSpammerAutostart) {
 		Start(nil, nil)
 	}
 }
@@ -124,9 +143,9 @@ func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := config.NodeConfig.Float64(config.CfgSpammerMPSRateLimit)
-	cpuMaxUsageCfg := config.NodeConfig.Float64(config.CfgSpammerCPUMaxUsage)
-	spammerWorkerCount := config.NodeConfig.Int(config.CfgSpammerWorkers)
+	mpsRateLimitCfg := deps.NodeConfig.Float64(config.CfgSpammerMPSRateLimit)
+	cpuMaxUsageCfg := deps.NodeConfig.Float64(config.CfgSpammerCPUMaxUsage)
+	spammerWorkerCount := deps.NodeConfig.Int(config.CfgSpammerWorkers)
 	checkPeersConnected := Plugin.Node.IsSkipped(coordinator.Plugin)
 
 	if mpsRateLimit != nil {
@@ -230,12 +249,12 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !database.Tangle().IsNodeSyncedWithThreshold() {
+					if !deps.Tangle.IsNodeSyncedWithThreshold() {
 						time.Sleep(time.Second)
 						continue
 					}
 
-					if checkPeersConnected && p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown) == 0 {
+					if checkPeersConnected && deps.Manager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

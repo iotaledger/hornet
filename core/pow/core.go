@@ -1,11 +1,13 @@
 package pow
 
 import (
-	"sync"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/config"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
@@ -18,45 +20,55 @@ const (
 )
 
 var (
-	CoreModule  *node.CoreModule
-	log         *logger.Logger
-	handler     *powpackage.Handler
-	handlerOnce sync.Once
+	CoreModule *node.CoreModule
+	log        *logger.Logger
+	deps       dependencies
 )
 
-// Handler gets the pow handler instance.
-func Handler() *powpackage.Handler {
-	handlerOnce.Do(func() {
-		// init the pow handler with all possible settings
-		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
-		if err != nil && len(powsrvAPIKey) > 12 {
-			powsrvAPIKey = powsrvAPIKey[:12]
-		}
-		handler = powpackage.New(log, config.NodeConfig.Int(config.CfgCoordinatorMWM), powsrvAPIKey, powsrvInitCooldown)
-
-	})
-	return handler
+type dependencies struct {
+	dig.In
+	handler *powpackage.Handler
 }
 
 func init() {
 	CoreModule = node.NewCoreModule("PoW", configure, run)
+	CoreModule.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
+		type handlerdeps struct {
+			dig.In
+			NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		}
+
+		if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
+			// init the pow handler with all possible settings
+			powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
+			if err != nil && len(powsrvAPIKey) > 12 {
+				powsrvAPIKey = powsrvAPIKey[:12]
+			}
+			return powpackage.New(log, deps.NodeConfig.Int(config.CfgCoordinatorMWM), powsrvAPIKey, powsrvInitCooldown)
+		}); err != nil {
+			panic(err)
+		}
+	}))
 }
 
-func configure(coreModule *node.CoreModule) {
-	log = logger.NewLogger(coreModule.Name)
+func configure(c *dig.Container) {
+	log = logger.NewLogger(CoreModule.Name)
 
-	// init pow handler
-	Handler()
+	if err := c.Invoke(func(cDeps dependencies) {
+		deps = cDeps
+	}); err != nil {
+		panic(err)
+	}
 }
 
-func run(_ *node.CoreModule) {
+func run(_ *dig.Container) {
 
 	// close the PoW handler on shutdown
 	CoreModule.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting PoW Handler ... done")
 		<-shutdownSignal
 		log.Info("Stopping PoW Handler ...")
-		Handler().Close()
+		deps.handler.Close()
 		log.Info("Stopping PoW Handler ... done")
 	}, shutdown.PriorityPoWHandler)
 }

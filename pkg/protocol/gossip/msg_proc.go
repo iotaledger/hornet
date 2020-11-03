@@ -270,7 +270,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	msg, err := tangle.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
-		wu.punish()
+		wu.punish(proc.ps)
 		return
 	}
 
