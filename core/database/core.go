@@ -27,6 +27,7 @@ var (
 )
 
 type dependencies struct {
+	dig.In
 	Tangle *tangle.Tangle
 }
 
