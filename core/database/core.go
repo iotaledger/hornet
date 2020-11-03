@@ -38,8 +38,8 @@ func init() {
 			config *configuration.Configuration `name:"nodeConfig"`
 		}
 
-		if err := c.Provide(func(params tangledeps) *tangle.Tangle {
-			return tangle.New(params.config.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
+		if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
+			return tangle.New(deps.config.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
 		}); err != nil {
 			panic(err)
 		}
