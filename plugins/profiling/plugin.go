@@ -11,6 +11,15 @@ import (
 	"go.uber.org/dig"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:     "Profiling",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Run:      run,
+		Status:   node.Enabled,
+	}
+}
+
 var (
 	Plugin *node.Plugin
 	deps   dependencies
@@ -21,19 +30,7 @@ type dependencies struct {
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	Plugin = node.NewPlugin("Profiling", node.Enabled, configure, run)
-}
-
-func configure(c *dig.Container) {
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
-}
-
-func run(_ *dig.Container) {
+func run() {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 

@@ -17,9 +17,21 @@ import (
 	"go.uber.org/dig"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "WarpSync",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Enabled,
+	}
+}
+
 var (
-	Plugin   *node.Plugin
-	log      *logger.Logger
+	Plugin *node.Plugin
+	log    *logger.Logger
+	deps   dependencies
+
 	warpSync *gossip.WarpSync
 
 	onGossipProtocolStreamCreated   *events.Closure
@@ -29,8 +41,6 @@ var (
 	onTargetUpdated                 *events.Closure
 	onStart                         *events.Closure
 	onDone                          *events.Closure
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -41,21 +51,13 @@ type dependencies struct {
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	Plugin = node.NewPlugin("WarpSync", node.Enabled, configure, run)
-}
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(Plugin.Name)
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
 	configureEvents()
 }
 
-func run(_ *dig.Container) {
+func run() {
 	Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal

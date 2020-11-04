@@ -106,12 +106,34 @@ func (n *Node) init() {
 	})
 
 	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
-		coreModule.Events.Init.Trigger(n.container)
+		if coreModule.Provide != nil {
+			coreModule.Provide(n.container)
+		}
+		return true
+	})
+
+	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
+		if coreModule.DepsFunc != nil {
+			if err := n.container.Invoke(coreModule.DepsFunc); err != nil {
+				panic(err)
+			}
+		}
 		return true
 	})
 
 	n.ForEachPlugin(func(plugin *Plugin) bool {
-		plugin.Events.Init.Trigger(n.container)
+		if plugin.Provide != nil {
+			plugin.Provide(n.container)
+		}
+		return true
+	})
+
+	n.ForEachPlugin(func(plugin *Plugin) bool {
+		if plugin.DepsFunc != nil {
+			if err := n.container.Invoke(plugin.DepsFunc); err != nil {
+				panic(err)
+			}
+		}
 		return true
 	})
 }
@@ -122,9 +144,10 @@ func (n *Node) configure() {
 		coreModule.wg = n.wg
 		coreModule.Node = n
 
-		coreModule.Events.Configure.Trigger(n.container)
+		if coreModule.Configure != nil {
+			coreModule.Configure()
+		}
 		n.Logger.Infof("Loading core module: %s ... done", coreModule.Name)
-
 		return true
 	})
 
@@ -132,9 +155,10 @@ func (n *Node) configure() {
 		plugin.wg = n.wg
 		plugin.Node = n
 
-		plugin.Events.Configure.Trigger(n.container)
+		if plugin.Configure != nil {
+			plugin.Configure()
+		}
 		n.Logger.Infof("Loading plugin: %s ... done", plugin.Name)
-
 		return true
 	})
 }
@@ -143,7 +167,9 @@ func (n *Node) execute() {
 	n.Logger.Info("Executing core modules ...")
 
 	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
-		coreModule.Events.Run.Trigger(n.container)
+		if coreModule.Run != nil {
+			coreModule.Run()
+		}
 		n.Logger.Infof("Starting core module: %s ... done", coreModule.Name)
 		return true
 	})
@@ -151,7 +177,9 @@ func (n *Node) execute() {
 	n.Logger.Info("Executing plugins ...")
 
 	n.ForEachPlugin(func(plugin *Plugin) bool {
-		plugin.Events.Run.Trigger(n.container)
+		if plugin.Run != nil {
+			plugin.Run()
+		}
 		n.Logger.Infof("Starting plugin: %s ... done", plugin.Name)
 		return true
 	})
@@ -202,6 +230,12 @@ func (n *Node) addPlugin(plugin *Plugin) {
 	n.pluginsMap[name] = plugin
 	n.plugins = append(n.plugins, plugin)
 }
+
+// ProvideFunc gets called with a dig.Container.
+type ProvideFunc func(c *dig.Container)
+
+// Callback is a function called without any arguments.
+type Callback func()
 
 // CoreModuleForEachFunc is used in ForEachCoreModule.
 // Returning false indicates to stop looping.

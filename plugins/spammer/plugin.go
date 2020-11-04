@@ -30,9 +30,20 @@ import (
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "Spammer",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Disabled,
+	}
+}
+
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	spammerInstance *spammer.Spammer
 	spammerLock     syncutils.RWMutex
@@ -56,8 +67,6 @@ var (
 
 	// ErrSpammerDisabled is returned if the spammer plugin is disabled.
 	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -70,18 +79,8 @@ type dependencies struct {
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	Plugin = node.NewPlugin("Spammer", node.Disabled, configure, run)
-}
-
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(Plugin.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	// do not enable the spammer if URTS is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
@@ -114,8 +113,7 @@ func configure(c *dig.Container) {
 	)
 }
 
-func run(_ *dig.Container) {
-
+func run() {
 	// do not enable the spammer if URTS is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
 		return

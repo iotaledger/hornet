@@ -9,22 +9,24 @@ import (
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
-	"go.uber.org/dig"
 )
 
 // the maximum amount of time to wait for background processes to terminate. After that the process is killed.
 const waitToKillTimeInSeconds = 300
+
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "Graceful Shutdown",
+		Configure: configure,
+	}
+}
 
 var (
 	CoreModule *node.CoreModule
 	log        *logger.Logger
 )
 
-func init() {
-	CoreModule = node.NewCoreModule("Graceful Shutdown", configure, run)
-}
-
-func configure(_ *dig.Container) {
+func configure() {
 	log = logger.NewLogger(CoreModule.Name)
 
 	gracefulStop := make(chan os.Signal)
@@ -58,8 +60,4 @@ func configure(_ *dig.Container) {
 
 		CoreModule.Daemon().ShutdownAndWait()
 	}()
-}
-
-func run(_ *dig.Container) {
-	// nothing
 }

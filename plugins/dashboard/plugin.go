@@ -31,6 +31,16 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "Dashboard",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Enabled,
+	}
+}
+
 const (
 	// MsgTypeSyncStatus is the type of the SyncStatus message.
 	MsgTypeSyncStatus byte = iota
@@ -78,6 +88,7 @@ const (
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	nodeStartAt = time.Now()
 
@@ -87,8 +98,6 @@ var (
 	upgrader *websocket.Upgrader
 
 	cachedMilestoneMetrics []*tanglecore.ConfirmedMilestoneMetric
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -101,18 +110,8 @@ type dependencies struct {
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	Plugin = node.NewPlugin("Dashboard", node.Enabled, configure, run)
-}
-
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(Plugin.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	upgrader = &websocket.Upgrader{
 		HandshakeTimeout:  webSocketWriteTimeout,
@@ -123,7 +122,7 @@ func configure(c *dig.Container) {
 	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
 }
 
-func run(_ *dig.Container) {
+func run() {
 
 	e := echo.New()
 	e.HideBanner = true

@@ -5,8 +5,6 @@ import (
 	"sync"
 
 	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/events"
-	"go.uber.org/dig"
 )
 
 const (
@@ -14,13 +12,21 @@ const (
 	Enabled
 )
 
-type PluginCallback = func(c *dig.Container)
-
 type Plugin struct {
-	Node   *Node
-	Name   string
+	// A reference to the Node instance.
+	Node *Node
+	// The name of the plugin.
+	Name string
+	// The function to call to initialize the Plugin dependencies.
+	DepsFunc interface{}
+	// Provide gets called in the provide stage of node initialization.
+	Provide ProvideFunc
+	// Configure gets called in the configure stage of node initialization.
+	Configure Callback
+	// Run gets called in the run stage of node initialization.
+	Run Callback
+	// The status of the plugin.
 	Status int
-	Events pluginEvents
 	wg     *sync.WaitGroup
 }
 
@@ -30,32 +36,4 @@ func (p *Plugin) Daemon() daemon.Daemon {
 
 func (p *Plugin) GetIdentifier() string {
 	return strings.ToLower(strings.Replace(p.Name, " ", "", -1))
-}
-
-// Creates a new plugin with the given name, default status and callbacks.
-// The last specified callback is the mandatory run callback, while all other callbacks are configure callbacks.
-func NewPlugin(name string, status int, callbacks ...PluginCallback) *Plugin {
-	plugin := &Plugin{
-		Name:   name,
-		Status: status,
-		Events: pluginEvents{
-			Init:      events.NewEvent(containerCaller),
-			Configure: events.NewEvent(containerCaller),
-			Run:       events.NewEvent(containerCaller),
-		},
-	}
-
-	switch len(callbacks) {
-	case 0:
-		// plugin doesn't have any callbacks (i.e. plugins that execute stuff on init())
-	case 1:
-		plugin.Events.Run.Attach(events.NewClosure(callbacks[0]))
-	case 2:
-		plugin.Events.Configure.Attach(events.NewClosure(callbacks[0]))
-		plugin.Events.Run.Attach(events.NewClosure(callbacks[1]))
-	default:
-		panic("too many callbacks in NewPlugin(...)")
-	}
-
-	return plugin
 }

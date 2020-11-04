@@ -6,7 +6,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"go.uber.org/dig"
@@ -17,13 +16,20 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "Database",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
+		Configure: configure,
+	}
+}
+
 var (
-	CoreModule *node.CoreModule
-	log        *logger.Logger
-
+	CoreModule            *node.CoreModule
+	log                   *logger.Logger
 	garbageCollectionLock syncutils.Mutex
-
-	deps dependencies
+	deps                  dependencies
 )
 
 type dependencies struct {
@@ -31,38 +37,27 @@ type dependencies struct {
 	Tangle *tangle.Tangle
 }
 
-func init() {
-	CoreModule = node.NewCoreModule("Database", configure, run)
+func provide(c *dig.Container) {
+	type tangledeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
 
-	CoreModule.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
-		type tangledeps struct {
-			dig.In
-			NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		}
-
-		if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-			return tangle.New(deps.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
-		}); err != nil {
-			panic(err)
-		}
-
-		if err := c.Provide(func(tangle *tangle.Tangle) *utxo.Manager {
-			return tangle.UTXO()
-		}); err != nil {
-			panic(err)
-		}
-	}))
-}
-
-func configure(c *dig.Container) {
-	log = logger.NewLogger(CoreModule.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) error {
-		deps = cDeps
-		return nil
+	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
+		return tangle.New(deps.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
 	}); err != nil {
 		panic(err)
 	}
+
+	if err := c.Provide(func(tangle *tangle.Tangle) *utxo.Manager {
+		return tangle.UTXO()
+	}); err != nil {
+		panic(err)
+	}
+}
+
+func configure() {
+	log = logger.NewLogger(CoreModule.Name)
 
 	if !deps.Tangle.IsCorrectDatabaseVersion() {
 		if !deps.Tangle.UpdateDatabaseVersion() {
@@ -80,39 +75,36 @@ func configure(c *dig.Container) {
 }
 
 func RunGarbageCollection() {
-	if deps.Tangle.DatabaseSupportsCleanup() {
-
-		garbageCollectionLock.Lock()
-		defer garbageCollectionLock.Unlock()
-
-		log.Info("running full database garbage collection. This can take a while...")
-
-		start := time.Now()
-
-		Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-			Start: start,
-		})
-
-		err := deps.Tangle.CleanupDatabases()
-
-		end := time.Now()
-
-		Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-			Start: start,
-			End:   end,
-		})
-
-		if err != nil {
-			if err != tangle.ErrNothingToCleanUp {
-				log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), end.Sub(start).Truncate(time.Millisecond))
-				return
-			}
-		}
-
-		log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
+	if !deps.Tangle.DatabaseSupportsCleanup() {
+		return
 	}
-}
 
-func run(_ *dig.Container) {
-	// do nothing
+	garbageCollectionLock.Lock()
+	defer garbageCollectionLock.Unlock()
+
+	log.Info("running full database garbage collection. This can take a while...")
+
+	start := time.Now()
+
+	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
+		Start: start,
+	})
+
+	err := deps.Tangle.CleanupDatabases()
+
+	end := time.Now()
+
+	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
+		Start: start,
+		End:   end,
+	})
+
+	if err != nil {
+		if err != tangle.ErrNothingToCleanUp {
+			log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), end.Sub(start).Truncate(time.Millisecond))
+			return
+		}
+	}
+
+	log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
 }

@@ -18,69 +18,69 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "URTS",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
+		Status:    node.Enabled,
+	}
+}
+
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	// Closures
 	onMessageSolid       *events.Closure
 	onMilestoneConfirmed *events.Closure
-
-	deps dependencies
 )
 
 type dependencies struct {
 	dig.In
 	TipSelector *tipselect.TipSelector
-	Tangle *tangle.Tangle
+	Tangle      *tangle.Tangle
 }
 
-func init() {
-	Plugin = node.NewPlugin("URTS", node.Enabled, configure, run)
-	Plugin.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
-		type tipseldeps struct {
-			dig.In
+func provide(c *dig.Container) {
+	type tipseldeps struct {
+		dig.In
+		Tangle     *tangle.Tangle
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
 
-			Tangle     *tangle.Tangle
-			NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		}
+	if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
+		return tipselect.New(
+			deps.Tangle,
 
-		if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
-			return tipselect.New(
-				deps.Tangle,
+			deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
+			deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
+			deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth),
 
-				deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
-				deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
-				deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth),
+			deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
+			time.Second*time.Duration(deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds)),
+			uint32(deps.NodeConfig.Int64(config.CfgTipSelNonLazy+config.CfgTipSelMaxChildren)),
+			deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelSpammerTipsThreshold),
 
-				deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
-				time.Second*time.Duration(deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds)),
-				uint32(deps.NodeConfig.Int64(config.CfgTipSelNonLazy+config.CfgTipSelMaxChildren)),
-				deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelSpammerTipsThreshold),
-
-				deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
-				time.Second*time.Duration(deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds)),
-				uint32(deps.NodeConfig.Int64(config.CfgTipSelSemiLazy+config.CfgTipSelMaxChildren)),
-				deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelSpammerTipsThreshold),
-			)
-		}); err != nil {
-			panic(err)
-		}
-	}))
-}
-func configure(c *dig.Container) {
-	log = logger.NewLogger(Plugin.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
+			deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
+			time.Second*time.Duration(deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds)),
+			uint32(deps.NodeConfig.Int64(config.CfgTipSelSemiLazy+config.CfgTipSelMaxChildren)),
+			deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelSpammerTipsThreshold),
+		)
 	}); err != nil {
 		panic(err)
 	}
+}
 
+func configure() {
+	log = logger.NewLogger(Plugin.Name)
 	configureEvents()
 }
 
-func run(_ *dig.Container) {
+func run() {
 	Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal

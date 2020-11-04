@@ -32,6 +32,13 @@ import (
 func init() {
 	flag.CommandLine.MarkHidden("cooBootstrap")
 	flag.CommandLine.MarkHidden("cooStartIndex")
+	Plugin = &node.Plugin{
+		Name:      "Coordinator",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Disabled,
+	}
 }
 
 var (
@@ -73,18 +80,8 @@ type dependencies struct {
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	Plugin = node.NewPlugin("Coordinator", node.Disabled, configure, run)
-}
-
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(Plugin.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	// set the node as synced at startup, so the coo plugin can select tips
 	tanglecore.SetUpdateSyncedAtStartup(true)
@@ -159,7 +156,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	return coo, nil
 }
 
-func run(_ *dig.Container) {
+func run() {
 
 	// create a background worker that signals to issue new milestones
 	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {

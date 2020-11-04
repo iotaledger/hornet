@@ -23,15 +23,24 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "Prometheus",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Disabled,
+	}
+}
+
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	server   *http.Server
 	registry = prometheus.NewRegistry()
 	collects []func()
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -43,18 +52,8 @@ type dependencies struct {
 	RequestQueue gossip.RequestQueue
 }
 
-func init() {
-	Plugin = node.NewPlugin("Prometheus", node.Disabled, configure, run)
-}
-
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(Plugin.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	if deps.NodeConfig.Bool(config.CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())
@@ -93,7 +92,7 @@ func writeFileServiceDiscoveryFile() {
 	log.Infof("Wrote 'file service discovery' content to %s", path)
 }
 
-func run(_ *dig.Container) {
+func run() {
 	log.Info("Starting Prometheus exporter ...")
 
 	if deps.NodeConfig.Bool(config.CfgPrometheusFileServiceDiscoveryEnabled) {

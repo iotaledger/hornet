@@ -25,12 +25,23 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 )
 
-var (
-	CoreModule            *node.CoreModule
-	log                   *logger.Logger
-	updateSyncedAtStartup bool
+func init() {
+	flag.CommandLine.MarkHidden("syncedAtStartup")
+	CoreModule = &node.CoreModule{
+		Name:      "Tangle",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+	}
+}
 
-	syncedAtStartup = flag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
+var (
+	CoreModule *node.CoreModule
+	log        *logger.Logger
+	deps       dependencies
+
+	updateSyncedAtStartup bool
+	syncedAtStartup       = flag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 
@@ -38,8 +49,6 @@ var (
 	onPruningMilestoneIndexChanged *events.Closure
 	onLatestMilestoneIndexChanged  *events.Closure
 	onReceivedNewTx                *events.Closure
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -51,19 +60,8 @@ type dependencies struct {
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	flag.CommandLine.MarkHidden("syncedAtStartup")
-	CoreModule = node.NewCoreModule("Tangle", configure, run)
-}
-
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(CoreModule.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	deps.Tangle.LoadInitialValuesFromDatabase()
 
@@ -96,7 +94,7 @@ func configure(c *dig.Container) {
 	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
 }
 
-func run(_ *dig.Container) {
+func run() {
 
 	if deps.Tangle.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")

@@ -15,6 +15,16 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "MQTT",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Disabled,
+	}
+}
+
 const (
 	workerCount     = 1
 	workerQueueSize = 10000
@@ -23,6 +33,7 @@ const (
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	newLatestMilestoneWorkerPool *workerpool.WorkerPool
 	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
@@ -30,8 +41,6 @@ var (
 	wasSyncBefore = false
 
 	mqttBroker *mqttpkg.Broker
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -40,17 +49,8 @@ type dependencies struct {
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	Plugin = node.NewPlugin("MQTT", node.Disabled, configure, run)
-}
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(Plugin.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone))
@@ -71,7 +71,7 @@ func configure(c *dig.Container) {
 	}
 }
 
-func run(_ *dig.Container) {
+func run() {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
 

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
 	"github.com/tcnksm/go-latest"
 	"go.uber.org/dig"
 
@@ -30,11 +29,20 @@ var (
 	githubTag *latest.GithubTag
 )
 
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "CLI",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
+	}
+}
+
 var (
 	CoreModule *node.CoreModule
 	log        *logger.Logger
-
-	deps dependencies
+	deps       dependencies
 )
 
 type dependencies struct {
@@ -42,34 +50,26 @@ type dependencies struct {
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	CoreModule = node.NewCoreModule("CLI", configure, run)
-	CoreModule.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
-		if err := c.Provide(func() *configuration.Configuration {
-			return config.NodeConfig
-		}, dig.Name("nodeConfig")); err != nil {
-			panic(err)
-		}
-		if err := c.Provide(func() *configuration.Configuration {
-			return config.PeeringConfig
-		}, dig.Name("peeringConfig")); err != nil {
-			panic(err)
-		}
-		if err := c.Provide(func() *configuration.Configuration {
-			return config.ProfilesConfig
-		}, dig.Name("profilesConfig")); err != nil {
-			panic(err)
-		}
-	}))
-}
-
-func configure(c *dig.Container) {
-	log = logger.NewLogger(CoreModule.Name)
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
+func provide(c *dig.Container) {
+	if err := c.Provide(func() *configuration.Configuration {
+		return config.NodeConfig
+	}, dig.Name("nodeConfig")); err != nil {
 		panic(err)
 	}
+	if err := c.Provide(func() *configuration.Configuration {
+		return config.PeeringConfig
+	}, dig.Name("peeringConfig")); err != nil {
+		panic(err)
+	}
+	if err := c.Provide(func() *configuration.Configuration {
+		return config.ProfilesConfig
+	}, dig.Name("profilesConfig")); err != nil {
+		panic(err)
+	}
+}
+
+func configure() {
+	log = logger.NewLogger(CoreModule.Name)
 
 	githubTag = &latest.GithubTag{
 		Owner:             "gohornet",
@@ -97,6 +97,13 @@ func configure(c *dig.Container) {
 	}
 
 	log.Info("Loading plugins ...")
+}
+
+func run() {
+	// create a background worker that checks for latest version every hour
+	CoreModule.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
+		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
+	}, shutdown.PriorityUpdateCheck)
 }
 
 func fixVersion(version string) string {
@@ -132,12 +139,4 @@ func checkLatestVersion() {
 		log.Infof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
 		LatestGithubVersion = res.Current
 	}
-}
-
-func run(_ *dig.Container) {
-
-	// create a background worker that checks for latest version every hour
-	CoreModule.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
-	}, shutdown.PriorityUpdateCheck)
 }

@@ -33,6 +33,16 @@ const (
 	iotaGossipProtocolIDTemplate = "/iota-gossip/%d/1.0.0"
 )
 
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "Gossip",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
+	}
+}
+
 var (
 	CoreModule *node.CoreModule
 	log        *logger.Logger
@@ -49,66 +59,56 @@ type dependencies struct {
 	Host             host.Host
 }
 
-func init() {
-	CoreModule = node.NewCoreModule("Gossip", configure, run)
-	CoreModule.Events.Init.Attach(events.NewClosure(func(c *dig.Container) {
-		if err := c.Provide(func() gossip.RequestQueue {
-			return gossip.NewRequestQueue()
-		}); err != nil {
-			panic(err)
-		}
-
-		type msgprocdependencies struct {
-			dig.In
-
-			Tangle       *tangle.Tangle
-			RequestQueue gossip.RequestQueue
-			Manager      *p2p.Manager
-			NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-		}
-
-		if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
-			return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
-				ValidMWM:          uint64(deps.NodeConfig.Int64(config.CfgCoordinatorMWM)),
-				WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
-			})
-		}); err != nil {
-			panic(err)
-		}
-
-		type servicedeps struct {
-			dig.In
-
-			Host       host.Host
-			Manager    *p2p.Manager
-			NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		}
-
-		if err := c.Provide(func(deps servicedeps) *gossip.Service {
-			// ToDo: Issa scam! Snapshot info is not yet known here (because snapshot is loaded afterwards)
-			// dafuq?
-			//networkID := tangle.GetSnapshotInfo().NetworkID)
-			var networkID uint8 = 1
-			iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
-			return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
-				gossip.WithLogger(logger.NewLogger("GossipService")),
-				gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
-			)
-		}); err != nil {
-			panic(err)
-		}
-	}))
-}
-
-func configure(c *dig.Container) {
-	log = logger.NewLogger(CoreModule.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) error {
-		deps = cDeps
-		return nil
+func provide(c *dig.Container) {
+	if err := c.Provide(func() gossip.RequestQueue {
+		return gossip.NewRequestQueue()
 	}); err != nil {
 		panic(err)
 	}
+
+	type msgprocdependencies struct {
+		dig.In
+
+		Tangle       *tangle.Tangle
+		RequestQueue gossip.RequestQueue
+		Manager      *p2p.Manager
+		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
+		return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
+			ValidMWM:          uint64(deps.NodeConfig.Int64(config.CfgCoordinatorMWM)),
+			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
+		})
+	}); err != nil {
+		panic(err)
+	}
+
+	type servicedeps struct {
+		dig.In
+
+		Host       host.Host
+		Manager    *p2p.Manager
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps servicedeps) *gossip.Service {
+		// ToDo: Issa scam! Snapshot info is not yet known here (because snapshot is loaded afterwards)
+		// dafuq?
+		//networkID := tangle.GetSnapshotInfo().NetworkID)
+		var networkID uint8 = 1
+		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
+		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
+			gossip.WithLogger(logger.NewLogger("GossipService")),
+			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
+		)
+	}); err != nil {
+		panic(err)
+	}
+}
+
+func configure() {
+	log = logger.NewLogger(CoreModule.Name)
 
 	// register event handlers for messages
 	deps.Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
@@ -166,7 +166,7 @@ func configure(c *dig.Container) {
 	}))
 }
 
-func run(_ *dig.Container) {
+func run() {
 
 	_ = CoreModule.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running GossipService")

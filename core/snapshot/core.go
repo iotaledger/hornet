@@ -24,6 +24,15 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "Snapshot",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+	}
+}
+
 var (
 	CoreModule *node.CoreModule
 	log        *logger.Logger
@@ -71,18 +80,8 @@ type dependencies struct {
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
-func init() {
-	CoreModule = node.NewCoreModule("Snapshot", configure, run)
-}
-
-func configure(c *dig.Container) {
+func configure() {
 	log = logger.NewLogger(CoreModule.Name)
-
-	if err := c.Invoke(func(cDeps dependencies) {
-		deps = cDeps
-	}); err != nil {
-		panic(err)
-	}
 
 	snapshotDepth = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
@@ -150,7 +149,7 @@ func isSnapshottingOrPruning() bool {
 	return isSnapshotting || isPruning
 }
 
-func run(_ *dig.Container) {
+func run() {
 
 	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		select {
