@@ -31,13 +31,13 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range database.Tangle().GetUnreferencedMessageIDs(targetIndex, true) {
+	for _, messageID := range deps.Tangle.GetUnreferencedMessageIDs(targetIndex, true) {
 		messageIDMapKey := messageID.MapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
 		}
 
-		cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
@@ -54,7 +54,7 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 	}
 
 	msgCountDeleted = pruneMessages(messageIDsToDeleteMap)
-	database.Tangle().DeleteUnreferencedMessages(targetIndex)
+	deps.Tangle.DeleteUnreferencedMessages(targetIndex)
 
 	return msgCountDeleted, len(messageIDsToDeleteMap)
 }
@@ -62,12 +62,12 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func pruneMilestone(milestoneIndex milestone.Index) error {
 
-	err := database.Tangle().UTXO().PruneMilestoneIndex(milestoneIndex)
+	err := deps.UTXO.PruneMilestoneIndex(milestoneIndex)
 	if err != nil {
 		return err
 	}
 
-	database.Tangle().DeleteMilestone(milestoneIndex)
+	deps.Tangle.DeleteMilestone(milestoneIndex)
 
 	return nil
 }
@@ -77,26 +77,26 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		cachedMsg := database.Tangle().GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
+		cachedMsg := deps.Tangle.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
 
 		cachedMsg.ConsumeMessage(func(msg *tangle.Message) { // msg -1
 			// Delete the reference in the parents
-			database.Tangle().DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
-			database.Tangle().DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
+			deps.Tangle.DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
+			deps.Tangle.DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
 
 			// delete all children of this message
-			database.Tangle().DeleteChildren(msg.GetMessageID())
+			deps.Tangle.DeleteChildren(msg.GetMessageID())
 
 			indexationPayload := tangle.CheckIfIndexation(msg)
 			if indexationPayload != nil {
 				// delete indexation if the message contains an indexation payload
-				database.Tangle().DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
+				deps.Tangle.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
 			}
 
-			database.Tangle().DeleteMessage(msg.GetMessageID())
+			deps.Tangle.DeleteMessage(msg.GetMessageID())
 		})
 	}
 
@@ -105,7 +105,7 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
 
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		log.Panic("No snapshotInfo found!")
 	}
@@ -140,13 +140,13 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 		return true
 	})
 
-	database.Tangle().WriteLockSolidEntryPoints()
-	database.Tangle().ResetSolidEntryPoints()
+	deps.Tangle.WriteLockSolidEntryPoints()
+	deps.Tangle.ResetSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		database.Tangle().SolidEntryPointsAdd(sep.messageID, sep.index)
+		deps.Tangle.SolidEntryPointsAdd(sep.messageID, sep.index)
 	}
-	database.Tangle().StoreSolidEntryPoints()
-	database.Tangle().WriteUnlockSolidEntryPoints()
+	deps.Tangle.StoreSolidEntryPoints()
+	deps.Tangle.WriteUnlockSolidEntryPoints()
 
 	if err != nil {
 		return 0, err
@@ -155,7 +155,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
-	database.Tangle().SetSnapshotInfo(snapshotInfo)
+	deps.Tangle.SetSnapshotInfo(snapshotInfo)
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
 	pruneUnreferencedMessages(snapshotInfo.PruningIndex)
@@ -174,7 +174,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 		ts := time.Now()
 		txCountDeleted, msgCountChecked := pruneUnreferencedMessages(milestoneIndex)
 
-		cachedMs := database.Tangle().GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMs := deps.Tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
 			// Milestone not found, pruning impossible
 			log.Warnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
@@ -183,7 +183,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 
 		messageIDsToDeleteMap := make(map[string]struct{})
 
-		err := dag.TraverseParents(database.Tangle(), cachedMs.GetMilestone().MessageID,
+		err := dag.TraverseParents(deps.Tangle, cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // msg +1
@@ -221,7 +221,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 		txCountDeleted += pruneMessages(messageIDsToDeleteMap)
 
 		snapshotInfo.PruningIndex = milestoneIndex
-		database.Tangle().SetSnapshotInfo(snapshotInfo)
+		deps.Tangle.SetSnapshotInfo(snapshotInfo)
 
 		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
 

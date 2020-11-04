@@ -1,8 +1,6 @@
 package prometheus
 
 import (
-	"github.com/gohornet/hornet/core/gossip"
-	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -137,16 +135,14 @@ func collectPeers() {
 	peersDroppedSentPackets.Reset()
 	peersConnected.Reset()
 
-	gossipService := gossip.Service()
-
-	for _, peer := range p2pcore.Manager().PeerInfoSnapshots() {
+	for _, peer := range deps.Manager.PeerInfoSnapshots() {
 		labels := prometheus.Labels{
 			"id":      peer.ID,
 			"address": peer.Addresses[0].String(),
 			"alias":   peer.Alias,
 		}
 
-		gossipProto := gossipService.Protocol(peer.Peer.ID)
+		gossipProto := deps.Service.Protocol(peer.Peer.ID)
 		if gossipProto == nil {
 			continue
 		}

@@ -3,7 +3,6 @@ package gossip
 import (
 	"time"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 
 	"github.com/gohornet/hornet/pkg/dag"
@@ -27,7 +26,6 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 func runRequestWorkers() {
 	CoreModule.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
-		rQueue := RequestQueue()
 	requestQueueEnqueueLoop:
 		for {
 			select {
@@ -42,7 +40,7 @@ func runRequestWorkers() {
 				}
 
 				// always fire the signal if something is in the queue, otherwise the sting request is not kicking in
-				queued := rQueue.EnqueuePending(discardRequestsOlderThan)
+				queued := deps.RequestQueue.EnqueuePending(discardRequestsOlderThan)
 				if queued > 0 {
 					select {
 					case requestQueueEnqueueSignal <- struct{}{}:
@@ -54,8 +52,7 @@ func runRequestWorkers() {
 	}, shutdown.PriorityRequestsProcessor)
 
 	CoreModule.Daemon().BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
-		gossipService := Service()
-		rQueue := RequestQueue()
+		rQueue := deps.RequestQueue
 		for {
 			select {
 			case <-shutdownSignal:
@@ -65,7 +62,7 @@ func runRequestWorkers() {
 				// drain request queue
 				for r := rQueue.Next(); r != nil; r = rQueue.Next() {
 					requested := false
-					gossipService.ForEach(func(proto *gossip.Protocol) bool {
+					deps.Service.ForEach(func(proto *gossip.Protocol) bool {
 						// we only send a request message if the peer actually has the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
 						if !proto.HasDataForMilestone(r.MilestoneIndex) {
@@ -81,7 +78,7 @@ func runRequestWorkers() {
 						// we have no neighbor that has the data for sure,
 						// so we ask all neighbors that could have the data
 						// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
-						gossipService.ForEach(func(proto *gossip.Protocol) bool {
+						deps.Service.ForEach(func(proto *gossip.Protocol) bool {
 							// we only send a request message if the peer could have the data
 							if !proto.CouldHaveDataForMilestone(r.MilestoneIndex) {
 								return true
@@ -99,7 +96,7 @@ func runRequestWorkers() {
 
 // adds the request to the request queue and signals the request to drain it.
 func enqueueAndSignal(r *gossip.Request) bool {
-	if !RequestQueue().Enqueue(r) {
+	if !deps.RequestQueue.Enqueue(r) {
 		return false
 	}
 
@@ -116,11 +113,11 @@ func enqueueAndSignal(r *gossip.Request) bool {
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
 func Request(messageID *hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
-	if database.Tangle().SolidEntryPointsContain(messageID) {
+	if deps.Tangle.SolidEntryPointsContain(messageID) {
 		return false
 	}
 
-	if database.Tangle().ContainsMessage(messageID) {
+	if deps.Tangle.ContainsMessage(messageID) {
 		return false
 	}
 
@@ -151,7 +148,7 @@ func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, pr
 	cachedMsg.ConsumeMetadata(func(metadata *tangle.MessageMetadata) {
 		messageID := metadata.GetMessageID()
 
-		if database.Tangle().SolidEntryPointsContain(messageID) {
+		if deps.Tangle.SolidEntryPointsContain(messageID) {
 			return
 		}
 
@@ -169,7 +166,7 @@ func RequestMilestoneParents(cachedMilestone *tangle.CachedMilestone) bool {
 
 	msIndex := cachedMilestone.GetMilestone().Index
 
-	cachedMilestoneMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
+	cachedMilestoneMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
 	if cachedMilestoneMsgMeta == nil {
 		panic("milestone metadata doesn't exist")
 	}
@@ -195,7 +192,7 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
 
-		cachedMs := database.Tangle().GetCachedMilestoneOrNil(ms) // milestone +1
+		cachedMs := deps.Tangle.GetCachedMilestoneOrNil(ms) // milestone +1
 		if cachedMs == nil {
 			log.Panicf("milestone %d wasn't found", ms)
 		}
@@ -203,7 +200,7 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 		milestoneMessageID := cachedMs.GetMilestone().MessageID
 		cachedMs.Release(true) // message -1
 
-		dag.TraverseParents(database.Tangle(), milestoneMessageID,
+		dag.TraverseParents(deps.Tangle, milestoneMessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1

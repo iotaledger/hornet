@@ -5,7 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/tcnksm/go-latest"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
@@ -27,18 +29,47 @@ var (
 	githubTag *latest.GithubTag
 )
 
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "CLI",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
+	}
+}
+
 var (
 	CoreModule *node.CoreModule
 	log        *logger.Logger
+	deps       dependencies
 )
 
-func init() {
-	CoreModule = node.NewCoreModule("CLI", configure, run)
+type dependencies struct {
+	dig.In
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
-func configure(coreModule *node.CoreModule) {
+func provide(c *dig.Container) {
+	if err := c.Provide(func() *configuration.Configuration {
+		return config.NodeConfig
+	}, dig.Name("nodeConfig")); err != nil {
+		panic(err)
+	}
+	if err := c.Provide(func() *configuration.Configuration {
+		return config.PeeringConfig
+	}, dig.Name("peeringConfig")); err != nil {
+		panic(err)
+	}
+	if err := c.Provide(func() *configuration.Configuration {
+		return config.ProfilesConfig
+	}, dig.Name("profilesConfig")); err != nil {
+		panic(err)
+	}
+}
 
-	log = logger.NewLogger(coreModule.Name)
+func configure() {
+	log = logger.NewLogger(CoreModule.Name)
 
 	githubTag = &latest.GithubTag{
 		Owner:             "gohornet",
@@ -59,13 +90,20 @@ func configure(coreModule *node.CoreModule) {
 
 	checkLatestVersion()
 
-	if config.NodeConfig.String(config.CfgProfileUseProfile) == config.AutoProfileName {
+	if deps.NodeConfig.String(config.CfgProfileUseProfile) == config.AutoProfileName {
 		log.Infof("Profile mode 'auto', Using profile '%s'", profile.LoadProfile().Name)
 	} else {
 		log.Infof("Using profile '%s'", profile.LoadProfile().Name)
 	}
 
 	log.Info("Loading plugins ...")
+}
+
+func run() {
+	// create a background worker that checks for latest version every hour
+	CoreModule.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
+		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
+	}, shutdown.PriorityUpdateCheck)
 }
 
 func fixVersion(version string) string {
@@ -101,12 +139,4 @@ func checkLatestVersion() {
 		log.Infof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
 		LatestGithubVersion = res.Current
 	}
-}
-
-func run(_ *node.CoreModule) {
-
-	// create a background worker that checks for latest version every hour
-	CoreModule.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
-	}, shutdown.PriorityUpdateCheck)
 }

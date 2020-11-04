@@ -72,7 +72,7 @@ func createSnapshot(c echo.Context) (*createSnapshotResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "parsing index failed: %w", err)
 	}
 
-	snapshotFilePath := filepath.Join(filepath.Dir(config.NodeConfig.String(config.CfgSnapshotsPath)), fmt.Sprintf("export_%d.bin", index))
+	snapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(config.CfgSnapshotsPath)), fmt.Sprintf("export_%d.bin", index))
 
 	// ToDo: abort signal?
 	if err := snapshot.CreateLocalSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {

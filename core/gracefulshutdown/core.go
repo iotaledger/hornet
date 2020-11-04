@@ -14,17 +14,20 @@ import (
 // the maximum amount of time to wait for background processes to terminate. After that the process is killed.
 const waitToKillTimeInSeconds = 300
 
+func init() {
+	CoreModule = &node.CoreModule{
+		Name:      "Graceful Shutdown",
+		Configure: configure,
+	}
+}
+
 var (
 	CoreModule *node.CoreModule
 	log        *logger.Logger
 )
 
-func init() {
-	CoreModule = node.NewCoreModule("Graceful Shutdown", configure, run)
-}
-
-func configure(coreModule *node.CoreModule) {
-	log = logger.NewLogger(coreModule.Name)
+func configure() {
+	log = logger.NewLogger(CoreModule.Name)
 
 	gracefulStop := make(chan os.Signal)
 
@@ -43,7 +46,7 @@ func configure(coreModule *node.CoreModule) {
 
 				if secondsSinceStart <= waitToKillTimeInSeconds {
 					processList := ""
-					runningBackgroundWorkers := coreModule.Daemon().GetRunningBackgroundWorkers()
+					runningBackgroundWorkers := CoreModule.Daemon().GetRunningBackgroundWorkers()
 					if len(runningBackgroundWorkers) >= 1 {
 						processList = "(" + strings.Join(runningBackgroundWorkers, ", ") + ") "
 					}
@@ -57,8 +60,4 @@ func configure(coreModule *node.CoreModule) {
 
 		CoreModule.Daemon().ShutdownAndWait()
 	}()
-}
-
-func run(_ *node.CoreModule) {
-	// nothing
 }

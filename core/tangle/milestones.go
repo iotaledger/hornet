@@ -5,7 +5,6 @@ import (
 
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
@@ -21,10 +20,10 @@ func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
 
 	Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 
-	solidMsIndex := database.Tangle().GetSolidMilestoneIndex()
+	solidMsIndex := deps.Tangle.GetSolidMilestoneIndex()
 	msIndex := cachedMilestone.GetMilestone().Index
 
-	if database.Tangle().SetLatestMilestoneIndex(msIndex) {
+	if deps.Tangle.SetLatestMilestoneIndex(msIndex) {
 		Events.LatestMilestoneChanged.Trigger(cachedMilestone) // milestone pass +1
 		Events.LatestMilestoneIndexChanged.Trigger(msIndex)
 	}
@@ -36,7 +35,7 @@ func processValidMilestone(cachedMilestone *tangle.CachedMilestone) {
 		// request parent1 and parent2
 		gossip.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else {
-		pruningIndex := database.Tangle().GetSnapshotInfo().PruningIndex
+		pruningIndex := deps.Tangle.GetSnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {
 			// this should not happen. we didn't request it and it should be filtered because of timestamp
 			log.Warnf("Synced too far back! Index: %d (%v), PruningIndex: %d", msIndex, hex.EncodeToString(cachedMilestone.GetMilestone().MilestoneID[:]), pruningIndex)
