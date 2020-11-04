@@ -9,24 +9,22 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/core/cli"
-	"github.com/gohornet/hornet/core/database"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi/common"
-	"github.com/gohornet/hornet/plugins/urts"
 )
 
 func info() (*infoResponse, error) {
 
 	// latest milestone index
 	latestMilestoneID := hornet.GetNullMessageID().Hex()
-	latestMilestoneIndex := database.Tangle().GetLatestMilestoneIndex()
+	latestMilestoneIndex := deps.Tangle.GetLatestMilestoneIndex()
 
 	// latest milestone message ID
-	cachedLatestMilestone := database.Tangle().GetCachedMilestoneOrNil(latestMilestoneIndex)
+	cachedLatestMilestone := deps.Tangle.GetCachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
 		latestMilestoneID = hex.EncodeToString(cachedLatestMilestone.GetMilestone().MilestoneID[:])
 		cachedLatestMilestone.Release(true)
@@ -34,10 +32,10 @@ func info() (*infoResponse, error) {
 
 	// solid milestone index
 	solidMilestoneID := hornet.GetNullMessageID().Hex()
-	solidMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
+	solidMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
 
 	// solid milestone message ID
-	cachedSolidMilestone := database.Tangle().GetCachedMilestoneOrNil(solidMilestoneIndex)
+	cachedSolidMilestone := deps.Tangle.GetCachedMilestoneOrNil(solidMilestoneIndex)
 	if cachedSolidMilestone != nil {
 		solidMilestoneID = hex.EncodeToString(cachedSolidMilestone.GetMilestone().MilestoneID[:])
 		cachedSolidMilestone.Release(true)
@@ -45,7 +43,7 @@ func info() (*infoResponse, error) {
 
 	// pruning index
 	var pruningIndex milestone.Index
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		pruningIndex = snapshotInfo.PruningIndex
 	}
@@ -77,9 +75,9 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	var err error
 
 	if !spammerTips {
-		tips, err = urts.TipSelector.SelectNonLazyTips()
+		tips, err = deps.TipSelector.SelectNonLazyTips()
 	} else {
-		_, tips, err = urts.TipSelector.SelectSpammerTips()
+		_, tips, err = deps.TipSelector.SelectSpammerTips()
 	}
 
 	if err != nil {
@@ -100,7 +98,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
 	}
 
-	cachedMilestone := database.Tangle().GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
+	cachedMilestone := deps.Tangle.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "milestone not found: %d", msIndex)
 	}

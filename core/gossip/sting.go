@@ -10,12 +10,11 @@ import (
 
 // sets up the event handlers which propagate STING messages.
 func addMessageEventHandlers(proto *gossip.Protocol) {
-	msgProc := MessageProcessor()
 
 	proto.Parser.Events.Received[gossip.MessageTypeMessage].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessages.Inc()
 		metrics.SharedServerMetrics.Messages.Inc()
-		msgProc.Process(proto, gossip.MessageTypeMessage, data)
+		deps.MessageProcessor.Process(proto, gossip.MessageTypeMessage, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeMessage].Attach(events.NewClosure(func() {
@@ -27,7 +26,7 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 	proto.Parser.Events.Received[gossip.MessageTypeMessageRequest].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessageRequests.Inc()
 		metrics.SharedServerMetrics.ReceivedMessageRequests.Inc()
-		msgProc.Process(proto, gossip.MessageTypeMessageRequest, data)
+		deps.MessageProcessor.Process(proto, gossip.MessageTypeMessageRequest, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeMessageRequest].Attach(events.NewClosure(func() {
@@ -39,7 +38,7 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMilestoneRequests.Inc()
 		metrics.SharedServerMetrics.ReceivedMilestoneRequests.Inc()
-		msgProc.Process(proto, gossip.MessageTypeMilestoneRequest, data)
+		deps.MessageProcessor.Process(proto, gossip.MessageTypeMilestoneRequest, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func() {

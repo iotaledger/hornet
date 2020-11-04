@@ -10,7 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -56,7 +55,7 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	}
 
 	// Children
-	t.Children = database.Tangle().GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
+	t.Children = deps.Tangle.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
 	// TODO:
@@ -216,7 +215,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 }
 
 func findMilestone(index milestone.Index) (*ExplorerMessage, error) {
-	cachedMsg := database.Tangle().GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMsg := deps.Tangle.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
@@ -235,7 +234,7 @@ func findTransaction(msgID string) (*ExplorerMessage, error) {
 		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
 	}
 
-	cachedMsg := database.Tangle().GetCachedMessageOrNil(messageID) // msg +1
+	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID) // msg +1
 	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "msg %s unknown", msgID)
 	}

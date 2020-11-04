@@ -1,8 +1,6 @@
 package gossip
 
 import (
-	"github.com/gohornet/hornet/core/database"
-	p2pcore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -10,18 +8,18 @@ import (
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.
 func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return
 	}
 
-	latestMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
-	connectedCount := p2pcore.Manager().ConnectedCount(p2p.PeerRelationKnown)
-	syncedCount := Service().SynchronizedCount(latestMilestoneIndex)
+	latestMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
+	connectedCount := deps.Manager.ConnectedCount(p2p.PeerRelationKnown)
+	syncedCount := deps.Service.SynchronizedCount(latestMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
-	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, database.Tangle().GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, deps.Tangle.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
-	Service().ForEach(func(proto *gossip.Protocol) bool {
+	deps.Service.ForEach(func(proto *gossip.Protocol) bool {
 		if filter != nil && !filter(proto) {
 			return true
 		}
@@ -36,7 +34,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	var requested int
 
 	// make sure we only request what we don't have
-	startingPoint := database.Tangle().GetSolidMilestoneIndex()
+	startingPoint := deps.Tangle.GetSolidMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}
@@ -44,7 +42,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := startingPoint + milestone.Index(i)
 		// only request if we do not have the milestone
-		if !database.Tangle().ContainsMilestone(toReq) {
+		if !deps.Tangle.ContainsMilestone(toReq) {
 			requested++
 			msIndexes = append(msIndexes, toReq)
 			continue
@@ -60,7 +58,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 
 	// send each ms request to a random peer who supports the message
 	for _, msIndex := range msIndexes {
-		Service().ForEach(func(proto *gossip.Protocol) bool {
+		deps.Service.ForEach(func(proto *gossip.Protocol) bool {
 			if !proto.HasDataForMilestone(msIndex) {
 				return true
 			}

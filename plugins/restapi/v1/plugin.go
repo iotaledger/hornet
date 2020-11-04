@@ -4,7 +4,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
+	"go.uber.org/dig"
 
 	"github.com/labstack/echo/v4"
 
@@ -138,27 +146,52 @@ const (
 	RouteDebugMessageCone = "/debug/message-cones/:" + ParameterMessageID
 )
 
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "RestAPIV1",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Status:    node.Enabled,
+	}
+}
+
 var (
+	Plugin   *node.Plugin
 	features = []string{} // Workaround until https://github.com/golang/go/issues/27589 is fixed
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
+
+	deps dependencies
 )
+
+type dependencies struct {
+	dig.In
+	Tangle           *tangle.Tangle
+	Manager          *p2p.Manager
+	RequestQueue     gossip.RequestQueue
+	UTXO             *utxo.Manager
+	PoWHandler       *pow.Handler
+	MessageProcessor *gossip.MessageProcessor
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	TipSelector      *tipselect.TipSelector
+	Echo             *echo.Echo
+}
 
 // jsonResponse wraps the result into a "data" field and sends the JSON response with status code.
 func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
 	return c.JSON(statusCode, &common.HTTPOkResponseEnvelope{Data: result})
 }
 
-func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
+func configure() {
+	routeGroup := deps.Echo.Group("/api/v1")
 
 	// Check for features
-	if config.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
+	if deps.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
-
 		resp, err := info()
 		if err != nil {
 			return err
@@ -167,9 +200,8 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
-	if !plugin.Node.IsSkipped(urts.Plugin) {
+	if !Plugin.Node.IsSkipped(urts.Plugin) {
 		routeGroup.GET(RouteTips, func(c echo.Context) error {
-
 			resp, err := tips(c)
 			if err != nil {
 				return err
@@ -179,9 +211,8 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	}
 
 	// only handle spammer api calls if the Spammer plugin is enabled
-	if !plugin.Node.IsSkipped(spammer.Plugin) {
+	if !Plugin.Node.IsSkipped(spammer.Plugin) {
 		routeGroup.GET(RouteSpammer, func(c echo.Context) error {
-
 			resp, err := executeSpammerCommand(c)
 			if err != nil {
 				return err
@@ -191,7 +222,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	}
 
 	routeGroup.GET(RouteMessageMetadata, func(c echo.Context) error {
-
 		resp, err := messageMetadataByID(c)
 		if err != nil {
 			return err
@@ -200,7 +230,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
-
 		resp, err := messageByID(c)
 		if err != nil {
 			return err
@@ -209,7 +238,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
-
 		resp, err := messageBytesByID(c)
 		if err != nil {
 			return err
@@ -219,7 +247,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteMessageChildren, func(c echo.Context) error {
-
 		resp, err := childrenIDsByID(c)
 		if err != nil {
 			return err
@@ -229,7 +256,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteMessages, func(c echo.Context) error {
-
 		resp, err := messageIDsByIndex(c)
 		if err != nil {
 			return err
@@ -239,7 +265,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
-
 		resp, err := sendMessage(c)
 		if err != nil {
 			return err
@@ -249,7 +274,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
-
 		resp, err := milestoneByIndex(c)
 		if err != nil {
 			return err
@@ -259,7 +283,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
-
 		resp, err := outputByID(c)
 		if err != nil {
 			return err
@@ -269,7 +292,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteAddressBalance, func(c echo.Context) error {
-
 		resp, err := balanceByAddress(c)
 		if err != nil {
 			return err
@@ -279,7 +301,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteAddressOutputs, func(c echo.Context) error {
-
 		resp, err := outputsIDsByAddress(c)
 		if err != nil {
 			return err
@@ -289,7 +310,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
-
 		resp, err := getPeer(c)
 		if err != nil {
 			return err
@@ -299,9 +319,7 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
-
-		err := removePeer(c)
-		if err != nil {
+		if err := removePeer(c); err != nil {
 			return err
 		}
 
@@ -309,7 +327,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RoutePeers, func(c echo.Context) error {
-
 		resp, err := listPeers(c)
 		if err != nil {
 			return err
@@ -319,7 +336,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
-
 		resp, err := addPeer(c)
 		if err != nil {
 			return err
@@ -329,7 +345,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
-
 		resp, err := pruneDatabase(c)
 		if err != nil {
 			return err
@@ -339,7 +354,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
-
 		resp, err := createSnapshot(c)
 		if err != nil {
 			return err
@@ -349,14 +363,12 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
-
 		tanglecore.TriggerSolidifier()
 
 		return jsonResponse(c, http.StatusOK, "solidifier triggered")
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
-
 		resp, err := debugOutputsIDs(c)
 		if err != nil {
 			return err
@@ -366,7 +378,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
-
 		resp, err := debugUnspentOutputsIDs(c)
 		if err != nil {
 			return err
@@ -376,7 +387,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
-
 		resp, err := debugSpentOutputsIDs(c)
 		if err != nil {
 			return err
@@ -386,7 +396,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
-
 		resp, err := debugMilestoneDiff(c)
 		if err != nil {
 			return err
@@ -396,7 +405,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
-
 		resp, err := debugRequests(c)
 		if err != nil {
 			return err
@@ -406,7 +414,6 @@ func SetupApiRoutesV1(plugin *node.Plugin, routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
-
 		resp, err := debugMessageCone(c)
 		if err != nil {
 			return err

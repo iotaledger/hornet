@@ -4,8 +4,6 @@ import (
 	"strconv"
 
 	"github.com/gohornet/hornet/core/cli"
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -86,13 +84,13 @@ func init() {
 
 func collectInfo() {
 	// Latest milestone index
-	lmi := database.Tangle().GetLatestMilestoneIndex()
+	lmi := deps.Tangle.GetLatestMilestoneIndex()
 	infoMilestoneIndex.Set(float64(lmi))
 	infoMilestone.Reset()
 	infoMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(lmi))).Set(1)
 
 	// Latest milestone message ID
-	cachedLatestMilestone := database.Tangle().GetCachedMilestoneOrNil(lmi)
+	cachedLatestMilestone := deps.Tangle.GetCachedMilestoneOrNil(lmi)
 	if cachedLatestMilestone != nil {
 		infoMilestone.Reset()
 		infoMilestone.WithLabelValues(cachedLatestMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
@@ -100,13 +98,13 @@ func collectInfo() {
 	}
 
 	// Solid milestone index
-	smi := database.Tangle().GetSolidMilestoneIndex()
+	smi := deps.Tangle.GetSolidMilestoneIndex()
 	infoSolidMilestoneIndex.Set(float64(smi))
 	infoSolidMilestone.Reset()
 	infoSolidMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(smi))).Set(1)
 
 	// Solid milestone message ID
-	cachedSolidMilestone := database.Tangle().GetCachedMilestoneOrNil(smi)
+	cachedSolidMilestone := deps.Tangle.GetCachedMilestoneOrNil(smi)
 	if cachedSolidMilestone != nil {
 		infoSolidMilestone.Reset()
 		infoSolidMilestone.WithLabelValues(cachedSolidMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
@@ -114,7 +112,7 @@ func collectInfo() {
 	}
 
 	// Snapshot index and Pruning index
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		infoSnapshotIndex.Set(float64(snapshotInfo.SnapshotIndex))
 		infoPruningIndex.Set(float64(snapshotInfo.PruningIndex))
@@ -124,6 +122,6 @@ func collectInfo() {
 	infoTips.Set(0)
 
 	// Messages to request
-	queued, pending, _ := gossip.RequestQueue().Size()
+	queued, pending, _ := deps.RequestQueue.Size()
 	infoMessagesToRequest.Set(float64(queued + pending))
 }

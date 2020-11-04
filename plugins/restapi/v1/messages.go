@@ -10,9 +10,6 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/core/pow"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -22,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/restapi/common"
-	"github.com/gohornet/hornet/plugins/urts"
 )
 
 var (
@@ -31,7 +27,7 @@ var (
 
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
-	if !database.Tangle().IsNodeSyncedWithThreshold() {
+	if !deps.Tangle.IsNodeSyncedWithThreshold() {
 		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -42,7 +38,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(messageID)
+	cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageID.Hex())
 	}
@@ -76,22 +72,22 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		lsmi := database.Tangle().GetSolidMilestoneIndex()
-		ycri, ocri := dag.GetConeRootIndexes(database.Tangle(), cachedMsgMeta.Retain(), lsmi)
+		lsmi := deps.Tangle.GetSolidMilestoneIndex()
+		ycri, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMsgMeta.Retain(), lsmi)
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
 		shouldReattach := false
 
-		if (lsmi - ocri) > milestone.Index(config.NodeConfig.Int(config.CfgTipSelBelowMaxDepth)) {
+		if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth)) {
 			// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 			shouldPromote = false
 			shouldReattach = true
-		} else if (lsmi - ycri) > milestone.Index(config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
+		} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
 			// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
-		} else if (lsmi - ocri) > milestone.Index(config.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
+		} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
 			// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
@@ -112,7 +108,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	cachedMsg := database.Tangle().GetCachedMessageOrNil(messageID)
+	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -129,7 +125,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	cachedMsg := database.Tangle().GetCachedMessageOrNil(messageID)
+	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -146,10 +142,10 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	childrenMessageIDsHex := []string{}
-	for _, childrenMessageID := range database.Tangle().GetChildrenMessageIDs(messageID, maxResults) {
+	for _, childrenMessageID := range deps.Tangle.GetChildrenMessageIDs(messageID, maxResults) {
 		childrenMessageIDsHex = append(childrenMessageIDsHex, childrenMessageID.Hex())
 	}
 
@@ -168,10 +164,10 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 		return nil, errors.WithMessage(common.ErrInvalidParameter, "query parameter index empty")
 	}
 
-	maxResults := config.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
 
 	messageIDsHex := []string{}
-	for _, messageID := range database.Tangle().GetIndexMessageIDs(index, maxResults) {
+	for _, messageID := range deps.Tangle.GetIndexMessageIDs(index, maxResults) {
 		messageIDsHex = append(messageIDsHex, messageID.Hex())
 	}
 
@@ -185,7 +181,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
-	if !database.Tangle().IsNodeSyncedWithThreshold() {
+	if !deps.Tangle.IsNodeSyncedWithThreshold() {
 		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -220,7 +216,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	var emptyMessageID = hornet.MessageID{}
 	if msg.Parent1 == emptyMessageID || msg.Parent2 == emptyMessageID {
 
-		tips, err := urts.TipSelector.SelectNonLazyTips()
+		tips, err := deps.TipSelector.SelectNonLazyTips()
 
 		if err != nil {
 			if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
@@ -233,7 +229,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Nonce == 0 {
-		if err := pow.Handler().DoPoW(msg, nil, 1); err != nil {
+		if err := deps.PoWHandler.DoPoW(msg, nil, 1); err != nil {
 			return nil, err
 		}
 	}
@@ -247,7 +243,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
 
-	if err := gossip.MessageProcessor().Emit(message); err != nil {
+	if err := deps.MessageProcessor.Emit(message); err != nil {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 

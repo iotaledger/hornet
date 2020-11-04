@@ -5,14 +5,16 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gohornet/hornet/core/database"
-	p2pcore "github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
-	gossip2 "github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gorilla/websocket"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/network"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/events"
@@ -20,7 +22,6 @@ import (
 	"github.com/iotaledger/hive.go/websockethub"
 
 	"github.com/gohornet/hornet/core/cli"
-	"github.com/gohornet/hornet/core/gossip"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/config"
@@ -29,6 +30,16 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
+
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "Dashboard",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Enabled,
+	}
+}
 
 const (
 	// MsgTypeSyncStatus is the type of the SyncStatus message.
@@ -77,6 +88,7 @@ const (
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	nodeStartAt = time.Now()
 
@@ -88,12 +100,18 @@ var (
 	cachedMilestoneMetrics []*tanglecore.ConfirmedMilestoneMetric
 )
 
-func init() {
-	Plugin = node.NewPlugin("Dashboard", node.Enabled, configure, run)
+type dependencies struct {
+	dig.In
+	Tangle           *tangle.Tangle
+	RequestQueue     gossip.RequestQueue
+	Manager          *p2p.Manager
+	MessageProcessor *gossip.MessageProcessor
+	TipSelector      *tipselect.TipSelector       `optional:"true"`
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+func configure() {
+	log = logger.NewLogger(Plugin.Name)
 
 	upgrader = &websocket.Upgrader{
 		HandshakeTimeout:  webSocketWriteTimeout,
@@ -104,17 +122,17 @@ func configure(plugin *node.Plugin) {
 	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
 }
 
-func run(_ *node.Plugin) {
+func run() {
 
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if config.NodeConfig.Bool(config.CfgDashboardBasicAuthEnabled) {
+	if deps.NodeConfig.Bool(config.CfgDashboardBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := config.NodeConfig.String(config.CfgDashboardBasicAuthUsername)
-		expectedPasswordHash := config.NodeConfig.String(config.CfgDashboardBasicAuthPasswordHash)
-		passwordSalt := config.NodeConfig.String(config.CfgDashboardBasicAuthPasswordSalt)
+		expectedUsername := deps.NodeConfig.String(config.CfgDashboardBasicAuthUsername)
+		expectedPasswordHash := deps.NodeConfig.String(config.CfgDashboardBasicAuthPasswordHash)
+		passwordSalt := deps.NodeConfig.String(config.CfgDashboardBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
 			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", config.CfgDashboardBasicAuthUsername)
@@ -138,7 +156,7 @@ func run(_ *node.Plugin) {
 	}
 
 	setupRoutes(e)
-	bindAddr := config.NodeConfig.String(config.CfgDashboardBindAddress)
+	bindAddr := deps.NodeConfig.String(config.CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
@@ -193,7 +211,7 @@ func run(_ *node.Plugin) {
 }
 
 func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
-	cachedMs := database.Tangle().GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMs := deps.Tangle.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
@@ -290,7 +308,7 @@ type PeerMetric struct {
 	ProtocolVersion  uint16                `json:"protocol_version"`
 	BytesRead        uint64                `json:"bytes_read"`
 	BytesWritten     uint64                `json:"bytes_written"`
-	Heartbeat        *gossip2.Heartbeat    `json:"heartbeat"`
+	Heartbeat        *gossip.Heartbeat     `json:"heartbeat"`
 	Info             *p2p.PeerInfoSnapshot `json:"info"`
 	Connected        bool                  `json:"connected"`
 }
@@ -337,7 +355,7 @@ func peerMetrics() []*PeerMetric {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{LSMI: database.Tangle().GetSolidMilestoneIndex(), LMI: database.Tangle().GetLatestMilestoneIndex()}
+	return &SyncStatus{LSMI: deps.Tangle.GetSolidMilestoneIndex(), LMI: deps.Tangle.GetLatestMilestoneIndex()}
 }
 
 func currentNodeStatus() *NodeStatus {
@@ -347,8 +365,8 @@ func currentNodeStatus() *NodeStatus {
 
 	// node status
 	var requestedMilestone milestone.Index
-	peekedRequest := gossip.RequestQueue().Peek()
-	queued, pending, processing := gossip.RequestQueue().Size()
+	peekedRequest := deps.RequestQueue.Peek()
+	queued, pending, processing := deps.RequestQueue.Size()
 	if peekedRequest != nil {
 		requestedMilestone = peekedRequest.MilestoneIndex
 	}
@@ -356,11 +374,11 @@ func currentNodeStatus() *NodeStatus {
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = tanglecore.IsNodeHealthy()
-	status.NodeAlias = config.NodeConfig.String(config.CfgNodeAlias)
+	status.NodeAlias = deps.NodeConfig.String(config.CfgNodeAlias)
 
-	status.ConnectedPeersCount = p2pcore.Manager().ConnectedCount()
+	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
@@ -369,24 +387,24 @@ func currentNodeStatus() *NodeStatus {
 	status.RequestQueueQueued = queued
 	status.RequestQueuePending = pending
 	status.RequestQueueProcessing = processing
-	status.RequestQueueAvgLatency = gossip.RequestQueue().AvgLatency()
+	status.RequestQueueAvgLatency = deps.RequestQueue.AvgLatency()
 
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: database.Tangle().GetChildrenStorageSize(),
+			Size: deps.Tangle.GetChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
 		Milestones: Cache{
-			Size: database.Tangle().GetMilestoneStorageSize(),
+			Size: deps.Tangle.GetMilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: database.Tangle().GetMessageStorageSize(),
+			Size: deps.Tangle.GetMessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
-			Size: gossip.MessageProcessor().WorkUnitsSize(),
+			Size: deps.MessageProcessor.WorkUnitsSize(),
 		},
 	}
 

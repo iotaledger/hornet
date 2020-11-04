@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
+	"go.uber.org/dig"
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
-	"github.com/gohornet/hornet/plugins/restapi/common"
-	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
-
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
@@ -25,36 +25,54 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
-var (
-	// The route for the health REST API call.
-	NodeAPIHealthRoute = "/health"
-)
-
-var (
-	Plugin *node.Plugin
-	log    *logger.Logger
-
-	server               *http.Server
-	e                    *echo.Echo
-	serverShutdownSignal <-chan struct{}
-)
-
 func init() {
-	Plugin = node.NewPlugin("RestAPI", node.Enabled, configure, run)
+	Plugin = &node.Plugin{
+		Name:      "RestAPI",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
+		Status:    node.Enabled,
+	}
 }
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
 
-	e = echo.New()
-	e.HideBanner = true
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
-	e.Use(middleware.Gzip())
-	e.Use(middleware.BodyLimit(config.NodeConfig.String(config.CfgRestAPILimitsMaxBodyLength)))
+var (
+	Plugin             *node.Plugin
+	log                *logger.Logger
+	deps               dependencies
+	nodeAPIHealthRoute = "/health"
+)
+
+type dependencies struct {
+	dig.In
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	Echo       *echo.Echo
+}
+
+func provide(c *dig.Container) {
+	type echodeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+	if err := c.Provide(func(deps echodeps) *echo.Echo {
+		e := echo.New()
+		e.HideBanner = true
+		e.Use(middleware.Recover())
+		e.Use(middleware.CORS())
+		e.Use(middleware.Gzip())
+		e.Use(middleware.BodyLimit(deps.NodeConfig.String(config.CfgRestAPILimitsMaxBodyLength)))
+		return e
+	}); err != nil {
+		panic(err)
+	}
+}
+
+func configure() {
+	log = logger.NewLogger(Plugin.Name)
 
 	// load whitelisted networks
 	var whitelistedNetworks []net.IPNet
-	for _, entry := range config.NodeConfig.Strings(config.CfgRestAPIWhitelistedAddresses) {
+	for _, entry := range deps.NodeConfig.Strings(config.CfgRestAPIWhitelistedAddresses) {
 		_, ipnet, err := cnet.ParseCIDROrIP(entry)
 		if err != nil {
 			log.Warnf("Invalid whitelist address: %s", entry)
@@ -65,24 +83,24 @@ func configure(plugin *node.Plugin) {
 
 	permittedRoutes := make(map[string]struct{})
 	// load allowed remote access to specific HTTP REST routes
-	for _, route := range config.NodeConfig.Strings(config.CfgRestAPIPermittedRoutes) {
+	for _, route := range deps.NodeConfig.Strings(config.CfgRestAPIPermittedRoutes) {
 		permittedRoutes[strings.ToLower(route)] = struct{}{}
 	}
 
-	e.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
+	deps.Echo.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
 
-	exclHealthCheckFromAuth := config.NodeConfig.Bool(config.CfgRestAPIExcludeHealthCheckFromAuth)
+	exclHealthCheckFromAuth := deps.NodeConfig.Bool(config.CfgRestAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {
 		// Handle route without auth
-		setupHealthRoute(e)
+		setupHealthRoute()
 	}
 
 	// set basic auth if enabled
-	if config.NodeConfig.Bool(config.CfgRestAPIBasicAuthEnabled) {
+	if deps.NodeConfig.Bool(config.CfgRestAPIBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := config.NodeConfig.String(config.CfgRestAPIBasicAuthUsername)
-		expectedPasswordHash := config.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordHash)
-		passwordSalt := config.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordSalt)
+		expectedUsername := deps.NodeConfig.String(config.CfgRestAPIBasicAuthUsername)
+		expectedPasswordHash := deps.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordHash)
+		passwordSalt := deps.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
 			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", config.CfgRestAPIBasicAuthUsername)
@@ -92,7 +110,7 @@ func configure(plugin *node.Plugin) {
 			log.Fatalf("'%s' must be 64 (sha256 hash) in length if web API basic auth is enabled", config.CfgRestAPIBasicAuthPasswordHash)
 		}
 
-		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+		deps.Echo.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 			if username != expectedUsername {
 				return false, nil
 			}
@@ -105,19 +123,17 @@ func configure(plugin *node.Plugin) {
 		}))
 	}
 
-	setupRoutes(e, exclHealthCheckFromAuth)
+	setupRoutes(exclHealthCheckFromAuth)
 }
 
-func run(_ *node.Plugin) {
+func run() {
 	log.Info("Starting REST-API server ...")
 
 	Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
-		serverShutdownSignal = shutdownSignal
-
 		log.Info("Starting REST-API server ... done")
 
-		bindAddr := config.NodeConfig.String(config.CfgRestAPIBindAddress)
-		server = &http.Server{Addr: bindAddr, Handler: e}
+		bindAddr := deps.NodeConfig.String(config.CfgRestAPIBindAddress)
+		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {
 			log.Infof("You can now access the API using: http://%s", bindAddr)
@@ -131,8 +147,7 @@ func run(_ *node.Plugin) {
 
 		if server != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			err := server.Shutdown(ctx)
-			if err != nil {
+			if err := server.Shutdown(ctx); err != nil {
 				log.Warn(err.Error())
 			}
 			cancel()
@@ -141,9 +156,9 @@ func run(_ *node.Plugin) {
 	}, shutdown.PriorityRestAPI)
 }
 
-func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
+func setupRoutes(exclHealthCheckFromAuth bool) {
 
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
+	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
 		c.Logger().Error(err)
 
 		var statusCode int
@@ -191,8 +206,6 @@ func setupRoutes(e *echo.Echo, exclHealthCheckFromAuth bool) {
 
 	if !exclHealthCheckFromAuth {
 		// Handle route with auth
-		setupHealthRoute(e)
+		setupHealthRoute()
 	}
-
-	v1.SetupApiRoutesV1(Plugin, e.Group("/api/v1"))
 }

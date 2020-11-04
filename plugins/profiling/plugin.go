@@ -7,24 +7,33 @@ import (
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
-)
-
-var (
-	Plugin *node.Plugin
+	"github.com/iotaledger/hive.go/configuration"
+	"go.uber.org/dig"
 )
 
 func init() {
-	Plugin = node.NewPlugin("Profiling", node.Enabled, configure, run)
+	Plugin = &node.Plugin{
+		Name:     "Profiling",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Run:      run,
+		Status:   node.Enabled,
+	}
 }
 
-func configure(_ *node.Plugin) {
-	// nothing
+var (
+	Plugin *node.Plugin
+	deps   dependencies
+)
+
+type dependencies struct {
+	dig.In
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
-func run(_ *node.Plugin) {
+func run() {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 
-	bindAddr := config.NodeConfig.String(config.CfgProfilingBindAddress)
+	bindAddr := deps.NodeConfig.String(config.CfgProfilingBindAddress)
 	go http.ListenAndServe(bindAddr, nil) // pprof Server for Debbuging Mutexes
 }

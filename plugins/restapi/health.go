@@ -8,9 +8,8 @@ import (
 	"github.com/gohornet/hornet/core/tangle"
 )
 
-func setupHealthRoute(e *echo.Echo) {
-
-	e.GET(NodeAPIHealthRoute, func(c echo.Context) error {
+func setupHealthRoute() {
+	deps.Echo.GET(nodeAPIHealthRoute, func(c echo.Context) error {
 
 		// node mode
 		if !tangle.IsNodeHealthy() {

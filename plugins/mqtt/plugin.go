@@ -1,18 +1,29 @@
 package mqtt
 
 import (
+	"github.com/gohornet/hornet/core/tangle"
+	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
+	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/config"
-	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
+
+func init() {
+	Plugin = &node.Plugin{
+		Name:      "MQTT",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+		Status:    node.Disabled,
+	}
+}
 
 const (
 	workerCount     = 1
@@ -22,6 +33,7 @@ const (
 var (
 	Plugin *node.Plugin
 	log    *logger.Logger
+	deps   dependencies
 
 	newLatestMilestoneWorkerPool *workerpool.WorkerPool
 	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
@@ -31,11 +43,14 @@ var (
 	mqttBroker *mqttpkg.Broker
 )
 
-func init() {
-	Plugin = node.NewPlugin("MQTT", node.Disabled, configure, run)
+type dependencies struct {
+	dig.In
+	Tangle     *tanglepkg.Tangle
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
-func configure(plugin *node.Plugin) {
-	log = logger.NewLogger(plugin.Name)
+
+func configure() {
+	log = logger.NewLogger(Plugin.Name)
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone))
@@ -47,7 +62,7 @@ func configure(plugin *node.Plugin) {
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	mqttConfigFile := config.NodeConfig.String(config.CfgMQTTConfig)
+	mqttConfigFile := deps.NodeConfig.String(config.CfgMQTTConfig)
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(mqttConfigFile)
@@ -56,7 +71,7 @@ func configure(plugin *node.Plugin) {
 	}
 }
 
-func run(plugin *node.Plugin) {
+func run() {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
 
@@ -75,7 +90,7 @@ func run(plugin *node.Plugin) {
 
 	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *tanglepkg.CachedMilestone) {
 		if !wasSyncBefore {
-			if !database.Tangle().IsNodeSyncedWithThreshold() {
+			if !deps.Tangle.IsNodeSyncedWithThreshold() {
 				cachedMs.Release(true)
 				return
 			}

@@ -4,12 +4,16 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/pkg/p2p"
+	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -21,12 +25,23 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 )
 
-var (
-	CoreModule            *node.CoreModule
-	log                   *logger.Logger
-	updateSyncedAtStartup bool
+func init() {
+	flag.CommandLine.MarkHidden("syncedAtStartup")
+	CoreModule = &node.CoreModule{
+		Name:      "Tangle",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Configure: configure,
+		Run:       run,
+	}
+}
 
-	syncedAtStartup = flag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
+var (
+	CoreModule *node.CoreModule
+	log        *logger.Logger
+	deps       dependencies
+
+	updateSyncedAtStartup bool
+	syncedAtStartup       = flag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 
@@ -36,15 +51,19 @@ var (
 	onReceivedNewTx                *events.Closure
 )
 
-func init() {
-	flag.CommandLine.MarkHidden("syncedAtStartup")
-	CoreModule = node.NewCoreModule("Tangle", configure, run)
+type dependencies struct {
+	dig.In
+	Tangle           *tangle.Tangle
+	Manager          *p2p.Manager
+	RequestQueue     gossippkg.RequestQueue
+	MessageProcessor *gossippkg.MessageProcessor
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
-func configure(coreModule *node.CoreModule) {
-	log = logger.NewLogger(coreModule.Name)
+func configure() {
+	log = logger.NewLogger(CoreModule.Name)
 
-	database.Tangle().LoadInitialValuesFromDatabase()
+	deps.Tangle.LoadInitialValuesFromDatabase()
 
 	updateSyncedAtStartup = *syncedAtStartup
 
@@ -53,7 +72,7 @@ func configure(coreModule *node.CoreModule) {
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
 	CoreModule.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
-		database.Tangle().MarkDatabaseCorrupted()
+		deps.Tangle.MarkDatabaseCorrupted()
 	})
 
 	keyManager := keymanager.New()
@@ -63,10 +82,10 @@ func configure(coreModule *node.CoreModule) {
 		}
 	}
 
-	database.Tangle().ConfigureMilestones(
+	deps.Tangle.ConfigureMilestones(
 		keyManager,
-		config.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
-		coordinator.MilestoneMerkleTreeHashFuncWithName(config.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		deps.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()
@@ -75,9 +94,9 @@ func configure(coreModule *node.CoreModule) {
 	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
 }
 
-func run(coreModule *node.CoreModule) {
+func run() {
 
-	if database.Tangle().IsDatabaseCorrupted() && !config.NodeConfig.Bool(config.CfgDatabaseDebug) {
+	if deps.Tangle.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(config.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {
@@ -107,17 +126,17 @@ func run(coreModule *node.CoreModule) {
 		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
-		database.Tangle().ShutdownStorages()
+		deps.Tangle.ShutdownStorages()
 		log.Info("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase)
 
 	// set latest known milestone from database
-	latestMilestoneFromDatabase := database.Tangle().SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < database.Tangle().GetSolidMilestoneIndex() {
-		latestMilestoneFromDatabase = database.Tangle().GetSolidMilestoneIndex()
+	latestMilestoneFromDatabase := deps.Tangle.SearchLatestMilestoneIndexInStore()
+	if latestMilestoneFromDatabase < deps.Tangle.GetSolidMilestoneIndex() {
+		latestMilestoneFromDatabase = deps.Tangle.GetSolidMilestoneIndex()
 	}
-	database.Tangle().SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
+	deps.Tangle.SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
 
 	runTangleProcessor()
 
@@ -152,7 +171,7 @@ func configureEvents() {
 		// Force release possible here, since processIncomingTx still holds a reference
 		defer cachedMsg.Release(true) // msg -1
 
-		if database.Tangle().IsNodeSyncedWithThreshold() {
+		if deps.Tangle.IsNodeSyncedWithThreshold() {
 			solidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
 		}
 	})

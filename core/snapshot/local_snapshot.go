@@ -9,7 +9,6 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/core/database"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -44,8 +43,8 @@ type solidEntryPoint struct {
 // isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
 func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index) bool {
 
-	for _, childMessageID := range database.Tangle().GetChildrenMessageIDs(messageID) {
-		cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(childMessageID) // meta +1
+	for _, childMessageID := range deps.Tangle.GetChildrenMessageIDs(messageID) {
+		cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(childMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// Ignore this message since it doesn't exist anymore
 			log.Warnf(errors.Wrapf(ErrChildMsgNotFound, "msg ID: %v, child msg ID: %v", messageID.Hex(), childMessageID.Hex()).Error())
@@ -71,7 +70,7 @@ func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessa
 
 	ts := time.Now()
 
-	if err := dag.TraverseParents(database.Tangle(), milestoneMessageID,
+	if err := dag.TraverseParents(deps.Tangle, milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // msg +1
@@ -106,13 +105,13 @@ func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessa
 
 func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		log.Panic("No snapshotInfo found!")
 	}
 
 	var snapshotInterval milestone.Index
-	if database.Tangle().IsNodeSynced() {
+	if deps.Tangle.IsNodeSynced() {
 		snapshotInterval = snapshotIntervalSynced
 	} else {
 		snapshotInterval = snapshotIntervalUnsynced
@@ -142,7 +141,7 @@ func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan stru
 		default:
 		}
 
-		cachedMilestone := database.Tangle().GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMilestone := deps.Tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMilestone == nil {
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
@@ -164,7 +163,7 @@ func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan stru
 			}
 
 			if isEntryPoint := isSolidEntryPoint(parentMessageID, targetIndex); isEntryPoint {
-				cachedMsgMeta := database.Tangle().GetCachedMessageMetadataOrNil(parentMessageID)
+				cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(parentMessageID)
 				if cachedMsgMeta == nil {
 					return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.Hex())
 				}
@@ -192,7 +191,7 @@ func forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan stru
 
 func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.SnapshotInfo, checkSnapshotIndex bool) error {
 
-	solidMilestoneIndex := database.Tangle().GetSolidMilestoneIndex()
+	solidMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
 
 	if solidMilestoneIndex < SolidEntryPointCheckThresholdFuture {
 		return errors.Wrapf(ErrNotEnoughHistory, "minimum solid index: %d, actual solid index: %d", SolidEntryPointCheckThresholdFuture+1, solidMilestoneIndex)
@@ -240,7 +239,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	log.Infof("creating local snapshot for targetIndex %d", targetIndex)
 	ts := time.Now()
 
-	snapshotInfo := database.Tangle().GetSnapshotInfo()
+	snapshotInfo := deps.Tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return errors.Wrap(ErrCritical, "no snapshot info found")
 	}
@@ -252,7 +251,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	setIsSnapshotting(true)
 	defer setIsSnapshotting(false)
 
-	cachedTargetMilestone := database.Tangle().GetCachedMilestoneOrNil(targetIndex) // milestone +1
+	cachedTargetMilestone := deps.Tangle.GetCachedMilestoneOrNil(targetIndex) // milestone +1
 	if cachedTargetMilestone == nil {
 		return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
@@ -276,15 +275,15 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
 	}
 
-	database.Tangle().UTXO().ReadLockLedger()
-	defer database.Tangle().UTXO().ReadUnlockLedger()
+	deps.UTXO.ReadLockLedger()
+	defer deps.UTXO.ReadUnlockLedger()
 
-	ledgerMilestoneIndex, err := database.Tangle().UTXO().ReadLedgerIndexWithoutLocking()
+	ledgerMilestoneIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
-	cachedMilestone := database.Tangle().GetCachedMilestoneOrNil(ledgerMilestoneIndex)
+	cachedMilestone := deps.Tangle.GetCachedMilestoneOrNil(ledgerMilestoneIndex)
 	if cachedMilestone == nil {
 		return errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
@@ -350,7 +349,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	}
 
 	go func() {
-		if err := database.Tangle().UTXO().ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
+		if err := deps.UTXO.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
 			outputProducerChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
 			return true
 		}); err != nil {
@@ -385,7 +384,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	go func() {
 		// targetIndex should not be included in the snapshot, because we only need the diff of targetIndex+1 to calculate the ledger index of targetIndex
 		for msIndex := ledgerMilestoneIndex; msIndex > targetIndex; msIndex-- {
-			newOutputs, newSpents, err := database.Tangle().UTXO().GetMilestoneDiffsWithoutLocking(msIndex)
+			newOutputs, newSpents, err := deps.UTXO.GetMilestoneDiffsWithoutLocking(msIndex)
 			if err != nil {
 				milestoneDiffProducerErrorChan <- err
 				close(milestoneDiffProducerChan)
@@ -431,7 +430,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 			// This has to be done before acquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
 			// In "solidifyMilestone" the LedgerLock is acquired, but by traversing the tangle, the SolidEntryPoint Lock is also acquired.
 			// ToDo: we should flush the caches here, just to be sure that all information before this local snapshot we stored in the persistence layer.
-			err = database.Tangle().StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
+			err = deps.Tangle.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
 			if err != nil {
 				return errors.Wrap(ErrCritical, err.Error())
 			}
@@ -440,7 +439,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		snapshotInfo.MilestoneID = cachedTargetMilestone.GetMilestone().MilestoneID
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = cachedTargetMilestone.GetMilestone().Timestamp
-		database.Tangle().SetSnapshotInfo(snapshotInfo)
+		deps.Tangle.SetSnapshotInfo(snapshotInfo)
 
 		tanglecore.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
@@ -467,7 +466,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		lsHeader = header
 		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
 
-		if err := database.Tangle().UTXO().StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
+		if err := deps.UTXO.StoreLedgerIndex(lsHeader.LedgerMilestoneIndex); err != nil {
 			return err
 		}
 
@@ -480,7 +479,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 	// this information was included in pre Chrysalis Phase 2 local snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
 	sepConsumer := func(solidEntryPointMessageID *hornet.MessageID) error {
-		database.Tangle().SolidEntryPointsAdd(solidEntryPointMessageID, lsHeader.SEPMilestoneIndex)
+		deps.Tangle.SolidEntryPointsAdd(solidEntryPointMessageID, lsHeader.SEPMilestoneIndex)
 		return nil
 	}
 
@@ -493,7 +492,7 @@ func LoadFullSnapshotFromFile(filePath string) error {
 			outputID := iotago.UTXOInputID(output.OutputID)
 			messageID := hornet.MessageID(output.MessageID)
 
-			return database.Tangle().UTXO().AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, addr, output.Amount))
+			return deps.UTXO.AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, addr, output.Amount))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -532,26 +531,26 @@ func LoadFullSnapshotFromFile(filePath string) error {
 			}
 		}
 
-		ledgerIndex, err := database.Tangle().UTXO().ReadLedgerIndex()
+		ledgerIndex, err := deps.UTXO.ReadLedgerIndex()
 		if err != nil {
 			return err
 		}
 
 		if ledgerIndex == msDiff.MilestoneIndex {
-			return database.Tangle().UTXO().RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+			return deps.UTXO.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
 		}
 
 		if ledgerIndex == msDiff.MilestoneIndex+1 {
-			return database.Tangle().UTXO().ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+			return deps.UTXO.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
 		}
 
 		return ErrWrongMilestoneDiffIndex
 	}
 
-	database.Tangle().WriteLockSolidEntryPoints()
-	database.Tangle().ResetSolidEntryPoints()
-	defer database.Tangle().WriteUnlockSolidEntryPoints()
-	defer database.Tangle().StoreSolidEntryPoints()
+	deps.Tangle.WriteLockSolidEntryPoints()
+	deps.Tangle.ResetSolidEntryPoints()
+	defer deps.Tangle.WriteUnlockSolidEntryPoints()
+	defer deps.Tangle.StoreSolidEntryPoints()
 
 	if err := StreamLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import local snapshot file: %w", err)
@@ -559,11 +558,11 @@ func LoadFullSnapshotFromFile(filePath string) error {
 
 	log.Infof("imported local snapshot file, took %v", time.Since(s))
 
-	if err := database.Tangle().UTXO().CheckLedgerState(); err != nil {
+	if err := deps.UTXO.CheckLedgerState(); err != nil {
 		return err
 	}
 
-	ledgerIndex, err := database.Tangle().UTXO().ReadLedgerIndex()
+	ledgerIndex, err := deps.UTXO.ReadLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -572,8 +571,8 @@ func LoadFullSnapshotFromFile(filePath string) error {
 		return errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, lsHeader.SEPMilestoneIndex)
 	}
 
-	database.Tangle().SetSnapshotMilestone(lsHeader.NetworkID, lsHeader.SEPMilestoneID, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
-	database.Tangle().SetSolidMilestoneIndex(lsHeader.SEPMilestoneIndex, false)
+	deps.Tangle.SetSnapshotMilestone(lsHeader.NetworkID, lsHeader.SEPMilestoneID, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, lsHeader.SEPMilestoneIndex, time.Now())
+	deps.Tangle.SetSolidMilestoneIndex(lsHeader.SEPMilestoneIndex, false)
 
 	return nil
 }
