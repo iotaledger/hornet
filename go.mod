@@ -22,7 +22,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201030150707-82a3d1909e62
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201027095256-4d5f5beeeedf
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201103093017-6e9ae891e8ff
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
