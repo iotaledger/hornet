@@ -13,7 +13,7 @@ const (
 	CfgCoordinatorPublicKeyRangesJSON = "publicKeyRanges"
 	// the ed25519 public key of the coordinator in hex representation
 	CfgCoordinatorPublicKeyRanges = "coordinator.publicKeyRanges"
-	// the minimum weight magnitude is the difficulty used by the network for proof of work.
+	// the minimum PoW score required by the network
 	CfgCoordinatorMinPoWScore = "coordinator.minPoWScore"
 	// the path to the state file of the coordinator
 	CfgCoordinatorStateFilePath = "coordinator.stateFilePath"
