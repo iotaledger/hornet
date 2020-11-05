@@ -51,7 +51,7 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.NodeConfig.Int(config.CfgCoordinatorMWM), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.NodeConfig.Float64(config.CfgCoordinatorMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}

@@ -77,7 +77,7 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
-			ValidMWM:          uint64(deps.NodeConfig.Int64(config.CfgCoordinatorMWM)),
+			MinPoWScore:       deps.NodeConfig.Float64(config.CfgCoordinatorMinPoWScore),
 			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {

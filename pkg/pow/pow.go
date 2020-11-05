@@ -1,9 +1,12 @@
 package pow
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/iota.go/pow"
 
 	iotago "github.com/iotaledger/iota.go"
 
@@ -11,14 +14,14 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
-type ProofOfWorkFunc func(message *iotago.Message, mwm byte, parallelism ...int) (uint64, error)
+type ProofOfWorkFunc func(message *iotago.Message, parallelism ...int) (uint64, error)
 
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
 // or uses local PoW if no API key was specified or the connection failed.
 type Handler struct {
 	log *logger.Logger
 
-	mwm int
+	targetScore float64
 
 	//powsrvClient       *powsrvio.PowClient
 	powsrvLock         syncutils.RWMutex
@@ -32,33 +35,34 @@ type Handler struct {
 }
 
 // New creates a new PoW handler instance.
-func New(log *logger.Logger, mwm int, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
-
-	// ToDo:
-	// Get the fastest available local PoW func
-	//localPoWType, localPoWFunc := pow.GetFastestProofOfWorkUnsyncImpl()
+// If the given powsrv.io API key is not empty, powsrv.io will be used to do proof-of-work.
+func New(log *logger.Logger, targetScore float64, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
 
 	localPoWType := "local"
-	localPoWFunc := func(message *iotago.Message, mwm byte, parallelism ...int) (uint64, error) {
-		return 0, nil
+	localPoWFunc := func(message *iotago.Message, parallelism ...int) (uint64, error) {
+		msgData, err := message.Serialize(iotago.DeSeriModeNoValidation)
+		if err != nil {
+			return 0, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
+		}
+		return pow.New(parallelism...).Mine(context.Background(), msgData, targetScore)
 	}
 
-	//var powsrvClient *powsrvio.PowClient
+	/*
+		//var powsrvClient *powsrvio.PowClient
 
-	// Check if powsrv.io API key is set
-	if powsrvAPIKey != "" {
-		/*
-			powsrvClient = &powsrvio.PowClient{
-				APIKey:        powsrvAPIKey,
-				ReadTimeOutMs: 3000,
-				Verbose:       false,
-			}
-		*/
-	}
+		// Check if powsrv.io API key is set
+		if powsrvAPIKey != "" {
+				powsrvClient = &powsrvio.PowClient{
+					APIKey:        powsrvAPIKey,
+					ReadTimeOutMs: 3000,
+					Verbose:       false,
+				}
+		}
+	*/
 
 	return &Handler{
-		log: log,
-		mwm: mwm,
+		log:         log,
+		targetScore: targetScore,
 		//powsrvClient:       powsrvClient,
 		powsrvInitCooldown: powsrvInitCooldown,
 		powsrvLastInit:     time.Time{},
@@ -156,8 +160,9 @@ func (h *Handler) GetPoWType() string {
 	return h.localPowType
 }
 
-// DoPoW calculates the PoW
-// Either with the fastest available local PoW function or with the help of powsrv.io (optional, POWSRV_API_KEY env var must be available)
+// DoPoW does the proof-of-work required to hit the target score configured on this Handler.
+// The given iota.Message's nonce is automatically updated.
+// If a powsrv.io key was provided, then powsrv.io is used to commence the proof-of-work.
 func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, parallelism ...int) (err error) {
 
 	select {
@@ -166,16 +171,20 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 	default:
 	}
 
-	// ToDo:
+	nonce, err := h.localPoWFunc(msg, parallelism...)
+	if err != nil {
+		return err
+	}
+	msg.Nonce = nonce
 	return nil
 
 	/*
 		if h.connectPowsrv() {
 			// connected to powsrv.io
-			// powsrv.io only accepts mwm <= 14
-			if mwm <= 14 {
+			// powsrv.io only accepts targetScore <= 14
+			if targetScore <= 14 {
 				h.powsrvLock.RLock()
-				nonce, err := h.powsrvClient.PowFunc(trytes, mwm)
+				nonce, err := h.powsrvClient.PowFunc(trytes, targetScore)
 				if err == nil {
 					h.powsrvLock.RUnlock()
 					return nonce, nil
@@ -193,9 +202,6 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 				h.powsrvLock.Unlock()
 			}
 		}
-
-		// Local PoW
-		return h.localPoWFunc(trytes, mwm, parallelism...)
 	*/
 }
 

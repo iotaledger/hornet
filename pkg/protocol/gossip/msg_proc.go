@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/iota.go/pow"
 	"github.com/libp2p/go-libp2p-core/peer"
 
 	iotago "github.com/iotaledger/iota.go"
@@ -111,7 +112,7 @@ type MessageProcessor struct {
 
 // The Options for the MessageProcessor.
 type Options struct {
-	ValidMWM          uint64
+	MinPoWScore       float64
 	WorkUnitCacheOpts profile.CacheOpts
 }
 
@@ -277,15 +278,12 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// mark the message as received
 	request := proc.requestQueue.Received(msg.GetMessageID())
 
-	/*
-		// ToDo:
-		// validate minimum weight magnitude requirement
-		if request == nil && !message.HasValidNonce(msg, proc.opts.ValidMWM) {
-			wu.UpdateState(Invalid)
-			wu.punish()
-			return
-		}
-	*/
+	// validate PoW score
+	if request == nil && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
+		wu.UpdateState(Invalid)
+		wu.punish(proc.ps)
+		return
+	}
 
 	wu.dataLock.Lock()
 	wu.msg = msg

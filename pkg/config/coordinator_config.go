@@ -14,7 +14,7 @@ const (
 	// the ed25519 public key of the coordinator in hex representation
 	CfgCoordinatorPublicKeyRanges = "coordinator.publicKeyRanges"
 	// the minimum weight magnitude is the difficulty used by the network for proof of work.
-	CfgCoordinatorMWM = "coordinator.mwm"
+	CfgCoordinatorMinPoWScore = "coordinator.minPoWScore"
 	// the path to the state file of the coordinator
 	CfgCoordinatorStateFilePath = "coordinator.stateFilePath"
 	// the interval milestones are issued
@@ -61,7 +61,7 @@ func init() {
 		panic(err)
 	}
 
-	configFlagSet.Int(CfgCoordinatorMWM, 14, "the minimum weight magnitude is the difficulty used by the network for proof of work.")
+	configFlagSet.Int(CfgCoordinatorMinPoWScore, 4000, "the minimum PoW score required by the network.")
 	configFlagSet.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
 	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
 	configFlagSet.Int(CfgCoordinatorMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
