@@ -25,84 +25,84 @@ func init() {
 			Name: "iota_peers_all_messages",
 			Help: "Number of all messages by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersNewMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_new_messages",
 			Help: "Number of new messages by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersKnownMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_known_messages",
 			Help: "Number of known messages by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersReceivedMessageRequests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_received_message_requests",
 			Help: "Number of received message requests by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersReceivedMilestoneRequests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_received_milestone_requests",
 			Help: "Number of received milestone requests by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersReceivedHeartbeats = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_received_heartbeats",
 			Help: "Number of received heartbeats by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersSentMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_sent_messages",
 			Help: "Number of sent messages by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersSentMessageRequests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_sent_message_requests",
 			Help: "Number of sent message requests by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersSentMilestoneRequests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_sent_milestone_requests",
 			Help: "Number of sent milestone requests by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersSentHeartbeats = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_sent_heartbeats",
 			Help: "Number of sent heartbeats by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersDroppedSentPackets = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_dropped_sent_packets",
 			Help: "Number of dropped sent packets by peer.",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 	peersConnected = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_connected",
 			Help: "Are peers connected?",
 		},
-		[]string{"address", "alias"},
+		[]string{"address", "alias", "id"},
 	)
 
 	registry.MustRegister(peersAllMessages)
