@@ -61,7 +61,7 @@ func init() {
 		panic(err)
 	}
 
-	configFlagSet.Int(CfgCoordinatorMinPoWScore, 4000, "the minimum PoW score required by the network.")
+	configFlagSet.Float64(CfgCoordinatorMinPoWScore, 4000, "the minimum PoW score required by the network.")
 	configFlagSet.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
 	configFlagSet.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
 	configFlagSet.Int(CfgCoordinatorMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
