@@ -9,7 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
@@ -24,19 +24,22 @@ import (
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Snapshot",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Snapshot",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 
-	forceLoadingSnapshot = pflag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
+	forceLoadingSnapshot = flag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", CfgSnapshotsDownloadURLs)
@@ -80,7 +83,7 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	snapshotDepth = milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
@@ -157,7 +160,7 @@ func run() {
 		}
 	})
 
-	CoreModule.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting LocalSnapshots ... done")
 
 		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)

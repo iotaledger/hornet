@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gohornet/hornet/core/app"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -49,8 +49,8 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                 cli.AppName,
-		Version:              cli.AppVersion,
+		Name:                 app.Name,
+		Version:              app.Version,
 		IsHealthy:            tanglecore.IsNodeHealthy(),
 		NetworkID:            snapshotInfo.NetworkID,
 		LatestMilestoneID:    latestMilestoneID,

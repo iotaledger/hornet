@@ -14,12 +14,15 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "P2PDiscovery",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
-		Status:    node.Disabled,
+		Status: node.Disabled,
+		Pluggable: node.Pluggable{
+			Name:      "P2PDiscovery",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 

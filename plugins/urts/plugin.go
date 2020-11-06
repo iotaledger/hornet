@@ -19,12 +19,15 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "URTS",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "URTS",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 

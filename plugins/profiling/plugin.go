@@ -12,10 +12,13 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:     "Profiling",
-		DepsFunc: func(cDeps dependencies) { deps = cDeps },
-		Run:      run,
 		Status:   node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:     "Profiling",
+			DepsFunc: func(cDeps dependencies) { deps = cDeps },
+			Params:   params,
+			Run:      run,
+		},
 	}
 }
 

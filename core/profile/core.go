@@ -266,16 +266,19 @@ var (
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Profile",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Profile",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 	deps       dependencies
 )
@@ -338,7 +341,7 @@ func loadProfile() *profile.Profile {
 }
 
 func provide(c *dig.Container) {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	if err := c.Provide(func() *profile.Profile {
 		return loadProfile()

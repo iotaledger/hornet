@@ -3,7 +3,7 @@ package prometheus
 import (
 	"strconv"
 
-	"github.com/gohornet/hornet/core/cli"
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -67,7 +67,7 @@ func init() {
 		Help: "Number of messages to request.",
 	})
 
-	infoApp.WithLabelValues(cli.AppName, cli.AppVersion).Set(1)
+	infoApp.WithLabelValues(app.Name, app.Version).Set(1)
 
 	registry.MustRegister(infoApp)
 	registry.MustRegister(infoMilestone)

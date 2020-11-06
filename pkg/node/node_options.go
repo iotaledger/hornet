@@ -11,11 +11,10 @@ var defaultNodeOptions = []NodeOption{
 
 // NodeOptions defines options for a Node.
 type NodeOptions struct {
-	daemon          daemon.Daemon
-	enabledPlugins  []string
-	disabledPlugins []string
-	coreModules     []*CoreModule
-	plugins         []*Plugin
+	initPlugin  *InitPlugin
+	daemon      daemon.Daemon
+	coreModules []*CorePlugin
+	plugins     []*Plugin
 }
 
 // NodeOption is a function setting a NodeOptions option.
@@ -28,6 +27,13 @@ func (no *NodeOptions) apply(opts ...NodeOption) {
 	}
 }
 
+// WithInitPlugin sets the init plugin.
+func WithInitPlugin(initPlugin *InitPlugin) NodeOption {
+	return func(opts *NodeOptions) {
+		opts.initPlugin = initPlugin
+	}
+}
+
 // WithDaemon sets the used daemon.
 func WithDaemon(daemon daemon.Daemon) NodeOption {
 	return func(args *NodeOptions) {
@@ -35,28 +41,14 @@ func WithDaemon(daemon daemon.Daemon) NodeOption {
 	}
 }
 
-// WithDisabledPlugins sets the disabled plugins.
-func WithDisabledPlugins(disabledPlugins ...string) NodeOption {
-	return func(args *NodeOptions) {
-		args.disabledPlugins = append(args.disabledPlugins, disabledPlugins...)
-	}
-}
-
-// WithEnabledPlugins sets the enabled plugins.
-func WithEnabledPlugins(enabledPlugins ...string) NodeOption {
-	return func(args *NodeOptions) {
-		args.enabledPlugins = append(args.enabledPlugins, enabledPlugins...)
-	}
-}
-
-// WithCoreModules sets the available core modules.
-func WithCoreModules(coreModules ...*CoreModule) NodeOption {
+// WithCorePlugins sets the core plugins.
+func WithCorePlugins(coreModules ...*CorePlugin) NodeOption {
 	return func(args *NodeOptions) {
 		args.coreModules = append(args.coreModules, coreModules...)
 	}
 }
 
-// WithPlugins sets the available plugins.
+// WithPlugins sets the plugins.
 func WithPlugins(plugins ...*Plugin) NodeOption {
 	return func(args *NodeOptions) {
 		args.plugins = append(args.plugins, plugins...)
