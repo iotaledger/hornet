@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -21,7 +22,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 
-	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -32,11 +32,14 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "Dashboard",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "Dashboard",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -369,8 +372,9 @@ func currentNodeStatus() *NodeStatus {
 	if peekedRequest != nil {
 		requestedMilestone = peekedRequest.MilestoneIndex
 	}
-	status.Version = cli.AppVersion
-	status.LatestVersion = cli.LatestGithubVersion
+
+	status.Version = app.Version
+	status.LatestVersion = app.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = tanglecore.IsNodeHealthy()
 	status.NodeAlias = deps.NodeConfig.String(CfgDashboardNodeAlias)

@@ -1,7 +1,8 @@
 package dashboard
 
 import (
-	"github.com/gohornet/hornet/core/cli"
+	"github.com/gohornet/hornet/pkg/node"
+	flag "github.com/spf13/pflag"
 )
 
 const (
@@ -23,13 +24,20 @@ const (
 	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordsalt" // config key must be lower cased (for hiding passwords in PrintConfig)
 )
 
-func init() {
-	cli.ConfigFlagSet.String(CfgDashboardNodeAlias, "", "set an alias to identify a node")
-	cli.ConfigFlagSet.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
-	cli.ConfigFlagSet.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
-	cli.ConfigFlagSet.Bool(CfgDashboardBasicAuthEnabled, false, "whether to use HTTP basic auth")
-	cli.ConfigFlagSet.String(CfgDashboardBasicAuthUsername, "", "the HTTP basic auth username")
-	cli.ConfigFlagSet.String(CfgDashboardBasicAuthPasswordHash, "", "the HTTP basic auth username")
-	cli.ConfigFlagSet.String(CfgDashboardBasicAuthPasswordSalt, "", "the HTTP basic auth password+salt as a sha256 hash")
-	cli.ConfigFlagSet.String(CfgDashboardTheme, "default", "the theme for the dashboard to use (default or dark)")
+var params = &node.PluginParams{
+	Params: map[string]*flag.FlagSet{
+		"nodeConfig": func() *flag.FlagSet {
+			fs := flag.NewFlagSet("", flag.ContinueOnError)
+			fs.String(CfgDashboardNodeAlias, "", "set an alias to identify a node")
+			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
+			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
+			fs.Bool(CfgDashboardBasicAuthEnabled, false, "whether to use HTTP basic auth")
+			fs.String(CfgDashboardBasicAuthUsername, "", "the HTTP basic auth username")
+			fs.String(CfgDashboardBasicAuthPasswordHash, "", "the HTTP basic auth username")
+			fs.String(CfgDashboardBasicAuthPasswordSalt, "", "the HTTP basic auth password+salt as a sha256 hash")
+			fs.String(CfgDashboardTheme, "default", "the theme for the dashboard to use (default or dark)")
+			return fs
+		}(),
+	},
+	Hide: nil,
 }

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/restapi/common"
@@ -148,10 +148,12 @@ const (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "RestAPIV1",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "RestAPIV1",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Configure: configure,
+		},
 	}
 }
 
@@ -187,7 +189,7 @@ func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
 	// Check for features
-	if deps.NodeConfig.Bool(cli.CfgNodeEnableProofOfWork) {
+	if deps.NodeConfig.Bool(app.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
 

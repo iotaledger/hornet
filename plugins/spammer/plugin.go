@@ -31,11 +31,14 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "Spammer",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
-		Status:    node.Disabled,
+		Status: node.Disabled,
+		Pluggable: node.Pluggable{
+			Name:      "Spammer",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 

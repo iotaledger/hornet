@@ -16,16 +16,19 @@ import (
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Database",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Database",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+		},
 	}
 }
 
 var (
-	CoreModule            *node.CoreModule
+	CorePlugin            *node.CorePlugin
 	log                   *logger.Logger
 	garbageCollectionLock syncutils.Mutex
 	deps                  dependencies
@@ -57,7 +60,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	if !deps.Tangle.IsCorrectDatabaseVersion() {
 		if !deps.Tangle.UpdateDatabaseVersion() {
@@ -65,7 +68,7 @@ func configure() {
 		}
 	}
 
-	CoreModule.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Tangle.MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")

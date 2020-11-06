@@ -425,7 +425,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	// Run check for next milestone
 	setSolidifierMilestoneIndex(0)
 
-	if CoreModule.Daemon().IsStopped() {
+	if CorePlugin.Daemon().IsStopped() {
 		// do not trigger the next solidification if the node was shut down
 		return
 	}

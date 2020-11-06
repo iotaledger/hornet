@@ -15,19 +15,21 @@ import (
 const waitToKillTimeInSeconds = 300
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Graceful Shutdown",
-		Configure: configure,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Graceful Shutdown",
+			Configure: configure,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 )
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	gracefulStop := make(chan os.Signal)
 
@@ -46,7 +48,7 @@ func configure() {
 
 				if secondsSinceStart <= waitToKillTimeInSeconds {
 					processList := ""
-					runningBackgroundWorkers := CoreModule.Daemon().GetRunningBackgroundWorkers()
+					runningBackgroundWorkers := CorePlugin.Daemon().GetRunningBackgroundWorkers()
 					if len(runningBackgroundWorkers) >= 1 {
 						processList = "(" + strings.Join(runningBackgroundWorkers, ", ") + ") "
 					}
@@ -58,6 +60,6 @@ func configure() {
 			}
 		}()
 
-		CoreModule.Daemon().ShutdownAndWait()
+		CorePlugin.Daemon().ShutdownAndWait()
 	}()
 }

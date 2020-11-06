@@ -35,17 +35,20 @@ import (
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "P2P",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "P2P",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
 var (
-	CoreModule        *node.CoreModule
+	CorePlugin        *node.CorePlugin
 	log               *logger.Logger
 	deps              dependencies
 	ErrNoPrivKeyFound = errors.New("no private key found")
@@ -64,7 +67,7 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	type hostdeps struct {
 		dig.In
@@ -120,6 +123,7 @@ func provide(c *dig.Container) {
 			)),
 			libp2p.NATPortMap(),
 		)
+		createdHost.ID()
 
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize peer: %w", err)
@@ -154,7 +158,7 @@ func configure() {
 func run() {
 
 	// register a daemon to disconnect all peers up on shutdown
-	_ = CoreModule.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
 		log.Infof("listening on: %s", deps.Host.Addrs())
 		go deps.Manager.Start(shutdownSignal)
 		connectConfigKnownPeers()

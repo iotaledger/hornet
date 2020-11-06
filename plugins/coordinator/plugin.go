@@ -2,10 +2,10 @@ package coordinator
 
 import (
 	"crypto/ed25519"
-	"encoding/json"
 	"errors"
 	"time"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
@@ -34,12 +34,14 @@ func init() {
 	flag.CommandLine.MarkHidden("cooBootstrap")
 	flag.CommandLine.MarkHidden("cooStartIndex")
 	Plugin = &node.Plugin{
-		Name:      "Coordinator",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
-		Status:    node.Disabled,
+		Status: node.Disabled,
+		Pluggable: node.Pluggable{
+			Name:      "Coordinator",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -80,32 +82,6 @@ type dependencies struct {
 	PoWHandler       *powpackage.Handler
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-}
-
-func provide(c *dig.Container) {
-	type tangledeps struct {
-		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	}
-
-	if err := c.Provide(func(deps tangledeps) coordinator.PublicKeyRanges {
-		r := coordinator.PublicKeyRanges{}
-
-		if *cooPubKeyRangesFlag != "" {
-			// load from special CLI flag
-			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &r); err != nil {
-				panic(err)
-			}
-		} else {
-			// load from config or default value
-			if err := deps.NodeConfig.Unmarshal(CfgCoordinatorPublicKeyRanges, &r); err != nil {
-				panic(err)
-			}
-		}
-		return r
-	}); err != nil {
-		panic(err)
-	}
 }
 
 func configure() {
@@ -162,7 +138,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		}
 	}
 
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Tangle.KeyManager(), deps.NodeConfig.Int(CfgCoordinatorMilestonePublicKeyCount))
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Tangle.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 
 	coo, err := coordinator.New(
 		deps.Tangle,
@@ -171,7 +147,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
 		powHandler,
 		sendMessage,
-		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(protocfg.CfgProtocolMilestoneMerkleTreeHashFunc)),
 	)
 	if err != nil {
 		return nil, err

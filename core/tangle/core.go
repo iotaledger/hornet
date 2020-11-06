@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -14,12 +15,11 @@ import (
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/plugins/coordinator"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
@@ -28,16 +28,18 @@ import (
 
 func init() {
 	flag.CommandLine.MarkHidden("syncedAtStartup")
-	CoreModule = &node.CoreModule{
-		Name:      "Tangle",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Tangle",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 	deps       dependencies
 
@@ -63,7 +65,7 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	deps.Tangle.LoadInitialValuesFromDatabase()
 
@@ -73,7 +75,7 @@ func configure() {
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	CoreModule.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
 		deps.Tangle.MarkDatabaseCorrupted()
 	})
 
@@ -86,8 +88,8 @@ func configure() {
 
 	deps.Tangle.ConfigureMilestones(
 		keyManager,
-		deps.NodeConfig.Int(coordinator.CfgCoordinatorMilestonePublicKeyCount),
-		coopkg.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(coordinator.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(protocfg.CfgProtocolMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()
@@ -117,13 +119,13 @@ func run() {
 	attachHeartbeatEvents()
 	detachHeartbeatEvents()
 
-	CoreModule.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
 		attachSolidifierGossipEvents()
 		<-shutdownSignal
 		detachSolidifierGossipEvents()
 	}, shutdown.PrioritySolidifierGossip)
 
-	CoreModule.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		abortMilestoneSolidification()
 
@@ -143,12 +145,12 @@ func run() {
 	runTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	CoreModule.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
 
 	// create a background worker that "measures" the MPS value every second
-	CoreModule.Daemon().BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(measureMPS, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityMetricsUpdater)
 }

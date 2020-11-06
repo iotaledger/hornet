@@ -1,11 +1,13 @@
 package node
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
+	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 )
 
@@ -13,8 +15,8 @@ type Node struct {
 	wg              *sync.WaitGroup
 	disabledPlugins map[string]struct{}
 	enabledPlugins  map[string]struct{}
-	coreModulesMap  map[string]*CoreModule
-	coreModules     []*CoreModule
+	coreModulesMap  map[string]*CorePlugin
+	coreModules     []*CorePlugin
 	pluginsMap      map[string]*Plugin
 	plugins         []*Plugin
 	container       *dig.Container
@@ -31,8 +33,8 @@ func New(optionalOptions ...NodeOption) *Node {
 		wg:              &sync.WaitGroup{},
 		disabledPlugins: make(map[string]struct{}),
 		enabledPlugins:  make(map[string]struct{}),
-		coreModulesMap:  make(map[string]*CoreModule),
-		coreModules:     make([]*CoreModule, 0),
+		coreModulesMap:  make(map[string]*CorePlugin),
+		coreModules:     make([]*CorePlugin, 0),
 		pluginsMap:      make(map[string]*Plugin),
 		plugins:         make([]*Plugin, 0),
 		container:       dig.New(dig.DeferAcyclicVerification()),
@@ -83,15 +85,53 @@ func (n *Node) isEnabled(plugin *Plugin) bool {
 
 func (n *Node) init() {
 
-	for _, name := range n.options.enabledPlugins {
+	if n.options.initPlugin == nil {
+		panic("you must configure the node with an InitPlugin")
+	}
+
+	params := map[string][]*flag.FlagSet{}
+	masked := []string{}
+
+	forEachCoreModule(n.options.coreModules, func(coreModule *CorePlugin) bool {
+		if coreModule.Params == nil {
+			return true
+		}
+		for k, v := range coreModule.Params.Params {
+			params[k] = append(params[k], v)
+		}
+		if coreModule.Params.Hide != nil {
+			masked = append(masked, coreModule.Params.Hide...)
+		}
+		return true
+	})
+
+	forEachPlugin(n.options.plugins, func(plugin *Plugin) bool {
+		if plugin.Params == nil {
+			return true
+		}
+		for k, v := range plugin.Params.Params {
+			params[k] = append(params[k], v)
+		}
+		if plugin.Params.Hide != nil {
+			masked = append(masked, plugin.Params.Hide...)
+		}
+		return true
+	})
+
+	initCfg, err := n.options.initPlugin.Init(params, masked)
+	if err != nil {
+		panic(fmt.Errorf("unable to initialize node: %w", err))
+	}
+
+	for _, name := range initCfg.EnabledPlugins {
 		n.enabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
 
-	for _, name := range n.options.disabledPlugins {
+	for _, name := range initCfg.DisabledPlugins {
 		n.disabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
 
-	forEachCoreModule(n.options.coreModules, func(coreModule *CoreModule) bool {
+	forEachCoreModule(n.options.coreModules, func(coreModule *CorePlugin) bool {
 		n.addCoreModule(coreModule)
 		return true
 	})
@@ -105,14 +145,14 @@ func (n *Node) init() {
 		return true
 	})
 
-	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
+	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
 		if coreModule.Provide != nil {
 			coreModule.Provide(n.container)
 		}
 		return true
 	})
 
-	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
+	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
 		if coreModule.DepsFunc != nil {
 			if err := n.container.Invoke(coreModule.DepsFunc); err != nil {
 				panic(err)
@@ -140,7 +180,7 @@ func (n *Node) init() {
 
 func (n *Node) configure() {
 
-	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
+	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
 		coreModule.wg = n.wg
 		coreModule.Node = n
 
@@ -166,7 +206,7 @@ func (n *Node) configure() {
 func (n *Node) execute() {
 	n.Logger.Info("Executing core modules ...")
 
-	n.ForEachCoreModule(func(coreModule *CoreModule) bool {
+	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
 		if coreModule.Run != nil {
 			coreModule.Run()
 		}
@@ -209,7 +249,7 @@ func (n *Node) Daemon() daemon.Daemon {
 	return n.options.daemon
 }
 
-func (n *Node) addCoreModule(coreModule *CoreModule) {
+func (n *Node) addCoreModule(coreModule *CorePlugin) {
 	name := coreModule.Name
 
 	if _, exists := n.coreModulesMap[name]; exists {
@@ -234,14 +274,23 @@ func (n *Node) addPlugin(plugin *Plugin) {
 // ProvideFunc gets called with a dig.Container.
 type ProvideFunc func(c *dig.Container)
 
+// InitConfig describes the result of a node initialization.
+type InitConfig struct {
+	EnabledPlugins  []string
+	DisabledPlugins []string
+}
+
+// InitFunc gets called as the initialization function of the node.
+type InitFunc func(params map[string][]*flag.FlagSet, maskedKeys []string) (*InitConfig, error)
+
 // Callback is a function called without any arguments.
 type Callback func()
 
 // CoreModuleForEachFunc is used in ForEachCoreModule.
 // Returning false indicates to stop looping.
-type CoreModuleForEachFunc func(coreModule *CoreModule) bool
+type CoreModuleForEachFunc func(coreModule *CorePlugin) bool
 
-func forEachCoreModule(coreModules []*CoreModule, f CoreModuleForEachFunc) {
+func forEachCoreModule(coreModules []*CorePlugin, f CoreModuleForEachFunc) {
 	for _, coreModule := range coreModules {
 		if !f(coreModule) {
 			break

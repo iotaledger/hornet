@@ -24,7 +24,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += uint64(n)
 
-	if CoreModule.Daemon().IsStopped() {
+	if CorePlugin.Daemon().IsStopped() {
 		return n, ErrSnapshotDownloadWasAborted
 	}
 
