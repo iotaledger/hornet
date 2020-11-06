@@ -145,6 +145,11 @@ func (n *Node) init() {
 		return true
 	})
 
+	if n.options.initPlugin.Provide == nil {
+		panic(fmt.Errorf("the init plugin must have a provide func"))
+	}
+	n.options.initPlugin.Provide(n.container)
+
 	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
 		if coreModule.Provide != nil {
 			coreModule.Provide(n.container)
