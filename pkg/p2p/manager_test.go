@@ -42,7 +42,7 @@ func TestManager(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	_= logger.InitGlobalLogger(cfg)
+	_ = logger.InitGlobalLogger(cfg)
 
 	node1 := newNode(ctx, t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
@@ -180,7 +180,7 @@ func TestManagerEvents(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	_= logger.InitGlobalLogger(cfg)
+	_ = logger.InitGlobalLogger(cfg)
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 

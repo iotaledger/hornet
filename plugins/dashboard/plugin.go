@@ -24,7 +24,6 @@ import (
 	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/basicauth"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -128,18 +127,18 @@ func run() {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if deps.NodeConfig.Bool(config.CfgDashboardBasicAuthEnabled) {
+	if deps.NodeConfig.Bool(CfgDashboardBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := deps.NodeConfig.String(config.CfgDashboardBasicAuthUsername)
-		expectedPasswordHash := deps.NodeConfig.String(config.CfgDashboardBasicAuthPasswordHash)
-		passwordSalt := deps.NodeConfig.String(config.CfgDashboardBasicAuthPasswordSalt)
+		expectedUsername := deps.NodeConfig.String(CfgDashboardBasicAuthUsername)
+		expectedPasswordHash := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordHash)
+		passwordSalt := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
-			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", config.CfgDashboardBasicAuthUsername)
+			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", CfgDashboardBasicAuthUsername)
 		}
 
 		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (sha256 hash) in length if dashboard basic auth is enabled", config.CfgDashboardBasicAuthPasswordHash)
+			log.Fatalf("'%s' must be 64 (sha256 hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
@@ -156,7 +155,7 @@ func run() {
 	}
 
 	setupRoutes(e)
-	bindAddr := deps.NodeConfig.String(config.CfgDashboardBindAddress)
+	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
@@ -374,7 +373,7 @@ func currentNodeStatus() *NodeStatus {
 	status.LatestVersion = cli.LatestGithubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = tanglecore.IsNodeHealthy()
-	status.NodeAlias = deps.NodeConfig.String(config.CfgNodeAlias)
+	status.NodeAlias = deps.NodeConfig.String(CfgDashboardNodeAlias)
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 

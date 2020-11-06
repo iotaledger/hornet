@@ -42,7 +42,7 @@ func (t *Tangle) GetMilestoneStorageSize() int {
 	return t.milestoneStorage.GetSize()
 }
 
-func (t *Tangle) configureMilestoneStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func (t *Tangle) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	t.milestoneStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixMilestones}),

@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -55,10 +54,10 @@ type dependencies struct {
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	if deps.NodeConfig.Bool(config.CfgPrometheusGoMetrics) {
+	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())
 	}
-	if deps.NodeConfig.Bool(config.CfgPrometheusProcessMetrics) {
+	if deps.NodeConfig.Bool(CfgPrometheusProcessMetrics) {
 		registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	}
 }
@@ -73,9 +72,9 @@ type fileservicediscovery struct {
 }
 
 func writeFileServiceDiscoveryFile() {
-	path := deps.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryPath)
+	path := deps.NodeConfig.String(CfgPrometheusFileServiceDiscoveryPath)
 	d := []fileservicediscovery{{
-		Targets: []string{deps.NodeConfig.String(config.CfgPrometheusFileServiceDiscoveryTarget)},
+		Targets: []string{deps.NodeConfig.String(CfgPrometheusFileServiceDiscoveryTarget)},
 		Labels:  make(map[string]string),
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
@@ -95,7 +94,7 @@ func writeFileServiceDiscoveryFile() {
 func run() {
 	log.Info("Starting Prometheus exporter ...")
 
-	if deps.NodeConfig.Bool(config.CfgPrometheusFileServiceDiscoveryEnabled) {
+	if deps.NodeConfig.Bool(CfgPrometheusFileServiceDiscoveryEnabled) {
 		writeFileServiceDiscoveryFile()
 	}
 
@@ -114,13 +113,13 @@ func run() {
 					EnableOpenMetrics: true,
 				},
 			)
-			if deps.NodeConfig.Bool(config.CfgPrometheusPromhttpMetrics) {
+			if deps.NodeConfig.Bool(CfgPrometheusPromhttpMetrics) {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}
 			handler.ServeHTTP(c.Writer, c.Request)
 		})
 
-		bindAddr := deps.NodeConfig.String(config.CfgPrometheusBindAddress)
+		bindAddr := deps.NodeConfig.String(CfgPrometheusBindAddress)
 		server = &http.Server{Addr: bindAddr, Handler: engine}
 
 		go func() {

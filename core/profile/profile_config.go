@@ -1,4 +1,8 @@
-package config
+package profile
+
+import (
+	"github.com/gohornet/hornet/core/cli"
+)
 
 const (
 	// CfgProfileUseProfile is the key to set the profile to use.
@@ -9,5 +13,5 @@ const (
 )
 
 func init() {
-	configFlagSet.StringP(CfgProfileUseProfile, "p", AutoProfileName, "Sets the profile with which the node runs")
+	cli.ConfigFlagSet.StringP(CfgProfileUseProfile, "p", AutoProfileName, "Sets the profile with which the node runs")
 }

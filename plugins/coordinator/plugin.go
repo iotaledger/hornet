@@ -2,10 +2,12 @@ package coordinator
 
 import (
 	"crypto/ed25519"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -16,7 +18,6 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 
 	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -35,6 +36,7 @@ func init() {
 	Plugin = &node.Plugin{
 		Name:      "Coordinator",
 		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Provide:   provide,
 		Configure: configure,
 		Run:       run,
 		Status:    node.Disabled,
@@ -80,6 +82,32 @@ type dependencies struct {
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 }
 
+func provide(c *dig.Container) {
+	type tangledeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps tangledeps) coordinator.PublicKeyRanges {
+		r := coordinator.PublicKeyRanges{}
+
+		if *cooPubKeyRangesFlag != "" {
+			// load from special CLI flag
+			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &r); err != nil {
+				panic(err)
+			}
+		} else {
+			// load from config or default value
+			if err := deps.NodeConfig.Unmarshal(CfgCoordinatorPublicKeyRanges, &r); err != nil {
+				panic(err)
+			}
+		}
+		return r
+	}); err != nil {
+		panic(err)
+	}
+}
+
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
@@ -118,10 +146,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
-		deps.NodeConfig.Int(config.CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
-		deps.NodeConfig.Int(config.CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-		deps.NodeConfig.Int(config.CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(deps.NodeConfig.Int(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+		deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
+		deps.NodeConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+		deps.NodeConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+		time.Duration(deps.NodeConfig.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
 
 	nextCheckpointSignal = make(chan struct{})
@@ -130,9 +158,9 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
 
-	maxTrackedMessages = deps.NodeConfig.Int(config.CfgCoordinatorCheckpointsMaxTrackedMessages)
+	maxTrackedMessages = deps.NodeConfig.Int(CfgCoordinatorCheckpointsMaxTrackedMessages)
 
-	belowMaxDepth = milestone.Index(deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth))
+	belowMaxDepth = milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth))
 
 	if len(privateKeys) == 0 {
 		return nil, errors.New("no private keys given")
@@ -144,16 +172,16 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		}
 	}
 
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Tangle.KeyManager(), deps.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount))
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Tangle.KeyManager(), deps.NodeConfig.Int(CfgCoordinatorMilestonePublicKeyCount))
 
 	coo, err := coordinator.New(
 		deps.Tangle,
 		inMemoryEd25519MilestoneSignerProvider,
-		deps.NodeConfig.String(config.CfgCoordinatorStateFilePath),
-		deps.NodeConfig.Int(config.CfgCoordinatorIntervalSeconds),
+		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
+		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
 		powHandler,
 		sendMessage,
-		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 	if err != nil {
 		return nil, err

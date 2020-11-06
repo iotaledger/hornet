@@ -13,8 +13,8 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
 
@@ -95,7 +95,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(restapi.CfgRestAPILimitsMaxResults)
 
 	balance, count, err := deps.UTXO.AddressBalance(&address, maxResults)
 	if err != nil {
@@ -132,7 +132,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(restapi.CfgRestAPILimitsMaxResults)
 
 	unspentOutputs, err := deps.UTXO.UnspentOutputsForAddress(&address, maxResults)
 	if err != nil {

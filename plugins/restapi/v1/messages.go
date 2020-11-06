@@ -11,14 +11,15 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 
 	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/restapi/common"
+	"github.com/gohornet/hornet/plugins/urts"
 )
 
 var (
@@ -79,15 +80,15 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		shouldPromote := false
 		shouldReattach := false
 
-		if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth)) {
+		if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
 			// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 			shouldPromote = false
 			shouldReattach = true
-		} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
+		} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
 			// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
-		} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
+		} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
 			// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
@@ -142,7 +143,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(restapi.CfgRestAPILimitsMaxResults)
 
 	childrenMessageIDsHex := []string{}
 	for _, childrenMessageID := range deps.Tangle.GetChildrenMessageIDs(messageID, maxResults) {
@@ -164,7 +165,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 		return nil, errors.WithMessage(common.ErrInvalidParameter, "query parameter index empty")
 	}
 
-	maxResults := deps.NodeConfig.Int(config.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(restapi.CfgRestAPILimitsMaxResults)
 
 	messageIDsHex := []string{}
 	for _, messageID := range deps.Tangle.GetIndexMessageIDs(index, maxResults) {

@@ -5,7 +5,6 @@ import (
 
 	gossipcore "github.com/gohornet/hornet/core/gossip"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
@@ -53,7 +52,7 @@ type dependencies struct {
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
-	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
+	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
 	configureEvents()
 }
 

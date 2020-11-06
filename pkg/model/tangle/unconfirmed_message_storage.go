@@ -34,7 +34,7 @@ func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.Storable
 	return unreferencedTx, nil
 }
 
-func (t *Tangle) configureUnreferencedMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func (t *Tangle) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	t.unreferencedMessagesStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixUnreferencedMessages}),

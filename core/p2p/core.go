@@ -29,7 +29,6 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
 
-	"github.com/gohornet/hornet/pkg/config"
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -77,7 +76,7 @@ func provide(c *dig.Container) {
 
 		ctx := context.Background()
 
-		peerStorePath := deps.NodeConfig.String(config.CfgP2PPeerStorePath)
+		peerStorePath := deps.NodeConfig.String(CfgP2PPeerStorePath)
 		_, statPeerStorePathErr := os.Stat(peerStorePath)
 
 		// TODO: switch out with impl. using KVStore
@@ -106,7 +105,7 @@ func provide(c *dig.Container) {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
 		}
 
-		bindAddrs := deps.NodeConfig.Strings(config.CfgP2PBindMultiAddresses)
+		bindAddrs := deps.NodeConfig.Strings(CfgP2PBindMultiAddresses)
 
 		createdHost, err := libp2p.New(ctx,
 			libp2p.Identity(prvKey),
@@ -115,8 +114,8 @@ func provide(c *dig.Container) {
 			libp2p.Transport(libp2pquic.NewTransport),
 			libp2p.DefaultTransports,
 			libp2p.ConnectionManager(connmgr.NewConnManager(
-				deps.NodeConfig.Int(config.CfgP2PConnMngLowWatermark),
-				deps.NodeConfig.Int(config.CfgP2PConnMngHighWatermark),
+				deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
+				deps.NodeConfig.Int(CfgP2PConnMngHighWatermark),
 				time.Minute,
 			)),
 			libp2p.NATPortMap(),
@@ -141,7 +140,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps mngdeps) *p2ppkg.Manager {
 		return p2ppkg.NewManager(deps.Host,
 			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-			p2ppkg.WithManagerReconnectInterval(time.Duration(deps.Config.Int(config.CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
+			p2ppkg.WithManagerReconnectInterval(time.Duration(deps.Config.Int(CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
 		)
 	}); err != nil {
 		panic(err)
@@ -168,8 +167,8 @@ func run() {
 
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
-	peerIDsStr := deps.PeeringConfig.Strings(config.CfgP2PPeers)
-	peerAliases := deps.PeeringConfig.Strings(config.CfgP2PPeerAliases)
+	peerIDsStr := deps.PeeringConfig.Strings(CfgP2PPeers)
+	peerAliases := deps.PeeringConfig.Strings(CfgP2PPeerAliases)
 
 	applyAliases := true
 	if len(peerIDsStr) != len(peerAliases) {
@@ -208,10 +207,10 @@ func loadOrCreateIdentity(nodeConfig *configuration.Configuration, peerStoreIsNe
 }
 
 func loadIdentityFromConfig(nodeConfig *configuration.Configuration) (crypto.PrivKey, error) {
-	if identityPrivKey := nodeConfig.String(config.CfgP2PIdentityPrivKey); identityPrivKey != "" {
+	if identityPrivKey := nodeConfig.String(CfgP2PIdentityPrivKey); identityPrivKey != "" {
 		prvKey, err := utils.ParseEd25519PrivateKeyFromString(identityPrivKey)
 		if err != nil {
-			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", config.CfgP2PIdentityPrivKey)
+			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", CfgP2PIdentityPrivKey)
 		}
 
 		sk, _, err := crypto.KeyPairFromStdKey(&prvKey)

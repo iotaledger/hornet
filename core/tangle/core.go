@@ -4,22 +4,23 @@ import (
 	"os"
 	"time"
 
-	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/pkg/p2p"
-	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/timeutil"
+
 	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
+	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/plugins/coordinator"
+	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -53,11 +54,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle           *tangle.Tangle
-	Manager          *p2p.Manager
-	RequestQueue     gossippkg.RequestQueue
-	MessageProcessor *gossippkg.MessageProcessor
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Tangle                     *tangle.Tangle
+	Manager                    *p2p.Manager
+	RequestQueue               gossippkg.RequestQueue
+	MessageProcessor           *gossippkg.MessageProcessor
+	NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
+	CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
 }
 
 func configure() {
@@ -76,7 +78,7 @@ func configure() {
 	})
 
 	keyManager := keymanager.New()
-	for _, keyRange := range config.CoordinatorPublicKeyRanges() {
+	for _, keyRange := range deps.CoordinatorPublicKeyRanges {
 		if err := keyManager.AddKeyRange(keyRange.Key, keyRange.StartIndex, keyRange.EndIndex); err != nil {
 			log.Panicf("can't load public key ranges: %w", err)
 		}
@@ -84,8 +86,8 @@ func configure() {
 
 	deps.Tangle.ConfigureMilestones(
 		keyManager,
-		deps.NodeConfig.Int(config.CfgCoordinatorMilestonePublicKeyCount),
-		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(config.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
+		deps.NodeConfig.Int(coordinator.CfgCoordinatorMilestonePublicKeyCount),
+		coopkg.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(coordinator.CfgCoordinatorMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()
@@ -96,7 +98,7 @@ func configure() {
 
 func run() {
 
-	if deps.Tangle.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(config.CfgDatabaseDebug) {
+	if deps.Tangle.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {

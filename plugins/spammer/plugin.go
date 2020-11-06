@@ -20,7 +20,6 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -104,9 +103,9 @@ func configure() {
 	}
 
 	spammerInstance = spammer.New(
-		deps.NodeConfig.String(config.CfgSpammerMessage),
-		deps.NodeConfig.String(config.CfgSpammerIndex),
-		deps.NodeConfig.String(config.CfgSpammerIndexSemiLazy),
+		deps.NodeConfig.String(CfgSpammerMessage),
+		deps.NodeConfig.String(CfgSpammerIndex),
+		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),
 		deps.TipSelector.SelectSpammerTips,
 		deps.PowHandler,
 		sendMessage,
@@ -125,7 +124,7 @@ func run() {
 	}, shutdown.PrioritySpammer)
 
 	// automatically start the spammer on node startup if the flag is set
-	if deps.NodeConfig.Bool(config.CfgSpammerAutostart) {
+	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
 		Start(nil, nil)
 	}
 }
@@ -141,9 +140,9 @@ func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := deps.NodeConfig.Float64(config.CfgSpammerMPSRateLimit)
-	cpuMaxUsageCfg := deps.NodeConfig.Float64(config.CfgSpammerCPUMaxUsage)
-	spammerWorkerCount := deps.NodeConfig.Int(config.CfgSpammerWorkers)
+	mpsRateLimitCfg := deps.NodeConfig.Float64(CfgSpammerMPSRateLimit)
+	cpuMaxUsageCfg := deps.NodeConfig.Float64(CfgSpammerCPUMaxUsage)
+	spammerWorkerCount := deps.NodeConfig.Int(CfgSpammerWorkers)
 	checkPeersConnected := Plugin.Node.IsSkipped(coordinator.Plugin)
 
 	if mpsRateLimit != nil {

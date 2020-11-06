@@ -4,8 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/gohornet/hornet/core/database"
 )
 
 var (
@@ -28,7 +29,7 @@ func init() {
 
 func collectData() {
 	dataSizes.Reset()
-	dbSize, err := directorySize(deps.NodeConfig.String(config.CfgDatabasePath))
+	dbSize, err := directorySize(deps.NodeConfig.String(database.CfgDatabasePath))
 	if err == nil {
 		dataSizes.WithLabelValues("database").Set(float64(dbSize))
 	}

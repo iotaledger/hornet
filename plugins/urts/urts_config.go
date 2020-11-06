@@ -1,4 +1,8 @@
-package config
+package urts
+
+import (
+	"github.com/gohornet/hornet/core/cli"
+)
 
 const (
 	// CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI is the maximum allowed delta
@@ -30,24 +34,24 @@ const (
 )
 
 func init() {
-	configFlagSet.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, 8, "the maximum allowed delta "+
+	cli.ConfigFlagSet.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, 8, "the maximum allowed delta "+
 		"value for the YCRI of a given message in relation to the current LSMI before it gets lazy")
-	configFlagSet.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, 13, "the maximum allowed delta "+
+	cli.ConfigFlagSet.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, 13, "the maximum allowed delta "+
 		"value between OCRI of a given message in relation to the current LSMI before it gets semi-lazy")
-	configFlagSet.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
+	cli.ConfigFlagSet.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
 		"value for the OCRI of a given message in relation to the current LSMI before it gets lazy")
-	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
-	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+	cli.ConfigFlagSet.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
+	cli.ConfigFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first message (non-lazy)")
-	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
+	cli.ConfigFlagSet.Int(CfgTipSelNonLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
 		"before the tip is removed from the tip pool (non-lazy)")
-	configFlagSet.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
+	cli.ConfigFlagSet.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
 		"the spammer tries to reduce these (0 = always)")
-	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
-	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+	cli.ConfigFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
+	cli.ConfigFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
 		"after it was referenced by the first message (semi-lazy)")
-	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
+	cli.ConfigFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
 		"before the tip is removed from the tip pool (semi-lazy)")
-	configFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
+	cli.ConfigFlagSet.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
 		"the spammer tries to reduce these (0 = disable)")
 }

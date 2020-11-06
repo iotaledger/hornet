@@ -113,7 +113,7 @@ type MessageProcessor struct {
 // The Options for the MessageProcessor.
 type Options struct {
 	MinPoWScore       float64
-	WorkUnitCacheOpts profile.CacheOpts
+	WorkUnitCacheOpts *profile.CacheOpts
 }
 
 // Run runs the processor and blocks until the shutdown signal is triggered.

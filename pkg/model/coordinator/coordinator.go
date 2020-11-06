@@ -45,6 +45,16 @@ type Events struct {
 	IssuedMilestone *events.Event
 }
 
+// PublicKeyRange is a public key of milestones with a valid range.
+type PublicKeyRange struct {
+	Key        string          `json:"key" koanf:"key"`
+	StartIndex milestone.Index `json:"start" koanf:"start"`
+	EndIndex   milestone.Index `json:"end" koanf:"end"`
+}
+
+// PublicKeyRanges are public keys of milestones with their valid ranges.
+type PublicKeyRanges []*PublicKeyRange
+
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
