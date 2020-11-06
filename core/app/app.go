@@ -69,7 +69,7 @@ var (
 func init() {
 	InitPlugin = &node.InitPlugin{
 		Pluggable: node.Pluggable{
-			Name:      "Init",
+			Name:      "App",
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
