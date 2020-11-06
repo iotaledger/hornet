@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gohornet/hornet/core/app"
+	powcore "github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -189,7 +189,7 @@ func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
 	// Check for features
-	if deps.NodeConfig.Bool(app.CfgNodeEnableProofOfWork) {
+	if deps.NodeConfig.Bool(powcore.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
 
