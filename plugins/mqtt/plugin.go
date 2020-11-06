@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
@@ -62,7 +61,7 @@ func configure() {
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	mqttConfigFile := deps.NodeConfig.String(config.CfgMQTTConfig)
+	mqttConfigFile := deps.NodeConfig.String(CfgMQTTConfig)
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(mqttConfigFile)

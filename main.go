@@ -7,9 +7,9 @@ import (
 	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/core/profile"
 	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/toolset"
 	"github.com/gohornet/hornet/plugins/coordinator"
@@ -34,10 +34,11 @@ func main() {
 	cli.PrintConfig()
 
 	node.Run(
-		node.WithDisabledPlugins(config.NodeConfig.Strings(config.CfgNodeDisablePlugins)...),
-		node.WithEnabledPlugins(config.NodeConfig.Strings(config.CfgNodeEnablePlugins)...),
+		node.WithDisabledPlugins(cli.Config.NodeConfig.Strings(cli.CfgNodeDisablePlugins)...),
+		node.WithEnabledPlugins(cli.Config.NodeConfig.Strings(cli.CfgNodeEnablePlugins)...),
 		node.WithCoreModules([]*node.CoreModule{
 			cli.CoreModule,
+			profile.CoreModule,
 			gracefulshutdown.CoreModule,
 			database.CoreModule,
 			pow.CoreModule,

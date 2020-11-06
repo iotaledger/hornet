@@ -36,7 +36,7 @@ func (t *Tangle) GetChildrenStorageSize() int {
 	return t.childrenStorage.GetSize()
 }
 
-func (t *Tangle) configureChildrenStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func (t *Tangle) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	t.childrenStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixChildren}),

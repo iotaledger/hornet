@@ -16,8 +16,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -187,7 +187,7 @@ func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
 	// Check for features
-	if deps.NodeConfig.Bool(config.CfgNodeEnableProofOfWork) {
+	if deps.NodeConfig.Bool(cli.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
 

@@ -1,4 +1,8 @@
-package config
+package restapi
+
+import (
+	"github.com/gohornet/hornet/core/cli"
+)
 
 const (
 	// the bind address on which the REST API listens on
@@ -24,8 +28,8 @@ const (
 )
 
 func init() {
-	configFlagSet.String(CfgRestAPIBindAddress, "0.0.0.0:14265", "the bind address on which the REST API listens on")
-	configFlagSet.StringSlice(CfgRestAPIPermittedRoutes,
+	cli.ConfigFlagSet.String(CfgRestAPIBindAddress, "0.0.0.0:14265", "the bind address on which the REST API listens on")
+	cli.ConfigFlagSet.StringSlice(CfgRestAPIPermittedRoutes,
 		[]string{
 			"/health",
 			"/api/v1/info",
@@ -40,12 +44,12 @@ func init() {
 			"/api/v1/addresses/:address",
 			"/api/v1/addresses/:address/outputs",
 		}, "the allowed HTTP REST routes which can be called from non whitelisted addresses")
-	configFlagSet.StringSlice(CfgRestAPIWhitelistedAddresses, []string{"127.0.0.1", "::1"}, "the whitelist of addresses which are allowed to access the REST API")
-	configFlagSet.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
-	configFlagSet.Bool(CfgRestAPIBasicAuthEnabled, false, "whether to use HTTP basic auth for the REST API")
-	configFlagSet.String(CfgRestAPIBasicAuthUsername, "", "the username of the HTTP basic auth")
-	configFlagSet.String(CfgRestAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a sha256 hash")
-	configFlagSet.String(CfgRestAPIBasicAuthPasswordSalt, "", "the HTTP basic auth salt used for hashing the password")
-	configFlagSet.String(CfgRestAPILimitsMaxBodyLength, "1M", "the maximum number of characters that the body of an API call may contain")
-	configFlagSet.Int(CfgRestAPILimitsMaxResults, 1000, "the maximum number of results that may be returned by an endpoint")
+	cli.ConfigFlagSet.StringSlice(CfgRestAPIWhitelistedAddresses, []string{"127.0.0.1", "::1"}, "the whitelist of addresses which are allowed to access the REST API")
+	cli.ConfigFlagSet.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
+	cli.ConfigFlagSet.Bool(CfgRestAPIBasicAuthEnabled, false, "whether to use HTTP basic auth for the REST API")
+	cli.ConfigFlagSet.String(CfgRestAPIBasicAuthUsername, "", "the username of the HTTP basic auth")
+	cli.ConfigFlagSet.String(CfgRestAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a sha256 hash")
+	cli.ConfigFlagSet.String(CfgRestAPIBasicAuthPasswordSalt, "", "the HTTP basic auth salt used for hashing the password")
+	cli.ConfigFlagSet.String(CfgRestAPILimitsMaxBodyLength, "1M", "the maximum number of characters that the body of an API call may contain")
+	cli.ConfigFlagSet.Int(CfgRestAPILimitsMaxResults, 1000, "the maximum number of results that may be returned by an endpoint")
 }

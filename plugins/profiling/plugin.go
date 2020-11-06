@@ -5,7 +5,6 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
 	"go.uber.org/dig"
@@ -34,6 +33,6 @@ func run() {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 
-	bindAddr := deps.NodeConfig.String(config.CfgProfilingBindAddress)
+	bindAddr := deps.NodeConfig.String(CfgProfilingBindAddress)
 	go http.ListenAndServe(bindAddr, nil) // pprof Server for Debbuging Mutexes
 }

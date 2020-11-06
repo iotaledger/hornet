@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/configuration"
+	flag "github.com/spf13/pflag"
 	"github.com/tcnksm/go-latest"
 	"go.uber.org/dig"
 
+	configpkg "github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -27,6 +28,22 @@ var (
 	AppName = "HORNET"
 
 	githubTag *latest.GithubTag
+)
+
+var (
+	ConfigFlagSet  = flag.NewFlagSet("", flag.ContinueOnError)
+	PeeringFlagSet = flag.NewFlagSet("", flag.ContinueOnError)
+
+	version  = flag.BoolP("version", "v", false, "Prints the HORNET version")
+	help     = flag.BoolP("help", "h", false, "Prints the HORNET help (--full for all parameters)")
+	helpFull = flag.Bool("full", false, "Prints full HORNET help (only in combination with -h)")
+
+	// flags
+	configFilePath   = flag.StringP(configpkg.FlagFilePathConfig, "c", "config.json", "file path of the config file")
+	peeringFilePath  = flag.StringP(configpkg.FlagFilePathPeeringConfig, "n", "peering.json", "file path of the peering config file")
+	profilesFilePath = flag.String(configpkg.FlagFilePathProfilesConfig, "profiles.json", "file path of the profiles config file")
+
+	Config = configpkg.New(config.WithConfigFilePath(*configFilePath), config.WithPeeringFilePath(*peeringFilePath), configpkg.WithProfilesFilePath(*profilesFilePath))
 )
 
 func init() {
@@ -52,17 +69,17 @@ type dependencies struct {
 
 func provide(c *dig.Container) {
 	if err := c.Provide(func() *configuration.Configuration {
-		return config.NodeConfig
+		return Config.NodeConfig
 	}, dig.Name("nodeConfig")); err != nil {
 		panic(err)
 	}
 	if err := c.Provide(func() *configuration.Configuration {
-		return config.PeeringConfig
+		return Config.PeeringConfig
 	}, dig.Name("peeringConfig")); err != nil {
 		panic(err)
 	}
 	if err := c.Provide(func() *configuration.Configuration {
-		return config.ProfilesConfig
+		return Config.ProfilesConfig
 	}, dig.Name("profilesConfig")); err != nil {
 		panic(err)
 	}
@@ -89,12 +106,6 @@ func configure() {
 `+"\n\n", AppVersion)
 
 	checkLatestVersion()
-
-	if deps.NodeConfig.String(config.CfgProfileUseProfile) == config.AutoProfileName {
-		log.Infof("Profile mode 'auto', Using profile '%s'", profile.LoadProfile().Name)
-	} else {
-		log.Infof("Using profile '%s'", profile.LoadProfile().Name)
-	}
 
 	log.Info("Loading plugins ...")
 }

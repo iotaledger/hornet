@@ -3,15 +3,15 @@ package pow
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/coordinator"
 )
 
 func init() {
@@ -51,7 +51,7 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.NodeConfig.Float64(config.CfgCoordinatorMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.NodeConfig.Float64(coordinator.CfgCoordinatorMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}

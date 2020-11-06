@@ -141,9 +141,6 @@
   "mqtt": {
     "config": "mqtt_config.json"
   },
-  "zmq": {
-    "bindAddress": "localhost:5558"
-  },
   "profiling": {
     "bindAddress": "localhost:6062"
   },

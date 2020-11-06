@@ -4,22 +4,23 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/timeutil"
+
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/coordinator"
 )
 
 const (
@@ -73,12 +74,13 @@ func provide(c *dig.Container) {
 		RequestQueue gossip.RequestQueue
 		Manager      *p2p.Manager
 		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
+		Profile      *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
-			MinPoWScore:       deps.NodeConfig.Float64(config.CfgCoordinatorMinPoWScore),
-			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
+			MinPoWScore:       deps.NodeConfig.Float64(coordinator.CfgCoordinatorMinPoWScore),
+			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {
 		panic(err)
@@ -100,7 +102,7 @@ func provide(c *dig.Container) {
 		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
 		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
-			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
+			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
 		)
 	}); err != nil {
 		panic(err)

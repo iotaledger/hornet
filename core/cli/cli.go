@@ -9,13 +9,8 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/config"
-)
-
-var (
-	version  = flag.BoolP("version", "v", false, "Prints the HORNET version")
-	help     = flag.BoolP("help", "h", false, "Prints the HORNET help (--full for all parameters)")
-	helpFull = flag.Bool("full", false, "Prints full HORNET help (only in combination with -h)")
+	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/restapi"
 )
 
 func getList(a []string) string {
@@ -25,21 +20,21 @@ func getList(a []string) string {
 
 // ParseConfig parses the configuration and initializes the global logger.
 func ParseConfig() {
-	if err := config.FetchConfig(); err != nil {
+	if err := Config.FetchConfig(); err != nil {
 		panic(err)
 	}
 
-	if err := logger.InitGlobalLogger(config.NodeConfig); err != nil {
+	if err := logger.InitGlobalLogger(Config.NodeConfig); err != nil {
 		panic(err)
 	}
 }
 
 // PrintConfig prints the loaded configuration, but hides sensitive information.
 func PrintConfig() {
-	config.PrintConfig([]string{config.CfgRestAPIBasicAuthPasswordHash, config.CfgRestAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
+	Config.PrintConfig([]string{restapi.CfgRestAPIBasicAuthPasswordHash, restapi.CfgRestAPIBasicAuthPasswordSalt, dashboard.CfgDashboardBasicAuthPasswordHash, dashboard.CfgDashboardBasicAuthPasswordSalt})
 
-	enablePlugins := config.NodeConfig.Strings(config.CfgNodeEnablePlugins)
-	disablePlugins := config.NodeConfig.Strings(config.CfgNodeDisablePlugins)
+	enablePlugins := Config.NodeConfig.Strings(CfgNodeEnablePlugins)
+	disablePlugins := Config.NodeConfig.Strings(CfgNodeDisablePlugins)
 
 	if len(enablePlugins) > 0 {
 		fmt.Printf("\nThe following plugins are enabled: %s", getList(enablePlugins))
@@ -51,7 +46,7 @@ func PrintConfig() {
 
 // ParseFlags defines and parses the command-line flags from os.Args[1:].
 func ParseFlags() {
-	config.ParseFlags()
+	Config.ParseFlags()
 }
 
 // PrintVersion prints out the HORNET version
@@ -64,7 +59,7 @@ func PrintVersion() {
 	if *help {
 		if !*helpFull {
 			// HideConfigFlags hides all non essential flags from the help/usage text.
-			config.HideConfigFlags()
+			Config.HideConfigFlags()
 		}
 		flag.Usage()
 		os.Exit(0)

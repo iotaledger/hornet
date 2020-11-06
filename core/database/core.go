@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -41,10 +40,11 @@ func provide(c *dig.Container) {
 	type tangledeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Profile    *profile.Profile
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-		return tangle.New(deps.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
+		return tangle.New(deps.NodeConfig.String(CfgDatabasePath), deps.Profile.Caches)
 	}); err != nil {
 		panic(err)
 	}

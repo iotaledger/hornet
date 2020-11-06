@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/core/snapshot"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/plugins/restapi/common"
 )
@@ -72,7 +71,7 @@ func createSnapshot(c echo.Context) (*createSnapshotResponse, error) {
 		return nil, errors.WithMessagef(common.ErrInvalidParameter, "parsing index failed: %w", err)
 	}
 
-	snapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(config.CfgSnapshotsPath)), fmt.Sprintf("export_%d.bin", index))
+	snapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsPath)), fmt.Sprintf("export_%d.bin", index))
 
 	// ToDo: abort signal?
 	if err := snapshot.CreateLocalSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {
