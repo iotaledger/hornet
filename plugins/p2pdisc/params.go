@@ -29,5 +29,5 @@ var params = &node.PluginParams{
 			return fs
 		}(),
 	},
-	Hide: nil,
+	Masked: nil,
 }
