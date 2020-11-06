@@ -39,5 +39,5 @@ var params = &node.PluginParams{
 			return fs
 		}(),
 	},
-	Hide: []string{CfgDashboardBasicAuthPasswordHash, CfgDashboardBasicAuthPasswordSalt},
+	Masked: []string{CfgDashboardBasicAuthPasswordHash, CfgDashboardBasicAuthPasswordSalt},
 }

@@ -59,5 +59,5 @@ var params = &node.PluginParams{
 			return fs
 		}(),
 	},
-	Hide: []string{CfgRestAPIBasicAuthPasswordHash, CfgRestAPIBasicAuthPasswordSalt},
+	Masked: []string{CfgRestAPIBasicAuthPasswordHash, CfgRestAPIBasicAuthPasswordSalt},
 }

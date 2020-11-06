@@ -37,7 +37,7 @@ func init() {
 						return fs
 					}(),
 				},
-				Hide: nil,
+				Masked: nil,
 			},
 			Provide: provide,
 		},

@@ -14,7 +14,7 @@ type PluginParams struct {
 	// The parameters of the plugin under for the defined configuration.
 	Params map[string]*flag.FlagSet
 	// The configuration values to mask.
-	Hide []string
+	Masked []string
 }
 
 // Pluggable is something which extends the Node's capabilities.

@@ -99,8 +99,8 @@ func (n *Node) init() {
 		for k, v := range coreModule.Params.Params {
 			params[k] = append(params[k], v)
 		}
-		if coreModule.Params.Hide != nil {
-			masked = append(masked, coreModule.Params.Hide...)
+		if coreModule.Params.Masked != nil {
+			masked = append(masked, coreModule.Params.Masked...)
 		}
 		return true
 	})
@@ -112,8 +112,8 @@ func (n *Node) init() {
 		for k, v := range plugin.Params.Params {
 			params[k] = append(params[k], v)
 		}
-		if plugin.Params.Hide != nil {
-			masked = append(masked, plugin.Params.Hide...)
+		if plugin.Params.Masked != nil {
+			masked = append(masked, plugin.Params.Masked...)
 		}
 		return true
 	})
