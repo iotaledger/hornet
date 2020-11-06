@@ -19,6 +19,103 @@ var (
 	ErrNotEnoughMemory = errors.New("not enough system memory")
 )
 
+func init() {
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Profile",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+		},
+	}
+}
+
+var (
+	CorePlugin *node.CorePlugin
+	log        *logger.Logger
+	deps       dependencies
+)
+
+type dependencies struct {
+	dig.In
+	Profile        *profile.Profile
+	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+	ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
+}
+
+func provide(c *dig.Container) {
+	log = logger.NewLogger(CorePlugin.Name)
+
+	type deps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+	if err := c.Provide(func(d deps) *profile.Profile {
+		return loadProfile(d.NodeConfig)
+	}); err != nil {
+		panic(err)
+	}
+}
+
+func configure() {
+	if deps.NodeConfig.String(CfgProfileUseProfile) == AutoProfileName {
+		log.Infof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
+	} else {
+		log.Infof("Using profile '%s'", deps.Profile.Name)
+	}
+}
+
+// loadProfile automatically loads the appropriate profile (given the system memory) if the config value
+// is set to 'auto' or the one specified in the config.
+func loadProfile(nodeConfig *configuration.Configuration) *profile.Profile {
+	profileName := strings.ToLower(nodeConfig.String(CfgProfileUseProfile))
+	if profileName == AutoProfileName {
+		v, err := mem.VirtualMemory()
+		if err != nil {
+			panic(err)
+		}
+
+		if v.Total >= 8000000000*0.95 {
+			profileName = "8gb"
+		} else if v.Total >= 4000000000*0.95 {
+			profileName = "4gb"
+		} else if v.Total >= 2000000000*0.95 {
+			profileName = "2gb"
+		} else if v.Total >= 1000000000*0.95 {
+			profileName = "1gb"
+		} else {
+			panic(ErrNotEnoughMemory)
+		}
+	}
+
+	var p *profile.Profile
+	switch profileName {
+	case "8gb":
+		p = Profile8GB
+		p.Name = "8gb"
+	case "4gb":
+		p = Profile4GB
+		p.Name = "4gb"
+	case "2gb":
+		p = Profile2GB
+		p.Name = "2gb"
+	case "1gb", "light":
+		p = Profile1GB
+		p.Name = "1gb"
+	default:
+		p = &profile.Profile{}
+		if !deps.ProfilesConfig.Exists(profileName) {
+			panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
+		}
+		if err := deps.ProfilesConfig.Unmarshal(profileName, p); err != nil {
+			panic(err)
+		}
+		p.Name = profileName
+	}
+	return p
+}
+
 var (
 	Profile8GB = &profile.Profile{
 		Caches: &profile.Caches{
@@ -264,96 +361,3 @@ var (
 		},
 	}
 )
-
-func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
-			Name:      "Profile",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-		},
-	}
-}
-
-var (
-	CorePlugin *node.CorePlugin
-	log        *logger.Logger
-	deps       dependencies
-)
-
-type dependencies struct {
-	dig.In
-	Profile        *profile.Profile
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
-}
-
-// loadProfile automatically loads the appropriate profile (given the system memory) if the config value
-// is set to 'auto' or the one specified in the config.
-func loadProfile() *profile.Profile {
-	profileName := strings.ToLower(deps.NodeConfig.String(CfgProfileUseProfile))
-	if profileName == AutoProfileName {
-		v, err := mem.VirtualMemory()
-		if err != nil {
-			panic(err)
-		}
-
-		if v.Total >= 8000000000*0.95 {
-			profileName = "8gb"
-		} else if v.Total >= 4000000000*0.95 {
-			profileName = "4gb"
-		} else if v.Total >= 2000000000*0.95 {
-			profileName = "2gb"
-		} else if v.Total >= 1000000000*0.95 {
-			profileName = "1gb"
-		} else {
-			panic(ErrNotEnoughMemory)
-		}
-	}
-
-	var p *profile.Profile
-	switch profileName {
-	case "8gb":
-		p = Profile8GB
-		p.Name = "8gb"
-	case "4gb":
-		p = Profile4GB
-		p.Name = "4gb"
-	case "2gb":
-		p = Profile2GB
-		p.Name = "2gb"
-	case "1gb", "light":
-		p = Profile1GB
-		p.Name = "1gb"
-	default:
-		p = &profile.Profile{}
-		if !deps.ProfilesConfig.Exists(profileName) {
-			panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
-		}
-		if err := deps.ProfilesConfig.Unmarshal(profileName, p); err != nil {
-			panic(err)
-		}
-		p.Name = profileName
-	}
-	return p
-}
-
-func provide(c *dig.Container) {
-	log = logger.NewLogger(CorePlugin.Name)
-
-	if err := c.Provide(func() *profile.Profile {
-		return loadProfile()
-	}); err != nil {
-		panic(err)
-	}
-}
-
-func configure() {
-	if deps.NodeConfig.String(CfgProfileUseProfile) == AutoProfileName {
-		log.Infof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
-	} else {
-		log.Infof("Using profile '%s'", deps.Profile.Name)
-	}
-}
