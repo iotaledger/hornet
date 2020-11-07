@@ -1,11 +1,11 @@
 package spammer
 
 import (
-	"errors"
 	"math/rand"
 	"runtime"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/cpu"
 
 	"github.com/gohornet/hornet/pkg/model/tangle"

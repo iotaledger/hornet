@@ -1,22 +1,22 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/toolset"
-	"github.com/iotaledger/hive.go/configuration"
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"github.com/tcnksm/go-latest"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/toolset"
 )
 
 var (

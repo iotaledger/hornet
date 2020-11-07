@@ -1,22 +1,23 @@
 package gossip
 
 import (
-	"errors"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/iota.go/pow"
-	"github.com/libp2p/go-libp2p-core/peer"
 
 	iotago "github.com/iotaledger/iota.go"
+	"github.com/iotaledger/iota.go/pow"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
