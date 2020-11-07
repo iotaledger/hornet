@@ -2,10 +2,10 @@ package whiteflag
 
 import (
 	"crypto"
-	"errors"
 	"fmt"
 
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"

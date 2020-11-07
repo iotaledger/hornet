@@ -2,17 +2,19 @@ package p2p
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 	"time"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
+	"github.com/pkg/errors"
+
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 const (

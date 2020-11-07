@@ -3,10 +3,10 @@ package mselection
 import (
 	"container/list"
 	"context"
-	"errors"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/willf/bitset"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"

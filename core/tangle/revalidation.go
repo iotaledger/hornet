@@ -1,8 +1,9 @@
 package tangle
 
 import (
-	"errors"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"

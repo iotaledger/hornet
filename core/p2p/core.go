@@ -4,7 +4,6 @@ package p2p
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	badger "github.com/ipfs/go-ds-badger"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/libp2p/go-libp2p"

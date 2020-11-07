@@ -1,6 +1,8 @@
 package common
 
-import "errors"
+import (
+	"github.com/pkg/errors"
+)
 
 var (
 	// ErrInvalidParameter defines the invalid parameter error.

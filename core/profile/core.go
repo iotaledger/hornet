@@ -1,10 +1,10 @@
 package profile
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/mem"
 	"go.uber.org/dig"
 

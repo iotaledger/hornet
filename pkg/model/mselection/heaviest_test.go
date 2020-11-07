@@ -4,15 +4,16 @@ package mselection
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
