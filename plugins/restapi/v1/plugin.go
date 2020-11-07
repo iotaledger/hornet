@@ -20,6 +20,7 @@ import (
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/restapi/common"
+	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -52,6 +53,13 @@ const (
 	// RouteTips is the route for getting two tips.
 	// GET returns the tips.
 	RouteTips = "/tips"
+
+	// RouteSpammer is the route for controlling the integrated spammer.
+	// GET returns the tips.
+	// query parameters: "cmd" (start, stop)
+	//					 "mpsRateLimit" (optional)
+	//					 "cpuMaxUsage" (optional)
+	RouteSpammer = "/spammer"
 
 	// RouteMessageData is the route for getting message data by it's messageID.
 	// GET returns message data (json).
@@ -172,23 +180,25 @@ type dependencies struct {
 	Echo             *echo.Echo
 }
 
+// jsonResponse wraps the result into a "data" field and sends the JSON response with status code.
+func jsonResponse(c echo.Context, statusCode int, result interface{}) error {
+	return c.JSON(statusCode, &common.HTTPOkResponseEnvelope{Data: result})
+}
+
 func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
-	// check for features
+	// Check for features
 	if deps.NodeConfig.Bool(powcore.CfgNodeEnableProofOfWork) {
 		features = append(features, "PoW")
 	}
-
-	// add all routes from other enabled plugins
-	Plugin.Node.ForEachAddRestRoutes(routeGroup)
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 		resp, err := info()
 		if err != nil {
 			return err
 		}
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
@@ -198,7 +208,18 @@ func configure() {
 			if err != nil {
 				return err
 			}
-			return common.JSONResponse(c, http.StatusOK, resp)
+			return jsonResponse(c, http.StatusOK, resp)
+		})
+	}
+
+	// only handle spammer api calls if the Spammer plugin is enabled
+	if !Plugin.Node.IsSkipped(spammer.Plugin) {
+		routeGroup.GET(RouteSpammer, func(c echo.Context) error {
+			resp, err := executeSpammerCommand(c)
+			if err != nil {
+				return err
+			}
+			return jsonResponse(c, http.StatusOK, resp)
 		})
 	}
 
@@ -207,7 +228,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
@@ -215,7 +236,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
@@ -233,7 +254,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessages, func(c echo.Context) error {
@@ -242,7 +263,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
@@ -251,7 +272,7 @@ func configure() {
 			return err
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
-		return common.JSONResponse(c, http.StatusCreated, resp)
+		return jsonResponse(c, http.StatusCreated, resp)
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
@@ -260,7 +281,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
@@ -269,7 +290,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBalance, func(c echo.Context) error {
@@ -278,7 +299,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressOutputs, func(c echo.Context) error {
@@ -287,7 +308,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
@@ -296,7 +317,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
@@ -313,7 +334,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
@@ -322,7 +343,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
@@ -331,7 +352,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
@@ -340,13 +361,13 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
 		tanglecore.TriggerSolidifier()
 
-		return common.JSONResponse(c, http.StatusOK, "solidifier triggered")
+		return jsonResponse(c, http.StatusOK, "solidifier triggered")
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
@@ -355,7 +376,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
@@ -364,7 +385,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
@@ -373,7 +394,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
@@ -382,7 +403,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
@@ -391,7 +412,7 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
@@ -400,6 +421,6 @@ func configure() {
 			return err
 		}
 
-		return common.JSONResponse(c, http.StatusOK, resp)
+		return jsonResponse(c, http.StatusOK, resp)
 	})
 }
