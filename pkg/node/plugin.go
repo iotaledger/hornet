@@ -4,15 +4,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/labstack/echo/v4"
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/daemon"
+	flag "github.com/spf13/pflag"
 )
-
-// AddRestRoutesFunc gets called with a echo.Group.
-type AddRestRoutesFunc func(routeGroup *echo.Group)
 
 // PluginParams defines the parameters configuration of a plugin.
 type PluginParams struct {
@@ -38,10 +33,7 @@ type Pluggable struct {
 	Configure Callback
 	// Run gets called in the run stage of node initialization.
 	Run Callback
-	// AddRestRoutes can be called by other plugins (e.g. restapi)
-	// to provide the REST routes of this plugin.
-	AddRestRoutes AddRestRoutesFunc
-	wg            *sync.WaitGroup
+	wg  *sync.WaitGroup
 }
 
 // InitPlugin is the module initializing configuration of the node.
