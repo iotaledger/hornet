@@ -7,7 +7,6 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/labstack/echo/v4"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 )
@@ -324,24 +323,4 @@ func forEachPlugin(plugins []*Plugin, f PluginForEachFunc) {
 // ForEachPlugin calls the given PluginForEachFunc on each loaded plugin.
 func (n *Node) ForEachPlugin(f PluginForEachFunc) {
 	forEachPlugin(n.plugins, f)
-}
-
-// ForEachAddRestRoutes calls AddRestRoutes with the given echo Group
-// for every core plugin and enabled plugin.
-func (n *Node) ForEachAddRestRoutes(routeGroup *echo.Group) {
-	forEachCorePlugin(n.corePlugins, func(coreModule *CorePlugin) bool {
-		if coreModule.Pluggable.AddRestRoutes == nil {
-			return true
-		}
-		coreModule.Pluggable.AddRestRoutes(routeGroup)
-		return true
-	})
-
-	forEachPlugin(n.plugins, func(plugin *Plugin) bool {
-		if plugin.Pluggable.AddRestRoutes == nil {
-			return true
-		}
-		plugin.Pluggable.AddRestRoutes(routeGroup)
-		return true
-	})
 }
