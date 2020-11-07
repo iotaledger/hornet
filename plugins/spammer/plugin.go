@@ -1,37 +1,31 @@
 package spammer
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
 	"runtime"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
-	"go.uber.org/atomic"
-	"go.uber.org/dig"
-
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	"go.uber.org/atomic"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
-	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -39,12 +33,11 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.Disabled,
 		Pluggable: node.Pluggable{
-			Name:          "Spammer",
-			DepsFunc:      func(cDeps dependencies) { deps = cDeps },
-			Params:        params,
-			Configure:     configure,
-			Run:           run,
-			AddRestRoutes: addRestRoutes,
+			Name:      "Spammer",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
 		},
 	}
 }
@@ -76,13 +69,6 @@ var (
 
 	// ErrSpammerDisabled is returned if the spammer plugin is disabled.
 	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
-
-	// RouteSpammer is the route for controlling the integrated spammer.
-	// GET returns the tips.
-	// query parameters: "cmd" (start, stop)
-	//					 "mpsRateLimit" (optional)
-	//					 "cpuMaxUsage" (optional)
-	RouteSpammer = "/plugins/spammer"
 )
 
 type dependencies struct {
@@ -142,22 +128,12 @@ func run() {
 
 	// automatically start the spammer on node startup if the flag is set
 	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
-		start(nil, nil)
+		Start(nil, nil)
 	}
 }
 
-func addRestRoutes(routeGroup *echo.Group) {
-	routeGroup.GET(RouteSpammer, func(c echo.Context) error {
-		resp, err := executeSpammerCommand(c)
-		if err != nil {
-			return err
-		}
-		return common.JSONResponse(c, http.StatusOK, resp)
-	})
-}
-
-// start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
-func start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error) {
+// Start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
+func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error) {
 	if spammerInstance == nil {
 		return 0.0, 0.0, ErrSpammerDisabled
 	}
@@ -311,8 +287,8 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	}
 }
 
-// stop stops the spammer.
-func stop() error {
+// Stop stops the spammer.
+func Stop() error {
 	if spammerInstance == nil {
 		return ErrSpammerDisabled
 	}
@@ -365,53 +341,4 @@ func measureSpammerMetrics() {
 		NewMessages:              new,
 		AverageMessagesPerSecond: spammerAvgHeap.GetAveragePerSecond(timeDiff),
 	})
-}
-
-func executeSpammerCommand(c echo.Context) (string, error) {
-	command := strings.ToLower(c.QueryParam("cmd"))
-
-	switch command {
-
-	case "start":
-		var err error
-		var mpsRateLimit *float64 = nil
-		var cpuMaxUsage *float64 = nil
-
-		mpsRateLimitQuery := c.QueryParam("mpsRateLimit")
-		if mpsRateLimitQuery != "" {
-			mpsRateLimitParsed, err := strconv.ParseFloat(mpsRateLimitQuery, 64)
-			if err != nil || mpsRateLimitParsed < 0.0 {
-				return "", errors.WithMessagef(common.ErrInvalidParameter, "parsing mpsRateLimit failed: %w", err)
-			}
-			mpsRateLimit = &mpsRateLimitParsed
-		}
-
-		cpuMaxUsageQuery := c.QueryParam("cpuMaxUsage")
-		if cpuMaxUsageQuery != "" {
-			cpuMaxUsageParsed, err := strconv.ParseFloat(cpuMaxUsageQuery, 64)
-			if err != nil || cpuMaxUsageParsed < 0.0 {
-				return "", errors.WithMessagef(common.ErrInvalidParameter, "parsing cpuMaxUsage failed: %w", err)
-			}
-			cpuMaxUsage = &cpuMaxUsageParsed
-		}
-
-		usedMpsRateLimit, usedCPUMaxUsage, err := start(mpsRateLimit, cpuMaxUsage)
-		if err != nil {
-			return "", errors.WithMessagef(common.ErrInternalError, "starting spammer failed: %w", err)
-		}
-
-		return fmt.Sprintf("started spamming (MPS Limit: %0.2f, CPU Limit: %0.2f%%)", usedMpsRateLimit, usedCPUMaxUsage*100.0), nil
-
-	case "stop":
-		if err := stop(); err != nil {
-			return "", errors.WithMessagef(common.ErrInternalError, "stopping spammer failed: %w", err)
-		}
-		return "stopped spamming", nil
-
-	case "":
-		return "", errors.WithMessage(common.ErrInvalidParameter, "no cmd given")
-
-	default:
-		return "", errors.WithMessagef(common.ErrInvalidParameter, "unknown cmd: %s", command)
-	}
 }
