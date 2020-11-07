@@ -4,7 +4,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/gohornet/hornet/plugins/restapi/common"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 )
 
@@ -25,7 +25,7 @@ func middlewareFilterRoutes(whitelistedNetworks []net.IPNet, permittedRoutes map
 			if !networkWhitelisted(c, whitelistedNetworks) {
 				// network is not whitelisted, check if the route is permitted, otherwise deny it.
 				if _, permitted := permittedRoutes[strings.ToLower(c.Path())]; !permitted {
-					return common.ErrForbidden
+					return restapi.ErrForbidden
 				}
 			}
 			return next(c)

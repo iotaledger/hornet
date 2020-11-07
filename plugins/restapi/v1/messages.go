@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
@@ -17,8 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/restapi"
-	"github.com/gohornet/hornet/plugins/restapi/common"
+	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -29,19 +29,19 @@ var (
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	if !deps.Tangle.IsNodeSyncedWithThreshold() {
-		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
 	cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageID.Hex())
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageID.Hex())
 	}
 	defer cachedMsgMeta.Release(true)
 
@@ -106,12 +106,12 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
 	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -123,12 +123,12 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
 	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -140,10 +140,10 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
 	}
 
-	maxResults := deps.NodeConfig.Int(restapi.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
 	childrenMessageIDsHex := []string{}
 	for _, childrenMessageID := range deps.Tangle.GetChildrenMessageIDs(messageID, maxResults) {
@@ -162,10 +162,10 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 	index := c.QueryParam("index")
 
 	if index == "" {
-		return nil, errors.WithMessage(common.ErrInvalidParameter, "query parameter index empty")
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
 	}
 
-	maxResults := deps.NodeConfig.Int(restapi.CfgRestAPILimitsMaxResults)
+	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
 	messageIDsHex := []string{}
 	for _, messageID := range deps.Tangle.GetIndexMessageIDs(index, maxResults) {
@@ -183,7 +183,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	if !deps.Tangle.IsNodeSyncedWithThreshold() {
-		return nil, errors.WithMessage(common.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 
 	msg := &iotago.Message{}
@@ -192,21 +192,21 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	if strings.HasPrefix(contentType, echo.MIMEApplicationJSON) {
 		if err := c.Bind(msg); err != nil {
-			return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 		}
 	} else {
 		if c.Request().Body == nil {
-			return nil, errors.WithMessage(common.ErrInvalidParameter, "invalid message, error: request body missing")
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: request body missing")
 			// bad request
 		}
 
 		bytes, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
-			return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 		}
 
 		if _, err := msg.Deserialize(bytes, iotago.DeSeriModeNoValidation); err != nil {
-			return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 		}
 	}
 
@@ -221,9 +221,9 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 		if err != nil {
 			if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-				return nil, errors.WithMessage(common.ErrServiceUnavailable, err.Error())
+				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
 			}
-			return nil, errors.WithMessage(common.ErrInternalError, err.Error())
+			return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
 		}
 		msg.Parent1 = *tips[0]
 		msg.Parent2 = *tips[1]
@@ -239,13 +239,13 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 
 	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
 
 	if err := deps.MessageProcessor.Emit(message); err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid message, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 
 	utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout)
