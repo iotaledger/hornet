@@ -3,6 +3,7 @@ package spammer
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -11,12 +12,14 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/labstack/echo/v4"
 	"go.uber.org/atomic"
 	"go.uber.org/dig"
 
@@ -68,7 +71,7 @@ var (
 	}
 
 	// ErrSpammerDisabled is returned if the spammer plugin is disabled.
-	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
+	ErrSpammerDisabled = errors.New("spammer plugin disabled")
 )
 
 type dependencies struct {
@@ -79,6 +82,7 @@ type dependencies struct {
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Echo             *echo.Echo
 }
 
 func configure() {
@@ -89,6 +93,14 @@ func configure() {
 		Plugin.Status = node.Disabled
 		return
 	}
+
+	deps.Echo.GET(RouteSpammer, func(c echo.Context) error {
+		resp, err := handleSpammerCommand(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
 
 	spammerAvgHeap = utils.NewTimeHeap()
 

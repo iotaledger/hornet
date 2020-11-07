@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -17,7 +18,6 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
@@ -176,23 +176,23 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 			statusCode = http.StatusUnauthorized
 			message = "unauthorized"
 
-		case common.ErrForbidden:
+		case restapi.ErrForbidden:
 			statusCode = http.StatusForbidden
 			message = "access forbidden"
 
-		case common.ErrServiceUnavailable:
+		case restapi.ErrServiceUnavailable:
 			statusCode = http.StatusServiceUnavailable
 			message = "service unavailable"
 
-		case common.ErrInternalError:
+		case restapi.ErrInternalError:
 			statusCode = http.StatusInternalServerError
 			message = "internal server error"
 
-		case common.ErrNotFound:
+		case restapi.ErrNotFound:
 			statusCode = http.StatusNotFound
 			message = "not found"
 
-		case common.ErrInvalidParameter:
+		case restapi.ErrInvalidParameter:
 			statusCode = http.StatusBadRequest
 			message = "bad request"
 
@@ -203,7 +203,7 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 
 		message = fmt.Sprintf("%s, error: %s", message, err.Error())
 
-		c.JSON(statusCode, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: string(statusCode), Message: message}})
+		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: string(statusCode), Message: message}})
 	}
 
 	if !exclHealthCheckFromAuth {
