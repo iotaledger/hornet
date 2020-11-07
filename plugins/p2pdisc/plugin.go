@@ -3,7 +3,6 @@ package p2pdisc
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -15,12 +14,15 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "P2PDiscovery",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
-		Status:    node.Disabled,
+		Status: node.Disabled,
+		Pluggable: node.Pluggable{
+			Name:      "P2PDiscovery",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -44,10 +46,10 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 	if err := c.Provide(func(deps discdeps) *p2p.DiscoveryService {
-		rendezvousPoint := deps.NodeConfig.String(config.CfgP2PDiscRendezvousPoint)
-		discoveryIntervalSec := deps.NodeConfig.Duration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
-		routingTableRefreshPeriodSec := deps.NodeConfig.Duration(config.CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
-		maxDiscoveredPeerCount := deps.NodeConfig.Int(config.CfgP2PDiscMaxDiscoveredPeerConns)
+		rendezvousPoint := deps.NodeConfig.String(CfgP2PDiscRendezvousPoint)
+		discoveryIntervalSec := deps.NodeConfig.Duration(CfgP2PDiscAdvertiseIntervalSec) * time.Second
+		routingTableRefreshPeriodSec := deps.NodeConfig.Duration(CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
+		maxDiscoveredPeerCount := deps.NodeConfig.Int(CfgP2PDiscMaxDiscoveredPeerConns)
 
 		return p2p.NewDiscoveryService(deps.Host, deps.Manager,
 			p2p.WithDiscoveryServiceAdvertiseInterval(discoveryIntervalSec),
@@ -67,8 +69,8 @@ func configure() {
 
 func run() {
 	_ = Plugin.Daemon().BackgroundWorker("P2PDiscovery", func(shutdownSignal <-chan struct{}) {
-		rendezvousPoint := deps.NodeConfig.String(config.CfgP2PDiscRendezvousPoint)
-		discoveryIntervalSec := deps.NodeConfig.Duration(config.CfgP2PDiscAdvertiseIntervalSec) * time.Second
+		rendezvousPoint := deps.NodeConfig.String(CfgP2PDiscRendezvousPoint)
+		discoveryIntervalSec := deps.NodeConfig.Duration(CfgP2PDiscAdvertiseIntervalSec) * time.Second
 		log.Infof("started peer discovery task with %d secs interval using '%s' as rendezvous point", discoveryIntervalSec, rendezvousPoint)
 		deps.DiscoveryService.Start(shutdownSignal)
 	}, shutdown.PriorityPeerDiscovery)

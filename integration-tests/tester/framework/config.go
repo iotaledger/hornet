@@ -5,7 +5,14 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/snapshot"
+	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/profiling"
+	"github.com/gohornet/hornet/plugins/restapi"
 )
 
 const (
@@ -132,15 +139,15 @@ type NetworkConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (netConfig *NetworkConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgP2PIdentityPrivKey, netConfig.IdentityPrivKey),
-		fmt.Sprintf("--%s=%s", config.CfgP2PBindMultiAddresses, strings.Join(netConfig.BindMultiAddresses, ",")),
-		fmt.Sprintf("--%s=%s", config.CfgP2PPeerStorePath, netConfig.PeerStorePath),
-		fmt.Sprintf("--%s=%d", config.CfgP2PConnMngHighWatermark, netConfig.ConnMngHighWatermark),
-		fmt.Sprintf("--%s=%d", config.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
-		fmt.Sprintf("--%s=%s", config.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
-		fmt.Sprintf("--%s=%s", config.CfgP2PPeerAliases, strings.Join(netConfig.PeerAliases, ",")),
-		fmt.Sprintf("--%s=%d", config.CfgP2PReconnectIntervalSeconds, netConfig.ReconnectIntervalSeconds),
-		fmt.Sprintf("--%s=%d", config.CfgP2PGossipUnknownPeersLimit, netConfig.GossipUnknownPeersLimit),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PIdentityPrivKey, netConfig.IdentityPrivKey),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PBindMultiAddresses, strings.Join(netConfig.BindMultiAddresses, ",")),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeerStorePath, netConfig.PeerStorePath),
+		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngHighWatermark, netConfig.ConnMngHighWatermark),
+		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeerAliases, strings.Join(netConfig.PeerAliases, ",")),
+		fmt.Sprintf("--%s=%d", p2p.CfgP2PReconnectIntervalSeconds, netConfig.ReconnectIntervalSeconds),
+		fmt.Sprintf("--%s=%d", gossip.CfgP2PGossipUnknownPeersLimit, netConfig.GossipUnknownPeersLimit),
 	}
 }
 
@@ -170,8 +177,8 @@ type RestAPIConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
-		fmt.Sprintf("--%s=%s", config.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
+		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
 	}
 }
 
@@ -239,7 +246,7 @@ type SnapshotConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgSnapshotsPath, snapshotConfig.SnapshotFilePath),
+		fmt.Sprintf("--%s=%s", snapshot.CfgSnapshotsPath, snapshotConfig.SnapshotFilePath),
 	}
 }
 
@@ -261,7 +268,7 @@ type CoordinatorConfig struct {
 	// The coo private keys.
 	PrivateKeys []string
 	// The coo public key ranges.
-	PublicKeyRanges []config.PublicKeyRange
+	PublicKeyRanges []coopkg.PublicKeyRange
 	// The interval in which to issue new milestones.
 	IssuanceIntervalSeconds int
 }
@@ -277,8 +284,8 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
 		fmt.Sprintf("--publicKeyRanges=[%v]", strings.Join(keyRanges, ",")),
-		fmt.Sprintf("--%s=%d", config.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
-		fmt.Sprintf("--%s=%d", config.CfgCoordinatorMinPoWScore, cooConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%d", coordinator.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
+		fmt.Sprintf("--%s=%0.0f", coordinator.CfgCoordinatorMinPoWScore, cooConfig.MinPoWScore),
 	}
 }
 
@@ -290,7 +297,7 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		MinPoWScore: 100,
 		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
-		PublicKeyRanges: []config.PublicKeyRange{
+		PublicKeyRanges: []coopkg.PublicKeyRange{
 			{
 				Key:        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 				StartIndex: 0,
@@ -315,7 +322,7 @@ type ProfilingConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (profilingConfig *ProfilingConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgProfilingBindAddress, profilingConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", profiling.CfgProfilingBindAddress, profilingConfig.BindAddress),
 	}
 }
 
@@ -335,7 +342,7 @@ type DashboardConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (dashboardConfig *DashboardConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", config.CfgDashboardBindAddress, dashboardConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", dashboard.CfgDashboardBindAddress, dashboardConfig.BindAddress),
 	}
 }
 

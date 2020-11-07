@@ -2,13 +2,13 @@ package tangle
 
 import (
 	"crypto"
-	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 
 	pebbleDB "github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"

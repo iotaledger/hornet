@@ -150,7 +150,7 @@ func (t *Tangle) GetMessageStorageSize() int {
 	return t.messagesStorage.GetSize()
 }
 
-func (t *Tangle) configureMessageStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func (t *Tangle) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	t.messagesStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixMessages}),

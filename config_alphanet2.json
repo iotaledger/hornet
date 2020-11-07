@@ -56,7 +56,8 @@
     "enabled": true,
     "delay": 500
   },
-  "coordinator": {
+  "protocol": {
+    "minPoWScore": 0,
     "publicKeyRanges": [
       {
         "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -68,8 +69,9 @@
         "start": 0,
         "end": 0
       }
-    ],
-    "mwm": 1,
+    ]
+  },
+  "coordinator": {
     "stateFilePath": "coordinator.state",
     "intervalSeconds": 10,
     "checkpoints": {
@@ -140,9 +142,6 @@
   },
   "mqtt": {
     "config": "mqtt_config.json"
-  },
-  "zmq": {
-    "bindAddress": "localhost:5557"
   },
   "profiling": {
     "bindAddress": "localhost:6061"

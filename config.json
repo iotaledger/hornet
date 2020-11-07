@@ -96,9 +96,6 @@
     "workers": 0,
     "autostart": false
   },
-  "zmq": {
-    "bindAddress": "localhost:5556"
-  },
   "profiling": {
     "bindAddress": "localhost:6060"
   },

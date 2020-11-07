@@ -3,29 +3,47 @@ package pow
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
+	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
+const (
+	// defines whether the node does PoW (e.g. if messages are received via API)
+	CfgNodeEnableProofOfWork = "node.enableProofOfWork"
+)
+
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "PoW",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:     "PoW",
+			DepsFunc: func(cDeps dependencies) { deps = cDeps },
+			Params: &node.PluginParams{
+				Params: map[string]*flag.FlagSet{
+					"nodeConfig": func() *flag.FlagSet {
+						fs := flag.NewFlagSet("", flag.ContinueOnError)
+						fs.Bool(CfgNodeEnableProofOfWork, false, "defines whether the node does PoW (e.g. if messages are received via API)")
+						return fs
+					}(),
+				},
+				Masked: nil,
+			},
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 	deps       dependencies
 )
@@ -51,20 +69,20 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.NodeConfig.Float64(config.CfgCoordinatorMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 }
 
 func run() {
 
 	// close the PoW handler on shutdown
-	CoreModule.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting PoW Handler ... done")
 		<-shutdownSignal
 		log.Info("Stopping PoW Handler ...")

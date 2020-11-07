@@ -24,7 +24,7 @@ func AddRequestBackpressureSignal(reqFunc func() bool) {
 }
 
 func runRequestWorkers() {
-	CoreModule.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		enqueueTicker := time.NewTicker(enqueuePendingRequestsInterval)
 	requestQueueEnqueueLoop:
 		for {
@@ -51,7 +51,7 @@ func runRequestWorkers() {
 		}
 	}, shutdown.PriorityRequestsProcessor)
 
-	CoreModule.Daemon().BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("STINGRequester", func(shutdownSignal <-chan struct{}) {
 		rQueue := deps.RequestQueue
 		for {
 			select {

@@ -24,7 +24,10 @@
       "/api/v1/peers/:peerID",
       "/api/v1/peers"
     ],
-    "whitelistedAddresses": ["127.0.0.1", "::1"],
+    "whitelistedAddresses": [
+      "127.0.0.1",
+      "::1"
+    ],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
       "bodyLength": "1M",
@@ -56,7 +59,8 @@
     "enabled": true,
     "delay": 500
   },
-  "coordinator": {
+  "protocol": {
+    "minPoWScore": 0,
     "publicKeyRanges": [
       {
         "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -68,8 +72,9 @@
         "start": 0,
         "end": 0
       }
-    ],
-    "mwm": 1,
+    ]
+  },
+  "coordinator": {
     "stateFilePath": "coordinator.state",
     "intervalSeconds": 10,
     "checkpoints": {
@@ -115,8 +120,13 @@
   "node": {
     "alias": "",
     "enableProofOfWork": false,
-    "disablePlugins": ["Autopeering"],
-    "enablePlugins": ["Spammer", "Coordinator"]
+    "disablePlugins": [
+      "Autopeering"
+    ],
+    "enablePlugins": [
+      "Spammer",
+      "Coordinator"
+    ]
   },
   "logger": {
     "level": "debug",
@@ -140,9 +150,6 @@
   },
   "mqtt": {
     "config": "mqtt_config.json"
-  },
-  "zmq": {
-    "bindAddress": "localhost:5556"
   },
   "profiling": {
     "bindAddress": "localhost:6060"

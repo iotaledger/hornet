@@ -3,7 +3,8 @@ package utils
 import (
 	"crypto/ed25519"
 	"encoding/hex"
-	"errors"
+
+	"github.com/pkg/errors"
 )
 
 var (

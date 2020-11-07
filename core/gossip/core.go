@@ -4,21 +4,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/timeutil"
+
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -34,17 +35,20 @@ const (
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Gossip",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Gossip",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 	deps       dependencies
 )
@@ -73,12 +77,13 @@ func provide(c *dig.Container) {
 		RequestQueue gossip.RequestQueue
 		Manager      *p2p.Manager
 		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
+		Profile      *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
-			MinPoWScore:       deps.NodeConfig.Float64(config.CfgCoordinatorMinPoWScore),
-			WorkUnitCacheOpts: profile.LoadProfile().Caches.IncomingMessagesFilter,
+			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {
 		panic(err)
@@ -100,7 +105,7 @@ func provide(c *dig.Container) {
 		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
 		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
-			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(config.CfgP2PGossipUnknownPeersLimit)),
+			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
 		)
 	}); err != nil {
 		panic(err)
@@ -108,7 +113,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	// register event handlers for messages
 	deps.Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
@@ -124,7 +129,7 @@ func configure() {
 			close(protocolTerminated)
 		}))
 
-		_ = CoreModule.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		_ = CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -139,7 +144,7 @@ func configure() {
 			}
 		}, shutdown.PriorityPeerGossipProtocolRead)
 
-		_ = CoreModule.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		_ = CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := deps.Tangle.GetSnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := deps.Tangle.GetLatestMilestoneIndex()
@@ -168,13 +173,13 @@ func configure() {
 
 func run() {
 
-	_ = CoreModule.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running GossipService")
 		deps.Service.Start(shutdownSignal)
 		log.Info("Stopped GossipService")
 	}, shutdown.PriorityGossipService)
 
-	_ = CoreModule.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running BroadcastQueue")
 		broadcastQueue := make(chan *gossip.Broadcast)
 		onBroadcastMessage := events.NewClosure(func(b *gossip.Broadcast) {
@@ -201,13 +206,13 @@ func run() {
 		log.Info("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue)
 
-	_ = CoreModule.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running MessageProcessor")
 		deps.MessageProcessor.Run(shutdownSignal)
 		log.Info("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 
-	_ = CoreModule.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
 	}, shutdown.PriorityHeartbeats)
 

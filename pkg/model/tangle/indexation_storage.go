@@ -32,7 +32,7 @@ func (t *Tangle) GetIndexationStorageSize() int {
 	return t.indexationStorage.GetSize()
 }
 
-func (t *Tangle) configureIndexationStorage(store kvstore.KVStore, opts profile.CacheOpts) {
+func (t *Tangle) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	t.indexationStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixIndexation}),

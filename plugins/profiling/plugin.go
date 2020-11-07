@@ -5,7 +5,6 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
 	"go.uber.org/dig"
@@ -13,10 +12,13 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:     "Profiling",
-		DepsFunc: func(cDeps dependencies) { deps = cDeps },
-		Run:      run,
-		Status:   node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:     "Profiling",
+			DepsFunc: func(cDeps dependencies) { deps = cDeps },
+			Params:   params,
+			Run:      run,
+		},
 	}
 }
 
@@ -34,6 +36,6 @@ func run() {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 
-	bindAddr := deps.NodeConfig.String(config.CfgProfilingBindAddress)
+	bindAddr := deps.NodeConfig.String(CfgProfilingBindAddress)
 	go http.ListenAndServe(bindAddr, nil) // pprof Server for Debbuging Mutexes
 }

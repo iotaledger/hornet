@@ -2,8 +2,9 @@ package utxo
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"

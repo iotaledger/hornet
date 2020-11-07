@@ -5,16 +5,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gohornet/hornet/core/app"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/restapi/common"
 )
 
 func info() (*infoResponse, error) {
@@ -49,8 +49,8 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                 cli.AppName,
-		Version:              cli.AppVersion,
+		Name:                 app.Name,
+		Version:              app.Version,
 		IsHealthy:            tanglecore.IsNodeHealthy(),
 		NetworkID:            snapshotInfo.NetworkID,
 		LatestMilestoneID:    latestMilestoneID,
@@ -82,9 +82,9 @@ func tips(c echo.Context) (*tipsResponse, error) {
 
 	if err != nil {
 		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-			return nil, errors.WithMessage(common.ErrServiceUnavailable, err.Error())
+			return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
 		}
-		return nil, errors.WithMessage(common.ErrInternalError, err.Error())
+		return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
 	}
 
 	return &tipsResponse{Tip1: tips[0].Hex(), Tip2: tips[1].Hex()}, nil
@@ -95,12 +95,12 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
 	if err != nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
 	}
 
 	cachedMilestone := deps.Tangle.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
 	if cachedMilestone == nil {
-		return nil, errors.WithMessagef(common.ErrInvalidParameter, "milestone not found: %d", msIndex)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "milestone not found: %d", msIndex)
 	}
 	defer cachedMilestone.Release(true)
 

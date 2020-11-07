@@ -5,7 +5,6 @@ package framework
 
 import (
 	"context"
-	"errors"
 	"log"
 	"strings"
 	"sync"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
+	"github.com/pkg/errors"
 )
 
 var (

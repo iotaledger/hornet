@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -17,22 +18,23 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/plugins/restapi/common"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "RestAPI",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "RestAPI",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -60,7 +62,7 @@ func provide(c *dig.Container) {
 		e.Use(middleware.Recover())
 		e.Use(middleware.CORS())
 		e.Use(middleware.Gzip())
-		e.Use(middleware.BodyLimit(deps.NodeConfig.String(config.CfgRestAPILimitsMaxBodyLength)))
+		e.Use(middleware.BodyLimit(deps.NodeConfig.String(CfgRestAPILimitsMaxBodyLength)))
 		return e
 	}); err != nil {
 		panic(err)
@@ -72,7 +74,7 @@ func configure() {
 
 	// load whitelisted networks
 	var whitelistedNetworks []net.IPNet
-	for _, entry := range deps.NodeConfig.Strings(config.CfgRestAPIWhitelistedAddresses) {
+	for _, entry := range deps.NodeConfig.Strings(CfgRestAPIWhitelistedAddresses) {
 		_, ipnet, err := cnet.ParseCIDROrIP(entry)
 		if err != nil {
 			log.Warnf("Invalid whitelist address: %s", entry)
@@ -83,31 +85,31 @@ func configure() {
 
 	permittedRoutes := make(map[string]struct{})
 	// load allowed remote access to specific HTTP REST routes
-	for _, route := range deps.NodeConfig.Strings(config.CfgRestAPIPermittedRoutes) {
+	for _, route := range deps.NodeConfig.Strings(CfgRestAPIPermittedRoutes) {
 		permittedRoutes[strings.ToLower(route)] = struct{}{}
 	}
 
 	deps.Echo.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
 
-	exclHealthCheckFromAuth := deps.NodeConfig.Bool(config.CfgRestAPIExcludeHealthCheckFromAuth)
+	exclHealthCheckFromAuth := deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth)
 	if exclHealthCheckFromAuth {
 		// Handle route without auth
 		setupHealthRoute()
 	}
 
 	// set basic auth if enabled
-	if deps.NodeConfig.Bool(config.CfgRestAPIBasicAuthEnabled) {
+	if deps.NodeConfig.Bool(CfgRestAPIBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := deps.NodeConfig.String(config.CfgRestAPIBasicAuthUsername)
-		expectedPasswordHash := deps.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordHash)
-		passwordSalt := deps.NodeConfig.String(config.CfgRestAPIBasicAuthPasswordSalt)
+		expectedUsername := deps.NodeConfig.String(CfgRestAPIBasicAuthUsername)
+		expectedPasswordHash := deps.NodeConfig.String(CfgRestAPIBasicAuthPasswordHash)
+		passwordSalt := deps.NodeConfig.String(CfgRestAPIBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
-			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", config.CfgRestAPIBasicAuthUsername)
+			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", CfgRestAPIBasicAuthUsername)
 		}
 
 		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (sha256 hash) in length if web API basic auth is enabled", config.CfgRestAPIBasicAuthPasswordHash)
+			log.Fatalf("'%s' must be 64 (sha256 hash) in length if web API basic auth is enabled", CfgRestAPIBasicAuthPasswordHash)
 		}
 
 		deps.Echo.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
@@ -132,7 +134,7 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting REST-API server ... done")
 
-		bindAddr := deps.NodeConfig.String(config.CfgRestAPIBindAddress)
+		bindAddr := deps.NodeConfig.String(CfgRestAPIBindAddress)
 		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {
@@ -174,23 +176,23 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 			statusCode = http.StatusUnauthorized
 			message = "unauthorized"
 
-		case common.ErrForbidden:
+		case restapi.ErrForbidden:
 			statusCode = http.StatusForbidden
 			message = "access forbidden"
 
-		case common.ErrServiceUnavailable:
+		case restapi.ErrServiceUnavailable:
 			statusCode = http.StatusServiceUnavailable
 			message = "service unavailable"
 
-		case common.ErrInternalError:
+		case restapi.ErrInternalError:
 			statusCode = http.StatusInternalServerError
 			message = "internal server error"
 
-		case common.ErrNotFound:
+		case restapi.ErrNotFound:
 			statusCode = http.StatusNotFound
 			message = "not found"
 
-		case common.ErrInvalidParameter:
+		case restapi.ErrInvalidParameter:
 			statusCode = http.StatusBadRequest
 			message = "bad request"
 
@@ -199,9 +201,9 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 			message = "internal server error"
 		}
 
-		message = fmt.Sprintf("%s, error: %+v", message, err)
+		message = fmt.Sprintf("%s, error: %s", message, err.Error())
 
-		c.JSON(statusCode, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: string(statusCode), Message: message}})
+		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: string(statusCode), Message: message}})
 	}
 
 	if !exclHealthCheckFromAuth {

@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -21,10 +22,8 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 
-	"github.com/gohornet/hornet/core/cli"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/basicauth"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -33,11 +32,14 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "Dashboard",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "Dashboard",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -128,18 +130,18 @@ func run() {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if deps.NodeConfig.Bool(config.CfgDashboardBasicAuthEnabled) {
+	if deps.NodeConfig.Bool(CfgDashboardBasicAuthEnabled) {
 		// grab auth info
-		expectedUsername := deps.NodeConfig.String(config.CfgDashboardBasicAuthUsername)
-		expectedPasswordHash := deps.NodeConfig.String(config.CfgDashboardBasicAuthPasswordHash)
-		passwordSalt := deps.NodeConfig.String(config.CfgDashboardBasicAuthPasswordSalt)
+		expectedUsername := deps.NodeConfig.String(CfgDashboardBasicAuthUsername)
+		expectedPasswordHash := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordHash)
+		passwordSalt := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordSalt)
 
 		if len(expectedUsername) == 0 {
-			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", config.CfgDashboardBasicAuthUsername)
+			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", CfgDashboardBasicAuthUsername)
 		}
 
 		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (sha256 hash) in length if dashboard basic auth is enabled", config.CfgDashboardBasicAuthPasswordHash)
+			log.Fatalf("'%s' must be 64 (sha256 hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
@@ -156,7 +158,7 @@ func run() {
 	}
 
 	setupRoutes(e)
-	bindAddr := deps.NodeConfig.String(config.CfgDashboardBindAddress)
+	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
@@ -370,11 +372,12 @@ func currentNodeStatus() *NodeStatus {
 	if peekedRequest != nil {
 		requestedMilestone = peekedRequest.MilestoneIndex
 	}
-	status.Version = cli.AppVersion
-	status.LatestVersion = cli.LatestGithubVersion
+
+	status.Version = app.Version
+	status.LatestVersion = app.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = tanglecore.IsNodeHealthy()
-	status.NodeAlias = deps.NodeConfig.String(config.CfgNodeAlias)
+	status.NodeAlias = deps.NodeConfig.String(CfgDashboardNodeAlias)
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 

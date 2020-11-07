@@ -3,7 +3,6 @@ package urts
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -20,12 +19,15 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "URTS",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
-		Run:       run,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "URTS",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -56,19 +58,19 @@ func provide(c *dig.Container) {
 		return tipselect.New(
 			deps.Tangle,
 
-			deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
-			deps.NodeConfig.Int(config.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
-			deps.NodeConfig.Int(config.CfgTipSelBelowMaxDepth),
+			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
+			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
+			deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
 
-			deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelRetentionRulesTipsLimit),
-			time.Second*time.Duration(deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelMaxReferencedTipAgeSeconds)),
-			uint32(deps.NodeConfig.Int64(config.CfgTipSelNonLazy+config.CfgTipSelMaxChildren)),
-			deps.NodeConfig.Int(config.CfgTipSelNonLazy+config.CfgTipSelSpammerTipsThreshold),
+			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
+			time.Second*time.Duration(deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds)),
+			uint32(deps.NodeConfig.Int64(CfgTipSelNonLazy+CfgTipSelMaxChildren)),
+			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold),
 
-			deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelRetentionRulesTipsLimit),
-			time.Second*time.Duration(deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelMaxReferencedTipAgeSeconds)),
-			uint32(deps.NodeConfig.Int64(config.CfgTipSelSemiLazy+config.CfgTipSelMaxChildren)),
-			deps.NodeConfig.Int(config.CfgTipSelSemiLazy+config.CfgTipSelSpammerTipsThreshold),
+			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit),
+			time.Second*time.Duration(deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds)),
+			uint32(deps.NodeConfig.Int64(CfgTipSelSemiLazy+CfgTipSelMaxChildren)),
+			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
 	}); err != nil {
 		panic(err)

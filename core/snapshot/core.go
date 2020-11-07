@@ -9,7 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
@@ -19,28 +19,30 @@ import (
 
 	"github.com/gohornet/hornet/core/gossip"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Snapshot",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Snapshot",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
 var (
-	CoreModule *node.CoreModule
+	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 
-	forceLoadingSnapshot = pflag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
+	forceLoadingSnapshot = flag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", config.CfgSnapshotsDownloadURLs)
+	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", CfgSnapshotsDownloadURLs)
 	ErrSnapshotDownloadWasAborted        = errors.New("snapshot download was aborted")
 	ErrSnapshotDownloadNoValidSource     = errors.New("no valid source found, snapshot download not possible")
 	ErrSnapshotImportWasAborted          = errors.New("snapshot import was aborted")
@@ -81,21 +83,21 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
-	snapshotDepth = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsDepth))
+	snapshotDepth = milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
 	if snapshotDepth < SolidEntryPointCheckThresholdFuture {
-		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
+		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
 		snapshotDepth = SolidEntryPointCheckThresholdFuture
 	}
-	snapshotIntervalSynced = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsIntervalSynced))
-	snapshotIntervalUnsynced = milestone.Index(deps.NodeConfig.Int(config.CfgSnapshotsIntervalUnsynced))
+	snapshotIntervalSynced = milestone.Index(deps.NodeConfig.Int(CfgSnapshotsIntervalSynced))
+	snapshotIntervalUnsynced = milestone.Index(deps.NodeConfig.Int(CfgSnapshotsIntervalUnsynced))
 
-	pruningEnabled = deps.NodeConfig.Bool(config.CfgPruningEnabled)
-	pruningDelay = milestone.Index(deps.NodeConfig.Int(config.CfgPruningDelay))
+	pruningEnabled = deps.NodeConfig.Bool(CfgPruningEnabled)
+	pruningDelay = milestone.Index(deps.NodeConfig.Int(CfgPruningDelay))
 	pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
 	if pruningDelay < pruningDelayMin {
-		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", config.CfgPruningDelay, pruningDelay, pruningDelayMin)
+		log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgPruningDelay, pruningDelay, pruningDelayMin)
 		pruningDelay = pruningDelayMin
 	}
 
@@ -113,7 +115,7 @@ func configure() {
 		}
 	}
 
-	path := deps.NodeConfig.String(config.CfgSnapshotsPath)
+	path := deps.NodeConfig.String(CfgSnapshotsPath)
 	if path == "" {
 		log.Fatal(ErrNoSnapshotSpecified.Error())
 	}
@@ -124,7 +126,7 @@ func configure() {
 			log.Fatalf("could not create snapshot dir '%s'", path)
 		}
 
-		urls := deps.NodeConfig.Strings(config.CfgSnapshotsDownloadURLs)
+		urls := deps.NodeConfig.Strings(CfgSnapshotsDownloadURLs)
 		if len(urls) == 0 {
 			log.Fatal(ErrNoSnapshotDownloadURL.Error())
 		}
@@ -158,7 +160,7 @@ func run() {
 		}
 	})
 
-	CoreModule.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting LocalSnapshots ... done")
 
 		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
@@ -175,7 +177,7 @@ func run() {
 				localSnapshotLock.Lock()
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
-					localSnapshotPath := deps.NodeConfig.String(config.CfgSnapshotsPath)
+					localSnapshotPath := deps.NodeConfig.String(CfgSnapshotsPath)
 					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))

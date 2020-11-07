@@ -2,22 +2,25 @@ package p2p_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/stretchr/testify/require"
+
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+
+	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 func newNode(ctx context.Context, t require.TestingT) host.Host {
@@ -42,7 +45,7 @@ func TestManager(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	_= logger.InitGlobalLogger(cfg)
+	_ = logger.InitGlobalLogger(cfg)
 
 	node1 := newNode(ctx, t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
@@ -180,7 +183,7 @@ func TestManagerEvents(t *testing.T) {
 
 	cfg := configuration.New()
 	cfg.Set("logger.disableStacktrace", true)
-	_= logger.InitGlobalLogger(cfg)
+	_ = logger.InitGlobalLogger(cfg)
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 

@@ -10,23 +10,25 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 func init() {
-	CoreModule = &node.CoreModule{
-		Name:      "Database",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Provide:   provide,
-		Configure: configure,
+	CorePlugin = &node.CorePlugin{
+		Pluggable: node.Pluggable{
+			Name:      "Database",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+		},
 	}
 }
 
 var (
-	CoreModule            *node.CoreModule
+	CorePlugin            *node.CorePlugin
 	log                   *logger.Logger
 	garbageCollectionLock syncutils.Mutex
 	deps                  dependencies
@@ -41,10 +43,11 @@ func provide(c *dig.Container) {
 	type tangledeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Profile    *profile.Profile
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-		return tangle.New(deps.NodeConfig.String(config.CfgDatabasePath), &profile.LoadProfile().Caches)
+		return tangle.New(deps.NodeConfig.String(CfgDatabasePath), deps.Profile.Caches)
 	}); err != nil {
 		panic(err)
 	}
@@ -57,7 +60,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	log = logger.NewLogger(CoreModule.Name)
+	log = logger.NewLogger(CorePlugin.Name)
 
 	if !deps.Tangle.IsCorrectDatabaseVersion() {
 		if !deps.Tangle.UpdateDatabaseVersion() {
@@ -65,7 +68,7 @@ func configure() {
 		}
 	}
 
-	CoreModule.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Tangle.MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")

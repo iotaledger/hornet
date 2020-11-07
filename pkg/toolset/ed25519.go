@@ -1,11 +1,11 @@
 package toolset
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
-	"errors"
 	"fmt"
 
-	"crypto/ed25519"
+	"github.com/pkg/errors"
 
 	iotago "github.com/iotaledger/iota.go"
 

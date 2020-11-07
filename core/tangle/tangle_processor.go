@@ -75,14 +75,14 @@ func runTangleProcessor() {
 		}
 	})
 
-	CoreModule.Daemon().BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
 		Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		startWaitGroup.Done()
 		<-shutdownSignal
 		Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater)
 
-	CoreModule.Daemon().BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		deps.MessageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		receiveMsgWorkerPool.Start()
@@ -94,7 +94,7 @@ func runTangleProcessor() {
 		log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
 
-	CoreModule.Daemon().BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		processValidMilestoneWorkerPool.Start()
 		deps.Tangle.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
@@ -106,7 +106,7 @@ func runTangleProcessor() {
 		log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
 
-	CoreModule.Daemon().BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
+	CorePlugin.Daemon().BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		milestoneSolidifierWorkerPool.Start()
 		startWaitGroup.Done()

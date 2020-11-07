@@ -3,12 +3,14 @@ package gossip
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
+
+	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/protocol/tlv"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/protocol/message"
-	"github.com/iotaledger/hive.go/protocol/tlv"
 )
 
 var (

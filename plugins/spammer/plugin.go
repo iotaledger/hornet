@@ -3,6 +3,7 @@ package spammer
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -11,16 +12,17 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/labstack/echo/v4"
 	"go.uber.org/atomic"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -32,11 +34,14 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "Spammer",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
-		Status:    node.Disabled,
+		Status: node.Disabled,
+		Pluggable: node.Pluggable{
+			Name:      "Spammer",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -66,7 +71,7 @@ var (
 	}
 
 	// ErrSpammerDisabled is returned if the spammer plugin is disabled.
-	ErrSpammerDisabled = errors.New("Spammer plugin disabled")
+	ErrSpammerDisabled = errors.New("spammer plugin disabled")
 )
 
 type dependencies struct {
@@ -77,6 +82,7 @@ type dependencies struct {
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Echo             *echo.Echo
 }
 
 func configure() {
@@ -87,6 +93,14 @@ func configure() {
 		Plugin.Status = node.Disabled
 		return
 	}
+
+	deps.Echo.GET(RouteSpammer, func(c echo.Context) error {
+		resp, err := handleSpammerCommand(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
 
 	spammerAvgHeap = utils.NewTimeHeap()
 
@@ -104,9 +118,9 @@ func configure() {
 	}
 
 	spammerInstance = spammer.New(
-		deps.NodeConfig.String(config.CfgSpammerMessage),
-		deps.NodeConfig.String(config.CfgSpammerIndex),
-		deps.NodeConfig.String(config.CfgSpammerIndexSemiLazy),
+		deps.NodeConfig.String(CfgSpammerMessage),
+		deps.NodeConfig.String(CfgSpammerIndex),
+		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),
 		deps.TipSelector.SelectSpammerTips,
 		deps.PowHandler,
 		sendMessage,
@@ -125,7 +139,7 @@ func run() {
 	}, shutdown.PrioritySpammer)
 
 	// automatically start the spammer on node startup if the flag is set
-	if deps.NodeConfig.Bool(config.CfgSpammerAutostart) {
+	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
 		Start(nil, nil)
 	}
 }
@@ -141,9 +155,9 @@ func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := deps.NodeConfig.Float64(config.CfgSpammerMPSRateLimit)
-	cpuMaxUsageCfg := deps.NodeConfig.Float64(config.CfgSpammerCPUMaxUsage)
-	spammerWorkerCount := deps.NodeConfig.Int(config.CfgSpammerWorkers)
+	mpsRateLimitCfg := deps.NodeConfig.Float64(CfgSpammerMPSRateLimit)
+	cpuMaxUsageCfg := deps.NodeConfig.Float64(CfgSpammerCPUMaxUsage)
+	spammerWorkerCount := deps.NodeConfig.Int(CfgSpammerWorkers)
 	checkPeersConnected := Plugin.Node.IsSkipped(coordinator.Plugin)
 
 	if mpsRateLimit != nil {

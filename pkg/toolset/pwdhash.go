@@ -2,12 +2,12 @@ package toolset
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/gohornet/hornet/pkg/basicauth"

@@ -5,7 +5,6 @@ import (
 
 	gossipcore "github.com/gohornet/hornet/core/gossip"
 	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
@@ -19,11 +18,14 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Name:      "WarpSync",
-		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-		Configure: configure,
-		Run:       run,
-		Status:    node.Enabled,
+		Status: node.Enabled,
+		Pluggable: node.Pluggable{
+			Name:      "WarpSync",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Configure: configure,
+			Run:       run,
+		},
 	}
 }
 
@@ -53,7 +55,7 @@ type dependencies struct {
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
-	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(config.CfgWarpSyncAdvancementRange))
+	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
 	configureEvents()
 }
 

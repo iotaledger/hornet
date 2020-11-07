@@ -3,9 +3,10 @@ package snapshot
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/byteutils"
 	iotago "github.com/iotaledger/iota.go"
