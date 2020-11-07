@@ -15,8 +15,8 @@ type Node struct {
 	wg              *sync.WaitGroup
 	disabledPlugins map[string]struct{}
 	enabledPlugins  map[string]struct{}
-	coreModulesMap  map[string]*CorePlugin
-	coreModules     []*CorePlugin
+	corePluginsMap  map[string]*CorePlugin
+	corePlugins     []*CorePlugin
 	pluginsMap      map[string]*Plugin
 	plugins         []*Plugin
 	container       *dig.Container
@@ -33,21 +33,21 @@ func New(optionalOptions ...NodeOption) *Node {
 		wg:              &sync.WaitGroup{},
 		disabledPlugins: make(map[string]struct{}),
 		enabledPlugins:  make(map[string]struct{}),
-		coreModulesMap:  make(map[string]*CorePlugin),
-		coreModules:     make([]*CorePlugin, 0),
+		corePluginsMap:  make(map[string]*CorePlugin),
+		corePlugins:     make([]*CorePlugin, 0),
 		pluginsMap:      make(map[string]*Plugin),
 		plugins:         make([]*Plugin, 0),
 		container:       dig.New(dig.DeferAcyclicVerification()),
 		options:         nodeOpts,
 	}
 
-	// initialize the core modules and plugins
+	// initialize the core plugins and plugins
 	node.init()
 
 	// initialize logger after init phase because plugins could modify it
 	node.Logger = logger.NewLogger("Node")
 
-	// configure the core modules and enabled plugins
+	// configure the core plugins and enabled plugins
 	node.configure()
 
 	return node
@@ -92,7 +92,7 @@ func (n *Node) init() {
 	params := map[string][]*flag.FlagSet{}
 	masked := []string{}
 
-	forEachCoreModule(n.options.coreModules, func(coreModule *CorePlugin) bool {
+	forEachCorePlugin(n.options.coreModules, func(coreModule *CorePlugin) bool {
 		if coreModule.Params == nil {
 			return true
 		}
@@ -131,8 +131,8 @@ func (n *Node) init() {
 		n.disabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
 
-	forEachCoreModule(n.options.coreModules, func(coreModule *CorePlugin) bool {
-		n.addCoreModule(coreModule)
+	forEachCorePlugin(n.options.coreModules, func(coreModule *CorePlugin) bool {
+		n.addCorePlugin(coreModule)
 		return true
 	})
 
@@ -150,14 +150,14 @@ func (n *Node) init() {
 	}
 	n.options.initPlugin.Provide(n.container)
 
-	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
+	n.ForEachCorePlugin(func(coreModule *CorePlugin) bool {
 		if coreModule.Provide != nil {
 			coreModule.Provide(n.container)
 		}
 		return true
 	})
 
-	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
+	n.ForEachCorePlugin(func(coreModule *CorePlugin) bool {
 		if coreModule.DepsFunc != nil {
 			if err := n.container.Invoke(coreModule.DepsFunc); err != nil {
 				panic(err)
@@ -185,14 +185,14 @@ func (n *Node) init() {
 
 func (n *Node) configure() {
 
-	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
-		coreModule.wg = n.wg
-		coreModule.Node = n
+	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
+		corePlugin.wg = n.wg
+		corePlugin.Node = n
 
-		if coreModule.Configure != nil {
-			coreModule.Configure()
+		if corePlugin.Configure != nil {
+			corePlugin.Configure()
 		}
-		n.Logger.Infof("Loading core module: %s ... done", coreModule.Name)
+		n.Logger.Infof("Loading core plugin: %s ... done", corePlugin.Name)
 		return true
 	})
 
@@ -209,13 +209,13 @@ func (n *Node) configure() {
 }
 
 func (n *Node) execute() {
-	n.Logger.Info("Executing core modules ...")
+	n.Logger.Info("Executing core plugin ...")
 
-	n.ForEachCoreModule(func(coreModule *CorePlugin) bool {
-		if coreModule.Run != nil {
-			coreModule.Run()
+	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
+		if corePlugin.Run != nil {
+			corePlugin.Run()
 		}
-		n.Logger.Infof("Starting core module: %s ... done", coreModule.Name)
+		n.Logger.Infof("Starting core plugin: %s ... done", corePlugin.Name)
 		return true
 	})
 
@@ -254,15 +254,15 @@ func (n *Node) Daemon() daemon.Daemon {
 	return n.options.daemon
 }
 
-func (n *Node) addCoreModule(coreModule *CorePlugin) {
+func (n *Node) addCorePlugin(coreModule *CorePlugin) {
 	name := coreModule.Name
 
-	if _, exists := n.coreModulesMap[name]; exists {
-		panic("duplicate core module - \"" + name + "\" was defined already")
+	if _, exists := n.corePluginsMap[name]; exists {
+		panic("duplicate core plugin - \"" + name + "\" was defined already")
 	}
 
-	n.coreModulesMap[name] = coreModule
-	n.coreModules = append(n.coreModules, coreModule)
+	n.corePluginsMap[name] = coreModule
+	n.corePlugins = append(n.corePlugins, coreModule)
 }
 
 func (n *Node) addPlugin(plugin *Plugin) {
@@ -291,25 +291,21 @@ type InitFunc func(params map[string][]*flag.FlagSet, maskedKeys []string) (*Ini
 // Callback is a function called without any arguments.
 type Callback func()
 
-// CoreModuleForEachFunc is used in ForEachCoreModule.
+// CorePluginForEachFunc is used in ForEachCorePlugin.
 // Returning false indicates to stop looping.
-type CoreModuleForEachFunc func(coreModule *CorePlugin) bool
+type CorePluginForEachFunc func(coreModule *CorePlugin) bool
 
-func forEachCoreModule(coreModules []*CorePlugin, f CoreModuleForEachFunc) {
-	for _, coreModule := range coreModules {
-		if !f(coreModule) {
+func forEachCorePlugin(corePlugins []*CorePlugin, f CorePluginForEachFunc) {
+	for _, corePlugin := range corePlugins {
+		if !f(corePlugin) {
 			break
 		}
 	}
 }
 
-// ForEachCoreModule calls the given CoreModuleForEachFunc on each loaded core module.
-func (n *Node) ForEachCoreModule(f CoreModuleForEachFunc) {
-	for _, coreModule := range n.coreModules {
-		if !f(coreModule) {
-			break
-		}
-	}
+// ForEachCorePlugin calls the given CorePluginForEachFunc on each loaded core plugins.
+func (n *Node) ForEachCorePlugin(f CorePluginForEachFunc) {
+	forEachCorePlugin(n.corePlugins, f)
 }
 
 // PluginForEachFunc is used in ForEachPlugin.
