@@ -26,7 +26,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status:    node.Enabled,
+		Status: node.Enabled,
 		Pluggable: node.Pluggable{
 			Name:      "RestAPI",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -201,7 +201,7 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 			message = "internal server error"
 		}
 
-		message = fmt.Sprintf("%s, error: %+v", message, err)
+		message = fmt.Sprintf("%s, error: %s", message, err.Error())
 
 		c.JSON(statusCode, common.HTTPErrorResponseEnvelope{Error: common.HTTPErrorResponse{Code: string(statusCode), Message: message}})
 	}
