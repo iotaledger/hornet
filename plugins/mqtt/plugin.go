@@ -103,11 +103,11 @@ func configure() {
 				return
 			}
 
-			spent, err := deps.Tangle.UTXO().IsOutputUnspent(outputId)
+			unspent, err := deps.Tangle.UTXO().IsOutputUnspent(outputId)
 			if err != nil {
 				return
 			}
-			utxoOutputWorkerPool.TrySubmit(output, spent)
+			utxoOutputWorkerPool.TrySubmit(output, !unspent)
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
