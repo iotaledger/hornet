@@ -1,16 +1,18 @@
 package mqtt
 
 import (
-	"github.com/gohornet/hornet/core/tangle"
-	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/node"
+	"go.uber.org/dig"
+
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
-	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -39,6 +41,7 @@ var (
 
 	newLatestMilestoneWorkerPool *workerpool.WorkerPool
 	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
+	messageMetadataWorkerPool    *workerpool.WorkerPool
 
 	wasSyncBefore = false
 
@@ -61,6 +64,11 @@ func configure() {
 
 	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onNewSolidMilestone(task.Param(0).(*tanglepkg.CachedMilestone))
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	messageMetadataWorkerPool = workerpool.New(func(task workerpool.Task) {
+		onMessageMetadata(task.Param(0).(*tanglepkg.CachedMetadata))
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -105,6 +113,20 @@ func run() {
 		cachedMs.Release(true)
 	})
 
+	onMessageSolid := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata) {
+		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+			return // Avoid Release (done inside workerpool task)
+		}
+		cachedMetadata.Release(true)
+	})
+
+	onMessageReferenced := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata, msIndex milestone.Index, confTime uint64) {
+		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+			return // Avoid Release (done inside workerpool task)
+		}
+		cachedMetadata.Release(true)
+	})
+
 	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
@@ -130,16 +152,24 @@ func run() {
 		tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
 		tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
 
+		tangle.Events.MessageSolid.Attach(onMessageSolid)
+		tangle.Events.MessageReferenced.Attach(onMessageReferenced)
+
 		newLatestMilestoneWorkerPool.Start()
 		newSolidMilestoneWorkerPool.Start()
+		messageMetadataWorkerPool.Start()
 
 		<-shutdownSignal
 
 		tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
 		tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
 
+		tangle.Events.MessageSolid.Detach(onMessageSolid)
+		tangle.Events.MessageReferenced.Detach(onMessageReferenced)
+
 		newLatestMilestoneWorkerPool.StopAndWait()
 		newSolidMilestoneWorkerPool.StopAndWait()
+		messageMetadataWorkerPool.StopAndWait()
 
 		log.Info("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers)

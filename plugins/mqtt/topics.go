@@ -2,5 +2,8 @@ package mqtt
 
 // Topic names
 const (
-	topicMilestones = "milestones"
+	topicMilestonesLatest = "milestones/latest"
+	topicMilestonesSolid  = "milestones/solid"
+
+	topicMessageMetadata = "messages/{messageId}/metadata"
 )
