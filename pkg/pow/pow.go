@@ -14,6 +14,10 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
+const (
+	nonceBytes = 8 // len(uint64)
+)
+
 type ProofOfWorkFunc func(message *iotago.Message, parallelism ...int) (uint64, error)
 
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
@@ -44,7 +48,7 @@ func New(log *logger.Logger, targetScore float64, powsrvAPIKey string, powsrvIni
 		if err != nil {
 			return 0, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
 		}
-		return pow.New(parallelism...).Mine(context.Background(), msgData, targetScore)
+		return pow.New(parallelism...).Mine(context.Background(), msgData[:len(msgData)-nonceBytes], targetScore)
 	}
 
 	/*
