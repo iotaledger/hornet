@@ -27,7 +27,6 @@ const (
 	containerIPRouteImage = "gaiadocker/iproute2"
 
 	containerNameTester      = "/tester"
-	containerNameEntryNode   = "entry_node"
 	containerNameReplica     = "replica_"
 	containerNameSuffixPumba = "_pumba"
 
@@ -40,8 +39,7 @@ const (
 )
 
 var (
-	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "restapi"}
-	disabledPluginsPeer      = []string{}
+	disabledPluginsPeer = []string{}
 )
 
 // DefaultConfig returns the default NodeConfig.
