@@ -56,7 +56,9 @@ func newTopicManager(onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribe
 		onUnsubscribe: onUnsubscribe,
 	}
 
+	// The normal MQTT broker uses the `mem` topic manager internally, so first unregister the default one.
 	topics.Unregister("mem")
+	// Then register our custom topic manager as the new `mem` topic manager, so that is gets used automatically.
 	topics.Register("mem", mgr)
 	return mgr
 }

@@ -138,3 +138,22 @@ func messageIdFromTopic(topic []byte) *hornet.MessageID {
 	}
 	return nil
 }
+
+func outputIdFromTopic(topic []byte) *iotago.UTXOInputID {
+	topicName := string(topic)
+	if strings.HasPrefix(topicName, "outputs/") {
+		outputIdHex := strings.Replace(topicName, "output/", "", 1)
+
+		bytes, err := hex.DecodeString(outputIdHex)
+		if err != nil {
+			return nil
+		}
+
+		if len(bytes) == iotago.TransactionIDLength+iotago.UInt16ByteSize {
+			outputId := &iotago.UTXOInputID{}
+			copy(outputId[:], bytes)
+			return outputId
+		}
+	}
+	return nil
+}

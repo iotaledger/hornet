@@ -78,30 +78,38 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
-
-		switch p := task.Param(0).(type) {
-		case *utxo.Output:
-			onUTXOOutput(p)
-		case *utxo.Spent:
-			onUTXOSpent(p)
-		default:
-		}
-
+		onUTXOOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	topicSubscriptionWorkerPool = workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		topic := task.Param(0).([]byte)
-		messageId := messageIdFromTopic(topic)
-		if messageId != nil {
+
+		if messageId := messageIdFromTopic(topic); messageId != nil {
 			if cachedMetadata := deps.Tangle.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 					return // Avoid Release (done inside workerpool task)
 				}
 				cachedMetadata.Release(true)
 			}
+			return
 		}
-		task.Return(nil)
+
+		if outputId := outputIdFromTopic(topic); outputId != nil {
+			output, err := deps.Tangle.UTXO().ReadOutputByOutputID(outputId)
+			if err != nil {
+				return
+			}
+
+			spent, err := deps.Tangle.UTXO().IsOutputUnspent(outputId)
+			if err != nil {
+				return
+			}
+			utxoOutputWorkerPool.TrySubmit(output, spent)
+		}
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	mqttConfigFile := deps.NodeConfig.String(CfgMQTTConfig)
@@ -166,11 +174,11 @@ func run() {
 	})
 
 	onUTXOOutput := events.NewClosure(func(output *utxo.Output) {
-		utxoOutputWorkerPool.TrySubmit(output)
+		utxoOutputWorkerPool.TrySubmit(output, false)
 	})
 
 	onUTXOSpent := events.NewClosure(func(spent *utxo.Spent) {
-		utxoOutputWorkerPool.TrySubmit(spent)
+		utxoOutputWorkerPool.TrySubmit(spent.Output(), true)
 	})
 
 	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {

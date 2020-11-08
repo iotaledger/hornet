@@ -23,10 +23,6 @@ func onMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
 	publishMessageMetadata(cachedMetadata.Retain())
 }
 
-func onUTXOOutput(output *utxo.Output) {
-	publishOutput(output, false)
-}
-
-func onUTXOSpent(spent *utxo.Spent) {
-	publishOutput(spent.Output(), true)
+func onUTXOOutput(output *utxo.Output, spent bool) {
+	publishOutput(output, spent)
 }
