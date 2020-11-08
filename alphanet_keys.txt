@@ -20,3 +20,8 @@ Your p2p PeerID:        12D3KooWCKwcTWevoRKa2kEBputeGASvEBuDfRDSbe8t1DWugUmL
 Your p2p private key:   5126767a84e1ced849dbbf2be809fd40f90bcfb81bd0d3309e2e25e34f803bf265500854f1f0e8fd3c389cf7b6b59cfd422b9319f257e2a8d3a772973560acdd
 Your p2p public key:    65500854f1f0e8fd3c389cf7b6b59cfd422b9319f257e2a8d3a772973560acdd
 Your p2p PeerID:        12D3KooWGdr8M5KX8KuKaXSiKfHJstdVnRkadYmupF7tFk2HrRoA
+
+4th node:
+Your p2p private key:   996dceaeddcb5fc21480646f38ac53c4f5668fd33f3c0bfecfd004861d4a9dc722355dabd7f31a1266423abcf6c1db6228eb8283deb55731915ed06bd2ca387e
+Your p2p public key:    22355dabd7f31a1266423abcf6c1db6228eb8283deb55731915ed06bd2ca387e
+Your p2p PeerID:        12D3KooWC7uE9w3RN4Vh1FJAZa8SbE8yMWR6wCVBajcWpyWguV73
