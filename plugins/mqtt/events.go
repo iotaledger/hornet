@@ -24,5 +24,5 @@ func onMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
 }
 
 func onUTXOOutput(output *utxo.Output, spent bool) {
-	publishOutput(output, spent)
+	publishOutputOnTopics(output, spent)
 }

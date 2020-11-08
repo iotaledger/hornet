@@ -5,7 +5,9 @@ const (
 	topicMilestonesLatest = "milestones/latest"
 	topicMilestonesSolid  = "milestones/solid"
 
-	topicMessageMetadata = "messages/{messageId}/metadata"
+	topicMessagesMetadata = "messages/{messageId}/metadata"
 
-	topicOutput = "outputs/{outputId}"
+	topicOutputs = "outputs/{outputId}"
+
+	topicAddressesOutput = "addresses/{address}/outputs"
 )

@@ -92,12 +92,12 @@ func publishMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
 	}
 
 	messageId := metadata.GetMessageID().Hex()
-	topic := strings.ReplaceAll(topicMessageMetadata, "{messageId}", messageId)
+	topic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageId)
 
 	publishOnTopic(topic, messageMetadataResponse)
 }
 
-func publishOutput(output *utxo.Output, spent bool) {
+func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 
 	sigLockedSingleDeposit := &iotago.SigLockedSingleOutput{
 		Address: output.Address(),
@@ -106,22 +106,28 @@ func publishOutput(output *utxo.Output, spent bool) {
 
 	sigLockedSingleDepositJSON, err := sigLockedSingleDeposit.MarshalJSON()
 	if err != nil {
-		return
+		return nil
 	}
 
 	rawMsgSigLockedSingleDepositJSON := json.RawMessage(sigLockedSingleDepositJSON)
 
-	payload := &outputPayload{
+	return &outputPayload{
 		MessageID:     output.MessageID().Hex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
 		RawOutput:     &rawMsgSigLockedSingleDepositJSON,
 	}
+}
 
-	topic := strings.ReplaceAll(topicOutput, "{outputId}", output.OutputID().ToHex())
+func publishOutputOnTopics(output *utxo.Output, spent bool) {
+	if payload := payloadForOutput(output, spent); payload != nil {
+		outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
+		publishOnTopic(outputsTopic, payload)
 
-	publishOnTopic(topic, payload)
+		addressTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().String())
+		publishOnTopic(addressTopic, payload)
+	}
 }
 
 func messageIdFromTopic(topic []byte) *hornet.MessageID {
