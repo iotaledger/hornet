@@ -3,24 +3,27 @@ package mqtt
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/eclipse/paho.mqtt.golang/packets"
 	"github.com/fhmq/hmq/broker"
+	"github.com/pkg/errors"
 )
 
 // Broker is a simple mqtt publisher abstraction.
 type Broker struct {
-	broker *broker.Broker
-	config *broker.Config
+	broker       *broker.Broker
+	config       *broker.Config
+	topicManager *topicManager
 }
 
 // NewBroker creates a new broker.
-func NewBroker(mqttConfigFilePath string) (*Broker, error) {
+func NewBroker(mqttConfigFilePath string, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
+
 	c, err := broker.ConfigureConfig([]string{fmt.Sprintf("--config=%s", mqttConfigFilePath)})
 	if err != nil {
 		return nil, errors.Errorf("configure broker config error: %w", err)
 	}
+
+	t := newTopicManager(onSubscribe, onUnsubscribe)
 
 	b, err := broker.NewBroker(c)
 	if err != nil {
@@ -28,8 +31,9 @@ func NewBroker(mqttConfigFilePath string) (*Broker, error) {
 	}
 
 	return &Broker{
-		broker: b,
-		config: c,
+		broker:       b,
+		config:       c,
+		topicManager: t,
 	}, nil
 }
 

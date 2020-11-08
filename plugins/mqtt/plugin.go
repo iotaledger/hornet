@@ -43,6 +43,8 @@ var (
 	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
 	messageMetadataWorkerPool    *workerpool.WorkerPool
 
+	topicSubscriptionWorkerPool *workerpool.WorkerPool
+
 	wasSyncBefore = false
 
 	mqttBroker *mqttpkg.Broker
@@ -72,10 +74,30 @@ func configure() {
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
+	topicSubscriptionWorkerPool = workerpool.New(func(task workerpool.Task) {
+		topic := task.Param(0).([]byte)
+		messageId := messageIdFromTopic(topic)
+		if messageId != nil {
+			if cachedMetadata := deps.Tangle.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
+				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+					return // Avoid Release (done inside workerpool task)
+				}
+				cachedMetadata.Release(true)
+			}
+		}
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
 	mqttConfigFile := deps.NodeConfig.String(CfgMQTTConfig)
 
 	var err error
-	mqttBroker, err = mqttpkg.NewBroker(mqttConfigFile)
+	mqttBroker, err = mqttpkg.NewBroker(mqttConfigFile, func(topic []byte) {
+		log.Infof("Subscribe to topic: %s", string(topic))
+		topicSubscriptionWorkerPool.TrySubmit(topic)
+	}, func(topic []byte) {
+		log.Infof("Unsubscribe from topic: %s", string(topic))
+	})
+
 	if err != nil {
 		log.Fatalf("MQTT broker init failed! %v", err.Error())
 	}
@@ -158,6 +180,7 @@ func run() {
 		newLatestMilestoneWorkerPool.Start()
 		newSolidMilestoneWorkerPool.Start()
 		messageMetadataWorkerPool.Start()
+		topicSubscriptionWorkerPool.Start()
 
 		<-shutdownSignal
 
@@ -170,6 +193,7 @@ func run() {
 		newLatestMilestoneWorkerPool.StopAndWait()
 		newSolidMilestoneWorkerPool.StopAndWait()
 		messageMetadataWorkerPool.StopAndWait()
+		topicSubscriptionWorkerPool.StopAndWait()
 
 		log.Info("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers)

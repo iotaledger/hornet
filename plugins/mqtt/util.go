@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -90,4 +91,19 @@ func publishMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
 	topic := strings.ReplaceAll(topicMessageMetadata, "{messageId}", messageId)
 
 	publishOnTopic(topic, messageMetadataResponse)
+}
+
+func messageIdFromTopic(topic []byte) *hornet.MessageID {
+	topicName := string(topic)
+	if strings.HasPrefix(topicName, "messages/") && strings.HasSuffix(topicName, "/metadata") {
+		messageIdHex := strings.Replace(topicName, "messages/", "", 1)
+		messageIdHex = strings.Replace(messageIdHex, "/metadata", "", 1)
+
+		messageId, err := hornet.MessageIDFromHex(messageIdHex)
+		if err != nil {
+			return nil
+		}
+		return messageId
+	}
+	return nil
 }
