@@ -3,7 +3,7 @@
   "restAPI": {
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     },
@@ -24,7 +24,10 @@
       "/api/v1/peers/:peerID",
       "/api/v1/peers"
     ],
-    "whitelistedAddresses": ["127.0.0.1", "::1"],
+    "whitelistedAddresses": [
+      "127.0.0.1",
+      "::1"
+    ],
     "bindAddress": "0.0.0.0:14268",
     "limits": {
       "bodyLength": "1M",
@@ -37,7 +40,7 @@
     "dev": false,
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     }
@@ -58,6 +61,8 @@
   },
   "protocol": {
     "minPoWScore": 0,
+    "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
+    "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
         "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -84,19 +89,6 @@
       "heaviestBranchSelectionDeadlineMilliseconds": 100
     }
   },
-  "network": {
-    "preferIPv6": false,
-    "gossip": {
-      "bindAddress": "0.0.0.0:15601",
-      "reconnectAttemptIntervalSeconds": 60
-    },
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14627",
-      "runAsEntryNode": false,
-      "entryNodes": [],
-      "seed": ""
-    }
-  },
   "tipsel": {
     "maxDeltaMsgYoungestConeRootIndexToLSMI": 2,
     "maxDeltaMsgOldestConeRootIndexToLSMI": 7,
@@ -117,8 +109,33 @@
   "node": {
     "alias": "",
     "enableProofOfWork": false,
-    "disablePlugins": ["Autopeering"],
-    "enablePlugins": ["Spammer"]
+    "disablePlugins": [
+      "Autopeering"
+    ],
+    "enablePlugins": [
+      "Spammer"
+    ]
+  },
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/127.0.0.1/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "gossipUnknownPeersLimit": 4,
+    "identityPrivateKey": "",
+    "peerStore": {
+      "path": "./p2pstore"
+    },
+    "reconnectIntervalSeconds": 30
+  },
+  "p2pdisc": {
+    "advertiseIntervalSec": 30,
+    "maxDiscoveredPeerConns": 4,
+    "rendezvousPoint": "between-two-vertices",
+    "routingTableRefreshPeriodSec": 60
   },
   "logger": {
     "level": "debug",
@@ -148,6 +165,11 @@
   },
   "prometheus": {
     "bindAddress": "localhost:9312",
+    "fileServiceDiscovery": {
+      "enabled": false,
+      "path": "target.json",
+      "target": "localhost:9311"
+    },
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

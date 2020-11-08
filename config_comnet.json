@@ -3,7 +3,7 @@
   "restAPI": {
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     },
@@ -22,7 +22,10 @@
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs"
     ],
-    "whitelistedAddresses": ["127.0.0.1", "::1"],
+    "whitelistedAddresses": [
+      "127.0.0.1",
+      "::1"
+    ],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
       "bodyLength": "1M",
@@ -35,7 +38,7 @@
     "dev": false,
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     }
@@ -56,13 +59,25 @@
     "enabled": true,
     "delay": 1000
   },
+  "protocol": {
+    "minPoWScore": 0,
+    "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
+    "milestonePublicKeyCount": 2,
+    "publicKeyRanges": [
+      {
+        "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+        "start": 0,
+        "end": 0
+      }
+    ]
+  },
   "coordinator": {
-    "address": "UOMFQOULWQLXQQHFMFRQQTRDKDHVMRFFEGZ9LDU9TFZZ9CHDLZSIAHA9MXNSLYOERCHDUVDFEEZAEOBEW",
-    "securityLevel": 2,
-    "merkleTreeDepth": 23,
-    "mwm": 10,
     "stateFilePath": "coordinator.state",
-    "merkleTreeFilePath": "coordinator.tree",
     "intervalSeconds": 60,
     "checkpoints": {
       "maxTrackedMessages": 10000
@@ -72,23 +87,6 @@
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100
-    }
-  },
-  "network": {
-    "preferIPv6": false,
-    "gossip": {
-      "bindAddress": "0.0.0.0:15600",
-      "reconnectAttemptIntervalSeconds": 60
-    },
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14626",
-      "runAsEntryNode": false,
-      "entryNodes": [
-        "iotaCrvEWGfaeA1HutcULjD4uZnPhEnD5xNGfGs8vhe@enter.comnet.thetangle.org:14647",
-        "GLZAWBGqvm6ZRT7jGMFAKyUJNPdvx4i5A1GPRZbGS6C9@enter.comnet.hornet.zone:14627",
-        "J1Hn5r9pS5FkLeYqXWstC2Zyjxj73grEWvjuene3qjM9@entrynode.comnet.tanglebay.org:14636"
-      ],
-      "seed": ""
     }
   },
   "tipsel": {
@@ -113,6 +111,27 @@
     "enableProofOfWork": false,
     "disablePlugins": [],
     "enablePlugins": []
+  },
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/127.0.0.1/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "gossipUnknownPeersLimit": 4,
+    "identityPrivateKey": "",
+    "peerStore": {
+      "path": "./p2pstore"
+    },
+    "reconnectIntervalSeconds": 30
+  },
+  "p2pdisc": {
+    "advertiseIntervalSec": 30,
+    "maxDiscoveredPeerConns": 4,
+    "rendezvousPoint": "between-two-vertices",
+    "routingTableRefreshPeriodSec": 60
   },
   "logger": {
     "level": "info",
@@ -142,6 +161,11 @@
   },
   "prometheus": {
     "bindAddress": "localhost:9311",
+    "fileServiceDiscovery": {
+      "enabled": false,
+      "path": "target.json",
+      "target": "localhost:9311"
+    },
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

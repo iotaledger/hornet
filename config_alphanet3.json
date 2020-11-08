@@ -1,9 +1,9 @@
 {
-  "useProfile": "debug",
+  "useProfile": "auto",
   "restAPI": {
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     },
@@ -40,7 +40,7 @@
     "dev": false,
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     }
@@ -52,7 +52,7 @@
     "depth": 50,
     "intervalSynced": 200,
     "intervalUnsynced": 1000,
-    "path": "snapshots/alphanet3/export.bin",
+    "path": "snapshots/alphanet/export.bin",
     "downloadURLs": []
   },
   "pruning": {
@@ -61,6 +61,8 @@
   },
   "protocol": {
     "minPoWScore": 0,
+    "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
+    "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
         "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -81,23 +83,10 @@
       "maxTrackedMessages": 10000
     },
     "tipsel": {
-      "minHeaviestBranchUnconfirmedMessagesThreshold": 20,
+      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100
-    }
-  },
-  "network": {
-    "preferIPv6": false,
-    "gossip": {
-      "bindAddress": "0.0.0.0:15602",
-      "reconnectAttemptIntervalSeconds": 60
-    },
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14627",
-      "runAsEntryNode": false,
-      "entryNodes": [],
-      "seed": ""
     }
   },
   "tipsel": {
@@ -119,13 +108,34 @@
   },
   "node": {
     "alias": "",
-    "showAliasInGetNodeInfo": false,
+    "enableProofOfWork": false,
     "disablePlugins": [
       "Autopeering"
     ],
     "enablePlugins": [
       "Spammer"
     ]
+  },
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/127.0.0.1/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "gossipUnknownPeersLimit": 4,
+    "identityPrivateKey": "",
+    "peerStore": {
+      "path": "./p2pstore"
+    },
+    "reconnectIntervalSeconds": 30
+  },
+  "p2pdisc": {
+    "advertiseIntervalSec": 30,
+    "maxDiscoveredPeerConns": 4,
+    "rendezvousPoint": "between-two-vertices",
+    "routingTableRefreshPeriodSec": 60
   },
   "logger": {
     "level": "debug",
@@ -155,6 +165,11 @@
   },
   "prometheus": {
     "bindAddress": "localhost:9313",
+    "fileServiceDiscovery": {
+      "enabled": false,
+      "path": "target.json",
+      "target": "localhost:9311"
+    },
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
