@@ -155,13 +155,13 @@ func (netConfig *NetworkConfig) CLIFlags() []string {
 func DefaultNetworkConfig() NetworkConfig {
 	return NetworkConfig{
 		IdentityPrivKey:          "",
-		BindMultiAddresses:       []string{"/ip4/127.0.0.1/tcp/15600"},
+		BindMultiAddresses:       []string{"/ip4/0.0.0.0/tcp/15600"},
 		PeerStorePath:            "./p2pstore",
-		ConnMngHighWatermark:     10,
-		ConnMngLowWatermark:      5,
+		ConnMngHighWatermark:     8,
+		ConnMngLowWatermark:      4,
 		Peers:                    []string{},
 		PeerAliases:              []string{},
-		ReconnectIntervalSeconds: 10,
+		ReconnectIntervalSeconds: 1,
 		GossipUnknownPeersLimit:  4,
 	}
 }
