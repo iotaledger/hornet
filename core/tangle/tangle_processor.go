@@ -193,14 +193,29 @@ func RegisterMessageProcessedEvent(messageID *hornet.MessageID) chan struct{} {
 	return messageProcessedSyncEvent.RegisterEvent(messageID.MapKey())
 }
 
+// DeregisterMessageProcessedEvent removes a registed event to free the memory if not used.
+func DeregisterMessageProcessedEvent(messageID *hornet.MessageID) {
+	messageProcessedSyncEvent.DeregisterEvent(messageID.MapKey())
+}
+
 // RegisterMessageSolidEvent returns a channel that gets closed when the message is marked as solid.
 func RegisterMessageSolidEvent(messageID *hornet.MessageID) chan struct{} {
 	return messageSolidSyncEvent.RegisterEvent(messageID.MapKey())
 }
 
+// DeregisterMessageSolidEvent removes a registed event to free the memory if not used.
+func DeregisterMessageSolidEvent(messageID *hornet.MessageID) {
+	messageSolidSyncEvent.DeregisterEvent(messageID.MapKey())
+}
+
 // RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.
 func RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
 	return milestoneConfirmedSyncEvent.RegisterEvent(msIndex)
+}
+
+// DeregisterMilestoneConfirmedEvent removes a registed event to free the memory if not used.
+func DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
+	milestoneConfirmedSyncEvent.DeregisterEvent(msIndex)
 }
 
 func printStatus() {

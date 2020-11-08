@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -245,10 +246,13 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
 
 	if err := deps.MessageProcessor.Emit(message); err != nil {
+		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 
-	utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout)
+	if err := utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout); err == context.DeadlineExceeded {
+		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
+	}
 
 	return &messageCreatedResponse{
 		MessageID: message.GetMessageID().Hex(),

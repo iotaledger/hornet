@@ -293,6 +293,11 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 	}
 
 	if err := deps.MessageProcessor.Emit(msg); err != nil {
+		tanglecore.DeregisterMessageSolidEvent(msg.GetMessageID())
+		if len(msIndex) > 0 {
+			tanglecore.DeregisterMilestoneConfirmedEvent(msIndex[0])
+		}
+
 		return err
 	}
 
