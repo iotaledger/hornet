@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/multiformats/go-multiaddr"
 )
 
 // infoResponse defines the response of a GET info REST API call.
@@ -215,7 +214,7 @@ type peerResponse struct {
 	// The libp2p identifier of the peer.
 	ID string `json:"id"`
 	// The libp2p multi addresses of the peer.
-	MultiAddress []multiaddr.Multiaddr `json:"multiAddresses"`
+	MultiAddresses []string `json:"multiAddresses"`
 	// The alias of the peer.
 	Alias *string `json:"alias,omitempty"`
 	// The relation (static, autopeered) of the peer.

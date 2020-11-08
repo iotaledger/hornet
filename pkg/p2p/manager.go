@@ -297,8 +297,9 @@ func (m *Manager) ConnectedCount(relation ...PeerRelation) int {
 // If the peer is not known to the Manager, result is nil.
 func (m *Manager) PeerInfoSnapshot(id peer.ID) *PeerInfoSnapshot {
 	var info *PeerInfoSnapshot
-	m.Call(id, func(peer *Peer) {
-		info = peer.InfoSnapshot()
+	m.Call(id, func(p *Peer) {
+		info = p.InfoSnapshot()
+		info.Connected = m.host.Network().Connectedness(p.ID) == network.Connected
 	})
 	return info
 }

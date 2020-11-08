@@ -38,6 +38,8 @@ func (p *Peer) InfoSnapshot() *PeerInfoSnapshot {
 		Peer:      p,
 		ID:        p.ID.String(),
 		Addresses: p.Addrs,
+		Alias:     p.Alias,
+		Relation:  string(p.Relation),
 	}
 	return info
 }
@@ -58,4 +60,6 @@ type PeerInfoSnapshot struct {
 	DroppedSentPackets uint32 `json:"droppedSentPackets"`
 	// Whether the peer is connected.
 	Connected bool `json:"connected"`
+	// The relation to the peer.
+	Relation string `json:"relation"`
 }
