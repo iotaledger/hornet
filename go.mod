@@ -3,10 +3,10 @@ module github.com/gohornet/hornet
 go 1.15
 
 require (
-	github.com/Microsoft/go-winio v0.4.14 // indirect
+	github.com/Microsoft/go-winio v0.4.15 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/blang/vfs v1.0.0
-	github.com/cockroachdb/pebble v0.0.0-20201029133112-b55da9192b59
+	github.com/cockroachdb/pebble v0.0.0-20201106190054-7c3b8ea9f5b3
 	github.com/dchest/blake2b v1.0.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -21,8 +21,8 @@ require (
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20201030150707-82a3d1909e62
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201103093017-6e9ae891e8ff
+	github.com/iotaledger/hive.go v0.0.0-20201106172115-fb2e7597977f
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201108113407-67980e909fd4
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
@@ -46,10 +46,10 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.11
-	github.com/wollac/iota-crypto-demo v0.0.0-20201031183512-398e22f20835
+	github.com/wollac/iota-crypto-demo v0.0.0-20201101181905-af99cf3538a6
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 // indirect
-	golang.org/x/tools v0.0.0-20201031021630-582c62ec74d0 // indirect
+	golang.org/x/sys v0.0.0-20201107080550-4d91cf3a1aaf // indirect
+	golang.org/x/tools v0.0.0-20201105220310-78b158585360 // indirect
 )
