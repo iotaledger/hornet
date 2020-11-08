@@ -17,7 +17,7 @@ import (
 
 const (
 	// The default REST API port of every node.
-	WebAPIPort = 14265
+	RestAPIPort = 14265
 
 	autopeeringMaxTries = 50
 
@@ -54,13 +54,13 @@ func DefaultConfig() *NodeConfig {
 		Network:     DefaultNetworkConfig(),
 		Snapshot:    DefaultSnapshotConfig(),
 		Coordinator: DefaultCoordinatorConfig(),
-		WebAPI:      DefaultRestAPIConfig(),
+		RestAPI:     DefaultRestAPIConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
 	}
 	cfg.ExposedPorts = nat.PortSet{
-		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
+		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.RestAPI.BindAddress, ":")[1])): {},
 		"6060/tcp": {},
 		"8081/tcp": {},
 	}
@@ -80,7 +80,7 @@ type NodeConfig struct {
 	// Network config.
 	Network NetworkConfig
 	// Web API config.
-	WebAPI RestAPIConfig
+	RestAPI RestAPIConfig
 	// Snapshot config.
 	Snapshot SnapshotConfig
 	// Coordinator config.
@@ -107,7 +107,7 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Network.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Snapshot.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.WebAPI.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.RestAPI.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)

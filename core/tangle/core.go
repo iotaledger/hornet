@@ -26,8 +26,14 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 )
 
+const (
+	// LMI is set to LSMI at startup
+	CfgTangleSyncedAtStartup = "syncedAtStartup"
+)
+
 func init() {
-	flag.CommandLine.MarkHidden("syncedAtStartup")
+	flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
+
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
 			Name:      "Tangle",
@@ -44,7 +50,7 @@ var (
 	deps       dependencies
 
 	updateSyncedAtStartup bool
-	syncedAtStartup       = flag.Bool("syncedAtStartup", false, "LMI is set to LSMI at startup")
+	syncedAtStartup       = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 

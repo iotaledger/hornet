@@ -282,7 +282,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// validate PoW score
 	if request == nil && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
 		wu.UpdateState(Invalid)
-		wu.punish(proc.ps, errors.New("peer sent a message with invalid PoW score"))
+		wu.punish(proc.ps, errors.New("peer sent a message with insufficient PoW score"))
 		return
 	}
 

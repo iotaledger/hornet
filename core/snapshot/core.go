@@ -23,7 +23,14 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
+const (
+	// force loading of a snapshot, even if a database already exists
+	CfgSnapshotsForceLoadingSnapshot = "forceLoadingSnapshot"
+)
+
 func init() {
+	flag.CommandLine.MarkHidden(CfgSnapshotsForceLoadingSnapshot)
+
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
 			Name:      "Snapshot",
@@ -39,7 +46,7 @@ var (
 	CorePlugin *node.CorePlugin
 	log        *logger.Logger
 
-	forceLoadingSnapshot = flag.Bool("forceLoadingSnapshot", false, "force loading of a snapshot, even if a database already exists")
+	forceLoadingSnapshot = flag.Bool(CfgSnapshotsForceLoadingSnapshot, false, "force loading of a snapshot, even if a database already exists")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL             = fmt.Errorf("no download URL given for local snapshot under config option '%s", CfgSnapshotsDownloadURLs)

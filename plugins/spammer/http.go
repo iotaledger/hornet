@@ -48,7 +48,7 @@ func handleSpammerCommand(c echo.Context) (string, error) {
 			cpuMaxUsage = &cpuMaxUsageParsed
 		}
 
-		usedMpsRateLimit, usedCPUMaxUsage, err := Start(mpsRateLimit, cpuMaxUsage)
+		usedMpsRateLimit, usedCPUMaxUsage, err := start(mpsRateLimit, cpuMaxUsage)
 		if err != nil {
 			return "", errors.WithMessagef(restapi.ErrInternalError, "starting spammer failed: %w", err)
 		}
@@ -56,7 +56,7 @@ func handleSpammerCommand(c echo.Context) (string, error) {
 		return fmt.Sprintf("started spamming (MPS Limit: %0.2f, CPU Limit: %0.2f%%)", usedMpsRateLimit, usedCPUMaxUsage*100.0), nil
 
 	case "stop":
-		if err := Stop(); err != nil {
+		if err := stop(); err != nil {
 			return "", errors.WithMessagef(restapi.ErrInternalError, "stopping spammer failed: %w", err)
 		}
 		return "stopped spamming", nil

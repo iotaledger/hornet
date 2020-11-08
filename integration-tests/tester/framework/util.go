@@ -10,7 +10,7 @@ import (
 
 // getNodeAPIBaseURL returns the web API base url for the given IP.
 func getNodeAPIBaseURL(hostname string) string {
-	return fmt.Sprintf("http://%s:%d", hostname, WebAPIPort)
+	return fmt.Sprintf("http://%s:%d", hostname, RestAPIPort)
 }
 
 // returns the given error if the provided context is done.

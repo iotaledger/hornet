@@ -60,7 +60,7 @@
     "delay": 500
   },
   "protocol": {
-    "minPoWScore": 0,
+    "minPoWScore": 100,
     "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
