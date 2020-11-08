@@ -142,7 +142,7 @@ func messageIdFromTopic(topic []byte) *hornet.MessageID {
 func outputIdFromTopic(topic []byte) *iotago.UTXOInputID {
 	topicName := string(topic)
 	if strings.HasPrefix(topicName, "outputs/") {
-		outputIdHex := strings.Replace(topicName, "output/", "", 1)
+		outputIdHex := strings.Replace(topicName, "outputs/", "", 1)
 
 		bytes, err := hex.DecodeString(outputIdHex)
 		if err != nil {
