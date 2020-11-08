@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -131,6 +132,15 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
 func (proc *MessageProcessor) Emit(msg *tangle.Message) error {
+
+	score, err := msg.GetMessage().POW()
+	if err != nil {
+		return err
+	}
+
+	if score < proc.opts.MinPoWScore {
+		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
+	}
 
 	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
 	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.GetData()})

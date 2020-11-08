@@ -231,12 +231,14 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Nonce == 0 {
+		if !proofOfWorkEnabled {
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
+		}
+
 		if err := deps.PoWHandler.DoPoW(msg, nil, 1); err != nil {
 			return nil, err
 		}
 	}
-
-	// ToDo: check PoW
 
 	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
