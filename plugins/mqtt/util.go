@@ -1,14 +1,18 @@
 package mqtt
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"strings"
+
+	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -91,6 +95,33 @@ func publishMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
 	topic := strings.ReplaceAll(topicMessageMetadata, "{messageId}", messageId)
 
 	publishOnTopic(topic, messageMetadataResponse)
+}
+
+func publishOutput(output *utxo.Output, spent bool) {
+
+	sigLockedSingleDeposit := &iotago.SigLockedSingleOutput{
+		Address: output.Address(),
+		Amount:  output.Amount(),
+	}
+
+	sigLockedSingleDepositJSON, err := sigLockedSingleDeposit.MarshalJSON()
+	if err != nil {
+		return
+	}
+
+	rawMsgSigLockedSingleDepositJSON := json.RawMessage(sigLockedSingleDepositJSON)
+
+	payload := &outputPayload{
+		MessageID:     output.MessageID().Hex(),
+		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
+		Spent:         spent,
+		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
+		RawOutput:     &rawMsgSigLockedSingleDepositJSON,
+	}
+
+	topic := strings.ReplaceAll(topicOutput, "{outputId}", output.OutputID().ToHex())
+
+	publishOnTopic(topic, payload)
 }
 
 func messageIdFromTopic(topic []byte) *hornet.MessageID {

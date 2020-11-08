@@ -6,4 +6,6 @@ const (
 	topicMilestonesSolid  = "milestones/solid"
 
 	topicMessageMetadata = "messages/{messageId}/metadata"
+
+	topicOutput = "outputs/{outputId}"
 )

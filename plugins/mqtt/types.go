@@ -1,6 +1,8 @@
 package mqtt
 
 import (
+	"encoding/json"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -32,4 +34,18 @@ type messageMetadataPayload struct {
 	ShouldPromote *bool `json:"shouldPromote,omitempty"`
 	// Whether the message should be reattached.
 	ShouldReattach *bool `json:"shouldReattach,omitempty"`
+}
+
+// outputPayload defines the payload of the output topics
+type outputPayload struct {
+	// The hex encoded message ID of the message.
+	MessageID string `json:"messageId"`
+	// The hex encoded transaction id from which this output originated.
+	TransactionID string `json:"transactionId"`
+	// The index of the output.
+	OutputIndex uint16 `json:"outputIndex"`
+	// Whether this output is spent.
+	Spent bool `json:"isSpent"`
+	// The output in its serialized form.
+	RawOutput *json.RawMessage `json:"output"`
 }

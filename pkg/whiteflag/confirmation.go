@@ -27,7 +27,7 @@ type ConfirmedMilestoneStats struct {
 // ConfirmMilestone traverses a milestone and collects all unreferenced msg,
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation), forEachNewOutput func(output *utxo.Output), forEachNewSpent func(spent *utxo.Spent)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
@@ -186,6 +186,14 @@ func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*t
 	}
 
 	onMilestoneConfirmed(confirmation)
+
+	for _, output := range newOutputs {
+		forEachNewOutput(output)
+	}
+
+	for _, spent := range newSpents {
+		forEachNewSpent(spent)
+	}
 
 	conf.Collecting = tc.Sub(ts)
 	conf.Total = time.Since(ts)

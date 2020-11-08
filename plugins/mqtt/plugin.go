@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -41,7 +42,9 @@ var (
 
 	newLatestMilestoneWorkerPool *workerpool.WorkerPool
 	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
-	messageMetadataWorkerPool    *workerpool.WorkerPool
+
+	messageMetadataWorkerPool *workerpool.WorkerPool
+	utxoOutputWorkerPool      *workerpool.WorkerPool
 
 	topicSubscriptionWorkerPool *workerpool.WorkerPool
 
@@ -71,6 +74,19 @@ func configure() {
 
 	messageMetadataWorkerPool = workerpool.New(func(task workerpool.Task) {
 		onMessageMetadata(task.Param(0).(*tanglepkg.CachedMetadata))
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
+
+		switch p := task.Param(0).(type) {
+		case *utxo.Output:
+			onUTXOOutput(p)
+		case *utxo.Spent:
+			onUTXOSpent(p)
+		default:
+		}
+
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -149,6 +165,14 @@ func run() {
 		cachedMetadata.Release(true)
 	})
 
+	onUTXOOutput := events.NewClosure(func(output *utxo.Output) {
+		utxoOutputWorkerPool.TrySubmit(output)
+	})
+
+	onUTXOSpent := events.NewClosure(func(spent *utxo.Spent) {
+		utxoOutputWorkerPool.TrySubmit(spent)
+	})
+
 	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
@@ -177,10 +201,14 @@ func run() {
 		tangle.Events.MessageSolid.Attach(onMessageSolid)
 		tangle.Events.MessageReferenced.Attach(onMessageReferenced)
 
+		tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
+		tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
+
 		newLatestMilestoneWorkerPool.Start()
 		newSolidMilestoneWorkerPool.Start()
 		messageMetadataWorkerPool.Start()
 		topicSubscriptionWorkerPool.Start()
+		utxoOutputWorkerPool.Start()
 
 		<-shutdownSignal
 
@@ -190,10 +218,14 @@ func run() {
 		tangle.Events.MessageSolid.Detach(onMessageSolid)
 		tangle.Events.MessageReferenced.Detach(onMessageReferenced)
 
+		tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
+		tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
+
 		newLatestMilestoneWorkerPool.StopAndWait()
 		newSolidMilestoneWorkerPool.StopAndWait()
 		messageMetadataWorkerPool.StopAndWait()
 		topicSubscriptionWorkerPool.StopAndWait()
+		utxoOutputWorkerPool.StopAndWait()
 
 		log.Info("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers)

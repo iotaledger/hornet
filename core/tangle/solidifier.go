@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -384,6 +385,10 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
 		milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
 		Events.MilestoneConfirmed.Trigger(confirmation)
+	}, func(output *utxo.Output) {
+		Events.NewUTXOOutput.Trigger(output)
+	}, func(spent *utxo.Spent) {
+		Events.NewUTXOSpent.Trigger(spent)
 	})
 
 	if err != nil {
