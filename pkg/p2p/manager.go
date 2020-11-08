@@ -92,6 +92,11 @@ func PeerCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*Peer))(params[0].(*Peer))
 }
 
+// PeerErrorCaller gets called with a Peer and an error.
+func PeerErrorCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*Peer, error))(params[0].(*Peer), params[1].(error))
+}
+
 // ManagerStateCaller gets called with a ManagerState.
 func ManagerStateCaller(handler interface{}, params ...interface{}) {
 	handler.(func(ManagerState))(params[0].(ManagerState))
@@ -171,7 +176,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 			Connect:            events.NewEvent(PeerCaller),
 			Disconnect:         events.NewEvent(PeerCaller),
 			Connected:          events.NewEvent(PeerConnCaller),
-			Disconnected:       events.NewEvent(PeerCaller),
+			Disconnected:       events.NewEvent(PeerErrorCaller),
 			ScheduledReconnect: events.NewEvent(PeerDurationCaller),
 			Reconnecting:       events.NewEvent(PeerCaller),
 			Reconnected:        events.NewEvent(PeerCaller),
@@ -186,7 +191,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		disconnectPeerChan: make(chan *disconnectpeermsg),
 		isConnectedReqChan: make(chan *isconnectedrequestmsg),
 		connectedChan:      make(chan *connectionmsg),
-		disconnectedChan:   make(chan *connectionmsg),
+		disconnectedChan:   make(chan *disconnectmsg),
 		reconnectChan:      make(chan *reconnectmsg, 100),
 		forEachChan:        make(chan *foreachmsg),
 		callChan:           make(chan *callmsg),
@@ -212,7 +217,7 @@ type Manager struct {
 	disconnectPeerChan chan *disconnectpeermsg
 	isConnectedReqChan chan *isconnectedrequestmsg
 	connectedChan      chan *connectionmsg
-	disconnectedChan   chan *connectionmsg
+	disconnectedChan   chan *disconnectmsg
 	reconnectChan      chan *reconnectmsg
 	forEachChan        chan *foreachmsg
 	callChan           chan *callmsg
@@ -254,9 +259,13 @@ func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation
 
 // DisconnectPeer disconnects the given peer.
 // If the peer is considered "known", then its connection is unprotected from future trimming.
-func (m *Manager) DisconnectPeer(peerID peer.ID) error {
+func (m *Manager) DisconnectPeer(peerID peer.ID, disconnectReason ...error) error {
 	back := make(chan error)
-	m.disconnectPeerChan <- &disconnectpeermsg{peerID: peerID, back: back}
+	var reason error
+	if len(disconnectReason) > 0 {
+		reason = disconnectReason[0]
+	}
+	m.disconnectPeerChan <- &disconnectpeermsg{peerID: peerID, reason: reason, back: back}
 	return <-back
 }
 
@@ -339,8 +348,15 @@ type connectionmsg struct {
 	conn network.Conn
 }
 
+type disconnectmsg struct {
+	net    network.Network
+	conn   network.Conn
+	reason error
+}
+
 type disconnectpeermsg struct {
 	peerID peer.ID
+	reason error
 	back   chan error
 }
 
@@ -393,7 +409,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 				m.Events.Error.Trigger(fmt.Errorf("error disconnect %s: %w", disconnectPeerMsg.peerID.ShortString(), err))
 			}
 			if disconnected {
-				m.Events.Disconnected.Trigger(p)
+				m.Events.Disconnected.Trigger(p, disconnectPeerMsg.reason)
 			}
 			disconnectPeerMsg.back <- err
 
@@ -435,7 +451,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			m.cleanupPeerIfUnknown(id)
 			m.scheduleReconnectIfKnown(id)
 			if p != nil {
-				m.Events.Disconnected.Trigger(p)
+				m.Events.Disconnected.Trigger(p, disconnectedMsg.reason)
 			}
 
 		case forEachMsg := <-m.forEachChan:
@@ -648,8 +664,12 @@ func (m *Manager) registerLoggerOnEvents() {
 	m.Events.Disconnect.Attach(events.NewClosure(func(p *Peer) {
 		m.opts.Logger.Infof("disconnecting %s", p.ID.ShortString())
 	}))
-	m.Events.Disconnected.Attach(events.NewClosure(func(p *Peer) {
-		m.opts.Logger.Infof("disconnected %s", p.ID.ShortString())
+	m.Events.Disconnected.Attach(events.NewClosure(func(p *Peer, reason error) {
+		msg := fmt.Sprintf("disconnected %s", p.ID.ShortString())
+		if reason != nil {
+			msg = fmt.Sprintf("%s %s", msg, reason.Error())
+		}
+		m.opts.Logger.Infof(msg)
 	}))
 	m.Events.ScheduledReconnect.Attach(events.NewClosure(func(p *Peer, dur time.Duration) {
 		m.opts.Logger.Infof("scheduled reconnect in %v to %s", dur, p.ID.ShortString())
@@ -679,7 +699,7 @@ func (m *netNotifiee) Connected(net network.Network, conn network.Conn) {
 	m.connectedChan <- &connectionmsg{net: net, conn: conn}
 }
 func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn) {
-	m.disconnectedChan <- &connectionmsg{net: net, conn: conn}
+	m.disconnectedChan <- &disconnectmsg{net: net, conn: conn, reason: errors.New("connection closed by libp2p network event")}
 }
 func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream) {}
 func (m *netNotifiee) ClosedStream(net network.Network, stream network.Stream) {}

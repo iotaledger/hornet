@@ -159,7 +159,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		metrics.SharedServerMetrics.InvalidRequests.Inc()
 
 		// drop the connection to the peer
-		_ = proc.ps.DisconnectPeer(p.PeerID)
+		_ = proc.ps.DisconnectPeer(p.PeerID, errors.WithMessage(err, "processMilestoneRequest failed"))
 		return
 	}
 
@@ -244,7 +244,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_ = proc.ps.DisconnectPeer(p.PeerID)
+		_ = proc.ps.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
 
 		return
 	case wu.Is(Hashed):
@@ -272,7 +272,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	msg, err := tangle.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
-		wu.punish(proc.ps)
+		wu.punish(proc.ps, errors.WithMessagef(err, "peer sent an invalid message"))
 		return
 	}
 
@@ -282,7 +282,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// validate PoW score
 	if request == nil && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
 		wu.UpdateState(Invalid)
-		wu.punish(proc.ps)
+		wu.punish(proc.ps, errors.New("peer sent a message with invalid PoW score"))
 		return
 	}
 

@@ -1,14 +1,16 @@
 package gossip
 
 import (
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/libp2p/go-libp2p-core/peer"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.
@@ -105,14 +107,14 @@ func (wu *WorkUnit) addReceivedFrom(p *Protocol, requestedMessageID *hornet.Mess
 // punishes, respectively increases the invalid message metric of all peers
 // which sent the given underlying message of this WorkUnit.
 // it also closes the connection to these peers.
-func (wu *WorkUnit) punish(mng *p2p.Manager) {
+func (wu *WorkUnit) punish(mng *p2p.Manager, reason error) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
 		metrics.SharedServerMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_ = mng.DisconnectPeer(p.PeerID)
+		_ = mng.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
 	}
 }
 

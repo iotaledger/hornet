@@ -56,7 +56,7 @@ func removePeer(c echo.Context) error {
 	if err != nil {
 		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %w", err)
 	}
-	return deps.Manager.DisconnectPeer(peerID)
+	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
 
 func listPeers(c echo.Context) ([]*peerResponse, error) {
