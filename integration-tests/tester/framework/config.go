@@ -7,6 +7,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
 	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/plugins/coordinator"
@@ -283,9 +284,9 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--publicKeyRanges=[%v]", strings.Join(keyRanges, ",")),
+		fmt.Sprintf("--%s=[%v]", protocfg.CfgProtocolPublicKeyRangesJSON, strings.Join(keyRanges, ",")),
 		fmt.Sprintf("--%s=%d", coordinator.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
-		fmt.Sprintf("--%s=%0.0f", coordinator.CfgCoordinatorMinPoWScore, cooConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, cooConfig.MinPoWScore),
 	}
 }
 

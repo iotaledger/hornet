@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -88,11 +87,11 @@ func (n *StaticNetwork) ConnectNodes() error {
 			if _, err := node.NodeAPI.AddPeer(multiAddress); err != nil {
 				return fmt.Errorf("%w: couldn't add peer %v", err, multiAddress)
 			}
-			log.Printf("connected %s with %s", node.IP, peer.IP)
+			log.Printf("connected %s (%s) with %s (%s)", node.IP, node.ID.String(), peer.IP, peer.ID.String())
 		}
 	}
 
-	peeringCtx, peeringCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	peeringCtx, peeringCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer peeringCtxCancel()
 	if err := n.AwaitPeering(peeringCtx); err != nil {
 		return err
@@ -111,17 +110,29 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 				return err
 			}
 
+			if len(n.Nodes) < len(n.layout) {
+				return fmt.Errorf("not enough nodes: %d", len(n.Nodes))
+			}
+
 			peers, err := node.NodeAPI.Peers()
 			if err != nil {
+				log.Println(fmt.Sprintf("node %s, peering: %s", node.ID.String(), err.Error()))
+				continue
+			}
+
+			if len(peers) < len(layoutPeers) {
 				continue
 			}
 
 			var peered int
+
+		layoutLoop:
 			for layoutNeighbor := range layoutPeers {
 				layoutNode := n.Nodes[layoutNeighbor]
 				for _, peer := range peers {
-					if strings.Contains(peer.MultiAddress, layoutNode.ID.String()) {
+					if peer.ID == layoutNode.ID.String() && peer.Connected {
 						peered++
+						continue layoutLoop
 					}
 				}
 			}
