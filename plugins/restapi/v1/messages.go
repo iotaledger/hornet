@@ -37,7 +37,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
 	cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID)
@@ -107,7 +107,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
 	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
@@ -124,7 +124,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
 	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
@@ -141,7 +141,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
@@ -193,7 +193,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	if strings.HasPrefix(contentType, echo.MIMEApplicationJSON) {
 		if err := c.Bind(msg); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	} else {
 		if c.Request().Body == nil {
@@ -203,11 +203,11 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 		bytes, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
 		if _, err := msg.Deserialize(bytes, iotago.DeSeriModeNoValidation); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	}
 
@@ -242,14 +242,14 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
 	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
 
 	if err := deps.MessageProcessor.Emit(message); err != nil {
 		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
 	if err := utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout); err == context.DeadlineExceeded {

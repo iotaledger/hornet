@@ -3,7 +3,7 @@ package tangle
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 )
 
 const (
@@ -16,7 +16,13 @@ func IsNodeHealthy() bool {
 		return false
 	}
 
-	if deps.Manager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
+	var gossipStreamsOngoing int
+	deps.Service.ForEach(func(proto *gossip.Protocol) bool {
+		gossipStreamsOngoing++
+		return true
+	})
+
+	if gossipStreamsOngoing == 0 {
 		return false
 	}
 

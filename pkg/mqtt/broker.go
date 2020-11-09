@@ -19,12 +19,12 @@ type Broker struct {
 func NewBroker(mqttConfigFilePath string) (*Broker, error) {
 	c, err := broker.ConfigureConfig([]string{fmt.Sprintf("--config=%s", mqttConfigFilePath)})
 	if err != nil {
-		return nil, errors.Errorf("configure broker config error: %w", err)
+		return nil, errors.Errorf("configure broker config error: %s", err)
 	}
 
 	b, err := broker.NewBroker(c)
 	if err != nil {
-		return nil, errors.Errorf("create new broker error: %w", err)
+		return nil, errors.Errorf("create new broker error: %s", err)
 	}
 
 	return &Broker{

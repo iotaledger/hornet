@@ -26,14 +26,14 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	if indexStr != "" {
 		index, err = strconv.Atoi(indexStr)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing index failed: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing index failed: %s", err)
 		}
 	}
 
 	if depthStr != "" {
 		depth, err = strconv.Atoi(depthStr)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing depth failed: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing depth failed: %s", err)
 		}
 	}
 
@@ -45,12 +45,12 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	if depth != 0 {
 		targetIndex, err = snapshot.PruneDatabaseByDepth(milestone.Index(depth))
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %s", err)
 		}
 	} else {
 		targetIndex, err = snapshot.PruneDatabaseByTargetIndex(milestone.Index(index))
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %w", err)
+			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %s", err)
 		}
 	}
 
@@ -68,14 +68,14 @@ func createSnapshot(c echo.Context) (*createSnapshotResponse, error) {
 
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing index failed: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing index failed: %s", err)
 	}
 
 	snapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsPath)), fmt.Sprintf("export_%d.bin", index))
 
 	// ToDo: abort signal?
 	if err := snapshot.CreateLocalSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "creating snapshot failed: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "creating snapshot failed: %s", err)
 	}
 
 	return &createSnapshotResponse{

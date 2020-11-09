@@ -27,7 +27,7 @@ func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error)
 
 	sigLockedSingleDepositJSON, err := sigLockedSingleDeposit.MarshalJSON()
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %w", hex.EncodeToString(output.UTXOKey()), err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %s", hex.EncodeToString(output.UTXOKey()), err)
 	}
 
 	rawMsgSigLockedSingleDepositJSON := json.RawMessage(sigLockedSingleDepositJSON)
@@ -46,11 +46,11 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 
 	outputIDBytes, err := hex.DecodeString(outputIDParam)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %w", outputIDParam, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
 	if len(outputIDBytes) != (iotago.TransactionIDLength + iotago.UInt16ByteSize) {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %w", outputIDParam, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
 	var outputID iotago.UTXOInputID
@@ -62,12 +62,12 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "output not found: %s", outputIDParam)
 		}
 
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading output failed: %s, error: %w", outputIDParam, err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading output failed: %s, error: %s", outputIDParam, err)
 	}
 
 	unspent, err := deps.UTXO.IsOutputUnspent(&outputID)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent status failed: %s, error: %w", outputIDParam, err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent status failed: %s, error: %s", outputIDParam, err)
 	}
 
 	return newOutputResponse(output, !unspent)
@@ -85,7 +85,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
 	addressBytes, err := hex.DecodeString(addressParam)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %w", addressParam, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
 	}
 
 	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
@@ -99,7 +99,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
 	balance, count, err := deps.UTXO.AddressBalance(&address, maxResults)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading address balance failed: %s, error: %w", address, err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading address balance failed: %s, error: %s", address, err)
 	}
 
 	return &addressBalanceResponse{
@@ -122,7 +122,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
 	addressBytes, err := hex.DecodeString(addressParam)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %w", addressParam, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
 	}
 
 	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
@@ -136,7 +136,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
 	unspentOutputs, err := deps.UTXO.UnspentOutputsForAddress(&address, maxResults)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed: %s, error: %w", address, err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
 	outputIDs := []string{}
@@ -150,7 +150,7 @@ func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
 		spents, err := deps.UTXO.SpentOutputsForAddress(&address, maxResults-len(outputIDs))
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed: %s, error: %w", address, err)
+			return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed: %s, error: %s", address, err)
 		}
 
 		for _, spent := range spents {
