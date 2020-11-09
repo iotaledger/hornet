@@ -214,8 +214,8 @@ func (s *Service) Start(shutdownSignal <-chan struct{}) {
 	s.manager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
 		s.connectedChan <- &connectionmsg{peer: peer, conn: conn}
 	}))
-	s.manager.Events.Disconnected.Attach(events.NewClosure(func(peer *p2p.Peer, reason error) {
-		s.disconnectedChan <- &connectionmsg{peer: peer, conn: nil}
+	s.manager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
+		s.disconnectedChan <- &connectionmsg{peer: peerOptErr.Peer, conn: nil}
 	}))
 	s.manager.Events.RelationUpdated.Attach(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
 		s.relationUpdatedChan <- &relationupdatedmsg{peer: peer, oldRelation: oldRel}

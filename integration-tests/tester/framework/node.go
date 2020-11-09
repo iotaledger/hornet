@@ -105,7 +105,11 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 			for time.Now().Before(end) {
 
 				txCount := atomic.AddInt32(&spammed, 1)
-				iotaMsg := &iotago.Message{Payload: &iotago.Indexation{Index: "SPAM", Data: []byte(fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339)))}}
+				data := fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339))
+				iotaMsg := &iotago.Message{Payload: &iotago.Indexation{
+					Index: "SPAM",
+					Data:  []byte(data)},
+				}
 
 				if _, err := p.NodeAPI.SubmitMessage(iotaMsg); err != nil {
 					spamErr = err

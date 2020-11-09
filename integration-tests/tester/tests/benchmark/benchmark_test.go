@@ -23,9 +23,10 @@ func TestNetworkBenchmark(t *testing.T) {
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
 	benchmarkDuration := 30 * time.Second
+	spamDuration := 25 * time.Second
 
 	go func() {
-		assert.NoError(t, n.SpamZeroVal(benchmarkDuration, runtime.NumCPU()))
+		assert.NoError(t, n.SpamZeroVal(spamDuration, runtime.NumCPU()))
 	}()
 	go func() {
 		assert.NoError(t, n.TakeCPUProfiles(benchmarkDuration))

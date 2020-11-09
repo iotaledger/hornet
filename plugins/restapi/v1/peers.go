@@ -40,7 +40,7 @@ func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
 func getPeer(c echo.Context) (*peerResponse, error) {
 	peerID, err := peer.IDFromString(c.Param(ParameterPeerID))
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
 
 	info := deps.Manager.PeerInfoSnapshot(peerID)
@@ -54,7 +54,7 @@ func getPeer(c echo.Context) (*peerResponse, error) {
 func removePeer(c echo.Context) error {
 	peerID, err := peer.IDFromString(c.Param(ParameterPeerID))
 	if err != nil {
-		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %w", err)
+		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
 	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
@@ -74,17 +74,17 @@ func addPeer(c echo.Context) (*peerResponse, error) {
 	request := &addPeerRequest{}
 
 	if err := c.Bind(request); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid addPeerRequest, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid addPeerRequest, error: %s", err)
 	}
 
 	multiAddr, err := multiaddr.NewMultiaddr(request.MultiAddress)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid multiAddress, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid multiAddress, error: %s", err)
 	}
 
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid multiAddress, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid multiAddress, error: %s", err)
 	}
 
 	var alias string

@@ -95,7 +95,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
 	cachedMilestone := deps.Tangle.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1

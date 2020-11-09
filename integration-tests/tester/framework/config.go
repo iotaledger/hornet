@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
 	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
@@ -171,6 +173,8 @@ type RestAPIConfig struct {
 	BindAddress string
 	// Explicit permitted REST API routes.
 	PermittedRoutes []string
+	// Whether the node does proof-of-work for submitted messages.
+	EnableProofOfWork bool
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -178,6 +182,7 @@ func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
+		fmt.Sprintf("--%s=%v", pow.CfgNodeEnableProofOfWork, restAPIConfig.EnableProofOfWork),
 	}
 }
 
@@ -207,6 +212,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/debug/requests",
 			"/api/v1/debug/message-cones/:messageID",
 		},
+		EnableProofOfWork: true,
 	}
 }
 
@@ -221,8 +227,8 @@ type PluginConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (pluginConfig *PluginConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--node.enablePlugins=%s", strings.Join(pluginConfig.Enabled, ",")),
-		fmt.Sprintf("--node.disablePlugins=%s", strings.Join(pluginConfig.Disabled, ",")),
+		fmt.Sprintf("--%s=%s", app.CfgNodeEnablePlugins, strings.Join(pluginConfig.Enabled, ",")),
+		fmt.Sprintf("--%s=%s", app.CfgNodeDisablePlugins, strings.Join(pluginConfig.Disabled, ",")),
 	}
 }
 

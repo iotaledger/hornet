@@ -66,6 +66,7 @@ type dependencies struct {
 	Manager                    *p2p.Manager
 	RequestQueue               gossippkg.RequestQueue
 	MessageProcessor           *gossippkg.MessageProcessor
+	Service                    *gossippkg.Service
 	NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
 	CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -203,7 +204,7 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 
 		message = fmt.Sprintf("%s, error: %s", message, err.Error())
 
-		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: string(statusCode), Message: message}})
+		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 	}
 
 	if !exclHealthCheckFromAuth {

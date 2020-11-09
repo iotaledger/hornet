@@ -107,7 +107,7 @@ func (u *Manager) ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
 			// there is no ledger milestone yet => return 0
 			return 0, nil
 		}
-		return 0, errors.Errorf("failed to load ledger milestone index: %w", err)
+		return 0, errors.Errorf("failed to load ledger milestone index: %s", err)
 	}
 
 	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
