@@ -39,9 +39,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	Profile        *profile.Profile
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
+	Profile    *profile.Profile
+	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
 func provide(c *dig.Container) {
@@ -49,10 +48,11 @@ func provide(c *dig.Container) {
 
 	type deps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
 	}
 	if err := c.Provide(func(d deps) *profile.Profile {
-		return loadProfile(d.NodeConfig)
+		return loadProfile(d.NodeConfig, d.ProfilesConfig)
 	}); err != nil {
 		panic(err)
 	}
@@ -68,7 +68,7 @@ func configure() {
 
 // loadProfile automatically loads the appropriate profile (given the system memory) if the config value
 // is set to 'auto' or the one specified in the config.
-func loadProfile(nodeConfig *configuration.Configuration) *profile.Profile {
+func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *configuration.Configuration) *profile.Profile {
 	profileName := strings.ToLower(nodeConfig.String(CfgProfileUseProfile))
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
@@ -105,10 +105,10 @@ func loadProfile(nodeConfig *configuration.Configuration) *profile.Profile {
 		p.Name = "1gb"
 	default:
 		p = &profile.Profile{}
-		if !deps.ProfilesConfig.Exists(profileName) {
+		if !profilesConfig.Exists(profileName) {
 			panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
 		}
-		if err := deps.ProfilesConfig.Unmarshal(profileName, p); err != nil {
+		if err := profilesConfig.Unmarshal(profileName, p); err != nil {
 			panic(err)
 		}
 		p.Name = profileName

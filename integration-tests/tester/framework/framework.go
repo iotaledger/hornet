@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 )
@@ -116,9 +115,6 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 	}
 
 	autoNetwork := &AutopeeredNetwork{Network: network}
-	if err := autoNetwork.createEntryNode(); err != nil {
-		return nil, err
-	}
 
 	for i := 0; i < peerCount; i++ {
 		cfg := DefaultConfig()
@@ -157,24 +153,6 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 	}
 
 	autoNetwork := &AutopeeredNetwork{Network: network}
-	if err := autoNetwork.createEntryNode(); err != nil {
-		return nil, err
-	}
-
-	// block all traffic from/to entry node
-	log.Println("blocking traffic to entry node...")
-	pumbaEntryNodeName := network.PrefixName(containerNameEntryNode) + containerNameSuffixPumba
-	pumbaEntryNode, err := autoNetwork.createPumba(
-		pumbaEntryNodeName,
-		network.PrefixName(containerNameEntryNode),
-		strslice.StrSlice{},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// wait until pumba is started and blocks all traffic
-	time.Sleep(5 * time.Second)
 
 	// create peers
 	for i := 0; i < peerCount; i++ {
@@ -213,25 +191,6 @@ func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitio
 
 	// wait until pumba containers are started and block traffic between partitions
 	time.Sleep(5 * time.Second)
-
-	// delete pumba for entry node
-	log.Println("unblocking traffic to entry node...")
-	if err := pumbaEntryNode.Stop(); err != nil {
-		return nil, err
-	}
-
-	logs, err := pumbaEntryNode.Logs()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := createContainerLogFile(pumbaEntryNodeName, logs); err != nil {
-		return nil, err
-	}
-
-	if err := pumbaEntryNode.Remove(); err != nil {
-		return nil, err
-	}
 
 	if err := autoNetwork.AwaitPeering(minimumPeers); err != nil {
 		return nil, err

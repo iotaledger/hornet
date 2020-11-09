@@ -2,6 +2,8 @@ package app
 
 import (
 	flag "github.com/spf13/pflag"
+
+	"github.com/gohornet/hornet/pkg/node"
 )
 
 const (
@@ -15,7 +17,14 @@ const (
 	CfgConfigFilePathProfilesConfig = "profiles"
 )
 
-func init() {
-	flag.StringSlice(CfgNodeDisablePlugins, nil, "a list of plugins that shall be disabled")
-	flag.StringSlice(CfgNodeEnablePlugins, nil, "a list of plugins that shall be enabled")
+var params = &node.PluginParams{
+	Params: map[string]*flag.FlagSet{
+		"nodeConfig": func() *flag.FlagSet {
+			fs := flag.NewFlagSet("", flag.ContinueOnError)
+			fs.StringSlice(CfgNodeDisablePlugins, nil, "a list of plugins that shall be disabled")
+			fs.StringSlice(CfgNodeEnablePlugins, nil, "a list of plugins that shall be enabled")
+			return fs
+		}(),
+	},
+	Masked: nil,
 }

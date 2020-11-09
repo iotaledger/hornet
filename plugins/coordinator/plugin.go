@@ -30,9 +30,17 @@ import (
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
+const (
+	// whether to bootstrap the network
+	CfgCoordinatorBootstrap = "cooBootstrap"
+	// the index of the first milestone at bootstrap
+	CfgCoordinatorStartIndex = "cooStartIndex"
+)
+
 func init() {
-	flag.CommandLine.MarkHidden("cooBootstrap")
-	flag.CommandLine.MarkHidden("cooStartIndex")
+	flag.CommandLine.MarkHidden(CfgCoordinatorBootstrap)
+	flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
+
 	Plugin = &node.Plugin{
 		Status: node.Disabled,
 		Pluggable: node.Pluggable{
@@ -49,8 +57,8 @@ var (
 	Plugin *node.Plugin
 	log    *logger.Logger
 
-	bootstrap  = flag.Bool("cooBootstrap", false, "bootstrap the network")
-	startIndex = flag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
+	bootstrap  = flag.Bool(CfgCoordinatorBootstrap, false, "bootstrap the network")
+	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
 
 	maxTrackedMessages int
 	belowMaxDepth      milestone.Index
@@ -298,6 +306,11 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 	}
 
 	if err := deps.MessageProcessor.Emit(msg); err != nil {
+		tanglecore.DeregisterMessageSolidEvent(msg.GetMessageID())
+		if len(msIndex) > 0 {
+			tanglecore.DeregisterMilestoneConfirmedEvent(msIndex[0])
+		}
+
 		return err
 	}
 

@@ -1,32 +1,33 @@
 package spammer
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"go.uber.org/atomic"
+	"go.uber.org/dig"
+
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/labstack/echo/v4"
-	"go.uber.org/atomic"
-	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -140,12 +141,12 @@ func run() {
 
 	// automatically start the spammer on node startup if the flag is set
 	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
-		Start(nil, nil)
+		start(nil, nil)
 	}
 }
 
-// Start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
-func Start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error) {
+// start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
+func start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error) {
 	if spammerInstance == nil {
 		return 0.0, 0.0, ErrSpammerDisabled
 	}
@@ -299,8 +300,8 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	}
 }
 
-// Stop stops the spammer.
-func Stop() error {
+// stop stops the spammer.
+func stop() error {
 	if spammerInstance == nil {
 		return ErrSpammerDisabled
 	}

@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	// CfgDashboardNodeAlias set an alias to identify a node
-	CfgDashboardNodeAlias = "dashboard.nodeAlias"
+	// CfgNodeAlias set an alias to identify a node
+	CfgNodeAlias = "node.alias"
 	// the bind address on which the dashboard can be access from
 	CfgDashboardBindAddress = "dashboard.bindAddress"
 	// whether to run the dashboard in dev mode
@@ -17,18 +17,18 @@ const (
 	// whether to use HTTP basic auth
 	CfgDashboardBasicAuthEnabled = "dashboard.basicAuth.enabled"
 	// the HTTP basic auth username
-	CfgDashboardBasicAuthUsername = "dashboard.basicAuth.username"
+	CfgDashboardBasicAuthUsername = "dashboard.basicAuth.userName"
 	// the HTTP basic auth password+salt as a sha256 hash
-	CfgDashboardBasicAuthPasswordHash = "dashboard.basicauth.passwordhash" // config key must be lower cased (for hiding passwords in PrintConfig)
+	CfgDashboardBasicAuthPasswordHash = "dashboard.basicauth.passwordHash"
 	// the HTTP basic auth salt used for hashing the password
-	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordsalt" // config key must be lower cased (for hiding passwords in PrintConfig)
+	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordSalt"
 )
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgDashboardNodeAlias, "", "set an alias to identify a node")
+			fs.String(CfgNodeAlias, "", "set an alias to identify a node")
 			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
 			fs.Bool(CfgDashboardBasicAuthEnabled, false, "whether to use HTTP basic auth")

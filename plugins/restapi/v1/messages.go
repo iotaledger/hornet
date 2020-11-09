@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -230,12 +231,14 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Nonce == 0 {
+		if !proofOfWorkEnabled {
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
+		}
+
 		if err := deps.PoWHandler.DoPoW(msg, nil, 1); err != nil {
 			return nil, err
 		}
 	}
-
-	// ToDo: check PoW
 
 	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
@@ -245,10 +248,13 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
 
 	if err := deps.MessageProcessor.Emit(message); err != nil {
+		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %w", err)
 	}
 
-	utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout)
+	if err := utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout); err == context.DeadlineExceeded {
+		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
+	}
 
 	return &messageCreatedResponse{
 		MessageID: message.GetMessageID().Hex(),
