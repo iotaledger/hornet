@@ -3,7 +3,7 @@
   "restAPI": {
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     },
@@ -40,7 +40,7 @@
     "dev": false,
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     }
@@ -60,7 +60,9 @@
     "delay": 500
   },
   "protocol": {
-    "minPoWScore": 0,
+    "minPoWScore": 100,
+    "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
+    "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
         "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -85,19 +87,6 @@
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100
-    }
-  },
-  "network": {
-    "preferIPv6": false,
-    "gossip": {
-      "bindAddress": "0.0.0.0:15600",
-      "reconnectAttemptIntervalSeconds": 60
-    },
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14626",
-      "runAsEntryNode": false,
-      "entryNodes": [],
-      "seed": ""
     }
   },
   "tipsel": {
@@ -128,6 +117,27 @@
       "Coordinator"
     ]
   },
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/127.0.0.1/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "gossipUnknownPeersLimit": 4,
+    "identityPrivateKey": "",
+    "peerStore": {
+      "path": "./p2pstore"
+    },
+    "reconnectIntervalSeconds": 30
+  },
+  "p2pdisc": {
+    "advertiseIntervalSec": 30,
+    "maxDiscoveredPeerConns": 4,
+    "rendezvousPoint": "between-two-vertices",
+    "routingTableRefreshPeriodSec": 60
+  },
   "logger": {
     "level": "debug",
     "disableCaller": true,
@@ -156,6 +166,11 @@
   },
   "prometheus": {
     "bindAddress": "localhost:9311",
+    "fileServiceDiscovery": {
+      "enabled": false,
+      "path": "target.json",
+      "target": "localhost:9311"
+    },
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

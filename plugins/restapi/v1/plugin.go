@@ -150,8 +150,9 @@ func init() {
 }
 
 var (
-	Plugin   *node.Plugin
-	features = []string{} // Workaround until https://github.com/golang/go/issues/27589 is fixed
+	Plugin             *node.Plugin
+	proofOfWorkEnabled bool
+	features           []string
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -175,8 +176,11 @@ type dependencies struct {
 func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
+	proofOfWorkEnabled = deps.NodeConfig.Bool(powcore.CfgNodeEnableProofOfWork)
+
 	// Check for features
-	if deps.NodeConfig.Bool(powcore.CfgNodeEnableProofOfWork) {
+	features = []string{}
+	if proofOfWorkEnabled {
 		features = append(features, "PoW")
 	}
 

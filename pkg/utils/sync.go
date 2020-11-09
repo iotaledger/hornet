@@ -42,6 +42,12 @@ func (se *syncEvent) RegisterEvent(key interface{}) chan struct{} {
 	return msgProcessedChan
 }
 
+// DeregisterEvent removes a registed event to free the memory if not used.
+func (se *syncEvent) DeregisterEvent(key interface{}) {
+	// the event is deregisted by triggering it
+	se.Trigger(key)
+}
+
 func (se *syncEvent) Trigger(key interface{}) {
 
 	se.RLock()
@@ -68,6 +74,7 @@ func (se *syncEvent) Trigger(key interface{}) {
 }
 
 // WaitForChannelClosed waits until the channel is closed or the deadline is reached.
+// If the deadline was reached, the event should be deregistered afterwards to clean up memory.
 func WaitForChannelClosed(ch chan struct{}, timeout ...time.Duration) error {
 
 	if len(timeout) > 0 {

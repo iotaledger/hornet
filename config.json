@@ -3,7 +3,7 @@
   "restAPI": {
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     },
@@ -22,7 +22,10 @@
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs"
     ],
-    "whitelistedAddresses": ["127.0.0.1", "::1"],
+    "whitelistedAddresses": [
+      "127.0.0.1",
+      "::1"
+    ],
     "bindAddress": "0.0.0.0:14265",
     "limits": {
       "bodyLength": "1M",
@@ -34,10 +37,13 @@
     "theme": "default",
     "basicAuth": {
       "enabled": false,
-      "username": "",
+      "userName": "",
       "passwordHash": "",
       "passwordSalt": ""
     }
+  },
+  "db": {
+    "path": "mainnetdb"
   },
   "snapshots": {
     "intervalSynced": 50,
@@ -53,31 +59,32 @@
     "enabled": true,
     "delay": 60480
   },
-  "network": {
-    "preferIPv6": false,
-    "gossip": {
-      "bindAddress": "0.0.0.0:15600",
-      "reconnectAttemptIntervalSeconds": 60
-    },
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14626",
-      "runAsEntryNode": false,
-      "entryNodes": [
-        "FvfwJuCMoWJvcJLSYww7whPxouZ9WFJ55uyxTxKxJ1ez@enter.hornet.zone:14626",
-        "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
-        "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627",
-        "12w9FrzMdDQ42aBgFrv1siHuJMhuZ4SMVHRFSS7Zb72W@entrynode.iotatoken.nl:14626",
-        "DboTc1v61Xdyvggj8VRszy92ScUTLgfwZaHvXsU8zr7e@entrynode.tanglebay.org:14626",
-        "31Tz9meznQMm7qSDUgyMmYVeHUCGA7za5Suvbom5hpE9@bender.iota.autopeering.com:14626"
-      ],
-      "seed": ""
-    }
-  },
   "node": {
     "alias": "",
     "enableProofOfWork": false,
     "disablePlugins": [],
     "enablePlugins": []
+  },
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/127.0.0.1/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "gossipUnknownPeersLimit": 4,
+    "identityPrivateKey": "",
+    "peerStore": {
+      "path": "./p2pstore"
+    },
+    "reconnectIntervalSeconds": 30
+  },
+  "p2pdisc": {
+    "advertiseIntervalSec": 30,
+    "maxDiscoveredPeerConns": 4,
+    "rendezvousPoint": "between-two-vertices",
+    "routingTableRefreshPeriodSec": 60
   },
   "logger": {
     "level": "info",
@@ -101,6 +108,11 @@
   },
   "prometheus": {
     "bindAddress": "localhost:9311",
+    "fileServiceDiscovery": {
+      "enabled": false,
+      "path": "target.json",
+      "target": "localhost:9311"
+    },
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

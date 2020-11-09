@@ -377,7 +377,7 @@ func currentNodeStatus() *NodeStatus {
 	status.LatestVersion = app.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = tanglecore.IsNodeHealthy()
-	status.NodeAlias = deps.NodeConfig.String(CfgDashboardNodeAlias)
+	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 

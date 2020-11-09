@@ -7,6 +7,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
 	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/plugins/coordinator"
@@ -17,7 +18,7 @@ import (
 
 const (
 	// The default REST API port of every node.
-	WebAPIPort = 14265
+	RestAPIPort = 14265
 
 	autopeeringMaxTries = 50
 
@@ -26,7 +27,6 @@ const (
 	containerIPRouteImage = "gaiadocker/iproute2"
 
 	containerNameTester      = "/tester"
-	containerNameEntryNode   = "entry_node"
 	containerNameReplica     = "replica_"
 	containerNameSuffixPumba = "_pumba"
 
@@ -39,8 +39,7 @@ const (
 )
 
 var (
-	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "restapi"}
-	disabledPluginsPeer      = []string{}
+	disabledPluginsPeer = []string{}
 )
 
 // DefaultConfig returns the default NodeConfig.
@@ -54,13 +53,13 @@ func DefaultConfig() *NodeConfig {
 		Network:     DefaultNetworkConfig(),
 		Snapshot:    DefaultSnapshotConfig(),
 		Coordinator: DefaultCoordinatorConfig(),
-		WebAPI:      DefaultRestAPIConfig(),
+		RestAPI:     DefaultRestAPIConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
 	}
 	cfg.ExposedPorts = nat.PortSet{
-		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
+		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.RestAPI.BindAddress, ":")[1])): {},
 		"6060/tcp": {},
 		"8081/tcp": {},
 	}
@@ -80,7 +79,7 @@ type NodeConfig struct {
 	// Network config.
 	Network NetworkConfig
 	// Web API config.
-	WebAPI RestAPIConfig
+	RestAPI RestAPIConfig
 	// Snapshot config.
 	Snapshot SnapshotConfig
 	// Coordinator config.
@@ -107,7 +106,7 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Network.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Snapshot.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.WebAPI.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.RestAPI.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
@@ -155,13 +154,13 @@ func (netConfig *NetworkConfig) CLIFlags() []string {
 func DefaultNetworkConfig() NetworkConfig {
 	return NetworkConfig{
 		IdentityPrivKey:          "",
-		BindMultiAddresses:       []string{"/ip4/127.0.0.1/tcp/15600"},
+		BindMultiAddresses:       []string{"/ip4/0.0.0.0/tcp/15600"},
 		PeerStorePath:            "./p2pstore",
-		ConnMngHighWatermark:     10,
-		ConnMngLowWatermark:      5,
+		ConnMngHighWatermark:     8,
+		ConnMngLowWatermark:      4,
 		Peers:                    []string{},
 		PeerAliases:              []string{},
-		ReconnectIntervalSeconds: 10,
+		ReconnectIntervalSeconds: 1,
 		GossipUnknownPeersLimit:  4,
 	}
 }
@@ -190,23 +189,23 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/health",
 			"/api/v1/info",
 			"/api/v1/tips",
-			"/api/v1/messages/*",
-			"/api/v1/messages/*/metadata",
-			"/api/v1/messages/*/raw",
-			"/api/v1/messages/*/children",
+			"/api/v1/messages/:messageID",
+			"/api/v1/messages/:messageID/metadata",
+			"/api/v1/messages/:messageID/raw",
+			"/api/v1/messages/:messageID/children",
 			"/api/v1/messages",
-			"/api/v1/milestones/*",
-			"/api/v1/outputs/*",
-			"/api/v1/addresses/*",
-			"/api/v1/addresses/*/outputs",
-			"/api/v1/peers/*",
+			"/api/v1/milestones/:milestoneIndex",
+			"/api/v1/outputs/:outputID",
+			"/api/v1/addresses/:address",
+			"/api/v1/addresses/:address/outputs",
+			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
 			"/api/v1/debug/outputs",
 			"/api/v1/debug/outputs/unspent",
 			"/api/v1/debug/outputs/spent",
-			"/api/v1/debug/ms-diff/*",
+			"/api/v1/debug/ms-diff/:milestoneIndex",
 			"/api/v1/debug/requests",
-			"/api/v1/debug/message-cones/*",
+			"/api/v1/debug/message-cones/:messageID",
 		},
 	}
 }
@@ -283,9 +282,9 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--publicKeyRanges=[%v]", strings.Join(keyRanges, ",")),
+		fmt.Sprintf("--%s=[%v]", protocfg.CfgProtocolPublicKeyRangesJSON, strings.Join(keyRanges, ",")),
 		fmt.Sprintf("--%s=%d", coordinator.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
-		fmt.Sprintf("--%s=%0.0f", coordinator.CfgCoordinatorMinPoWScore, cooConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, cooConfig.MinPoWScore),
 	}
 }
 

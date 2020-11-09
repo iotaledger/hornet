@@ -4,54 +4,14 @@ import (
 	"fmt"
 	"log"
 	"time"
-
-	"github.com/iotaledger/hive.go/crypto/ed25519"
-	"github.com/iotaledger/hive.go/identity"
 )
 
 // AutopeeredNetwork is a network consisting out of autopeered nodes.
 // It contains additionally an entry node.
 type AutopeeredNetwork struct {
 	*Network
-	// The entry node docker container.
-	entryNode *DockerContainer
-	// The peer identity of the entry node.
-	entryNodeIdentity *identity.Identity
 	// The partitions of which this network is made up of.
 	partitions []*Partition
-}
-
-// createEntryNode creates the network's entry node.
-func (n *AutopeeredNetwork) createEntryNode() error {
-	// create identity
-	publicKey, privateKey, err := ed25519.GenerateKey()
-	if err != nil {
-		return err
-	}
-
-	n.entryNodeIdentity = identity.New(publicKey)
-	seed := privateKey.Seed().String()
-
-	// create entry node container
-	n.entryNode = NewDockerContainer(n.dockerClient)
-
-	cfg := DefaultConfig()
-	cfg.Name = n.PrefixName(containerNameEntryNode)
-	//cfg.Network.RunAsEntryNode = true
-	cfg.Network.IdentityPrivKey = seed
-	cfg.Plugins.Disabled = disabledPluginsEntryNode
-
-	if err = n.entryNode.CreateNodeContainer(cfg); err != nil {
-		return err
-	}
-	if err = n.entryNode.ConnectToNetwork(n.ID); err != nil {
-		return err
-	}
-	if err = n.entryNode.Start(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // AwaitPeering waits until all peers have reached the minimum amount of peers.
@@ -98,44 +58,14 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 
 // CreatePeer creates a new HORNET node initialized with the right entry node.
 func (n *AutopeeredNetwork) CreatePeer(cfg *NodeConfig) (*Node, error) {
-	/*
-		ip, err := n.entryNode.IP(n.Name)
-		if err != nil {
-			return nil, err
-		}
-		cfg.Network.EntryNodes = []string{
-			fmt.Sprintf("%s@%s:14626", n.entryNodePublicKey(), ip),
-		}
-	*/
 	return n.Network.CreateNode(cfg)
 }
 
 // Shutdown shuts down the network.
 func (n *AutopeeredNetwork) Shutdown() error {
-	if err := n.entryNode.Stop(); err != nil {
-		return err
-	}
 
 	// delete all partitions
 	if err := n.DeletePartitions(); err != nil {
-		return err
-	}
-
-	// persist entry node log, stop it and remove it from the network
-	logs, err := n.entryNode.Logs()
-	if err != nil {
-		return err
-	}
-	if err := createContainerLogFile(n.PrefixName(containerNameEntryNode), logs); err != nil {
-		return err
-	}
-
-	entryNodeExitStatus, err := n.entryNode.ExitStatus()
-	if err != nil {
-		return err
-	}
-
-	if err := n.entryNode.Remove(); err != nil {
 		return err
 	}
 
@@ -144,17 +74,7 @@ func (n *AutopeeredNetwork) Shutdown() error {
 		return err
 	}
 
-	// check whether the entry node was successfully exited
-	if entryNodeExitStatus != exitStatusSuccessful {
-		return fmt.Errorf("container %s exited with code %d", containerNameEntryNode, entryNodeExitStatus)
-	}
-
 	return nil
-}
-
-// entryNodePublicKey returns the entry node's public key encoded as base58
-func (n *AutopeeredNetwork) entryNodePublicKey() string {
-	return n.entryNodeIdentity.PublicKey().String()
 }
 
 // createPumba creates and starts a Pumba Docker container.

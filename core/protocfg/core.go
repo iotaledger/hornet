@@ -24,6 +24,8 @@ const (
 )
 
 func init() {
+	flag.CommandLine.MarkHidden(CfgProtocolPublicKeyRangesJSON)
+
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
 			Name: "ProtoCfg",
@@ -48,7 +50,7 @@ var (
 	CorePlugin *node.CorePlugin
 )
 
-var cooPubKeyRangesFlag = flag.String("publicKeyRanges", "", "overwrite public key ranges (JSON)")
+var cooPubKeyRangesFlag = flag.String(CfgProtocolPublicKeyRangesJSON, "", "overwrite public key ranges (JSON)")
 
 func provide(c *dig.Container) {
 	type tangledeps struct {

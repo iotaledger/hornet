@@ -6,7 +6,6 @@ import (
 )
 
 const (
-
 	// the path to the state file of the coordinator
 	CfgCoordinatorStateFilePath = "coordinator.stateFilePath"
 	// the interval milestones are issued

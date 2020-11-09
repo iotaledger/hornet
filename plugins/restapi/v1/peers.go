@@ -18,12 +18,18 @@ func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
 		alias = &info.Alias
 	}
 
+	multiAddresses := []string{}
+
+	for _, multiAddress := range info.Addresses {
+		multiAddresses = append(multiAddresses, multiAddress.String())
+	}
+
 	return &peerResponse{
-		ID:           info.ID,
-		MultiAddress: info.Addresses,
-		Alias:        alias,
-		Relation:     "not implemented",
-		Connected:    info.Connected,
+		ID:             info.ID,
+		MultiAddresses: multiAddresses,
+		Alias:          alias,
+		Relation:       info.Relation,
+		Connected:      info.Connected,
 		GossipMetrics: &peerGossipMetrics{
 			DroppedSentPackets: info.DroppedSentPackets,
 			SentPackets:        info.SentPackets,
@@ -50,7 +56,7 @@ func removePeer(c echo.Context) error {
 	if err != nil {
 		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %w", err)
 	}
-	return deps.Manager.DisconnectPeer(peerID)
+	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
 
 func listPeers(c echo.Context) ([]*peerResponse, error) {

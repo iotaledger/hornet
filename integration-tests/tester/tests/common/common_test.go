@@ -17,7 +17,7 @@ func TestCommon(t *testing.T) {
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 
-	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer syncCtxCancel()
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 }

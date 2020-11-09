@@ -92,6 +92,15 @@ func (n *Node) init() {
 	params := map[string][]*flag.FlagSet{}
 	masked := []string{}
 
+	if n.options.initPlugin.Params != nil {
+		for k, v := range n.options.initPlugin.Params.Params {
+			params[k] = append(params[k], v)
+		}
+	}
+	if n.options.initPlugin.Params.Masked != nil {
+		masked = append(masked, n.options.initPlugin.Params.Masked...)
+	}
+
 	forEachCorePlugin(n.options.coreModules, func(coreModule *CorePlugin) bool {
 		if coreModule.Params == nil {
 			return true
