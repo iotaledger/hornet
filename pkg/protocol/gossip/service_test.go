@@ -64,6 +64,14 @@ func TestServiceEvents(t *testing.T) {
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())
 
+	var protocolStartedCalled1, protocolStartedCalled2 bool
+	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
+		protocolStartedCalled1 = true
+	}))
+	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
+		protocolStartedCalled2 = true
+	}))
+
 	// connect node 1 and 2 to each other
 	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
 	time.Sleep(100 * time.Millisecond)
@@ -72,14 +80,6 @@ func TestServiceEvents(t *testing.T) {
 	// should eventually both be connected to each other
 	connectivity(t, node1Manager, node2.ID(), false, 10*time.Second)
 	connectivity(t, node2Manager, node1.ID(), false, 10*time.Second)
-
-	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
-		protocolStartedCalled1 = true
-	}))
-	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
-		protocolStartedCalled2 = true
-	}))
 
 	// and because both are known to each other, gossip protocol streams should
 	// have been instantiated
@@ -117,6 +117,9 @@ func TestServiceEvents(t *testing.T) {
 	require.True(t, protocolTerminatedCalled1)
 	require.True(t, protocolTerminatedCalled2)
 
+	connectivity(t, node1Manager, node2.ID(), true, 5*time.Second)
+	connectivity(t, node2Manager, node1.ID(), true, 5*time.Second)
+
 	// if we now connect node 1 to 2 with relation 'known'
 	// but node 2 doesn't see node 1 as 'known', the protocol should
 	// be started and terminated immediately
@@ -131,13 +134,7 @@ func TestServiceEvents(t *testing.T) {
 	}))
 
 	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
-	// should eventually both be connected to each other
-	connectivity(t, node1Manager, node2.ID(), false, 10*time.Second)
-	connectivity(t, node2Manager, node1.ID(), false, 10*time.Second)
-	// but only node 2 is seen as protected on node 1
-	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
-	require.False(t, node2.ConnManager().IsProtected(node1.ID(), p2p.KnownPeerConnectivityProtectionTag))
-
+	
 	require.Eventually(t, func() bool { return protocolStartedCalled1 }, 10*time.Second, 10*time.Millisecond)
 	require.Eventually(t, func() bool { return protocolTerminatedCalled1 }, 10*time.Second, 10*time.Millisecond)
 }
@@ -163,7 +160,7 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	_ = logger.InitGlobalLogger(cfg)
 
 	mngOpts := []p2p.ManagerOption{
-		p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond),
+		p2p.WithManagerReconnectInterval(2*time.Second, 500*time.Millisecond),
 	}
 	srvOpts := []gossip.ServiceOption{
 		gossip.WithUnknownPeersLimit(1),
@@ -171,7 +168,9 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 
 	node1, _, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, shutdownSignal, mngOpts, srvOpts)
 	node2, _, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, shutdownSignal, mngOpts, srvOpts)
-	node3, _, node3Manager, node3Service, _ := newNode("node3", ctx, t, shutdownSignal, mngOpts, srvOpts)
+	node3, _, node3Manager, node3Service, _ := newNode("node3", ctx, t, shutdownSignal, mngOpts, []gossip.ServiceOption{
+		gossip.WithUnknownPeersLimit(2),
+	})
 
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())

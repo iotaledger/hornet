@@ -92,9 +92,15 @@ func PeerCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*Peer))(params[0].(*Peer))
 }
 
-// PeerErrorCaller gets called with a Peer and an error.
-func PeerErrorCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*Peer, error))(params[0].(*Peer), params[1].(error))
+// PeerOptError holds a Peer and optionally an error.
+type PeerOptError struct {
+	Peer  *Peer
+	Error error
+}
+
+// PeerOptErrorCaller gets called with a Peer and an error.
+func PeerOptErrorCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*PeerOptError))(params[0].(*PeerOptError))
 }
 
 // ManagerStateCaller gets called with a ManagerState.
@@ -176,7 +182,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 			Connect:            events.NewEvent(PeerCaller),
 			Disconnect:         events.NewEvent(PeerCaller),
 			Connected:          events.NewEvent(PeerConnCaller),
-			Disconnected:       events.NewEvent(PeerErrorCaller),
+			Disconnected:       events.NewEvent(PeerOptErrorCaller),
 			ScheduledReconnect: events.NewEvent(PeerDurationCaller),
 			Reconnecting:       events.NewEvent(PeerCaller),
 			Reconnected:        events.NewEvent(PeerCaller),
@@ -187,14 +193,14 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		host:               host,
 		peers:              map[peer.ID]*Peer{},
 		opts:               mngOpts,
-		connectPeerChan:    make(chan *connectpeermsg),
-		disconnectPeerChan: make(chan *disconnectpeermsg),
-		isConnectedReqChan: make(chan *isconnectedrequestmsg),
-		connectedChan:      make(chan *connectionmsg),
-		disconnectedChan:   make(chan *disconnectmsg),
+		connectPeerChan:    make(chan *connectpeermsg, 10),
+		disconnectPeerChan: make(chan *disconnectpeermsg, 10),
+		isConnectedReqChan: make(chan *isconnectedrequestmsg, 10),
+		connectedChan:      make(chan *connectionmsg, 10),
+		disconnectedChan:   make(chan *disconnectmsg, 10),
 		reconnectChan:      make(chan *reconnectmsg, 100),
-		forEachChan:        make(chan *foreachmsg),
-		callChan:           make(chan *callmsg),
+		forEachChan:        make(chan *foreachmsg, 10),
+		callChan:           make(chan *callmsg, 10),
 	}
 	if mng.opts.Logger != nil {
 		mng.registerLoggerOnEvents()
@@ -409,7 +415,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 				m.Events.Error.Trigger(fmt.Errorf("error disconnect %s: %w", disconnectPeerMsg.peerID.ShortString(), err))
 			}
 			if disconnected {
-				m.Events.Disconnected.Trigger(p, disconnectPeerMsg.reason)
+				m.Events.Disconnected.Trigger(&PeerOptError{Peer: p, Error: disconnectPeerMsg.reason})
 			}
 			disconnectPeerMsg.back <- err
 
@@ -451,7 +457,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 			m.cleanupPeerIfUnknown(id)
 			m.scheduleReconnectIfKnown(id)
 			if p != nil {
-				m.Events.Disconnected.Trigger(p, disconnectedMsg.reason)
+				m.Events.Disconnected.Trigger(&PeerOptError{Peer: p, Error: disconnectedMsg.reason})
 			}
 
 		case forEachMsg := <-m.forEachChan:
@@ -664,10 +670,10 @@ func (m *Manager) registerLoggerOnEvents() {
 	m.Events.Disconnect.Attach(events.NewClosure(func(p *Peer) {
 		m.opts.Logger.Infof("disconnecting %s", p.ID.ShortString())
 	}))
-	m.Events.Disconnected.Attach(events.NewClosure(func(p *Peer, reason error) {
-		msg := fmt.Sprintf("disconnected %s", p.ID.ShortString())
-		if reason != nil {
-			msg = fmt.Sprintf("%s %s", msg, reason.Error())
+	m.Events.Disconnected.Attach(events.NewClosure(func(peerErr *PeerOptError) {
+		msg := fmt.Sprintf("disconnected %s", peerErr.Peer.ID.ShortString())
+		if peerErr.Error != nil {
+			msg = fmt.Sprintf("%s %s", msg, peerErr.Error.Error())
 		}
 		m.opts.Logger.Infof(msg)
 	}))

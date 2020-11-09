@@ -27,7 +27,7 @@ func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err := deps.UTXO.ForEachOutput(outputConsumerFunc)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -45,7 +45,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -64,7 +64,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err := deps.UTXO.ForEachSpentOutput(spentConsumerFunc)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -77,7 +77,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
 	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %w", milestoneIndex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
 	diffOutputs, diffSpents, err := deps.UTXO.GetMilestoneDiffs(milestone.Index(msIndex))
@@ -154,7 +154,7 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %w", messageIDHex, err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
 	cachedStartMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
@@ -211,7 +211,7 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.Hex(), ReferencedByMilestone: entryPointIndex})
 		},
 		false, nil); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "traverse parents failed, error: %w", err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "traverse parents failed, error: %s", err)
 	}
 
 	if len(entryPoints) == 0 {

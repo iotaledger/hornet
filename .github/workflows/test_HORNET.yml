@@ -20,6 +20,9 @@ jobs:
       - name: Print Go version
         run: go version
 
+      - name: Install Build Essential
+        run: sudo apt update && sudo apt install build-essential -y
+
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
@@ -28,4 +31,4 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 3
-          command: go test `go list ./... | grep -v integration-tests`
+          command: go test `go list ./... | grep -v -e integration-tests -e testsuite -e whiteflag`

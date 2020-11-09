@@ -34,7 +34,7 @@ func handleSpammerCommand(c echo.Context) (string, error) {
 		if mpsRateLimitQuery != "" {
 			mpsRateLimitParsed, err := strconv.ParseFloat(mpsRateLimitQuery, 64)
 			if err != nil || mpsRateLimitParsed < 0.0 {
-				return "", errors.WithMessagef(restapi.ErrInvalidParameter, "parsing mpsRateLimit failed: %w", err)
+				return "", errors.WithMessagef(restapi.ErrInvalidParameter, "parsing mpsRateLimit failed: %s", err)
 			}
 			mpsRateLimit = &mpsRateLimitParsed
 		}
@@ -43,21 +43,21 @@ func handleSpammerCommand(c echo.Context) (string, error) {
 		if cpuMaxUsageQuery != "" {
 			cpuMaxUsageParsed, err := strconv.ParseFloat(cpuMaxUsageQuery, 64)
 			if err != nil || cpuMaxUsageParsed < 0.0 {
-				return "", errors.WithMessagef(restapi.ErrInvalidParameter, "parsing cpuMaxUsage failed: %w", err)
+				return "", errors.WithMessagef(restapi.ErrInvalidParameter, "parsing cpuMaxUsage failed: %s", err)
 			}
 			cpuMaxUsage = &cpuMaxUsageParsed
 		}
 
 		usedMpsRateLimit, usedCPUMaxUsage, err := start(mpsRateLimit, cpuMaxUsage)
 		if err != nil {
-			return "", errors.WithMessagef(restapi.ErrInternalError, "starting spammer failed: %w", err)
+			return "", errors.WithMessagef(restapi.ErrInternalError, "starting spammer failed: %s", err)
 		}
 
 		return fmt.Sprintf("started spamming (MPS Limit: %0.2f, CPU Limit: %0.2f%%)", usedMpsRateLimit, usedCPUMaxUsage*100.0), nil
 
 	case "stop":
 		if err := stop(); err != nil {
-			return "", errors.WithMessagef(restapi.ErrInternalError, "stopping spammer failed: %w", err)
+			return "", errors.WithMessagef(restapi.ErrInternalError, "stopping spammer failed: %s", err)
 		}
 		return "stopped spamming", nil
 

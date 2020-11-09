@@ -220,7 +220,7 @@ func TestManagerEvents(t *testing.T) {
 	node1Manager.Events.Disconnect.Attach(events.NewClosure(func(peer *p2p.Peer) {
 		disconnectCalled = true
 	}))
-	node1Manager.Events.Disconnected.Attach(events.NewClosure(func(peer *p2p.Peer, reason error) {
+	node1Manager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
 		disconnectedCalled = true
 	}))
 
