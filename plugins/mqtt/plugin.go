@@ -63,22 +63,22 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone))
+		publishLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onNewSolidMilestone(task.Param(0).(*tanglepkg.CachedMilestone))
+		publishSolidMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messageMetadataWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onMessageMetadata(task.Param(0).(*tanglepkg.CachedMetadata))
+		publishMessageMetadata(task.Param(0).(*tanglepkg.CachedMetadata)) // metadata pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
-		onUTXOOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
+		publishOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -86,8 +86,9 @@ func configure() {
 		defer task.Return(nil)
 
 		topic := task.Param(0).([]byte)
+		topicName := string(topic)
 
-		if messageId := messageIdFromTopic(topic); messageId != nil {
+		if messageId := messageIdFromTopic(topicName); messageId != nil {
 			if cachedMetadata := deps.Tangle.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 					return // Avoid Release (done inside workerpool task)
@@ -97,7 +98,7 @@ func configure() {
 			return
 		}
 
-		if outputId := outputIdFromTopic(topic); outputId != nil {
+		if outputId := outputIdFromTopic(topicName); outputId != nil {
 			output, err := deps.Tangle.UTXO().ReadOutputByOutputID(outputId)
 			if err != nil {
 				return
@@ -108,6 +109,23 @@ func configure() {
 				return
 			}
 			utxoOutputWorkerPool.TrySubmit(output, !unspent)
+			return
+		}
+
+		if topicName == topicMilestonesLatest {
+			index := deps.Tangle.GetLatestMilestoneIndex()
+			if milestone := deps.Tangle.GetCachedMilestoneOrNil(index); milestone != nil {
+				publishLatestMilestone(milestone) // milestone pass +1
+			}
+			return
+		}
+
+		if topicName == topicMilestonesSolid {
+			index := deps.Tangle.GetSolidMilestoneIndex()
+			if milestone := deps.Tangle.GetCachedMilestoneOrNil(index); milestone != nil {
+				publishSolidMilestone(milestone) // milestone pass +1
+			}
+			return
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))

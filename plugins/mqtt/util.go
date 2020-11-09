@@ -26,6 +26,16 @@ func publishOnTopic(topic string, payload interface{}) {
 	mqttBroker.Send(topic, milestoneInfoJSON)
 }
 
+func publishSolidMilestone(cachedMs *tangle.CachedMilestone) {
+	defer cachedMs.Release(true)
+	publishMilestoneOnTopic(topicMilestonesSolid, cachedMs.GetMilestone())
+}
+
+func publishLatestMilestone(cachedMs *tangle.CachedMilestone) {
+	defer cachedMs.Release(true)
+	publishMilestoneOnTopic(topicMilestonesLatest, cachedMs.GetMilestone())
+}
+
 func publishMilestoneOnTopic(topic string, milestone *tangle.Milestone) {
 	publishOnTopic(topic, &milestonePayload{
 		Index:       uint32(milestone.Index),
@@ -120,7 +130,7 @@ func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 	}
 }
 
-func publishOutputOnTopics(output *utxo.Output, spent bool) {
+func publishOutput(output *utxo.Output, spent bool) {
 	if payload := payloadForOutput(output, spent); payload != nil {
 		outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 		publishOnTopic(outputsTopic, payload)
@@ -130,8 +140,7 @@ func publishOutputOnTopics(output *utxo.Output, spent bool) {
 	}
 }
 
-func messageIdFromTopic(topic []byte) *hornet.MessageID {
-	topicName := string(topic)
+func messageIdFromTopic(topicName string) *hornet.MessageID {
 	if strings.HasPrefix(topicName, "messages/") && strings.HasSuffix(topicName, "/metadata") {
 		messageIdHex := strings.Replace(topicName, "messages/", "", 1)
 		messageIdHex = strings.Replace(messageIdHex, "/metadata", "", 1)
@@ -145,8 +154,7 @@ func messageIdFromTopic(topic []byte) *hornet.MessageID {
 	return nil
 }
 
-func outputIdFromTopic(topic []byte) *iotago.UTXOInputID {
-	topicName := string(topic)
+func outputIdFromTopic(topicName string) *iotago.UTXOInputID {
 	if strings.HasPrefix(topicName, "outputs/") {
 		outputIdHex := strings.Replace(topicName, "outputs/", "", 1)
 
