@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/iotaledger/hive.go/events"
@@ -142,7 +143,7 @@ func WithUnknownPeersLimit(limit int) ServiceOption {
 type ServiceOption func(opts *ServiceOptions)
 
 // NewService creates a new Service.
-func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts ...ServiceOption) *Service {
+func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts ...ServiceOption) *Service {
 	srvOpts := &ServiceOptions{}
 	srvOpts.apply(defaultServiceOptions...)
 	srvOpts.apply(opts...)
@@ -157,6 +158,7 @@ func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts
 		protocol:            protocol,
 		streams:             make(map[peer.ID]*Protocol),
 		manager:             manager,
+		serverMetrics:       serverMetrics,
 		opts:                srvOpts,
 		unknownPeers:        map[peer.ID]struct{}{},
 		inboundStreamChan:   make(chan network.Stream, 10),
@@ -176,12 +178,13 @@ func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts
 // Service handles ongoing gossip streams.
 type Service struct {
 	// Events happening around a Service.
-	Events   ServiceEvents
-	host     host.Host
-	protocol protocol.ID
-	streams  map[peer.ID]*Protocol
-	manager  *p2p.Manager
-	opts     *ServiceOptions
+	Events        ServiceEvents
+	host          host.Host
+	protocol      protocol.ID
+	streams       map[peer.ID]*Protocol
+	manager       *p2p.Manager
+	serverMetrics *metrics.ServerMetrics
+	opts          *ServiceOptions
 	// the amount of unknown peers with which a gossip stream is ongoing.
 	unknownPeers map[peer.ID]struct{}
 	// event loop channels
@@ -415,7 +418,7 @@ func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
 
 // registers a protocol instance for the given peer and stream.
 func (s *Service) registerProtocol(peerID peer.ID, stream network.Stream) *Protocol {
-	proto := NewProtocol(peerID, stream, s.opts.SendQueueSize, s.opts.StreamReadTimeout, s.opts.StreamWriteTimeout)
+	proto := NewProtocol(peerID, stream, s.opts.SendQueueSize, s.opts.StreamReadTimeout, s.opts.StreamWriteTimeout, s.serverMetrics)
 	s.streams[peerID] = proto
 	return proto
 }

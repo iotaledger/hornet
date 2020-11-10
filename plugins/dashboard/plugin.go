@@ -105,6 +105,7 @@ var (
 type dependencies struct {
 	dig.In
 	Tangle           *tangle.Tangle
+	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	Manager          *p2p.Manager
 	MessageProcessor *gossip.MessageProcessor
@@ -413,21 +414,21 @@ func currentNodeStatus() *NodeStatus {
 
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
-		AllMessages:          metrics.SharedServerMetrics.Messages.Load(),
-		NewMessages:          metrics.SharedServerMetrics.NewMessages.Load(),
-		KnownMessages:        metrics.SharedServerMetrics.KnownMessages.Load(),
-		InvalidMessages:      metrics.SharedServerMetrics.InvalidMessages.Load(),
-		InvalidRequests:      metrics.SharedServerMetrics.InvalidRequests.Load(),
-		ReceivedMessageReq:   metrics.SharedServerMetrics.ReceivedMessageRequests.Load(),
-		ReceivedMilestoneReq: metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),
-		ReceivedHeartbeats:   metrics.SharedServerMetrics.ReceivedHeartbeats.Load(),
-		SentMessages:         metrics.SharedServerMetrics.SentMessages.Load(),
-		SentMessageReq:       metrics.SharedServerMetrics.SentMessageRequests.Load(),
-		SentMilestoneReq:     metrics.SharedServerMetrics.SentMilestoneRequests.Load(),
-		SentHeartbeats:       metrics.SharedServerMetrics.SentHeartbeats.Load(),
-		DroppedSentPackets:   metrics.SharedServerMetrics.DroppedMessages.Load(),
-		SentSpamMsgsCount:    metrics.SharedServerMetrics.SentSpamMessages.Load(),
-		ValidatedMessages:    metrics.SharedServerMetrics.ValidatedMessages.Load(),
+		AllMessages:          deps.ServerMetrics.Messages.Load(),
+		NewMessages:          deps.ServerMetrics.NewMessages.Load(),
+		KnownMessages:        deps.ServerMetrics.KnownMessages.Load(),
+		InvalidMessages:      deps.ServerMetrics.InvalidMessages.Load(),
+		InvalidRequests:      deps.ServerMetrics.InvalidRequests.Load(),
+		ReceivedMessageReq:   deps.ServerMetrics.ReceivedMessageRequests.Load(),
+		ReceivedMilestoneReq: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:   deps.ServerMetrics.ReceivedHeartbeats.Load(),
+		SentMessages:         deps.ServerMetrics.SentMessages.Load(),
+		SentMessageReq:       deps.ServerMetrics.SentMessageRequests.Load(),
+		SentMilestoneReq:     deps.ServerMetrics.SentMilestoneRequests.Load(),
+		SentHeartbeats:       deps.ServerMetrics.SentHeartbeats.Load(),
+		DroppedSentPackets:   deps.ServerMetrics.DroppedMessages.Load(),
+		SentSpamMsgsCount:    deps.ServerMetrics.SentSpamMessages.Load(),
+		ValidatedMessages:    deps.ServerMetrics.ValidatedMessages.Load(),
 	}
 
 	// memory metrics

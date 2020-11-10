@@ -4,10 +4,6 @@ import (
 	"go.uber.org/atomic"
 )
 
-var (
-	SharedServerMetrics = &ServerMetrics{}
-)
-
 // ServerMetrics defines metrics over the entire runtime of the node.
 type ServerMetrics struct {
 	// The number of total received messages.

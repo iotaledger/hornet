@@ -3,6 +3,7 @@ package urts
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -50,13 +51,15 @@ type dependencies struct {
 func provide(c *dig.Container) {
 	type tipseldeps struct {
 		dig.In
-		Tangle     *tangle.Tangle
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Tangle        *tangle.Tangle
+		ServerMetrics *metrics.ServerMetrics
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 	}
 
 	if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
 		return tipselect.New(
 			deps.Tangle,
+			deps.ServerMetrics,
 
 			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
 			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),

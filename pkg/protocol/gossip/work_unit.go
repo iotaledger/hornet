@@ -23,18 +23,14 @@ const (
 )
 
 // newWorkUnit creates a new WorkUnit and initializes values by unmarshalling key.
-func newWorkUnit(key []byte) *WorkUnit {
+func newWorkUnit(key []byte, serverMetrics *metrics.ServerMetrics) *WorkUnit {
 	wu := &WorkUnit{
 		receivedMsgBytes: make([]byte, len(key)),
 		receivedFrom:     make([]*Protocol, 0),
+		serverMetrics:    serverMetrics,
 	}
 	copy(wu.receivedMsgBytes, key)
 	return wu
-}
-
-// defines the factory function for WorkUnits.
-func workUnitFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	return newWorkUnit(key), nil
 }
 
 // CachedWorkUnit represents a cached WorkUnit.
@@ -53,6 +49,8 @@ func (c *CachedWorkUnit) WorkUnit() *WorkUnit {
 type WorkUnit struct {
 	objectstorage.StorableObjectFlags
 	processingLock syncutils.Mutex
+
+	serverMetrics *metrics.ServerMetrics
 
 	// data
 	dataLock         syncutils.RWMutex
@@ -111,7 +109,7 @@ func (wu *WorkUnit) punish(mng *p2p.Manager, reason error) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
-		metrics.SharedServerMetrics.InvalidMessages.Inc()
+		wu.serverMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
 		_ = mng.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
@@ -142,7 +140,7 @@ func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 		if p.PeerID == excludedPeer.PeerID {
 			continue
 		}
-		metrics.SharedServerMetrics.KnownMessages.Inc()
+		wu.serverMetrics.KnownMessages.Inc()
 		p.Metrics.KnownMessages.Inc()
 	}
 }

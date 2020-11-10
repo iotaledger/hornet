@@ -3,7 +3,6 @@ package gossip
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hive.go/events"
 )
@@ -13,43 +12,43 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 
 	proto.Parser.Events.Received[gossip.MessageTypeMessage].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessages.Inc()
-		metrics.SharedServerMetrics.Messages.Inc()
+		deps.ServerMetrics.Messages.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeMessage, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeMessage].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentMessages.Inc()
-		metrics.SharedServerMetrics.SentMessages.Inc()
+		deps.ServerMetrics.SentMessages.Inc()
 	}))
 
 	proto.Parser.Events.Received[gossip.MessageTypeMessageRequest].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessageRequests.Inc()
-		metrics.SharedServerMetrics.ReceivedMessageRequests.Inc()
+		deps.ServerMetrics.ReceivedMessageRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeMessageRequest, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeMessageRequest].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentMessageRequests.Inc()
-		metrics.SharedServerMetrics.SentMessageRequests.Inc()
+		deps.ServerMetrics.SentMessageRequests.Inc()
 	}))
 
 	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMilestoneRequests.Inc()
-		metrics.SharedServerMetrics.ReceivedMilestoneRequests.Inc()
+		deps.ServerMetrics.ReceivedMilestoneRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeMilestoneRequest, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentMilestoneRequests.Inc()
-		metrics.SharedServerMetrics.SentMilestoneRequests.Inc()
+		deps.ServerMetrics.SentMilestoneRequests.Inc()
 	}))
 
 	proto.Parser.Events.Received[gossip.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedHeartbeats.Inc()
-		metrics.SharedServerMetrics.ReceivedHeartbeats.Inc()
+		deps.ServerMetrics.ReceivedHeartbeats.Inc()
 
 		proto.LatestHeartbeat = gossip.ParseHeartbeat(data)
 
@@ -70,7 +69,7 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 	proto.Events.Sent[gossip.MessageTypeHeartbeat].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentHeartbeats.Inc()
-		metrics.SharedServerMetrics.SentHeartbeats.Inc()
+		deps.ServerMetrics.SentHeartbeats.Inc()
 		proto.HeartbeatSentTime = time.Now()
 	}))
 }

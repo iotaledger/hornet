@@ -32,21 +32,25 @@ var (
 )
 
 // New creates a new processor which parses messages.
-func NewMessageProcessor(tangle *tangle.Tangle, requestQueue RequestQueue, peeringService *p2p.Manager, opts *Options) *MessageProcessor {
+func NewMessageProcessor(tangle *tangle.Tangle, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) *MessageProcessor {
 	proc := &MessageProcessor{
-		tangle:       tangle,
-		ps:           peeringService,
-		requestQueue: requestQueue,
+		tangle: tangle,
 		Events: MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},
-		opts: *opts,
+		ps:            peeringService,
+		requestQueue:  requestQueue,
+		serverMetrics: serverMetrics,
+		opts:          *opts,
 	}
 	wuCacheOpts := opts.WorkUnitCacheOpts
 	proc.workUnits = objectstorage.New(
 		nil,
-		workUnitFactory,
+		// defines the factory function for WorkUnits.
+		func(key []byte, data []byte) (objectstorage.StorableObject, error) {
+			return newWorkUnit(key, serverMetrics), nil
+		},
 		objectstorage.CacheTime(time.Duration(wuCacheOpts.CacheTimeMs)),
 		objectstorage.PersistenceEnabled(false),
 		objectstorage.KeysOnly(true),
@@ -103,13 +107,14 @@ type MessageProcessorEvents struct {
 
 // MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
 type MessageProcessor struct {
-	tangle       *tangle.Tangle
-	Events       MessageProcessorEvents
-	ps           *p2p.Manager
-	wp           *workerpool.WorkerPool
-	requestQueue RequestQueue
-	workUnits    *objectstorage.ObjectStorage
-	opts         Options
+	tangle        *tangle.Tangle
+	Events        MessageProcessorEvents
+	ps            *p2p.Manager
+	wp            *workerpool.WorkerPool
+	requestQueue  RequestQueue
+	workUnits     *objectstorage.ObjectStorage
+	serverMetrics *metrics.ServerMetrics
+	opts          Options
 }
 
 // The Options for the MessageProcessor.
@@ -157,7 +162,7 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
-			return newWorkUnit(receivedTxBytes)
+			return newWorkUnit(receivedTxBytes, proc.serverMetrics)
 		}),
 	}
 }
@@ -166,7 +171,7 @@ func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) *CachedWorkUni
 func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) {
 	msIndex, err := ExtractRequestedMilestoneIndex(data)
 	if err != nil {
-		metrics.SharedServerMetrics.InvalidRequests.Inc()
+		proc.serverMetrics.InvalidRequests.Inc()
 
 		// drop the connection to the peer
 		_ = proc.ps.DisconnectPeer(p.PeerID, errors.WithMessage(err, "processMilestoneRequest failed"))
@@ -251,7 +256,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Invalid):
 		wu.processingLock.Unlock()
 
-		metrics.SharedServerMetrics.InvalidMessages.Inc()
+		proc.serverMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
 		_ = proc.ps.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
@@ -267,7 +272,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		}
 
 		if proc.tangle.ContainsMessage(wu.msg.GetMessageID()) {
-			metrics.SharedServerMetrics.KnownMessages.Inc()
+			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 			return
 		}

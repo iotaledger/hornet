@@ -11,7 +11,6 @@ import (
 
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -378,7 +377,7 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		return
 	}
 
-	conf, err := whiteflag.ConfirmMilestone(deps.Tangle, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {
+	conf, err := whiteflag.ConfirmMilestone(deps.Tangle, deps.ServerMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {
 		Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 	}, func(confirmation *whiteflag.Confirmation) {
 		deps.Tangle.SetSolidMilestoneIndex(milestoneIndexToSolidify)
@@ -454,11 +453,11 @@ func getConfirmedMilestoneMetric(cachedMilestone *tangle.CachedMilestone, milest
 		return nil, ErrDivisionByZero
 	}
 
-	newNewMsgCount := metrics.SharedServerMetrics.NewMessages.Load()
+	newNewMsgCount := deps.ServerMetrics.NewMessages.Load()
 	newMsgDiff := utils.GetUint32Diff(newNewMsgCount, oldNewMsgCount)
 	oldNewMsgCount = newNewMsgCount
 
-	newReferencedMsgCount := metrics.SharedServerMetrics.ReferencedMessages.Load()
+	newReferencedMsgCount := deps.ServerMetrics.ReferencedMessages.Load()
 	referencedMsgDiff := utils.GetUint32Diff(newReferencedMsgCount, oldReferencedMsgCount)
 	oldReferencedMsgCount = newReferencedMsgCount
 

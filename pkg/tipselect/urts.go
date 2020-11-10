@@ -81,6 +81,8 @@ type Events struct {
 type TipSelector struct {
 	// tangle contains the database.
 	tangle *tangle.Tangle
+	// serverMetrics is the shared server metrics instance.
+	serverMetrics *metrics.ServerMetrics
 	// maxDeltaMsgYoungestConeRootIndexToLSMI is the maximum allowed delta
 	// value for the YCRI of a given message in relation to the current LSMI before it gets lazy.
 	maxDeltaMsgYoungestConeRootIndexToLSMI milestone.Index
@@ -132,6 +134,7 @@ type TipSelector struct {
 
 // New creates a new tip-selector.
 func New(tangle *tangle.Tangle,
+	serverMetrics *metrics.ServerMetrics,
 	maxDeltaMsgYoungestConeRootIndexToLSMI int,
 	maxDeltaMsgOldestConeRootIndexToLSMI int,
 	belowMaxDepth int,
@@ -146,6 +149,7 @@ func New(tangle *tangle.Tangle,
 
 	return &TipSelector{
 		tangle:                                 tangle,
+		serverMetrics:                          serverMetrics,
 		maxDeltaMsgYoungestConeRootIndexToLSMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToLSMI),
 		maxDeltaMsgOldestConeRootIndexToLSMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToLSMI),
 		belowMaxDepth:                          milestone.Index(belowMaxDepth),
@@ -204,10 +208,10 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 	switch tip.Score {
 	case ScoreNonLazy:
 		ts.nonLazyTipsMap[messageIDMapKey] = tip
-		metrics.SharedServerMetrics.TipsNonLazy.Add(1)
+		ts.serverMetrics.TipsNonLazy.Add(1)
 	case ScoreSemiLazy:
 		ts.semiLazyTipsMap[messageIDMapKey] = tip
-		metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
+		ts.serverMetrics.TipsSemiLazy.Add(1)
 	}
 
 	ts.Events.TipAdded.Trigger(tip)
@@ -250,13 +254,13 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 		case ScoreNonLazy:
 			if parentTip, exists := ts.nonLazyTipsMap[parentMessageID]; exists {
 				if checkTip(ts.nonLazyTipsMap, parentTip, ts.retentionRulesTipsLimitNonLazy, ts.maxChildrenNonLazy, ts.maxReferencedTipAgeSecondsNonLazy) {
-					metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+					ts.serverMetrics.TipsNonLazy.Sub(1)
 				}
 			}
 		case ScoreSemiLazy:
 			if parentTip, exists := ts.semiLazyTipsMap[parentMessageID]; exists {
 				if checkTip(ts.semiLazyTipsMap, parentTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxChildrenSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy) {
-					metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+					ts.serverMetrics.TipsSemiLazy.Sub(1)
 				}
 			}
 		}
@@ -411,13 +415,13 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
 		if checkTip(ts.nonLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsNonLazy) {
-			metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+			ts.serverMetrics.TipsNonLazy.Sub(1)
 			count++
 		}
 	}
 	for _, tip := range ts.semiLazyTipsMap {
 		if checkTip(ts.semiLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsSemiLazy) {
-			metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+			ts.serverMetrics.TipsSemiLazy.Sub(1)
 			count++
 		}
 	}
@@ -441,7 +445,7 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
 			continue
 		}
@@ -450,12 +454,12 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
 			// add the tip to the semi-lazy tips map
 			ts.semiLazyTipsMap[tip.MessageID.MapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
-			metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
+			ts.serverMetrics.TipsSemiLazy.Add(1)
 			count--
 		}
 	}
@@ -467,7 +471,7 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
 			continue
 		}
@@ -476,12 +480,12 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
 			// add the tip to the non-lazy tips map
 			ts.nonLazyTipsMap[tip.MessageID.MapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
-			metrics.SharedServerMetrics.TipsNonLazy.Add(1)
+			ts.serverMetrics.TipsNonLazy.Add(1)
 			count--
 		}
 	}

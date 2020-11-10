@@ -1,7 +1,6 @@
 package prometheus
 
 import (
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -111,20 +110,20 @@ func init() {
 }
 
 func collectServer() {
-	serverAllMessages.Set(float64(metrics.SharedServerMetrics.Messages.Load()))
-	serverNewMessages.Set(float64(metrics.SharedServerMetrics.NewMessages.Load()))
-	serverKnownMessages.Set(float64(metrics.SharedServerMetrics.KnownMessages.Load()))
-	serverReferencedMessages.Set(float64(metrics.SharedServerMetrics.ReferencedMessages.Load()))
-	serverInvalidMessages.Set(float64(metrics.SharedServerMetrics.InvalidMessages.Load()))
-	serverInvalidRequests.Set(float64(metrics.SharedServerMetrics.InvalidRequests.Load()))
-	serverReceivedMessageRequests.Set(float64(metrics.SharedServerMetrics.ReceivedMessageRequests.Load()))
-	serverReceivedMilestoneRequests.Set(float64(metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load()))
-	serverReceivedHeartbeats.Set(float64(metrics.SharedServerMetrics.ReceivedHeartbeats.Load()))
-	serverSentMessages.Set(float64(metrics.SharedServerMetrics.SentMessages.Load()))
-	serverSentMessageRequests.Set(float64(metrics.SharedServerMetrics.SentMessageRequests.Load()))
-	serverSentMilestoneRequests.Set(float64(metrics.SharedServerMetrics.SentMilestoneRequests.Load()))
-	serverSentHeartbeats.Set(float64(metrics.SharedServerMetrics.SentHeartbeats.Load()))
-	serverDroppedSentPackets.Set(float64(metrics.SharedServerMetrics.DroppedMessages.Load()))
-	serverSentSpamMessages.Set(float64(metrics.SharedServerMetrics.SentSpamMessages.Load()))
-	serverValidatedMessages.Set(float64(metrics.SharedServerMetrics.ValidatedMessages.Load()))
+	serverAllMessages.Set(float64(deps.ServerMetrics.Messages.Load()))
+	serverNewMessages.Set(float64(deps.ServerMetrics.NewMessages.Load()))
+	serverKnownMessages.Set(float64(deps.ServerMetrics.KnownMessages.Load()))
+	serverReferencedMessages.Set(float64(deps.ServerMetrics.ReferencedMessages.Load()))
+	serverInvalidMessages.Set(float64(deps.ServerMetrics.InvalidMessages.Load()))
+	serverInvalidRequests.Set(float64(deps.ServerMetrics.InvalidRequests.Load()))
+	serverReceivedMessageRequests.Set(float64(deps.ServerMetrics.ReceivedMessageRequests.Load()))
+	serverReceivedMilestoneRequests.Set(float64(deps.ServerMetrics.ReceivedMilestoneRequests.Load()))
+	serverReceivedHeartbeats.Set(float64(deps.ServerMetrics.ReceivedHeartbeats.Load()))
+	serverSentMessages.Set(float64(deps.ServerMetrics.SentMessages.Load()))
+	serverSentMessageRequests.Set(float64(deps.ServerMetrics.SentMessageRequests.Load()))
+	serverSentMilestoneRequests.Set(float64(deps.ServerMetrics.SentMilestoneRequests.Load()))
+	serverSentHeartbeats.Set(float64(deps.ServerMetrics.SentHeartbeats.Load()))
+	serverDroppedSentPackets.Set(float64(deps.ServerMetrics.DroppedMessages.Load()))
+	serverSentSpamMessages.Set(float64(deps.ServerMetrics.SentSpamMessages.Load()))
+	serverValidatedMessages.Set(float64(deps.ServerMetrics.ValidatedMessages.Load()))
 }

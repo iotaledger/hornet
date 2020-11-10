@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -13,9 +12,9 @@ var (
 
 // measures the MPS values
 func measureMPS() {
-	incomingMsgCnt := metrics.SharedServerMetrics.Messages.Load()
-	incomingNewMsgCnt := metrics.SharedServerMetrics.NewMessages.Load()
-	outgoingMsgCnt := metrics.SharedServerMetrics.SentMessages.Load()
+	incomingMsgCnt := deps.ServerMetrics.Messages.Load()
+	incomingNewMsgCnt := deps.ServerMetrics.NewMessages.Load()
+	outgoingMsgCnt := deps.ServerMetrics.SentMessages.Load()
 
 	mpsMetrics := &MPSMetrics{
 		Incoming: utils.GetUint32Diff(incomingMsgCnt, lastIncomingMsgCnt),

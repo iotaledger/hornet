@@ -36,7 +36,7 @@ type ProtocolEvents struct {
 }
 
 // NewProtocol creates a new gossip protocol instance associated to the given peer.
-func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readTimeout, writeTimeout time.Duration) *Protocol {
+func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readTimeout, writeTimeout time.Duration, serverMetrics *metrics.ServerMetrics) *Protocol {
 	defs := gossipMessageRegistry.Definitions()
 	sentEvents := make([]*events.Event, len(defs))
 	for i, def := range defs {
@@ -57,10 +57,11 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 			Closed: events.NewEvent(events.CallbackCaller),
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
-		Stream:       stream,
-		SendQueue:    make(chan []byte, sendQueueSize),
-		readTimeout:  readTimeout,
-		writeTimeout: writeTimeout,
+		Stream:        stream,
+		SendQueue:     make(chan []byte, sendQueueSize),
+		readTimeout:   readTimeout,
+		writeTimeout:  writeTimeout,
+		ServerMetrics: serverMetrics,
 	}
 }
 
@@ -87,6 +88,8 @@ type Protocol struct {
 	sendMu       sync.Mutex
 	readTimeout  time.Duration
 	writeTimeout time.Duration
+	// The shared server metrics instance.
+	ServerMetrics *metrics.ServerMetrics
 }
 
 // Enqueue enqueues the given gossip protocol message to be sent to the peer.
@@ -95,7 +98,7 @@ func (p *Protocol) Enqueue(data []byte) {
 	select {
 	case p.SendQueue <- data:
 	default:
-		metrics.SharedServerMetrics.DroppedMessages.Inc()
+		p.ServerMetrics.DroppedMessages.Inc()
 		p.Metrics.DroppedPackets.Inc()
 	}
 }
