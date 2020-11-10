@@ -80,6 +80,10 @@ func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 	return db
 }
 
+type packageEvents struct {
+	ReceivedValidMilestone *events.Event
+}
+
 type Tangle struct {
 
 	// database
@@ -144,7 +148,6 @@ func New(databaseDirectory string, cachesProfile *profile.Caches) *Tangle {
 		utxoManager:    utxoManager,
 		Events: &packageEvents{
 			ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
-			AddressSpent:           events.NewEvent(events.StringCaller),
 		},
 	}
 
