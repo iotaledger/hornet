@@ -5,6 +5,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
@@ -26,6 +27,14 @@ func MPSMetricsCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*MPSMetrics))(params[0].(*MPSMetrics))
 }
 
+func UTXOOutputCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*utxo.Output))(params[0].(*utxo.Output))
+}
+
+func UTXOSpentCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*utxo.Spent))(params[0].(*utxo.Spent))
+}
+
 var Events = pluginEvents{
 	MPSMetricsUpdated:             events.NewEvent(MPSMetricsCaller),
 	ReceivedNewMessage:            events.NewEvent(tangle.NewMessageCaller),
@@ -43,6 +52,8 @@ var Events = pluginEvents{
 	PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
 	NewConfirmedMilestoneMetric:   events.NewEvent(NewConfirmedMilestoneMetricCaller),
 	MilestoneSolidificationFailed: events.NewEvent(milestone.IndexCaller),
+	NewUTXOOutput:                 events.NewEvent(UTXOOutputCaller),
+	NewUTXOSpent:                  events.NewEvent(UTXOSpentCaller),
 }
 
 type pluginEvents struct {
@@ -62,4 +73,6 @@ type pluginEvents struct {
 	PruningMilestoneIndexChanged  *events.Event
 	NewConfirmedMilestoneMetric   *events.Event
 	MilestoneSolidificationFailed *events.Event
+	NewUTXOOutput                 *events.Event
+	NewUTXOSpent                  *events.Event
 }
