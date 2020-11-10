@@ -104,7 +104,7 @@ func RunGarbageCollection() {
 
 	if err != nil {
 		if err != tangle.ErrNothingToCleanUp {
-			log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), end.Sub(start).Truncate(time.Millisecond))
+			log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
 			return
 		}
 	}

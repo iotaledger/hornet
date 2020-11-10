@@ -673,7 +673,7 @@ func (m *Manager) registerLoggerOnEvents() {
 	m.Events.Disconnected.Attach(events.NewClosure(func(peerErr *PeerOptError) {
 		msg := fmt.Sprintf("disconnected %s", peerErr.Peer.ID.ShortString())
 		if peerErr.Error != nil {
-			msg = fmt.Sprintf("%s %s", msg, peerErr.Error.Error())
+			msg = fmt.Sprintf("%s %s", msg, peerErr.Error)
 		}
 		m.opts.Logger.Infof(msg)
 	}))

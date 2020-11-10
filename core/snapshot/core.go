@@ -140,7 +140,7 @@ func configure() {
 
 		log.Infof("Downloading snapshot from one of the provided sources %v", urls)
 		if err := downloadSnapshotFile(path, urls); err != nil {
-			log.Fatalf("Error downloading snapshot file: %w", err)
+			log.Fatalf("Error downloading snapshot file: %s", err)
 		}
 
 		log.Info("Snapshot download finished")
@@ -187,9 +187,9 @@ func run() {
 					localSnapshotPath := deps.NodeConfig.String(CfgSnapshotsPath)
 					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
-							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
+							log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 						}
-						log.Warn(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
+						log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
 					}
 				}
 
@@ -201,7 +201,7 @@ func run() {
 					}
 
 					if _, err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
-						log.Debugf("pruning aborted: %v", err.Error())
+						log.Debugf("pruning aborted: %v", err)
 					}
 				}
 

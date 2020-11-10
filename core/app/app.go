@@ -191,7 +191,7 @@ func checkLatestVersion() {
 
 	res, err := latest.Check(githubTag, fixVersion(Version))
 	if err != nil {
-		log.Warnf("Update check failed: %s", err.Error())
+		log.Warnf("Update check failed: %s", err)
 		return
 	}
 

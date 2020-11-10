@@ -5,7 +5,6 @@ import (
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
 	"github.com/fhmq/hmq/broker"
-	"github.com/pkg/errors"
 )
 
 // Broker is a simple mqtt publisher abstraction.
@@ -20,14 +19,14 @@ func NewBroker(mqttConfigFilePath string, onSubscribe OnSubscribeHandler, onUnsu
 
 	c, err := broker.ConfigureConfig([]string{fmt.Sprintf("--config=%s", mqttConfigFilePath)})
 	if err != nil {
-		return nil, errors.Errorf("configure broker config error: %s", err)
+		return nil, fmt.Errorf("configure broker config error: %w", err)
 	}
 
 	t := newTopicManager(onSubscribe, onUnsubscribe)
 
 	b, err := broker.NewBroker(c)
 	if err != nil {
-		return nil, errors.Errorf("create new broker error: %s", err)
+		return nil, fmt.Errorf("create new broker error: %w", err)
 	}
 
 	return &Broker{

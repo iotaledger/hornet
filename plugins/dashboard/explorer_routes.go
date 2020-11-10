@@ -231,7 +231,7 @@ func findTransaction(msgID string) (*ExplorerMessage, error) {
 
 	messageID, err := hornet.MessageIDFromHex(msgID)
 	if err != nil {
-		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
+		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err)
 	}
 
 	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID) // msg +1
@@ -288,7 +288,7 @@ func findAddress(messageID string, valueOnly bool) (*ExplorerAddress, error) {
 
 	_, err := hex.DecodeString(messageID)
 	if err != nil {
-		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
+		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err)
 	}
 
 	/*
