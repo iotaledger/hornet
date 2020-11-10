@@ -101,7 +101,7 @@ func downloadSnapshotFile(filepath string, urls []string) error {
 
 	// No download possible
 	if !downloadOK {
-		return fmt.Errorf(ErrSnapshotDownloadNoValidSource.Error())
+		return ErrSnapshotDownloadNoValidSource
 	}
 
 	if err := os.Rename(filepath+".tmp", filepath); err != nil {

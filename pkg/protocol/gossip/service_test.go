@@ -134,7 +134,7 @@ func TestServiceEvents(t *testing.T) {
 	}))
 
 	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
-	
+
 	require.Eventually(t, func() bool { return protocolStartedCalled1 }, 10*time.Second, 10*time.Millisecond)
 	require.Eventually(t, func() bool { return protocolTerminatedCalled1 }, 10*time.Second, 10*time.Millisecond)
 }

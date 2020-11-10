@@ -214,7 +214,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 
 		err = pruneMilestone(milestoneIndex)
 		if err != nil {
-			log.Warnf("Pruning milestone (%d) failed! %v", err.Error())
+			log.Warnf("Pruning milestone (%d) failed! %s", err)
 		}
 
 		msgCountChecked += len(messageIDsToDeleteMap)

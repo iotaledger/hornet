@@ -55,7 +55,7 @@ func HandleTools() {
 	}
 
 	if err := tool(args[2:]); err != nil {
-		fmt.Printf("\nerror: %v\n", err.Error())
+		fmt.Printf("\nerror: %s\n", err)
 		os.Exit(1)
 	}
 

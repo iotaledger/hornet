@@ -47,7 +47,7 @@ func isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index)
 		cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(childMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// Ignore this message since it doesn't exist anymore
-			log.Warnf(errors.Wrapf(ErrChildMsgNotFound, "msg ID: %v, child msg ID: %v", messageID.Hex(), childMessageID.Hex()).Error())
+			log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.Hex(), childMessageID.Hex())
 			continue
 		}
 

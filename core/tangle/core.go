@@ -89,7 +89,7 @@ func configure() {
 	keyManager := keymanager.New()
 	for _, keyRange := range deps.CoordinatorPublicKeyRanges {
 		if err := keyManager.AddKeyRange(keyRange.Key, keyRange.StartIndex, keyRange.EndIndex); err != nil {
-			log.Panicf("can't load public key ranges: %w", err)
+			log.Panicf("can't load public key ranges: %s", err)
 		}
 	}
 
@@ -115,7 +115,7 @@ func run() {
 				log.Info("database revalidation aborted")
 				os.Exit(0)
 			}
-			log.Panic(errors.Wrap(ErrDatabaseRevalidationFailed, err.Error()))
+			log.Panicf("%s %s", ErrDatabaseRevalidationFailed, err)
 		}
 		log.Info("database revalidation successful")
 	}

@@ -147,7 +147,7 @@ func configure() {
 	})
 
 	if err != nil {
-		log.Fatalf("MQTT broker init failed! %v", err.Error())
+		log.Fatalf("MQTT broker init failed! %s", err)
 	}
 }
 
