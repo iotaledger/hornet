@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -57,6 +58,7 @@ type dependencies struct {
 	dig.In
 	Service          *gossip.Service
 	Tangle           *tangle.Tangle
+	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
 	Manager          *p2p.Manager
@@ -73,15 +75,16 @@ func provide(c *dig.Container) {
 	type msgprocdependencies struct {
 		dig.In
 
-		Tangle       *tangle.Tangle
-		RequestQueue gossip.RequestQueue
-		Manager      *p2p.Manager
-		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-		Profile      *profile.Profile
+		Tangle        *tangle.Tangle
+		ServerMetrics *metrics.ServerMetrics
+		RequestQueue  gossip.RequestQueue
+		Manager       *p2p.Manager
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		Profile       *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
-		return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, &gossip.Options{
+		return gossip.NewMessageProcessor(deps.Tangle, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
 			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
@@ -92,9 +95,10 @@ func provide(c *dig.Container) {
 	type servicedeps struct {
 		dig.In
 
-		Host       host.Host
-		Manager    *p2p.Manager
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Host          host.Host
+		Manager       *p2p.Manager
+		ServerMetrics *metrics.ServerMetrics
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 	}
 
 	if err := c.Provide(func(deps servicedeps) *gossip.Service {
@@ -103,7 +107,7 @@ func provide(c *dig.Container) {
 		//networkID := tangle.GetSnapshotInfo().NetworkID)
 		var networkID uint8 = 1
 		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
-		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
+		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager, deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
 			gossip.WithStreamReadTimeout(time.Duration(deps.NodeConfig.Int(CfgGossipStreamReadTimeoutSec))*time.Second),

@@ -79,6 +79,7 @@ type dependencies struct {
 	dig.In
 	MessageProcessor *gossip.MessageProcessor
 	Tangle           *tangle.Tangle
+	ServerMetrics    *metrics.ServerMetrics
 	PowHandler       *pow.Handler
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
@@ -114,7 +115,7 @@ func configure() {
 			return err
 		}
 
-		metrics.SharedServerMetrics.SentSpamMessages.Inc()
+		deps.ServerMetrics.SentSpamMessages.Inc()
 		return nil
 	}
 
@@ -125,6 +126,7 @@ func configure() {
 		deps.TipSelector.SelectSpammerTips,
 		deps.PowHandler,
 		sendMessage,
+		deps.ServerMetrics,
 	)
 }
 
@@ -337,7 +339,7 @@ func measureSpammerMetrics() {
 		return
 	}
 
-	sentSpamMsgsCnt := metrics.SharedServerMetrics.SentSpamMessages.Load()
+	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
 	new := utils.GetUint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 

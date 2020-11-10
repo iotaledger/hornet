@@ -9,7 +9,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -139,7 +138,7 @@ func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, 
 	defer cachedMsg.Release(!isNodeSyncedWithThreshold) // msg -1
 
 	if !alreadyAdded {
-		metrics.SharedServerMetrics.NewMessages.Inc()
+		deps.ServerMetrics.NewMessages.Inc()
 
 		if proto != nil {
 			proto.Metrics.NewMessages.Inc()
@@ -159,7 +158,7 @@ func processIncomingTx(incomingMsg *tangle.Message, request *gossippkg.Request, 
 		Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, solidMilestoneIndex)
 
 	} else {
-		metrics.SharedServerMetrics.KnownMessages.Inc()
+		deps.ServerMetrics.KnownMessages.Inc()
 		if proto != nil {
 			proto.Metrics.KnownMessages.Inc()
 		}
@@ -243,6 +242,6 @@ func printStatus() {
 			lastIncomingMPS,
 			lastNewMPS,
 			lastOutgoingMPS,
-			metrics.SharedServerMetrics.TipsNonLazy.Load(),
-			metrics.SharedServerMetrics.TipsSemiLazy.Load()))
+			deps.ServerMetrics.TipsNonLazy.Load(),
+			deps.ServerMetrics.TipsSemiLazy.Load()))
 }

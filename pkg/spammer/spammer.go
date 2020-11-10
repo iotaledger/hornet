@@ -28,10 +28,11 @@ type Spammer struct {
 	tipselFunc      SpammerTipselFunc
 	powHandler      *pow.Handler
 	sendMessageFunc SendMessageFunc
+	serverMetrics   *metrics.ServerMetrics
 }
 
 // New creates a new spammer instance.
-func New(message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) *Spammer {
+func New(message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, serverMetrics *metrics.ServerMetrics) *Spammer {
 
 	return &Spammer{
 		message:         message,
@@ -40,6 +41,7 @@ func New(message string, index string, indexSemiLazy string, tipselFunc SpammerT
 		tipselFunc:      tipselFunc,
 		powHandler:      powHandler,
 		sendMessageFunc: sendMessageFunc,
+		serverMetrics:   serverMetrics,
 	}
 }
 
@@ -57,7 +59,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 		indexation = s.indexSemiLazy
 	}
 
-	txCount := int(metrics.SharedServerMetrics.SentSpamMessages.Load()) + 1
+	txCount := int(s.serverMetrics.SentSpamMessages.Load()) + 1
 
 	now := time.Now()
 	messageString := s.message

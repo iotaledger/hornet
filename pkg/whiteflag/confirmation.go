@@ -27,7 +27,7 @@ type ConfirmedMilestoneStats struct {
 // ConfirmMilestone traverses a milestone and collects all unreferenced msg,
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation), forEachNewOutput func(output *utxo.Output), forEachNewSpent func(spent *utxo.Spent)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(tangleObj *tangle.Tangle, serverMetrics *metrics.ServerMetrics, cachedMessageMetas map[string]*tangle.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *tangle.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation), forEachNewOutput func(output *utxo.Output), forEachNewSpent func(spent *utxo.Spent)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*tangle.CachedMessage)
 
@@ -140,8 +140,8 @@ func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*t
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesReferenced++
 				conf.MessagesIncludedWithTransactions++
-				metrics.SharedServerMetrics.IncludedTransactionMessages.Inc()
-				metrics.SharedServerMetrics.ReferencedMessages.Inc()
+				serverMetrics.IncludedTransactionMessages.Inc()
+				serverMetrics.ReferencedMessages.Inc()
 				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
@@ -158,8 +158,8 @@ func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*t
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesReferenced++
 				conf.MessagesExcludedWithoutTransactions++
-				metrics.SharedServerMetrics.NoTransactionMessages.Inc()
-				metrics.SharedServerMetrics.ReferencedMessages.Inc()
+				serverMetrics.NoTransactionMessages.Inc()
+				serverMetrics.ReferencedMessages.Inc()
 				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {
@@ -176,8 +176,8 @@ func ConfirmMilestone(tangleObj *tangle.Tangle, cachedMessageMetas map[string]*t
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				conf.MessagesReferenced++
 				conf.MessagesExcludedWithConflictingTransactions++
-				metrics.SharedServerMetrics.ConflictingTransactionMessages.Inc()
-				metrics.SharedServerMetrics.ReferencedMessages.Inc()
+				serverMetrics.ConflictingTransactionMessages.Inc()
+				serverMetrics.ReferencedMessages.Inc()
 				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
 			}
 		}); err != nil {

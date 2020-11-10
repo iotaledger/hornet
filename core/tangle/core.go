@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
@@ -38,6 +39,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Tangle",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -63,12 +65,21 @@ var (
 type dependencies struct {
 	dig.In
 	Tangle                     *tangle.Tangle
+	ServerMetrics              *metrics.ServerMetrics
 	Manager                    *p2p.Manager
 	RequestQueue               gossippkg.RequestQueue
 	MessageProcessor           *gossippkg.MessageProcessor
 	Service                    *gossippkg.Service
 	NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
 	CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
+}
+
+func provide(c *dig.Container) {
+	if err := c.Provide(func() *metrics.ServerMetrics {
+		return &metrics.ServerMetrics{}
+	}); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {

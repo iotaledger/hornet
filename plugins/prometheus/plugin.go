@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -47,11 +48,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Tangle       *tangle.Tangle
-	Service      *gossip.Service
-	Manager      *p2p.Manager
-	RequestQueue gossip.RequestQueue
+	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+	Tangle        *tangle.Tangle
+	ServerMetrics *metrics.ServerMetrics
+	Service       *gossip.Service
+	Manager       *p2p.Manager
+	RequestQueue  gossip.RequestQueue
 }
 
 func configure() {
