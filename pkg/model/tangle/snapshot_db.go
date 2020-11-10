@@ -10,7 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-var (
+const (
 	snapshotMilestoneIndexKey = "snapshotMilestoneIndex"
 )
 
