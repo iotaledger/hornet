@@ -5,7 +5,10 @@ const (
 	topicMilestonesLatest = "milestones/latest"
 	topicMilestonesSolid  = "milestones/solid"
 
-	topicMessagesMetadata = "messages/{messageId}/metadata"
+	topicMessages           = "messages"
+	topicMessagesReferenced = "messages/referenced"
+	topicMessagesIndexation = "messages/indexation/{index}"
+	topicMessagesMetadata   = "messages/{messageId}/metadata"
 
 	topicOutputs = "outputs/{outputId}"
 

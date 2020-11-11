@@ -43,6 +43,7 @@ var (
 	newLatestMilestoneWorkerPool *workerpool.WorkerPool
 	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
 
+	messagesWorkerPool        *workerpool.WorkerPool
 	messageMetadataWorkerPool *workerpool.WorkerPool
 	utxoOutputWorkerPool      *workerpool.WorkerPool
 
@@ -69,6 +70,11 @@ func configure() {
 
 	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishSolidMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	messagesWorkerPool = workerpool.New(func(task workerpool.Task) {
+		publishMessage(task.Param(0).(*tanglepkg.CachedMessage)) // metadata pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -177,6 +183,19 @@ func run() {
 		cachedMs.Release(true)
 	})
 
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglepkg.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		if !wasSyncBefore {
+			// Not sync
+			cachedMsg.Release(true)
+			return
+		}
+
+		if _, added := messagesWorkerPool.TrySubmit(cachedMsg); added {
+			return // Avoid Release (done inside workerpool task)
+		}
+		cachedMsg.Release(true)
+	})
+
 	onMessageSolid := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
@@ -224,12 +243,14 @@ func run() {
 		tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
 		tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
 
+		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		tangle.Events.MessageSolid.Attach(onMessageSolid)
 		tangle.Events.MessageReferenced.Attach(onMessageReferenced)
 
 		tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
 		tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
 
+		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
 		newSolidMilestoneWorkerPool.Start()
 		messageMetadataWorkerPool.Start()
@@ -241,12 +262,14 @@ func run() {
 		tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
 		tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
 
+		tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		tangle.Events.MessageSolid.Detach(onMessageSolid)
 		tangle.Events.MessageReferenced.Detach(onMessageReferenced)
 
 		tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
 		tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
 
+		messagesWorkerPool.StopAndWait()
 		newLatestMilestoneWorkerPool.StopAndWait()
 		newSolidMilestoneWorkerPool.StopAndWait()
 		messageMetadataWorkerPool.StopAndWait()
