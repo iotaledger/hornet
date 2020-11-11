@@ -47,6 +47,10 @@ func (b *Broker) GetConfig() *broker.Config {
 	return b.config
 }
 
+func (b *Broker) HasSubscribers(topic string) bool {
+	return b.topicManager.hasSubscribers(topic)
+}
+
 // Send publishes a message.
 func (b *Broker) Send(topic string, payload []byte) {
 
