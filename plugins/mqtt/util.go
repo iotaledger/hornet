@@ -37,74 +37,116 @@ func publishLatestMilestone(cachedMs *tangle.CachedMilestone) {
 }
 
 func publishMilestoneOnTopic(topic string, milestone *tangle.Milestone) {
-	publishOnTopic(topic, &milestonePayload{
-		Index:       uint32(milestone.Index),
-		MilestoneID: hex.EncodeToString(milestone.MilestoneID[:]),
-		Time:        milestone.Timestamp.Unix(),
-	})
+	if mqttBroker.HasSubscribers(topic) {
+		publishOnTopic(topic, &milestonePayload{
+			Index:       uint32(milestone.Index),
+			MilestoneID: hex.EncodeToString(milestone.MilestoneID[:]),
+			Time:        milestone.Timestamp.Unix(),
+		})
+	}
+}
+
+func publishMessage(cachedMessage *tangle.CachedMessage) {
+	defer cachedMessage.Release(true)
+
+	if mqttBroker.HasSubscribers(topicMessages) {
+		mqttBroker.Send(topicMessages, cachedMessage.GetMessage().GetData())
+	}
+
+	indexation := cachedMessage.GetMessage().GetIndexation()
+	if indexation != nil {
+		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", indexation.Index)
+		if mqttBroker.HasSubscribers(indexationTopic) {
+			mqttBroker.Send(indexationTopic, cachedMessage.GetMessage().GetData())
+		}
+	}
+
 }
 
 func publishMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
-
 	defer cachedMetadata.Release(true)
 
 	metadata := cachedMetadata.GetMetadata()
 
-	var referencedByMilestone *milestone.Index = nil
-	referenced, referencedIndex := metadata.GetReferenced()
-	if referenced {
-		referencedByMilestone = &referencedIndex
-	}
-
-	messageMetadataResponse := &messageMetadataPayload{
-		MessageID:                  metadata.GetMessageID().Hex(),
-		Parent1:                    metadata.GetParent1MessageID().Hex(),
-		Parent2:                    metadata.GetParent2MessageID().Hex(),
-		Solid:                      metadata.IsSolid(),
-		ReferencedByMilestoneIndex: referencedByMilestone,
-	}
-
-	if referenced {
-		inclusionState := "noTransaction"
-
-		if metadata.IsConflictingTx() {
-			inclusionState = "conflicting"
-		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = "included"
-		}
-
-		messageMetadataResponse.LedgerInclusionState = &inclusionState
-	} else if metadata.IsSolid() {
-		// determine info about the quality of the tip if not referenced
-		lsmi := deps.Tangle.GetSolidMilestoneIndex()
-		ycri, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMetadata.Retain(), lsmi)
-
-		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
-		shouldPromote := false
-		shouldReattach := false
-
-		if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
-			// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
-			shouldPromote = false
-			shouldReattach = true
-		} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
-			// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
-			shouldPromote = true
-			shouldReattach = false
-		} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
-			// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
-			shouldPromote = true
-			shouldReattach = false
-		}
-
-		messageMetadataResponse.ShouldPromote = &shouldPromote
-		messageMetadataResponse.ShouldReattach = &shouldReattach
-	}
-
 	messageId := metadata.GetMessageID().Hex()
-	topic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageId)
+	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageId)
+	hasSingleMessageTopicSubscriber := mqttBroker.HasSubscribers(singleMessageTopic)
 
-	publishOnTopic(topic, messageMetadataResponse)
+	hasAllMessagesTopicSubscriber := mqttBroker.HasSubscribers(topicMessagesReferenced)
+
+	if hasSingleMessageTopicSubscriber || hasAllMessagesTopicSubscriber {
+
+		var referencedByMilestone *milestone.Index = nil
+		referenced, referencedIndex := metadata.GetReferenced()
+		if referenced {
+			referencedByMilestone = &referencedIndex
+		}
+
+		if !hasSingleMessageTopicSubscriber && (hasAllMessagesTopicSubscriber && !referenced) {
+			// the topicMessagesReferenced only cares about referenced messages,
+			// so skip this if no one is subscribed to this particular message
+			return
+		}
+
+		messageMetadataResponse := &messageMetadataPayload{
+			MessageID:                  metadata.GetMessageID().Hex(),
+			Parent1:                    metadata.GetParent1MessageID().Hex(),
+			Parent2:                    metadata.GetParent2MessageID().Hex(),
+			Solid:                      metadata.IsSolid(),
+			ReferencedByMilestoneIndex: referencedByMilestone,
+		}
+
+		if referenced {
+			inclusionState := "noTransaction"
+
+			if metadata.IsConflictingTx() {
+				inclusionState = "conflicting"
+			} else if metadata.IsIncludedTxInLedger() {
+				inclusionState = "included"
+			}
+
+			messageMetadataResponse.LedgerInclusionState = &inclusionState
+		} else if metadata.IsSolid() {
+			// determine info about the quality of the tip if not referenced
+			lsmi := deps.Tangle.GetSolidMilestoneIndex()
+			ycri, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMetadata.Retain(), lsmi)
+
+			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
+			shouldPromote := false
+			shouldReattach := false
+
+			if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
+				// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
+				shouldPromote = false
+				shouldReattach = true
+			} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
+				// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
+				shouldPromote = true
+				shouldReattach = false
+			} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
+				// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
+				shouldPromote = true
+				shouldReattach = false
+			}
+
+			messageMetadataResponse.ShouldPromote = &shouldPromote
+			messageMetadataResponse.ShouldReattach = &shouldReattach
+		}
+
+		// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
+		jsonPayload, err := json.Marshal(messageMetadataResponse)
+		if err != nil {
+			log.Warn(err.Error())
+			return
+		}
+
+		if hasSingleMessageTopicSubscriber {
+			mqttBroker.Send(singleMessageTopic, jsonPayload)
+		}
+		if hasAllMessagesTopicSubscriber {
+			mqttBroker.Send(topicMessagesReferenced, jsonPayload)
+		}
+	}
 }
 
 func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
@@ -131,12 +173,30 @@ func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 }
 
 func publishOutput(output *utxo.Output, spent bool) {
-	if payload := payloadForOutput(output, spent); payload != nil {
-		outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
-		publishOnTopic(outputsTopic, payload)
+	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
+	addressTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().String())
 
-		addressTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().String())
-		publishOnTopic(addressTopic, payload)
+	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
+	addressTopicHasSubscribers := mqttBroker.HasSubscribers(addressTopic)
+
+	if outputsTopicHasSubscribers || addressTopicHasSubscribers {
+		if payload := payloadForOutput(output, spent); payload != nil {
+
+			// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
+			jsonPayload, err := json.Marshal(payload)
+			if err != nil {
+				log.Warn(err.Error())
+				return
+			}
+
+			if outputsTopicHasSubscribers {
+				mqttBroker.Send(outputsTopic, jsonPayload)
+			}
+
+			if addressTopicHasSubscribers {
+				mqttBroker.Send(addressTopic, jsonPayload)
+			}
+		}
 	}
 }
 
