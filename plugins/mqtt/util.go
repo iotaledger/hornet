@@ -17,13 +17,13 @@ import (
 )
 
 func publishOnTopic(topic string, payload interface{}) {
-	milestoneInfoJSON, err := json.Marshal(payload)
+	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		log.Warn(err.Error())
 		return
 	}
 
-	mqttBroker.Send(topic, milestoneInfoJSON)
+	mqttBroker.Send(topic, jsonPayload)
 }
 
 func publishSolidMilestone(cachedMs *tangle.CachedMilestone) {
