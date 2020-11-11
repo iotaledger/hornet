@@ -22,11 +22,10 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201106172115-fb2e7597977f
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201109084134-310b170ce948
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201111154008-40c889762428
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
-	github.com/labstack/gommon v0.3.0
 	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
 	github.com/libp2p/go-libp2p-core v0.6.1
@@ -51,6 +50,10 @@ require (
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/sys v0.0.0-20201107080550-4d91cf3a1aaf // indirect
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
+	golang.org/x/sys v0.0.0-20201110211018-35f3e6cf4a65 // indirect
+	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/tools v0.0.0-20201105220310-78b158585360 // indirect
+	google.golang.org/genproto v0.0.0-20201111145450-ac7456db90a6 // indirect
+	google.golang.org/grpc v1.33.2 // indirect
 )
