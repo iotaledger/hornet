@@ -28,15 +28,17 @@ func (t topicManager) Subscribe(topic []byte, qos byte, subscriber interface{}) 
 
 	b, err := t.mem.Subscribe(topic, qos, subscriber)
 
-	topicName := string(topic)
-	count, has := t.subscribedTopics[topicName]
-	if has {
-		t.subscribedTopics[topicName] = count + 1
-	} else {
-		t.subscribedTopics[topicName] = 1
-	}
+	if err == nil {
+		topicName := string(topic)
+		count, has := t.subscribedTopics[topicName]
+		if has {
+			t.subscribedTopics[topicName] = count + 1
+		} else {
+			t.subscribedTopics[topicName] = 1
+		}
 
-	t.onSubscribe(topic)
+		t.onSubscribe(topic)
+	}
 
 	return b, err
 }
@@ -46,6 +48,8 @@ func (t topicManager) Unsubscribe(topic []byte, subscriber interface{}) error {
 	defer t.subscribedTopicsLock.Unlock()
 
 	err := t.mem.Unsubscribe(topic, subscriber)
+
+	//Ignore error here, always unsubscribe to be safe
 
 	topicName := string(topic)
 	count, has := t.subscribedTopics[topicName]
