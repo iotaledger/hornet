@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	iotago "github.com/iotaledger/iota.go"
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,7 +59,7 @@ func TestValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// broadcast to a node
-	log.Info("submitting transaction...")
+	log.Println("submitting transaction...")
 	submittedMsg, err := n.Nodes[0].NodeAPI.SubmitMessage(msg)
 	require.NoError(t, err)
 
@@ -67,7 +67,7 @@ func TestValue(t *testing.T) {
 	submittedMsgID, err := submittedMsg.ID()
 	require.NoError(t, err)
 
-	log.Info("checking that the transaction gets confirmed...")
+	log.Println("checking that the transaction gets confirmed...")
 	require.Eventually(t, func() bool {
 		msgMeta, err := n.Coordinator().NodeAPI.MessageMetadataByMessageID(*submittedMsgID)
 		if err != nil {
