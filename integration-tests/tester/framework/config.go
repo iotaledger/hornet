@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"strings"
 
@@ -12,15 +13,20 @@ import (
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
 	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/restapi"
+	iotago "github.com/iotaledger/iota.go"
 )
 
 const (
 	// The default REST API port of every node.
 	RestAPIPort = 14265
+
+	GenesisAddressPublicKeyHex = "081d0275379702477a359db2ecc9c47971418599aedda7677da97df730a7575c"
+	GenesisAddressHex          = "fccb24fbb68b9e2cf4ff7af95b41d3175c2cabbfc9713474b90d9e5a32d5fc60"
 
 	autopeeringMaxTries = 50
 
@@ -42,7 +48,19 @@ const (
 
 var (
 	disabledPluginsPeer = []string{}
+	// The seed on which the total supply resides on per default.
+	GenesisSeed    ed25519.PrivateKey
+	GenesisAddress iotago.Ed25519Address
 )
+
+func init() {
+	prvkey, err := utils.ParseEd25519PrivateKeyFromString("00d8be77e66f759a3ea45914c4fc0b1f4e65d8d2f2d4dae73df4b6b674cb90b3081d0275379702477a359db2ecc9c47971418599aedda7677da97df730a7575c")
+	if err != nil {
+		panic(err)
+	}
+	GenesisSeed = prvkey
+	GenesisAddress = iotago.AddressFromEd25519PubKey(GenesisSeed.Public().(ed25519.PublicKey))
+}
 
 // DefaultConfig returns the default NodeConfig.
 func DefaultConfig() *NodeConfig {
