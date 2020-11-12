@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/iotaledger/iota.go/pow"
 
 	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
+
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 const (
