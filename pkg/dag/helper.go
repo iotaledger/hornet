@@ -3,7 +3,6 @@ package dag
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 // Predicate defines whether a traversal should continue or not.
