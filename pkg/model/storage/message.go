@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"fmt"

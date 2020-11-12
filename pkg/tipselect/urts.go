@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -80,7 +81,7 @@ type Events struct {
 // TipSelector manages a list of tips and emits events for their removal and addition.
 type TipSelector struct {
 	// tangle contains the database.
-	tangle *tangle.Tangle
+	storage *storage.Storage
 	// serverMetrics is the shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
 	// maxDeltaMsgYoungestConeRootIndexToLSMI is the maximum allowed delta
@@ -133,7 +134,7 @@ type TipSelector struct {
 }
 
 // New creates a new tip-selector.
-func New(tangle *tangle.Tangle,
+func New(storage *storage.Storage,
 	serverMetrics *metrics.ServerMetrics,
 	maxDeltaMsgYoungestConeRootIndexToLSMI int,
 	maxDeltaMsgOldestConeRootIndexToLSMI int,
@@ -148,7 +149,7 @@ func New(tangle *tangle.Tangle,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		tangle:                                 tangle,
+		storage:                                 storage,
 		serverMetrics:                          serverMetrics,
 		maxDeltaMsgYoungestConeRootIndexToLSMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToLSMI),
 		maxDeltaMsgOldestConeRootIndexToLSMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToLSMI),
@@ -172,7 +173,7 @@ func New(tangle *tangle.Tangle,
 }
 
 // AddTip adds the given message as a tip.
-func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
+func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
@@ -189,7 +190,7 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 		return
 	}
 
-	lsmi := ts.tangle.GetSolidMilestoneIndex()
+	lsmi := ts.storage.GetSolidMilestoneIndex()
 
 	score := ts.calculateScore(messageID, lsmi)
 	if score == ScoreLazy {
@@ -307,7 +308,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (*hornet
 // selectTipWithoutLocking selects a tip.
 func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (*hornet.MessageID, error) {
 
-	if !ts.tangle.IsNodeSyncedWithThreshold() {
+	if !ts.storage.IsNodeSyncedWithThreshold() {
 		return nil, tangle.ErrNodeNotSynced
 	}
 
@@ -435,7 +436,7 @@ func (ts *TipSelector) UpdateScores() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	lsmi := ts.tangle.GetSolidMilestoneIndex()
+	lsmi := ts.storage.GetSolidMilestoneIndex()
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
@@ -495,7 +496,7 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this message
 func (ts *TipSelector) calculateScore(messageID *hornet.MessageID, lsmi milestone.Index) Score {
-	cachedMsgMeta := ts.tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	cachedMsgMeta := ts.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
@@ -503,7 +504,7 @@ func (ts *TipSelector) calculateScore(messageID *hornet.MessageID, lsmi mileston
 	}
 	defer cachedMsgMeta.Release(true)
 
-	ycri, ocri := dag.GetConeRootIndexes(ts.tangle, cachedMsgMeta.Retain(), lsmi) // meta +1
+	ycri, ocri := dag.GetConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), lsmi) // meta +1
 
 	// if the LSMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy
 	if (lsmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToLSMI {

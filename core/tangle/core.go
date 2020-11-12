@@ -4,7 +4,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -14,11 +13,12 @@ import (
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -51,8 +51,7 @@ var (
 	log        *logger.Logger
 	deps       dependencies
 
-	updateSyncedAtStartup bool
-	syncedAtStartup       = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to LSMI at startup")
+	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to LSMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
 
@@ -64,7 +63,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle                     *tangle.Tangle
+	Storage *storage.Storage
 	ServerMetrics              *metrics.ServerMetrics
 	Manager                    *p2p.Manager
 	RequestQueue               gossippkg.RequestQueue
@@ -85,16 +84,14 @@ func provide(c *dig.Container) {
 func configure() {
 	log = logger.NewLogger(CorePlugin.Name)
 
-	deps.Tangle.LoadInitialValuesFromDatabase()
-
-	updateSyncedAtStartup = *syncedAtStartup
+	deps.Storage.LoadInitialValuesFromDatabase()
 
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
 	CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
-		deps.Tangle.MarkDatabaseCorrupted()
+		deps.Storage.MarkDatabaseCorrupted()
 	})
 
 	keyManager := keymanager.New()
@@ -104,7 +101,7 @@ func configure() {
 		}
 	}
 
-	deps.Tangle.ConfigureMilestones(
+	deps.Storage.ConfigureMilestones(
 		keyManager,
 		deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
 		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(protocfg.CfgProtocolMilestoneMerkleTreeHashFunc)),
@@ -118,7 +115,7 @@ func configure() {
 
 func run() {
 
-	if deps.Tangle.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := revalidateDatabase(); err != nil {
@@ -148,7 +145,7 @@ func run() {
 		abortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
-		deps.Tangle.ShutdownStorages()
+		deps.Storage.ShutdownStorages()
 		log.Info("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase)
@@ -189,12 +186,11 @@ func configureEvents() {
 		gossip.BroadcastHeartbeat(nil)
 	})
 
-	onReceivedNewTx = events.NewClosure(func(cachedMsg *tangle.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewTx = events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		// Force release possible here, since processIncomingTx still holds a reference
 		defer cachedMsg.Release(true) // msg -1
 
-		if deps.Tangle.IsNodeSyncedWithThreshold() {
-			solidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
+		if deps.Storage.IsNodeSyncedWithThreshold() {
 		}
 	})
 }

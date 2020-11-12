@@ -75,7 +75,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 
 func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
-	if !deps.Tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -112,7 +112,7 @@ func balanceByAddress(c echo.Context) (*addressBalanceResponse, error) {
 
 func outputsIDsByAddress(c echo.Context) (*addressOutputsResponse, error) {
 
-	if !deps.Tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 

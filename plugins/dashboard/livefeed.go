@@ -5,10 +5,10 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	tanglemodel "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func runLiveFeed() {
@@ -16,9 +16,9 @@ func runLiveFeed() {
 	newMessageNoValueRateLimiter := time.NewTicker(time.Second / 10)
 	newMessageValueRateLimiter := time.NewTicker(time.Second / 20)
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglemodel.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedMsg.ConsumeMessage(func(msg *tanglemodel.Message) {
-			if !deps.Tangle.IsNodeSyncedWithThreshold() {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedMsg.ConsumeMessage(func(msg *storage.Message) {
+			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				return
 			}
 

@@ -5,21 +5,21 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/core/gossip"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -84,7 +84,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle     *tangle.Tangle
+	Storage *storage.Storage
 	UTXO       *utxo.Manager
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
@@ -110,7 +110,7 @@ func configure() {
 
 	gossip.AddRequestBackpressureSignal(isSnapshottingOrPruning)
 
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		if !*forceLoadingSnapshot {
 			// If we don't enforce loading of a snapshot,
@@ -147,7 +147,7 @@ func configure() {
 	}
 
 	if err := LoadFullSnapshotFromFile(path); err != nil {
-		deps.Tangle.MarkDatabaseCorrupted()
+		deps.Storage.MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}
 }
@@ -215,7 +215,7 @@ func PruneDatabaseByDepth(depth milestone.Index) (milestone.Index, error) {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
-	solidMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
+	solidMilestoneIndex := deps.Storage.GetSolidMilestoneIndex()
 
 	if solidMilestoneIndex <= depth {
 		// Not enough history

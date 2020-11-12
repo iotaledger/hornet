@@ -13,8 +13,8 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
@@ -118,7 +118,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 		debugReqs = append(debugReqs, &request{
 			MessageID:        req.MessageID.Hex(),
 			Type:             "queued",
-			MessageExists:    deps.Tangle.ContainsMessage(req.MessageID),
+			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -128,7 +128,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 		debugReqs = append(debugReqs, &request{
 			MessageID:        req.MessageID.Hex(),
 			Type:             "pending",
-			MessageExists:    deps.Tangle.ContainsMessage(req.MessageID),
+			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -138,7 +138,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 		debugReqs = append(debugReqs, &request{
 			MessageID:        req.MessageID.Hex(),
 			Type:             "processing",
-			MessageExists:    deps.Tangle.ContainsMessage(req.MessageID),
+			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -157,7 +157,7 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedStartMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	cachedStartMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -169,14 +169,14 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 
 	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.GetMetadata().GetReferenced()
 
-	entryPointIndex := deps.Tangle.GetSnapshotInfo().EntryPointIndex
+	entryPointIndex := deps.Storage.GetSnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}
 	tanglePath := []*messageWithParents{}
 
-	if err := dag.TraverseParents(deps.Tangle, messageID,
+	if err := dag.TraverseParents(deps.Storage, messageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced {
@@ -189,8 +189,8 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 			return true, nil
 		},
 		// consumer
-		func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
-			cachedMsgMeta.ConsumeMetadata(func(metadata *tangle.MessageMetadata) { // meta -1
+		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+			cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 
 				tanglePath = append(tanglePath,
 					&messageWithParents{

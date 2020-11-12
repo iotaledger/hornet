@@ -6,14 +6,14 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/pow"
 )
 
 // SendMessageFunc is a function which sends a message to the network.
-type SendMessageFunc = func(msg *tangle.Message) error
+type SendMessageFunc = func(msg *storage.Message) error
 
 // SpammerTipselFunc selects tips for the spammer.
 type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err error)
@@ -75,7 +75,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	}
 	durationPOW := time.Since(timeStart)
 
-	msg, err := tangle.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}

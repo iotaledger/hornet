@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 // ShortenedHash returns a shortened hex encoded hash for the given hash.
@@ -19,7 +19,7 @@ func ShortenedHash(hash *hornet.MessageID) string {
 
 // ShortenedIndex returns a shortened index or milestone index for the given message.
 // this is used for the dot file.
-func ShortenedIndex(cachedMessage *tangle.CachedMessage) string {
+func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 	defer cachedMessage.Release(true)
 
 	ms := cachedMessage.GetMessage().GetMilestone()

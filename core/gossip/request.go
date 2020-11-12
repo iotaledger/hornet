@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
@@ -113,11 +112,11 @@ func enqueueAndSignal(r *gossip.Request) bool {
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
 func Request(messageID *hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
-	if deps.Tangle.SolidEntryPointsContain(messageID) {
+	if deps.Storage.SolidEntryPointsContain(messageID) {
 		return false
 	}
 
-	if deps.Tangle.ContainsMessage(messageID) {
+	if deps.Storage.ContainsMessage(messageID) {
 		return false
 	}
 
@@ -144,11 +143,11 @@ func RequestMultiple(messageIDs hornet.MessageIDs, msIndex milestone.Index, prev
 
 // RequestParents enqueues requests for the parents of the given message to the request queue, if the
 // given message is not a solid entry point and neither its parents are and also not in the database.
-func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
-	cachedMsg.ConsumeMetadata(func(metadata *tangle.MessageMetadata) {
+func RequestParents(cachedMsg *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
+	cachedMsg.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
 		messageID := metadata.GetMessageID()
 
-		if deps.Tangle.SolidEntryPointsContain(messageID) {
+		if deps.Storage.SolidEntryPointsContain(messageID) {
 			return
 		}
 
@@ -161,12 +160,12 @@ func RequestParents(cachedMsg *tangle.CachedMessage, msIndex milestone.Index, pr
 
 // RequestMilestoneParents enqueues requests for the parents of the given milestone to the request queue,
 // if the parents are not solid entry points and not already in the database.
-func RequestMilestoneParents(cachedMilestone *tangle.CachedMilestone) bool {
+func RequestMilestoneParents(cachedMilestone *storage.CachedMilestone) bool {
 	defer cachedMilestone.Release(true) // message -1
 
 	msIndex := cachedMilestone.GetMilestone().Index
 
-	cachedMilestoneMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
+	cachedMilestoneMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
 	if cachedMilestoneMsgMeta == nil {
 		panic("milestone metadata doesn't exist")
 	}
@@ -192,7 +191,7 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 	traversed := map[string]struct{}{}
 	return func(ms milestone.Index) {
 
-		cachedMs := deps.Tangle.GetCachedMilestoneOrNil(ms) // milestone +1
+		cachedMs := deps.Storage.GetCachedMilestoneOrNil(ms) // milestone +1
 		if cachedMs == nil {
 			log.Panicf("milestone %d wasn't found", ms)
 		}
@@ -200,16 +199,16 @@ func MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms mile
 		milestoneMessageID := cachedMs.GetMilestone().MessageID
 		cachedMs.Release(true) // message -1
 
-		dag.TraverseParents(deps.Tangle, milestoneMessageID,
+		dag.TraverseParents(deps.Storage, milestoneMessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]
 				return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
 			},
 			// consumer
-			func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
+			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 				traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
 				return nil

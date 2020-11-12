@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 const (
@@ -113,7 +113,7 @@ func TestHeaviestSelector_Concurrent(t *testing.T) {
 func BenchmarkHeaviestSelector_OnNewSolidTransaction(b *testing.B) {
 	hps := New()
 	hashes := []hornet.Hash{hornet.NullMessageID}
-	data := make([]*tangle.Message, numBenchmarkTxs)
+	data := make([]*storage.Message, numBenchmarkTxs)
 	for i := 0; i < numBenchmarkTxs; i++ {
 		data[i] = newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
 		hashes = append(hashes, data[i].GetMessageID())
@@ -143,8 +143,8 @@ func BenchmarkHeaviestSelector_SelectTips(b *testing.B) {
 	}
 }
 
-func newTestBundle(idx int, trunk, parent2MessageID hornet.Hash) *tangle.Message {
-	bndl := tangle.Message{
+func newTestBundle(idx int, trunk, parent2MessageID hornet.Hash) *storage.Message {
+	bndl := storage.Message{
 
 	}
 	msg := &transaction.Message{

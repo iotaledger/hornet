@@ -17,7 +17,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -32,9 +32,9 @@ var (
 )
 
 // New creates a new processor which parses messages.
-func NewMessageProcessor(tangle *tangle.Tangle, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) *MessageProcessor {
+func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) *MessageProcessor {
 	proc := &MessageProcessor{
-		tangle: tangle,
+		storage: storage,
 		Events: MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
@@ -82,7 +82,7 @@ func NewMessageProcessor(tangle *tangle.Tangle, requestQueue RequestQueue, peeri
 }
 
 func MessageProcessedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(msg *tangle.Message, request *Request, proto *Protocol))(params[0].(*tangle.Message), params[1].(*Request), params[2].(*Protocol))
+	handler.(func(msg *storage.Message, request *Request, proto *Protocol))(params[0].(*storage.Message), params[1].(*Request), params[2].(*Protocol))
 }
 
 // Broadcast defines a message which should be broadcasted.
@@ -107,7 +107,7 @@ type MessageProcessorEvents struct {
 
 // MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
 type MessageProcessor struct {
-	tangle        *tangle.Tangle
+	storage *storage.Storage
 	Events        MessageProcessorEvents
 	ps            *p2p.Manager
 	wp            *workerpool.WorkerPool
@@ -136,7 +136,7 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 }
 
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
-func (proc *MessageProcessor) Emit(msg *tangle.Message) error {
+func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	score, err := msg.GetMessage().POW()
 	if err != nil {
@@ -180,10 +180,10 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 
 	// peers can request the latest milestone we know
 	if msIndex == LatestMilestoneRequestIndex {
-		msIndex = proc.tangle.GetLatestMilestoneIndex()
+		msIndex = proc.storage.GetLatestMilestoneIndex()
 	}
 
-	cachedMessage := proc.tangle.GetMilestoneCachedMessageOrNil(msIndex) // message +1
+	cachedMessage := proc.storage.GetMilestoneCachedMessageOrNil(msIndex) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the wanted milestone
 		return
@@ -211,7 +211,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMessage := proc.tangle.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
+	cachedMessage := proc.storage.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the requested message
 		return
@@ -271,7 +271,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			return
 		}
 
-		if proc.tangle.ContainsMessage(wu.msg.GetMessageID()) {
+		if proc.storage.ContainsMessage(wu.msg.GetMessageID()) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 			return
@@ -284,7 +284,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the message
-	msg, err := tangle.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
+	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(proc.ps, errors.WithMessagef(err, "peer sent an invalid message"))
@@ -315,7 +315,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.UpdateState(Hashed)
 
 	// check the existence of the message before broadcasting it
-	containsTx := proc.tangle.ContainsMessage(msg.GetMessageID())
+	containsTx := proc.storage.ContainsMessage(msg.GetMessageID())
 
 	proc.Events.MessageProcessed.Trigger(msg, request, p)
 

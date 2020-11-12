@@ -3,16 +3,17 @@ package urts
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/node"
+	"go.uber.org/dig"
+
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"go.uber.org/dig"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -45,20 +46,20 @@ var (
 type dependencies struct {
 	dig.In
 	TipSelector *tipselect.TipSelector
-	Tangle      *tangle.Tangle
+	Storage     *storage.Storage
 }
 
 func provide(c *dig.Container) {
 	type tipseldeps struct {
 		dig.In
-		Tangle        *tangle.Tangle
+		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 	}
 
 	if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
 		return tipselect.New(
-			deps.Tangle,
+			deps.Storage,
 			deps.ServerMetrics,
 
 			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
@@ -107,10 +108,10 @@ func run() {
 }
 
 func configureEvents() {
-	onMessageSolid = events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *tangle.MessageMetadata) { // metadata -1
+	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
-			if !deps.Tangle.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -120,13 +121,13 @@ func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		// do not propagate during syncing, because it is not needed at all
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
 		// propagate new cone root indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateConeRootIndexes(deps.Tangle, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		dag.UpdateConeRootIndexes(deps.Storage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 
 		ts = time.Now()

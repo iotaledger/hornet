@@ -16,11 +16,12 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 var (
@@ -29,7 +30,7 @@ var (
 
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
-	if !deps.Tangle.IsNodeSyncedWithThreshold() {
+	if !deps.Storage.IsNodeSyncedWithThreshold() {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -40,7 +41,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID)
+	cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageID.Hex())
 	}
@@ -74,8 +75,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		lsmi := deps.Tangle.GetSolidMilestoneIndex()
-		ycri, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMsgMeta.Retain(), lsmi)
+		lsmi := deps.Storage.GetSolidMilestoneIndex()
+		ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), lsmi)
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
@@ -110,7 +111,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -127,7 +128,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
 	}
@@ -147,7 +148,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
 	childrenMessageIDsHex := []string{}
-	for _, childrenMessageID := range deps.Tangle.GetChildrenMessageIDs(messageID, maxResults) {
+	for _, childrenMessageID := range deps.Storage.GetChildrenMessageIDs(messageID, maxResults) {
 		childrenMessageIDsHex = append(childrenMessageIDsHex, childrenMessageID.Hex())
 	}
 
@@ -169,7 +170,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
 	messageIDsHex := []string{}
-	for _, messageID := range deps.Tangle.GetIndexMessageIDs(index, maxResults) {
+	for _, messageID := range deps.Storage.GetIndexMessageIDs(index, maxResults) {
 		messageIDsHex = append(messageIDsHex, messageID.Hex())
 	}
 
@@ -183,7 +184,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
-	if !deps.Tangle.IsNodeSyncedWithThreshold() {
+	if !deps.Storage.IsNodeSyncedWithThreshold() {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -240,7 +241,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
