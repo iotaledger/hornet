@@ -3,17 +3,20 @@ package warpsync
 import (
 	"time"
 
-	gossipcore "github.com/gohornet/hornet/core/gossip"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
+	"go.uber.org/dig"
+
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"go.uber.org/dig"
+
+	gossipcore "github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func init() {
@@ -47,7 +50,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle       *tangle.Tangle
+	Storage      *storage.Storage
 	RequestQueue gossip.RequestQueue
 	Service      *gossip.Service
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
@@ -71,7 +74,7 @@ func configureEvents() {
 
 	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossip.Protocol) {
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip.Heartbeat) {
-			warpSync.UpdateCurrent(deps.Tangle.GetSolidMilestoneIndex())
+			warpSync.UpdateCurrent(deps.Storage.GetSolidMilestoneIndex())
 			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
 	})

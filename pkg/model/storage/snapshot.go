@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"encoding/hex"
@@ -28,12 +28,12 @@ type SnapshotInfo struct {
 	Metadata        bitmask.BitMask
 }
 
-func (t *Tangle) loadSnapshotInfo() {
-	info, err := t.readSnapshotInfo()
+func (s *Storage) loadSnapshotInfo() {
+	info, err := s.readSnapshotInfo()
 	if err != nil {
 		panic(err)
 	}
-	t.snapshot = info
+	s.snapshot = info
 	if info != nil {
 		println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
@@ -114,7 +114,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return marshalUtil.Bytes()
 }
 
-func (t *Tangle) SetSnapshotMilestone(networkID byte, milestoneID *iotago.MilestoneID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
+func (s *Storage) SetSnapshotMilestone(networkID byte, milestoneID *iotago.MilestoneID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
@@ -133,23 +133,23 @@ func (t *Tangle) SetSnapshotMilestone(networkID byte, milestoneID *iotago.Milest
 		Metadata:        bitmask.BitMask(0),
 	}
 
-	t.SetSnapshotInfo(sn)
+	s.SetSnapshotInfo(sn)
 }
 
-func (t *Tangle) SetSnapshotInfo(sn *SnapshotInfo) {
-	t.snapshotMutex.Lock()
-	defer t.snapshotMutex.Unlock()
+func (s *Storage) SetSnapshotInfo(sn *SnapshotInfo) {
+	s.snapshotMutex.Lock()
+	defer s.snapshotMutex.Unlock()
 
-	err := t.storeSnapshotInfo(sn)
+	err := s.storeSnapshotInfo(sn)
 	if err != nil {
 		panic(err)
 	}
-	t.snapshot = sn
+	s.snapshot = sn
 }
 
-func (t *Tangle) GetSnapshotInfo() *SnapshotInfo {
-	t.snapshotMutex.RLock()
-	defer t.snapshotMutex.RUnlock()
+func (s *Storage) GetSnapshotInfo() *SnapshotInfo {
+	s.snapshotMutex.RLock()
+	defer s.snapshotMutex.RUnlock()
 
-	return t.snapshot
+	return s.snapshot
 }

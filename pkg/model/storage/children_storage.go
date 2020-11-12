@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"time"
@@ -32,13 +32,13 @@ func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	return child, nil
 }
 
-func (t *Tangle) GetChildrenStorageSize() int {
-	return t.childrenStorage.GetSize()
+func (s *Storage) GetChildrenStorageSize() int {
+	return s.childrenStorage.GetSize()
 }
 
-func (t *Tangle) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
-	t.childrenStorage = objectstorage.New(
+	s.childrenStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixChildren}),
 		childrenFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
@@ -55,11 +55,11 @@ func (t *Tangle) configureChildrenStorage(store kvstore.KVStore, opts *profile.C
 }
 
 // children +-0
-func (t *Tangle) GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...int) hornet.MessageIDs {
+func (s *Storage) GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...int) hornet.MessageIDs {
 	var childrenMessageIDs hornet.MessageIDs
 
 	i := 0
-	t.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
+	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
 			return false
@@ -73,51 +73,51 @@ func (t *Tangle) GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...i
 }
 
 // ContainsChild returns if the given child exists in the cache/persistence layer.
-func (t *Tangle) ContainsChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
-	return t.childrenStorage.Contains(append(messageID.Slice(), childMessageID.Slice()...))
+func (s *Storage) ContainsChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
+	return s.childrenStorage.Contains(append(messageID.Slice(), childMessageID.Slice()...))
 }
 
 // ChildConsumer consumes the given child during looping through all children in the persistence layer.
 type ChildConsumer func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool
 
 // ForEachChild loops over all children.
-func (t *Tangle) ForEachChild(consumer ChildConsumer, skipCache bool) {
-	t.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
+func (s *Storage) ForEachChild(consumer ChildConsumer, skipCache bool) {
+	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]), hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	}, skipCache)
 }
 
 // child +1
-func (t *Tangle) StoreChild(parentMessageID *hornet.MessageID, childMessageID *hornet.MessageID) *CachedChild {
+func (s *Storage) StoreChild(parentMessageID *hornet.MessageID, childMessageID *hornet.MessageID) *CachedChild {
 	child := NewChild(parentMessageID, childMessageID)
-	return &CachedChild{CachedObject: t.childrenStorage.Store(child)}
+	return &CachedChild{CachedObject: s.childrenStorage.Store(child)}
 }
 
 // child +-0
-func (t *Tangle) DeleteChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) {
+func (s *Storage) DeleteChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) {
 	child := NewChild(messageID, childMessageID)
-	t.childrenStorage.Delete(child.ObjectStorageKey())
+	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 
 // child +-0
-func (t *Tangle) DeleteChildren(messageID *hornet.MessageID) {
+func (s *Storage) DeleteChildren(messageID *hornet.MessageID) {
 
 	var keysToDelete [][]byte
 
-	t.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
+	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
 	}, false, messageID.Slice())
 
 	for _, key := range keysToDelete {
-		t.childrenStorage.Delete(key)
+		s.childrenStorage.Delete(key)
 	}
 }
 
-func (t *Tangle) ShutdownChildrenStorage() {
-	t.childrenStorage.Shutdown()
+func (s *Storage) ShutdownChildrenStorage() {
+	s.childrenStorage.Shutdown()
 }
 
-func (t *Tangle) FlushChildrenStorage() {
-	t.childrenStorage.Flush()
+func (s *Storage) FlushChildrenStorage() {
+	s.childrenStorage.Flush()
 }

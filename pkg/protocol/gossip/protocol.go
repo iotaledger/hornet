@@ -5,14 +5,17 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/atomic"
+
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
+
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/protocol"
+
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/protocol"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"go.uber.org/atomic"
 )
 
 const (
@@ -131,7 +134,7 @@ func (p *Protocol) Send(message []byte) error {
 	return nil
 }
 
-// SendMessage sends a tangle.Message to the given peer.
+// SendMessage sends a storage.Message to the given peer.
 func (p *Protocol) SendMessage(msgData []byte) {
 	messageMsg, _ := NewMessageMsg(msgData)
 	p.Enqueue(messageMsg)
@@ -143,19 +146,19 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 	p.Enqueue(heartbeatData)
 }
 
-// SendMessageRequest sends a tangle.Message request message to the given peer.
+// SendMessageRequest sends a storage.Message request message to the given peer.
 func (p *Protocol) SendMessageRequest(requestedMessageID *hornet.MessageID) {
 	txReqData, _ := NewMessageRequestMsg(requestedMessageID)
 	p.Enqueue(txReqData)
 }
 
-// SendMilestoneRequest sends a tangle.Milestone request to the given peer.
+// SendMilestoneRequest sends a storage.Milestone request to the given peer.
 func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
 	milestoneRequestData, _ := NewMilestoneRequestMsg(index)
 	p.Enqueue(milestoneRequestData)
 }
 
-// SendLatestMilestoneRequest sends a tangle.Milestone request which requests the latest known milestone from the given peer.
+// SendLatestMilestoneRequest sends a storage.Milestone request which requests the latest known milestone from the given peer.
 func (p *Protocol) SendLatestMilestoneRequest() {
 	p.SendMilestoneRequest(LatestMilestoneRequestIndex)
 }

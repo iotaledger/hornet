@@ -9,8 +9,8 @@ import (
 	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 const (
@@ -31,13 +31,13 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range deps.Tangle.GetUnreferencedMessageIDs(targetIndex, true) {
+	for _, messageID := range deps.Storage.GetUnreferencedMessageIDs(targetIndex, true) {
 		messageIDMapKey := messageID.MapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
 		}
 
-		cachedMsgMeta := deps.Tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
@@ -54,7 +54,7 @@ func pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int
 	}
 
 	msgCountDeleted = pruneMessages(messageIDsToDeleteMap)
-	deps.Tangle.DeleteUnreferencedMessages(targetIndex)
+	deps.Storage.DeleteUnreferencedMessages(targetIndex)
 
 	return msgCountDeleted, len(messageIDsToDeleteMap)
 }
@@ -67,7 +67,7 @@ func pruneMilestone(milestoneIndex milestone.Index) error {
 		return err
 	}
 
-	deps.Tangle.DeleteMilestone(milestoneIndex)
+	deps.Storage.DeleteMilestone(milestoneIndex)
 
 	return nil
 }
@@ -77,26 +77,26 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		cachedMsg := deps.Tangle.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
+		cachedMsg := deps.Storage.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
 
-		cachedMsg.ConsumeMessage(func(msg *tangle.Message) { // msg -1
+		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // msg -1
 			// Delete the reference in the parents
-			deps.Tangle.DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
-			deps.Tangle.DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
+			deps.Storage.DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
+			deps.Storage.DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
 
 			// delete all children of this message
-			deps.Tangle.DeleteChildren(msg.GetMessageID())
+			deps.Storage.DeleteChildren(msg.GetMessageID())
 
-			indexationPayload := tangle.CheckIfIndexation(msg)
+			indexationPayload := storage.CheckIfIndexation(msg)
 			if indexationPayload != nil {
 				// delete indexation if the message contains an indexation payload
-				deps.Tangle.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
+				deps.Storage.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
 			}
 
-			deps.Tangle.DeleteMessage(msg.GetMessageID())
+			deps.Storage.DeleteMessage(msg.GetMessageID())
 		})
 	}
 
@@ -105,7 +105,7 @@ func pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
 
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		log.Panic("No snapshotInfo found!")
 	}
@@ -140,13 +140,13 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 		return true
 	})
 
-	deps.Tangle.WriteLockSolidEntryPoints()
-	deps.Tangle.ResetSolidEntryPoints()
+	deps.Storage.WriteLockSolidEntryPoints()
+	deps.Storage.ResetSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		deps.Tangle.SolidEntryPointsAdd(sep.messageID, sep.index)
+		deps.Storage.SolidEntryPointsAdd(sep.messageID, sep.index)
 	}
-	deps.Tangle.StoreSolidEntryPoints()
-	deps.Tangle.WriteUnlockSolidEntryPoints()
+	deps.Storage.StoreSolidEntryPoints()
+	deps.Storage.WriteUnlockSolidEntryPoints()
 
 	if err != nil {
 		return 0, err
@@ -155,7 +155,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
-	deps.Tangle.SetSnapshotInfo(snapshotInfo)
+	deps.Storage.SetSnapshotInfo(snapshotInfo)
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
 	pruneUnreferencedMessages(snapshotInfo.PruningIndex)
@@ -174,7 +174,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 		ts := time.Now()
 		txCountDeleted, msgCountChecked := pruneUnreferencedMessages(milestoneIndex)
 
-		cachedMs := deps.Tangle.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMs := deps.Storage.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
 			// Milestone not found, pruning impossible
 			log.Warnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
@@ -183,16 +183,16 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 
 		messageIDsToDeleteMap := make(map[string]struct{})
 
-		err := dag.TraverseParents(deps.Tangle, cachedMs.GetMilestone().MessageID,
+		err := dag.TraverseParents(deps.Storage, cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // msg +1
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
 				// everything that was referenced by that milestone can be pruned (even messages of older milestones)
 				return true, nil
 			},
 			// consumer
-			func(cachedMsgMeta *tangle.CachedMetadata) error { // msg +1
+			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
 				messageIDsToDeleteMap[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
 				return nil
@@ -221,7 +221,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (mi
 		txCountDeleted += pruneMessages(messageIDsToDeleteMap)
 
 		snapshotInfo.PruningIndex = milestoneIndex
-		deps.Tangle.SetSnapshotInfo(snapshotInfo)
+		deps.Storage.SetSnapshotInfo(snapshotInfo)
 
 		log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
 

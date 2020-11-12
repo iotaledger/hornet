@@ -8,16 +8,15 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 // StoreMessage adds the message to the storage layer and solidifies it.
-func (te *TestEnvironment) StoreMessage(msg *tangle.Message) *tangle.CachedMessage {
+func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMessage {
 
 	// Store message in the database
-	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(msg, tangle.GetLatestMilestoneIndex(), false, true, true)
+	cachedMsg, alreadyAdded := storage.AddMessageToStorage(msg, storage.GetLatestMilestoneIndex(), false, true, true)
 	require.NotNil(te.testState, cachedMsg)
 	require.False(te.testState, alreadyAdded)
 
@@ -33,13 +32,13 @@ func (te *TestEnvironment) StoreMessage(msg *tangle.Message) *tangle.CachedMessa
 
 // VerifyLSMI checks if the latest solid milestone index is equal to the given milestone index.
 func (te *TestEnvironment) VerifyLSMI(index milestone.Index) {
-	lsmi := tangle.GetSolidMilestoneIndex()
+	lsmi := storage.GetSolidMilestoneIndex()
 	require.Equal(te.testState, index, lsmi)
 }
 
 // VerifyLMI checks if the latest milestone index is equal to the given milestone index.
 func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
-	lmi := tangle.GetLatestMilestoneIndex()
+	lmi := storage.GetLatestMilestoneIndex()
 	require.Equal(te.testState, index, lmi)
 }
 
@@ -47,14 +46,14 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 func (te *TestEnvironment) AssertAddressBalance(seed []byte, index uint64, balance uint64) {
 	address := utils.GenerateHDWalletAddress(te.testState, seed, index)
 
-	addrBalance, _, err := tangle.UTXO().AddressBalance(&address)
+	addrBalance, _, err := storage.UTXO().AddressBalance(&address)
 	require.NoError(te.testState, err)
 	require.Equal(te.testState, balance, addrBalance)
 }
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.
 func (te *TestEnvironment) AssertTotalSupplyStillValid() {
-	err := tangle.UTXO().CheckLedgerState()
+	err := storage.UTXO().CheckLedgerState()
 	require.NoError(te.testState, err)
 }
 
@@ -75,21 +74,21 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		return -1
 	}
 
-	visitedCachedMessages := make(map[string]*tangle.CachedMessage)
+	visitedCachedMessages := make(map[string]*storage.CachedMessage)
 
 	err := dag.TraverseParents(conf.MilestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 			return true, nil
 		},
 		// consumer
-		func(cachedMsgMeta *tangle.CachedMetadata) error { // meta +1
+		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			if _, visited := visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]; !visited {
-				cachedMsg := tangle.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
+				cachedMsg := storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
 				require.NotNil(te.testState, cachedMsg)
 				visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = cachedMsg
 			}
@@ -120,19 +119,19 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
 		}
 
-		if tangle.SolidEntryPointsContain(message.GetParent1MessageID()) {
+		if storage.SolidEntryPointsContain(message.GetParent1MessageID()) {
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent1\" ];\n", shortIndex, utils.ShortenedHash(message.GetParent1MessageID()))
 		} else {
-			cachedMessageParent1 := tangle.GetCachedMessageOrNil(message.GetParent1MessageID())
+			cachedMessageParent1 := storage.GetCachedMessageOrNil(message.GetParent1MessageID())
 			require.NotNil(te.testState, cachedMessageParent1)
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent1\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent1))
 			cachedMessageParent1.Release(true)
 		}
 
-		if tangle.SolidEntryPointsContain(message.GetParent2MessageID()) {
+		if storage.SolidEntryPointsContain(message.GetParent2MessageID()) {
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent2\" ];\n", shortIndex, utils.ShortenedHash(message.GetParent2MessageID()))
 		} else {
-			cachedMessageParent2 := tangle.GetCachedMessageOrNil(message.GetParent2MessageID())
+			cachedMessageParent2 := storage.GetCachedMessageOrNil(message.GetParent2MessageID())
 			require.NotNil(te.testState, cachedMessageParent2)
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent2\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent2))
 			cachedMessageParent2.Release(true)

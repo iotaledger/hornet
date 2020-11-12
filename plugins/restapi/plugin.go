@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
@@ -18,10 +16,12 @@ import (
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
 

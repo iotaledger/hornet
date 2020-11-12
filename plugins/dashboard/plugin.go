@@ -5,29 +5,29 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gohornet/hornet/core/app"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gorilla/websocket"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/network"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 
 	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
 func init() {
@@ -104,7 +104,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle           *tangle.Tangle
+	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	Manager          *p2p.Manager
@@ -214,7 +214,7 @@ func run() {
 }
 
 func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
-	cachedMs := deps.Tangle.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMs := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
@@ -358,7 +358,7 @@ func peerMetrics() []*PeerMetric {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{LSMI: deps.Tangle.GetSolidMilestoneIndex(), LMI: deps.Tangle.GetLatestMilestoneIndex()}
+	return &SyncStatus{LSMI: deps.Storage.GetSolidMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
 }
 
 func currentNodeStatus() *NodeStatus {
@@ -382,7 +382,7 @@ func currentNodeStatus() *NodeStatus {
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
@@ -396,16 +396,16 @@ func currentNodeStatus() *NodeStatus {
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: deps.Tangle.GetChildrenStorageSize(),
+			Size: deps.Storage.GetChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
 		Milestones: Cache{
-			Size: deps.Tangle.GetMilestoneStorageSize(),
+			Size: deps.Storage.GetMilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: deps.Tangle.GetMessageStorageSize(),
+			Size: deps.Storage.GetMessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),

@@ -10,7 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	utils2 "github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -28,12 +28,12 @@ const (
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator() {
 
-	storeMessageFunc := func(msg *tangle.Message, msIndex ...milestone.Index) error {
+	storeMessageFunc := func(msg *storage.Message, msIndex ...milestone.Index) error {
 		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
 
 		ms := cachedMessage.GetMessage().GetMilestone()
 		if ms != nil {
-			tangle.SetLatestMilestoneIndex(milestone.Index(ms.Index))
+			storage.SetLatestMilestoneIndex(milestone.Index(ms.Index))
 		}
 
 		return nil
@@ -58,21 +58,21 @@ func (te *TestEnvironment) configureCoordinator() {
 	te.coo.InitState(true, 0)
 
 	// save snapshot info
-	tangle.SetSnapshotMilestone(cooPubKey, hornet.GetNullMessageID(), 0, 0, 0, time.Now())
+	storage.SetSnapshotMilestone(cooPubKey, hornet.GetNullMessageID(), 0, 0, 0, time.Now())
 
 	// configure Milestones
-	tangle.ConfigureMilestones(cooPubKey, merkleHashFunc)
+	storage.ConfigureMilestones(cooPubKey, merkleHashFunc)
 
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.testState, err)
 
 	te.lastMilestoneMessageID = milestoneMessageID
 
-	ms := tangle.GetCachedMilestoneOrNil(1)
+	ms := storage.GetCachedMilestoneOrNil(1)
 	require.NotNil(te.testState, ms)
 	defer ms.Release(true)
 
-	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
+	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
@@ -83,8 +83,8 @@ func (te *TestEnvironment) configureCoordinator() {
 		}
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.GetMilestone().MessageID, func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {}, func(confirmation *whiteflag.Confirmation) {
-		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.GetMilestone().MessageID, func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {}, func(confirmation *whiteflag.Confirmation) {
+		storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
 	require.Equal(te.testState, 3, conf.MessagesReferenced)
@@ -93,7 +93,7 @@ func (te *TestEnvironment) configureCoordinator() {
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
 func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
 
-	currentIndex := tangle.GetSolidMilestoneIndex()
+	currentIndex := storage.GetSolidMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
@@ -105,10 +105,10 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, 
 	te.VerifyLMI(currentIndex + 1)
 
 	milestoneIndex := currentIndex + 1
-	ms := tangle.GetCachedMilestoneOrNil(milestoneIndex)
+	ms := storage.GetCachedMilestoneOrNil(milestoneIndex)
 	require.NotNil(te.testState, ms)
 
-	cachedMsgMetas := make(map[string]*tangle.CachedMetadata)
+	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
 
 	defer func() {
 		// All releases are forced since the cone is referenced and not needed anymore
@@ -120,9 +120,9 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, 
 	}()
 
 	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.GetMilestone().MessageID, func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime uint64) {}, func(confirmation *whiteflag.Confirmation) {
+	confStats, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.GetMilestone().MessageID, func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {}, func(confirmation *whiteflag.Confirmation) {
 		wfConf = confirmation
-		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+		storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
 

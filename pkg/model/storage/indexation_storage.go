@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"time"
@@ -28,13 +28,13 @@ func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, e
 	}, nil
 }
 
-func (t *Tangle) GetIndexationStorageSize() int {
-	return t.indexationStorage.GetSize()
+func (s *Storage) GetIndexationStorageSize() int {
+	return s.indexationStorage.GetSize()
 }
 
-func (t *Tangle) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
-	t.indexationStorage = objectstorage.New(
+	s.indexationStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixIndexation}),
 		indexationFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
@@ -51,13 +51,13 @@ func (t *Tangle) configureIndexationStorage(store kvstore.KVStore, opts *profile
 }
 
 // indexation +-0
-func (t *Tangle) GetIndexMessageIDs(index string, maxFind ...int) hornet.MessageIDs {
+func (s *Storage) GetIndexMessageIDs(index string, maxFind ...int) hornet.MessageIDs {
 	var messageIDs hornet.MessageIDs
 
 	indexationHash := blake2b.Sum256([]byte(index))
 
 	i := 0
-	t.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
+	s.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
 		i++
 		if (len(maxFind) > 0) && (i > maxFind[0]) {
 			return false
@@ -74,30 +74,30 @@ func (t *Tangle) GetIndexMessageIDs(index string, maxFind ...int) hornet.Message
 type IndexConsumer func(messageID *hornet.MessageID) bool
 
 // ForEachMessageIDWithIndex loops over all messages with the given index.
-func (t *Tangle) ForEachMessageIDWithIndex(index string, consumer IndexConsumer, skipCache bool) {
+func (s *Storage) ForEachMessageIDWithIndex(index string, consumer IndexConsumer, skipCache bool) {
 	indexationHash := blake2b.Sum256([]byte(index))
 
-	t.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
+	s.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(hornet.MessageIDFromBytes(key[IndexationHashLength : IndexationHashLength+iotago.MessageIDLength]))
 	}, skipCache, indexationHash[:])
 }
 
 // indexation +1
-func (t *Tangle) StoreIndexation(index string, messageID *hornet.MessageID) *CachedIndexation {
+func (s *Storage) StoreIndexation(index string, messageID *hornet.MessageID) *CachedIndexation {
 	indexation := NewIndexation(index, messageID)
-	return &CachedIndexation{CachedObject: t.indexationStorage.Store(indexation)}
+	return &CachedIndexation{CachedObject: s.indexationStorage.Store(indexation)}
 }
 
 // indexation +-0
-func (t *Tangle) DeleteIndexation(index string, messageID *hornet.MessageID) {
+func (s *Storage) DeleteIndexation(index string, messageID *hornet.MessageID) {
 	indexation := NewIndexation(index, messageID)
-	t.indexationStorage.Delete(indexation.ObjectStorageKey())
+	s.indexationStorage.Delete(indexation.ObjectStorageKey())
 }
 
-func (t *Tangle) ShutdownIndexationStorage() {
-	t.indexationStorage.Shutdown()
+func (s *Storage) ShutdownIndexationStorage() {
+	s.indexationStorage.Shutdown()
 }
 
-func (t *Tangle) FlushIndexationStorage() {
-	t.indexationStorage.Flush()
+func (s *Storage) FlushIndexationStorage() {
+	s.indexationStorage.Flush()
 }

@@ -4,22 +4,24 @@ import (
 	"net/http"
 	"time"
 
-	powcore "github.com/gohornet/hornet/core/pow"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/labstack/echo/v4"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+
+	powcore "github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
+	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -162,7 +164,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle           *tangle.Tangle
+	Storage          *storage.Storage
 	Manager          *p2p.Manager
 	RequestQueue     gossip.RequestQueue
 	UTXO             *utxo.Manager

@@ -8,13 +8,13 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/core/tangle"
 )
 
 func init() {
@@ -56,7 +56,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle     *tanglepkg.Tangle
+	Storage     *storage.Storage
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -64,12 +64,12 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
+		publishLatestMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishSolidMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
+		publishSolidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -79,7 +79,7 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messageMetadataWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishMessageMetadata(task.Param(0).(*tanglepkg.CachedMetadata)) // metadata pass +1
+		publishMessageMetadata(task.Param(0).(*storage.CachedMetadata)) // metadata pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -95,7 +95,7 @@ func configure() {
 		topicName := string(topic)
 
 		if messageId := messageIdFromTopic(topicName); messageId != nil {
-			if cachedMetadata := deps.Tangle.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
+			if cachedMetadata := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 					return // Avoid Release (done inside workerpool task)
 				}
@@ -105,12 +105,12 @@ func configure() {
 		}
 
 		if outputId := outputIdFromTopic(topicName); outputId != nil {
-			output, err := deps.Tangle.UTXO().ReadOutputByOutputID(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputID(outputId)
 			if err != nil {
 				return
 			}
 
-			unspent, err := deps.Tangle.UTXO().IsOutputUnspent(outputId)
+			unspent, err := deps.Storage.UTXO().IsOutputUnspent(outputId)
 			if err != nil {
 				return
 			}
@@ -119,16 +119,16 @@ func configure() {
 		}
 
 		if topicName == topicMilestonesLatest {
-			index := deps.Tangle.GetLatestMilestoneIndex()
-			if milestone := deps.Tangle.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.GetLatestMilestoneIndex()
+			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
 				publishLatestMilestone(milestone) // milestone pass +1
 			}
 			return
 		}
 
 		if topicName == topicMilestonesSolid {
-			index := deps.Tangle.GetSolidMilestoneIndex()
-			if milestone := deps.Tangle.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.GetSolidMilestoneIndex()
+			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
 				publishSolidMilestone(milestone) // milestone pass +1
 			}
 			return
@@ -155,7 +155,7 @@ func run() {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
 
-	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *tanglepkg.CachedMilestone) {
+	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMs.Release(true)
@@ -168,9 +168,9 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *tanglepkg.CachedMilestone) {
+	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
-			if !deps.Tangle.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				cachedMs.Release(true)
 				return
 			}
@@ -183,7 +183,7 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglepkg.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMsg.Release(true)
@@ -196,14 +196,14 @@ func run() {
 		cachedMsg.Release(true)
 	})
 
-	onMessageSolid := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata) {
+	onMessageSolid := events.NewClosure(func(cachedMetadata *storage.CachedMetadata) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
 		}
 		cachedMetadata.Release(true)
 	})
 
-	onMessageReferenced := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata, msIndex milestone.Index, confTime uint64) {
+	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, msIndex milestone.Index, confTime uint64) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
 		}

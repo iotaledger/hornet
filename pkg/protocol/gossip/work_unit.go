@@ -7,9 +7,9 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
@@ -55,7 +55,7 @@ type WorkUnit struct {
 	// data
 	dataLock         syncutils.RWMutex
 	receivedMsgBytes []byte
-	msg              *tangle.Message
+	msg              *storage.Message
 
 	// status
 	stateLock syncutils.RWMutex

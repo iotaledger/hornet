@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/urts"
 )
@@ -26,17 +26,17 @@ func publishOnTopic(topic string, payload interface{}) {
 	mqttBroker.Send(topic, jsonPayload)
 }
 
-func publishSolidMilestone(cachedMs *tangle.CachedMilestone) {
+func publishSolidMilestone(cachedMs *storage.CachedMilestone) {
 	defer cachedMs.Release(true)
 	publishMilestoneOnTopic(topicMilestonesSolid, cachedMs.GetMilestone())
 }
 
-func publishLatestMilestone(cachedMs *tangle.CachedMilestone) {
+func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
 	defer cachedMs.Release(true)
 	publishMilestoneOnTopic(topicMilestonesLatest, cachedMs.GetMilestone())
 }
 
-func publishMilestoneOnTopic(topic string, milestone *tangle.Milestone) {
+func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
 	if mqttBroker.HasSubscribers(topic) {
 		publishOnTopic(topic, &milestonePayload{
 			Index:       uint32(milestone.Index),
@@ -46,7 +46,7 @@ func publishMilestoneOnTopic(topic string, milestone *tangle.Milestone) {
 	}
 }
 
-func publishMessage(cachedMessage *tangle.CachedMessage) {
+func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
 	if mqttBroker.HasSubscribers(topicMessages) {
@@ -63,7 +63,7 @@ func publishMessage(cachedMessage *tangle.CachedMessage) {
 
 }
 
-func publishMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
+func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 	defer cachedMetadata.Release(true)
 
 	metadata := cachedMetadata.GetMetadata()
@@ -108,8 +108,8 @@ func publishMessageMetadata(cachedMetadata *tangle.CachedMetadata) {
 			messageMetadataResponse.LedgerInclusionState = &inclusionState
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
-			lsmi := deps.Tangle.GetSolidMilestoneIndex()
-			ycri, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMetadata.Retain(), lsmi)
+			lsmi := deps.Storage.GetSolidMilestoneIndex()
+			ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMetadata.Retain(), lsmi)
 
 			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 			shouldPromote := false

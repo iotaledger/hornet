@@ -6,13 +6,14 @@ import (
 	"sync"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 type ParentTraverser struct {
-	cachedMessageMetas map[string]*tangle.CachedMetadata
+	cachedMessageMetas map[string]*storage.CachedMetadata
 
-	tangle *tangle.Tangle
+	storage *storage.Storage
 
 	// stack holding the ordered msg to process
 	stack *list.List
@@ -35,10 +36,10 @@ type ParentTraverser struct {
 }
 
 // NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(tangle *tangle.Tangle, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
+func NewParentTraverser(storage *storage.Storage, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
 
 	return &ParentTraverser{
-		tangle:            tangle,
+		storage:            storage,
 		condition:         condition,
 		consumer:          consumer,
 		onMissingParent:   onMissingParent,
@@ -60,7 +61,7 @@ func (t *ParentTraverser) cleanup(forceRelease bool) {
 
 func (t *ParentTraverser) reset() {
 
-	t.cachedMessageMetas = make(map[string]*tangle.CachedMetadata)
+	t.cachedMessageMetas = make(map[string]*storage.CachedMetadata)
 	t.processed = make(map[string]struct{})
 	t.checked = make(map[string]bool)
 	t.stack = list.New()
@@ -154,7 +155,7 @@ func (t *ParentTraverser) processStackParents() error {
 	}
 
 	// check if the message is a solid entry point
-	if t.tangle.SolidEntryPointsContain(currentMessageID) {
+	if t.storage.SolidEntryPointsContain(currentMessageID) {
 		if t.onSolidEntryPoint != nil {
 			t.onSolidEntryPoint(currentMessageID)
 		}
@@ -170,7 +171,7 @@ func (t *ParentTraverser) processStackParents() error {
 
 	cachedMetadata, exists := t.cachedMessageMetas[currentMessageIDMapKey]
 	if !exists {
-		cachedMetadata = t.tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
+		cachedMetadata = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMetadata == nil {
 			// remove the message from the stack, parent1 and parent2 are not traversed
 			t.processed[currentMessageIDMapKey] = struct{}{}

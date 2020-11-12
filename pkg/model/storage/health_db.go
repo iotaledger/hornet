@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"github.com/pkg/errors"
@@ -10,63 +10,63 @@ const (
 	DbVersion = 1
 )
 
-func (t *Tangle) configureHealthStore(store kvstore.KVStore) {
-	t.healthStore = store.WithRealm([]byte{StorePrefixHealth})
-	t.setDatabaseVersion()
+func (s *Storage) configureHealthStore(store kvstore.KVStore) {
+	s.healthStore = store.WithRealm([]byte{StorePrefixHealth})
+	s.setDatabaseVersion()
 }
 
-func (t *Tangle) MarkDatabaseCorrupted() {
+func (s *Storage) MarkDatabaseCorrupted() {
 
-	if err := t.healthStore.Set([]byte("dbCorrupted"), []byte{}); err != nil {
+	if err := s.healthStore.Set([]byte("dbCorrupted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
 }
 
-func (t *Tangle) MarkDatabaseTainted() {
+func (s *Storage) MarkDatabaseTainted() {
 
-	if err := t.healthStore.Set([]byte("dbTainted"), []byte{}); err != nil {
+	if err := s.healthStore.Set([]byte("dbTainted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
 }
 
-func (t *Tangle) MarkDatabaseHealthy() {
+func (s *Storage) MarkDatabaseHealthy() {
 
-	if err := t.healthStore.Delete([]byte("dbCorrupted")); err != nil {
+	if err := s.healthStore.Delete([]byte("dbCorrupted")); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
 }
 
-func (t *Tangle) IsDatabaseCorrupted() bool {
+func (s *Storage) IsDatabaseCorrupted() bool {
 
-	contains, err := t.healthStore.Has([]byte("dbCorrupted"))
+	contains, err := s.healthStore.Has([]byte("dbCorrupted"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
 	}
 	return contains
 }
 
-func (t *Tangle) IsDatabaseTainted() bool {
+func (s *Storage) IsDatabaseTainted() bool {
 
-	contains, err := t.healthStore.Has([]byte("dbTainted"))
+	contains, err := s.healthStore.Has([]byte("dbTainted"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
 	}
 	return contains
 }
 
-func (t *Tangle) setDatabaseVersion() {
-	_, err := t.healthStore.Get([]byte("dbVersion"))
+func (s *Storage) setDatabaseVersion() {
+	_, err := s.healthStore.Get([]byte("dbVersion"))
 	if err == kvstore.ErrKeyNotFound {
 		// Only create the entry, if it doesn't exist already (fresh database)
-		if err := t.healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
+		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))
 		}
 	}
 }
 
-func (t *Tangle) IsCorrectDatabaseVersion() bool {
+func (s *Storage) IsCorrectDatabaseVersion() bool {
 
-	value, err := t.healthStore.Get([]byte("dbVersion"))
+	value, err := s.healthStore.Get([]byte("dbVersion"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database version"))
 	}
@@ -79,8 +79,8 @@ func (t *Tangle) IsCorrectDatabaseVersion() bool {
 }
 
 // UpdateDatabaseVersion tries to migrate the existing data to the new database version.
-func (t *Tangle) UpdateDatabaseVersion() bool {
-	value, err := t.healthStore.Get([]byte("dbVersion"))
+func (s *Storage) UpdateDatabaseVersion() bool {
+	value, err := s.healthStore.Get([]byte("dbVersion"))
 	if err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to read database version"))
 	}
