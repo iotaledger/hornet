@@ -88,6 +88,10 @@ func (msg *Message) GetMessage() *iotago.Message {
 	return msg.message
 }
 
+func (msg *Message) GetNetworkID() uint64 {
+	return msg.GetMessage().NetworkID
+}
+
 func (msg *Message) GetParent1MessageID() *hornet.MessageID {
 	parent1 := hornet.MessageID(msg.GetMessage().Parent1)
 	return &parent1

@@ -171,6 +171,7 @@ type dependencies struct {
 	PoWHandler       *pow.Handler
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	NetworkID        uint64                       `name:"networkId"`
 	TipSelector      *tipselect.TipSelector
 	Echo             *echo.Echo
 }

@@ -27,7 +27,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201116175809-49c4c301be79
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201111154008-40c889762428
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201117144025-0657bc1c8025
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
@@ -62,9 +62,9 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20201116153603-4be66e5b6582
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/sys v0.0.0-20201116161645-c061ba923fbb // indirect
+	golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48 // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/tools v0.0.0-20201116182000-1d699438d2cf // indirect
-	google.golang.org/genproto v0.0.0-20201116144945-7adebfbe6a3f // indirect
+	google.golang.org/genproto v0.0.0-20201117123952-62d171c70ae1 // indirect
 	google.golang.org/grpc v1.33.2 // indirect
 )

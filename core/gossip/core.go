@@ -79,12 +79,14 @@ func provide(c *dig.Container) {
 		RequestQueue  gossip.RequestQueue
 		Manager       *p2p.Manager
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		NetworkID     uint64                       `name:"networkId"`
 		Profile       *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
 			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+			NetworkID:         deps.NetworkID,
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {
@@ -98,15 +100,13 @@ func provide(c *dig.Container) {
 		Manager       *p2p.Manager
 		ServerMetrics *metrics.ServerMetrics
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		NetworkID     uint64                       `name:"networkId"`
 	}
 
 	if err := c.Provide(func(deps servicedeps) *gossip.Service {
-		// ToDo: Issa scam! Snapshot info is not yet known here (because snapshot is loaded afterwards)
-		// dafuq?
-		//networkID := tangle.GetSnapshotInfo().NetworkID)
-		var networkID uint8 = 1
-		iotaGossipProtocolID := protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, networkID))
-		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager, deps.ServerMetrics,
+		return gossip.NewService(
+			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.NetworkID)),
+			deps.Host, deps.Manager, deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
 			gossip.WithStreamReadTimeout(time.Duration(deps.NodeConfig.Int(CfgGossipStreamReadTimeoutSec))*time.Second),

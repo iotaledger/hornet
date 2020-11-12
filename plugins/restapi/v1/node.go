@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gohornet/hornet/core/app"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
@@ -51,7 +52,7 @@ func info() (*infoResponse, error) {
 		Name:                 app.Name,
 		Version:              app.Version,
 		IsHealthy:            deps.Tangle.IsNodeHealthy(),
-		NetworkID:            snapshotInfo.NetworkID,
+		NetworkID:            deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
 		LatestMilestoneID:    latestMilestoneID,
 		LatestMilestoneIndex: latestMilestoneIndex,
 		SolidMilestoneID:     solidMilestoneID,

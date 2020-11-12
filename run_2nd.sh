@@ -1,6 +1,7 @@
 #!/bin/bash
 rm -rf alphanetdb2
 go run -tags "pow_avx" main.go -c config_alphanet.json \
+--protocol.networkID="alphanet1" \
 --restAPI.bindAddress="0.0.0.0:14266" \
 --dashboard.bindAddress="localhost:8082" \
 --db.path="alphanetdb2" \
