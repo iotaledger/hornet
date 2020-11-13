@@ -51,9 +51,8 @@
       "intervalUnsynced": 1000,
       "path": "snapshots/mainnet/export.bin",
       "downloadURLs": [
-        "https://ls.manapotion.io/export.bin",
-        "https://x-vps.com/export.bin",
-        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin",
+        "https://x-vps.com/export.bin"
       ]
     },
     "global": {
@@ -87,7 +86,7 @@
         "EkSLZ4uvSTED1x6KaGzqxoGxjbytt2rPVfbJk1LRLCGL@enter.manapotion.io:18626",
         "iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627",
         "12w9FrzMdDQ42aBgFrv1siHuJMhuZ4SMVHRFSS7Zb72W@entrynode.iotatoken.nl:14626",
-        "DboTc1v61Xdyvggj8VRszy92ScUTLgfwZaHvXsU8zr7e@entrynode.tanglebay.org:14626",
+        "DboTc1v61Xdyvggj8VRszy92ScUTLgfwZaHvXsU8zr7e@entrynode.einfachiota.de:14626",
         "31Tz9meznQMm7qSDUgyMmYVeHUCGA7za5Suvbom5hpE9@bender.iota.autopeering.com:14626"
       ],
       "seed": ""

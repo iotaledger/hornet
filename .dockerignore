@@ -6,7 +6,7 @@ export_comnet.bin
 docker/
 mainnetdb/
 comnetdb/
-snapshot/
+snapshots/
 README.md
 .dockerignore
 docker-compose.yml

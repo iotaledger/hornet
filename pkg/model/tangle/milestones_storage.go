@@ -27,10 +27,11 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 	return milestone.Index(binary.LittleEndian.Uint32(key))
 }
 
-func milestoneFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index: milestoneIndexFromDatabaseKey(key),
-	}, 4, nil
+		Hash:  hornet.Hash(data[:49]),
+	}, nil
 }
 
 func GetMilestoneStorageSize() int {
@@ -76,12 +77,6 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 		49 byte transaction hash
 	*/
 	return ms.Hash
-}
-
-func (ms *Milestone) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
-
-	ms.Hash = hornet.Hash(data[:49])
-	return 49, nil
 }
 
 // Cached Object

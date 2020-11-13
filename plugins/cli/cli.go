@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -19,8 +18,9 @@ var (
 	enabledPlugins  []string
 	disabledPlugins []string
 
-	version = flag.BoolP("version", "v", false, "Prints the HORNET version")
-	help    = flag.BoolP("help", "h", false, "Prints the HORNET help")
+	version  = flag.BoolP("version", "v", false, "Prints the HORNET version")
+	help     = flag.BoolP("help", "h", false, "Prints the HORNET help (--full for all parameters)")
+	helpFull = flag.Bool("full", false, "Prints full HORNET help (only in combination with -h)")
 )
 
 func AddPluginStatus(name string, status int) {
@@ -50,6 +50,16 @@ func ParseConfig() {
 
 func PrintConfig() {
 	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
+
+	enablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins)
+	disablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins)
+
+	if len(enablePlugins) > 0 {
+		fmt.Printf("\nThe following plugins are enabled: %s\n", getList(enablePlugins))
+	}
+	if len(disablePlugins) > 0 {
+		fmt.Printf("\nThe following plugins are disabled: %s\n", getList(disablePlugins))
+	}
 }
 
 // HideConfigFlags hides all non essential flags from the help/usage text.
@@ -68,25 +78,12 @@ func PrintVersion() {
 		fmt.Println(AppName + " " + AppVersion)
 		os.Exit(0)
 	}
+
 	if *help {
+		if !*helpFull {
+			HideConfigFlags()
+		}
 		flag.Usage()
 		os.Exit(0)
 	}
-}
-
-func printUsage() {
-	fmt.Fprintf(
-		os.Stderr,
-		"\n"+
-			"HORNET\n\n"+
-			"  A lightweight modular IOTA node.\n\n"+
-			"Usage:\n\n"+
-			"  %s [OPTIONS]\n\n"+
-			"Options:\n",
-		filepath.Base(os.Args[0]),
-	)
-	flag.PrintDefaults()
-
-	fmt.Fprintf(os.Stderr, "\nThe following plugins are enabled: %s\n", getList(config.NodeConfig.GetStringSlice(node.CFG_ENABLE_PLUGINS)))
-	fmt.Fprintf(os.Stderr, "\nThe following plugins are disabled: %s\n", getList(config.NodeConfig.GetStringSlice(node.CFG_DISABLE_PLUGINS)))
 }

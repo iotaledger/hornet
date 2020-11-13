@@ -13,8 +13,10 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
+	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/gohornet/hornet/pkg/config"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -87,9 +89,19 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, ErrDatabaseTainted
 	}
 
-	seed, err := config.LoadHashFromEnvironment("COO_SEED")
+	seed, err := config.LoadHashFromEnvironment("COO_SEED", consts.HashTrytesSize)
 	if err != nil {
 		return nil, err
+	}
+
+	// the last trit of the seed will be ignored, so it is important security information when that happens
+	lastTrits := trinary.MustTrytesToTrits(string(seed[consts.HashTrytesSize-1]))
+	if lastTrits[consts.TritsPerTryte-1] != 0 {
+		// print warning and set the 243rd trit to zero for consistency and to prevent warnings during key derivation
+		log.Warn("The trit at index 243 of the coordinator seed is non-zero. " +
+			"The value of this trit will be ignored by the key derivation.")
+		lastTrits[consts.TritsPerTryte-1] = 0
+		seed = seed[:consts.HashTrytesSize-1] + trinary.MustTritsToTrytes(lastTrits)
 	}
 
 	// use the heaviest branch tip selection for the milestones
@@ -151,6 +163,9 @@ func run(plugin *node.Plugin) {
 
 	// create a background worker that issues milestones
 	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+		// wait until all background workers of the tangle plugin are started
+		tangleplugin.WaitForTangleProcessorStartup()
+
 		attachEvents()
 
 		// bootstrap the network if not done yet
@@ -244,13 +259,13 @@ func run(plugin *node.Plugin) {
 
 }
 
-func sendBundle(b coordinator.Bundle, isMilestone bool) error {
+func sendBundle(b bundle.Bundle, isMilestone bool) error {
 
 	// search the tail transaction hash of the bundle
 	txHashes := make(map[string]struct{})
-	for _, t := range b {
-		if t.CurrentIndex == 0 {
-			txHashes[string(hornet.HashFromHashTrytes(t.Hash))] = struct{}{}
+	for i := range b {
+		if b[i].CurrentIndex == 0 {
+			txHashes[string(hornet.HashFromHashTrytes(b[i].Hash))] = struct{}{}
 			break
 		}
 	}
@@ -293,8 +308,8 @@ func sendBundle(b coordinator.Bundle, isMilestone bool) error {
 		defer tangleplugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 	}
 
-	for _, t := range b {
-		tx := t // assign to new variable, otherwise it would be overwritten by the loop before processed
+	for i := range b {
+		tx := &b[i]
 		txTrits, _ := transaction.TransactionToTrits(tx)
 		if err := gossip.Processor().CompressAndEmit(tx, txTrits); err != nil {
 			return err

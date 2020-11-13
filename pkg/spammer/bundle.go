@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/converter"
+	"github.com/iotaledger/iota.go/encoding/ascii"
 	"github.com/iotaledger/iota.go/kerl"
 	"github.com/iotaledger/iota.go/signing"
 	"github.com/iotaledger/iota.go/signing/key"
@@ -28,52 +28,6 @@ func integerToAscii(number int) string {
 	return result
 }
 
-// We don't need to care about the M-Bug in the spammer => much faster without
-func finalizeInsecure(bundle bundle.Bundle) (bundle.Bundle, error) {
-	var valueTrits = make([]trinary.Trits, len(bundle))
-	var timestampTrits = make([]trinary.Trits, len(bundle))
-	var currentIndexTrits = make([]trinary.Trits, len(bundle))
-	var obsoleteTagTrits = make([]trinary.Trits, len(bundle))
-	var lastIndexTrits = trinary.MustPadTrits(trinary.IntToTrits(int64(bundle[0].LastIndex)), 27)
-
-	for i := range bundle {
-		valueTrits[i] = trinary.MustPadTrits(trinary.IntToTrits(bundle[i].Value), 81)
-		timestampTrits[i] = trinary.MustPadTrits(trinary.IntToTrits(int64(bundle[i].Timestamp)), 27)
-		currentIndexTrits[i] = trinary.MustPadTrits(trinary.IntToTrits(int64(bundle[i].CurrentIndex)), 27)
-		obsoleteTagTrits[i] = trinary.MustPadTrits(trinary.MustTrytesToTrits(bundle[i].ObsoleteTag), 81)
-	}
-
-	var bundleHash trinary.Hash
-
-	k := kerl.NewKerl()
-
-	for i := 0; i < len(bundle); i++ {
-		relevantTritsForBundleHash := trinary.MustTrytesToTrits(
-			bundle[i].Address +
-				trinary.MustTritsToTrytes(valueTrits[i]) +
-				trinary.MustTritsToTrytes(obsoleteTagTrits[i]) +
-				trinary.MustTritsToTrytes(timestampTrits[i]) +
-				trinary.MustTritsToTrytes(currentIndexTrits[i]) +
-				trinary.MustTritsToTrytes(lastIndexTrits),
-		)
-		k.Absorb(relevantTritsForBundleHash)
-	}
-
-	bundleHashTrits, err := k.Squeeze(consts.HashTrinarySize)
-	if err != nil {
-		return nil, err
-	}
-	bundleHash = trinary.MustTritsToTrytes(bundleHashTrits)
-
-	// set the computed bundle hash on each tx in the bundle
-	for i := range bundle {
-		tx := &bundle[i]
-		tx.Bundle = bundleHash
-	}
-
-	return bundle, nil
-}
-
 func createBundle(seed trinary.Trytes, seedIndex uint64, txAddress trinary.Hash, msg string, tagSubstring string, bundleSize int, valueSpam bool, txCount int, additionalMesssage ...string) (bundle.Bundle, error) {
 
 	tag, err := trinary.NewTrytes(tagSubstring + integerToAscii(txCount))
@@ -88,7 +42,7 @@ func createBundle(seed trinary.Trytes, seedIndex uint64, txAddress trinary.Hash,
 		messageString = fmt.Sprintf("%v\n%v", messageString, additionalMesssage[0])
 	}
 
-	message, err := converter.ASCIIToTrytes(messageString)
+	message, err := ascii.EncodeToTrytes(messageString)
 	if err != nil {
 		return nil, fmt.Errorf("ASCIIToTrytes: %v", err.Error())
 	}
@@ -140,9 +94,9 @@ func createBundle(seed trinary.Trytes, seedIndex uint64, txAddress trinary.Hash,
 	}
 
 	// finalize bundle by adding the bundle hash
-	b, err = finalizeInsecure(b)
+	b, err = bundle.FinalizeInsecure(b)
 	if err != nil {
-		return nil, fmt.Errorf("Bundle.Finalize: %v", err.Error())
+		return nil, fmt.Errorf("bundle.FinalizeInsecure: %v", err)
 	}
 
 	if valueSpam {

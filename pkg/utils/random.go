@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 )
 
@@ -37,4 +38,18 @@ func RandomTrytesInsecure(length int) trinary.Trytes {
 		trytes[i] = charsetTrytes[seededRand.Intn(len(charsetTrytes))]
 	}
 	return trinary.Trytes(trytes)
+}
+
+// RandomKerlHashTrytesInsecure returns random hash trytes.
+// Since the result mimics a Kerl hash, the last trit will be zero.
+func RandomKerlHashTrytesInsecure() trinary.Hash {
+	// Rand needs to be locked: https://github.com/golang/go/issues/3611
+	randLock.Lock()
+	defer randLock.Unlock()
+
+	trits := make(trinary.Trits, consts.HashTrinarySize)
+	for i := 0; i < consts.HashTrinarySize-1; i++ {
+		trits[i] = int8(seededRand.Intn(consts.TrinaryRadix) + consts.MinTritValue)
+	}
+	return trinary.MustTritsToTrytes(trits)
 }

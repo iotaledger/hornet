@@ -1,10 +1,8 @@
 package database
 
 import (
-	"runtime"
+	"bytes"
 	"time"
-
-	"github.com/spf13/viper"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -12,6 +10,8 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/config"
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
@@ -23,19 +23,101 @@ var (
 	garbageCollectionLock syncutils.Mutex
 )
 
+// pruneTransactions prunes the approvers, bundles, bundle txs, addresses, tags and transaction metadata from the database
+func pruneTransactions(txsToCheckMap map[string]struct{}) int {
+
+	txsToDeleteMap := make(map[string]struct{})
+
+	for txHashToCheck := range txsToCheckMap {
+
+		cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHashToCheck)) // tx +1
+		if cachedTxMeta == nil {
+			log.Warnf("pruneTransactions: Transaction not found: %s", txHashToCheck)
+			continue
+		}
+
+		for txToRemove := range tangle.RemoveTransactionFromBundle(cachedTxMeta.GetMetadata()) {
+			txsToDeleteMap[txToRemove] = struct{}{}
+		}
+		// since it gets loaded below again it doesn't make sense to force release here
+		cachedTxMeta.Release() // tx -1
+	}
+
+	for txHashToDelete := range txsToDeleteMap {
+
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.Hash(txHashToDelete)) // tx +1
+		if cachedTx == nil {
+			continue
+		}
+
+		cachedTx.ConsumeTransaction(func(tx *hornet.Transaction) { // tx -1
+			// Delete the reference in the approvees
+			tangle.DeleteApprover(tx.GetTrunkHash(), tx.GetTxHash())
+			tangle.DeleteApprover(tx.GetBranchHash(), tx.GetTxHash())
+
+			tangle.DeleteTag(tx.GetTag(), tx.GetTxHash())
+			tangle.DeleteAddress(tx.GetAddress(), tx.GetTxHash())
+			tangle.DeleteApprovers(tx.GetTxHash())
+			tangle.DeleteTransaction(tx.GetTxHash())
+		})
+	}
+
+	return len(txsToDeleteMap)
+}
+
+// pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
+func pruneMilestone(milestoneIndex milestone.Index) {
+
+	// state diffs
+	if err := tangle.DeleteLedgerDiffForMilestone(milestoneIndex); err != nil {
+		log.Warn(err)
+	}
+
+	tangle.DeleteMilestone(milestoneIndex)
+}
+
+func deleteInvalidMilestones() {
+
+	invalidMilestoneBundles := []hornet.Hash{
+		hornet.HashFromHashTrytes("JVYIDMDDFISYRAMQL9W9YQTDSWKVOLHOISWTFDVNNQGZAQUYLWMYYMLXQQCVVVXJWHWG9ULP9QEJJUQDC"),
+		hornet.HashFromHashTrytes("RKAZMTNNOOZGEIS9SYUVLFRRRRFWALTHSSKZPVNQPSCIX9CYHTIJXNWBXVQECJYLJKY99YMWIBBJXILXC"),
+	}
+
+	txsToCheck := map[string]struct{}{}
+
+	invalidMilestonesIndexes := []milestone.Index{2272660, 2272661}
+	for _, invalidMilestonesIndex := range invalidMilestonesIndexes {
+		cachedMs := tangle.GetMilestoneOrNil(invalidMilestonesIndex)
+		if cachedMs == nil {
+			continue
+		}
+
+		for _, bundleHash := range invalidMilestoneBundles {
+			if !bytes.Equal(cachedMs.GetBundle().GetBundleHash(), bundleHash) {
+				continue
+			}
+
+			// invalid milestone detected
+			for _, txHash := range cachedMs.GetBundle().GetTxHashes() {
+				txsToCheck[string(txHash)] = struct{}{}
+			}
+
+			log.Warnf("Deleting invalid milestone %d (%s)", invalidMilestonesIndex, bundleHash.Trytes())
+			pruneMilestone(invalidMilestonesIndex)
+		}
+
+		cachedMs.Release(true)
+	}
+
+	pruneTransactions(txsToCheck)
+}
+
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	viper.BindEnv("GOMAXPROCS")
-	goMaxProcsEnv := viper.GetInt("GOMAXPROCS")
-	if goMaxProcsEnv == 0 {
-		// badger documentation recommends setting a high number for GOMAXPROCS.
-		// this allows Go to observe the full IOPS throughput provided by modern SSDs.
-		// Dgraph uses 128.
-		runtime.GOMAXPROCS(128)
-	}
-
 	tangle.ConfigureDatabases(config.NodeConfig.GetString(config.CfgDatabasePath))
+
+	deleteInvalidMilestones()
 
 	if !tangle.IsCorrectDatabaseVersion() {
 		if !tangle.UpdateDatabaseVersion() {

@@ -95,7 +95,8 @@
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "entryNodes": [
-        "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637"
+        "iotaDvNxMP5EPQPbHNzMTZK5ipd4BGZfjZBomenmyk3@enter.devnet.thetangle.org:14637",
+        "7XmpP8KD2MSsHdZ4wcfjicbHJgsM5x325kaXXaq3VKsg@entrynode.devnet.einfachiota.de:14646"
       ],
       "seed": ""
     }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/iotaledger/hive.go/batchhasher"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/workerpool"
@@ -26,6 +25,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/message"
 	"github.com/gohornet/hornet/pkg/protocol/rqueue"
 	"github.com/gohornet/hornet/pkg/protocol/sting"
+	"github.com/gohornet/hornet/plugins/curl"
 )
 
 const (
@@ -33,8 +33,17 @@ const (
 )
 
 var (
-	workerCount         = batchhasher.CURLP81.GetBatchSize() * batchhasher.CURLP81.GetWorkerCount()
+	workerCount         = curl.Hasher().BatchSize() * curl.Hasher().WorkerCount()
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
+
+	invalidMilestoneHashes = map[string]struct{}{
+		string(hornet.HashFromHashTrytes("HBXSPG9ISUFPIRLFWEXGEXKEDRXZQMXYQMGHPPHCUNVRHQMRHVEVZIGLZVLAZ9ALHMTYZZBXRHLVA9999")): {},
+		string(hornet.HashFromHashTrytes("QXKJWQBYTQWQWOAOSQ9EAOCKXCZPLJFTMJBUYZYJVNECV9FTKTSPNCPFEHWBZBWXUMLXKIXQBTNO99999")): {},
+		string(hornet.HashFromHashTrytes("J9RDJWAEUXMXDUNLPIPXTSQYHZTKWNCTJFKWNZOJOHXLXTEEJFZGUSYNZVWYBZMXMKQPCGKBAZVZA9999")): {},
+		string(hornet.HashFromHashTrytes("PANOKVXNOGIOHEIDLCYFJOUVXWAUR9FSYVRWGAXZJHPFKCMBOXCZAKQLZN9QEX9LQLFWNUADM9OV99999")): {},
+		string(hornet.HashFromHashTrytes("9LICXLMXACLWTQUTURTNFQQPGCKJMVNVWZNGVMSOWZJTLFDCNELENMUFT9HBGLTQORJNOHOVHOISA9999")): {},
+		string(hornet.HashFromHashTrytes("YTKLUHCTUQVJILTKNUWDYCOGSPPAWXAHRHJEIV9XZTNCCDOSRJFSWHLK9WQGOCVRAAMJFOYAVBJYZ9999")): {},
+	}
 )
 
 // New creates a new processor which parses messages.
@@ -144,7 +153,10 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 		return err
 	}
 
-	hashTrits := batchhasher.CURLP81.Hash(txTrits)
+	hashTrits, err := curl.Hasher().Hash(txTrits)
+	if err != nil {
+		return err
+	}
 	tx.Hash = trinary.MustTritsToTrytes(hashTrits)
 
 	if tx.Value != 0 {
@@ -168,11 +180,16 @@ func (proc *Processor) ValidateTransactionTrytesAndEmit(txTrytes trinary.Trytes)
 // CompressAndEmit compresses the given transaction and emits TransactionProcessed and BroadcastTransaction events.
 // This function does not run within the Processor's worker pool.
 func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trinary.Trits) error {
-	txBytesTruncated := compressed.TruncateTx(trinary.MustTritsToBytes(txTrits))
+	txBytesTruncated := compressed.TruncateTxTrits(txTrits)
 	hornetTx := hornet.NewTransactionFromTx(tx, txBytesTruncated)
 
 	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {
 		return ErrInvalidTimestamp
+	}
+
+	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(hornetTx.GetTxHash())]; isInvalidMilestoneTx {
+		// do not accept the invalid milestone transactions
+		return consts.ErrInvalidTransactionHash
 	}
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
@@ -192,8 +209,7 @@ func (proc *Processor) WorkUnitsSize() int {
 func (proc *Processor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
-			cachedWorkUnit, _, _ := workUnitFactory(receivedTxBytes)
-			return cachedWorkUnit
+			return newWorkUnit(receivedTxBytes)
 		}),
 	}
 }
@@ -330,6 +346,13 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	wu.receivedTxHash = hornetTx.GetTxHash()
 	wu.tx = hornetTx
 	wu.dataLock.Unlock()
+
+	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(wu.receivedTxHash)]; isInvalidMilestoneTx {
+		// do not accept the invalid milestone transactions
+		wu.UpdateState(Invalid)
+		wu.punish()
+		return
+	}
 
 	wu.UpdateState(Hashed)
 

@@ -24,11 +24,17 @@ func databaseKeyForBundle(tailTxHash hornet.Hash) []byte {
 	return tailTxHash
 }
 
-func bundleFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	return &Bundle{
+func bundleFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+	bndl := &Bundle{
 		tailTx: key[:49],
 		txs:    make(map[string]struct{}),
-	}, 49, nil
+	}
+
+	if err := bndl.UnmarshalObjectStorageValue(data); err != nil {
+		return nil, err
+	}
+
+	return bndl, nil
 }
 
 func GetBundleStorageSize() int {
@@ -101,7 +107,7 @@ func (bundle *Bundle) ObjectStorageValue() (data []byte) {
 	return value
 }
 
-func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (consumedBytes int, err error) {
+func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (err error) {
 
 	/*
 		 1 byte  	   				metadata
@@ -139,7 +145,7 @@ func (bundle *Bundle) UnmarshalObjectStorageValue(data []byte) (consumedBytes in
 		bundle.ledgerChanges[string(address)] = balance
 	}
 
-	return offset, nil
+	return nil
 }
 
 // Cached Object

@@ -29,9 +29,9 @@ func (c *CachedTag) GetTag() *hornet.Tag {
 	return c.Get().(*hornet.Tag)
 }
 
-func tagsFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func tagsFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	tag := hornet.NewTag(key[:17], key[17:66])
-	return tag, 66, nil
+	return tag, nil
 }
 
 func GetTagsStorageSize() int {

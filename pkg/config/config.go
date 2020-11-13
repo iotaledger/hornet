@@ -50,12 +50,21 @@ var (
 		"profilesConfig":      {},
 		"useProfile":          {},
 		"version":             {},
+		"help":                {},
 	}
 )
 
 // HideConfigFlags hides all non essential flags from the help/usage text.
 func HideConfigFlags() {
 	flag.VisitAll(func(f *flag.Flag) {
+		_, notHidden := nonHiddenFlags[f.Name]
+		f.Hidden = !notHidden
+	})
+	configFlagSet.VisitAll(func(f *flag.Flag) {
+		_, notHidden := nonHiddenFlags[f.Name]
+		f.Hidden = !notHidden
+	})
+	peeringFlagSet.VisitAll(func(f *flag.Flag) {
 		_, notHidden := nonHiddenFlags[f.Name]
 		f.Hidden = !notHidden
 	})
@@ -81,6 +90,7 @@ func FetchConfig() error {
 	ProfilesConfig.SetEnvKeyReplacer(dotReplacer)
 
 	// ensure that envs are read in too
+	viper.AutomaticEnv()
 	NodeConfig.AutomaticEnv()
 	PeeringConfig.AutomaticEnv()
 	ProfilesConfig.AutomaticEnv()
@@ -108,7 +118,6 @@ func PrintConfig(ignoreSettingsAtPrint ...[]string) {
 	fmt.Println(CfgPeers, PeeringConfig.GetStringSlice(CfgPeers))
 	fmt.Println(CfgPeeringMaxPeers, PeeringConfig.GetStringSlice(CfgPeeringMaxPeers))
 	fmt.Println(CfgPeeringAcceptAnyConnection, PeeringConfig.GetStringSlice(CfgPeeringAcceptAnyConnection))
-	parameter.PrintConfig(ProfilesConfig)
 }
 
 func AllowPeeringConfigHotReload() {

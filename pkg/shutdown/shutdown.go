@@ -9,6 +9,7 @@ const (
 	PriorityMilestoneProcessor
 	PrioritySolidifierGossip
 	PriorityReceiveTxWorker
+	PriorityCurlHasher
 	PriorityBroadcastQueue
 	PriorityMessageProcessor
 	PriorityPeerSendQueue

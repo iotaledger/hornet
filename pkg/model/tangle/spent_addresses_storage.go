@@ -42,9 +42,9 @@ func (c *CachedSpentAddress) GetSpentAddress() *hornet.SpentAddress {
 	return c.Get().(*hornet.SpentAddress)
 }
 
-func spentAddressFactory(key []byte) (objectstorage.StorableObject, int, error) {
+func spentAddressFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	sa := hornet.NewSpentAddress(key[:49])
-	return sa, 49, nil
+	return sa, nil
 }
 
 func GetSpentAddressesStorageSize() int {
@@ -84,7 +84,7 @@ func MarkAddressAsSpent(address hornet.Hash) bool {
 // spentAddress +-0
 func MarkAddressAsSpentWithoutLocking(address hornet.Hash) bool {
 
-	spentAddress, _, _ := spentAddressFactory(address)
+	spentAddress := hornet.NewSpentAddress(address[:49])
 
 	cachedSpentAddress, newlyAdded := spentAddressesStorage.StoreIfAbsent(spentAddress)
 	if cachedSpentAddress != nil {

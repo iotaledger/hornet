@@ -20,14 +20,19 @@ const (
 	Hashed  WorkUnitState = 1 << 2
 )
 
-// defines the factory function for WorkUnits.
-func workUnitFactory(key []byte) (objectstorage.StorableObject, int, error) {
-	req := &WorkUnit{
+// newWorkUnit creates a new WorkUnit and initializes values by unmarshalling key.
+func newWorkUnit(key []byte) *WorkUnit {
+	wu := &WorkUnit{
 		receivedTxBytes: make([]byte, len(key)),
 		receivedFrom:    make([]*peer.Peer, 0),
 	}
-	copy(req.receivedTxBytes, key)
-	return req, len(key), nil
+	copy(wu.receivedTxBytes, key)
+	return wu
+}
+
+// defines the factory function for WorkUnits.
+func workUnitFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+	return newWorkUnit(key), nil
 }
 
 // CachedWorkUnit represents a cached WorkUnit.
@@ -73,10 +78,6 @@ func (wu *WorkUnit) ObjectStorageKey() []byte {
 
 func (wu *WorkUnit) ObjectStorageValue() []byte {
 	return nil
-}
-
-func (wu *WorkUnit) UnmarshalObjectStorageValue(_ []byte) (consumedBytes int, err error) {
-	return 0, nil
 }
 
 // UpdateState updates the WorkUnit's state.
