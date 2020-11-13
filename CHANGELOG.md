@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.5.4-rc1] - 21.10.2020
+## [0.5.4] - 13.11.2020
 
 ### Changed
 
@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
     - improve tryte distribution of tools/rand-seed
     - do not change default GOMAXPROCS value
     - several CLI flag problems
+    - delete invalid milestones (2272660, 2272661) that could not be solidified after COO crashed
 
 ## [0.5.3] - 14.09.2020
 

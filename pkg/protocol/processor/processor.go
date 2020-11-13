@@ -35,6 +35,15 @@ const (
 var (
 	workerCount         = curl.Hasher().BatchSize() * curl.Hasher().WorkerCount()
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
+
+	invalidMilestoneHashes = map[string]struct{}{
+		string(hornet.HashFromHashTrytes("HBXSPG9ISUFPIRLFWEXGEXKEDRXZQMXYQMGHPPHCUNVRHQMRHVEVZIGLZVLAZ9ALHMTYZZBXRHLVA9999")): {},
+		string(hornet.HashFromHashTrytes("QXKJWQBYTQWQWOAOSQ9EAOCKXCZPLJFTMJBUYZYJVNECV9FTKTSPNCPFEHWBZBWXUMLXKIXQBTNO99999")): {},
+		string(hornet.HashFromHashTrytes("J9RDJWAEUXMXDUNLPIPXTSQYHZTKWNCTJFKWNZOJOHXLXTEEJFZGUSYNZVWYBZMXMKQPCGKBAZVZA9999")): {},
+		string(hornet.HashFromHashTrytes("PANOKVXNOGIOHEIDLCYFJOUVXWAUR9FSYVRWGAXZJHPFKCMBOXCZAKQLZN9QEX9LQLFWNUADM9OV99999")): {},
+		string(hornet.HashFromHashTrytes("9LICXLMXACLWTQUTURTNFQQPGCKJMVNVWZNGVMSOWZJTLFDCNELENMUFT9HBGLTQORJNOHOVHOISA9999")): {},
+		string(hornet.HashFromHashTrytes("YTKLUHCTUQVJILTKNUWDYCOGSPPAWXAHRHJEIV9XZTNCCDOSRJFSWHLK9WQGOCVRAAMJFOYAVBJYZ9999")): {},
+	}
 )
 
 // New creates a new processor which parses messages.
@@ -176,6 +185,11 @@ func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trin
 
 	if timeValid, _ := proc.ValidateTimestamp(hornetTx); !timeValid {
 		return ErrInvalidTimestamp
+	}
+
+	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(hornetTx.GetTxHash())]; isInvalidMilestoneTx {
+		// do not accept the invalid milestone transactions
+		return consts.ErrInvalidTransactionHash
 	}
 
 	proc.Events.TransactionProcessed.Trigger(hornetTx, (*rqueue.Request)(nil), (*peer.Peer)(nil))
@@ -332,6 +346,13 @@ func (proc *Processor) processWorkUnit(wu *WorkUnit, p *peer.Peer) {
 	wu.receivedTxHash = hornetTx.GetTxHash()
 	wu.tx = hornetTx
 	wu.dataLock.Unlock()
+
+	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(wu.receivedTxHash)]; isInvalidMilestoneTx {
+		// do not accept the invalid milestone transactions
+		wu.UpdateState(Invalid)
+		wu.punish()
+		return
+	}
 
 	wu.UpdateState(Hashed)
 
