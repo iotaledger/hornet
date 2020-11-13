@@ -24,7 +24,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201016154508-2514b782563a
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201021142308-f12fd6c4e069
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201113171647-14f7a0d87712
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0

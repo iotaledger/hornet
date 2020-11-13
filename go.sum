@@ -291,8 +291,8 @@ github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod
 github.com/iotaledger/hive.go v0.0.0-20201016154508-2514b782563a h1:qIx5/33BqXKQFaLhfq8h3zqBFJMI+49Y/48SAmr5PNk=
 github.com/iotaledger/hive.go v0.0.0-20201016154508-2514b782563a/go.mod h1:h56kcBj+CYn3UEoCG6RJI5lVdYVJmhmeuIHOUgFCfEg=
 github.com/iotaledger/iota.go v1.0.0-beta.15/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
-github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201021142308-f12fd6c4e069 h1:yZwdtzAKntWsQDcFnwXb8vWDmBWEceSRKTyDVyK/Or8=
-github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201021142308-f12fd6c4e069/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201113171647-14f7a0d87712 h1:p6ZjZoXLpv7NlCv6r9uMCg8EZM1ugbaLe8z4m1wPh4s=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201113171647-14f7a0d87712/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
 github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03 h1:FUwcHNlEqkqLjLBdCp5PRlCFijNjvcYANOZXzCfXwCM=
 github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03/go.mod h1:MK8+TM0La+2rjBD4jE12Kj1pCCxK7d2LK/UM3ncEo0o=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=

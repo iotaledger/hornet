@@ -43,8 +43,9 @@ var (
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone = milestone.Index(0)
 
-	ErrMilestoneNotFound = errors.New("milestone not found")
-	ErrDivisionByZero    = errors.New("division by zero")
+	ErrMilestoneNotFound     = errors.New("milestone not found")
+	ErrDivisionByZero        = errors.New("division by zero")
+	ErrMissingMilestoneFound = errors.New("missing milestone found")
 )
 
 type ConfirmedMilestoneMetric struct {
@@ -409,8 +410,19 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := tangle.FindClosestNextMilestoneOrNil(currentSolidIndex) // bundle +1
-		if cachedClosestNextMs.GetBundle().GetMilestoneIndex() == milestoneIndexToSolidify {
-			log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetBundle().GetMilestoneIndex())
+		cachedClosestNextMsIndex := cachedClosestNextMs.GetBundle().GetMilestoneIndex()
+
+		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
+			log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, cachedClosestNextMsIndex)
+
+			// no Milestones found in between => search an older milestone in the solid cone
+			if found, err := searchMissingMilestone(currentSolidIndex, cachedClosestNextMsIndex, cachedMsToSolidify.GetBundle().GetTailMetadata(), signalChanMilestoneStopSolidification); !found { // meta pass +1
+				if err != nil {
+					// no milestones found => this should not happen!
+					log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
+				}
+				log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
+			}
 		}
 		cachedClosestNextMs.Release() // bundle -1
 
@@ -476,6 +488,85 @@ func solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
 	}
 
 	milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
+}
+
+func searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, cachedMsTailTxMeta *tangle.CachedMetadata, abortSignal chan struct{}) (found bool, err error) {
+
+	defer cachedMsTailTxMeta.Release() // meta -1
+
+	var milestoneFound bool
+
+	ts := time.Now()
+
+	// search milestones in the cone that are not persisted in the DB yet by traversing the tangle
+	if err := dag.TraverseApprovees(cachedMsTailTxMeta.GetMetadata().GetTxHash(),
+		// traversal stops if no more transactions pass the given condition
+		// Caution: condition func is not in DFS order
+		func(cachedTxMeta *tangle.CachedMetadata) (bool, error) { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
+
+			// if the tx is confirmed by an older milestone, there is no need to traverse its approvees
+			if confirmed, at := cachedTxMeta.GetMetadata().GetConfirmed(); confirmed && (at <= solidMilestoneIndex) {
+				return false, nil
+			}
+
+			return true, nil
+		},
+		// consumer
+		func(cachedTxMeta *tangle.CachedMetadata) error { // meta +1
+			defer cachedTxMeta.Release(true) // meta -1
+
+			cachedTx := tangle.GetCachedTransactionOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // tx +1
+			if cachedTx == nil {
+				return fmt.Errorf("%w hash: %s", tangle.ErrTransactionNotFound, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+			}
+			defer cachedTx.Release(true) // tx -1
+
+			if tangle.IsMaybeMilestone(cachedTx.Retain()) { // tx pass +1
+				// this tx could belong to a milestone
+				// => load bundle, and start the milestone check
+				cachedBndl := tangle.GetCachedBundleOrNil(cachedTxMeta.GetMetadata().GetTxHash()) // bundle +1
+				if cachedBndl == nil {
+					// bundle must be created here
+					return fmt.Errorf("searchMissingMilestone: bundle not found: %s, TxHash: %s", cachedTx.GetTransaction().Tx.Bundle, cachedTxMeta.GetMetadata().GetTxHash().Trytes())
+				}
+				defer cachedBndl.Release(true) // bundle -1
+
+				isMilestone, err := tangle.CheckIfMilestone(cachedBndl.GetBundle())
+				if err != nil {
+					log.Infof("searchMissingMilestone: Milestone check failed: %s", err)
+				}
+
+				if isMilestone {
+					msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
+					if (msIndex > solidMilestoneIndex) && (msIndex < startMilestoneIndex) {
+						// milestone found!
+						processValidMilestone(cachedBndl.Retain()) // bundle pass +1
+						return ErrMissingMilestoneFound            // we return this as an error to stop the traverser
+					}
+				}
+			}
+
+			return nil
+		},
+		// called on missing approvees
+		// return error on missing approvees
+		nil,
+		// called on solid entry points
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		false, true, abortSignal); err != nil {
+		if err == tangle.ErrOperationAborted {
+			return false, nil
+		} else if err == ErrMissingMilestoneFound {
+			milestoneFound = true
+		} else {
+			return false, err
+		}
+	}
+
+	log.Infof("searchMissingMilestone finished, found: %v, total: %v", milestoneFound, time.Since(ts))
+	return milestoneFound, nil
 }
 
 func getConfirmedMilestoneMetric(cachedMsTailTx *tangle.CachedTransaction, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
