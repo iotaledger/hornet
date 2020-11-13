@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.5] - 13.11.2020
+
+### Changed
+
+    - traverse the cone of a solid milestone to reapply former milestones if they were missing in the database
+
+### Fixed
+
+    - update iota.go to fix finalizing of bundles
+
 ## [0.5.4] - 13.11.2020
 
 ### Changed
