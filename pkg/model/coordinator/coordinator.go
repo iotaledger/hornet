@@ -83,16 +83,15 @@ type Coordinator struct {
 // MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.Hash hashing functions.
 // Also verifies that the available function is available or else panics.
 func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
-	//TODO: golang 1.15 will include a String() method to get the string from the crypto.Hash, so we could iterate over them instead
 	var hashFunc crypto.Hash
 	switch strings.ToLower(name) {
-	case "blake2b-512":
+	case strings.ToLower(crypto.BLAKE2b_512.String()):
 		hashFunc = crypto.BLAKE2b_512
-	case "blake2b-384":
+	case strings.ToLower(crypto.BLAKE2b_384.String()):
 		hashFunc = crypto.BLAKE2b_384
-	case "blake2b-256":
+	case strings.ToLower(crypto.BLAKE2b_256.String()):
 		hashFunc = crypto.BLAKE2b_256
-	case "blake2s-256":
+	case strings.ToLower(crypto.BLAKE2s_256.String()):
 		hashFunc = crypto.BLAKE2s_256
 	default:
 		panic(fmt.Sprintf("Unsupported merkle tree hash func '%s'", name))
