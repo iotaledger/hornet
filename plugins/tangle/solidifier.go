@@ -541,8 +541,13 @@ func searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneI
 					msIndex := cachedBndl.GetBundle().GetMilestoneIndex()
 					if (msIndex > solidMilestoneIndex) && (msIndex < startMilestoneIndex) {
 						// milestone found!
-						processValidMilestone(cachedBndl.Retain()) // bundle pass +1
-						return ErrMissingMilestoneFound            // we return this as an error to stop the traverser
+						if cachedBndl.GetBundle().IsValid() && cachedBndl.GetBundle().ValidStrictSemantics() && cachedBndl.GetBundle().IsMilestone() {
+							// Force release to store milestones without caching
+							tangle.StoreMilestone(cachedBndl.GetBundle()).Release(true) // milestone +-0
+
+							processValidMilestone(cachedBndl.Retain()) // bundle pass +1
+							return ErrMissingMilestoneFound            // we return this as an error to stop the traverser
+						}
 					}
 				}
 			}
