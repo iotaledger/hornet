@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.6] - 15.11.2020
+
+### Changed
+
+    - Updated to Go 1.15.5 (security fixes)
+
+### Fixed
+
+    - Store milestone after it was found in serachMissingMilestone
+
 ## [0.5.5] - 13.11.2020
 
 ### Changed
