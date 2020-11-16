@@ -388,7 +388,6 @@ func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
 		return nil, fmt.Errorf("unable to create gossip stream to %s: %w", peerID, err)
 	}
 	// now some special sauce to trigger the remote peer's SetStreamHandler
-	// ¯\_(ツ)_/¯
 	// https://github.com/libp2p/go-libp2p/issues/729
 	_, _ = stream.Read(make([]byte, 0))
 	return stream, nil
