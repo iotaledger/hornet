@@ -67,6 +67,8 @@ const (
 var defaultServiceOptions = []ServiceOption{
 	WithSendQueueSize(defaultSendQueueSize),
 	WithStreamConnectTimeout(defaultStreamConnectTimeout),
+	WithStreamReadTimeout(1 * time.Minute),
+	WithStreamWriteTimeout(10 * time.Second),
 	WithUnknownPeersLimit(0),
 }
 
@@ -76,6 +78,10 @@ type ServiceOptions struct {
 	SendQueueSize int
 	// Timeout for connecting a stream.
 	StreamConnectTimeout time.Duration
+	// The read timeout for a stream.
+	StreamReadTimeout time.Duration
+	// The write timeout for a stream.
+	StreamWriteTimeout time.Duration
 	// The logger to use to log events.
 	Logger *logger.Logger
 	// The amount of unknown peers to allow to have a gossip stream with.
@@ -100,6 +106,20 @@ func WithSendQueueSize(size int) ServiceOption {
 func WithStreamConnectTimeout(dur time.Duration) ServiceOption {
 	return func(opts *ServiceOptions) {
 		opts.StreamConnectTimeout = dur
+	}
+}
+
+// WithStreamReadTimeout defines the read timeout for reading from a stream.
+func WithStreamReadTimeout(dur time.Duration) ServiceOption {
+	return func(opts *ServiceOptions) {
+		opts.StreamReadTimeout = dur
+	}
+}
+
+// WithStreamWriteTimeout defines the write timeout for writing to a stream.
+func WithStreamWriteTimeout(dur time.Duration) ServiceOption {
+	return func(opts *ServiceOptions) {
+		opts.StreamWriteTimeout = dur
 	}
 }
 
@@ -395,7 +415,7 @@ func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
 
 // registers a protocol instance for the given peer and stream.
 func (s *Service) registerProtocol(peerID peer.ID, stream network.Stream) *Protocol {
-	proto := NewProtocol(peerID, stream, s.opts.SendQueueSize)
+	proto := NewProtocol(peerID, stream, s.opts.SendQueueSize, s.opts.StreamReadTimeout, s.opts.StreamWriteTimeout)
 	s.streams[peerID] = proto
 	return proto
 }
