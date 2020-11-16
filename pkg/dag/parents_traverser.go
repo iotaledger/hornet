@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 type ParentTraverser struct {
@@ -39,7 +39,7 @@ type ParentTraverser struct {
 func NewParentTraverser(storage *storage.Storage, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
 
 	return &ParentTraverser{
-		storage:            storage,
+		storage:           storage,
 		condition:         condition,
 		consumer:          consumer,
 		onMissingParent:   onMissingParent,
@@ -138,7 +138,7 @@ func (t *ParentTraverser) processStackParents() error {
 
 	select {
 	case <-t.abortSignal:
-		return tangle.ErrOperationAborted
+		return common.ErrOperationAborted
 	default:
 	}
 
@@ -180,7 +180,7 @@ func (t *ParentTraverser) processStackParents() error {
 
 			if t.onMissingParent == nil {
 				// stop processing the stack with an error
-				return fmt.Errorf("%w: message %s", tangle.ErrMessageNotFound, currentMessageID.Hex())
+				return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.Hex())
 			}
 
 			// stop processing the stack if the caller returns an error

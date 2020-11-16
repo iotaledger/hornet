@@ -5,10 +5,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/cpu"
-
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 const (
@@ -79,7 +78,7 @@ func waitForLowerCPUUsage(cpuMaxUsage float64, shutdownSignal <-chan struct{}) e
 
 		select {
 		case <-shutdownSignal:
-			return tangle.ErrOperationAborted
+			return common.ErrOperationAborted
 		default:
 		}
 

@@ -3,8 +3,6 @@ package tangle
 import (
 	"github.com/iotaledger/hive.go/events"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -33,27 +31,6 @@ func UTXOOutputCaller(handler interface{}, params ...interface{}) {
 
 func UTXOSpentCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*utxo.Spent))(params[0].(*utxo.Spent))
-}
-
-var Events = pluginEvents{
-	MPSMetricsUpdated:             events.NewEvent(MPSMetricsCaller),
-	ReceivedNewMessage:            events.NewEvent(tangle.NewMessageCaller),
-	ReceivedKnownMessage:          events.NewEvent(tangle.MessageCaller),
-	ProcessedMessage:              events.NewEvent(tangle.MessageIDCaller),
-	MessageSolid:                  events.NewEvent(tangle.MessageMetadataCaller),
-	MessageReferenced:             events.NewEvent(tangle.MessageReferencedCaller),
-	ReceivedNewMilestone:          events.NewEvent(tangle.MilestoneCaller),
-	LatestMilestoneChanged:        events.NewEvent(tangle.MilestoneCaller),
-	LatestMilestoneIndexChanged:   events.NewEvent(milestone.IndexCaller),
-	MilestoneConfirmed:            events.NewEvent(ConfirmedMilestoneCaller),
-	SolidMilestoneChanged:         events.NewEvent(tangle.MilestoneCaller),
-	SolidMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
-	SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
-	PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
-	NewConfirmedMilestoneMetric:   events.NewEvent(NewConfirmedMilestoneMetricCaller),
-	MilestoneSolidificationFailed: events.NewEvent(milestone.IndexCaller),
-	NewUTXOOutput:                 events.NewEvent(UTXOOutputCaller),
-	NewUTXOSpent:                  events.NewEvent(UTXOSpentCaller),
 }
 
 type pluginEvents struct {

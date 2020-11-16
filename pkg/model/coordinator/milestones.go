@@ -6,8 +6,8 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
 )
 

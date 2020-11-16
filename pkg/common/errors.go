@@ -1,4 +1,4 @@
-package tangle
+package common
 
 import (
 	"github.com/pkg/errors"

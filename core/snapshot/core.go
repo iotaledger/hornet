@@ -17,10 +17,10 @@ import (
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 const (
@@ -84,7 +84,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage *storage.Storage
+	Storage    *storage.Storage
+	Tangle     *tangle.Tangle
 	UTXO       *utxo.Manager
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
@@ -170,8 +171,8 @@ func run() {
 	CorePlugin.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting LocalSnapshots ... done")
 
-		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		defer tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		defer deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 
 		for {
 			select {

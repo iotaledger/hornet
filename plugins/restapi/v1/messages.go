@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	iotago "github.com/iotaledger/iota.go"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -21,7 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 var (
@@ -222,7 +221,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 
 		if err != nil {
-			if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+			if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
 				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
 			}
 			return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
@@ -246,15 +245,15 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
-	msgProcessedChan := tanglecore.RegisterMessageProcessedEvent(message.GetMessageID())
+	msgProcessedChan := deps.Tangle.RegisterMessageProcessedEvent(message.GetMessageID())
 
 	if err := deps.MessageProcessor.Emit(message); err != nil {
-		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
+		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
 	if err := utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout); err == context.DeadlineExceeded {
-		tanglecore.DeregisterMessageProcessedEvent(message.GetMessageID())
+		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
 	}
 
 	return &messageCreatedResponse{

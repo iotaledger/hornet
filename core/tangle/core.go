@@ -14,15 +14,16 @@ import (
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -63,12 +64,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage *storage.Storage
-	ServerMetrics              *metrics.ServerMetrics
-	Manager                    *p2p.Manager
-	RequestQueue               gossippkg.RequestQueue
-	MessageProcessor           *gossippkg.MessageProcessor
-	Service                    *gossippkg.Service
+	Storage                    *storage.Storage
+	Tangle                     *tangle.Tangle
 	NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
 	CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
 }
@@ -76,6 +73,22 @@ type dependencies struct {
 func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
+	}); err != nil {
+		panic(err)
+	}
+
+	type tangledeps struct {
+		dig.In
+		Storage          *storage.Storage
+		RequestQueue     gossippkg.RequestQueue
+		Service          *gossippkg.Service
+		MessageProcessor *gossippkg.MessageProcessor
+		ServerMetrics    *metrics.ServerMetrics
+	}
+
+	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
+		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
+			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), gossip.RequestMilestoneParents, gossip.RequestMultiple, gossip.RequestParents, CorePlugin.Daemon(), *syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}
@@ -108,9 +121,9 @@ func configure() {
 	)
 
 	configureEvents()
-	configureTangleProcessor()
+	deps.Tangle.ConfigureTangleProcessor()
 
-	gossip.AddRequestBackpressureSignal(IsReceiveTxWorkerPoolBusy)
+	gossip.AddRequestBackpressureSignal(deps.Tangle.IsReceiveTxWorkerPoolBusy)
 }
 
 func run() {
@@ -118,8 +131,8 @@ func run() {
 	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := revalidateDatabase(); err != nil {
-			if err == tangle.ErrOperationAborted {
+		if err := deps.Tangle.RevalidateDatabase(); err != nil {
+			if err == common.ErrOperationAborted {
 				log.Info("database revalidation aborted")
 				os.Exit(0)
 			}
@@ -142,7 +155,7 @@ func run() {
 
 	CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		abortMilestoneSolidification()
+		deps.Tangle.AbortMilestoneSolidification()
 
 		log.Info("Flushing caches to database...")
 		deps.Storage.ShutdownStorages()
@@ -150,24 +163,13 @@ func run() {
 
 	}, shutdown.PriorityFlushToDatabase)
 
-	// set latest known milestone from database
-	latestMilestoneFromDatabase := deps.Tangle.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < deps.Tangle.GetSolidMilestoneIndex() {
-		latestMilestoneFromDatabase = deps.Tangle.GetSolidMilestoneIndex()
-	}
-	deps.Tangle.SetLatestMilestoneIndex(latestMilestoneFromDatabase, updateSyncedAtStartup)
-
-	runTangleProcessor()
+	deps.Tangle.RunTangleProcessor()
 
 	// create a background worker that prints a status message every second
 	CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(printStatus, 1*time.Second, shutdownSignal)
+		timeutil.Ticker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
 
-	// create a background worker that "measures" the MPS value every second
-	CorePlugin.Daemon().BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(measureMPS, 1*time.Second, shutdownSignal)
-	}, shutdown.PriorityMetricsUpdater)
 }
 
 func configureEvents() {
@@ -191,31 +193,27 @@ func configureEvents() {
 		defer cachedMsg.Release(true) // msg -1
 
 		if deps.Storage.IsNodeSyncedWithThreshold() {
+			deps.Tangle.SolidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
 		}
 	})
 }
 
 func attachHeartbeatEvents() {
-	Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-	Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
-	Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+	deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
 func attachSolidifierGossipEvents() {
-	Events.ReceivedNewMessage.Attach(onReceivedNewTx)
+	deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTx)
 }
 
 func detachHeartbeatEvents() {
-	Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-	Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
-	Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+	deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }
 
 func detachSolidifierGossipEvents() {
-	Events.ReceivedNewMessage.Detach(onReceivedNewTx)
-}
-
-// SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup
-func SetUpdateSyncedAtStartup(updateSynced bool) {
-	updateSyncedAtStartup = updateSynced
+	deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTx)
 }

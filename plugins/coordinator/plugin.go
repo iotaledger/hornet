@@ -14,7 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/core/protocfg"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -88,6 +88,7 @@ var (
 type dependencies struct {
 	dig.In
 	Storage          *storage.Storage
+	Tangle           *tangle.Tangle
 	PoWHandler       *powpackage.Handler
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
@@ -97,7 +98,7 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	// set the node as synced at startup, so the coo plugin can select tips
-	tanglecore.SetUpdateSyncedAtStartup(true)
+	deps.Tangle.SetUpdateSyncedAtStartup(true)
 
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex, deps.PoWHandler)
@@ -188,7 +189,7 @@ func run() {
 	// create a background worker that issues milestones
 	Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		// wait until all background workers of the tangle plugin are started
-		tanglecore.WaitForTangleProcessorStartup()
+		deps.Tangle.WaitForTangleProcessorStartup()
 
 		attachEvents()
 
@@ -258,9 +259,9 @@ func run() {
 					log.Panic(criticalErr)
 				}
 				if err != nil {
-					if err == tangle.ErrNodeNotSynced {
+					if err == common.ErrNodeNotSynced {
 						// Coordinator is not synchronized, trigger the solidifier manually
-						tanglecore.TriggerSolidifier()
+						deps.Tangle.TriggerSolidifier()
 					}
 					log.Warn(err)
 					continue
@@ -285,18 +286,18 @@ func run() {
 
 func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
-	msgSolidEventChan := tanglecore.RegisterMessageSolidEvent(msg.GetMessageID())
+	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.GetMessageID())
 
 	var milestoneConfirmedEventChan chan struct{}
 
 	if len(msIndex) > 0 {
-		milestoneConfirmedEventChan = tanglecore.RegisterMilestoneConfirmedEvent(msIndex[0])
+		milestoneConfirmedEventChan = deps.Tangle.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
 	if err := deps.MessageProcessor.Emit(msg); err != nil {
-		tanglecore.DeregisterMessageSolidEvent(msg.GetMessageID())
+		deps.Tangle.DeregisterMessageSolidEvent(msg.GetMessageID())
 		if len(msIndex) > 0 {
-			tanglecore.DeregisterMilestoneConfirmedEvent(msIndex[0])
+			deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
 		}
 
 		return err
@@ -380,14 +381,14 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	tanglecore.Events.MessageSolid.Attach(onMessageSolid)
-	tanglecore.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 	coo.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
 	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 
 func detachEvents() {
-	tanglecore.Events.MessageSolid.Detach(onMessageSolid)
-	tanglecore.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 	coo.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }

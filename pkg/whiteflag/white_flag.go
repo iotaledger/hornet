@@ -7,12 +7,12 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 )
 
 var (
@@ -92,7 +92,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		if !exists {
 			cachedMessage = s.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
-				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
+				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 			}
 
 			// release the messages at the end to speed up calculation

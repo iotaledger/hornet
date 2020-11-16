@@ -14,7 +14,7 @@ import (
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func init() {
@@ -56,7 +56,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage     *storage.Storage
+	Storage    *storage.Storage
+	Tangle     *tangle.Tangle
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -74,7 +75,7 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messagesWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishMessage(task.Param(0).(*tanglepkg.CachedMessage)) // metadata pass +1
+		publishMessage(task.Param(0).(*storage.CachedMessage)) // metadata pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -240,15 +241,15 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT Events ... done")
 
-		tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
-		tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
+		deps.Tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
 
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		tangle.Events.MessageSolid.Attach(onMessageSolid)
-		tangle.Events.MessageReferenced.Attach(onMessageReferenced)
+		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+		deps.Tangle.Events.MessageReferenced.Attach(onMessageReferenced)
 
-		tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
-		tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
+		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
+		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
 
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
@@ -259,15 +260,15 @@ func run() {
 
 		<-shutdownSignal
 
-		tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
-		tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+		deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
+		deps.Tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
 
-		tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		tangle.Events.MessageSolid.Detach(onMessageSolid)
-		tangle.Events.MessageReferenced.Detach(onMessageReferenced)
+		deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+		deps.Tangle.Events.MessageReferenced.Detach(onMessageReferenced)
 
-		tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
-		tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
+		deps.Tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
+		deps.Tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
 
 		messagesWorkerPool.StopAndWait()
 		newLatestMilestoneWorkerPool.StopAndWait()

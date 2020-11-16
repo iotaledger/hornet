@@ -12,11 +12,10 @@ import (
 	gossipcore "github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func init() {
@@ -51,6 +50,7 @@ var (
 type dependencies struct {
 	dig.In
 	Storage      *storage.Storage
+	Tangle       *tangle.Tangle
 	RequestQueue gossip.RequestQueue
 	Service      *gossip.Service
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
@@ -117,7 +117,7 @@ func configureEvents() {
 		// that we should manually kick start the milestone solidifier.
 		if msRequested != int(advRange) {
 			log.Info("Manually starting solidifier, as some milestones are already in the database")
-			tanglecore.TriggerSolidifier()
+			deps.Tangle.TriggerSolidifier()
 		}
 	})
 
@@ -129,8 +129,8 @@ func configureEvents() {
 
 func attachEvents() {
 	deps.Service.Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
-	tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-	tanglecore.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
+	deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
 	warpSync.Events.Start.Attach(onStart)
@@ -139,8 +139,8 @@ func attachEvents() {
 
 func detachEvents() {
 	deps.Service.Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
-	tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-	tanglecore.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
+	deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
 	warpSync.Events.Start.Detach(onStart)
