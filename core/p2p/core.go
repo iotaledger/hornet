@@ -17,6 +17,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -24,10 +26,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
-	libp2pquic "github.com/libp2p/go-libp2p-quic-transport"
-
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/iotaledger/hive.go/logger"
 
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -114,7 +112,6 @@ func provide(c *dig.Container) {
 			libp2p.Identity(prvKey),
 			libp2p.ListenAddrStrings(bindAddrs...),
 			libp2p.Peerstore(peerStore),
-			libp2p.Transport(libp2pquic.NewTransport),
 			libp2p.DefaultTransports,
 			libp2p.ConnectionManager(connmgr.NewConnManager(
 				deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
