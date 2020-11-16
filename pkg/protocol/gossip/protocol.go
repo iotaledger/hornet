@@ -36,7 +36,7 @@ type ProtocolEvents struct {
 }
 
 // NewProtocol creates a new gossip protocol instance associated to the given peer.
-func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int) *Protocol {
+func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readTimeout, writeTimeout time.Duration) *Protocol {
 	defs := gossipMessageRegistry.Definitions()
 	sentEvents := make([]*events.Event, len(defs))
 	for i, def := range defs {
@@ -57,8 +57,10 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int) *Prot
 			Closed: events.NewEvent(events.CallbackCaller),
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
-		Stream:    stream,
-		SendQueue: make(chan []byte, sendQueueSize),
+		Stream:       stream,
+		SendQueue:    make(chan []byte, sendQueueSize),
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
 	}
 }
 
@@ -81,8 +83,10 @@ type Protocol struct {
 	// The send queue into which to enqueue messages to send.
 	SendQueue chan []byte
 	// The metrics around this protocol instance.
-	Metrics Metrics
-	sendMu  sync.Mutex
+	Metrics      Metrics
+	sendMu       sync.Mutex
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 }
 
 // Enqueue enqueues the given gossip protocol message to be sent to the peer.
@@ -96,10 +100,23 @@ func (p *Protocol) Enqueue(data []byte) {
 	}
 }
 
+// Read reads from the stream into the given buffer.
+func (p *Protocol) Read(buf []byte) (int, error) {
+	if err := p.Stream.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+		return 0, fmt.Errorf("unable to set read deadline: %w", err)
+	}
+	r, err := p.Stream.Read(buf)
+	return r, err
+}
+
 // Send sends the given gossip message on the underlying Protocol.Stream.
 func (p *Protocol) Send(message []byte) error {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
+
+	if err := p.Stream.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return fmt.Errorf("unable to set write deadline: %w", err)
+	}
 
 	// write message
 	if _, err := p.Stream.Write(message); err != nil {
