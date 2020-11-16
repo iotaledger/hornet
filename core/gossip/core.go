@@ -106,6 +106,8 @@ func provide(c *dig.Container) {
 		return gossip.NewService(iotaGossipProtocolID, deps.Host, deps.Manager,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
+			gossip.WithStreamReadTimeout(time.Duration(deps.NodeConfig.Int(CfgGossipStreamReadTimeoutSec))*time.Second),
+			gossip.WithStreamWriteTimeout(time.Duration(deps.NodeConfig.Int(CfgGossipStreamWriteTimeoutSec))*time.Second),
 		)
 	}); err != nil {
 		panic(err)
@@ -133,7 +135,7 @@ func configure() {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
-				r, err := proto.Stream.Read(buf)
+				r, err := proto.Read(buf)
 				if err != nil {
 					proto.Parser.Events.Error.Trigger(err)
 					return
@@ -164,6 +166,7 @@ func configure() {
 				case data := <-proto.SendQueue:
 					if err := proto.Send(data); err != nil {
 						proto.Events.Errors.Trigger(err)
+						return
 					}
 				}
 			}
