@@ -2,7 +2,6 @@ package node
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/daemon"
@@ -33,7 +32,6 @@ type Pluggable struct {
 	Configure Callback
 	// Run gets called in the run stage of node initialization.
 	Run Callback
-	wg  *sync.WaitGroup
 }
 
 // InitPlugin is the module initializing configuration of the node.
