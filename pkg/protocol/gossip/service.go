@@ -159,13 +159,13 @@ func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, opts
 		manager:             manager,
 		opts:                srvOpts,
 		unknownPeers:        map[peer.ID]struct{}{},
-		inboundStreamChan:   make(chan network.Stream),
-		connectedChan:       make(chan *connectionmsg),
-		disconnectedChan:    make(chan *connectionmsg),
-		streamClosedChan:    make(chan *streamclosedmsg),
-		relationUpdatedChan: make(chan *relationupdatedmsg),
-		streamReqChan:       make(chan *streamreqmsg),
-		forEachChan:         make(chan *foreachmsg),
+		inboundStreamChan:   make(chan network.Stream, 10),
+		connectedChan:       make(chan *connectionmsg, 10),
+		disconnectedChan:    make(chan *connectionmsg, 10),
+		streamClosedChan:    make(chan *streamclosedmsg, 10),
+		relationUpdatedChan: make(chan *relationupdatedmsg, 10),
+		streamReqChan:       make(chan *streamreqmsg, 10),
+		forEachChan:         make(chan *foreachmsg, 10),
 	}
 	if s.opts.Logger != nil {
 		s.registerLoggerOnEvents()
