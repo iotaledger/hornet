@@ -13,7 +13,7 @@ var defaultNodeOptions = []NodeOption{
 type NodeOptions struct {
 	initPlugin  *InitPlugin
 	daemon      daemon.Daemon
-	coreModules []*CorePlugin
+	corePlugins []*CorePlugin
 	plugins     []*Plugin
 }
 
@@ -42,9 +42,9 @@ func WithDaemon(daemon daemon.Daemon) NodeOption {
 }
 
 // WithCorePlugins sets the core plugins.
-func WithCorePlugins(coreModules ...*CorePlugin) NodeOption {
+func WithCorePlugins(corePlugins ...*CorePlugin) NodeOption {
 	return func(args *NodeOptions) {
-		args.coreModules = append(args.coreModules, coreModules...)
+		args.corePlugins = append(args.corePlugins, corePlugins...)
 	}
 }
 

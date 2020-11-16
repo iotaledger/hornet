@@ -1,4 +1,4 @@
-package tangle
+package common
 
 import (
 	"github.com/pkg/errors"
@@ -12,19 +12,3 @@ var (
 	// ErrNodeNotSynced is returned when the node is not synchronized.
 	ErrNodeNotSynced = errors.New("node is not synchronized")
 )
-
-func NewDatabaseError(cause error) *ErrDatabaseError {
-	return &ErrDatabaseError{Inner: cause}
-}
-
-type ErrDatabaseError struct {
-	Inner error
-}
-
-func (e ErrDatabaseError) Cause() error {
-	return e.Inner
-}
-
-func (e ErrDatabaseError) Error() string {
-	return "database error: " + e.Inner.Error()
-}

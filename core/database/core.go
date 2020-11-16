@@ -3,14 +3,15 @@ package database
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
+	"go.uber.org/dig"
+
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
 )
@@ -36,24 +37,24 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle *tangle.Tangle
+	Storage *storage.Storage
 }
 
 func provide(c *dig.Container) {
-	type tangledeps struct {
+	type storagedeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		Profile    *profile.Profile
 	}
 
-	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-		return tangle.New(deps.NodeConfig.String(CfgDatabasePath), deps.Profile.Caches)
+	if err := c.Provide(func(deps storagedeps) *storage.Storage {
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Profile.Caches)
 	}); err != nil {
 		panic(err)
 	}
 
-	if err := c.Provide(func(tangle *tangle.Tangle) *utxo.Manager {
-		return tangle.UTXO()
+	if err := c.Provide(func(storage *storage.Storage) *utxo.Manager {
+		return storage.UTXO()
 	}); err != nil {
 		panic(err)
 	}
@@ -62,23 +63,23 @@ func provide(c *dig.Container) {
 func configure() {
 	log = logger.NewLogger(CorePlugin.Name)
 
-	if !deps.Tangle.IsCorrectDatabaseVersion() {
-		if !deps.Tangle.UpdateDatabaseVersion() {
+	if !deps.Storage.IsCorrectDatabaseVersion() {
+		if !deps.Storage.UpdateDatabaseVersion() {
 			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
 		}
 	}
 
 	CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		deps.Tangle.MarkDatabaseHealthy()
+		deps.Storage.MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")
-		deps.Tangle.CloseDatabases()
+		deps.Storage.CloseDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 }
 
 func RunGarbageCollection() {
-	if !deps.Tangle.DatabaseSupportsCleanup() {
+	if !deps.Storage.DatabaseSupportsCleanup() {
 		return
 	}
 
@@ -93,7 +94,7 @@ func RunGarbageCollection() {
 		Start: start,
 	})
 
-	err := deps.Tangle.CleanupDatabases()
+	err := deps.Storage.CleanupDatabases()
 
 	end := time.Now()
 
@@ -103,8 +104,8 @@ func RunGarbageCollection() {
 	})
 
 	if err != nil {
-		if err != tangle.ErrNothingToCleanUp {
-			log.Warnf("full database garbage collection failed with error: %s. took: %v", err.Error(), end.Sub(start).Truncate(time.Millisecond))
+		if err != storage.ErrNothingToCleanUp {
+			log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
 			return
 		}
 	}

@@ -5,22 +5,22 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/core/gossip"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 const (
@@ -84,6 +84,7 @@ var (
 
 type dependencies struct {
 	dig.In
+	Storage    *storage.Storage
 	Tangle     *tangle.Tangle
 	UTXO       *utxo.Manager
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
@@ -110,7 +111,7 @@ func configure() {
 
 	gossip.AddRequestBackpressureSignal(isSnapshottingOrPruning)
 
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		if !*forceLoadingSnapshot {
 			// If we don't enforce loading of a snapshot,
@@ -140,14 +141,14 @@ func configure() {
 
 		log.Infof("Downloading snapshot from one of the provided sources %v", urls)
 		if err := downloadSnapshotFile(path, urls); err != nil {
-			log.Fatalf("Error downloading snapshot file: %w", err)
+			log.Fatalf("Error downloading snapshot file: %s", err)
 		}
 
 		log.Info("Snapshot download finished")
 	}
 
 	if err := LoadFullSnapshotFromFile(path); err != nil {
-		deps.Tangle.MarkDatabaseCorrupted()
+		deps.Storage.MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}
 }
@@ -170,8 +171,8 @@ func run() {
 	CorePlugin.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting LocalSnapshots ... done")
 
-		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		defer tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		defer deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 
 		for {
 			select {
@@ -187,9 +188,9 @@ func run() {
 					localSnapshotPath := deps.NodeConfig.String(CfgSnapshotsPath)
 					if err := createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
 						if errors.Is(err, ErrCritical) {
-							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
+							log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 						}
-						log.Warn(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
+						log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
 					}
 				}
 
@@ -201,7 +202,7 @@ func run() {
 					}
 
 					if _, err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
-						log.Debugf("pruning aborted: %v", err.Error())
+						log.Debugf("pruning aborted: %v", err)
 					}
 				}
 
@@ -215,7 +216,7 @@ func PruneDatabaseByDepth(depth milestone.Index) (milestone.Index, error) {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
-	solidMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
+	solidMilestoneIndex := deps.Storage.GetSolidMilestoneIndex()
 
 	if solidMilestoneIndex <= depth {
 		// Not enough history

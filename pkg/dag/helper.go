@@ -2,14 +2,14 @@ package dag
 
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 // Predicate defines whether a traversal should continue or not.
-type Predicate func(cachedMetadata *tangle.CachedMetadata) (bool, error)
+type Predicate func(cachedMetadata *storage.CachedMetadata) (bool, error)
 
 // Consumer consumes the given message metadata during traversal.
-type Consumer func(cachedMetadata *tangle.CachedMetadata) error
+type Consumer func(cachedMetadata *storage.CachedMetadata) error
 
 // OnMissingParent gets called when during traversal a parent is missing.
 type OnMissingParent func(parentMessageID *hornet.MessageID) error
@@ -22,9 +22,9 @@ type OnSolidEntryPoint func(messageID *hornet.MessageID)
 // Afterwards it traverses the parents (past cone) of the given parent2 message.
 // It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
-func TraverseParent1AndParent2(tangle *tangle.Tangle, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func TraverseParent1AndParent2(storage *storage.Storage, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
-	t := NewParentTraverser(tangle, condition, consumer, onMissingParent, onSolidEntryPoint, abortSignal)
+	t := NewParentTraverser(storage, condition, consumer, onMissingParent, onSolidEntryPoint, abortSignal)
 	return t.TraverseParent1AndParent2(parent1MessageID, parent2MessageID, traverseSolidEntryPoints)
 }
 
@@ -32,17 +32,17 @@ func TraverseParent1AndParent2(tangle *tangle.Tangle, parent1MessageID *hornet.M
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS with parent1 / parent2.
 // Caution: condition func is not in DFS order
-func TraverseParents(tangle *tangle.Tangle, startMessageID *hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func TraverseParents(storage *storage.Storage, startMessageID *hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
-	t := NewParentTraverser(tangle, condition, consumer, onMissingParent, onSolidEntryPoint, abortSignal)
+	t := NewParentTraverser(storage, condition, consumer, onMissingParent, onSolidEntryPoint, abortSignal)
 	return t.Traverse(startMessageID, traverseSolidEntryPoints)
 }
 
 // TraverseChildren starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func TraverseChildren(tangle *tangle.Tangle, startMessageID *hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) error {
+func TraverseChildren(storage *storage.Storage, startMessageID *hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) error {
 
-	t := NewChildrenTraverser(tangle, condition, consumer, walkAlreadyDiscovered, abortSignal)
+	t := NewChildrenTraverser(storage, condition, consumer, walkAlreadyDiscovered, abortSignal)
 	return t.Traverse(startMessageID)
 }

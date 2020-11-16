@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/iota.go/pow"
-
-	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go"
 )
 
 const (
@@ -116,7 +115,7 @@ func (h *Handler) connectPowsrv() bool {
 		// connect to powsrv.io
 		if err := h.powsrvClient.Init(); err != nil {
 			if h.log != nil {
-				h.log.Warnf("Error connecting to powsrv.io: %w", err)
+				h.log.Warnf("Error connecting to powsrv.io: %s", err)
 			}
 			return false
 		}
@@ -171,7 +170,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 
 	select {
 	case <-shutdownSignal:
-		return tangle.ErrOperationAborted
+		return common.ErrOperationAborted
 	default:
 	}
 
@@ -199,7 +198,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 				if !h.powsrvErrorHandled {
 					// some error occurred => disconnect from powsrv.io
 					if h.log != nil {
-						h.log.Warnf("Error during PoW via powsrv.io: %w", err)
+						h.log.Warnf("Error during PoW via powsrv.io: %s", err)
 					}
 					h.disconnectPowsrv()
 				}

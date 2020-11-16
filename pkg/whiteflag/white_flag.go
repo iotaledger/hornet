@@ -7,10 +7,11 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 )
 
@@ -55,7 +56,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index, cachedMessageMetas map[string]*tangle.CachedMetadata, cachedMessages map[string]*tangle.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make(hornet.MessageIDs, 0),
@@ -67,7 +68,7 @@ func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index
 
 	// traversal stops if no more messages pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedMetadata *tangle.CachedMetadata) (bool, error) { // meta +1
+	condition := func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
 		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
@@ -81,7 +82,7 @@ func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index
 	}
 
 	// consumer
-	consumer := func(cachedMetadata *tangle.CachedMetadata) error { // meta +1
+	consumer := func(cachedMetadata *storage.CachedMetadata) error { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
 		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
@@ -89,9 +90,9 @@ func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index
 		// load up message
 		cachedMessage, exists := cachedMessages[cachedMetadataMapKey]
 		if !exists {
-			cachedMessage = tangleObj.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
+			cachedMessage = s.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
-				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", tangle.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
+				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
 			}
 
 			// release the messages at the end to speed up calculation
@@ -144,7 +145,7 @@ func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index
 			}
 
 			// check current ledger for this input
-			output, err = tangleObj.UTXO().ReadOutputByOutputIDWithoutLocking(input)
+			output, err = s.UTXO().ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
 				if err == kvstore.ErrKeyNotFound {
 					// input not found, so mark as invalid tx
@@ -155,7 +156,7 @@ func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index
 			}
 
 			// check if this output is unspent
-			unspent, err := tangleObj.UTXO().IsOutputUnspentWithoutLocking(output)
+			unspent, err := s.UTXO().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return err
 			}
@@ -220,7 +221,7 @@ func ComputeWhiteFlagMutations(tangleObj *tangle.Tangle, msIndex milestone.Index
 	// If parent1 and parent2 of a message are both SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
-	if err := dag.TraverseParent1AndParent2(tangleObj, parent1MessageID, parent2MessageID,
+	if err := dag.TraverseParent1AndParent2(s, parent1MessageID, parent2MessageID,
 		condition,
 		consumer,
 		// called on missing parents

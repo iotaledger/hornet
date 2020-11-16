@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"encoding/binary"
@@ -38,13 +38,13 @@ func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, er
 	}, nil
 }
 
-func (t *Tangle) GetMilestoneStorageSize() int {
-	return t.milestoneStorage.GetSize()
+func (s *Storage) GetMilestoneStorageSize() int {
+	return s.milestoneStorage.GetSize()
 }
 
-func (t *Tangle) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
-	t.milestoneStorage = objectstorage.New(
+	s.milestoneStorage = objectstorage.New(
 		store.WithRealm([]byte{StorePrefixMilestones}),
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
@@ -106,8 +106,8 @@ func (c *CachedMilestone) GetMilestone() *Milestone {
 }
 
 // milestone +1
-func (t *Tangle) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMilestone {
-	cachedMilestone := t.milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
+func (s *Storage) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMilestone {
+	cachedMilestone := s.milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
 	if !cachedMilestone.Exists() {
 		cachedMilestone.Release(true) // milestone -1
 		return nil
@@ -116,15 +116,15 @@ func (t *Tangle) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *Cached
 }
 
 // milestone +-0
-func (t *Tangle) ContainsMilestone(milestoneIndex milestone.Index) bool {
-	return t.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
+func (s *Storage) ContainsMilestone(milestoneIndex milestone.Index) bool {
+	return s.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
 // SearchLatestMilestoneIndexInStore searches the latest milestone without accessing the cache layer.
-func (t *Tangle) SearchLatestMilestoneIndexInStore() milestone.Index {
+func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 	var latestMilestoneIndex milestone.Index
 
-	t.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
+	s.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		msIndex := milestoneIndexFromDatabaseKey(key)
 		if latestMilestoneIndex < msIndex {
 			latestMilestoneIndex = msIndex
@@ -140,14 +140,14 @@ func (t *Tangle) SearchLatestMilestoneIndexInStore() milestone.Index {
 type MilestoneIndexConsumer func(index milestone.Index) bool
 
 // ForEachMilestoneIndex loops through all milestones in the persistence layer.
-func (t *Tangle) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
-	t.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
+func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
+	s.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))
 	}, skipCache)
 }
 
 // milestone +1
-func (t *Tangle) storeMilestone(milestoneID *iotago.MilestoneID, index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
+func (s *Storage) storeMilestone(milestoneID *iotago.MilestoneID, index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
 	milestone := &Milestone{
 		MilestoneID: milestoneID,
 		Index:       index,
@@ -156,18 +156,18 @@ func (t *Tangle) storeMilestone(milestoneID *iotago.MilestoneID, index milestone
 	}
 
 	// milestones should never exist in the database already, even with an unclean database
-	return &CachedMilestone{CachedObject: t.milestoneStorage.Store(milestone)}
+	return &CachedMilestone{CachedObject: s.milestoneStorage.Store(milestone)}
 }
 
 // +-0
-func (t *Tangle) DeleteMilestone(milestoneIndex milestone.Index) {
-	t.milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
+func (s *Storage) DeleteMilestone(milestoneIndex milestone.Index) {
+	s.milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
-func (t *Tangle) ShutdownMilestoneStorage() {
-	t.milestoneStorage.Shutdown()
+func (s *Storage) ShutdownMilestoneStorage() {
+	s.milestoneStorage.Shutdown()
 }
 
-func (t *Tangle) FlushMilestoneStorage() {
-	t.milestoneStorage.Flush()
+func (s *Storage) FlushMilestoneStorage() {
+	s.milestoneStorage.Flush()
 }

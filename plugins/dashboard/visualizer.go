@@ -3,10 +3,9 @@ package dashboard
 import (
 	"github.com/iotaledger/hive.go/events"
 
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	tanglepackage "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -48,9 +47,9 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglepackage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		cachedMsg.ConsumeMessageAndMetadata(func(msg *tanglepackage.Message, metadata *tanglepackage.MessageMetadata) { // msg -1
-			if !deps.Tangle.IsNodeSyncedWithThreshold() {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
+			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -71,10 +70,10 @@ func runVisualizer() {
 		})
 	})
 
-	onMessageSolid := events.NewClosure(func(cachedMsgMeta *tanglepackage.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *tanglepackage.MessageMetadata) { // metadata -1
+	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 
-			if !deps.Tangle.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				return
 			}
 
@@ -89,10 +88,10 @@ func runVisualizer() {
 		})
 	})
 
-	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *tanglepackage.CachedMilestone) {
+	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -108,7 +107,7 @@ func runVisualizer() {
 
 	// show checkpoints as milestones in the coordinator node
 	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -123,7 +122,7 @@ func runVisualizer() {
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -144,7 +143,7 @@ func runVisualizer() {
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -160,7 +159,7 @@ func runVisualizer() {
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
@@ -176,18 +175,18 @@ func runVisualizer() {
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		tangle.Events.MessageSolid.Attach(onMessageSolid)
-		defer tangle.Events.MessageSolid.Detach(onMessageSolid)
-		tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
-		defer tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
+		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
+		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
 		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
 			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
 			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
 		}
-		tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
-		defer tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 
 		// check if URTS plugin is enabled
 		if !Plugin.Node.IsSkipped(urts.Plugin) {

@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 import (
 	"fmt"
@@ -80,7 +80,7 @@ func (msg *Message) GetMessage() *iotago.Message {
 	msg.messageOnce.Do(func() {
 		iotaMsg := &iotago.Message{}
 		if _, err := iotaMsg.Deserialize(msg.data, iotago.DeSeriModeNoValidation); err != nil {
-			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.Hex(), err.Error()))
+			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.Hex(), err))
 		}
 
 		msg.message = iotaMsg

@@ -9,11 +9,12 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -80,7 +81,9 @@ type Events struct {
 // TipSelector manages a list of tips and emits events for their removal and addition.
 type TipSelector struct {
 	// tangle contains the database.
-	tangle *tangle.Tangle
+	storage *storage.Storage
+	// serverMetrics is the shared server metrics instance.
+	serverMetrics *metrics.ServerMetrics
 	// maxDeltaMsgYoungestConeRootIndexToLSMI is the maximum allowed delta
 	// value for the YCRI of a given message in relation to the current LSMI before it gets lazy.
 	maxDeltaMsgYoungestConeRootIndexToLSMI milestone.Index
@@ -131,7 +134,8 @@ type TipSelector struct {
 }
 
 // New creates a new tip-selector.
-func New(tangle *tangle.Tangle,
+func New(storage *storage.Storage,
+	serverMetrics *metrics.ServerMetrics,
 	maxDeltaMsgYoungestConeRootIndexToLSMI int,
 	maxDeltaMsgOldestConeRootIndexToLSMI int,
 	belowMaxDepth int,
@@ -145,7 +149,8 @@ func New(tangle *tangle.Tangle,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		tangle:                                 tangle,
+		storage:                                storage,
+		serverMetrics:                          serverMetrics,
 		maxDeltaMsgYoungestConeRootIndexToLSMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToLSMI),
 		maxDeltaMsgOldestConeRootIndexToLSMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToLSMI),
 		belowMaxDepth:                          milestone.Index(belowMaxDepth),
@@ -168,7 +173,7 @@ func New(tangle *tangle.Tangle,
 }
 
 // AddTip adds the given message as a tip.
-func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
+func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
@@ -185,7 +190,7 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 		return
 	}
 
-	lsmi := ts.tangle.GetSolidMilestoneIndex()
+	lsmi := ts.storage.GetSolidMilestoneIndex()
 
 	score := ts.calculateScore(messageID, lsmi)
 	if score == ScoreLazy {
@@ -204,10 +209,10 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 	switch tip.Score {
 	case ScoreNonLazy:
 		ts.nonLazyTipsMap[messageIDMapKey] = tip
-		metrics.SharedServerMetrics.TipsNonLazy.Add(1)
+		ts.serverMetrics.TipsNonLazy.Add(1)
 	case ScoreSemiLazy:
 		ts.semiLazyTipsMap[messageIDMapKey] = tip
-		metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
+		ts.serverMetrics.TipsSemiLazy.Add(1)
 	}
 
 	ts.Events.TipAdded.Trigger(tip)
@@ -250,13 +255,13 @@ func (ts *TipSelector) AddTip(messageMeta *tangle.MessageMetadata) {
 		case ScoreNonLazy:
 			if parentTip, exists := ts.nonLazyTipsMap[parentMessageID]; exists {
 				if checkTip(ts.nonLazyTipsMap, parentTip, ts.retentionRulesTipsLimitNonLazy, ts.maxChildrenNonLazy, ts.maxReferencedTipAgeSecondsNonLazy) {
-					metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+					ts.serverMetrics.TipsNonLazy.Sub(1)
 				}
 			}
 		case ScoreSemiLazy:
 			if parentTip, exists := ts.semiLazyTipsMap[parentMessageID]; exists {
 				if checkTip(ts.semiLazyTipsMap, parentTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxChildrenSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy) {
-					metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+					ts.serverMetrics.TipsSemiLazy.Sub(1)
 				}
 			}
 		}
@@ -303,8 +308,8 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (*hornet
 // selectTipWithoutLocking selects a tip.
 func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (*hornet.MessageID, error) {
 
-	if !ts.tangle.IsNodeSyncedWithThreshold() {
-		return nil, tangle.ErrNodeNotSynced
+	if !ts.storage.IsNodeSyncedWithThreshold() {
+		return nil, common.ErrNodeNotSynced
 	}
 
 	// record stats
@@ -411,13 +416,13 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
 		if checkTip(ts.nonLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsNonLazy) {
-			metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+			ts.serverMetrics.TipsNonLazy.Sub(1)
 			count++
 		}
 	}
 	for _, tip := range ts.semiLazyTipsMap {
 		if checkTip(ts.semiLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsSemiLazy) {
-			metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+			ts.serverMetrics.TipsSemiLazy.Sub(1)
 			count++
 		}
 	}
@@ -431,7 +436,7 @@ func (ts *TipSelector) UpdateScores() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	lsmi := ts.tangle.GetSolidMilestoneIndex()
+	lsmi := ts.storage.GetSolidMilestoneIndex()
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
@@ -441,7 +446,7 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
 			continue
 		}
@@ -450,12 +455,12 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsNonLazy.Sub(1)
+				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
 			// add the tip to the semi-lazy tips map
 			ts.semiLazyTipsMap[tip.MessageID.MapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
-			metrics.SharedServerMetrics.TipsSemiLazy.Add(1)
+			ts.serverMetrics.TipsSemiLazy.Add(1)
 			count--
 		}
 	}
@@ -467,7 +472,7 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
 			continue
 		}
@@ -476,12 +481,12 @@ func (ts *TipSelector) UpdateScores() int {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
 				count++
-				metrics.SharedServerMetrics.TipsSemiLazy.Sub(1)
+				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
 			// add the tip to the non-lazy tips map
 			ts.nonLazyTipsMap[tip.MessageID.MapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
-			metrics.SharedServerMetrics.TipsNonLazy.Add(1)
+			ts.serverMetrics.TipsNonLazy.Add(1)
 			count--
 		}
 	}
@@ -491,7 +496,7 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this message
 func (ts *TipSelector) calculateScore(messageID *hornet.MessageID, lsmi milestone.Index) Score {
-	cachedMsgMeta := ts.tangle.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	cachedMsgMeta := ts.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
@@ -499,7 +504,7 @@ func (ts *TipSelector) calculateScore(messageID *hornet.MessageID, lsmi mileston
 	}
 	defer cachedMsgMeta.Release(true)
 
-	ycri, ocri := dag.GetConeRootIndexes(ts.tangle, cachedMsgMeta.Retain(), lsmi) // meta +1
+	ycri, ocri := dag.GetConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), lsmi) // meta +1
 
 	// if the LSMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy
 	if (lsmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToLSMI {

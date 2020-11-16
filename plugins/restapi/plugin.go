@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
@@ -18,11 +16,14 @@ import (
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func init() {
@@ -49,6 +50,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	Tangle     *tangle.Tangle
 	Echo       *echo.Echo
 }
 
@@ -141,7 +143,7 @@ func run() {
 		go func() {
 			log.Infof("You can now access the API using: http://%s", bindAddr)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Warnf("Stopped REST-API server due to an error (%w)", err)
+				log.Warnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()
 
@@ -202,7 +204,7 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 			message = "internal server error"
 		}
 
-		message = fmt.Sprintf("%s, error: %s", message, err.Error())
+		message = fmt.Sprintf("%s, error: %s", message, err)
 
 		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 	}

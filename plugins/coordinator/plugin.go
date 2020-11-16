@@ -4,27 +4,28 @@ import (
 	"crypto/ed25519"
 	"time"
 
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/core/protocfg"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/mselection"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -86,6 +87,7 @@ var (
 
 type dependencies struct {
 	dig.In
+	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	PoWHandler       *powpackage.Handler
 	MessageProcessor *gossip.MessageProcessor
@@ -96,7 +98,7 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	// set the node as synced at startup, so the coo plugin can select tips
-	tanglecore.SetUpdateSyncedAtStartup(true)
+	deps.Tangle.SetUpdateSyncedAtStartup(true)
 
 	var err error
 	coo, err = initCoordinator(*bootstrap, *startIndex, deps.PoWHandler)
@@ -109,7 +111,7 @@ func configure() {
 
 func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
-	if deps.Tangle.IsDatabaseTainted() {
+	if deps.Storage.IsDatabaseTainted() {
 		return nil, ErrDatabaseTainted
 	}
 
@@ -146,10 +148,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		}
 	}
 
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Tangle.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 
 	coo, err := coordinator.New(
-		deps.Tangle,
+		deps.Storage,
 		inMemoryEd25519MilestoneSignerProvider,
 		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
@@ -187,7 +189,7 @@ func run() {
 	// create a background worker that issues milestones
 	Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		// wait until all background workers of the tangle plugin are started
-		tanglecore.WaitForTangleProcessorStartup()
+		deps.Tangle.WaitForTangleProcessorStartup()
 
 		attachEvents()
 
@@ -257,9 +259,9 @@ func run() {
 					log.Panic(criticalErr)
 				}
 				if err != nil {
-					if err == tangle.ErrNodeNotSynced {
+					if err == common.ErrNodeNotSynced {
 						// Coordinator is not synchronized, trigger the solidifier manually
-						tanglecore.TriggerSolidifier()
+						deps.Tangle.TriggerSolidifier()
 					}
 					log.Warn(err)
 					continue
@@ -282,20 +284,20 @@ func run() {
 
 }
 
-func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
+func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
-	msgSolidEventChan := tanglecore.RegisterMessageSolidEvent(msg.GetMessageID())
+	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.GetMessageID())
 
 	var milestoneConfirmedEventChan chan struct{}
 
 	if len(msIndex) > 0 {
-		milestoneConfirmedEventChan = tanglecore.RegisterMilestoneConfirmedEvent(msIndex[0])
+		milestoneConfirmedEventChan = deps.Tangle.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
 	if err := deps.MessageProcessor.Emit(msg); err != nil {
-		tanglecore.DeregisterMessageSolidEvent(msg.GetMessageID())
+		deps.Tangle.DeregisterMessageSolidEvent(msg.GetMessageID())
 		if len(msIndex) > 0 {
-			tanglecore.DeregisterMilestoneConfirmedEvent(msIndex[0])
+			deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
 		}
 
 		return err
@@ -313,12 +315,12 @@ func sendMessage(msg *tangle.Message, msIndex ...milestone.Index) error {
 }
 
 // isBelowMaxDepth checks the below max depth criteria for the given message.
-func isBelowMaxDepth(cachedMsgMeta *tangle.CachedMetadata) bool {
+func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	lsmi := deps.Tangle.GetSolidMilestoneIndex()
+	lsmi := deps.Storage.GetSolidMilestoneIndex()
 
-	_, ocri := dag.GetConeRootIndexes(deps.Tangle, cachedMsgMeta.Retain(), lsmi) // meta +1
+	_, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), lsmi) // meta +1
 
 	// if the OCRI to LSMI delta is over belowMaxDepth, then the tip is invalid.
 	return (lsmi - ocri) > belowMaxDepth
@@ -334,7 +336,7 @@ func GetEvents() *coordinator.Events {
 
 func configureEvents() {
 	// pass all new solid messages to the selector
-	onMessageSolid = events.NewClosure(func(cachedMsgMeta *tangle.CachedMetadata) {
+	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		defer cachedMsgMeta.Release(true)
 
 		if isBelowMaxDepth(cachedMsgMeta.Retain()) {
@@ -359,12 +361,12 @@ func configureEvents() {
 		ts := time.Now()
 
 		// do not propagate during syncing, because it is not needed at all
-		if !deps.Tangle.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
 
 		// propagate new cone root indexes to the future cone for heaviest branch tipselection
-		dag.UpdateConeRootIndexes(deps.Tangle, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+		dag.UpdateConeRootIndexes(deps.Storage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 
 		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
@@ -379,14 +381,14 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	tanglecore.Events.MessageSolid.Attach(onMessageSolid)
-	tanglecore.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 	coo.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
 	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 
 func detachEvents() {
-	tanglecore.Events.MessageSolid.Detach(onMessageSolid)
-	tanglecore.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 	coo.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }

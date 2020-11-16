@@ -3,7 +3,6 @@ package node
 import (
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
@@ -12,7 +11,6 @@ import (
 )
 
 type Node struct {
-	wg              *sync.WaitGroup
 	disabledPlugins map[string]struct{}
 	enabledPlugins  map[string]struct{}
 	corePluginsMap  map[string]*CorePlugin
@@ -30,7 +28,6 @@ func New(optionalOptions ...NodeOption) *Node {
 	nodeOpts.apply(optionalOptions...)
 
 	node := &Node{
-		wg:              &sync.WaitGroup{},
 		disabledPlugins: make(map[string]struct{}),
 		enabledPlugins:  make(map[string]struct{}),
 		corePluginsMap:  make(map[string]*CorePlugin),
@@ -101,20 +98,24 @@ func (n *Node) init() {
 		masked = append(masked, n.options.initPlugin.Params.Masked...)
 	}
 
-	forEachCorePlugin(n.options.coreModules, func(coreModule *CorePlugin) bool {
-		if coreModule.Params == nil {
+	forEachCorePlugin(n.options.corePlugins, func(corePlugin *CorePlugin) bool {
+		corePlugin.Node = n
+
+		if corePlugin.Params == nil {
 			return true
 		}
-		for k, v := range coreModule.Params.Params {
+		for k, v := range corePlugin.Params.Params {
 			params[k] = append(params[k], v)
 		}
-		if coreModule.Params.Masked != nil {
-			masked = append(masked, coreModule.Params.Masked...)
+		if corePlugin.Params.Masked != nil {
+			masked = append(masked, corePlugin.Params.Masked...)
 		}
 		return true
 	})
 
 	forEachPlugin(n.options.plugins, func(plugin *Plugin) bool {
+		plugin.Node = n
+
 		if plugin.Params == nil {
 			return true
 		}
@@ -140,8 +141,8 @@ func (n *Node) init() {
 		n.disabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
 
-	forEachCorePlugin(n.options.coreModules, func(coreModule *CorePlugin) bool {
-		n.addCorePlugin(coreModule)
+	forEachCorePlugin(n.options.corePlugins, func(corePlugin *CorePlugin) bool {
+		n.addCorePlugin(corePlugin)
 		return true
 	})
 
@@ -159,16 +160,16 @@ func (n *Node) init() {
 	}
 	n.options.initPlugin.Provide(n.container)
 
-	n.ForEachCorePlugin(func(coreModule *CorePlugin) bool {
-		if coreModule.Provide != nil {
-			coreModule.Provide(n.container)
+	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
+		if corePlugin.Provide != nil {
+			corePlugin.Provide(n.container)
 		}
 		return true
 	})
 
-	n.ForEachCorePlugin(func(coreModule *CorePlugin) bool {
-		if coreModule.DepsFunc != nil {
-			if err := n.container.Invoke(coreModule.DepsFunc); err != nil {
+	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
+		if corePlugin.DepsFunc != nil {
+			if err := n.container.Invoke(corePlugin.DepsFunc); err != nil {
 				panic(err)
 			}
 		}
@@ -195,9 +196,6 @@ func (n *Node) init() {
 func (n *Node) configure() {
 
 	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
-		corePlugin.wg = n.wg
-		corePlugin.Node = n
-
 		if corePlugin.Configure != nil {
 			corePlugin.Configure()
 		}
@@ -206,9 +204,6 @@ func (n *Node) configure() {
 	})
 
 	n.ForEachPlugin(func(plugin *Plugin) bool {
-		plugin.wg = n.wg
-		plugin.Node = n
-
 		if plugin.Configure != nil {
 			plugin.Configure()
 		}
@@ -263,15 +258,15 @@ func (n *Node) Daemon() daemon.Daemon {
 	return n.options.daemon
 }
 
-func (n *Node) addCorePlugin(coreModule *CorePlugin) {
-	name := coreModule.Name
+func (n *Node) addCorePlugin(corePlugin *CorePlugin) {
+	name := corePlugin.Name
 
 	if _, exists := n.corePluginsMap[name]; exists {
 		panic("duplicate core plugin - \"" + name + "\" was defined already")
 	}
 
-	n.corePluginsMap[name] = coreModule
-	n.corePlugins = append(n.corePlugins, coreModule)
+	n.corePluginsMap[name] = corePlugin
+	n.corePlugins = append(n.corePlugins, corePlugin)
 }
 
 func (n *Node) addPlugin(plugin *Plugin) {
@@ -302,7 +297,7 @@ type Callback func()
 
 // CorePluginForEachFunc is used in ForEachCorePlugin.
 // Returning false indicates to stop looping.
-type CorePluginForEachFunc func(coreModule *CorePlugin) bool
+type CorePluginForEachFunc func(corePlugin *CorePlugin) bool
 
 func forEachCorePlugin(corePlugins []*CorePlugin, f CorePluginForEachFunc) {
 	for _, corePlugin := range corePlugins {

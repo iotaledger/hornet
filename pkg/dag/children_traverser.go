@@ -6,14 +6,15 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 type ChildrenTraverser struct {
-	cachedMsgMetas map[string]*tangle.CachedMetadata
+	cachedMsgMetas map[string]*storage.CachedMetadata
 
-	tangle *tangle.Tangle
+	storage *storage.Storage
 
 	// stack holding the ordered msg to process
 	stack *list.List
@@ -30,10 +31,10 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(tangle *tangle.Tangle, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
+func NewChildrenTraverser(storage *storage.Storage, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
 
 	return &ChildrenTraverser{
-		tangle:                tangle,
+		storage:               storage,
 		condition:             condition,
 		consumer:              consumer,
 		walkAlreadyDiscovered: walkAlreadyDiscovered,
@@ -54,7 +55,7 @@ func (t *ChildrenTraverser) cleanup(forceRelease bool) {
 
 func (t *ChildrenTraverser) reset() {
 
-	t.cachedMsgMetas = make(map[string]*tangle.CachedMetadata)
+	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
 	t.discovered = make(map[string]struct{})
 	t.stack = list.New()
 }
@@ -92,7 +93,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	select {
 	case <-t.abortSignal:
-		return tangle.ErrOperationAborted
+		return common.ErrOperationAborted
 	default:
 	}
 
@@ -106,10 +107,10 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	cachedMsgMeta, exists := t.cachedMsgMetas[currentMessageIDMapKey]
 	if !exists {
-		cachedMsgMeta = t.tangle.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
+		cachedMsgMeta = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(tangle.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
+			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
 		}
 		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
 	}
@@ -134,7 +135,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	for _, childMessageID := range t.tangle.GetChildrenMessageIDs(currentMessageID) {
+	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID) {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.MapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {

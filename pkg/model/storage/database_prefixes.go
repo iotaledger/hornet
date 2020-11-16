@@ -1,4 +1,4 @@
-package tangle
+package storage
 
 const (
 	StorePrefixHealth               byte = 0

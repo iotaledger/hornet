@@ -4,22 +4,23 @@ import (
 	"net/http"
 	"time"
 
-	powcore "github.com/gohornet/hornet/core/pow"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/labstack/echo/v4"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+
+	powcore "github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -162,6 +163,7 @@ var (
 
 type dependencies struct {
 	dig.In
+	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	Manager          *p2p.Manager
 	RequestQueue     gossip.RequestQueue
@@ -345,7 +347,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
-		tanglecore.TriggerSolidifier()
+		deps.Tangle.TriggerSolidifier()
 
 		return restapi.JSONResponse(c, http.StatusOK, "solidifier triggered")
 	})

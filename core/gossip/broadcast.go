@@ -8,16 +8,16 @@ import (
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every connected peer who supports STING.
 func BroadcastHeartbeat(filter func(proto *gossip.Protocol) bool) {
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return
 	}
 
-	latestMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
+	latestMilestoneIndex := deps.Storage.GetSolidMilestoneIndex()
 	connectedCount := deps.Manager.ConnectedCount(p2p.PeerRelationKnown)
 	syncedCount := deps.Service.SynchronizedCount(latestMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
-	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, deps.Tangle.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	heartbeatMsg, _ := gossip.NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, deps.Storage.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
 	deps.Service.ForEach(func(proto *gossip.Protocol) bool {
 		if filter != nil && !filter(proto) {
@@ -34,7 +34,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	var requested int
 
 	// make sure we only request what we don't have
-	startingPoint := deps.Tangle.GetSolidMilestoneIndex()
+	startingPoint := deps.Storage.GetSolidMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}
@@ -42,7 +42,7 @@ func BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange f
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := startingPoint + milestone.Index(i)
 		// only request if we do not have the milestone
-		if !deps.Tangle.ContainsMilestone(toReq) {
+		if !deps.Storage.ContainsMilestone(toReq) {
 			requested++
 			msIndexes = append(msIndexes, toReq)
 			continue

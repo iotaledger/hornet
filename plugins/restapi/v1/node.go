@@ -6,14 +6,13 @@ import (
 	"strings"
 
 	"github.com/gohornet/hornet/core/app"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
@@ -21,10 +20,10 @@ func info() (*infoResponse, error) {
 
 	// latest milestone index
 	latestMilestoneID := hornet.GetNullMessageID().Hex()
-	latestMilestoneIndex := deps.Tangle.GetLatestMilestoneIndex()
+	latestMilestoneIndex := deps.Storage.GetLatestMilestoneIndex()
 
 	// latest milestone message ID
-	cachedLatestMilestone := deps.Tangle.GetCachedMilestoneOrNil(latestMilestoneIndex)
+	cachedLatestMilestone := deps.Storage.GetCachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
 		latestMilestoneID = hex.EncodeToString(cachedLatestMilestone.GetMilestone().MilestoneID[:])
 		cachedLatestMilestone.Release(true)
@@ -32,10 +31,10 @@ func info() (*infoResponse, error) {
 
 	// solid milestone index
 	solidMilestoneID := hornet.GetNullMessageID().Hex()
-	solidMilestoneIndex := deps.Tangle.GetSolidMilestoneIndex()
+	solidMilestoneIndex := deps.Storage.GetSolidMilestoneIndex()
 
 	// solid milestone message ID
-	cachedSolidMilestone := deps.Tangle.GetCachedMilestoneOrNil(solidMilestoneIndex)
+	cachedSolidMilestone := deps.Storage.GetCachedMilestoneOrNil(solidMilestoneIndex)
 	if cachedSolidMilestone != nil {
 		solidMilestoneID = hex.EncodeToString(cachedSolidMilestone.GetMilestone().MilestoneID[:])
 		cachedSolidMilestone.Release(true)
@@ -43,7 +42,7 @@ func info() (*infoResponse, error) {
 
 	// pruning index
 	var pruningIndex milestone.Index
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		pruningIndex = snapshotInfo.PruningIndex
 	}
@@ -51,7 +50,7 @@ func info() (*infoResponse, error) {
 	return &infoResponse{
 		Name:                 app.Name,
 		Version:              app.Version,
-		IsHealthy:            tanglecore.IsNodeHealthy(),
+		IsHealthy:            deps.Tangle.IsNodeHealthy(),
 		NetworkID:            snapshotInfo.NetworkID,
 		LatestMilestoneID:    latestMilestoneID,
 		LatestMilestoneIndex: latestMilestoneIndex,
@@ -81,7 +80,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	}
 
 	if err != nil {
-		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+		if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
 			return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
 		}
 		return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
@@ -98,7 +97,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
-	cachedMilestone := deps.Tangle.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
+	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "milestone not found: %d", msIndex)
 	}

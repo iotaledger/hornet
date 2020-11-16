@@ -120,7 +120,6 @@ func provide(c *dig.Container) {
 			)),
 			libp2p.NATPortMap(),
 		)
-		createdHost.ID()
 
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize peer: %w", err)

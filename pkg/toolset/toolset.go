@@ -14,16 +14,6 @@ const (
 	ToolSnapGen     = "snapgen"
 )
 
-var (
-	tools = map[string]func([]string) error{
-		ToolPwdHash:     hashPasswordAndSalt,
-		ToolEd25519Key:  generateEd25519Key,
-		ToolEd25519Addr: generateEd25519Address,
-		ToolSnapGen:     snapshotGen,
-		ToolP2PIdentity: generateP2PIdentity,
-	}
-)
-
 // HandleTools handles available tools.
 func HandleTools() {
 	args := os.Args[1:]
@@ -47,6 +37,14 @@ func HandleTools() {
 		os.Exit(1)
 	}
 
+	tools := map[string]func([]string) error{
+		ToolPwdHash:     hashPasswordAndSalt,
+		ToolEd25519Key:  generateEd25519Key,
+		ToolEd25519Addr: generateEd25519Address,
+		ToolSnapGen:     snapshotGen,
+		ToolP2PIdentity: generateP2PIdentity,
+	}
+
 	tool, exists := tools[strings.ToLower(args[1])]
 	if !exists {
 		fmt.Print("tool not found.\n\n")
@@ -55,7 +53,7 @@ func HandleTools() {
 	}
 
 	if err := tool(args[2:]); err != nil {
-		fmt.Printf("\nerror: %v\n", err.Error())
+		fmt.Printf("\nerror: %s\n", err)
 		os.Exit(1)
 	}
 

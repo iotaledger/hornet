@@ -5,29 +5,29 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gohornet/hornet/core/app"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gorilla/websocket"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/network"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
 func init() {
@@ -99,12 +99,14 @@ var (
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
-	cachedMilestoneMetrics []*tanglecore.ConfirmedMilestoneMetric
+	cachedMilestoneMetrics []*tangle.ConfirmedMilestoneMetric
 )
 
 type dependencies struct {
 	dig.In
+	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
+	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	Manager          *p2p.Manager
 	MessageProcessor *gossip.MessageProcessor
@@ -162,7 +164,7 @@ func run() {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tanglecore.MPSMetrics) {
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
@@ -176,26 +178,26 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
-	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tanglecore.ConfirmedMilestoneMetric) {
+	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tangle.ConfirmedMilestoneMetric) {
 		cachedMilestoneMetrics = append(cachedMilestoneMetrics, metric)
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
 		}
-		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tanglecore.ConfirmedMilestoneMetric{metric}})
+		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangle.ConfirmedMilestoneMetric{metric}})
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		tanglecore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		tanglecore.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		tanglecore.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
+		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		tanglecore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-		tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-		tanglecore.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
-		tanglecore.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
+		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
 		log.Info("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
@@ -213,7 +215,7 @@ func run() {
 }
 
 func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
-	cachedMs := deps.Tangle.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMs := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
@@ -357,7 +359,7 @@ func peerMetrics() []*PeerMetric {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{LSMI: deps.Tangle.GetSolidMilestoneIndex(), LMI: deps.Tangle.GetLatestMilestoneIndex()}
+	return &SyncStatus{LSMI: deps.Storage.GetSolidMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
 }
 
 func currentNodeStatus() *NodeStatus {
@@ -376,12 +378,12 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = app.Version
 	status.LatestVersion = app.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.IsHealthy = tanglecore.IsNodeHealthy()
+	status.IsHealthy = deps.Tangle.IsNodeHealthy()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
@@ -395,16 +397,16 @@ func currentNodeStatus() *NodeStatus {
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: deps.Tangle.GetChildrenStorageSize(),
+			Size: deps.Storage.GetChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
 		Milestones: Cache{
-			Size: deps.Tangle.GetMilestoneStorageSize(),
+			Size: deps.Storage.GetMilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: deps.Tangle.GetMessageStorageSize(),
+			Size: deps.Storage.GetMessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),
@@ -413,21 +415,21 @@ func currentNodeStatus() *NodeStatus {
 
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
-		AllMessages:          metrics.SharedServerMetrics.Messages.Load(),
-		NewMessages:          metrics.SharedServerMetrics.NewMessages.Load(),
-		KnownMessages:        metrics.SharedServerMetrics.KnownMessages.Load(),
-		InvalidMessages:      metrics.SharedServerMetrics.InvalidMessages.Load(),
-		InvalidRequests:      metrics.SharedServerMetrics.InvalidRequests.Load(),
-		ReceivedMessageReq:   metrics.SharedServerMetrics.ReceivedMessageRequests.Load(),
-		ReceivedMilestoneReq: metrics.SharedServerMetrics.ReceivedMilestoneRequests.Load(),
-		ReceivedHeartbeats:   metrics.SharedServerMetrics.ReceivedHeartbeats.Load(),
-		SentMessages:         metrics.SharedServerMetrics.SentMessages.Load(),
-		SentMessageReq:       metrics.SharedServerMetrics.SentMessageRequests.Load(),
-		SentMilestoneReq:     metrics.SharedServerMetrics.SentMilestoneRequests.Load(),
-		SentHeartbeats:       metrics.SharedServerMetrics.SentHeartbeats.Load(),
-		DroppedSentPackets:   metrics.SharedServerMetrics.DroppedMessages.Load(),
-		SentSpamMsgsCount:    metrics.SharedServerMetrics.SentSpamMessages.Load(),
-		ValidatedMessages:    metrics.SharedServerMetrics.ValidatedMessages.Load(),
+		AllMessages:          deps.ServerMetrics.Messages.Load(),
+		NewMessages:          deps.ServerMetrics.NewMessages.Load(),
+		KnownMessages:        deps.ServerMetrics.KnownMessages.Load(),
+		InvalidMessages:      deps.ServerMetrics.InvalidMessages.Load(),
+		InvalidRequests:      deps.ServerMetrics.InvalidRequests.Load(),
+		ReceivedMessageReq:   deps.ServerMetrics.ReceivedMessageRequests.Load(),
+		ReceivedMilestoneReq: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:   deps.ServerMetrics.ReceivedHeartbeats.Load(),
+		SentMessages:         deps.ServerMetrics.SentMessages.Load(),
+		SentMessageReq:       deps.ServerMetrics.SentMessageRequests.Load(),
+		SentMilestoneReq:     deps.ServerMetrics.SentMilestoneRequests.Load(),
+		SentHeartbeats:       deps.ServerMetrics.SentHeartbeats.Load(),
+		DroppedSentPackets:   deps.ServerMetrics.DroppedMessages.Load(),
+		SentSpamMsgsCount:    deps.ServerMetrics.SentSpamMessages.Load(),
+		ValidatedMessages:    deps.ServerMetrics.ValidatedMessages.Load(),
 	}
 
 	// memory metrics

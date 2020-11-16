@@ -7,18 +7,18 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
-type syncEvent struct {
+type SyncEvent struct {
 	syncutils.RWMutex
 
 	syncMap map[interface{}]chan struct{}
 }
 
-func NewSyncEvent() *syncEvent {
-	return &syncEvent{syncMap: make(map[interface{}]chan struct{})}
+func NewSyncEvent() *SyncEvent {
+	return &SyncEvent{syncMap: make(map[interface{}]chan struct{})}
 }
 
 // RegisterEvent creates a unique channel for the key which can be used to signal global events.
-func (se *syncEvent) RegisterEvent(key interface{}) chan struct{} {
+func (se *SyncEvent) RegisterEvent(key interface{}) chan struct{} {
 
 	se.RLock()
 	// check if the channel already exists
@@ -43,12 +43,12 @@ func (se *syncEvent) RegisterEvent(key interface{}) chan struct{} {
 }
 
 // DeregisterEvent removes a registed event to free the memory if not used.
-func (se *syncEvent) DeregisterEvent(key interface{}) {
+func (se *SyncEvent) DeregisterEvent(key interface{}) {
 	// the event is deregisted by triggering it
 	se.Trigger(key)
 }
 
-func (se *syncEvent) Trigger(key interface{}) {
+func (se *SyncEvent) Trigger(key interface{}) {
 
 	se.RLock()
 	// check if the key was registered

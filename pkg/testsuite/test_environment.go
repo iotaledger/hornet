@@ -20,7 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -36,10 +36,10 @@ type TestEnvironment struct {
 	testState *testing.T
 
 	// Milestones are the created milestones by the coordinator during the test.
-	Milestones tangle.CachedMessages
+	Milestones storage.CachedMessages
 
 	// cachedMessages is used to cleanup all messages at the end of a test.
-	cachedMessages tangle.CachedMessages
+	cachedMessages storage.CachedMessages
 
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
@@ -81,8 +81,8 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 
 	te := &TestEnvironment{
 		testState:              testState,
-		Milestones:             make(tangle.CachedMessages, 0),
-		cachedMessages:         make(tangle.CachedMessages, 0),
+		Milestones:             make(storage.CachedMessages, 0),
+		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		powHandler:             pow.New(nil, 1, "", 30*time.Second),
 		lastMilestoneMessageID: hornet.GetNullMessageID(),
@@ -104,13 +104,13 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	te.store = mapdb.NewMapDB()
 	te.configureStorages(te.store)
 
-	tangle.ResetSolidEntryPoints()
-	tangle.ResetMilestoneIndexes()
+	storage.ResetSolidEntryPoints()
+	storage.ResetMilestoneIndexes()
 
 	snapshotIndex := milestone.Index(0)
 
-	tangle.StoreSnapshotBalancesInDatabase(balances, snapshotIndex)
-	tangle.StoreLedgerBalancesInDatabase(balances, snapshotIndex)
+	storage.StoreSnapshotBalancesInDatabase(balances, snapshotIndex)
+	storage.StoreLedgerBalancesInDatabase(balances, snapshotIndex)
 
 	te.AssertTotalSupplyStillValid()
 
@@ -134,10 +134,10 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 // configureStorages initializes the storage layer.
 func (te *TestEnvironment) configureStorages(store kvstore.KVStore) {
 
-	tangle.ConfigureStorages(store, profile.Profile2GB.Caches)
+	storage.ConfigureStorages(store, profile.Profile2GB.Caches)
 
 	setupTangleOnce.Do(func() {
-		tangle.LoadInitialValuesFromDatabase()
+		storage.LoadInitialValuesFromDatabase()
 	})
 }
 
@@ -147,7 +147,7 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	te.cachedMessages = nil
 
 	// this should not hang, i.e. all objects should be released
-	tangle.ShutdownStorages()
+	storage.ShutdownStorages()
 
 	te.store.Clear()
 

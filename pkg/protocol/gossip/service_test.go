@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hive.go/configuration"
@@ -33,12 +34,14 @@ func newNode(name string, ctx context.Context, t *testing.T, shutdownSignal chan
 	)
 	require.NoError(t, err)
 
+	serverMetrics := &metrics.ServerMetrics{}
+
 	nLogger := logger.NewLogger(fmt.Sprintf("%s/%s", name, n.ID().ShortString()))
 
 	nManager := p2p.NewManager(n, append(mngOpts, p2p.WithManagerLogger(nLogger))...)
 	go nManager.Start(shutdownSignal)
 
-	service := gossip.NewService(protocolID, n, nManager, append(srvOpts, gossip.WithLogger(nLogger))...)
+	service := gossip.NewService(protocolID, n, nManager, serverMetrics, append(srvOpts, gossip.WithLogger(nLogger))...)
 	go service.Start(shutdownSignal)
 	return n, nLogger, nManager, service, peer.AddrInfo{ID: n.ID(), Addrs: n.Addrs()}
 }
@@ -134,7 +137,7 @@ func TestServiceEvents(t *testing.T) {
 	}))
 
 	go node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
-	
+
 	require.Eventually(t, func() bool { return protocolStartedCalled1 }, 10*time.Second, 10*time.Millisecond)
 	require.Eventually(t, func() bool { return protocolTerminatedCalled1 }, 10*time.Second, 10*time.Millisecond)
 }

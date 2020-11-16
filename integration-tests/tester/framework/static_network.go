@@ -116,7 +116,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 
 			peers, err := node.NodeAPI.Peers()
 			if err != nil {
-				log.Println(fmt.Sprintf("node %s, peering: %s", node.ID.String(), err.Error()))
+				log.Println(fmt.Sprintf("node %s, peering: %s", node.ID.String(), err))
 				continue
 			}
 

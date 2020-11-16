@@ -18,8 +18,9 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -78,7 +79,8 @@ var (
 type dependencies struct {
 	dig.In
 	MessageProcessor *gossip.MessageProcessor
-	Tangle           *tangle.Tangle
+	Storage          *storage.Storage
+	ServerMetrics    *metrics.ServerMetrics
 	PowHandler       *pow.Handler
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
@@ -109,12 +111,12 @@ func configure() {
 	cpuUsageUpdater()
 
 	// helper function to send the message to the network
-	sendMessage := func(msg *tangle.Message) error {
+	sendMessage := func(msg *storage.Message) error {
 		if err := deps.MessageProcessor.Emit(msg); err != nil {
 			return err
 		}
 
-		metrics.SharedServerMetrics.SentSpamMessages.Inc()
+		deps.ServerMetrics.SentSpamMessages.Inc()
 		return nil
 	}
 
@@ -125,6 +127,7 @@ func configure() {
 		deps.TipSelector.SelectSpammerTips,
 		deps.PowHandler,
 		sendMessage,
+		deps.ServerMetrics,
 	)
 }
 
@@ -262,7 +265,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !deps.Tangle.IsNodeSyncedWithThreshold() {
+					if !deps.Storage.IsNodeSyncedWithThreshold() {
 						time.Sleep(time.Second)
 						continue
 					}
@@ -273,7 +276,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					}
 
 					if err := waitForLowerCPUUsage(cpuMaxUsage, shutdownSignal); err != nil {
-						if err != tangle.ErrOperationAborted {
+						if err != common.ErrOperationAborted {
 							log.Warn(err.Error())
 						}
 						continue
@@ -337,7 +340,7 @@ func measureSpammerMetrics() {
 		return
 	}
 
-	sentSpamMsgsCnt := metrics.SharedServerMetrics.SentSpamMessages.Load()
+	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
 	new := utils.GetUint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 

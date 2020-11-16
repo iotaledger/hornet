@@ -8,13 +8,13 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func init() {
@@ -56,7 +56,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle     *tanglepkg.Tangle
+	Storage    *storage.Storage
+	Tangle     *tangle.Tangle
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -64,22 +65,22 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishLatestMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
+		publishLatestMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishSolidMilestone(task.Param(0).(*tanglepkg.CachedMilestone)) // milestone pass +1
+		publishSolidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messagesWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishMessage(task.Param(0).(*tanglepkg.CachedMessage)) // metadata pass +1
+		publishMessage(task.Param(0).(*storage.CachedMessage)) // metadata pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messageMetadataWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishMessageMetadata(task.Param(0).(*tanglepkg.CachedMetadata)) // metadata pass +1
+		publishMessageMetadata(task.Param(0).(*storage.CachedMetadata)) // metadata pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -95,7 +96,7 @@ func configure() {
 		topicName := string(topic)
 
 		if messageId := messageIdFromTopic(topicName); messageId != nil {
-			if cachedMetadata := deps.Tangle.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
+			if cachedMetadata := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 					return // Avoid Release (done inside workerpool task)
 				}
@@ -105,12 +106,12 @@ func configure() {
 		}
 
 		if outputId := outputIdFromTopic(topicName); outputId != nil {
-			output, err := deps.Tangle.UTXO().ReadOutputByOutputID(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputID(outputId)
 			if err != nil {
 				return
 			}
 
-			unspent, err := deps.Tangle.UTXO().IsOutputUnspent(outputId)
+			unspent, err := deps.Storage.UTXO().IsOutputUnspent(outputId)
 			if err != nil {
 				return
 			}
@@ -119,16 +120,16 @@ func configure() {
 		}
 
 		if topicName == topicMilestonesLatest {
-			index := deps.Tangle.GetLatestMilestoneIndex()
-			if milestone := deps.Tangle.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.GetLatestMilestoneIndex()
+			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
 				publishLatestMilestone(milestone) // milestone pass +1
 			}
 			return
 		}
 
 		if topicName == topicMilestonesSolid {
-			index := deps.Tangle.GetSolidMilestoneIndex()
-			if milestone := deps.Tangle.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.GetSolidMilestoneIndex()
+			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
 				publishSolidMilestone(milestone) // milestone pass +1
 			}
 			return
@@ -147,7 +148,7 @@ func configure() {
 	})
 
 	if err != nil {
-		log.Fatalf("MQTT broker init failed! %v", err.Error())
+		log.Fatalf("MQTT broker init failed! %s", err)
 	}
 }
 
@@ -155,7 +156,7 @@ func run() {
 
 	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
 
-	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *tanglepkg.CachedMilestone) {
+	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMs.Release(true)
@@ -168,9 +169,9 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *tanglepkg.CachedMilestone) {
+	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
-			if !deps.Tangle.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				cachedMs.Release(true)
 				return
 			}
@@ -183,7 +184,7 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *tanglepkg.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMsg.Release(true)
@@ -196,14 +197,14 @@ func run() {
 		cachedMsg.Release(true)
 	})
 
-	onMessageSolid := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata) {
+	onMessageSolid := events.NewClosure(func(cachedMetadata *storage.CachedMetadata) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
 		}
 		cachedMetadata.Release(true)
 	})
 
-	onMessageReferenced := events.NewClosure(func(cachedMetadata *tanglepkg.CachedMetadata, msIndex milestone.Index, confTime uint64) {
+	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, msIndex milestone.Index, confTime uint64) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
 		}
@@ -240,15 +241,15 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting MQTT Events ... done")
 
-		tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
-		tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
+		deps.Tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
 
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		tangle.Events.MessageSolid.Attach(onMessageSolid)
-		tangle.Events.MessageReferenced.Attach(onMessageReferenced)
+		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+		deps.Tangle.Events.MessageReferenced.Attach(onMessageReferenced)
 
-		tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
-		tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
+		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
+		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
 
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
@@ -259,15 +260,15 @@ func run() {
 
 		<-shutdownSignal
 
-		tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
-		tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+		deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
+		deps.Tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
 
-		tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		tangle.Events.MessageSolid.Detach(onMessageSolid)
-		tangle.Events.MessageReferenced.Detach(onMessageReferenced)
+		deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+		deps.Tangle.Events.MessageReferenced.Detach(onMessageReferenced)
 
-		tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
-		tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
+		deps.Tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
+		deps.Tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
 
 		messagesWorkerPool.StopAndWait()
 		newLatestMilestoneWorkerPool.StopAndWait()

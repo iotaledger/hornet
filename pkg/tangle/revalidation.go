@@ -5,9 +5,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -52,78 +53,78 @@ var (
 //			- Balances of snapshot milestone			=> should be consistent (total iotas are checked)
 //			- Balance diffs of every solid milestone	=> will be removed and added again by confirmation
 //
-func revalidateDatabase() error {
+func (t *Tangle) RevalidateDatabase() error {
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
-	deps.Tangle.MarkDatabaseTainted()
+	t.storage.MarkDatabaseTainted()
 
 	start := time.Now()
 
-	snapshotInfo := deps.Tangle.GetSnapshotInfo()
+	snapshotInfo := t.storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		return ErrSnapshotInfoMissing
 	}
 
-	latestMilestoneIndex := deps.Tangle.SearchLatestMilestoneIndexInStore()
+	latestMilestoneIndex := t.storage.SearchLatestMilestoneIndexInStore()
 
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	log.Infof("reverting database state back from %d to local snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
+	t.log.Infof("reverting database state back from %d to local snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
-	if err := cleanupMilestones(snapshotInfo); err != nil {
+	if err := t.cleanupMilestones(snapshotInfo); err != nil {
 		return err
 	}
 
 	// deletes all ledger diffs which have a confirmation milestone newer than the last local snapshot's milestone.
-	if err := cleanupLedgerDiffs(snapshotInfo); err != nil {
+	if err := t.cleanupLedgerDiffs(snapshotInfo); err != nil {
 		return err
 	}
 
 	// clean up messages which are above the local snapshot
-	if err := cleanupMessages(snapshotInfo); err != nil {
+	if err := t.cleanupMessages(snapshotInfo); err != nil {
 		return err
 	}
 
 	// deletes all message metadata where the msg doesn't exist in the database anymore.
-	if err := cleanupMessageMetadata(); err != nil {
+	if err := t.cleanupMessageMetadata(); err != nil {
 		return err
 	}
 
 	// deletes all children where the msg doesn't exist in the database anymore.
-	if err := cleanupChildren(); err != nil {
+	if err := t.cleanupChildren(); err != nil {
 		return err
 	}
 
 	// deletes all addresses where the msg doesn't exist in the database anymore.
-	if err := cleanupAddresses(); err != nil {
+	if err := t.cleanupAddresses(); err != nil {
 		return err
 	}
 
 	// deletes all unreferenced msgs that are left in the database (we do not need them since we deleted all unreferenced msgs).
-	if err := cleanupUnreferencedMsgs(); err != nil {
+	if err := t.cleanupUnreferencedMsgs(); err != nil {
 		return err
 	}
 
-	log.Info("flushing storages...")
-	deps.Tangle.FlushStorages()
-	log.Info("flushing storages... done!")
+	t.log.Info("flushing storages...")
+	t.storage.FlushStorages()
+	t.log.Info("flushing storages... done!")
 
 	// apply the ledger from the last snapshot to the database
-	if err := applySnapshotLedger(snapshotInfo); err != nil {
+	if err := t.applySnapshotLedger(snapshotInfo); err != nil {
 		return err
 	}
 
-	log.Infof("reverted state back to local snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("reverted state back to local snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
 // deletes milestones above the given snapshot's milestone index.
-func cleanupMilestones(info *tangle.SnapshotInfo) error {
+func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 
 	start := time.Now()
 
@@ -131,17 +132,17 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var milestonesCounter int64
-	deps.Tangle.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
+	t.storage.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
 		milestonesCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
-			log.Infof("analyzed %d milestones", milestonesCounter)
+			t.log.Infof("analyzed %d milestones", milestonesCounter)
 		}
 
 		// do not delete older milestones
@@ -154,8 +155,8 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		return true
 	}, true)
 
-	if CorePlugin.Daemon().IsStopped() {
-		return tangle.ErrOperationAborted
+	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	total := len(milestonesToDelete)
@@ -166,34 +167,34 @@ func cleanupMilestones(info *tangle.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
-				return tangle.ErrOperationAborted
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+				return err
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.log.Infof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		deps.Tangle.DeleteUnreferencedMessages(msIndex)
+		t.storage.DeleteUnreferencedMessages(msIndex)
 		/*
-			if err := deps.Tangle.DeleteLedgerDiffForMilestone(msIndex); err != nil {
+			if err := t.storage.DeleteLedgerDiffForMilestone(msIndex); err != nil {
 				panic(err)
 			}
 		*/
 
-		deps.Tangle.DeleteMilestone(msIndex)
+		t.storage.DeleteMilestone(msIndex)
 	}
 
-	deps.Tangle.FlushUnreferencedMessagesStorage()
-	deps.Tangle.FlushMilestoneStorage()
+	t.storage.FlushUnreferencedMessagesStorage()
+	t.storage.FlushMilestoneStorage()
 
-	log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
 // deletes all ledger diffs which have a confirmation milestone newer than the last local snapshot's milestone.
-func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
+func (t *Tangle) cleanupLedgerDiffs(info *storage.SnapshotInfo) error {
 	return nil
 	/*
 		start := time.Now()
@@ -202,17 +203,17 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 
 		lastStatusTime := time.Now()
 		var ledgerDiffsCounter int64
-		deps.Tangle.ForEachLedgerDiffHash(func(msIndex milestone.Index, address hornet.Hash) bool {
+		t.storage.ForEachLedgerDiffHash(func(msIndex milestone.Index, address hornet.Hash) bool {
 			ledgerDiffsCounter++
 
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if CorePlugin.Daemon().IsStopped() {
+				if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 					return false
 				}
 
-				log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
+				t.log.Infof("analyzed %d ledger diffs", ledgerDiffsCounter)
 			}
 
 			// do not delete older milestones
@@ -225,8 +226,8 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 			return true
 		}, true)
 
-		if CorePlugin.Daemon().IsStopped() {
-			return tangle.ErrOperationAborted
+		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			return err
 		}
 
 		total := len(ledgerDiffsToDelete)
@@ -237,18 +238,18 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if CorePlugin.Daemon().IsStopped() {
-					return tangle.ErrOperationAborted
+				if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+					return err
 				}
 
 				percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-				log.Infof("deleting ledger diffs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+				t.log.Infof("deleting ledger diffs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 			}
 
-			deps.Tangle.DeleteLedgerDiffForMilestone(msIndex)
+			t.storage.DeleteLedgerDiffForMilestone(msIndex)
 		}
 
-		log.Infof("deleting ledger diffs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+		t.log.Infof("deleting ledger diffs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 		return nil
 	*/
@@ -256,7 +257,7 @@ func cleanupLedgerDiffs(info *tangle.SnapshotInfo) error {
 
 // deletes all messages which are not referenced, not solid or
 // their confirmation milestone is newer than the last local snapshot's milestone.
-func cleanupMessages(info *tangle.SnapshotInfo) error {
+func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	start := time.Now()
 
@@ -264,20 +265,20 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	deps.Tangle.ForEachMessageID(func(messageID *hornet.MessageID) bool {
+	t.storage.ForEachMessageID(func(messageID *hornet.MessageID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
-			log.Infof("analyzed %d messages", txsCounter)
+			t.log.Infof("analyzed %d messages", txsCounter)
 		}
 
-		storedTxMeta := deps.Tangle.GetStoredMetadataOrNil(messageID)
+		storedTxMeta := t.storage.GetStoredMetadataOrNil(messageID)
 
 		// delete message if metadata doesn't exist
 		if storedTxMeta == nil {
@@ -299,10 +300,10 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 
 		return true
 	}, true)
-	log.Infof("analyzed %d messages", txsCounter)
+	t.log.Infof("analyzed %d messages", txsCounter)
 
-	if CorePlugin.Daemon().IsStopped() {
-		return tangle.ErrOperationAborted
+	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	total := len(messagesToDelete)
@@ -313,26 +314,26 @@ func cleanupMessages(info *tangle.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
-				return tangle.ErrOperationAborted
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+				return err
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.log.Infof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		deps.Tangle.DeleteMessage(hornet.MessageIDFromMapKey(messageID))
+		t.storage.DeleteMessage(hornet.MessageIDFromMapKey(messageID))
 	}
 
-	deps.Tangle.FlushMessagesStorage()
+	t.storage.FlushMessagesStorage()
 
-	log.Infof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
 // deletes all message metadata where the msg doesn't exist in the database anymore.
-func cleanupMessageMetadata() error {
+func (t *Tangle) cleanupMessageMetadata() error {
 
 	start := time.Now()
 
@@ -340,30 +341,30 @@ func cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	deps.Tangle.ForEachMessageMetadataMessageID(func(messageID *hornet.MessageID) bool {
+	t.storage.ForEachMessageMetadataMessageID(func(messageID *hornet.MessageID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
-			log.Infof("analyzed %d message metadata", metadataCounter)
+			t.log.Infof("analyzed %d message metadata", metadataCounter)
 		}
 
 		// delete metadata if message doesn't exist
-		if !deps.Tangle.MessageExistsInStore(messageID) {
+		if !t.storage.MessageExistsInStore(messageID) {
 			metadataToDelete[messageID.MapKey()] = struct{}{}
 		}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d message metadata", metadataCounter)
+	t.log.Infof("analyzed %d message metadata", metadataCounter)
 
-	if CorePlugin.Daemon().IsStopped() {
-		return tangle.ErrOperationAborted
+	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	total := len(metadataToDelete)
@@ -374,26 +375,26 @@ func cleanupMessageMetadata() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
-				return tangle.ErrOperationAborted
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+				return err
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.log.Infof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		deps.Tangle.DeleteMessageMetadata(hornet.MessageIDFromMapKey(messageID))
+		t.storage.DeleteMessageMetadata(hornet.MessageIDFromMapKey(messageID))
 	}
 
-	deps.Tangle.FlushMessagesStorage()
+	t.storage.FlushMessagesStorage()
 
-	log.Infof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
 // deletes all children where the msg doesn't exist in the database anymore.
-func cleanupChildren() error {
+func (t *Tangle) cleanupChildren() error {
 
 	type child struct {
 		messageID      *hornet.MessageID
@@ -406,37 +407,37 @@ func cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	deps.Tangle.ForEachChild(func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
+	t.storage.ForEachChild(func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
-			log.Infof("analyzed %d children", childCounter)
+			t.log.Infof("analyzed %d children", childCounter)
 		}
 
 		childrenMapKey := messageID.MapKey() + childMessageID.MapKey()
 
 		// delete child if message doesn't exist
-		if !deps.Tangle.MessageExistsInStore(messageID) {
+		if !t.storage.MessageExistsInStore(messageID) {
 			childrenToDelete[childrenMapKey] = &child{messageID: messageID, childMessageID: childMessageID}
 		}
 
 		// delete child if child message doesn't exist
-		if !deps.Tangle.MessageExistsInStore(childMessageID) {
+		if !t.storage.MessageExistsInStore(childMessageID) {
 			childrenToDelete[childrenMapKey] = &child{messageID: messageID, childMessageID: childMessageID}
 		}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d children", childCounter)
+	t.log.Infof("analyzed %d children", childCounter)
 
-	if CorePlugin.Daemon().IsStopped() {
-		return tangle.ErrOperationAborted
+	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	total := len(childrenToDelete)
@@ -447,26 +448,26 @@ func cleanupChildren() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
-				return tangle.ErrOperationAborted
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+				return err
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.log.Infof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		deps.Tangle.DeleteChild(child.messageID, child.childMessageID)
+		t.storage.DeleteChild(child.messageID, child.childMessageID)
 	}
 
-	deps.Tangle.FlushChildrenStorage()
+	t.storage.FlushChildrenStorage()
 
-	log.Infof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
 // deletes all addresses where the msg doesn't exist in the database anymore.
-func cleanupAddresses() error {
+func (t *Tangle) cleanupAddresses() error {
 	return nil
 
 	/*
@@ -481,30 +482,30 @@ func cleanupAddresses() error {
 
 		lastStatusTime := time.Now()
 		var addressesCounter int64
-		deps.Tangle.ForEachAddress(func(addressHash hornet.Hash, messageID hornet.Hash, isValue bool) bool {
+		t.storage.ForEachAddress(func(addressHash hornet.Hash, messageID hornet.Hash, isValue bool) bool {
 			addressesCounter++
 
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if CorePlugin.Daemon().IsStopped() {
+				if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 					return false
 				}
 
-				log.Infof("analyzed %d addresses", addressesCounter)
+				t.log.Infof("analyzed %d addresses", addressesCounter)
 			}
 
 			// delete address if message doesn't exist
-			if !deps.Tangle.MessageExistsInStore(messageID) {
+			if !t.storage.MessageExistsInStore(messageID) {
 				addressesToDelete[messageID.MapKey()] = &address{address: addressHash, messageID: messageID}
 			}
 
 			return true
 		}, true)
-		log.Infof("analyzed %d addresses", addressesCounter)
+		t.log.Infof("analyzed %d addresses", addressesCounter)
 
-		if CorePlugin.Daemon().IsStopped() {
-			return tangle.ErrOperationAborted
+		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			return err
 		}
 
 		total := len(addressesToDelete)
@@ -515,27 +516,27 @@ func cleanupAddresses() error {
 			if time.Since(lastStatusTime) >= printStatusInterval {
 				lastStatusTime = time.Now()
 
-				if CorePlugin.Daemon().IsStopped() {
-					return tangle.ErrOperationAborted
+				if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+					return err
 				}
 
 				percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-				log.Infof("deleting addresses...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+				t.log.Infof("deleting addresses...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 			}
 
-			deps.Tangle.DeleteAddress(addr.address, addr.messageID)
+			t.storage.DeleteAddress(addr.address, addr.messageID)
 		}
 
-		deps.Tangle.FlushAddressStorage()
+		t.storage.FlushAddressStorage()
 
-		log.Infof("deleting addresses...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+		t.log.Infof("deleting addresses...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 		return nil
 	*/
 }
 
 // deletes all unreferenced msgs that are left in the database (we do not need them since we deleted all unreferenced msgs).
-func cleanupUnreferencedMsgs() error {
+func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	start := time.Now()
 
@@ -543,27 +544,27 @@ func cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	deps.Tangle.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID *hornet.MessageID) bool {
+	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID *hornet.MessageID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
-			log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
+			t.log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 		}
 
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
 	}, true)
-	log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
+	t.log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 
-	if CorePlugin.Daemon().IsStopped() {
-		return tangle.ErrOperationAborted
+	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	total := len(unreferencedMilestoneIndexes)
@@ -574,32 +575,32 @@ func cleanupUnreferencedMsgs() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if CorePlugin.Daemon().IsStopped() {
-				return tangle.ErrOperationAborted
+			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+				return err
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			log.Infof("deleting unreferenced msgs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.log.Infof("deleting unreferenced msgs...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		deps.Tangle.DeleteUnreferencedMessages(msIndex)
+		t.storage.DeleteUnreferencedMessages(msIndex)
 	}
 
-	deps.Tangle.FlushUnreferencedMessagesStorage()
+	t.storage.FlushUnreferencedMessagesStorage()
 
-	log.Infof("deleting unreferenced msgs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("deleting unreferenced msgs...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
 // apply the ledger from the last snapshot to the database
-func applySnapshotLedger(info *tangle.SnapshotInfo) error {
+func (t *Tangle) applySnapshotLedger(info *storage.SnapshotInfo) error {
 
-	log.Info("applying snapshot balances to the ledger state...")
+	t.log.Info("applying snapshot balances to the ledger state...")
 
 	/*
 		// Get the ledger state of the last snapshot
-		snapshotBalances, snapshotIndex, err := deps.Tangle.GetAllSnapshotBalances(nil)
+		snapshotBalances, snapshotIndex, err := t.storage.GetAllSnapshotBalances(nil)
 		if err != nil {
 			return err
 		}
@@ -609,13 +610,13 @@ func applySnapshotLedger(info *tangle.SnapshotInfo) error {
 		}
 
 		// Store the snapshot balances as the current valid ledger
-		if err = deps.Tangle.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
+		if err = t.storage.StoreLedgerBalancesInDatabase(snapshotBalances, snapshotIndex); err != nil {
 			return err
 		}
-		log.Info("applying snapshot balances to the ledger state ... done!")
+		t.log.Info("applying snapshot balances to the ledger state ... done!")
 	*/
 	// Set the valid solid milestone index
-	deps.Tangle.OverwriteSolidMilestoneIndex(info.SnapshotIndex)
+	t.storage.OverwriteSolidMilestoneIndex(info.SnapshotIndex)
 
 	return nil
 }

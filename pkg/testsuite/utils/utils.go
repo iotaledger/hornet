@@ -14,7 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 var (
@@ -42,7 +42,7 @@ func GenerateHDWalletAddress(t *testing.T, seed []byte, index uint64) iotago.Ed2
 }
 
 // MsgWithIndexation creates a zero value transaction to a random address with the given tag.
-func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string) *tangle.Message {
+func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string) *storage.Message {
 
 	msg := &iotago.Message{
 		Version: iotago.MessageVersion,
@@ -54,7 +54,7 @@ func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.
 	err := pow.Handler().DoPoW(msg, nil, 1)
 	require.NoError(t, err)
 
-	message, err := tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	require.NoError(t, err)
 
 	return message
@@ -62,7 +62,7 @@ func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.
 
 // MsgWithValueTx creates a value transaction with the given tag from an input seed index to an address created by a given output seed and index.
 func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, inputUTXOs []*iotago.UTXOInput, fromSeed []byte, fromIndices []uint64, balances []uint64,
-	toRemainderIndex uint64, toSeed []byte, toIndex uint64, value uint64) (message *tangle.Message, remainderUTXOInput *iotago.UTXOInput, sentToUTXOInput *iotago.UTXOInput) {
+	toRemainderIndex uint64, toSeed []byte, toIndex uint64, value uint64) (message *storage.Message, remainderUTXOInput *iotago.UTXOInput, sentToUTXOInput *iotago.UTXOInput) {
 
 	require.Equal(t, len(inputUTXOs), len(fromIndices))
 	require.Equal(t, len(inputUTXOs), len(balances))
@@ -130,7 +130,7 @@ func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.Mes
 	err = pow.Handler().DoPoW(msg, nil, 1)
 	require.NoError(t, err)
 
-	message, err = tangle.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	require.NoError(t, err)
 
 	fmt.Println(fmt.Sprintf("Send %d iota to %s and remaining %d iota to %s", value, outputAddr.Bech32(iotago.PrefixTestnet), totalInputBalance-value, remainderAddr.Bech32(iotago.PrefixTestnet)))

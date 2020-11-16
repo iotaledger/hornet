@@ -12,7 +12,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 const (
@@ -37,7 +37,7 @@ type ExplorerMessage struct {
 	MilestoneIndex milestone.Index `json:"milestone_index"`
 }
 
-func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, error) {
+func createExplorerMessage(cachedMsg *storage.CachedMessage) (*ExplorerMessage, error) {
 	defer cachedMsg.Release(true) // msg -1
 
 	referenced, by := cachedMsg.GetMetadata().GetReferenced()
@@ -55,7 +55,7 @@ func createExplorerMessage(cachedMsg *tangle.CachedMessage) (*ExplorerMessage, e
 	}
 
 	// Children
-	t.Children = deps.Tangle.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
+	t.Children = deps.Storage.GetChildrenMessageIDs(cachedMsg.GetMessage().GetMessageID(), MaxChildrenResults).Hex()
 
 	// compute mwm
 	// TODO:
@@ -215,7 +215,7 @@ func setupExplorerRoutes(routeGroup *echo.Group) {
 }
 
 func findMilestone(index milestone.Index) (*ExplorerMessage, error) {
-	cachedMsg := deps.Tangle.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMsg := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "milestone %d unknown", index)
 	}
@@ -231,10 +231,10 @@ func findTransaction(msgID string) (*ExplorerMessage, error) {
 
 	messageID, err := hornet.MessageIDFromHex(msgID)
 	if err != nil {
-		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
+		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err)
 	}
 
-	cachedMsg := deps.Tangle.GetCachedMessageOrNil(messageID) // msg +1
+	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID) // msg +1
 	if cachedMsg == nil {
 		return nil, errors.Wrapf(ErrNotFound, "msg %s unknown", msgID)
 	}
@@ -288,7 +288,7 @@ func findAddress(messageID string, valueOnly bool) (*ExplorerAddress, error) {
 
 	_, err := hex.DecodeString(messageID)
 	if err != nil {
-		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err.Error())
+		return nil, errors.Wrapf(ErrInvalidParameter, "hash invalid: %s", err)
 	}
 
 	/*
