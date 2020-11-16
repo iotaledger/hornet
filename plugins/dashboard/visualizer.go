@@ -6,7 +6,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -176,18 +175,18 @@ func runVisualizer() {
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		tangle.Events.MessageSolid.Attach(onMessageSolid)
-		defer tangle.Events.MessageSolid.Detach(onMessageSolid)
-		tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
-		defer tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
+		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
+		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
 		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
 			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
 			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
 		}
-		tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
-		defer tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 
 		// check if URTS plugin is enabled
 		if !Plugin.Node.IsSkipped(urts.Plugin) {

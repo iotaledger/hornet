@@ -1,10 +1,10 @@
 package dag
 
 import (
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given messages.
@@ -13,7 +13,7 @@ func updateOutdatedConeRootIndexes(s *storage.Storage, outdatedMessageIDs hornet
 	for _, outdatedMessageID := range outdatedMessageIDs {
 		cachedMsgMeta := s.GetCachedMessageMetadataOrNil(outdatedMessageID)
 		if cachedMsgMeta == nil {
-			panic(tangle.ErrMessageNotFound)
+			panic(common.ErrMessageNotFound)
 		}
 		GetConeRootIndexes(s, cachedMsgMeta, lsmi)
 	}
@@ -100,7 +100,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 			entryPointIndex, _ := s.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
 		}, false, nil); err != nil {
-		if err == tangle.ErrMessageNotFound {
+		if err == common.ErrMessageNotFound {
 			indexesValid = false
 		} else {
 			panic(err)

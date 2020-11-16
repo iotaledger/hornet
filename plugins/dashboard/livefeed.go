@@ -8,7 +8,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
 func runLiveFeed() {
@@ -46,10 +45,10 @@ func runLiveFeed() {
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
-		tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		defer tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		defer tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		defer deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
 		<-shutdownSignal
 

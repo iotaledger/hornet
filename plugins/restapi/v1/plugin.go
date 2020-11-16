@@ -19,8 +19,8 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -164,6 +164,7 @@ var (
 type dependencies struct {
 	dig.In
 	Storage          *storage.Storage
+	Tangle           *tangle.Tangle
 	Manager          *p2p.Manager
 	RequestQueue     gossip.RequestQueue
 	UTXO             *utxo.Manager
@@ -346,7 +347,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
-		tanglecore.TriggerSolidifier()
+		deps.Tangle.TriggerSolidifier()
 
 		return restapi.JSONResponse(c, http.StatusOK, "solidifier triggered")
 	})

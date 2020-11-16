@@ -16,7 +16,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -27,6 +26,7 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
@@ -99,12 +99,13 @@ var (
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
-	cachedMilestoneMetrics []*tanglecore.ConfirmedMilestoneMetric
+	cachedMilestoneMetrics []*tangle.ConfirmedMilestoneMetric
 )
 
 type dependencies struct {
 	dig.In
 	Storage          *storage.Storage
+	Tangle           *tangle.Tangle
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	Manager          *p2p.Manager
@@ -163,7 +164,7 @@ func run() {
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tanglecore.MPSMetrics) {
+	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
@@ -177,26 +178,26 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
-	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tanglecore.ConfirmedMilestoneMetric) {
+	onNewConfirmedMilestoneMetric := events.NewClosure(func(metric *tangle.ConfirmedMilestoneMetric) {
 		cachedMilestoneMetrics = append(cachedMilestoneMetrics, metric)
 		if len(cachedMilestoneMetrics) > 20 {
 			cachedMilestoneMetrics = cachedMilestoneMetrics[len(cachedMilestoneMetrics)-20:]
 		}
-		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tanglecore.ConfirmedMilestoneMetric{metric}})
+		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangle.ConfirmedMilestoneMetric{metric}})
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
-		tanglecore.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		tanglecore.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		tanglecore.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		tanglecore.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
+		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
-		tanglecore.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-		tanglecore.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
-		tanglecore.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
-		tanglecore.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
+		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
 		log.Info("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
@@ -377,7 +378,7 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = app.Version
 	status.LatestVersion = app.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.IsHealthy = tanglecore.IsNodeHealthy()
+	status.IsHealthy = deps.Tangle.IsNodeHealthy()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()

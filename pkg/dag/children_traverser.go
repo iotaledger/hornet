@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 type ChildrenTraverser struct {
@@ -93,7 +93,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	select {
 	case <-t.abortSignal:
-		return tangle.ErrOperationAborted
+		return common.ErrOperationAborted
 	default:
 	}
 
@@ -110,7 +110,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		cachedMsgMeta = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(tangle.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
+			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
 		}
 		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
 	}

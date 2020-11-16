@@ -6,15 +6,14 @@ import (
 	"strings"
 
 	"github.com/gohornet/hornet/core/app"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func info() (*infoResponse, error) {
@@ -51,7 +50,7 @@ func info() (*infoResponse, error) {
 	return &infoResponse{
 		Name:                 app.Name,
 		Version:              app.Version,
-		IsHealthy:            tanglecore.IsNodeHealthy(),
+		IsHealthy:            deps.Tangle.IsNodeHealthy(),
 		NetworkID:            snapshotInfo.NetworkID,
 		LatestMilestoneID:    latestMilestoneID,
 		LatestMilestoneIndex: latestMilestoneIndex,
@@ -81,7 +80,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	}
 
 	if err != nil {
-		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+		if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
 			return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
 		}
 		return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())

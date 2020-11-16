@@ -12,9 +12,9 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 var (

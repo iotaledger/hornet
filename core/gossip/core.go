@@ -57,7 +57,7 @@ var (
 type dependencies struct {
 	dig.In
 	Service          *gossip.Service
-	Storage *storage.Storage
+	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
@@ -74,7 +74,7 @@ func provide(c *dig.Container) {
 
 	type msgprocdependencies struct {
 		dig.In
-		Storage *storage.Storage
+		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
 		RequestQueue  gossip.RequestQueue
 		Manager       *p2p.Manager

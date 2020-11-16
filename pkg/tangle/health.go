@@ -11,13 +11,13 @@ const (
 )
 
 // IsNodeHealthy returns whether the node is synced, has active neighbors and its latest milestone is not too old.
-func IsNodeHealthy() bool {
-	if !deps.Tangle.IsNodeSyncedWithThreshold() {
+func (t *Tangle) IsNodeHealthy() bool {
+	if !t.storage.IsNodeSyncedWithThreshold() {
 		return false
 	}
 
 	var gossipStreamsOngoing int
-	deps.Service.ForEach(func(proto *gossip.Protocol) bool {
+	t.service.ForEach(func(proto *gossip.Protocol) bool {
 		gossipStreamsOngoing++
 		return true
 	})
@@ -27,8 +27,8 @@ func IsNodeHealthy() bool {
 	}
 
 	// latest milestone timestamp
-	lmi := deps.Tangle.GetLatestMilestoneIndex()
-	cachedLatestMilestone := deps.Tangle.GetCachedMilestoneOrNil(lmi) // milestone +1
+	lmi := t.storage.GetLatestMilestoneIndex()
+	cachedLatestMilestone := t.storage.GetCachedMilestoneOrNil(lmi) // milestone +1
 	if cachedLatestMilestone == nil {
 		return false
 	}

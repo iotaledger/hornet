@@ -107,7 +107,7 @@ type MessageProcessorEvents struct {
 
 // MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
 type MessageProcessor struct {
-	storage *storage.Storage
+	storage       *storage.Storage
 	Events        MessageProcessorEvents
 	ps            *p2p.Manager
 	wp            *workerpool.WorkerPool

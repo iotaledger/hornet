@@ -23,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func init() {
@@ -49,6 +50,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	Tangle     *tangle.Tangle
 	Echo       *echo.Echo
 }
 

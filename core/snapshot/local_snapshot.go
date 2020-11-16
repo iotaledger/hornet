@@ -9,7 +9,7 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	tanglecore "github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -94,7 +94,7 @@ func getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessa
 		// the pruning target index is also a solid entry point => traverse it anyways
 		true,
 		abortSignal); err != nil {
-		if err == tangle.ErrOperationAborted {
+		if err == common.ErrOperationAborted {
 			return nil, ErrSnapshotCreationWasAborted
 		}
 	}
@@ -441,7 +441,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 		snapshotInfo.Timestamp = cachedTargetMilestone.GetMilestone().Timestamp
 		deps.Storage.SetSnapshotInfo(snapshotInfo)
 
-		tanglecore.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
+		deps.Tangle.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
 	log.Infof("created local snapshot for target index %d, took %v", targetIndex, time.Since(ts))

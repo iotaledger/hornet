@@ -14,12 +14,12 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 // BackPressureFunc is a function which tells the Coordinator
@@ -60,7 +60,7 @@ type PublicKeyRanges []*PublicKeyRange
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
-	storage *storage.Storage
+	storage        *storage.Storage
 	signerProvider MilestoneSignerProvider
 
 	// config options
@@ -107,7 +107,7 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 func New(storage *storage.Storage, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
 	result := &Coordinator{
-		storage:                  storage,
+		storage:                 storage,
 		signerProvider:          signerProvider,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
@@ -281,7 +281,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.storage.IsNodeSynced() {
-		return nil, tangle.ErrNodeNotSynced
+		return nil, common.ErrNodeNotSynced
 	}
 
 	// check whether we should hold issuing checkpoints
@@ -317,7 +317,7 @@ func (coo *Coordinator) IssueMilestone(parent1MessageID *hornet.MessageID, paren
 
 	if !coo.storage.IsNodeSynced() {
 		// return a non-critical error to not kill the database
-		return nil, tangle.ErrNodeNotSynced, nil
+		return nil, common.ErrNodeNotSynced, nil
 	}
 
 	// check whether we should hold issuing miletones

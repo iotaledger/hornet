@@ -9,8 +9,8 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -149,7 +149,7 @@ func New(storage *storage.Storage,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		storage:                                 storage,
+		storage:                                storage,
 		serverMetrics:                          serverMetrics,
 		maxDeltaMsgYoungestConeRootIndexToLSMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToLSMI),
 		maxDeltaMsgOldestConeRootIndexToLSMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToLSMI),
@@ -309,7 +309,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (*hornet
 func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (*hornet.MessageID, error) {
 
 	if !ts.storage.IsNodeSyncedWithThreshold() {
-		return nil, tangle.ErrNodeNotSynced
+		return nil, common.ErrNodeNotSynced
 	}
 
 	// record stats

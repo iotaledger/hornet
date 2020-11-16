@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/iota.go/pow"
 
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-
-	"github.com/gohornet/hornet/pkg/tangle"
+	iotago "github.com/iotaledger/iota.go"
 )
 
 const (
@@ -171,7 +170,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 
 	select {
 	case <-shutdownSignal:
-		return tangle.ErrOperationAborted
+		return common.ErrOperationAborted
 	default:
 	}
 

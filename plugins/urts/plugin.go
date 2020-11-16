@@ -10,11 +10,11 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/pkg/dag"
-	tanglecore "github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -47,6 +47,7 @@ type dependencies struct {
 	dig.In
 	TipSelector *tipselect.TipSelector
 	Storage     *storage.Storage
+	Tangle      *tangle.Tangle
 }
 
 func provide(c *dig.Container) {
@@ -137,11 +138,11 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	tanglecore.Events.MessageSolid.Attach(onMessageSolid)
-	tanglecore.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 }
 
 func detachEvents() {
-	tanglecore.Events.MessageSolid.Detach(onMessageSolid)
-	tanglecore.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 }
