@@ -2,9 +2,14 @@ package mqtt
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
 	"github.com/fhmq/hmq/broker"
+)
+
+const (
+	workerNumber = 4096
 )
 
 // Broker is a simple mqtt publisher abstraction.
@@ -15,9 +20,21 @@ type Broker struct {
 }
 
 // NewBroker creates a new broker.
-func NewBroker(mqttConfigFilePath string, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
+func NewBroker(bindAddress string, wsPort int, wsPath string, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
 
-	c, err := broker.ConfigureConfig([]string{fmt.Sprintf("--config=%s", mqttConfigFilePath)})
+	host, port, err := net.SplitHostPort(bindAddress)
+	if err != nil {
+		return nil, fmt.Errorf("configure broker config error: %w", err)
+	}
+
+	c, err := broker.ConfigureConfig([]string{
+		fmt.Sprintf("--worker=%d", workerNumber),
+		fmt.Sprintf("--host=%s", host),
+		fmt.Sprintf("--port=%s", port),
+		fmt.Sprintf("--wsport=%d", wsPort),
+		fmt.Sprintf("--wspath=%s", wsPath),
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("configure broker config error: %w", err)
 	}
