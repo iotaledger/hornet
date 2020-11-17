@@ -40,7 +40,6 @@ func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
 	if mqttBroker.HasSubscribers(topic) {
 		publishOnTopic(topic, &milestonePayload{
 			Index:       uint32(milestone.Index),
-			MilestoneID: hex.EncodeToString(milestone.MilestoneID[:]),
 			Time:        milestone.Timestamp.Unix(),
 		})
 	}

@@ -333,17 +333,8 @@ func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex mil
 			}
 		}
 
-		var milestoneID *iotago.MilestoneID
 		if valid {
-			var err error
-			milestoneID, err = ms.ID()
-			if err != nil {
-				valid = false
-			}
-		}
-
-		if valid {
-			cachedMilestone := s.storeMilestone(milestoneID, milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+			cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
 
 			s.Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
 

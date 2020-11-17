@@ -73,9 +73,6 @@ func snapshotGen(args []string) error {
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 	}
 
-	header.SEPMilestoneID = &iotago.MilestoneID{}
-	header.LedgerMilestoneID = &iotago.MilestoneID{}
-
 	// solid entry points
 	// add "NullMessageID" as sole entry point
 	nullHashAdded := false
