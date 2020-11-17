@@ -147,7 +147,7 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	var err error
-	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTHost), deps.NodeConfig.Int(CfgMQTTPort), deps.NodeConfig.Int(CfgMQTTWSPort), deps.NodeConfig.String(CfgMQTTWSPath), func(topic []byte) {
+	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", func(topic []byte) {
 		log.Infof("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {

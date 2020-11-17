@@ -160,7 +160,8 @@
     "autostart": true
   },
   "mqtt": {
-    "config": "mqtt_config.json"
+    "bindAddress": "localhost:1883",
+    "wsPort": 1888
   },
   "profiling": {
     "bindAddress": "localhost:6060"

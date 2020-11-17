@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
 	"github.com/fhmq/hmq/broker"
@@ -19,12 +20,17 @@ type Broker struct {
 }
 
 // NewBroker creates a new broker.
-func NewBroker(host string, port int, wsPort int, wsPath string, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
+func NewBroker(bindAddress string, wsPort int, wsPath string, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
+
+	host, port, err := net.SplitHostPort(bindAddress)
+	if err != nil {
+		return nil, fmt.Errorf("configure broker config error: %w", err)
+	}
 
 	c, err := broker.ConfigureConfig([]string{
 		fmt.Sprintf("--worker=%d", workerNumber),
 		fmt.Sprintf("--host=%s", host),
-		fmt.Sprintf("--port=%d", port),
+		fmt.Sprintf("--port=%s", port),
 		fmt.Sprintf("--wsport=%d", wsPort),
 		fmt.Sprintf("--wspath=%s", wsPath),
 	})
