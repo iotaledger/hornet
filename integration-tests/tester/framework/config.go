@@ -73,6 +73,7 @@ func DefaultConfig() *NodeConfig {
 		Network:     DefaultNetworkConfig(),
 		Snapshot:    DefaultSnapshotConfig(),
 		Coordinator: DefaultCoordinatorConfig(),
+		Protocol:    DefaultProtocolConfig(),
 		RestAPI:     DefaultRestAPIConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
@@ -104,6 +105,8 @@ type NodeConfig struct {
 	Snapshot SnapshotConfig
 	// Coordinator config.
 	Coordinator CoordinatorConfig
+	// Protocol config.
+	Protocol ProtocolConfig
 	// Plugin config.
 	Plugins PluginConfig
 	// Profiling config.
@@ -126,6 +129,7 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Network.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Snapshot.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Protocol.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.RestAPI.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
@@ -284,42 +288,62 @@ func DefaultSnapshotConfig() SnapshotConfig {
 type CoordinatorConfig struct {
 	// Whether to let the node run as the coordinator.
 	RunAsCoo bool
-	// Whether to run the coordinator in bootstrap node.
-	Bootstrap bool
-	// The minimum PoW score needed.
-	MinPoWScore float64
 	// The coo private keys.
 	PrivateKeys []string
-	// The coo public key ranges.
-	PublicKeyRanges []coopkg.PublicKeyRange
+	// Whether to run the coordinator in bootstrap node.
+	Bootstrap bool
 	// The interval in which to issue new milestones.
 	IssuanceIntervalSeconds int
 }
 
 // CLIFlags returns the config as CLI flags.
 func (cooConfig *CoordinatorConfig) CLIFlags() []string {
-	keyRanges := []string{}
-
-	for _, keyRange := range cooConfig.PublicKeyRanges {
-		keyRanges = append(keyRanges, fmt.Sprintf("{\"key\":\"%v\",\"start\":%d,\"end\":%d}", keyRange.Key, keyRange.StartIndex, keyRange.EndIndex))
-	}
-
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--%s=[%v]", protocfg.CfgProtocolPublicKeyRangesJSON, strings.Join(keyRanges, ",")),
 		fmt.Sprintf("--%s=%d", coordinator.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
-		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, cooConfig.MinPoWScore),
 	}
 }
 
 // DefaultCoordinatorConfig returns the default coordinator config.
 func DefaultCoordinatorConfig() CoordinatorConfig {
 	return CoordinatorConfig{
-		RunAsCoo:    false,
-		Bootstrap:   false,
-		MinPoWScore: 100,
+		RunAsCoo:  false,
+		Bootstrap: false,
 		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
+		IssuanceIntervalSeconds: 10,
+	}
+}
+
+// ProtocolConfig defines protocol specific configuration.
+type ProtocolConfig struct {
+	// The minimum PoW score needed.
+	MinPoWScore float64
+	// The coo public key ranges.
+	PublicKeyRanges []coopkg.PublicKeyRange
+	// The network ID on which this node operates on.
+	NetworkIDName string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (protoConfig *ProtocolConfig) CLIFlags() []string {
+	keyRanges := []string{}
+
+	for _, keyRange := range protoConfig.PublicKeyRanges {
+		keyRanges = append(keyRanges, fmt.Sprintf("{\"key\":\"%v\",\"start\":%d,\"end\":%d}", keyRange.Key, keyRange.StartIndex, keyRange.EndIndex))
+	}
+
+	return []string{
+		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
+		fmt.Sprintf("--%s=[%v]", protocfg.CfgProtocolPublicKeyRangesJSON, strings.Join(keyRanges, ",")),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkIDName),
+	}
+}
+
+// DefaultProtocolConfig returns the default protocol config.
+func DefaultProtocolConfig() ProtocolConfig {
+	return ProtocolConfig{
+		MinPoWScore: 100,
 		PublicKeyRanges: []coopkg.PublicKeyRange{
 			{
 				Key:        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -332,7 +356,7 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 				EndIndex:   0,
 			},
 		},
-		IssuanceIntervalSeconds: 10,
+		NetworkIDName: "alphanet1",
 	}
 }
 
