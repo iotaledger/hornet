@@ -85,6 +85,7 @@ type dependencies struct {
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	NetworkID        uint64                       `name:"networkId"`
 	Echo             *echo.Echo
 }
 
@@ -121,6 +122,7 @@ func configure() {
 	}
 
 	spammerInstance = spammer.New(
+		deps.NetworkID,
 		deps.NodeConfig.String(CfgSpammerMessage),
 		deps.NodeConfig.String(CfgSpammerIndex),
 		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),

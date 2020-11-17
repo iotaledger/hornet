@@ -23,7 +23,7 @@ const (
 
 	// The offset of counters within a local snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + sep-ms-hash + ledger-ms-index + ledger-ms-hash
-	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.OneByte +
+	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.UInt64ByteSize +
 		iotago.UInt32ByteSize + iotago.MilestoneIDLength +
 		iotago.UInt32ByteSize + iotago.MilestoneIDLength
 )
@@ -174,8 +174,8 @@ type FileHeader struct {
 	Version byte
 	// Type denotes the type of this local snapshot.
 	Type Type
-	// The id of the network (1=mainnet).
-	NetworkID uint8
+	// The ID of the network for which this snapshot is compatible with.
+	NetworkID uint64
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
 	// The ID of the milestone of the SEPs.

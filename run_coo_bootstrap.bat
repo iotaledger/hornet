@@ -5,6 +5,7 @@ set COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e
 go run -tags "pow_avx" main.go -c config_alphanet.json ^
 --cooBootstrap ^
 --cooStartIndex 0 ^
+--protocol.networkID="alphanet1" ^
 --restAPI.bindAddress="0.0.0.0:14265" ^
 --dashboard.bindAddress="localhost:8081" ^
 --db.path="alphanetdb" ^

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -88,6 +89,7 @@ type dependencies struct {
 	Tangle     *tangle.Tangle
 	UTXO       *utxo.Manager
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	NetworkID  uint64                       `name:"networkId"`
 }
 
 func configure() {
@@ -114,6 +116,13 @@ func configure() {
 	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {
 		if !*forceLoadingSnapshot {
+
+			// check that the stored snapshot corresponds to the wanted network ID
+			if snapshotInfo.NetworkID != deps.NetworkID {
+				networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
+				log.Panicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", deps.NetworkID, networkIDSource, snapshotInfo.NetworkID)
+			}
+
 			// If we don't enforce loading of a snapshot,
 			// we can check the ledger state of current database and start the node.
 			if err := deps.UTXO.CheckLedgerState(); err != nil {
@@ -147,7 +156,7 @@ func configure() {
 		log.Info("Snapshot download finished")
 	}
 
-	if err := LoadFullSnapshotFromFile(path); err != nil {
+	if err := LoadFullSnapshotFromFile(deps.NetworkID, path); err != nil {
 		deps.Storage.MarkDatabaseCorrupted()
 		log.Panic(err.Error())
 	}

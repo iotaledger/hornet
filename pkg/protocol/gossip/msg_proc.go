@@ -120,6 +120,7 @@ type MessageProcessor struct {
 // The Options for the MessageProcessor.
 type Options struct {
 	MinPoWScore       float64
+	NetworkID         uint64
 	WorkUnitCacheOpts *profile.CacheOpts
 }
 
@@ -137,6 +138,10 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
 func (proc *MessageProcessor) Emit(msg *storage.Message) error {
+
+	if msg.GetNetworkID() != proc.opts.NetworkID {
+		return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.GetNetworkID(), proc.opts.NetworkID)
+	}
 
 	score, err := msg.GetMessage().POW()
 	if err != nil {
@@ -288,6 +293,13 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(proc.ps, errors.WithMessagef(err, "peer sent an invalid message"))
+		return
+	}
+
+	// check the network ID of the message
+	if msg.GetNetworkID() != proc.opts.NetworkID {
+		wu.UpdateState(Invalid)
+		wu.punish(proc.ps, errors.New("peer sent a message with an invalid network ID"))
 		return
 	}
 

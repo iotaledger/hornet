@@ -6,6 +6,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
+	iotago "github.com/iotaledger/iota.go"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 )
@@ -17,6 +18,8 @@ const (
 	CfgProtocolPublicKeyRanges = "protocol.publicKeyRanges"
 	// the minimum PoW score required by the network
 	CfgProtocolMinPoWScore = "protocol.minPoWScore"
+	// the network ID on which this node operates on.
+	CfgProtocolNetworkIDName = "protocol.networkID"
 	// the amount of public keys in a milestone
 	CfgProtocolMilestonePublicKeyCount = "protocol.milestonePublicKeyCount"
 	// the hash function to use to calculate milestone merkle tree hash (see RFC-0012)
@@ -35,6 +38,7 @@ func init() {
 						fs := flag.NewFlagSet("", flag.ContinueOnError)
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
+						fs.String(CfgProtocolNetworkIDName, "alphanet1", "the network ID on which this node operates on.")
 						fs.String(CfgProtocolMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
 						return fs
 					}(),
@@ -58,8 +62,17 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps tangledeps) coordinator.PublicKeyRanges {
-		r := coordinator.PublicKeyRanges{}
+	type protoresult struct {
+		dig.Out
+
+		PublicKeyRanges coordinator.PublicKeyRanges
+		NetworkID       uint64 `name:"networkId"`
+	}
+
+	if err := c.Provide(func(deps tangledeps) protoresult {
+		res := protoresult{
+			NetworkID: iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
+		}
 
 		if err := deps.NodeConfig.SetDefault(CfgProtocolPublicKeyRanges, &coordinator.PublicKeyRanges{
 			&coordinator.PublicKeyRange{Key: "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c", StartIndex: 1, EndIndex: 1000},
@@ -71,18 +84,18 @@ func provide(c *dig.Container) {
 
 		if *cooPubKeyRangesFlag != "" {
 			// load from special CLI flag
-			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &r); err != nil {
+			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &res.PublicKeyRanges); err != nil {
 				panic(err)
 			}
-			return r
+			return res
 		}
 
 		// load from config or default value
-		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &r); err != nil {
+		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &res.PublicKeyRanges); err != nil {
 			panic(err)
 		}
 
-		return r
+		return res
 	}); err != nil {
 		panic(err)
 	}

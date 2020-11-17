@@ -25,8 +25,8 @@ const (
 var (
 	// Returned when a critical error stops the execution of a task.
 	ErrCritical = errors.New("critical error")
-	// Returned when an unsupported local snapshot file version is read.
-	ErrUnsupportedLSFileVersion = errors.New("unsupported local snapshot file version")
+	// Returned when unsupported snapshot data is read.
+	ErrUnsupportedSnapshot = errors.New("unsupported snapshot data")
 	// Returned when a child message wasn't found.
 	ErrChildMsgNotFound = errors.New("child message not found")
 	// Returned when the milestone diff that should be applied is not the current or next milestone.
@@ -448,7 +448,7 @@ func createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath
 	return nil
 }
 
-func LoadFullSnapshotFromFile(filePath string) error {
+func LoadFullSnapshotFromFile(networkID uint64, filePath string) error {
 	log.Info("importing full snapshot file...")
 	s := time.Now()
 
@@ -461,8 +461,12 @@ func LoadFullSnapshotFromFile(filePath string) error {
 	var lsHeader *ReadFileHeader
 	headerConsumer := func(header *ReadFileHeader) error {
 		if header.Version != SupportedFormatVersion {
-			return errors.Wrapf(ErrUnsupportedLSFileVersion, "local snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
+			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
 		}
+		if header.NetworkID != networkID {
+			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file network ID is %d but this HORNET is meant for %d", header.NetworkID, networkID)
+		}
+
 		lsHeader = header
 		log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
 
