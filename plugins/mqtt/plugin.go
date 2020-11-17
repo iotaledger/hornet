@@ -1,6 +1,11 @@
 package mqtt
 
 import (
+	"fmt"
+	"net/url"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -31,6 +36,9 @@ func init() {
 }
 
 const (
+	// RouteMQTT is the route for accessing the MQTT over WebSockets.
+	RouteMQTT = "/mqtt"
+
 	workerCount     = 1
 	workerQueueSize = 10000
 )
@@ -59,6 +67,7 @@ type dependencies struct {
 	Storage    *storage.Storage
 	Tangle     *tangle.Tangle
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	Echo       *echo.Echo
 }
 
 func configure() {
@@ -137,10 +146,8 @@ func configure() {
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	mqttConfigFile := deps.NodeConfig.String(CfgMQTTConfig)
-
 	var err error
-	mqttBroker, err = mqttpkg.NewBroker(mqttConfigFile, func(topic []byte) {
+	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTHost), deps.NodeConfig.Int(CfgMQTTPort), deps.NodeConfig.Int(CfgMQTTWSPort), deps.NodeConfig.String(CfgMQTTWSPath), func(topic []byte) {
 		log.Infof("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
@@ -150,6 +157,33 @@ func configure() {
 	if err != nil {
 		log.Fatalf("MQTT broker init failed! %s", err)
 	}
+
+	setupWebSocketRoute()
+}
+
+func setupWebSocketRoute() {
+
+	// Configure MQTT WebSocket route
+	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().WsPort))
+	if err != nil {
+		log.Fatalf("MQTT WebSocket init failed! %s", err)
+	}
+
+	wsGroup := deps.Echo.Group(RouteMQTT)
+	proxyConfig := middleware.ProxyConfig{
+		Skipper: middleware.DefaultSkipper,
+		Balancer: middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
+			{
+				URL: mqttWSUrl,
+			},
+		}),
+		// We need to forward any calls to the MQTT route to the ws endpoint of our broker
+		Rewrite: map[string]string{
+			RouteMQTT: mqttBroker.GetConfig().WsPath,
+		},
+	}
+
+	wsGroup.Use(middleware.ProxyWithConfig(proxyConfig))
 }
 
 func run() {
