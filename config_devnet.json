@@ -60,6 +60,7 @@
     "delay": 60480
   },
   "protocol": {
+    "networkID": "devnet1",
     "minPoWScore": 0,
     "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
     "milestonePublicKeyCount": 2,

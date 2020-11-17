@@ -38,7 +38,7 @@ func init() {
 						fs := flag.NewFlagSet("", flag.ContinueOnError)
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
-						fs.String(CfgProtocolNetworkIDName, "alphanet1", "the network ID on which this node operates on.")
+						fs.String(CfgProtocolNetworkIDName, "mainnet1", "the network ID on which this node operates on.")
 						fs.String(CfgProtocolMilestoneMerkleTreeHashFunc, "BLAKE2b-512", "the hash function the coordinator will use to calculate milestone merkle tree hash (see RFC-0012)")
 						return fs
 					}(),

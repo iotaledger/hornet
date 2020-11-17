@@ -60,6 +60,7 @@
     "delay": 1000
   },
   "protocol": {
+    "networkID": "comnet1",
     "minPoWScore": 0,
     "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
     "milestonePublicKeyCount": 2,
