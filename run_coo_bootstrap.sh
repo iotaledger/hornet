@@ -11,7 +11,7 @@ go run -tags "pow_avx" main.go -c config_alphanet.json \
 --dashboard.bindAddress="localhost:8081" \
 --db.path="alphanetdb" \
 --node.disablePlugins="Autopeering" \
---node.enablePlugins="Spammer,Coordinator" \
+--node.enablePlugins="Spammer,Coordinator,MQTT" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15600" \
 --profiling.bindAddress="127.0.0.1:6060" \
 --prometheus.bindAddress="localhost:9311" \
