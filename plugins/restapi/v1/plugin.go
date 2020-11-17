@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -170,6 +171,7 @@ type dependencies struct {
 	UTXO             *utxo.Manager
 	PoWHandler       *pow.Handler
 	MessageProcessor *gossip.MessageProcessor
+	Snapshot         *snapshot.Snapshot
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
 	TipSelector      *tipselect.TipSelector

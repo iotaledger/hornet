@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
 )

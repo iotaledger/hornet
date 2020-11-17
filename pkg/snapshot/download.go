@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,22 +10,33 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
-	Expected         uint64
-	Total            uint64
-	Last             uint64
-	LastProgressTime time.Time
+	Expected    uint64
+	shutdownCtx context.Context
+
+	total            uint64
+	last             uint64
+	lastProgressTime time.Time
+}
+
+func NewWriteCounter(expected uint64, shutdownCtx context.Context) *WriteCounter {
+	return &WriteCounter{
+		Expected:    expected,
+		shutdownCtx: shutdownCtx,
+	}
 }
 
 func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
-	wc.Total += uint64(n)
+	wc.total += uint64(n)
 
-	if CorePlugin.Daemon().IsStopped() {
+	if err := utils.ReturnErrIfCtxDone(wc.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return n, ErrSnapshotDownloadWasAborted
 	}
 
@@ -33,13 +45,13 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 }
 
 func (wc *WriteCounter) PrintProgress() {
-	if time.Since(wc.LastProgressTime) < 1*time.Second {
+	if time.Since(wc.lastProgressTime) < 1*time.Second {
 		return
 	}
 
-	bytesPerSecond := uint64(float64(wc.Total-wc.Last) / time.Since(wc.LastProgressTime).Seconds())
-	wc.LastProgressTime = time.Now()
-	wc.Last = wc.Total
+	bytesPerSecond := uint64(float64(wc.total-wc.last) / time.Since(wc.lastProgressTime).Seconds())
+	wc.lastProgressTime = time.Now()
+	wc.last = wc.total
 
 	// Clear the line by using a character return to go back to the start and remove
 	// the remaining characters by filling it with spaces
@@ -47,15 +59,15 @@ func (wc *WriteCounter) PrintProgress() {
 
 	// Return again and print current status of download
 	// We use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
-	fmt.Printf("\rDownloading... %s/%s (%s/s)", humanize.Bytes(wc.Total), humanize.Bytes(wc.Expected), humanize.Bytes(bytesPerSecond))
+	fmt.Printf("\rDownloading... %s/%s (%s/s)", humanize.Bytes(wc.total), humanize.Bytes(wc.Expected), humanize.Bytes(bytesPerSecond))
 }
 
-func downloadSnapshotFile(filepath string, urls []string) error {
+func (s *Snapshot) DownloadSnapshotFile(filepath string, urls []string) error {
 
 	// Try to download a snapshot from one of the provided sources, break if download was successful
 	downloadOK := false
 	for _, url := range urls {
-		log.Infof("Downloading snapshot from %s", url)
+		s.log.Infof("Downloading snapshot from %s", url)
 
 		// Create the file, but give it a tmp file extension, this means we won't overwrite a
 		// file until it's downloaded, but we'll remove the tmp extension once downloaded.
@@ -67,12 +79,12 @@ func downloadSnapshotFile(filepath string, urls []string) error {
 		// Get the data
 		resp, err := http.Get(url)
 		if err != nil {
-			log.Warnf("Downloading snapshot from %s failed with %v", url, err)
+			s.log.Warnf("Downloading snapshot from %s failed with %v", url, err)
 			out.Close()
 			continue
 		}
 		if resp.StatusCode != http.StatusOK {
-			log.Warnf("Downloading snapshot from %s failed. Server returned %d", url, resp.StatusCode)
+			s.log.Warnf("Downloading snapshot from %s failed. Server returned %d", url, resp.StatusCode)
 			out.Close()
 			continue
 		}
@@ -80,11 +92,9 @@ func downloadSnapshotFile(filepath string, urls []string) error {
 		defer resp.Body.Close()
 
 		// Create our progress reporter and pass it to be used alongside our writer
-		counter := &WriteCounter{
-			Expected: uint64(resp.ContentLength),
-		}
+		counter := NewWriteCounter(uint64(resp.ContentLength), s.shutdownCtx)
 		if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
-			log.Warnf("Downloading snapshot from %s failed with %v", url, err)
+			s.log.Warnf("Downloading snapshot from %s failed with %v", url, err)
 			out.Close()
 			continue
 		}

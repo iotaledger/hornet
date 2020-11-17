@@ -3,12 +3,13 @@ package pow
 import (
 	"time"
 
-	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
+
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
