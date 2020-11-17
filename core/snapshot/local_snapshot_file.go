@@ -22,10 +22,9 @@ const (
 	SolidEntryPointHashLength = iotago.MessageIDLength
 
 	// The offset of counters within a local snapshot file:
-	// version + type + timestamp + network-id + sep-ms-index + sep-ms-hash + ledger-ms-index + ledger-ms-hash
+	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
 	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.UInt64ByteSize +
-		iotago.UInt32ByteSize + iotago.MilestoneIDLength +
-		iotago.UInt32ByteSize + iotago.MilestoneIDLength
+		iotago.UInt32ByteSize + iotago.UInt32ByteSize
 )
 
 var (
@@ -178,12 +177,8 @@ type FileHeader struct {
 	NetworkID uint64
 	// The milestone index of the SEPs for which this local snapshot was taken.
 	SEPMilestoneIndex milestone.Index
-	// The ID of the milestone of the SEPs.
-	SEPMilestoneID *iotago.MilestoneID
 	// The milestone index of the ledger data within the local snapshot.
 	LedgerMilestoneIndex milestone.Index
-	// The ID of the ledger milestone.
-	LedgerMilestoneID *iotago.MilestoneID
 }
 
 // ReadFileHeader is a FileHeader but with additional content read from the local snapshot.
@@ -228,16 +223,8 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 		return fmt.Errorf("unable to write LS SEPs milestone index: %w", err)
 	}
 
-	if _, err := writeSeeker.Write(header.SEPMilestoneID[:]); err != nil {
-		return fmt.Errorf("unable to write LS SEPs milestone hash: %w", err)
-	}
-
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.LedgerMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to write LS ledger milestone index: %w", err)
-	}
-
-	if _, err := writeSeeker.Write(header.LedgerMilestoneID[:]); err != nil {
-		return fmt.Errorf("unable to write LS ledger milestone hash: %w", err)
 	}
 
 	// write count placeholders
@@ -358,18 +345,8 @@ func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumer
 		return fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
 	}
 
-	readHeader.SEPMilestoneID = &iotago.MilestoneID{}
-	if _, err := io.ReadFull(reader, readHeader.SEPMilestoneID[:]); err != nil {
-		return fmt.Errorf("unable to read LS SEPs milestone hash: %w", err)
-	}
-
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
 		return fmt.Errorf("unable to read LS ledger milestone index: %w", err)
-	}
-
-	readHeader.LedgerMilestoneID = &iotago.MilestoneID{}
-	if _, err := io.ReadFull(reader, readHeader.LedgerMilestoneID[:]); err != nil {
-		return fmt.Errorf("unable to read LS ledger milestone hash: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPCount); err != nil {

@@ -1,17 +1,14 @@
 package storage
 
 import (
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/marshalutil"
-	iotago "github.com/iotaledger/iota.go"
-
-	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 var (
@@ -20,7 +17,6 @@ var (
 
 type SnapshotInfo struct {
 	NetworkID       uint64
-	MilestoneID     *iotago.MilestoneID
 	SnapshotIndex   milestone.Index
 	EntryPointIndex milestone.Index
 	PruningIndex    milestone.Index
@@ -37,16 +33,16 @@ func (s *Storage) loadSnapshotInfo() {
 	if info != nil {
 		println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
-	SnapshotIndex: %d (%v)
+	SnapshotIndex: %d
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, hex.EncodeToString(info.MilestoneID[:]), info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
+	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
 	}
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
-	if len(bytes) != 61 {
+	if len(bytes) != 29 {
 		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "invalid length %d != %d", len(bytes), 54)
 	}
 
@@ -56,13 +52,6 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	milestoneID := &iotago.MilestoneID{}
-	milestoneIDBytes, err := marshalUtil.ReadBytes(32)
-	if err != nil {
-		return nil, err
-	}
-	copy(milestoneID[:], milestoneIDBytes[:32])
 
 	snapshotIndex, err := marshalUtil.ReadUint32()
 	if err != nil {
@@ -91,7 +80,6 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 
 	return &SnapshotInfo{
 		NetworkID:       networkID,
-		MilestoneID:     milestoneID,
 		SnapshotIndex:   milestone.Index(snapshotIndex),
 		EntryPointIndex: milestone.Index(entryPointIndex),
 		PruningIndex:    milestone.Index(pruningIndex),
@@ -104,7 +92,6 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	marshalUtil := marshalutil.New()
 
 	marshalUtil.WriteUint64(i.NetworkID)
-	marshalUtil.WriteBytes(i.MilestoneID[:32])
 	marshalUtil.WriteUint32(uint32(i.SnapshotIndex))
 	marshalUtil.WriteUint32(uint32(i.EntryPointIndex))
 	marshalUtil.WriteUint32(uint32(i.PruningIndex))
@@ -114,18 +101,17 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return marshalUtil.Bytes()
 }
 
-func (s *Storage) SetSnapshotMilestone(networkID uint64, milestoneID *iotago.MilestoneID, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
+func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
 	println(fmt.Sprintf(`SnapshotInfo:
 	NetworkID: %d
-	SnapshotIndex: %d (%v)
+	SnapshotIndex: %d
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, networkID, snapshotIndex, hex.EncodeToString(milestoneID[:]), entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
+	Timestamp: %v`, networkID, snapshotIndex, entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
 
 	sn := &SnapshotInfo{
 		NetworkID:       networkID,
-		MilestoneID:     milestoneID,
 		SnapshotIndex:   snapshotIndex,
 		EntryPointIndex: entryPointIndex,
 		PruningIndex:    pruningIndex,

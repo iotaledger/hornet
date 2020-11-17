@@ -10,8 +10,6 @@ import (
 type milestonePayload struct {
 	// The index of the milestone.
 	Index uint32 `json:"milestoneIndex"`
-	// The hex encoded ID of the milestone.
-	MilestoneID string `json:"milestoneId"`
 	// The unix time of the milestone payload.
 	Time int64 `json:"timestamp"`
 }

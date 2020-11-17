@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"encoding/hex"
 	"strconv"
 	"strings"
 
@@ -20,24 +19,20 @@ import (
 func info() (*infoResponse, error) {
 
 	// latest milestone index
-	latestMilestoneID := hornet.GetNullMessageID().Hex()
 	latestMilestoneIndex := deps.Storage.GetLatestMilestoneIndex()
 
 	// latest milestone message ID
 	cachedLatestMilestone := deps.Storage.GetCachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
-		latestMilestoneID = hex.EncodeToString(cachedLatestMilestone.GetMilestone().MilestoneID[:])
 		cachedLatestMilestone.Release(true)
 	}
 
 	// solid milestone index
-	solidMilestoneID := hornet.GetNullMessageID().Hex()
 	solidMilestoneIndex := deps.Storage.GetSolidMilestoneIndex()
 
 	// solid milestone message ID
 	cachedSolidMilestone := deps.Storage.GetCachedMilestoneOrNil(solidMilestoneIndex)
 	if cachedSolidMilestone != nil {
-		solidMilestoneID = hex.EncodeToString(cachedSolidMilestone.GetMilestone().MilestoneID[:])
 		cachedSolidMilestone.Release(true)
 	}
 
@@ -53,9 +48,7 @@ func info() (*infoResponse, error) {
 		Version:              app.Version,
 		IsHealthy:            deps.Tangle.IsNodeHealthy(),
 		NetworkID:            deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
-		LatestMilestoneID:    latestMilestoneID,
 		LatestMilestoneIndex: latestMilestoneIndex,
-		SolidMilestoneID:     solidMilestoneID,
 		SolidMilestoneIndex:  solidMilestoneIndex,
 		PruningIndex:         pruningIndex,
 		Features:             features,
@@ -105,9 +98,9 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 	defer cachedMilestone.Release(true)
 
 	return &milestoneResponse{
-		Index:       uint32(cachedMilestone.GetMilestone().Index),
-		MilestoneID: hex.EncodeToString(cachedMilestone.GetMilestone().MilestoneID[:]),
-		Time:        cachedMilestone.GetMilestone().Timestamp.Unix(),
+		Index:     uint32(cachedMilestone.GetMilestone().Index),
+		MessageID: cachedMilestone.GetMilestone().MessageID.Hex(),
+		Time:      cachedMilestone.GetMilestone().Timestamp.Unix(),
 	}, nil
 
 }
