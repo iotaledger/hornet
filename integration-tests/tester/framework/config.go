@@ -25,8 +25,8 @@ const (
 	// The default REST API port of every node.
 	RestAPIPort = 14265
 
-	GenesisAddressPublicKeyHex = "081d0275379702477a359db2ecc9c47971418599aedda7677da97df730a7575c"
-	GenesisAddressHex          = "fccb24fbb68b9e2cf4ff7af95b41d3175c2cabbfc9713474b90d9e5a32d5fc60"
+	GenesisAddressPublicKeyHex = "f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44"
+	GenesisAddressHex          = "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92"
 
 	autopeeringMaxTries = 50
 
@@ -54,7 +54,7 @@ var (
 )
 
 func init() {
-	prvkey, err := utils.ParseEd25519PrivateKeyFromString("00d8be77e66f759a3ea45914c4fc0b1f4e65d8d2f2d4dae73df4b6b674cb90b3081d0275379702477a359db2ecc9c47971418599aedda7677da97df730a7575c")
+	prvkey, err := utils.ParseEd25519PrivateKeyFromString("256a818b2aac458941f7274985a410e57fb750f3a3a67969ece5bd9ae7eef5b2f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44")
 	if err != nil {
 		panic(err)
 	}

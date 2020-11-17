@@ -92,6 +92,7 @@ type dependencies struct {
 	PoWHandler       *powpackage.Handler
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	NetworkID        uint64                       `name:"networkId"`
 }
 
 func configure() {
@@ -162,6 +163,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	coo, err := coordinator.New(
 		deps.Storage,
+		deps.NetworkID,
 		inMemoryEd25519MilestoneSignerProvider,
 		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),

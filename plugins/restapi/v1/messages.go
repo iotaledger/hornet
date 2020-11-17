@@ -211,8 +211,8 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	if msg.Version == 0 {
-		msg.Version = iotago.MessageVersion
+	if msg.NetworkID == 0 {
+		msg.NetworkID = deps.NetworkID
 	}
 
 	var emptyMessageID = hornet.MessageID{}

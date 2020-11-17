@@ -1,49 +1,42 @@
 package toolset
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
-	"github.com/pkg/errors"
-
 	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go"
+	"github.com/pkg/errors"
 )
 
 func snapshotGen(args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [MINT_ADDRESS] [OUTPUT_FILE_PATH]", ToolSnapGen))
+		println(fmt.Sprintf("	%s [NETWORK_ID_STR] [MINT_ADDRESS] [OUTPUT_FILE_PATH]", ToolSnapGen))
 		println()
-		println("	[MINT_ADDRESS] 	   - the initial ed25519 address all the tokens will be minted to")
-		println("	[OUTPUT_FILE_PATH] - the file path to the generated snapshot file")
+		println("	[NETWORK_ID_STR]	- the network ID for which this snapshot is meant for")
+		println("	[MINT_ADDRESS]		- the initial ed25519 address all the tokens will be minted to")
+		println("	[OUTPUT_FILE_PATH]	- the file path to the generated snapshot file")
+		println()
+		println(fmt.Sprintf("example: %s %s %s %s", ToolSnapGen, "alphanet@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "snapshots/alphanet/export.bin"))
 	}
 
 	// check arguments
-	if len(args) == 0 {
+	if len(args) != 3 {
 		printUsage()
-		return errors.New("MINT_ADDRESS missing")
+		return fmt.Errorf("wrong argument count '%s'", ToolSnapGen)
 	}
 
-	if len(args) == 1 {
-		printUsage()
-		return errors.New("OUTPUT_FILE_PATH missing")
-	}
-
-	if len(args) > 2 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolSnapGen)
-	}
+	// check network ID
+	networkID := iotago.NetworkIDFromString(args[0])
 
 	// check mint address
-	mintAddress := args[0]
-
+	mintAddress := args[1]
 	addressBytes, err := hex.DecodeString(mintAddress)
 	if err != nil {
 		return fmt.Errorf("can't decode MINT_ADDRESS: %v", err)
@@ -56,7 +49,7 @@ func snapshotGen(args []string) error {
 	copy(address[:], addressBytes)
 
 	// check filepath
-	outputFilePath := args[1]
+	outputFilePath := args[2]
 	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
 		return errors.New("OUTPUT_FILE_PATH already exists")
 	}
@@ -70,21 +63,12 @@ func snapshotGen(args []string) error {
 		return fmt.Errorf("unable to create snapshot file: %w", err)
 	}
 
-	networkID := make([]byte, 1)
-
-	// 1 is reserved for mainnet
-	for networkID[0] <= 1 {
-		if _, err := rand.Read(networkID); err != nil {
-			return fmt.Errorf("unable to create network ID: %w", err)
-		}
-	}
-
 	// create snapshot file
 	targetIndex := 0
 	header := &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 snapshot.Full,
-		NetworkID:            networkID[0],
+		NetworkID:            networkID,
 		SEPMilestoneIndex:    milestone.Index(targetIndex),
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 	}

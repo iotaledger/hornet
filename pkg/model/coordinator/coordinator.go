@@ -67,6 +67,7 @@ type Coordinator struct {
 	stateFilePath            string
 	milestoneIntervalSec     int
 	milestonePublicKeysCount int
+	networkID                uint64
 	powHandler               *pow.Handler
 	sendMesssageFunc         SendMessageFunc
 	milestoneMerkleHashFunc  crypto.Hash
@@ -104,10 +105,11 @@ func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
 }
 
 // New creates a new coordinator instance.
-func New(storage *storage.Storage, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
+func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
 
 	result := &Coordinator{
 		storage:                 storage,
+		networkID:               networkID,
 		signerProvider:          signerProvider,
 		stateFilePath:           stateFilePath,
 		milestoneIntervalSec:    milestoneIntervalSec,
@@ -221,7 +223,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return fmt.Errorf("failed to compute muations: %w", err)
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create: %w", err)
 	}
@@ -291,7 +293,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	}
 
 	for i, tip := range tips {
-		msg, err := createCheckpoint(tip, lastCheckpointMessageID, coo.powHandler)
+		msg, err := createCheckpoint(coo.networkID, tip, lastCheckpointMessageID, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create: %w", err)
 		}

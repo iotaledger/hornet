@@ -48,7 +48,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			originHeader := &snapshot.FileHeader{
 				Type:                 snapshot.Full,
 				Version:              snapshot.SupportedFormatVersion,
-				NetworkID:            1,
+				NetworkID:            1337133713371337,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
@@ -96,7 +96,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			originHeader := &snapshot.FileHeader{
 				Type:                 snapshot.Delta,
 				Version:              snapshot.SupportedFormatVersion,
-				NetworkID:            1,
+				NetworkID:            666666666,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}

@@ -20,8 +20,7 @@ type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err er
 
 // Spammer is used to issue messages to the IOTA network to create load on the tangle.
 type Spammer struct {
-
-	// config options
+	networkID       uint64
 	message         string
 	index           string
 	indexSemiLazy   string
@@ -32,9 +31,10 @@ type Spammer struct {
 }
 
 // New creates a new spammer instance.
-func New(message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, serverMetrics *metrics.ServerMetrics) *Spammer {
+func New(networkID uint64, message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, serverMetrics *metrics.ServerMetrics) *Spammer {
 
 	return &Spammer{
+		networkID:       networkID,
 		message:         message,
 		index:           index,
 		indexSemiLazy:   indexSemiLazy,
@@ -67,7 +67,11 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	messageString += fmt.Sprintf("\nTimestamp: %s", now.Format(time.RFC3339))
 	messageString += fmt.Sprintf("\nTipselection: %v", durationGTTA.Truncate(time.Microsecond))
 
-	iotaMsg := &iotago.Message{Version: 1, Parent1: *tips[0], Parent2: *tips[1], Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)}}
+	iotaMsg := &iotago.Message{
+		NetworkID: s.networkID,
+		Parent1:   *tips[0], Parent2: *tips[1],
+		Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)},
+	}
 
 	timeStart = time.Now()
 	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
