@@ -53,12 +53,6 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
 
-			sepMilestoneID := rand32ByteHash()
-			ledgerMilestoneID := rand32ByteHash()
-
-			originHeader.SEPMilestoneID = &sepMilestoneID
-			originHeader.LedgerMilestoneID = &ledgerMilestoneID
-
 			originTimestamp := uint64(time.Now().Unix())
 
 			// create generators and consumers
@@ -100,12 +94,6 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
-
-			sepMilestoneID := rand32ByteHash()
-			ledgerMilestoneID := rand32ByteHash()
-
-			originHeader.SEPMilestoneID = &sepMilestoneID
-			originHeader.LedgerMilestoneID = &ledgerMilestoneID
 
 			originTimestamp := uint64(time.Now().Unix())
 
