@@ -143,7 +143,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 		// request them for messages which should be part of milestone cones
 		if request != nil {
 			// add this newly received message's parents to the request queue
-			t.requestParentsFunc(cachedMsg.Retain(), request.MilestoneIndex, true)
+			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
 		solidMilestoneIndex := t.storage.GetSolidMilestoneIndex()

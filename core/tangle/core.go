@@ -12,7 +12,6 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/keymanager"
@@ -21,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -66,6 +66,8 @@ type dependencies struct {
 	dig.In
 	Storage                    *storage.Storage
 	Tangle                     *tangle.Tangle
+	Requester                  *gossip.Requester
+	Broadcaster                *gossip.Broadcaster
 	NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
 	CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
 }
@@ -82,13 +84,14 @@ func provide(c *dig.Container) {
 		Storage          *storage.Storage
 		RequestQueue     gossippkg.RequestQueue
 		Service          *gossippkg.Service
+		Requester        *gossippkg.Requester
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
 		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
-			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), gossip.RequestMilestoneParents, gossip.RequestMultiple, gossip.RequestParents, CorePlugin.Daemon(), *syncedAtStartup)
+			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), *syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}
@@ -173,17 +176,17 @@ func run() {
 func configureEvents() {
 	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new solid milestone index
-		gossip.BroadcastHeartbeat(nil)
+		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
 	onPruningMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new pruning milestone index
-		gossip.BroadcastHeartbeat(nil)
+		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
 	onLatestMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new latest milestone index
-		gossip.BroadcastHeartbeat(nil)
+		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
 	onReceivedNewTx = events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {

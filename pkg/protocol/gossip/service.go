@@ -143,7 +143,10 @@ func WithUnknownPeersLimit(limit int) ServiceOption {
 type ServiceOption func(opts *ServiceOptions)
 
 // NewService creates a new Service.
-func NewService(protocol protocol.ID, host host.Host, manager *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts ...ServiceOption) *Service {
+func NewService(
+	protocol protocol.ID, host host.Host,
+	manager *p2p.Manager,
+	serverMetrics *metrics.ServerMetrics, opts ...ServiceOption) *Service {
 	srvOpts := &ServiceOptions{}
 	srvOpts.apply(defaultServiceOptions...)
 	srvOpts.apply(opts...)

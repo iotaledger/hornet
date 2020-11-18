@@ -12,37 +12,22 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-// milestoneParentsRequestFunc requests the parents of a given milestone.
-// It returns True if the parents are enqeued to the request queue.
-type milestoneParentsRequestFunc func(cachedMilestone *storage.CachedMilestone) bool
-
-// requestMultipleFunc enqueues multiple request to the request queue for the given message ids
-// if they aren't solid entry points and are not contained in the database already.
-type requestMultipleFunc func(messageIDs hornet.MessageIDs, msIndex milestone.Index, preventDiscard ...bool) int
-
-// requestParentsFunc enqueues requests for the parents of the given message to the request queue, if the
-// given message is not a solid entry point and neither its parents are and also not in the database.
-type requestParentsFunc func(cachedMsg *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool)
-
 type Tangle struct {
-	log                         *logger.Logger
-	storage                     *storage.Storage
-	requestQueue                gossip.RequestQueue
-	service                     *gossip.Service
-	messageProcessor            *gossip.MessageProcessor
-	serverMetrics               *metrics.ServerMetrics
-	shutdownCtx                 context.Context
-	daemon                      daemon.Daemon
-	milestoneParentsRequestFunc milestoneParentsRequestFunc
-	requestMultipleFunc         requestMultipleFunc
-	requestParentsFunc          requestParentsFunc
+	log              *logger.Logger
+	storage          *storage.Storage
+	requestQueue     gossip.RequestQueue
+	service          *gossip.Service
+	messageProcessor *gossip.MessageProcessor
+	serverMetrics    *metrics.ServerMetrics
+	requester        *gossip.Requester
+	shutdownCtx      context.Context
+	daemon           daemon.Daemon
 
 	receiveMsgWorkerCount int
 	receiveMsgQueueSize   int
@@ -128,8 +113,9 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 
 */
 
-func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueue, service *gossip.Service, messageProcessor *gossip.MessageProcessor, serverMetrics *metrics.ServerMetrics, shutdownCtx context.Context,
-	milestoneParentsRequestFunc milestoneParentsRequestFunc, requestMultipleFunc requestMultipleFunc, requestParentsFunc requestParentsFunc, daemon daemon.Daemon, updateSyncedAtStartup bool) *Tangle {
+func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueue, service *gossip.Service, messageProcessor *gossip.MessageProcessor,
+	serverMetrics *metrics.ServerMetrics, shutdownCtx context.Context,
+	requester *gossip.Requester, daemon daemon.Daemon, updateSyncedAtStartup bool) *Tangle {
 	return &Tangle{
 		log:                         log,
 		storage:                     s,
@@ -138,9 +124,7 @@ func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueu
 		messageProcessor:            messageProcessor,
 		serverMetrics:               serverMetrics,
 		shutdownCtx:                 shutdownCtx,
-		milestoneParentsRequestFunc: milestoneParentsRequestFunc,
-		requestMultipleFunc:         requestMultipleFunc,
-		requestParentsFunc:          requestParentsFunc,
+		requester:                   requester,
 		daemon:                      daemon,
 		receiveMsgWorkerCount:       2 * runtime.NumCPU(),
 		receiveMsgQueueSize:         10000,
