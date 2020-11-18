@@ -172,7 +172,7 @@ func (r *Requester) checkBackPressureFunctions() bool {
 }
 
 // AddBackPressureFunc adds a RequestBackPressureFunc.
-// This function can bbe called multiple times to add additional RequestBackPressureFunc.
+// This function can be called multiple times to add additional RequestBackPressureFunc.
 // Calling this function after any Requester worker has been started results in a panic.
 func (r *Requester) AddBackPressureFunc(pressureFunc RequestBackPressureFunc) {
 	if r.running {

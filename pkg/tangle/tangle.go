@@ -32,17 +32,15 @@ type requestMultipleFunc func(messageIDs hornet.MessageIDs, msIndex milestone.In
 type requestParentsFunc func(cachedMsg *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool)
 
 type Tangle struct {
-	log                         *logger.Logger
-	storage                     *storage.Storage
-	requestQueue                gossip.RequestQueue
-	service                     *gossip.Service
-	messageProcessor            *gossip.MessageProcessor
-	serverMetrics               *metrics.ServerMetrics
-	shutdownCtx                 context.Context
-	daemon                      daemon.Daemon
-	milestoneParentsRequestFunc milestoneParentsRequestFunc
-	requestMultipleFunc         requestMultipleFunc
-	requestParentsFunc          requestParentsFunc
+	log              *logger.Logger
+	storage          *storage.Storage
+	requestQueue     gossip.RequestQueue
+	service          *gossip.Service
+	messageProcessor *gossip.MessageProcessor
+	serverMetrics    *metrics.ServerMetrics
+	requester        *gossip.Requester
+	shutdownCtx      context.Context
+	daemon           daemon.Daemon
 
 	receiveMsgWorkerCount int
 	receiveMsgQueueSize   int
@@ -128,8 +126,9 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 
 */
 
-func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueue, service *gossip.Service, messageProcessor *gossip.MessageProcessor, serverMetrics *metrics.ServerMetrics, shutdownCtx context.Context,
-	milestoneParentsRequestFunc milestoneParentsRequestFunc, requestMultipleFunc requestMultipleFunc, requestParentsFunc requestParentsFunc, daemon daemon.Daemon, updateSyncedAtStartup bool) *Tangle {
+func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueue, service *gossip.Service, messageProcessor *gossip.MessageProcessor,
+	serverMetrics *metrics.ServerMetrics, shutdownCtx context.Context,
+	requester *gossip.Requester, daemon daemon.Daemon, updateSyncedAtStartup bool) *Tangle {
 	return &Tangle{
 		log:                         log,
 		storage:                     s,
@@ -138,9 +137,7 @@ func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueu
 		messageProcessor:            messageProcessor,
 		serverMetrics:               serverMetrics,
 		shutdownCtx:                 shutdownCtx,
-		milestoneParentsRequestFunc: milestoneParentsRequestFunc,
-		requestMultipleFunc:         requestMultipleFunc,
-		requestParentsFunc:          requestParentsFunc,
+		requester:                   requester,
 		daemon:                      daemon,
 		receiveMsgWorkerCount:       2 * runtime.NumCPU(),
 		receiveMsgQueueSize:         10000,

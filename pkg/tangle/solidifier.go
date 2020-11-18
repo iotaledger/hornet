@@ -113,7 +113,7 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 		for messageID := range messageIDsToRequest {
 			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
 		}
-		requested := t.requestMultipleFunc(messageIDs, milestoneIndex, true)
+		requested := t.requester.RequestMultiple(messageIDs, milestoneIndex, true)
 		t.log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
@@ -327,7 +327,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		}
 	}()
 
-	t.log.Infof("RunRequestQueueDrainer solidity check for Milestone (%d)...", milestoneIndexToSolidify)
+	t.log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
 	if becameSolid, aborted := t.solidQueueCheck(cachedMsgMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running

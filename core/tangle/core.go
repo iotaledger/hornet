@@ -91,7 +91,7 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
 		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
-			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester.RequestMilestoneParents, deps.Requester.RequestMultiple, deps.Requester.RequestParents, CorePlugin.Daemon(), *syncedAtStartup)
+			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), *syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}
