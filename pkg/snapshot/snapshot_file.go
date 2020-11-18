@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	// The supported local snapshot file version.
+	// The supported snapshot file version.
 	SupportedFormatVersion byte = 1
 	// The length of a solid entry point hash.
 	SolidEntryPointHashLength = iotago.MessageIDLength
 
-	// The offset of counters within a local snapshot file:
+	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
 	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.UInt64ByteSize +
 		iotago.UInt32ByteSize + iotago.UInt32ByteSize
@@ -34,19 +34,19 @@ var (
 	ErrOutputConsumerNotProvided = errors.New("output consumer is not provided")
 )
 
-// Type defines the type of the local snapshot.
+// Type defines the type of the snapshot.
 type Type byte
 
 const (
-	// Full is a local snapshot which contains the full ledger entry for a given milestone
+	// Full is a snapshot which contains the full ledger entry for a given milestone
 	// plus the milestone diffs which subtracted to the ledger milestone reduce to the snapshot milestone ledger.
 	Full Type = iota
-	// Delta is a local snapshot which contains solely diffs of milestones newer than a certain ledger milestone
+	// Delta is a snapshot which contains solely diffs of milestones newer than a certain ledger milestone
 	// instead of the complete ledger state of a given milestone.
 	Delta
 )
 
-// Output defines an output within a local snapshot.
+// Output defines an output within a snapshot.
 type Output struct {
 	// The message ID of the message that contained the transaction where this output was created.
 	MessageID [iotago.MessageIDLength]byte `json:"message_id"`
@@ -79,7 +79,7 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Spent defines a spent within a local snapshot.
+// Spent defines a spent within a snapshot.
 type Spent struct {
 	Output
 	// The transaction ID the funds were spent with.
@@ -142,62 +142,62 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// SEPProducerFunc yields a solid entry point to be written to a local snapshot or nil if no more is available.
+// SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
 type SEPProducerFunc func() (*hornet.MessageID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
 type SEPConsumerFunc func(*hornet.MessageID) error
 
-// HeaderConsumerFunc consumes the local snapshot file header.
+// HeaderConsumerFunc consumes the snapshot file header.
 // A returned error signals to cancel further reading.
 type HeaderConsumerFunc func(*ReadFileHeader) error
 
-// OutputProducerFunc yields an output to be written to a local snapshot or nil if no more is available.
+// OutputProducerFunc yields an output to be written to a snapshot or nil if no more is available.
 type OutputProducerFunc func() (*Output, error)
 
 // OutputConsumerFunc consumes the given output.
 // A returned error signals to cancel further reading.
 type OutputConsumerFunc func(output *Output) error
 
-// MilestoneDiffProducerFunc yields a milestone diff to be written to a local snapshot or nil if no more is available.
+// MilestoneDiffProducerFunc yields a milestone diff to be written to a snapshot or nil if no more is available.
 type MilestoneDiffProducerFunc func() (*MilestoneDiff, error)
 
 // MilestoneDiffConsumerFunc consumes the given MilestoneDiff.
 // A returned error signals to cancel further reading.
 type MilestoneDiffConsumerFunc func(milestoneDiff *MilestoneDiff) error
 
-// FileHeader is the file header of a local snapshot file.
+// FileHeader is the file header of a snapshot file.
 type FileHeader struct {
-	// Version denotes the version of this local snapshot.
+	// Version denotes the version of this snapshot.
 	Version byte
-	// Type denotes the type of this local snapshot.
+	// Type denotes the type of this snapshot.
 	Type Type
 	// The ID of the network for which this snapshot is compatible with.
 	NetworkID uint64
-	// The milestone index of the SEPs for which this local snapshot was taken.
+	// The milestone index of the SEPs for which this snapshot was taken.
 	SEPMilestoneIndex milestone.Index
-	// The milestone index of the ledger data within the local snapshot.
+	// The milestone index of the ledger data within the snapshot.
 	LedgerMilestoneIndex milestone.Index
 }
 
-// ReadFileHeader is a FileHeader but with additional content read from the local snapshot.
+// ReadFileHeader is a FileHeader but with additional content read from the snapshot.
 type ReadFileHeader struct {
 	FileHeader
-	// The time at which the local snapshot was taken.
+	// The time at which the snapshot was taken.
 	Timestamp uint64
 	// The count of solid entry points.
 	SEPCount uint64
-	// The count of outputs. This count is zero if a delta local snapshot has been read.
+	// The count of outputs. This count is zero if a delta snapshot has been read.
 	OutputCount uint64
 	// The count of milestone diffs.
 	MilestoneDiffCount uint64
 }
 
-// StreamLocalSnapshotDataTo streams a local snapshot data into the given io.WriteSeeker.
-// FileHeader.Type is used to determine whether to write a full or delta local snapshot.
-// If the type of the local snapshot is Full, then OutputProducerFunc must be provided.
-func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *FileHeader,
+// StreamSnapshotDataTo streams a snapshot data into the given io.WriteSeeker.
+// FileHeader.Type is used to determine whether to write a full or delta snapshot.
+// If the type of the snapshot is Full, then OutputProducerFunc must be provided.
+func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *FileHeader,
 	sepProd SEPProducerFunc, outputProd OutputProducerFunc, msDiffProd MilestoneDiffProducerFunc) error {
 
 	if header.Type == Full && outputProd == nil {
@@ -315,9 +315,9 @@ func StreamLocalSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, hea
 	return nil
 }
 
-// StreamLocalSnapshotDataFrom consumes a local snapshot from the given reader.
-// OutputConsumerFunc must not be nil if the local snapshot is not a delta snapshot.
-func StreamLocalSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
+// StreamSnapshotDataFrom consumes a snapshot from the given reader.
+// OutputConsumerFunc must not be nil if the snapshot is not a delta snapshot.
+func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 	sepConsumer SEPConsumerFunc, outputConsumer OutputConsumerFunc, msDiffConsumer MilestoneDiffConsumerFunc) error {
 	readHeader := &ReadFileHeader{}
 

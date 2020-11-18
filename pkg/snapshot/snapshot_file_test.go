@@ -130,18 +130,18 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamLocalSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
+			require.NoError(t, snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)
 			require.NoError(t, err)
-			fmt.Printf("%s: written (snapshot type: %d) local snapshot file size: %d MB\n", tt.name, tt.originHeader.Type, fileInfo.Size()/1024/1024)
+			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %d MB\n", tt.name, tt.originHeader.Type, fileInfo.Size()/1024/1024)
 
 			// read back written data and verify that it is equal
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamLocalSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.msDiffConsumer))
+			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.msDiffConsumer))
 
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())

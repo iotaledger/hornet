@@ -54,7 +54,7 @@ var (
 
 	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to LSMI at startup")
 
-	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new local snapshot.")
+	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 
 	onSolidMilestoneIndexChanged   *events.Closure
 	onPruningMilestoneIndexChanged *events.Closure

@@ -65,7 +65,7 @@ func configure() {
 
 	if !deps.Storage.IsCorrectDatabaseVersion() {
 		if !deps.Storage.UpdateDatabaseVersion() {
-			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new local snapshot.")
+			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 

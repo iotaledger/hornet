@@ -80,7 +80,7 @@ var (
 	onIssuedCheckpoint   *events.Closure
 	onIssuedMilestone    *events.Closure
 
-	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
+	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a snapshot")
 
 	deps dependencies
 )
