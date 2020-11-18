@@ -186,8 +186,8 @@ func run() {
 		}
 	})
 
-	CorePlugin.Daemon().BackgroundWorker("LocalSnapshots", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting LocalSnapshots ... done")
+	CorePlugin.Daemon().BackgroundWorker("Snapshots", func(shutdownSignal <-chan struct{}) {
+		log.Info("Starting Snapshots ... done")
 
 		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		defer deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
@@ -195,13 +195,13 @@ func run() {
 		for {
 			select {
 			case <-shutdownSignal:
-				log.Info("Stopping LocalSnapshots...")
-				log.Info("Stopping LocalSnapshots... done")
+				log.Info("Stopping Snapshots...")
+				log.Info("Stopping Snapshots... done")
 				return
 
 			case solidMilestoneIndex := <-newSolidMilestoneSignal:
-				deps.Snapshot.TriggerNewSolidMilestoneEvent(solidMilestoneIndex, shutdownSignal)
+				deps.Snapshot.HandleNewSolidMilestoneEvent(solidMilestoneIndex, shutdownSignal)
 			}
 		}
-	}, shutdown.PriorityLocalSnapshots)
+	}, shutdown.PrioritySnapshots)
 }

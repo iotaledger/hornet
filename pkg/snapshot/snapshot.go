@@ -34,7 +34,7 @@ var (
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
 
 	ErrNoSnapshotSpecified               = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL             = errors.New("no download URL given for local snapshot in config")
+	ErrNoSnapshotDownloadURL             = errors.New("no download URL given for snapshot in config")
 	ErrSnapshotDownloadWasAborted        = errors.New("snapshot download was aborted")
 	ErrSnapshotDownloadNoValidSource     = errors.New("no valid source found, snapshot download not possible")
 	ErrSnapshotImportWasAborted          = errors.New("snapshot import was aborted")
@@ -56,6 +56,7 @@ type solidEntryPoint struct {
 	index     milestone.Index
 }
 
+// Snapshot handles reading and writing snapshot data.
 type Snapshot struct {
 	shutdownCtx                         context.Context
 	log                                 *logger.Logger
@@ -307,14 +308,15 @@ func (s *Snapshot) setIsSnapshotting(value bool) {
 	s.statusLock.Unlock()
 }
 
-func (s *Snapshot) CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+// CreateSnapshot creates a snapshot for the given target milestone index.
+func (s *Snapshot) CreateSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
-	return s.createFullLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
+	return s.createFullSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
 }
 
-func (s *Snapshot) createFullLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
-	s.log.Infof("creating local snapshot for targetIndex %d", targetIndex)
+func (s *Snapshot) createFullSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+	s.log.Infof("creating snapshot for targetIndex %d", targetIndex)
 	ts := time.Now()
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
@@ -349,7 +351,7 @@ func (s *Snapshot) createFullLocalSnapshotWithoutLocking(targetIndex milestone.I
 	// create temp file
 	lsFile, err := os.OpenFile(filePathTmp, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		return fmt.Errorf("unable to create tmp local snapshot file: %w", err)
+		return fmt.Errorf("unable to create tmp snapshot file: %w", err)
 	}
 
 	s.utxo.ReadLockLedger()
@@ -486,17 +488,17 @@ func (s *Snapshot) createFullLocalSnapshotWithoutLocking(targetIndex milestone.I
 		close(milestoneDiffProducerErrorChan)
 	}()
 
-	if err := StreamLocalSnapshotDataTo(lsFile, uint64(ts.Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
+	if err := StreamSnapshotDataTo(lsFile, uint64(ts.Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
 		_ = lsFile.Close()
-		return fmt.Errorf("couldn't generate local snapshot file: %w", err)
+		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}
 
 	// rename tmp file to final file name
 	if err := lsFile.Close(); err != nil {
-		return fmt.Errorf("unable to close local snapshot file: %w", err)
+		return fmt.Errorf("unable to close snapshot file: %w", err)
 	}
 	if err := os.Rename(filePathTmp, filePath); err != nil {
-		return fmt.Errorf("unable to rename temp local snapshot file: %w", err)
+		return fmt.Errorf("unable to rename temp snapshot file: %w", err)
 	}
 
 	if writeToDatabase {
@@ -505,7 +507,7 @@ func (s *Snapshot) createFullLocalSnapshotWithoutLocking(targetIndex milestone.I
 
 			// This has to be done before acquiring the SolidEntryPoints Lock, otherwise there is a race condition with "solidifyMilestone"
 			// In "solidifyMilestone" the LedgerLock is acquired, but by traversing the tangle, the SolidEntryPoint Lock is also acquired.
-			// ToDo: we should flush the caches here, just to be sure that all information before this local snapshot we stored in the persistence layer.
+			// ToDo: we should flush the caches here, just to be sure that all information before this snapshot we stored in the persistence layer.
 			err = s.storage.StoreSnapshotBalancesInDatabase(newBalances, targetIndex)
 			if err != nil {
 				return errors.Wrap(ErrCritical, err.Error())
@@ -519,17 +521,18 @@ func (s *Snapshot) createFullLocalSnapshotWithoutLocking(targetIndex milestone.I
 		s.tangle.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
-	s.log.Infof("created local snapshot for target index %d, took %v", targetIndex, time.Since(ts))
+	s.log.Infof("created snapshot for target index %d, took %v", targetIndex, time.Since(ts))
 	return nil
 }
 
+// LoadFullSnapshotFromFile loads a full snapshot file from the given file path into the storage.
 func (s *Snapshot) LoadFullSnapshotFromFile(networkID uint64, filePath string) error {
 	s.log.Info("importing full snapshot file...")
 	ts := time.Now()
 
 	lsFile, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("unable to open local snapshot file for import: %w", err)
+		return fmt.Errorf("unable to open snapshot file for import: %w", err)
 	}
 	defer lsFile.Close()
 
@@ -554,8 +557,8 @@ func (s *Snapshot) LoadFullSnapshotFromFile(networkID uint64, filePath string) e
 
 	// note that we only get the hash of the SEP message instead
 	// of also its associated oldest cone root index, since the index
-	// of the local snapshot milestone will be below max depth anyway.
-	// this information was included in pre Chrysalis Phase 2 local snapshots
+	// of the snapshot milestone will be below max depth anyway.
+	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
 	sepConsumer := func(solidEntryPointMessageID *hornet.MessageID) error {
 		s.storage.SolidEntryPointsAdd(solidEntryPointMessageID, lsHeader.SEPMilestoneIndex)
@@ -631,11 +634,11 @@ func (s *Snapshot) LoadFullSnapshotFromFile(networkID uint64, filePath string) e
 	defer s.storage.WriteUnlockSolidEntryPoints()
 	defer s.storage.StoreSolidEntryPoints()
 
-	if err := StreamLocalSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
-		return fmt.Errorf("unable to import local snapshot file: %w", err)
+	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
+		return fmt.Errorf("unable to import snapshot file: %w", err)
 	}
 
-	s.log.Infof("imported local snapshot file, took %v", time.Since(ts))
+	s.log.Infof("imported snapshot file, took %v", time.Since(ts))
 
 	if err := s.utxo.CheckLedgerState(); err != nil {
 		return err
@@ -656,12 +659,13 @@ func (s *Snapshot) LoadFullSnapshotFromFile(networkID uint64, filePath string) e
 	return nil
 }
 
-func (s *Snapshot) TriggerNewSolidMilestoneEvent(solidMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+// HandleNewSolidMilestoneEvent handles new solid milestone events which may trigger a snapshot creation and pruning.
+func (s *Snapshot) HandleNewSolidMilestoneEvent(solidMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
 	if s.shouldTakeSnapshot(solidMilestoneIndex) {
-		if err := s.createFullLocalSnapshotWithoutLocking(solidMilestoneIndex-s.snapshotDepth, s.snapshotPath, true, shutdownSignal); err != nil {
+		if err := s.createFullSnapshotWithoutLocking(solidMilestoneIndex-s.snapshotDepth, s.snapshotPath, true, shutdownSignal); err != nil {
 			if errors.Is(err, ErrCritical) {
 				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 			}
@@ -669,14 +673,16 @@ func (s *Snapshot) TriggerNewSolidMilestoneEvent(solidMilestoneIndex milestone.I
 		}
 	}
 
-	if s.pruningEnabled {
-		if solidMilestoneIndex <= s.pruningDelay {
-			// Not enough history
-			return
-		}
+	if !s.pruningEnabled {
+		return
+	}
 
-		if _, err := s.pruneDatabase(solidMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
-			s.log.Debugf("pruning aborted: %v", err)
-		}
+	if solidMilestoneIndex <= s.pruningDelay {
+		// not enough history
+		return
+	}
+
+	if _, err := s.pruneDatabase(solidMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
+		s.log.Debugf("pruning aborted: %v", err)
 	}
 }
