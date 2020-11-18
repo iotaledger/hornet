@@ -43,12 +43,12 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 
 	var targetIndex milestone.Index
 	if depth != 0 {
-		targetIndex, err = snapshot.PruneDatabaseByDepth(milestone.Index(depth))
+		targetIndex, err = deps.Snapshot.PruneDatabaseByDepth(milestone.Index(depth))
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %s", err)
 		}
 	} else {
-		targetIndex, err = snapshot.PruneDatabaseByTargetIndex(milestone.Index(index))
+		targetIndex, err = deps.Snapshot.PruneDatabaseByTargetIndex(milestone.Index(index))
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %s", err)
 		}
@@ -74,7 +74,7 @@ func createSnapshot(c echo.Context) (*createSnapshotResponse, error) {
 	snapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsPath)), fmt.Sprintf("export_%d.bin", index))
 
 	// ToDo: abort signal?
-	if err := snapshot.CreateLocalSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {
+	if err := deps.Snapshot.CreateLocalSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "creating snapshot failed: %s", err)
 	}
 

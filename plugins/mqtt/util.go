@@ -39,8 +39,8 @@ func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
 func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
 	if mqttBroker.HasSubscribers(topic) {
 		publishOnTopic(topic, &milestonePayload{
-			Index:       uint32(milestone.Index),
-			Time:        milestone.Timestamp.Unix(),
+			Index: uint32(milestone.Index),
+			Time:  milestone.Timestamp.Unix(),
 		})
 	}
 }

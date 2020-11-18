@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -15,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
@@ -22,6 +22,8 @@ import (
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 const (
@@ -58,6 +60,8 @@ type dependencies struct {
 	dig.In
 	Service          *gossip.Service
 	Storage          *storage.Storage
+	Tangle           *tangle.Tangle
+	Snapshot         *snapshot.Snapshot
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
