@@ -19,7 +19,7 @@ const (
 	PriorityP2PManager
 	PriorityHeartbeats
 	PriorityWarpSync
-	PriorityLocalSnapshots
+	PrioritySnapshots
 	PriorityMetricsUpdater
 	PriorityDashboard
 	PriorityPoWHandler

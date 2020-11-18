@@ -25,6 +25,7 @@ type WriteCounter struct {
 	lastProgressTime time.Time
 }
 
+// NewWriteCounter creates a new WriteCounter.
 func NewWriteCounter(expected uint64, shutdownCtx context.Context) *WriteCounter {
 	return &WriteCounter{
 		Expected:    expected,
@@ -44,6 +45,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// PrintProgress prints the current progress.
 func (wc *WriteCounter) PrintProgress() {
 	if time.Since(wc.lastProgressTime) < 1*time.Second {
 		return
@@ -62,6 +64,7 @@ func (wc *WriteCounter) PrintProgress() {
 	fmt.Printf("\rDownloading... %s/%s (%s/s)", humanize.Bytes(wc.total), humanize.Bytes(wc.Expected), humanize.Bytes(bytesPerSecond))
 }
 
+// DownloadSnapshotFile downloads a snapshot file by examining the given URLs.
 func (s *Snapshot) DownloadSnapshotFile(filepath string, urls []string) error {
 
 	// Try to download a snapshot from one of the provided sources, break if download was successful
@@ -83,6 +86,7 @@ func (s *Snapshot) DownloadSnapshotFile(filepath string, urls []string) error {
 			out.Close()
 			continue
 		}
+
 		if resp.StatusCode != http.StatusOK {
 			s.log.Warnf("Downloading snapshot from %s failed. Server returned %d", url, resp.StatusCode)
 			out.Close()

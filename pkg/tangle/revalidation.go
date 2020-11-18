@@ -72,7 +72,7 @@ func (t *Tangle) RevalidateDatabase() error {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	t.log.Infof("reverting database state back from %d to local snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
+	t.log.Infof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
 
 	// delete milestone data newer than the local snapshot
 	if err := t.cleanupMilestones(snapshotInfo); err != nil {
@@ -118,7 +118,7 @@ func (t *Tangle) RevalidateDatabase() error {
 		return err
 	}
 
-	t.log.Infof("reverted state back to local snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
+	t.log.Infof("reverted state back to snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
