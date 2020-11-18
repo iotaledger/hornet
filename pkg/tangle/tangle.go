@@ -12,24 +12,11 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/utils"
 )
-
-// milestoneParentsRequestFunc requests the parents of a given milestone.
-// It returns True if the parents are enqeued to the request queue.
-type milestoneParentsRequestFunc func(cachedMilestone *storage.CachedMilestone) bool
-
-// requestMultipleFunc enqueues multiple request to the request queue for the given message ids
-// if they aren't solid entry points and are not contained in the database already.
-type requestMultipleFunc func(messageIDs hornet.MessageIDs, msIndex milestone.Index, preventDiscard ...bool) int
-
-// requestParentsFunc enqueues requests for the parents of the given message to the request queue, if the
-// given message is not a solid entry point and neither its parents are and also not in the database.
-type requestParentsFunc func(cachedMsg *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool)
 
 type Tangle struct {
 	log              *logger.Logger

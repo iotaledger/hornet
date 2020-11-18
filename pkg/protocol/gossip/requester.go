@@ -253,8 +253,8 @@ func (r *Requester) RequestMilestoneParents(cachedMilestone *storage.CachedMiles
 	return enqueued
 }
 
-// of a given milestone and requests each missing parent. As a special property, invocations
 // MemoizedRequestMissingMilestoneParents returns a function which traverses the parents
+// of a given milestone and requests each missing parent. As a special property, invocations
 // of the yielded function share the same 'already traversed' set to circumvent requesting
 // the same parents multiple times.
 func (r *Requester) MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms milestone.Index) {
