@@ -59,6 +59,8 @@ var (
 type dependencies struct {
 	dig.In
 	Service          *gossip.Service
+	Broadcaster      *gossip.Broadcaster
+	Requester        *gossip.Requester
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	Snapshot         *snapshot.Snapshot
@@ -99,9 +101,9 @@ func provide(c *dig.Container) {
 
 	type servicedeps struct {
 		dig.In
-
 		Host          host.Host
 		Manager       *p2p.Manager
+		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		NetworkID     uint64                       `name:"networkId"`
@@ -119,10 +121,41 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		panic(err)
 	}
+
+	type requesterdeps struct {
+		dig.In
+		Service      *gossip.Service
+		RequestQueue gossip.RequestQueue
+		Storage      *storage.Storage
+	}
+
+	if err := c.Provide(func(deps requesterdeps) *gossip.Requester {
+		return gossip.NewRequester(deps.Service, deps.RequestQueue, deps.Storage)
+	}); err != nil {
+		panic(err)
+	}
+
+	type broadcasterdeps struct {
+		dig.In
+		Service *gossip.Service
+		Manager *p2p.Manager
+		Storage *storage.Storage
+	}
+
+	if err := c.Provide(func(deps broadcasterdeps) *gossip.Broadcaster {
+		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage)
+	}); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {
 	log = logger.NewLogger(CorePlugin.Name)
+
+	// don't re-enqueue pending requests in case the node is running hot
+	deps.Requester.AddBackPressureFunc(func() bool {
+		return deps.Snapshot.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
+	})
 
 	// register event handlers for messages
 	deps.Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
@@ -189,30 +222,20 @@ func run() {
 		log.Info("Stopped GossipService")
 	}, shutdown.PriorityGossipService)
 
+	_ = CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
+		deps.Requester.RunPendingRequestEnqueuer(shutdownSignal)
+	}, shutdown.PriorityRequestsProcessor)
+
+	_ = CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(shutdownSignal <-chan struct{}) {
+		deps.Requester.RunRequestQueueDrainer(shutdownSignal)
+	}, shutdown.PriorityRequestsProcessor)
+
 	_ = CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
 		log.Info("Running BroadcastQueue")
-		broadcastQueue := make(chan *gossip.Broadcast)
-		onBroadcastMessage := events.NewClosure(func(b *gossip.Broadcast) {
-			broadcastQueue <- b
-		})
+		onBroadcastMessage := events.NewClosure(deps.Broadcaster.Broadcast)
 		deps.MessageProcessor.Events.BroadcastMessage.Attach(onBroadcastMessage)
 		defer deps.MessageProcessor.Events.BroadcastMessage.Detach(onBroadcastMessage)
-	exit:
-		for {
-			select {
-			case <-shutdownSignal:
-				break exit
-			case b := <-broadcastQueue:
-				deps.Service.ForEach(func(proto *gossip.Protocol) bool {
-					if _, excluded := b.ExcludePeers[proto.PeerID]; excluded {
-						return true
-					}
-
-					proto.SendMessage(b.MsgData)
-					return true
-				})
-			}
-		}
+		deps.Broadcaster.RunBroadcastQueueDrainer(shutdownSignal)
 		log.Info("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue)
 
@@ -225,8 +248,6 @@ func run() {
 	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
 		timeutil.Ticker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
 	}, shutdown.PriorityHeartbeats)
-
-	runRequestWorkers()
 }
 
 // checkHeartbeats sends a heartbeat to each peer and also checks
@@ -235,7 +256,7 @@ func run() {
 func checkHeartbeats() {
 
 	// send a new heartbeat message to every neighbor at least every heartbeatSentInterval
-	BroadcastHeartbeat(func(proto *gossip.Protocol) bool {
+	deps.Broadcaster.BroadcastHeartbeat(func(proto *gossip.Protocol) bool {
 		return time.Since(proto.HeartbeatSentTime) > heartbeatSentInterval
 	})
 

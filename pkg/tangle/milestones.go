@@ -30,7 +30,7 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone)
 		t.log.Infof("Valid milestone detected! Index: %d", msIndex)
 
 		// request parent1 and parent2
-		t.milestoneParentsRequestFunc(cachedMilestone.Retain()) // milestone pass +1
+		t.requester.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else {
 		pruningIndex := t.storage.GetSnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {

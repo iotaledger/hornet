@@ -9,7 +9,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 
-	gossipcore "github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
@@ -53,6 +52,8 @@ type dependencies struct {
 	Tangle       *tangle.Tangle
 	RequestQueue gossip.RequestQueue
 	Service      *gossip.Service
+	Broadcaster  *gossip.Broadcaster
+	Requester    *gossip.Requester
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -87,7 +88,7 @@ func configureEvents() {
 		if warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
 			log.Infof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
-			gossipcore.BroadcastMilestoneRequests(warpSync.AdvancementRange, nil)
+			deps.Broadcaster.BroadcastMilestoneRequests(warpSync.AdvancementRange, nil)
 		}
 	})
 
@@ -97,8 +98,8 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		requestMissingMilestoneParents := gossipcore.MemoizedRequestMissingMilestoneParents()
-		gossipcore.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents, oldCheckpoint)
+		requestMissingMilestoneParents := deps.Requester.MemoizedRequestMissingMilestoneParents()
+		deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents, oldCheckpoint)
 	})
 
 	onTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
@@ -110,8 +111,8 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		requestMissingMilestoneParents := gossipcore.MemoizedRequestMissingMilestoneParents()
-		msRequested := gossipcore.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents)
+		requestMissingMilestoneParents := deps.Requester.MemoizedRequestMissingMilestoneParents()
+		msRequested := deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
