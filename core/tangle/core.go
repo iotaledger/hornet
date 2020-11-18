@@ -122,8 +122,6 @@ func configure() {
 
 	configureEvents()
 	deps.Tangle.ConfigureTangleProcessor()
-
-	gossip.AddRequestBackpressureSignal(deps.Tangle.IsReceiveTxWorkerPoolBusy)
 }
 
 func run() {

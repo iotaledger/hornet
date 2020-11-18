@@ -143,9 +143,9 @@ func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCac
 // milestone +1
 func (s *Storage) storeMilestone(index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
 	milestone := &Milestone{
-		Index:       index,
-		MessageID:   messageID,
-		Timestamp:   timestamp,
+		Index:     index,
+		MessageID: messageID,
+		Timestamp: timestamp,
 	}
 
 	// milestones should never exist in the database already, even with an unclean database
