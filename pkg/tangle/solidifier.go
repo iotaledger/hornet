@@ -327,7 +327,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		}
 	}()
 
-	t.log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
+	t.log.Infof("RunRequestQueueDrainer solidity check for Milestone (%d)...", milestoneIndexToSolidify)
 	if becameSolid, aborted := t.solidQueueCheck(cachedMsgMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
