@@ -83,7 +83,7 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 		case <-r.drainSignal:
 
 			// drain request queue
-			for request := r.rQueue.Next(); r != nil; request = r.rQueue.Next() {
+			for request := r.rQueue.Next(); request != nil; request = r.rQueue.Next() {
 
 				requested := false
 				r.service.ForEach(func(proto *Protocol) bool {
