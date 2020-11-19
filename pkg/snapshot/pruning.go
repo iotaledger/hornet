@@ -55,8 +55,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index) error {
 
-	err := s.utxo.PruneMilestoneIndex(milestoneIndex)
-	if err != nil {
+	if err := s.utxo.PruneMilestoneIndex(milestoneIndex); err != nil {
 		return err
 	}
 

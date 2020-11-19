@@ -62,21 +62,18 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index) error {
 	mutations := u.utxoStorage.Batched()
 
 	for _, spent := range spents {
-		err = deleteOutput(spent.output, mutations)
-		if err != nil {
+		if err := deleteOutput(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
 
-		err = deleteSpent(spent, mutations)
-		if err != nil {
+		if err := deleteSpent(spent, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
 	}
 
-	err = deleteDiff(msIndex, mutations)
-	if err != nil {
+	if err := deleteDiff(msIndex, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}

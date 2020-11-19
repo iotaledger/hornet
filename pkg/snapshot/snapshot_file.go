@@ -5,7 +5,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
+	"time"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/byteutils"
@@ -32,6 +36,8 @@ var (
 	ErrOutputProducerNotProvided = errors.New("output producer is not provided")
 	// Returned when an output consumer has not been provided.
 	ErrOutputConsumerNotProvided = errors.New("output consumer is not provided")
+	// Returned if specified snapshots are not mergeable.
+	ErrSnapshotsNotMergeable = errors.New("snapshot files not mergeable")
 )
 
 // Type defines the type of the snapshot.
@@ -45,6 +51,12 @@ const (
 	// instead of the complete ledger state of a given milestone.
 	Delta
 )
+
+// maps the snapshot type to its name.
+var snapshotNames = map[Type]string{
+	Full:  "full",
+	Delta: "delta",
+}
 
 // Output defines an output within a snapshot.
 type Output struct {
@@ -503,4 +515,177 @@ func readSpent(reader io.Reader) (*Spent, error) {
 	}
 
 	return spent, nil
+}
+
+// ReadSnapshotHeader reads the header of the given snapshot.
+func ReadSnapshotHeader(filePath string) (*ReadFileHeader, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open snapshot file to read header: %w", err)
+	}
+	defer file.Close()
+
+	var readHeader *ReadFileHeader
+	var wantedAbort = errors.New("wanted abort")
+	if err := StreamSnapshotDataFrom(file, func(header *ReadFileHeader) error {
+		readHeader = header
+		return wantedAbort
+	}, func(id *hornet.MessageID) error {
+		return nil
+	}, func(output *Output) error {
+		return nil
+	}, func(milestoneDiff *MilestoneDiff) error {
+		return nil
+	}); err != nil && !errors.Is(err, wantedAbort) {
+		return nil, err
+	}
+
+	return readHeader, nil
+}
+
+// MergeInfo holds information about a merge of a full and delta snapshot.
+type MergeInfo struct {
+	// The header of the full snapshot.
+	FullSnapshotHeader *ReadFileHeader
+	// The header of the delta snapshot.
+	DeltaSnapshotHeader *ReadFileHeader
+	// The header of the merged snapshot.
+	MergedSnapshotHeader *FileHeader
+	// The total output count of the ledger.
+	UnspentOutputsCount uint64
+	// The total count of solid entry points.
+	SEPsCount int
+}
+
+// MergeSnapshotsFiles merges the given full and delta snapshots to create an updated full snapshot.
+// The result is a full snapshot file containing the ledger outputs corresponding to the
+// snapshot index of the specified delta snapshot. The target file does not include any milestone diffs
+// and the ledger and snapshot index are equal.
+// This function consumes disk space over memory by importing the full snapshot into a temporary database,
+// applying the delta diffs onto it and then writing out the merged state.
+func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
+
+	// check that the delta snapshot file's ledger index equals the snapshot index of the full one
+	fullHeader, err := ReadSnapshotHeader(fullPath)
+	if err != nil {
+		return nil, err
+	}
+
+	deltaHeader, err := ReadSnapshotHeader(deltaPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if deltaHeader.LedgerMilestoneIndex != fullHeader.SEPMilestoneIndex {
+		return nil, fmt.Errorf("%w: delta snapshot's ledger index %d does not correspond to full snapshot's SEPs index %d",
+			ErrSnapshotsNotMergeable, deltaHeader.LedgerMilestoneIndex, fullHeader.SEPMilestoneIndex)
+	}
+
+	// spawn temporary database to built up the wanted merged state in
+	pebbleDB, err := pebble.CreateDB(tempDBPath)
+	if err != nil {
+		return nil, err
+	}
+	kvStore := pebble.New(pebbleDB)
+
+	defer func() {
+		// clean up temp db
+		kvStore.Shutdown()
+		_ = kvStore.Close()
+		_ = os.RemoveAll(tempDBPath)
+	}()
+
+	fullSnapshotFile, err := os.Open(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open full snapshot file: %w", err)
+	}
+	defer fullSnapshotFile.Close()
+
+	// build up retracted ledger state
+	mergeUTXOManager := utxo.New(kvStore)
+	if err := StreamSnapshotDataFrom(fullSnapshotFile,
+		func(header *ReadFileHeader) error {
+			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
+		},
+		func(id *hornet.MessageID) error {
+			return nil
+		}, newOutputConsumer(mergeUTXOManager), newMsDiffConsumer(mergeUTXOManager),
+	); err != nil {
+		return nil, fmt.Errorf("unable to import full snapshot data into temp database: %w", err)
+	}
+
+	deltaSnapshotFile, err := os.Open(deltaPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open delta snapshot file: %w", err)
+	}
+	defer deltaSnapshotFile.Close()
+
+	// build up ledger state to delta snapshot index
+	deltaSnapSEPs := make([]*hornet.MessageID, 0)
+	if err := StreamSnapshotDataFrom(deltaSnapshotFile,
+		func(header *ReadFileHeader) error {
+			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
+		}, func(msgID *hornet.MessageID) error {
+			deltaSnapSEPs = append(deltaSnapSEPs, msgID)
+			return nil
+		}, nil, newMsDiffConsumer(mergeUTXOManager),
+	); err != nil {
+		return nil, fmt.Errorf("unable to import delta snapshot data into temp database: %w", err)
+	}
+
+	// write out merged state to full snapshot file
+	targetSnapshotFile, err := os.Create(targetFileName)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open target snapshot file: %w", err)
+	}
+	defer targetSnapshotFile.Close()
+
+	var sepsIndex int
+	sepsIter := func() (*hornet.MessageID, error) {
+		if sepsIndex == len(deltaSnapSEPs) {
+			return nil, nil
+		}
+		sep := deltaSnapSEPs[sepsIndex]
+		sepsIndex++
+		return sep, nil
+	}
+
+	// create a prepped output producer which counts how many went through
+	var unspentOutputsCount uint64
+	lsmiUTXOProducer := newLSMIUTXOProducer(mergeUTXOManager)
+	countingOutputProducer := func() (*Output, error) {
+		output, err := lsmiUTXOProducer()
+		if output != nil {
+			unspentOutputsCount++
+		}
+		return output, err
+	}
+
+	mergedSnapshotFileHeader := &FileHeader{
+		Version:           SupportedFormatVersion,
+		Type:              Full,
+		NetworkID:         deltaHeader.NetworkID,
+		SEPMilestoneIndex: deltaHeader.SEPMilestoneIndex,
+		// the SEP index on the delta snapshot is the built up state of applying
+		// all ms diffs to the origin state of the full snapshot
+		LedgerMilestoneIndex: deltaHeader.SEPMilestoneIndex,
+	}
+
+	if err := StreamSnapshotDataTo(
+		targetSnapshotFile, uint64(time.Now().Unix()), mergedSnapshotFileHeader,
+		sepsIter, countingOutputProducer,
+		func() (*MilestoneDiff, error) {
+			// we won't have any ms diffs within this merged full snapshot file
+			return nil, nil
+		}); err != nil {
+		return nil, fmt.Errorf("unable to write merged full snapshot data to target file %s: %w", targetFileName, err)
+	}
+
+	return &MergeInfo{
+		FullSnapshotHeader:   fullHeader,
+		DeltaSnapshotHeader:  deltaHeader,
+		MergedSnapshotHeader: mergedSnapshotFileHeader,
+		UnspentOutputsCount:  unspentOutputsCount,
+		SEPsCount:            len(deltaSnapSEPs),
+	}, nil
 }
