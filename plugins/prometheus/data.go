@@ -13,7 +13,7 @@ var (
 	dataSizes *prometheus.GaugeVec
 )
 
-func init() {
+func configureData() {
 	dataSizes = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_data_sizes_bytes",

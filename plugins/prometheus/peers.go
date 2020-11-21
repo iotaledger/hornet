@@ -19,7 +19,7 @@ var (
 	peersConnected                 *prometheus.GaugeVec
 )
 
-func init() {
+func configurePeers() {
 	peersAllMessages = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "iota_peers_all_messages",

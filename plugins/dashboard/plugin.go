@@ -16,7 +16,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 
-	"github.com/gohornet/hornet/core/app"
+	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -112,6 +112,7 @@ type dependencies struct {
 	MessageProcessor *gossip.MessageProcessor
 	TipSelector      *tipselect.TipSelector       `optional:"true"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	AppInfo          *app.AppInfo
 }
 
 func configure() {
@@ -375,8 +376,8 @@ func currentNodeStatus() *NodeStatus {
 		requestedMilestone = peekedRequest.MilestoneIndex
 	}
 
-	status.Version = app.Version
-	status.LatestVersion = app.LatestGitHubVersion
+	status.Version = deps.AppInfo.Version
+	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)

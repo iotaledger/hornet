@@ -22,6 +22,7 @@ import (
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/gohornet/hornet/plugins/versioncheck"
 	"github.com/gohornet/hornet/plugins/warpsync"
 )
 
@@ -41,6 +42,7 @@ func main() {
 		}...),
 		node.WithPlugins([]*node.Plugin{
 			profiling.Plugin,
+			versioncheck.Plugin,
 			restapi.Plugin,
 			restapiv1.Plugin,
 			p2pdisc.Plugin,
