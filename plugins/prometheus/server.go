@@ -23,7 +23,7 @@ var (
 	serverValidatedMessages         prometheus.Gauge
 )
 
-func init() {
+func configureServer() {
 	serverAllMessages = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_server_all_messages",
 		Help: "Number of all messages.",

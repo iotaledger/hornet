@@ -2,32 +2,25 @@ package app
 
 import (
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
-	"github.com/tcnksm/go-latest"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
 
+	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/toolset"
 )
 
 var (
-	// Version version number
-	Version             = "0.5.3"
-	LatestGitHubVersion = Version
-
-	// Name app code name
+	// Name of the app.
 	Name = "HORNET"
 
-	githubTag *latest.GithubTag
+	// Version of the app.
+	Version = "0.6.0-alpha"
 )
 
 var (
@@ -48,11 +41,11 @@ var (
 	nonHiddenFlag = map[string]struct{}{
 		"config":              {},
 		"config-dir":          {},
+		"node.profile":        {},
 		"node.disablePlugins": {},
 		"node.enablePlugins":  {},
 		"peeringConfig":       {},
 		"profilesConfig":      {},
-		"useProfile":          {},
 		"version":             {},
 		"help":                {},
 	}
@@ -70,10 +63,10 @@ func init() {
 	InitPlugin = &node.InitPlugin{
 		Pluggable: node.Pluggable{
 			Name:      "App",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
-			Run:       run,
 		},
 		Configs: map[string]*configuration.Configuration{
 			"nodeConfig":    nodeConfig,
@@ -87,7 +80,13 @@ func init() {
 var (
 	InitPlugin *node.InitPlugin
 	log        *logger.Logger
+	deps       dependencies
 )
+
+type dependencies struct {
+	dig.In
+	AppInfo *app.AppInfo
+}
 
 func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
 	flagSets, err := normalizeFlagSets(params)
@@ -116,6 +115,16 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 }
 
 func provide(c *dig.Container) {
+
+	if err := c.Provide(func() *app.AppInfo {
+		return &app.AppInfo{
+			Name:                Name,
+			Version:             Version,
+			LatestGitHubVersion: "",
+		}
+	}); err != nil {
+		panic(err)
+	}
 	if err := c.Provide(func() *configuration.Configuration {
 		return nodeConfig
 	}, dig.Name("nodeConfig")); err != nil {
@@ -136,13 +145,6 @@ func provide(c *dig.Container) {
 func configure() {
 	log = logger.NewLogger(InitPlugin.Name)
 
-	githubTag = &latest.GithubTag{
-		Owner:             "gohornet",
-		Repository:        "hornet",
-		FixVersionStrFunc: fixVersion,
-		TagFilterFunc:     includeVersionInCheck,
-	}
-
 	fmt.Printf("\n\n"+`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
@@ -151,52 +153,7 @@ func configure() {
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
                                    v%s
-`+"\n\n", Version)
-
-	checkLatestVersion()
+`+"\n\n", deps.AppInfo.Version)
 
 	log.Info("Loading plugins ...")
-}
-
-func run() {
-	// create a background worker that checks for latest version every hour
-	// TODO: move this into a separate plugin
-	_ = InitPlugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(checkLatestVersion, 1*time.Hour, shutdownSignal)
-	}, shutdown.PriorityUpdateCheck)
-}
-
-func fixVersion(version string) string {
-	ver := strings.Replace(version, "v", "", 1)
-	if !strings.Contains(ver, "-rc.") {
-		ver = strings.Replace(ver, "-rc", "-rc.", 1)
-	}
-	return ver
-}
-
-func includeVersionInCheck(version string) bool {
-	isPrerelease := func(ver string) bool {
-		return strings.Contains(ver, "-rc")
-	}
-
-	if isPrerelease(Version) {
-		// When using pre-release versions, check for any updates
-		return true
-	}
-
-	return !isPrerelease(version)
-}
-
-func checkLatestVersion() {
-
-	res, err := latest.Check(githubTag, fixVersion(Version))
-	if err != nil {
-		log.Warnf("Update check failed: %s", err)
-		return
-	}
-
-	if res.Outdated {
-		log.Infof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
-		LatestGitHubVersion = res.Current
-	}
 }

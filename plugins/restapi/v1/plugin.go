@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 
 	powcore "github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
@@ -172,6 +173,7 @@ type dependencies struct {
 	PoWHandler       *pow.Handler
 	MessageProcessor *gossip.MessageProcessor
 	Snapshot         *snapshot.Snapshot
+	AppInfo          *app.AppInfo
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
 	TipSelector      *tipselect.TipSelector

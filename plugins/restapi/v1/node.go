@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -44,8 +43,8 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                 app.Name,
-		Version:              app.Version,
+		Name:                 deps.AppInfo.Name,
+		Version:              deps.AppInfo.Version,
 		IsHealthy:            deps.Tangle.IsNodeHealthy(),
 		NetworkID:            deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
 		LatestMilestoneIndex: latestMilestoneIndex,
