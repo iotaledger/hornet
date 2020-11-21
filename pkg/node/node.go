@@ -89,6 +89,7 @@ func (n *Node) init() {
 	params := map[string][]*flag.FlagSet{}
 	masked := []string{}
 
+	n.options.initPlugin.Node = n
 	if n.options.initPlugin.Params != nil {
 		for k, v := range n.options.initPlugin.Params.Params {
 			params[k] = append(params[k], v)
@@ -167,18 +168,24 @@ func (n *Node) init() {
 		return true
 	})
 
+	n.ForEachPlugin(func(plugin *Plugin) bool {
+		if plugin.Provide != nil {
+			plugin.Provide(n.container)
+		}
+		return true
+	})
+
+	if n.options.initPlugin.DepsFunc != nil {
+		if err := n.container.Invoke(n.options.initPlugin.DepsFunc); err != nil {
+			panic(err)
+		}
+	}
+
 	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
 		if corePlugin.DepsFunc != nil {
 			if err := n.container.Invoke(corePlugin.DepsFunc); err != nil {
 				panic(err)
 			}
-		}
-		return true
-	})
-
-	n.ForEachPlugin(func(plugin *Plugin) bool {
-		if plugin.Provide != nil {
-			plugin.Provide(n.container)
 		}
 		return true
 	})
@@ -194,6 +201,10 @@ func (n *Node) init() {
 }
 
 func (n *Node) configure() {
+
+	if n.options.initPlugin.Configure != nil {
+		n.options.initPlugin.Configure()
+	}
 
 	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
 		if corePlugin.Configure != nil {
@@ -214,6 +225,10 @@ func (n *Node) configure() {
 
 func (n *Node) execute() {
 	n.Logger.Info("Executing core plugin ...")
+
+	if n.options.initPlugin.Run != nil {
+		n.options.initPlugin.Run()
+	}
 
 	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
 		if corePlugin.Run != nil {
