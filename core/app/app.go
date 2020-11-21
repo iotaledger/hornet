@@ -48,11 +48,11 @@ var (
 	nonHiddenFlag = map[string]struct{}{
 		"config":              {},
 		"config-dir":          {},
+		"node.profile":        {},
 		"node.disablePlugins": {},
 		"node.enablePlugins":  {},
 		"peeringConfig":       {},
 		"profilesConfig":      {},
-		"useProfile":          {},
 		"version":             {},
 		"help":                {},
 	}

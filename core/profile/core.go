@@ -59,7 +59,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	if deps.NodeConfig.String(CfgProfileUseProfile) == AutoProfileName {
+	if deps.NodeConfig.String(CfgNodeProfile) == AutoProfileName {
 		log.Infof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {
 		log.Infof("Using profile '%s'", deps.Profile.Name)
@@ -69,7 +69,7 @@ func configure() {
 // loadProfile automatically loads the appropriate profile (given the system memory) if the config value
 // is set to 'auto' or the one specified in the config.
 func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *configuration.Configuration) *profile.Profile {
-	profileName := strings.ToLower(nodeConfig.String(CfgProfileUseProfile))
+	profileName := strings.ToLower(nodeConfig.String(CfgNodeProfile))
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {

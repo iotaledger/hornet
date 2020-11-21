@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	// CfgProfileUseProfile is the key to set the profile to use.
-	CfgProfileUseProfile = "useProfile"
+	// CfgNodeProfile is the key to set the profile to use.
+	CfgNodeProfile = "node.profile"
 
 	// AutoProfileName is the name of the automatic profile.
 	AutoProfileName = "auto"
@@ -17,7 +17,7 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.StringP(CfgProfileUseProfile, "p", AutoProfileName, "Sets the profile with which the node runs")
+			fs.StringP(CfgNodeProfile, "p", AutoProfileName, "Sets the profile with which the node runs")
 			return fs
 		}(),
 	},
