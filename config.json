@@ -1,5 +1,4 @@
 {
-  "useProfile": "auto",
   "restAPI": {
     "basicAuth": {
       "enabled": false,
@@ -61,6 +60,7 @@
   },
   "node": {
     "alias": "",
+    "profile": "auto",
     "enableProofOfWork": false,
     "disablePlugins": [],
     "enablePlugins": []
