@@ -6,13 +6,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	pebbleDB "github.com/cockroachdb/pebble"
-	"github.com/cockroachdb/pebble/bloom"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
@@ -22,64 +19,10 @@ import (
 	"github.com/gohornet/hornet/pkg/profile"
 )
 
-const (
-	cacheSize = 1 << 30 // 1 GB
-)
-
 var (
 	// ErrNothingToCleanUp is returned when nothing is there to clean up in the database.
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
-
-func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
-
-	cache := pebbleDB.NewCache(cacheSize)
-	defer cache.Unref()
-
-	opts := &pebbleDB.Options{
-		Cache:                       cache,
-		DisableWAL:                  false,
-		L0CompactionThreshold:       2,
-		L0StopWritesThreshold:       1000,
-		LBaseMaxBytes:               64 << 20, // 64 MB
-		Levels:                      make([]pebbleDB.LevelOptions, 7),
-		MaxConcurrentCompactions:    3,
-		MaxOpenFiles:                16384,
-		MemTableSize:                64 << 20,
-		MemTableStopWritesThreshold: 4,
-	}
-	opts.Experimental.L0SublevelCompactions = true
-
-	for i := 0; i < len(opts.Levels); i++ {
-		l := &opts.Levels[i]
-		l.BlockSize = 32 << 10       // 32 KB
-		l.IndexBlockSize = 256 << 10 // 256 KB
-		l.FilterPolicy = bloom.FilterPolicy(10)
-		l.FilterType = pebbleDB.TableFilter
-		if i > 0 {
-			l.TargetFileSize = opts.Levels[i-1].TargetFileSize * 2
-		}
-		l.EnsureDefaults()
-	}
-	opts.Levels[6].FilterPolicy = nil
-	opts.Experimental.FlushSplitBytes = opts.Levels[0].TargetFileSize
-
-	opts.EnsureDefaults()
-
-	if verbose {
-		opts.EventListener = pebbleDB.MakeLoggingEventListener(nil)
-		opts.EventListener.TableDeleted = nil
-		opts.EventListener.TableIngested = nil
-		opts.EventListener.WALCreated = nil
-		opts.EventListener.WALDeleted = nil
-	}
-
-	db, err := pebble.CreateDB(directory, opts)
-	if err != nil {
-		panic(err)
-	}
-	return db
-}
 
 type packageEvents struct {
 	ReceivedValidMilestone *events.Event
@@ -88,9 +31,8 @@ type packageEvents struct {
 type Storage struct {
 
 	// database
-	databaseDir    string
-	pebbleInstance *pebbleDB.DB
-	pebbleStore    kvstore.KVStore
+	databaseDir string
+	store       kvstore.KVStore
 
 	// kv storages
 	healthStore   kvstore.KVStore
@@ -136,26 +78,27 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, cachesProfile *profile.Caches) *Storage {
+func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches) *Storage {
 
-	pebbleInstance := getPebbleDB(databaseDirectory, false)
-	pebbleStore := pebble.New(pebbleInstance)
-	utxoManager := utxo.New(pebbleStore)
+	utxoManager := utxo.New(store)
 
 	s := &Storage{
-		databaseDir:    databaseDirectory,
-		pebbleInstance: pebbleInstance,
-		pebbleStore:    pebbleStore,
-		utxoManager:    utxoManager,
+		databaseDir: databaseDirectory,
+		store:       store,
+		utxoManager: utxoManager,
 		Events: &packageEvents{
 			ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
 		},
 	}
 
-	s.ConfigureStorages(pebbleStore, cachesProfile)
+	s.ConfigureStorages(s.store, cachesProfile)
 	s.loadSolidMilestoneFromDatabase()
 
 	return s
+}
+
+func (s *Storage) KVStore() kvstore.KVStore {
+	return s.store
 }
 
 func (s *Storage) UTXO() *utxo.Manager {
@@ -206,19 +149,6 @@ func (s *Storage) loadSolidMilestoneFromDatabase() {
 
 	// set the solid milestone index based on the ledger milestone
 	s.SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
-}
-
-func (s *Storage) CloseDatabases() error {
-
-	if err := s.pebbleInstance.Flush(); err != nil {
-		return err
-	}
-
-	if err := s.pebbleInstance.Close(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *Storage) DatabaseSupportsCleanup() bool {

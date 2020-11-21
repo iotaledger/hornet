@@ -5,7 +5,10 @@ import (
 
 	"go.uber.org/dig"
 
+	pebbleDB "github.com/cockroachdb/pebble"
+
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 
@@ -29,26 +32,40 @@ func init() {
 }
 
 var (
-	CorePlugin            *node.CorePlugin
-	log                   *logger.Logger
+	CorePlugin *node.CorePlugin
+	log        *logger.Logger
+	deps       dependencies
+
 	garbageCollectionLock syncutils.Mutex
-	deps                  dependencies
 )
 
 type dependencies struct {
 	dig.In
-	Storage *storage.Storage
+	PebbleInstance *pebbleDB.DB
+	Storage        *storage.Storage
 }
 
 func provide(c *dig.Container) {
-	type storagedeps struct {
+	type pebbledeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Profile    *profile.Profile
+	}
+
+	if err := c.Provide(func(deps pebbledeps) *pebbleDB.DB {
+		return getPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false)
+	}); err != nil {
+		panic(err)
+	}
+
+	type storagedeps struct {
+		dig.In
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		PebbleInstance *pebbleDB.DB
+		Profile        *profile.Profile
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Profile.Caches)
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), pebble.New(deps.PebbleInstance), deps.Profile.Caches)
 	}); err != nil {
 		panic(err)
 	}
@@ -73,7 +90,7 @@ func configure() {
 		<-shutdownSignal
 		deps.Storage.MarkDatabaseHealthy()
 		log.Info("Syncing databases to disk...")
-		deps.Storage.CloseDatabases()
+		closeDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 }
@@ -111,4 +128,17 @@ func RunGarbageCollection() {
 	}
 
 	log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
+}
+
+func closeDatabases() error {
+
+	if err := deps.PebbleInstance.Flush(); err != nil {
+		return err
+	}
+
+	if err := deps.PebbleInstance.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }

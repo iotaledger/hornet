@@ -7,6 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/profile"
 )
@@ -39,7 +40,7 @@ func (s *Storage) GetChildrenStorageSize() int {
 func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	s.childrenStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixChildren}),
+		store.WithRealm([]byte{common.StorePrefixChildren}),
 		childrenFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
