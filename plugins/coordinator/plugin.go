@@ -142,6 +142,9 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, err
 	}
 
+	// don't issue milestones or checkpoints in case the node is running hot
+	coo.AddBackPressureFunc(tangleplugin.IsReceiveTxWorkerPoolBusy)
+
 	return coo, nil
 }
 

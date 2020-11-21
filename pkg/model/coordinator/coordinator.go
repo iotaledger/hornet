@@ -27,6 +27,10 @@ import (
 // SendBundleFunc is a function which sends a bundle to the network.
 type SendBundleFunc = func(b bundle.Bundle, isMilestone bool) error
 
+// BackPressureFunc is a function which tells the Coordinator
+// to stop issuing milestones and checkpoints under high load.
+type BackPressureFunc func() bool
+
 var (
 	// ErrNoTipsGiven is returned when no tips were given to issue a checkpoint.
 	ErrNoTipsGiven = errors.New("no tips given")
@@ -58,6 +62,7 @@ type Coordinator struct {
 	powHandler              *pow.Handler
 	sendBundleFunc          SendBundleFunc
 	milestoneMerkleHashFunc crypto.Hash
+	backpressureFuncs       []BackPressureFunc
 
 	// internal state
 	state        *State
@@ -303,6 +308,12 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointHash 
 		return nil, tangle.ErrNodeNotSynced
 	}
 
+	// check whether we should hold issuing checkpoints
+	// if the node is currently under a lot of load
+	if coo.checkBackPressureFunctions() {
+		return nil, tangle.ErrNodeLoadTooHigh
+	}
+
 	for i, tip := range tips {
 		b, err := createCheckpoint(tip, lastCheckpointHash, coo.minWeightMagnitude, coo.powHandler)
 		if err != nil {
@@ -333,6 +344,12 @@ func (coo *Coordinator) IssueMilestone(trunkHash hornet.Hash, branchHash hornet.
 		return nil, tangle.ErrNodeNotSynced, nil
 	}
 
+	// check whether we should hold issuing miletones
+	// if the node is currently under a lot of load
+	if coo.checkBackPressureFunctions() {
+		return nil, tangle.ErrNodeLoadTooHigh, nil
+	}
+
 	if err := coo.createAndSendMilestone(trunkHash, branchHash, coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, nil, err
@@ -349,4 +366,20 @@ func (coo *Coordinator) GetInterval() time.Duration {
 // State returns the current state of the coordinator.
 func (coo *Coordinator) State() *State {
 	return coo.state
+}
+
+// AddBackPressureFunc adds a BackPressureFunc.
+// This function can be called multiple times to add additional BackPressureFunc.
+func (coo *Coordinator) AddBackPressureFunc(bpFunc BackPressureFunc) {
+	coo.backpressureFuncs = append(coo.backpressureFuncs, bpFunc)
+}
+
+// checkBackPressureFunctions checks whether any back pressure function is signaling congestion.
+func (coo *Coordinator) checkBackPressureFunctions() bool {
+	for _, f := range coo.backpressureFuncs {
+		if f() {
+			return true
+		}
+	}
+	return false
 }
