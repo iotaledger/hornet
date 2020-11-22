@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -153,7 +154,7 @@ func (s *Storage) GetMessageStorageSize() int {
 func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	s.messagesStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixMessages}),
+		store.WithRealm([]byte{common.StorePrefixMessages}),
 		messageFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
@@ -166,7 +167,7 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 	)
 
 	s.metadataStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixMessageMetadata}),
+		store.WithRealm([]byte{common.StorePrefixMessageMetadata}),
 		MetadataFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

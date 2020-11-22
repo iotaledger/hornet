@@ -1,4 +1,4 @@
-package storage
+package common
 
 const (
 	StorePrefixHealth               byte = 0
@@ -9,5 +9,6 @@ const (
 	StorePrefixSnapshot             byte = 5
 	StorePrefixUnreferencedMessages byte = 6
 	StorePrefixIndexation           byte = 7
-	StorePrefixAutopeering          byte = 8
+	StorePrefixUTXO                 byte = 8
+	StorePrefixAutopeering          byte = 9
 )

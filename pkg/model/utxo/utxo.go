@@ -9,6 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go"
 )
@@ -28,7 +29,7 @@ type Manager struct {
 
 func New(store kvstore.KVStore) *Manager {
 	return &Manager{
-		utxoStorage: store.WithRealm([]byte{StorePrefixUTXO}),
+		utxoStorage: store.WithRealm([]byte{common.StorePrefixUTXO}),
 	}
 }
 
