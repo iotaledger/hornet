@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -41,7 +42,7 @@ func (s *Storage) GetMilestoneStorageSize() int {
 func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	s.milestoneStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixMilestones}),
+		store.WithRealm([]byte{common.StorePrefixMilestones}),
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

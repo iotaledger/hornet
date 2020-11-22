@@ -7,6 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -37,7 +38,7 @@ func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.Storable
 func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	s.unreferencedMessagesStorage = objectstorage.New(
-		store.WithRealm([]byte{StorePrefixUnreferencedMessages}),
+		store.WithRealm([]byte{common.StorePrefixUnreferencedMessages}),
 		unreferencedMessageFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),

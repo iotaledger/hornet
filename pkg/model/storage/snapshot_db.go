@@ -7,6 +7,7 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -15,7 +16,7 @@ const (
 )
 
 func (s *Storage) configureSnapshotStore(store kvstore.KVStore) {
-	s.snapshotStore = store.WithRealm([]byte{StorePrefixSnapshot})
+	s.snapshotStore = store.WithRealm([]byte{common.StorePrefixSnapshot})
 }
 
 func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {
