@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
@@ -52,7 +53,7 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps pebbledeps) *pebbleDB.DB {
-		return getPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false)
+		return database.GetPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false)
 	}); err != nil {
 		panic(err)
 	}

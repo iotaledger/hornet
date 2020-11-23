@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 )
 
-func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
+func GetPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 
 	cache := pebbleDB.NewCache(1 << 30) // 1 GB
 	defer cache.Unref()
