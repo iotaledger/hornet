@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.7-rc1] - 21.11.2020
+
+### Changed
+
+    - Added backpressure signal to the coordinator
+
 ## [0.5.6] - 15.11.2020
 
 ### Changed
@@ -10,7 +16,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-    - Store milestone after it was found in serachMissingMilestone
+    - Store milestone after it was found in searchMissingMilestone
 
 ## [0.5.5] - 13.11.2020
 
