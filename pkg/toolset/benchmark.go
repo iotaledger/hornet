@@ -17,6 +17,12 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/utils"
+)
+
+const (
+	// printStatusInterval is the interval for printing status messages
+	printStatusInterval = 2 * time.Second
 )
 
 type benchmarkObject struct {
@@ -76,7 +82,7 @@ func benchmarkIO(args []string) error {
 		println()
 		println("	[COUNT] 	- objects count (optional)")
 		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DATABASE]  - database implementation (optional, values: badger, bolt, pebble)")
+		println("	[DATABASE]  - database implementation (optional, values: bolt, pebble)")
 	}
 
 	objectCnt := 500000
@@ -134,9 +140,22 @@ func benchmarkIO(args []string) error {
 
 	ts := time.Now()
 
+	lastStatusTime := time.Now()
 	for i := 0; i < objectCnt; i++ {
 		// one read operation and one write operation per cycle
 		batchWriter.Enqueue(newBenchmarkObject(store, writeDoneWaitGroup, randBytes(32), randBytes(size)))
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
+			duration := time.Since(ts)
+			bytes := uint64(i * (32 + size))
+			totalBytes := uint64(objectCnt * (32 + size))
+			bytesPerSecond := uint64(float64(bytes) / duration.Seconds())
+			objectsPerSecond := uint64(float64(i) / duration.Seconds())
+			percentage, remaining := utils.EstimateRemainingTime(ts, int64(i), int64(objectCnt))
+			fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)", humanize.Bytes(bytesPerSecond), i, size, dbImplementation, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second)))
+		}
 	}
 
 	writeDoneWaitGroup.Wait()
@@ -155,7 +174,7 @@ func benchmarkIO(args []string) error {
 	bytesPerSecond := uint64(float64(totalBytes) / duration.Seconds())
 	objectsPerSecond := uint64(float64(objectCnt) / duration.Seconds())
 
-	fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s, took %v, %d objects/s)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbImplementation, humanize.Bytes(totalBytes), duration.Truncate(time.Millisecond), objectsPerSecond))
+	fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbImplementation, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
 
 	return nil
 }
