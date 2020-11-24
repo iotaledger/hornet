@@ -7,7 +7,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/blang/vfs v1.0.0
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/cockroachdb/pebble v0.0.0-20201113231719-11399317ed18
+	github.com/cockroachdb/pebble v0.0.0-20201123184641-2da62788eede
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dchest/blake2b v1.0.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -26,7 +26,7 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20201116175809-49c4c301be79
+	github.com/iotaledger/hive.go v0.0.0-20201123215537-c329b5b598aa
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201117144025-0657bc1c8025
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
@@ -55,16 +55,16 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.11
-	github.com/wollac/iota-crypto-demo v0.0.0-20201111165926-ce8c524892af
+	github.com/wollac/iota-crypto-demo v0.0.0-20201119181127-32188ea0d129
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20201116153603-4be66e5b6582
+	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48 // indirect
+	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 // indirect
 	golang.org/x/text v0.3.4 // indirect
-	golang.org/x/tools v0.0.0-20201116182000-1d699438d2cf // indirect
-	google.golang.org/genproto v0.0.0-20201117123952-62d171c70ae1 // indirect
+	golang.org/x/tools v0.0.0-20201123232213-4aa1a224cdb5 // indirect
+	google.golang.org/genproto v0.0.0-20201119123407-9b1e624d6bc4 // indirect
 	google.golang.org/grpc v1.33.2 // indirect
 )
