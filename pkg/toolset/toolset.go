@@ -12,6 +12,7 @@ const (
 	ToolEd25519Key  = "ed25519key"
 	ToolEd25519Addr = "ed25519addr"
 	ToolSnapGen     = "snapgen"
+	ToolBenchmarkIO = "bench-io"
 )
 
 // HandleTools handles available tools.
@@ -43,6 +44,7 @@ func HandleTools() {
 		ToolEd25519Addr: generateEd25519Address,
 		ToolSnapGen:     snapshotGen,
 		ToolP2PIdentity: generateP2PIdentity,
+		ToolBenchmarkIO: benchmarkIO,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -66,6 +68,7 @@ func listTools(args []string) error {
 	fmt.Println(fmt.Sprintf("%-15s generates an ed25519 key pair", fmt.Sprintf("%s:", ToolEd25519Key)))
 	fmt.Println(fmt.Sprintf("%-15s generates an ed25519 address from a public key", fmt.Sprintf("%s:", ToolEd25519Addr)))
 	fmt.Println(fmt.Sprintf("%-15s generates an initial snapshot for a private network", fmt.Sprintf("%s:", ToolSnapGen)))
+	fmt.Println(fmt.Sprintf("%-15s benchmarks the IO throughput", fmt.Sprintf("%s:", ToolBenchmarkIO)))
 
 	return nil
 }

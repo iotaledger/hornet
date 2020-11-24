@@ -7,14 +7,14 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 )
 
-func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
-
+// NewPebbleDB creates a new pebble DB instance.
+func NewPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 	cache := pebbleDB.NewCache(1 << 30) // 1 GB
 	defer cache.Unref()
 
 	opts := &pebbleDB.Options{
 		Cache:                       cache,
-		DisableWAL:                  false,
+		DisableWAL:                  true,
 		L0CompactionThreshold:       2,
 		L0StopWritesThreshold:       1000,
 		LBaseMaxBytes:               64 << 20, // 64 MB
@@ -54,5 +54,6 @@ func getPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 	if err != nil {
 		panic(err)
 	}
+
 	return db
 }
