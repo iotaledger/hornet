@@ -5,13 +5,13 @@ import (
 
 	"go.uber.org/dig"
 
-	pebbleDB "github.com/cockroachdb/pebble"
-
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
@@ -41,8 +41,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	PebbleInstance *pebbleDB.DB
-	Storage        *storage.Storage
+	Store   kvstore.KVStore
+	Storage *storage.Storage
 }
 
 func provide(c *dig.Container) {
@@ -51,21 +51,21 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps pebbledeps) *pebbleDB.DB {
-		return getPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false)
+	if err := c.Provide(func(deps pebbledeps) kvstore.KVStore {
+		return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false))
 	}); err != nil {
 		panic(err)
 	}
 
 	type storagedeps struct {
 		dig.In
-		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-		PebbleInstance *pebbleDB.DB
-		Profile        *profile.Profile
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Store      kvstore.KVStore
+		Profile    *profile.Profile
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), pebble.New(deps.PebbleInstance), deps.Profile.Caches)
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches)
 	}); err != nil {
 		panic(err)
 	}
@@ -132,11 +132,11 @@ func RunGarbageCollection() {
 
 func closeDatabases() error {
 
-	if err := deps.PebbleInstance.Flush(); err != nil {
+	if err := deps.Store.Flush(); err != nil {
 		return err
 	}
 
-	if err := deps.PebbleInstance.Close(); err != nil {
+	if err := deps.Store.Close(); err != nil {
 		return err
 	}
 
