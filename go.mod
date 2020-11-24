@@ -26,7 +26,7 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20201123215537-c329b5b598aa
+	github.com/iotaledger/hive.go v0.0.0-20201124005433-574a12496b99
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201117144025-0657bc1c8025
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
@@ -56,6 +56,7 @@ require (
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.11
 	github.com/wollac/iota-crypto-demo v0.0.0-20201119181127-32188ea0d129
+	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0

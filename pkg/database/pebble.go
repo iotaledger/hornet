@@ -7,8 +7,8 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 )
 
-func GetPebbleDB(directory string, verbose bool) *pebbleDB.DB {
-
+// NewPebbleDB creates a new pebble DB instance.
+func NewPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 	cache := pebbleDB.NewCache(1 << 30) // 1 GB
 	defer cache.Unref()
 
@@ -54,5 +54,6 @@ func GetPebbleDB(directory string, verbose bool) *pebbleDB.DB {
 	if err != nil {
 		panic(err)
 	}
+
 	return db
 }
