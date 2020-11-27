@@ -55,71 +55,93 @@ func (wc *WriteCounter) PrintProgress() {
 	wc.lastProgressTime = time.Now()
 	wc.last = wc.total
 
-	// Clear the line by using a character return to go back to the start and remove
+	// clear the line by using a character return to go back to the start and remove
 	// the remaining characters by filling it with spaces
 	fmt.Printf("\r%s", strings.Repeat(" ", 60))
 
-	// Return again and print current status of download
-	// We use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
+	// return again and print current status of download
+	// we use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
 	fmt.Printf("\rDownloading... %s/%s (%s/s)", humanize.Bytes(wc.total), humanize.Bytes(wc.Expected), humanize.Bytes(bytesPerSecond))
 }
 
-// DownloadSnapshotFile downloads a snapshot file by examining the given URLs.
-func (s *Snapshot) DownloadSnapshotFile(filepath string, urls []string) error {
+// DownloadTarget holds URLs to a full and delta snapshot.
+type DownloadTarget struct {
+	// URL of the full snapshot file.
+	Full string `json:"full"`
+	// URL of the delta snapshot file.
+	Delta string `json:"delta"`
+}
 
-	// Try to download a snapshot from one of the provided sources, break if download was successful
-	downloadOK := false
-	for _, url := range urls {
-		s.log.Infof("Downloading snapshot from %s", url)
+// DownloadSnapshotFiles tries to download snapshots file from the given targets.
+func (s *Snapshot) DownloadSnapshotFiles(fullPath string, deltaPath string, targets []DownloadTarget) error {
 
-		// Create the file, but give it a tmp file extension, this means we won't overwrite a
-		// file until it's downloaded, but we'll remove the tmp extension once downloaded.
-		out, err := os.Create(filepath + ".tmp")
-		if err != nil {
-			return err
-		}
+	for _, target := range targets {
 
-		// Get the data
-		resp, err := http.Get(url)
-		if err != nil {
-			s.log.Warnf("Downloading snapshot from %s failed with %v", url, err)
-			out.Close()
+		s.log.Infof("downloading full snapshot file from %s", target.Full)
+		if err := s.downloadFile(fullPath, target.Full); err != nil {
+			s.log.Warn(err.Error())
 			continue
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			s.log.Warnf("Downloading snapshot from %s failed. Server returned %d", url, resp.StatusCode)
-			out.Close()
-			continue
+		if len(target.Delta) > 0 {
+			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
+			if err := s.downloadFile(deltaPath, target.Delta); err != nil {
+				s.log.Warn(err.Error())
+				// as the delta snapshot URL was defined but it failed to download,
+				// we delete the downloaded full snapshot and commence further with our targets
+				if err := os.Remove(fullPath); err != nil {
+					return fmt.Errorf("unable to remove full snapshot file, after failed companion delta snapshot file download: %w", err)
+				}
+				continue
+			}
 		}
-
-		defer resp.Body.Close()
-
-		// Create our progress reporter and pass it to be used alongside our writer
-		counter := NewWriteCounter(uint64(resp.ContentLength), s.shutdownCtx)
-		if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
-			s.log.Warnf("Downloading snapshot from %s failed with %v", url, err)
-			out.Close()
-			continue
-		}
-
-		// The progress use the same line so print a new line once it's finished downloading
-		fmt.Print("\n")
-
-		downloadOK = true
-
-		// Close the file without defer so it can happen before Rename()
-		out.Close()
-		break
+		return nil
 	}
 
-	// No download possible
-	if !downloadOK {
-		return ErrSnapshotDownloadNoValidSource
+	return ErrSnapshotDownloadNoValidSource
+}
+
+// downloads a snapshot file from the given url to the specified path.
+func (s *Snapshot) downloadFile(path string, url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
 	}
 
-	if err := os.Rename(filepath+".tmp", filepath); err != nil {
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
+	}
+
+	defer resp.Body.Close()
+
+	tempFileName := path + ".tmp"
+	out, err := os.Create(tempFileName)
+	if err != nil {
 		return err
 	}
+
+	var ok bool
+	defer func() {
+		if !ok {
+			_ = os.Remove(tempFileName)
+		}
+	}()
+
+	// create our progress reporter and pass it to be used alongside our writer
+	counter := NewWriteCounter(uint64(resp.ContentLength), s.shutdownCtx)
+	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
+		_ = out.Close()
+		return fmt.Errorf("download failed: %w", err)
+	}
+
+	// the progress indicator uses the same line so print a new line once it's finished downloading
+	fmt.Print("\n")
+
+	_ = out.Close()
+	if err := os.Rename(tempFileName, path); err != nil {
+		return fmt.Errorf("unable to rename downloaded snapshot file: %w", err)
+	}
+
+	ok = true
 	return nil
 }
