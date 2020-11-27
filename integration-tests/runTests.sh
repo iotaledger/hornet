@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEST_NAMES='common value benchmark'
+TEST_NAMES='common value benchmark snapshot'
 
 echo "Build HORNET image"
 docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.

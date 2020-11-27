@@ -266,21 +266,25 @@ func DefaultPluginConfig() PluginConfig {
 
 // SnapshotConfig defines snapshot specific configuration.
 type SnapshotConfig struct {
-	// The path to the snapshot file.
-	SnapshotFilePath string
+	// The path to the full snapshot file.
+	FullSnapshotFilePath string
+	// the path to the delta snapshot file.
+	DeltaSnapshotFilePath string
 }
 
 // CLIFlags returns the config as CLI flags.
 func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", snapshot.CfgSnapshotsPath, snapshotConfig.SnapshotFilePath),
+		fmt.Sprintf("--%s=%s", snapshot.CfgSnapshotsFullPath, snapshotConfig.FullSnapshotFilePath),
+		fmt.Sprintf("--%s=%s", snapshot.CfgSnapshotsDeltaPath, snapshotConfig.DeltaSnapshotFilePath),
 	}
 }
 
 // DefaultSnapshotConfig returns the default snapshot config.
 func DefaultSnapshotConfig() SnapshotConfig {
 	return SnapshotConfig{
-		SnapshotFilePath: "/assets/snapshot.bin",
+		FullSnapshotFilePath:  "/assets/full_snapshot.bin",
+		DeltaSnapshotFilePath: "/assets/delta_snapshot.bin",
 	}
 }
 

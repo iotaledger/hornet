@@ -51,7 +51,8 @@
     "depth": 50,
     "intervalSynced": 200,
     "intervalUnsynced": 1000,
-    "path": "snapshots/alphanet/export.bin",
+    "fullPath": "snapshots/alphanet/full_export.bin",
+    "deltaPath": "snapshots/alphanet/delta_export.bin",
     "downloadURLs": []
   },
   "pruning": {
