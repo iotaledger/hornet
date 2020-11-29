@@ -139,6 +139,14 @@ const (
 	// GET returns the outputIDs for all spent outputs.
 	RouteDebugOutputsSpent = "/debug/outputs/spent"
 
+	// RouteDebugAddresses is the debug route for getting all known addresses.
+	// GET returns all known addresses encoded in hex.
+	RouteDebugAddresses = "/debug/addresses"
+
+	// RouteDebugAddressesEd25519 is the debug route for getting all known ed25519 addresses.
+	// GET returns all known ed25519 addresses encoded in hex.
+	RouteDebugAddressesEd25519 = "/debug/addresses/ed25519"
+
 	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
 	// GET returns the utxo diff (new outputs & spents) for the milestone index.
 	RouteDebugMilestoneDiffs = "/debug/ms-diff/:" + ParameterMilestoneIndex
@@ -407,6 +415,24 @@ func configure() {
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
 		resp, err := debugSpentOutputsIDs(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
+		resp, err := debugAddresses(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
+		resp, err := debugAddressesEd25519(c)
 		if err != nil {
 			return err
 		}
