@@ -58,7 +58,7 @@ func hashPasswordAndSalt(args []string) error {
 
 	passwordKey, err := basicauth.GetPasswordKey(password, passwordSalt)
 
-	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %s\n", passwordKey, passwordSalt)
+	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)
 
 	return nil
 }

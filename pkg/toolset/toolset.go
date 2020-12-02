@@ -67,7 +67,7 @@ func HandleTools() {
 }
 
 func listTools(args []string) error {
-	fmt.Println(fmt.Sprintf("%-15s generates a sha265 sum from your password and salt", fmt.Sprintf("%s:", ToolPwdHash)))
+	fmt.Println(fmt.Sprintf("%-15s generates a scrypt hash from your password and salt", fmt.Sprintf("%s:", ToolPwdHash)))
 	fmt.Println(fmt.Sprintf("%-15s generates an p2p identity", fmt.Sprintf("%s:", ToolP2PIdentity)))
 	fmt.Println(fmt.Sprintf("%-15s generates an ed25519 key pair", fmt.Sprintf("%s:", ToolEd25519Key)))
 	fmt.Println(fmt.Sprintf("%-15s generates an ed25519 address from a public key", fmt.Sprintf("%s:", ToolEd25519Addr)))
