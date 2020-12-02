@@ -7,10 +7,13 @@ import (
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/websockethub"
+
+	"github.com/gohornet/hornet/plugins/restapi"
 )
 
 const (
@@ -32,8 +35,7 @@ var (
 	ErrForbidden = errors.New("forbidden")
 
 	// holds dashboard assets
-	appBox    = packr.New("Dashboard_App", "./frontend/build")
-	assetsBox = packr.New("Dashboard_Assets", "./frontend/src/assets")
+	appBox = packr.New("Dashboard_App", "./frontend/build")
 )
 
 func indexRoute(e echo.Context) error {
@@ -48,15 +50,69 @@ func indexRoute(e echo.Context) error {
 		}
 		return e.HTMLBlob(http.StatusOK, devIndexHTML)
 	}
-	theme := deps.NodeConfig.String(CfgDashboardTheme)
+
 	indexHTML, err := appBox.Find("index.html")
-	if theme == "light" {
-		indexHTML, err = appBox.Find("index_light.html")
-	}
 	if err != nil {
 		return err
 	}
+
 	return e.HTMLBlob(http.StatusOK, indexHTML)
+}
+
+func passThroughRoute(e echo.Context) error {
+	contentType := calculateMimeType(e)
+
+	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
+		res, err := http.Get("http://127.0.0.1:9090" + e.Request().URL.Path)
+		if err != nil {
+			return err
+		}
+		devStaticBlob, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		return e.Blob(http.StatusOK, contentType, devStaticBlob)
+	}
+	staticBlob, err := appBox.Find(e.Request().URL.Path)
+	if err != nil {
+		return err
+	}
+	return e.Blob(http.StatusOK, contentType, staticBlob)
+}
+
+func passThroughAPIRoute(e echo.Context) error {
+	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
+
+	res, err := http.Get("http://" + apiBindAddr + e.Request().URL.Path + "?" + e.Request().URL.RawQuery)
+	if err != nil {
+		return err
+	}
+	apiBlob, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, apiBlob)
+}
+
+func calculateMimeType(e echo.Context) string {
+	url := e.Request().URL.String()
+
+	switch {
+	case strings.HasSuffix(url, ".html"):
+		return echo.MIMETextHTMLCharsetUTF8
+	case strings.HasSuffix(url, ".css"):
+		return "text/css"
+	case strings.HasSuffix(url, ".js"):
+		return echo.MIMEApplicationJavaScript
+	case strings.HasSuffix(url, ".json"):
+		return echo.MIMEApplicationJSONCharsetUTF8
+	case strings.HasSuffix(url, ".png"):
+		return "image/png"
+	case strings.HasSuffix(url, ".svg"):
+		return "image/svg+xml"
+	default:
+		return echo.MIMEOctetStream
+	}
 }
 
 func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
@@ -72,23 +128,21 @@ func setupRoutes(e *echo.Echo) {
 
 	e.Pre(enforceMaxOneDotPerURL)
 
-	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
-		e.Static("/assets", "./plugins/dashboard/frontend/src/assets")
-	} else {
-		// load assets from packr: either from within the binary or actual disk
-		e.GET("/app/*", echo.WrapHandler(http.StripPrefix("/app", http.FileServer(appBox))))
-		e.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets", http.FileServer(assetsBox))))
-	}
-
 	e.GET("/ws", websocketRoute)
 	e.GET("/", indexRoute)
 
-	// used to route into the dashboard index
+	e.GET("/static/*", passThroughRoute)
+	e.GET("/branding/*", passThroughRoute)
+	e.GET("/favicon/*", passThroughRoute)
+
+	// Hot reload code
+	e.GET("/main*.js", passThroughRoute)
+
+	// Pass all the explorer request through to the local rest API
+	e.GET("/api/*", passThroughAPIRoute)
+
+	// Everything else fallback to index for routing.
 	e.GET("*", indexRoute)
-
-	apiRoutes := e.Group("/api")
-
-	setupExplorerRoutes(apiRoutes)
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		c.Logger().Error(err)
