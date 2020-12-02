@@ -52,10 +52,6 @@ const (
 	MsgTypeMPSMetric
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
-	// MsgTypeTxZeroValue is the type of the zero value Tx message.
-	MsgTypeTxZeroValue
-	// MsgTypeTxValue is the type of the value Tx message.
-	MsgTypeTxValue
 	// MsgTypeMs is the type of the Ms message.
 	MsgTypeMs
 	// MsgTypePeerMetric is the type of the PeerMetric message.
@@ -229,12 +225,6 @@ func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
 type Msg struct {
 	Type byte        `json:"type"`
 	Data interface{} `json:"data"`
-}
-
-// LivefeedMessage represents a message for the livefeed.
-type LivefeedMessage struct {
-	MessageID string `json:"messageID"`
-	Value     int64  `json:"value"`
 }
 
 // LivefeedMilestone represents a milestone for the livefeed.
