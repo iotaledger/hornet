@@ -144,7 +144,7 @@ func run() {
 		}
 
 		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (sha256 hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
+			log.Fatalf("'%s' must be 64 (scrypt hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {

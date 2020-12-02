@@ -94,12 +94,6 @@ func configure() {
 
 	deps.Echo.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
 
-	exclHealthCheckFromAuth := deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth)
-	if exclHealthCheckFromAuth {
-		// Handle route without auth
-		setupHealthRoute()
-	}
-
 	// set basic auth if enabled
 	if deps.NodeConfig.Bool(CfgRestAPIBasicAuthEnabled) {
 		// grab auth info
@@ -112,23 +106,37 @@ func configure() {
 		}
 
 		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (sha256 hash) in length if web API basic auth is enabled", CfgRestAPIBasicAuthPasswordHash)
+			log.Fatalf("'%s' must be 64 (scrypt hash) in length if web API basic auth is enabled", CfgRestAPIBasicAuthPasswordHash)
 		}
 
-		deps.Echo.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username != expectedUsername {
-				return false, nil
-			}
+		excludedRoutes := make(map[string]struct{})
+		if deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth) {
+			excludedRoutes[nodeAPIHealthRoute] = struct{}{}
+		}
 
-			if valid, _ := basicauth.VerifyPassword([]byte(password), []byte(passwordSalt), []byte(expectedPasswordHash)); !valid {
-				return false, nil
-			}
+		deps.Echo.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
+			Skipper: func(c echo.Context) bool {
+				// check if the route is excluded from basic auth.
+				if _, excluded := excludedRoutes[strings.ToLower(c.Path())]; excluded {
+					return true
+				}
+				return false
+			},
+			Validator: func(username, password string, c echo.Context) (bool, error) {
+				if username != expectedUsername {
+					return false, nil
+				}
 
-			return true, nil
+				if valid, _ := basicauth.VerifyPassword([]byte(password), []byte(passwordSalt), []byte(expectedPasswordHash)); !valid {
+					return false, nil
+				}
+
+				return true, nil
+			},
 		}))
 	}
 
-	setupRoutes(exclHealthCheckFromAuth)
+	setupRoutes()
 }
 
 func run() {
@@ -161,7 +169,7 @@ func run() {
 	}, shutdown.PriorityRestAPI)
 }
 
-func setupRoutes(exclHealthCheckFromAuth bool) {
+func setupRoutes() {
 
 	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
 		c.Logger().Error(err)
@@ -209,8 +217,5 @@ func setupRoutes(exclHealthCheckFromAuth bool) {
 		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 	}
 
-	if !exclHealthCheckFromAuth {
-		// Handle route with auth
-		setupHealthRoute()
-	}
+	setupHealthRoute()
 }
