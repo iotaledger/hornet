@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/restapi"
+	iotago "github.com/iotaledger/iota.go"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
@@ -69,6 +70,80 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	return &outputIDsResponse{
 		OutputIDs: outputIDs,
+	}, nil
+}
+
+func debugAddresses(c echo.Context) (*addressesResponse, error) {
+
+	addressMap := map[string]*address{}
+
+	outputConsumerFunc := func(output *utxo.Output) bool {
+		// ToDo: check for different address types
+
+		if addr, exists := addressMap[output.Address().String()]; exists {
+			// add balance to total balance
+			addr.Balance += output.Amount()
+			return true
+		}
+
+		addressMap[output.Address().String()] = &address{
+			AddressType: iotago.AddressEd25519,
+			Address:     output.Address().String(),
+			Balance:     output.Amount(),
+		}
+
+		return true
+	}
+
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
+	}
+
+	addresses := []*address{}
+	for _, addr := range addressMap {
+		addresses = append(addresses, addr)
+	}
+
+	return &addressesResponse{
+		Addresses: addresses,
+	}, nil
+}
+
+func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
+
+	addressMap := map[string]*address{}
+
+	outputConsumerFunc := func(output *utxo.Output) bool {
+		// ToDo: allow ed25519 address type only
+
+		if addr, exists := addressMap[output.Address().String()]; exists {
+			// add balance to total balance
+			addr.Balance += output.Amount()
+			return true
+		}
+
+		addressMap[output.Address().String()] = &address{
+			AddressType: iotago.AddressEd25519,
+			Address:     output.Address().String(),
+			Balance:     output.Amount(),
+		}
+
+		return true
+	}
+
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
+	}
+
+	addresses := []*address{}
+	for _, addr := range addressMap {
+		addresses = append(addresses, addr)
+	}
+
+	return &addressesResponse{
+		Addresses: addresses,
 	}, nil
 }
 

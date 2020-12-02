@@ -110,6 +110,8 @@ type outputResponse struct {
 
 // addressBalanceResponse defines the response of a GET addresses REST API call.
 type addressBalanceResponse struct {
+	// The type of the address (0=WOTS, 1=Ed25519).
+	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
 	// The maximum count of results that are returned by the node.
@@ -122,6 +124,8 @@ type addressBalanceResponse struct {
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
 type addressOutputsResponse struct {
+	// The type of the address (0=WOTS, 1=Ed25519).
+	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
 	// The maximum count of results that are returned by the node.
@@ -136,6 +140,22 @@ type addressOutputsResponse struct {
 type outputIDsResponse struct {
 	// The output IDs (transaction hash + output index) of the outputs.
 	OutputIDs []string `json:"outputIds"`
+}
+
+// address defines the response of a GET debug addresses REST API call.
+type address struct {
+	// The type of the address (0=WOTS, 1=Ed25519).
+	AddressType byte `json:"addressType"`
+	// The hex encoded address.
+	Address string `json:"address"`
+	// The balance of the address.
+	Balance uint64 `json:"balance"`
+}
+
+// addressesResponse defines the response of a GET debug addresses REST API call.
+type addressesResponse struct {
+	// The addresses (type + hex encoded address).
+	Addresses []*address `json:"addresses"`
 }
 
 // outputIDsResponse defines the response of a GET debug milestone diff REST API call.

@@ -85,13 +85,25 @@ const (
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + ParameterOutputID
 
-	// RouteAddressBalance is the route for getting the total balance of all unspent outputs of an address.
+	// RouteAddressBech32Balance is the route for getting the total balance of all unspent outputs of an address.
+	// The address must be encoded in bech32.
 	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressBalance = "/addresses/:" + ParameterAddress
+	RouteAddressBech32Balance = "/addresses/:" + ParameterAddress
 
-	// RouteAddressOutputs is the route for getting all output IDs for an address.
+	// RouteAddressEd25519Balance is the route for getting the total balance of all unspent outputs of an ed25519 address.
+	// The ed25519 address must be encoded in hex.
+	// GET returns the balance of all unspent outputs of this address.
+	RouteAddressEd25519Balance = "/addresses/ed25519/:" + ParameterAddress
+
+	// RouteAddressBech32Outputs is the route for getting all output IDs for an address.
+	// The address must be encoded in bech32.
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
-	RouteAddressOutputs = "/addresses/:" + ParameterAddress + "/outputs"
+	RouteAddressBech32Outputs = "/addresses/:" + ParameterAddress + "/outputs"
+
+	// RouteAddressEd25519Outputs is the route for getting all output IDs for an ed25519 address.
+	// The ed25519 address must be encoded in hex.
+	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
+	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + ParameterAddress + "/outputs"
 
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
@@ -126,6 +138,14 @@ const (
 	// RouteDebugOutputsSpent is the debug route for getting all spent output IDs.
 	// GET returns the outputIDs for all spent outputs.
 	RouteDebugOutputsSpent = "/debug/outputs/spent"
+
+	// RouteDebugAddresses is the debug route for getting all known addresses.
+	// GET returns all known addresses encoded in hex.
+	RouteDebugAddresses = "/debug/addresses"
+
+	// RouteDebugAddressesEd25519 is the debug route for getting all known ed25519 addresses.
+	// GET returns all known ed25519 addresses encoded in hex.
+	RouteDebugAddressesEd25519 = "/debug/addresses/ed25519"
 
 	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
 	// GET returns the utxo diff (new outputs & spents) for the milestone index.
@@ -280,8 +300,8 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteAddressBalance, func(c echo.Context) error {
-		resp, err := balanceByAddress(c)
+	routeGroup.GET(RouteAddressBech32Balance, func(c echo.Context) error {
+		resp, err := balanceByBech32Address(c)
 		if err != nil {
 			return err
 		}
@@ -289,8 +309,26 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteAddressOutputs, func(c echo.Context) error {
-		resp, err := outputsIDsByAddress(c)
+	routeGroup.GET(RouteAddressEd25519Balance, func(c echo.Context) error {
+		resp, err := balanceByEd25519Address(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
+		resp, err := outputsIDsByBech32Address(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
+		resp, err := outputsIDsByEd25519Address(c)
 		if err != nil {
 			return err
 		}
@@ -377,6 +415,24 @@ func configure() {
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
 		resp, err := debugSpentOutputsIDs(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
+		resp, err := debugAddresses(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
+		resp, err := debugAddressesEd25519(c)
 		if err != nil {
 			return err
 		}

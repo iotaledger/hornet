@@ -225,6 +225,8 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/outputs/:outputID",
 			"/api/v1/addresses/:address",
 			"/api/v1/addresses/:address/outputs",
+			"/api/v1/addresses/ed25519/:address",
+			"/api/v1/addresses/ed25519/:address/outputs",
 			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
 			"/api/v1/debug/outputs",
