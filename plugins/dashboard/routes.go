@@ -7,10 +7,13 @@ import (
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/websockethub"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/websockethub"
+
+	"github.com/gohornet/hornet/plugins/restapi"
 )
 
 const (
@@ -36,22 +39,21 @@ var (
 )
 
 func indexRoute(e echo.Context) error {
-	var indexHTML []byte
-	var err error
 	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
 		res, err := http.Get("http://127.0.0.1:9090/")
 		if err != nil {
 			return err
 		}
-		indexHTML, err = ioutil.ReadAll(res.Body)
+		devIndexHTML, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
-	} else {
-		indexHTML, err = appBox.Find("index.html")
-		if err != nil {
-			return err
-		}
+		return e.HTMLBlob(http.StatusOK, devIndexHTML)
+	}
+
+	indexHTML, err := appBox.Find("index.html")
+	if err != nil {
+		return err
 	}
 
 	return e.HTMLBlob(http.StatusOK, indexHTML)
@@ -79,7 +81,7 @@ func passThroughRoute(e echo.Context) error {
 }
 
 func passThroughAPIRoute(e echo.Context) error {
-	apiBindAddr := deps.NodeConfig.String(CfgRestAPIBindAddress)
+	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
 
 	res, err := http.Get("http://" + apiBindAddr + e.Request().URL.Path + "?" + e.Request().URL.RawQuery)
 	if err != nil {
@@ -94,21 +96,23 @@ func passThroughAPIRoute(e echo.Context) error {
 
 func calculateMimeType(e echo.Context) string {
 	url := e.Request().URL.String()
-	if strings.HasSuffix(url, ".html") {
-		return echo.MIMETextHTMLCharsetUTF8
-	} else if strings.HasSuffix(url, ".css") {
-		return "text/css"
-	} else if strings.HasSuffix(url, ".js") {
-		return echo.MIMEApplicationJavaScript
-	} else if strings.HasSuffix(url, ".json") {
-		return echo.MIMEApplicationJSONCharsetUTF8
-	} else if strings.HasSuffix(url, ".png") {
-		return "image/png"
-	} else if strings.HasSuffix(url, ".svg") {
-		return "image/svg+xml"
-	}
 
-	return echo.MIMEOctetStream
+	switch {
+	case strings.HasSuffix(url, ".html"):
+		return echo.MIMETextHTMLCharsetUTF8
+	case strings.HasSuffix(url, ".css"):
+		return "text/css"
+	case strings.HasSuffix(url, ".js"):
+		return echo.MIMEApplicationJavaScript
+	case strings.HasSuffix(url, ".json"):
+		return echo.MIMEApplicationJSONCharsetUTF8
+	case strings.HasSuffix(url, ".png"):
+		return "image/png"
+	case strings.HasSuffix(url, ".svg"):
+		return "image/svg+xml"
+	default:
+		return echo.MIMEOctetStream
+	}
 }
 
 func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
