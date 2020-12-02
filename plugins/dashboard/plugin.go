@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"go.uber.org/dig"
 
@@ -52,10 +53,6 @@ const (
 	MsgTypeMPSMetric
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric
-	// MsgTypeTxZeroValue is the type of the zero value Tx message.
-	MsgTypeTxZeroValue
-	// MsgTypeTxValue is the type of the value Tx message.
-	MsgTypeTxValue
 	// MsgTypeMs is the type of the Ms message.
 	MsgTypeMs
 	// MsgTypePeerMetric is the type of the PeerMetric message.
@@ -113,6 +110,7 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector       `optional:"true"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	AppInfo          *app.AppInfo
+	Host             host.Host
 }
 
 func configure() {
@@ -231,12 +229,6 @@ type Msg struct {
 	Data interface{} `json:"data"`
 }
 
-// LivefeedMessage represents a message for the livefeed.
-type LivefeedMessage struct {
-	MessageID string `json:"messageID"`
-	Value     int64  `json:"value"`
-}
-
 // LivefeedMilestone represents a milestone for the livefeed.
 type LivefeedMilestone struct {
 	MessageID string          `json:"messageID"`
@@ -254,6 +246,7 @@ type NodeStatus struct {
 	SnapshotIndex          milestone.Index `json:"snapshot_index"`
 	PruningIndex           milestone.Index `json:"pruning_index"`
 	IsHealthy              bool            `json:"is_healthy"`
+	IsSynced               bool            `json:"is_synced"`
 	Version                string          `json:"version"`
 	LatestVersion          string          `json:"latest_version"`
 	Uptime                 int64           `json:"uptime"`
@@ -333,30 +326,23 @@ type Cache struct {
 }
 
 func peerMetrics() []*PeerMetric {
-	/*
-		infos := peering.Manager().PeerInfoSnapshots()
-		var stats []*PeerMetric
-		for _, info := range infos {
-			m := &PeerMetric{
-				OriginAddr: info.DomainWithPort,
-				Info:       info,
-			}
-			if info.Peer != nil && info.Peer.Protocol != nil {
-				m.Identity = info.Peer.ID
-				m.Alias = info.Alias
-				m.ConnectionOrigin = info.Peer.ConnectionOrigin
-				m.ProtocolVersion = info.Peer.Protocol.Version
-				m.BytesRead = info.Peer.Conn.BytesRead()
-				m.BytesWritten = info.Peer.Conn.BytesWritten()
-				m.Heartbeat = info.Peer.LatestHeartbeat
-				m.Connected = info.Connected
-			} else {
-				m.Identity = info.ID
-			}
-			stats = append(stats, m)
+	var stats []*PeerMetric
+	for _, info := range deps.Manager.PeerInfoSnapshots() {
+		m := &PeerMetric{
+			OriginAddr: info.Addresses[0].String(),
+			Info:       info,
 		}
-	*/
-	return nil
+		if info.Peer != nil {
+			m.Identity = info.Peer.ID.String()
+			m.Alias = info.Alias
+			m.Connected = info.Connected
+		} else {
+			m.Identity = info.ID
+		}
+		stats = append(stats, m)
+	}
+
+	return stats
 }
 
 func currentSyncStatus() *SyncStatus {
@@ -380,7 +366,9 @@ func currentNodeStatus() *NodeStatus {
 	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
+	status.IsSynced = deps.Storage.IsNodeSyncedWithThreshold()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
+	status.AutopeeringID = deps.Host.ID().String()
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 
