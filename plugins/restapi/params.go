@@ -18,7 +18,7 @@ const (
 	CfgRestAPIBasicAuthEnabled = "restAPI.basicAuth.enabled"
 	// the username of the HTTP basic auth
 	CfgRestAPIBasicAuthUsername = "restAPI.basicAuth.username"
-	// the HTTP basic auth password+salt as a sha256 hash
+	// the HTTP basic auth password+salt as a scrypt hash
 	CfgRestAPIBasicAuthPasswordHash = "restAPI.basicAuth.passwordHash"
 	// the HTTP basic auth salt used for hashing the password
 	CfgRestAPIBasicAuthPasswordSalt = "restAPI.basicAuth.passwordSalt"
@@ -52,7 +52,7 @@ var params = &node.PluginParams{
 			fs.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
 			fs.Bool(CfgRestAPIBasicAuthEnabled, false, "whether to use HTTP basic auth for the REST API")
 			fs.String(CfgRestAPIBasicAuthUsername, "", "the username of the HTTP basic auth")
-			fs.String(CfgRestAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a sha256 hash")
+			fs.String(CfgRestAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a scrypt hash")
 			fs.String(CfgRestAPIBasicAuthPasswordSalt, "", "the HTTP basic auth salt used for hashing the password")
 			fs.String(CfgRestAPILimitsMaxBodyLength, "1M", "the maximum number of characters that the body of an API call may contain")
 			fs.Int(CfgRestAPILimitsMaxResults, 1000, "the maximum number of results that may be returned by an endpoint")
