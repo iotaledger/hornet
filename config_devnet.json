@@ -19,7 +19,9 @@
       "/api/v1/milestones/:milestoneIndex",
       "/api/v1/outputs/:outputID",
       "/api/v1/addresses/:address",
-      "/api/v1/addresses/:address/outputs"
+      "/api/v1/addresses/:address/outputs",
+      "/api/v1/addresses/ed25519/:address",
+      "/api/v1/addresses/ed25519/:address/outputs"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
