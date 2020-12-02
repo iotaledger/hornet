@@ -80,15 +80,15 @@ func TestValue(t *testing.T) {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available
-	res, err := n.Coordinator().NodeAPI.BalanceByAddress(framework.GenesisAddress.String())
+	res, err := n.Coordinator().NodeAPI.BalanceByEd25519Address(framework.GenesisAddress.String())
 	require.NoError(t, err)
 	require.Zero(t, res.Balance)
 
-	res, err = n.Coordinator().NodeAPI.BalanceByAddress(target1Addr.String())
+	res, err = n.Coordinator().NodeAPI.BalanceByEd25519Address(target1Addr.String())
 	require.NoError(t, err)
 	require.EqualValues(t, target1Deposit, res.Balance)
 
-	res, err = n.Coordinator().NodeAPI.BalanceByAddress(target2Addr.String())
+	res, err = n.Coordinator().NodeAPI.BalanceByEd25519Address(target2Addr.String())
 	require.NoError(t, err)
 	require.EqualValues(t, target2Deposit, res.Balance)
 

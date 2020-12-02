@@ -23,7 +23,7 @@ func HandleTools() {
 
 	toolFound := false
 	for i, arg := range args {
-		if strings.ToLower(arg) == "tool" {
+		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
 			args = args[i:]
 			toolFound = true
 			break
