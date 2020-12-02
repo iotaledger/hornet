@@ -1,11 +1,13 @@
 del /f /q /s alphanetdb2
-go run -tags "pow_avx" main.go -c config_alphanet.json ^
+go run -tags "pow_avx" "..\main.go" -c config_alphanet.json ^
 --protocol.networkID="alphanet1" ^
 --restAPI.bindAddress="0.0.0.0:14266" ^
 --dashboard.bindAddress="localhost:8082" ^
 --db.path="alphanetdb2" ^
 --node.disablePlugins="Autopeering" ^
 --node.enablePlugins="Spammer,MQTT" ^
+--snapshots.fullPath="snapshots/alphanet2/full_export.bin" ^
+--snapshots.deltaPath="snapshots/alphanet2/delta_export.bin" ^
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15601" ^
 --profiling.bindAddress="127.0.0.1:6061" ^
 --prometheus.bindAddress="localhost:9312" ^
