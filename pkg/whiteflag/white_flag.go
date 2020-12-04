@@ -8,6 +8,8 @@ import (
 	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
 
+	_ "golang.org/x/crypto/blake2b" // import implementation
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"

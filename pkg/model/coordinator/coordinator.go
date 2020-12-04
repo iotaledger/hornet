@@ -5,8 +5,6 @@ import (
 	"os"
 	"time"
 
-	_ "golang.org/x/crypto/blake2b" // import implementation
-
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
