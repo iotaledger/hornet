@@ -120,7 +120,6 @@ func configure() {
 	deps.Storage.ConfigureMilestones(
 		keyManager,
 		deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
-		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(protocfg.CfgProtocolMilestoneMerkleTreeHashFunc)),
 	)
 
 	configureEvents()

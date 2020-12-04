@@ -21,7 +21,6 @@ const (
 	cooPublicKey  = "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
 
 	mwm            = 1
-	merkleHashFunc = crypto.BLAKE2b_512
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.
@@ -51,7 +50,7 @@ func (te *TestEnvironment) configureCoordinator() {
 
 	}
 
-	te.coo, err = coordinator.New(cooPrivKey, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc, merkleHashFunc)
+	te.coo, err = coordinator.New(cooPrivKey, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc)
 	require.NoError(te.testState, err)
 	require.NotNil(te.testState, te.coo)
 
