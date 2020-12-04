@@ -64,7 +64,6 @@
   "protocol": {
     "networkID": "alphanet1",
     "minPoWScore": 100,
-    "milestoneMerkleTreeHashFunc": "BLAKE2b-512",
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
