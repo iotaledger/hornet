@@ -66,7 +66,7 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 
 	ts := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, cachedMessageMetas, cachedMessages, s.GetMilestoneMerkleHashFunc(), message.GetParent1MessageID(), message.GetParent2MessageID())
+	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, cachedMessageMetas, cachedMessages, message.GetParent1MessageID(), message.GetParent2MessageID())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)

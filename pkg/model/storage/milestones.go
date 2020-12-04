@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"crypto"
 	"crypto/ed25519"
 	"fmt"
 	"time"
@@ -31,18 +30,13 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
-func (s *Storage) ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int, cooMilestoneMerkleHashFunc crypto.Hash) {
+func (s *Storage) ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int) {
 	s.keyManager = cooKeyManager
 	s.milestonePublicKeyCount = cooMilestonePublicKeyCount
-	s.coordinatorMilestoneMerkleHashFunc = cooMilestoneMerkleHashFunc
 }
 
 func (s *Storage) KeyManager() *keymanager.KeyManager {
 	return s.keyManager
-}
-
-func (s *Storage) GetMilestoneMerkleHashFunc() crypto.Hash {
-	return s.coordinatorMilestoneMerkleHashFunc
 }
 
 func (s *Storage) ResetMilestoneIndexes() {

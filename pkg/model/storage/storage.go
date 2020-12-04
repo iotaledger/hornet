@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"crypto"
 	"os"
 	"path/filepath"
 	"sync"
@@ -69,7 +68,6 @@ type Storage struct {
 	// milestones
 	keyManager                         *keymanager.KeyManager
 	milestonePublicKeyCount            int
-	coordinatorMilestoneMerkleHashFunc crypto.Hash
 
 	// utxo
 	utxoManager *utxo.Manager

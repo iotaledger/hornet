@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -45,7 +46,7 @@ type WhiteFlagMutations struct {
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
 	// The merkle tree root hash of all messages.
-	MerkleTreeHash [64]byte
+	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
 
 // ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by parent1 and parent2.
@@ -56,7 +57,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, merkleTreeHashFunc crypto.Hash, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make(hornet.MessageIDs, 0),
@@ -235,8 +236,8 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	}
 
 	// compute merkle tree root hash
-	merkleTreeHash := NewHasher(merkleTreeHashFunc).TreeHash(wfConf.MessagesIncludedWithTransactions)
-	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:64])
+	merkleTreeHash := NewHasher(crypto.BLAKE2b_256).TreeHash(wfConf.MessagesIncludedWithTransactions)
+	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:iotago.MilestoneInclusionMerkleProofLength])
 
 	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch
