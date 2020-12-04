@@ -1,10 +1,8 @@
 package coordinator
 
 import (
-	"crypto"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,7 +68,6 @@ type Coordinator struct {
 	networkID                uint64
 	powHandler               *pow.Handler
 	sendMesssageFunc         SendMessageFunc
-	milestoneMerkleHashFunc  crypto.Hash
 	backpressureFuncs        []BackPressureFunc
 
 	// internal state
@@ -81,41 +78,17 @@ type Coordinator struct {
 	Events *Events
 }
 
-// MilestoneMerkleTreeHashFuncWithName maps the passed name to one of the supported crypto.Hash hashing functions.
-// Also verifies that the available function is available or else panics.
-func MilestoneMerkleTreeHashFuncWithName(name string) crypto.Hash {
-	var hashFunc crypto.Hash
-	switch strings.ToLower(name) {
-	case strings.ToLower(crypto.BLAKE2b_512.String()):
-		hashFunc = crypto.BLAKE2b_512
-	case strings.ToLower(crypto.BLAKE2b_384.String()):
-		hashFunc = crypto.BLAKE2b_384
-	case strings.ToLower(crypto.BLAKE2b_256.String()):
-		hashFunc = crypto.BLAKE2b_256
-	case strings.ToLower(crypto.BLAKE2s_256.String()):
-		hashFunc = crypto.BLAKE2s_256
-	default:
-		panic(fmt.Sprintf("Unsupported merkle tree hash func '%s'", name))
-	}
-
-	if !hashFunc.Available() {
-		panic(fmt.Sprintf("Merkle tree hash func '%s' not available. Please check the package imports", name))
-	}
-	return hashFunc
-}
-
 // New creates a new coordinator instance.
-func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, milestoneMerkleHashFunc crypto.Hash) (*Coordinator, error) {
+func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) (*Coordinator, error) {
 
 	result := &Coordinator{
-		storage:                 storage,
-		networkID:               networkID,
-		signerProvider:          signerProvider,
-		stateFilePath:           stateFilePath,
-		milestoneIntervalSec:    milestoneIntervalSec,
-		powHandler:              powHandler,
-		sendMesssageFunc:        sendMessageFunc,
-		milestoneMerkleHashFunc: milestoneMerkleHashFunc,
+		storage:              storage,
+		networkID:            networkID,
+		signerProvider:       signerProvider,
+		stateFilePath:        stateFilePath,
+		milestoneIntervalSec: milestoneIntervalSec,
+		powHandler:           powHandler,
+		sendMesssageFunc:     sendMessageFunc,
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
@@ -218,7 +191,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 	}()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, cachedMsgMetas, cachedMessages, coo.milestoneMerkleHashFunc, parent1MessageID, parent2MessageID)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, cachedMsgMetas, cachedMessages, parent1MessageID, parent2MessageID)
 	if err != nil {
 		return fmt.Errorf("failed to compute muations: %w", err)
 	}

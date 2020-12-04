@@ -169,7 +169,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
 		powHandler,
 		sendMessage,
-		coordinator.MilestoneMerkleTreeHashFuncWithName(deps.NodeConfig.String(protocfg.CfgProtocolMilestoneMerkleTreeHashFunc)),
 	)
 	if err != nil {
 		return nil, err

@@ -28,7 +28,7 @@ func createCheckpoint(networkID uint64, parent1MessageID *hornet.MessageID, pare
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(index milestone.Index, networkID uint64, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, signerProvider MilestoneSignerProvider, whiteFlagMerkleRootTreeHash [64]byte, powHandler *pow.Handler) (*storage.Message, error) {
+func createMilestone(index milestone.Index, networkID uint64, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, signerProvider MilestoneSignerProvider, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powHandler *pow.Handler) (*storage.Message, error) {
 
 	milestoneIndexSigner := signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
