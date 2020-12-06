@@ -172,13 +172,21 @@ func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 }
 
 func publishOutput(output *utxo.Output, spent bool) {
+
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
-	addressTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().String())
-
 	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
-	addressTopicHasSubscribers := mqttBroker.HasSubscribers(addressTopic)
 
-	if outputsTopicHasSubscribers || addressTopicHasSubscribers {
+	// Since we do not know on which network we are running (Mainnet vs Testnet), we have to check if anyone is subscribed to the bech32 address on both Mainnet and Testnet
+	addressBech32MainnetTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(iotago.PrefixMainnet))
+	addressBech32MainnetTopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32MainnetTopic)
+
+	addressBech32TestnetTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(iotago.PrefixTestnet))
+	addressBech32TestnetTopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32TestnetTopic)
+	
+	addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
+	addressEd25519TopicHasSubscribers := mqttBroker.HasSubscribers(addressEd25519Topic)
+
+	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32MainnetTopicHasSubscribers || addressBech32TestnetTopicHasSubscribers {
 		if payload := payloadForOutput(output, spent); payload != nil {
 
 			// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
@@ -192,8 +200,16 @@ func publishOutput(output *utxo.Output, spent bool) {
 				mqttBroker.Send(outputsTopic, jsonPayload)
 			}
 
-			if addressTopicHasSubscribers {
-				mqttBroker.Send(addressTopic, jsonPayload)
+			if addressBech32MainnetTopicHasSubscribers {
+				mqttBroker.Send(addressBech32MainnetTopic, jsonPayload)
+			}
+
+			if addressBech32TestnetTopicHasSubscribers {
+				mqttBroker.Send(addressBech32TestnetTopic, jsonPayload)
+			}
+
+			if addressEd25519TopicHasSubscribers {
+				mqttBroker.Send(addressEd25519Topic, jsonPayload)
 			}
 		}
 	}
