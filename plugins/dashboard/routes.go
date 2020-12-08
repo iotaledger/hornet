@@ -94,6 +94,20 @@ func passThroughAPIRoute(e echo.Context) error {
 	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, apiBlob)
 }
 
+func passThroughSpammerRoute(e echo.Context) error {
+	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
+
+	res, err := http.Get("http://" + apiBindAddr + "/spammer?" + e.Request().URL.RawQuery)
+	if err != nil {
+		return err
+	}
+	apiBlob, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, apiBlob)
+}
+
 func calculateMimeType(e echo.Context) string {
 	url := e.Request().URL.String()
 
@@ -140,6 +154,7 @@ func setupRoutes(e *echo.Echo) {
 
 	// Pass all the explorer request through to the local rest API
 	e.GET("/api/*", passThroughAPIRoute)
+	e.GET("/plugins/spammer*", passThroughSpammerRoute)
 
 	// Everything else fallback to index for routing.
 	e.GET("*", indexRoute)
