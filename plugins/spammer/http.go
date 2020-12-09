@@ -1,7 +1,7 @@
 package spammer
 
 import (
-	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -19,7 +19,15 @@ const (
 	RouteSpammer = "/spammer"
 )
 
-func handleSpammerCommand(c echo.Context) (string, error) {
+type spamSettings struct {
+	Running           bool    `json:"running"`
+	MpsRateLimit      float64 `json:"mpsRateLimit"`
+	CpuMaxUsage       float64 `json:"cpuMaxUsage"`
+	SpammerWorkers    int     `json:"spammerWorkers"`
+	SpammerWorkersMax int     `json:"spammerWorkersMax"`
+}
+
+func handleSpammerCommand(c echo.Context) (*spamSettings, error) {
 
 	command := strings.ToLower(c.QueryParam("cmd"))
 
@@ -29,12 +37,13 @@ func handleSpammerCommand(c echo.Context) (string, error) {
 		var err error
 		var mpsRateLimit *float64 = nil
 		var cpuMaxUsage *float64 = nil
+		var spammerWorkers *int = nil
 
 		mpsRateLimitQuery := c.QueryParam("mpsRateLimit")
 		if mpsRateLimitQuery != "" {
 			mpsRateLimitParsed, err := strconv.ParseFloat(mpsRateLimitQuery, 64)
 			if err != nil || mpsRateLimitParsed < 0.0 {
-				return "", errors.WithMessagef(restapi.ErrInvalidParameter, "parsing mpsRateLimit failed: %s", err)
+				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing mpsRateLimit failed: %s", err)
 			}
 			mpsRateLimit = &mpsRateLimitParsed
 		}
@@ -43,28 +52,49 @@ func handleSpammerCommand(c echo.Context) (string, error) {
 		if cpuMaxUsageQuery != "" {
 			cpuMaxUsageParsed, err := strconv.ParseFloat(cpuMaxUsageQuery, 64)
 			if err != nil || cpuMaxUsageParsed < 0.0 {
-				return "", errors.WithMessagef(restapi.ErrInvalidParameter, "parsing cpuMaxUsage failed: %s", err)
+				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing cpuMaxUsage failed: %s", err)
 			}
 			cpuMaxUsage = &cpuMaxUsageParsed
 		}
 
-		usedMpsRateLimit, usedCPUMaxUsage, err := start(mpsRateLimit, cpuMaxUsage)
-		if err != nil {
-			return "", errors.WithMessagef(restapi.ErrInternalError, "starting spammer failed: %s", err)
+		spammerWorkersQuery := c.QueryParam("spammerWorkers")
+		if spammerWorkersQuery != "" {
+			spammerWorkersParsed64, err := strconv.ParseInt(spammerWorkersQuery, 10, 32)
+			spammerWorkersParsed := int(spammerWorkersParsed64)
+			if err != nil {
+				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing spammerWorkers failed: %s", err)
+			}
+			if spammerWorkersParsed < 1 || spammerWorkersParsed >= runtime.NumCPU() {
+				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing spammerWorkers failed: out of range")
+			}
+			spammerWorkers = &spammerWorkersParsed
 		}
 
-		return fmt.Sprintf("started spamming (MPS Limit: %0.2f, CPU Limit: %0.2f%%)", usedMpsRateLimit, usedCPUMaxUsage*100.0), nil
+		err = start(mpsRateLimit, cpuMaxUsage, spammerWorkers)
+		if err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInternalError, "starting spammer failed: %s", err)
+		}
 
 	case "stop":
 		if err := stop(); err != nil {
-			return "", errors.WithMessagef(restapi.ErrInternalError, "stopping spammer failed: %s", err)
+			return nil, errors.WithMessagef(restapi.ErrInternalError, "stopping spammer failed: %s", err)
 		}
-		return "stopped spamming", nil
+
+	case "settings":
+		// Nothing to do here, will fallthrough to returning settings
 
 	case "":
-		return "", errors.WithMessage(restapi.ErrInvalidParameter, "no cmd given")
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no cmd given")
 
 	default:
-		return "", errors.WithMessagef(restapi.ErrInvalidParameter, "unknown cmd: %s", command)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "unknown cmd: %s", command)
 	}
+
+	return &spamSettings{
+		Running:           isRunning,
+		MpsRateLimit:      mpsRateLimitRunning,
+		CpuMaxUsage:       cpuMaxUsageRunning,
+		SpammerWorkers:    spammerWorkersRunning,
+		SpammerWorkersMax: runtime.NumCPU() - 1,
+	}, nil
 }
