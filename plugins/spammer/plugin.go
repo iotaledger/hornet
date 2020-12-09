@@ -59,6 +59,11 @@ var (
 	spammerAvgHeap      *utils.TimeHeap
 	lastSentSpamMsgsCnt uint32
 
+	isRunning             bool
+	mpsRateLimitRunning   float64
+	cpuMaxUsageRunning    float64
+	spammerWorkersRunning int
+
 	cpuUsageLock   syncutils.RWMutex
 	cpuUsageResult float64
 	cpuUsageError  error
@@ -121,6 +126,14 @@ func configure() {
 		return nil
 	}
 
+	mpsRateLimitRunning = deps.NodeConfig.Float64(CfgSpammerMPSRateLimit)
+	cpuMaxUsageRunning = deps.NodeConfig.Float64(CfgSpammerCPUMaxUsage)
+	spammerWorkersRunning = deps.NodeConfig.Int(CfgSpammerWorkers)
+	if spammerWorkersRunning == 0 {
+		spammerWorkersRunning = runtime.NumCPU() - 1
+	}
+	isRunning = false
+
 	spammerInstance = spammer.New(
 		deps.NetworkID,
 		deps.NodeConfig.String(CfgSpammerMessage),
@@ -146,14 +159,14 @@ func run() {
 
 	// automatically start the spammer on node startup if the flag is set
 	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
-		start(nil, nil)
+		start(nil, nil, nil)
 	}
 }
 
 // start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
-func start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error) {
+func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) error {
 	if spammerInstance == nil {
-		return 0.0, 0.0, ErrSpammerDisabled
+		return ErrSpammerDisabled
 	}
 
 	spammerLock.Lock()
@@ -172,6 +185,10 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 
 	if cpuMaxUsage != nil {
 		cpuMaxUsageCfg = *cpuMaxUsage
+	}
+
+	if spammerWorkers != nil {
+		spammerWorkerCount = *spammerWorkers
 	}
 
 	if cpuMaxUsageCfg > 0.0 && runtime.GOOS == "windows" {
@@ -193,10 +210,14 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64) (float64, float64, error
 
 	startSpammerWorkers(mpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount, checkPeersConnected)
 
-	return mpsRateLimitCfg, cpuMaxUsageCfg, nil
+	return nil
 }
 
 func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int, checkPeersConnected bool) {
+	mpsRateLimitRunning = mpsRateLimit
+	cpuMaxUsageRunning = cpuMaxUsage
+	spammerWorkersRunning = spammerWorkerCount
+	isRunning = true
 
 	var rateLimitChannel chan struct{} = nil
 	var rateLimitAbortSignal chan struct{} = nil
@@ -315,6 +336,8 @@ func stop() error {
 	defer spammerLock.Unlock()
 
 	stopWithoutLocking()
+
+	isRunning = false
 
 	return nil
 }
