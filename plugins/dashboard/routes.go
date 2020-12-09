@@ -44,6 +44,8 @@ func indexRoute(e echo.Context) error {
 		if err != nil {
 			return err
 		}
+		defer res.Body.Close()
+
 		devIndexHTML, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			return err
@@ -59,19 +61,25 @@ func indexRoute(e echo.Context) error {
 	return e.HTMLBlob(http.StatusOK, indexHTML)
 }
 
+func readDataFromURL(url string) ([]byte, error) {
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return ioutil.ReadAll(res.Body)
+}
+
 func passThroughRoute(e echo.Context) error {
 	contentType := calculateMimeType(e)
 
 	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
-		res, err := http.Get("http://127.0.0.1:9090" + e.Request().URL.Path)
+		data, err := readDataFromURL("http://127.0.0.1:9090" + e.Request().URL.Path)
 		if err != nil {
 			return err
 		}
-		devStaticBlob, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		return e.Blob(http.StatusOK, contentType, devStaticBlob)
+		return e.Blob(http.StatusOK, contentType, data)
 	}
 	staticBlob, err := appBox.Find(e.Request().URL.Path)
 	if err != nil {
@@ -83,29 +91,22 @@ func passThroughRoute(e echo.Context) error {
 func passThroughAPIRoute(e echo.Context) error {
 	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
 
-	res, err := http.Get("http://" + apiBindAddr + e.Request().URL.Path + "?" + e.Request().URL.RawQuery)
+	data, err := readDataFromURL("http://" + apiBindAddr + e.Request().URL.Path + "?" + e.Request().URL.RawQuery)
 	if err != nil {
 		return err
 	}
-	apiBlob, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, apiBlob)
+	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, data)
 }
 
 func passThroughSpammerRoute(e echo.Context) error {
 	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
 
-	res, err := http.Get("http://" + apiBindAddr + "/spammer?" + e.Request().URL.RawQuery)
+	data, err := readDataFromURL("http://" + apiBindAddr + "/spammer?" + e.Request().URL.RawQuery)
 	if err != nil {
 		return err
 	}
-	apiBlob, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, apiBlob)
+
+	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, data)
 }
 
 func calculateMimeType(e echo.Context) string {
