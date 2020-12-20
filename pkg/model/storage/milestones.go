@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -239,4 +241,35 @@ func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMi
 			return cachedMs
 		}
 	}
+}
+
+// VerifyMilestone checks if the message contains a valid milestone payload.
+// Returns a milestone payload if the signature is valid.
+func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
+	ms := message.GetMilestone()
+	if ms == nil {
+		return nil
+	}
+
+	if message.message.Parent1 != ms.Parent1 || message.message.Parent2 != ms.Parent2 {
+		// parents in message and payload have to be equal
+		return nil
+	}
+
+	if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
+		return nil
+	}
+
+	return ms
+}
+
+// StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
+func (s *Storage) StoreMilestone(messageID *hornet.MessageID, ms *iotago.Milestone) {
+
+	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), messageID, time.Unix(int64(ms.Timestamp), 0))
+
+	// Force release to store milestones without caching
+	defer cachedMilestone.Release(true) // milestone +-0
+
+	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
 }

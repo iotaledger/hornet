@@ -319,29 +319,8 @@ func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex mil
 		s.StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
 	}
 
-	ms := message.GetMilestone()
-	if ms != nil {
-		valid := true
-
-		if message.message.Parent1 != ms.Parent1 || message.message.Parent2 != ms.Parent2 {
-			// parents in message and payload have to be equal
-			valid = false
-		}
-
-		if valid {
-			if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
-				valid = false
-			}
-		}
-
-		if valid {
-			cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
-
-			s.Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
-
-			// Force release to store milestones without caching
-			cachedMilestone.Release(true) // milestone +-0
-		}
+	if ms := s.VerifyMilestone(message); ms != nil {
+		s.StoreMilestone(message.GetMessageID(), ms)
 	}
 
 	return cachedMessage, false

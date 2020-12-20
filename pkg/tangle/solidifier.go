@@ -24,8 +24,9 @@ const (
 )
 
 var (
-	ErrMilestoneNotFound = errors.New("milestone not found")
-	ErrDivisionByZero    = errors.New("division by zero")
+	ErrMilestoneNotFound     = errors.New("milestone not found")
+	ErrDivisionByZero        = errors.New("division by zero")
+	ErrMissingMilestoneFound = errors.New("missing milestone found")
 )
 
 type ConfirmedMilestoneMetric struct {
@@ -346,8 +347,18 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := t.storage.FindClosestNextMilestoneOrNil(currentSolidIndex) // message +1
-		if cachedClosestNextMs.GetMilestone().Index == milestoneIndexToSolidify {
-			t.log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMs.GetMilestone().Index)
+		cachedClosestNextMsIndex := cachedClosestNextMs.GetMilestone().Index
+		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
+			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, cachedClosestNextMsIndex)
+
+			// no Milestones found in between => search an older milestone in the solid cone
+			if found, err := t.searchMissingMilestone(currentSolidIndex, cachedClosestNextMsIndex, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !found {
+				if err != nil {
+					// no milestones found => this should not happen!
+					t.log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
+				}
+				t.log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
+			}
 		}
 		cachedClosestNextMs.Release() // message -1
 
@@ -462,4 +473,69 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 	t.solidifierMilestoneIndexLock.Lock()
 	t.solidifierMilestoneIndex = index
 	t.solidifierMilestoneIndexLock.Unlock()
+}
+
+// searchMissingMilestone searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
+func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal chan struct{}) (found bool, err error) {
+
+	var milestoneFound bool
+
+	ts := time.Now()
+
+	if err := dag.TraverseParents(t.storage, milestoneMessageID,
+		// traversal stops if no more messages pass the given condition
+		// Caution: condition func is not in DFS order
+		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedMsgMeta.Release(true) // meta -1
+
+			// if the message is referenced by an older milestone, there is no need to traverse its parents
+			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at <= solidMilestoneIndex) {
+				return false, nil
+			}
+
+			return true, nil
+		},
+		// consumer
+		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+			defer cachedMsgMeta.Release(true) // meta -1
+
+			cachedMessage := t.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID()) // message +1
+			if cachedMessage == nil {
+				return fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.GetMetadata().GetMessageID().Hex())
+			}
+			defer cachedMessage.Release(true) // message -1
+
+			ms := t.storage.VerifyMilestone(cachedMessage.GetMessage())
+			if ms == nil {
+				return nil
+			}
+
+			msIndex := milestone.Index(ms.Index)
+			if (msIndex <= solidMilestoneIndex) || (msIndex >= startMilestoneIndex) {
+				return nil
+			}
+
+			// milestone found!
+			t.storage.StoreMilestone(cachedMessage.GetMessage().GetMessageID(), ms)
+
+			return ErrMissingMilestoneFound // we return this as an error to stop the traverser
+		},
+		// called on missing parents
+		// return error on missing parents
+		nil,
+		// called on solid entry points
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		false, abortSignal); err != nil {
+		if err == common.ErrOperationAborted {
+			return false, nil
+		} else if err == ErrMissingMilestoneFound {
+			milestoneFound = true
+		} else {
+			return false, err
+		}
+	}
+
+	t.log.Infof("searchMissingMilestone finished, found: %v, total: %v", milestoneFound, time.Since(ts))
+	return milestoneFound, nil
 }
