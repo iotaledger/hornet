@@ -317,13 +317,6 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.msg = msg
 	wu.dataLock.Unlock()
 
-	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(wu.receivedTxHash)]; isInvalidMilestoneTx {
-		// do not accept the invalid milestone transactions
-		wu.UpdateState(Invalid)
-		wu.punish()
-		return
-	}
-
 	wu.UpdateState(Hashed)
 
 	// check the existence of the message before broadcasting it

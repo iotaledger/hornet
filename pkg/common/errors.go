@@ -11,4 +11,6 @@ var (
 	ErrMessageNotFound = errors.New("message not found")
 	// ErrNodeNotSynced is returned when the node is not synchronized.
 	ErrNodeNotSynced = errors.New("node is not synchronized")
+	// ErrNodeLoadTooHigh is returned when the load on the node is too high.
+	ErrNodeLoadTooHigh = errors.New("node load is too high")
 )

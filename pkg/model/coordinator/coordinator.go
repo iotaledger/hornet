@@ -193,12 +193,12 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 	// compute merkle tree root
 	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, cachedMsgMetas, cachedMessages, parent1MessageID, parent2MessageID)
 	if err != nil {
-		return fmt.Errorf("failed to compute muations: %w", err)
+		return fmt.Errorf("failed to compute white flag mutations: %w", err)
 	}
 
 	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powHandler)
 	if err != nil {
-		return fmt.Errorf("failed to create: %w", err)
+		return fmt.Errorf("failed to create milestone: %w", err)
 	}
 
 	if err := coo.sendMesssageFunc(milestoneMsg, newMilestoneIndex); err != nil {
@@ -213,7 +213,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 	coo.state.LatestMilestoneTime = time.Now()
 
 	if err := coo.state.storeStateFile(coo.stateFilePath); err != nil {
-		return fmt.Errorf("failed to update state: %w", err)
+		return fmt.Errorf("failed to update state file: %w", err)
 	}
 
 	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneMessageID)
@@ -262,13 +262,13 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	// check whether we should hold issuing checkpoints
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, tangle.ErrNodeLoadTooHigh
+		return nil, common.ErrNodeLoadTooHigh
 	}
 
 	for i, tip := range tips {
 		msg, err := createCheckpoint(coo.networkID, tip, lastCheckpointMessageID, coo.powHandler)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create: %w", err)
+			return nil, fmt.Errorf("failed to create checkPoint: %w", err)
 		}
 
 		if err := coo.sendMesssageFunc(msg); err != nil {
@@ -298,7 +298,7 @@ func (coo *Coordinator) IssueMilestone(parent1MessageID *hornet.MessageID, paren
 	// check whether we should hold issuing miletones
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, tangle.ErrNodeLoadTooHigh, nil
+		return nil, common.ErrNodeLoadTooHigh, nil
 	}
 
 	if err := coo.createAndSendMilestone(parent1MessageID, parent2MessageID, coo.state.LatestMilestoneIndex+1); err != nil {

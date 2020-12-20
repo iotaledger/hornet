@@ -121,16 +121,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, err
 	}
 
-	// the last trit of the seed will be ignored, so it is important security information when that happens
-	lastTrits := trinary.MustTrytesToTrits(string(seed[consts.HashTrytesSize-1]))
-	if lastTrits[consts.TritsPerTryte-1] != 0 {
-		// print warning and set the 243rd trit to zero for consistency and to prevent warnings during key derivation
-		log.Warn("The trit at index 243 of the coordinator seed is non-zero. " +
-			"The value of this trit will be ignored by the key derivation.")
-		lastTrits[consts.TritsPerTryte-1] = 0
-		seed = seed[:consts.HashTrytesSize-1] + trinary.MustTritsToTrytes(lastTrits)
-	}
-
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
 		deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
@@ -179,7 +169,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	}
 
 	// don't issue milestones or checkpoints in case the node is running hot
-	coo.AddBackPressureFunc(tangleplugin.IsReceiveTxWorkerPoolBusy)
+	coo.AddBackPressureFunc(deps.Tangle.IsReceiveTxWorkerPoolBusy)
 
 	return coo, nil
 }

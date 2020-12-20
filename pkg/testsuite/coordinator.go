@@ -1,7 +1,6 @@
 package testsuite
 
 import (
-	"crypto"
 	"fmt"
 	"time"
 
@@ -20,7 +19,7 @@ const (
 	cooPrivateKey = "651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
 	cooPublicKey  = "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
 
-	mwm            = 1
+	mwm = 1
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.
