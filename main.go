@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/curl"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/p2pdisc"
