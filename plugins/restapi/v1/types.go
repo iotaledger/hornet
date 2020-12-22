@@ -16,6 +16,8 @@ type infoResponse struct {
 	IsHealthy bool `json:"isHealthy"`
 	// The ID of the network.
 	NetworkID string `json:"networkId"`
+	// The minimum pow score of the network.
+	MinPowScore float64 `json:"minPowScore"`
 	// The latest known milestone index.
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
 	// The current solid milestone's index.
