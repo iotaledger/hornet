@@ -1,6 +1,7 @@
 package tipselect
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -371,24 +372,27 @@ func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.Message
 		// threshold was defined and reached, return semi-lazy tips for the spammer
 		tips, err = ts.SelectSemiLazyTips()
 		if err != nil {
-			return false, nil, err
+			return false, nil, fmt.Errorf("couldn't select semi-lazy tips: %w", err)
 		}
 
-		if *tips[0] != *tips[1] {
+		if *tips[0] == *tips[1] {
 			// do not spam if the tip is equal since that would not reduce the semi lazy count
-			return false, nil, ErrNoTipsAvailable
+			return false, nil, fmt.Errorf("%w: semi lazy tips are equal", ErrNoTipsAvailable)
 		}
 
-		return true, tips, err
+		return true, tips, nil
 	}
 
 	if ts.spammerTipsThresholdNonLazy != 0 && len(ts.nonLazyTipsMap) < ts.spammerTipsThresholdNonLazy {
 		// if a threshold was defined and not reached, do not return tips for the spammer
-		return false, nil, ErrNoTipsAvailable
+		return false, nil, fmt.Errorf("%w: non-lazy threshold not reached", ErrNoTipsAvailable)
 	}
 
 	tips, err = ts.SelectNonLazyTips()
-	return false, tips, err
+	if err != nil {
+		return false, tips, fmt.Errorf("couldn't select non-lazy tips: %w", err)
+	}
+	return false, tips, nil
 }
 
 // CleanUpReferencedTips checks if tips were referenced before
