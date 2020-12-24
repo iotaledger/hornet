@@ -12,10 +12,10 @@ import (
 )
 
 // createCheckpoint creates a checkpoint message.
-func createCheckpoint(networkID uint64, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, powHandler *pow.Handler) (*storage.Message, error) {
+func createCheckpoint(networkID uint64, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, powParallelism int, powHandler *pow.Handler) (*storage.Message, error) {
 	iotaMsg := &iotago.Message{NetworkID: networkID, Parent1: *parent1MessageID, Parent2: *parent2MessageID, Payload: nil}
 
-	if err := powHandler.DoPoW(iotaMsg, nil, 1); err != nil {
+	if err := powHandler.DoPoW(iotaMsg, nil, powParallelism); err != nil {
 		return nil, err
 	}
 
@@ -28,7 +28,7 @@ func createCheckpoint(networkID uint64, parent1MessageID *hornet.MessageID, pare
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(index milestone.Index, networkID uint64, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, signerProvider MilestoneSignerProvider, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powHandler *pow.Handler) (*storage.Message, error) {
+func createMilestone(index milestone.Index, networkID uint64, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, signerProvider MilestoneSignerProvider, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powParallelism int, powHandler *pow.Handler) (*storage.Message, error) {
 
 	milestoneIndexSigner := signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
@@ -48,7 +48,7 @@ func createMilestone(index milestone.Index, networkID uint64, parent1MessageID *
 		return nil, err
 	}
 
-	if err := powHandler.DoPoW(iotaMsg, nil, 1); err != nil {
+	if err := powHandler.DoPoW(iotaMsg, nil, powParallelism); err != nil {
 		return nil, err
 	}
 

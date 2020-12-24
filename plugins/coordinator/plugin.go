@@ -151,12 +151,18 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 
+	powParallelism := deps.NodeConfig.Int(CfgCoordinatorPoWParallelism)
+	if powParallelism < 1 {
+		powParallelism = 1
+	}
+
 	coo, err := coordinator.New(
 		deps.Storage,
 		deps.NetworkID,
 		inMemoryEd25519MilestoneSignerProvider,
 		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
+		powParallelism,
 		powHandler,
 		sendMessage,
 	)

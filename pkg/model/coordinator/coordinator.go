@@ -64,6 +64,7 @@ type Coordinator struct {
 	// config options
 	stateFilePath            string
 	milestoneIntervalSec     int
+	powParallelism           int
 	milestonePublicKeysCount int
 	networkID                uint64
 	powHandler               *pow.Handler
@@ -79,7 +80,7 @@ type Coordinator struct {
 }
 
 // New creates a new coordinator instance.
-func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) (*Coordinator, error) {
+func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powParallelism int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) (*Coordinator, error) {
 
 	result := &Coordinator{
 		storage:              storage,
@@ -87,6 +88,7 @@ func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSig
 		signerProvider:       signerProvider,
 		stateFilePath:        stateFilePath,
 		milestoneIntervalSec: milestoneIntervalSec,
+		powParallelism:       powParallelism,
 		powHandler:           powHandler,
 		sendMesssageFunc:     sendMessageFunc,
 		Events: &Events{
@@ -196,7 +198,7 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		return fmt.Errorf("failed to compute white flag mutations: %w", err)
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powHandler)
+	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powParallelism, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create milestone: %w", err)
 	}
@@ -266,7 +268,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	}
 
 	for i, tip := range tips {
-		msg, err := createCheckpoint(coo.networkID, tip, lastCheckpointMessageID, coo.powHandler)
+		msg, err := createCheckpoint(coo.networkID, tip, lastCheckpointMessageID, coo.powParallelism, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create checkPoint: %w", err)
 		}
