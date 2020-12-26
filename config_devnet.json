@@ -35,7 +35,6 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
-    "theme": "default",
     "dev": false,
     "basicAuth": {
       "enabled": false,
@@ -51,9 +50,13 @@
     "depth": 50,
     "intervalSynced": 50,
     "intervalUnsynced": 1000,
-    "path": "snapshots/devnet/export.bin",
+    "fullPath": "snapshots/devnet/full_snapshot.bin",
+    "deltaPath": "snapshots/devnet/delta_snapshot.bin",
     "downloadURLs": [
-      "https://dbfiles.iota.org/devnet/hornet/latest-export.bin"
+      {
+        "full": "https://dbfiles.iota.org/devnet/hornet/full_snapshot.bin",
+        "delta": "https://dbfiles.iota.org/devnet/hornet/delta_snapshot.bin"
+      }
     ]
   },
   "pruning": {
@@ -62,7 +65,7 @@
   },
   "protocol": {
     "networkID": "devnet1",
-    "minPoWScore": 0,
+    "minPoWScore": 2000,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
@@ -79,7 +82,7 @@
   },
   "coordinator": {
     "stateFilePath": "coordinator.state",
-    "intervalSeconds": 30,
+    "intervalSeconds": 10,
     "checkpoints": {
       "maxTrackedMessages": 10000
     },
@@ -91,8 +94,8 @@
     }
   },
   "tipsel": {
-    "maxDeltaMsgYoungestConeRootIndexToLSMI": 2,
-    "maxDeltaMsgOldestConeRootIndexToLSMI": 7,
+    "maxDeltaMsgYoungestConeRootIndexToLSMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToLSMI": 13,
     "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
@@ -108,15 +111,17 @@
     }
   },
   "node": {
-    "alias": "",
+    "alias": "Devnet",
     "profile": "auto",
-    "enableProofOfWork": false,
+    "enableProofOfWork": true,
     "disablePlugins": [],
-    "enablePlugins": []
+    "enablePlugins": [
+      "Spammer"
+    ]
   },
   "p2p": {
     "bindMultiAddresses": [
-      "/ip4/127.0.0.1/tcp/15600"
+      "/ip4/0.0.0.0/tcp/15600"
     ],
     "connectionManager": {
       "highWatermark": 10,
@@ -151,9 +156,9 @@
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 0.0,
+    "mpsRateLimit": 5.0,
     "workers": 0,
-    "autostart": false
+    "autostart": true
   },
   "mqtt": {
     "bindAddress": "localhost:1883",

@@ -35,7 +35,6 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
-    "theme": "default",
     "basicAuth": {
       "enabled": false,
       "userName": "",
@@ -49,11 +48,21 @@
   "snapshots": {
     "intervalSynced": 50,
     "intervalUnsynced": 1000,
-    "path": "snapshots/mainnet/export.bin",
+    "fullPath": "snapshots/mainnet/full_snapshot.bin",
+    "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
     "downloadURLs": [
-      "https://ls.manapotion.io/export.bin",
-      "https://x-vps.com/export.bin",
-      "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+      {
+        "full": "https://ls.manapotion.io/full_snapshot.bin",
+        "delta": "https://ls.manapotion.io/delta_snapshot.bin"
+      },
+      {
+        "full": "https://x-vps.com/full_snapshot.bin",
+        "delta": "https://x-vps.com/delta_snapshot.bin"
+      },
+      {
+        "full": "https://dbfiles.iota.org/mainnet/hornet/full_snapshot.bin",
+        "delta": "https://dbfiles.iota.org/mainnet/hornet/delta_snapshot.bin"
+      }
     ]
   },
   "pruning": {
@@ -61,15 +70,15 @@
     "delay": 60480
   },
   "node": {
-    "alias": "",
+    "alias": "Mainnet",
     "profile": "auto",
-    "enableProofOfWork": false,
+    "enableProofOfWork": true,
     "disablePlugins": [],
     "enablePlugins": []
   },
   "p2p": {
     "bindMultiAddresses": [
-      "/ip4/127.0.0.1/tcp/15600"
+      "/ip4/0.0.0.0/tcp/15600"
     ],
     "connectionManager": {
       "highWatermark": 10,

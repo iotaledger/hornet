@@ -44,37 +44,42 @@
     }
   },
   "db": {
-    "path": "comnetdb"
+    "path": "testnetdb"
   },
   "snapshots": {
     "depth": 50,
     "intervalSynced": 200,
     "intervalUnsynced": 1000,
-    "fullPath": "snapshots/comnet/full_snapshot.bin",
-    "deltaPath": "snapshots/comnet/delta_snapshot.bin",
+    "fullPath": "snapshots/testnet/full_snapshot.bin",
+    "deltaPath": "snapshots/testnet/delta_snapshot.bin",
     "downloadURLs": [
       {
-        "full": "https://ls.manapotion.io/comnet/full_snapshot.bin",
-        "delta": "https://ls.manapotion.io/comnet/delta_snapshot.bin"
+        "full": "https://dbfiles.testnet.chrysalis2.com/full_snapshot.bin",
+        "delta": "https://dbfiles.testnet.chrysalis2.com/delta_snapshot.bin"
       }
     ]
   },
   "pruning": {
     "enabled": true,
-    "delay": 1000
+    "delay": 60480
   },
   "protocol": {
-    "networkID": "comnet1",
-    "minPoWScore": 100,
+    "networkID": "alphanet1",
+    "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
-        "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+        "key": "7205c145525cee64f1c9363696811d239919d830ad964b4e29359e6475848f5a",
         "start": 0,
         "end": 0
       },
       {
-        "key": "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+        "key": "e468e82df33d10dea3bd0eadcd7867946a674d207c39f5af4cc44365d268a7e6",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "0758028d34508079ba1f223907ac3bb5ce8f6bdccc6b961c7c85a2f460b30c1d",
         "start": 0,
         "end": 0
       }
@@ -94,8 +99,8 @@
     }
   },
   "tipsel": {
-    "maxDeltaMsgYoungestConeRootIndexToLSMI": 2,
-    "maxDeltaMsgOldestConeRootIndexToLSMI": 7,
+    "maxDeltaMsgYoungestConeRootIndexToLSMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToLSMI": 13,
     "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
@@ -111,7 +116,7 @@
     }
   },
   "node": {
-    "alias": "Comnet",
+    "alias": "Chrysalis Testnet",
     "profile": "auto",
     "enableProofOfWork": true,
     "disablePlugins": [],
