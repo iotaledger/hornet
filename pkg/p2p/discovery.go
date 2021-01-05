@@ -168,7 +168,7 @@ func (ds *DiscoveryService) Start(shutdownSignal <-chan struct{}) {
 	if err := ds.dht.Bootstrap(context.Background()); err != nil {
 		panic(err)
 	}
-	timeutil.Ticker(ds.discover, ds.opts.AdvertiseInterval, shutdownSignal)
+	timeutil.NewTicker(ds.discover, ds.opts.AdvertiseInterval, shutdownSignal)
 	ds.dhtCtxCancel()
 	ds.host.Network().StopNotify((*dsNotifiee)(ds))
 }

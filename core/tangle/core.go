@@ -167,7 +167,7 @@ func run() {
 
 	// create a background worker that prints a status message every second
 	CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
+		timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
 
 }

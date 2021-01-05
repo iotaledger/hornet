@@ -67,7 +67,7 @@ func runDatabaseSizeCollector() {
 		database.Events.DatabaseCleanup.Attach(onDatabaseCleanup)
 		defer database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
 
-		timeutil.Ticker(func() {
+		timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
 			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
 		}, 1*time.Minute, shutdownSignal)

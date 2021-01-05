@@ -66,7 +66,7 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// create a background worker that "measures" the MPS value every second
 	t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(t.measureMPS, 1*time.Second, shutdownSignal)
+		timeutil.NewTicker(t.measureMPS, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityMetricsUpdater)
 
 	t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
