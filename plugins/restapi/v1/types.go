@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -50,6 +51,8 @@ type messageMetadataResponse struct {
 	ReferencedByMilestoneIndex *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
 	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
+	// The reason why this message is marked as conflicting.
+	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
 	// Whether the message should be promoted.
 	ShouldPromote *bool `json:"shouldPromote,omitempty"`
 	// Whether the message should be reattached.

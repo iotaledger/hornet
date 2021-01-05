@@ -33,12 +33,17 @@ type Confirmation struct {
 	Mutations *WhiteFlagMutations
 }
 
+type MessageWithConflict struct {
+	MessageID *hornet.MessageID
+	Conflict storage.Conflict
+}
+
 // WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The messages which mutate the ledger in the order in which they were applied.
 	MessagesIncludedWithTransactions hornet.MessageIDs
 	// The messages which were excluded as they were conflicting with the mutations.
-	MessagesExcludedWithConflictingTransactions hornet.MessageIDs
+	MessagesExcludedWithConflictingTransactions []MessageWithConflict
 	// The messages which were excluded because they did not include a value transaction.
 	MessagesExcludedWithoutTransactions hornet.MessageIDs
 	// The messages which were referenced by the milestone (should be the sum of MessagesIncludedWithTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
@@ -62,7 +67,7 @@ type WhiteFlagMutations struct {
 func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
-		MessagesExcludedWithConflictingTransactions: make(hornet.MessageIDs, 0),
+		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
 		MessagesExcludedWithoutTransactions:         make(hornet.MessageIDs, 0),
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
@@ -111,7 +116,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			return nil
 		}
 
-		var conflicting bool
+		var conflict = storage.ConflictNone
 
 		transaction := message.GetTransaction()
 		transactionID, err := transaction.ID()
@@ -121,7 +126,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 		// Verify transaction syntax
 		if err := transaction.SyntacticallyValidate(); err != nil {
-			// We do not mark as conflicting here but error out, because the message should not be part of a sane tangle if the syntax is wrong
+			// We do not mark as conflict here but error out, because the message should not be part of a sane tangle if the syntax is wrong
 			return err
 		}
 
@@ -134,8 +139,8 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			// check if this input was already spent during the confirmation
 			_, hasSpent := wfConf.NewSpents[string(input[:])]
 			if hasSpent {
-				// UTXO already spent, so mark as conflicting
-				conflicting = true
+				// UTXO already spent, so mark as conflict
+				conflict = storage.ConflictInputUTXOAlreadySpentInThisMilestone
 				break
 			}
 
@@ -152,7 +157,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			if err != nil {
 				if err == kvstore.ErrKeyNotFound {
 					// input not found, so mark as invalid tx
-					conflicting = true
+					conflict = storage.ConflictInputUTXONotFound
 					break
 				}
 				return err
@@ -165,8 +170,8 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			}
 
 			if !unspent {
-				// output is already spent, so mark as conflicting
-				conflicting = true
+				// output is already spent, so mark as conflict
+				conflict = storage.ConflictInputUTXOAlreadySpent
 				break
 			}
 
@@ -175,12 +180,25 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
 		if err := transaction.SemanticallyValidate(inputOutputs.InputToOutputMapping()); err != nil {
-			conflicting = true
+
+			if errors.Is(err, iotago.ErrMissingUTXO) {
+				conflict = storage.ConflictInputUTXONotFound
+			} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
+				conflict = storage.ConflictInputOutputSumMismatch
+			} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
+				conflict = storage.ConflictInvalidSignature
+			} else if errors.Is(err, iotago.ErrUnknownInputType) || errors.Is(err, iotago.ErrUnknownOutputType) {
+				conflict = storage.ConflictUnsupportedInputOrOutputType
+			} else if errors.Is(err, iotago.ErrUnknownAddrType) {
+				conflict = storage.ConflictUnsupportedAddressType
+			} else {
+				conflict = storage.ConflictSemanticValidationFailed
+			}
 		}
 
 		// go through all deposits and generate unspent outputs
 		depositOutputs := utxo.Outputs{}
-		if !conflicting {
+		if conflict == storage.ConflictNone {
 
 			transactionEssence := message.GetTransactionEssence()
 			if transactionEssence == nil {
@@ -198,8 +216,11 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
 
-		if conflicting {
-			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, cachedMetadata.GetMetadata().GetMessageID())
+		if conflict != storage.ConflictNone {
+			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, MessageWithConflict{
+				MessageID: cachedMetadata.GetMetadata().GetMessageID(),
+				Conflict:  conflict,
+			})
 			return nil
 		}
 
