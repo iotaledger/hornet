@@ -185,7 +185,7 @@ func run() {
 	// create a background worker that signals to issue new milestones
 	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
 
-		timeutil.Ticker(func() {
+		timeutil.NewTicker(func() {
 			// issue next milestone
 			select {
 			case nextMilestoneSignal <- struct{}{}:

@@ -246,7 +246,7 @@ func run() {
 	}, shutdown.PriorityMessageProcessor)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
-		timeutil.Ticker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
+		timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
 	}, shutdown.PriorityHeartbeats)
 }
 
