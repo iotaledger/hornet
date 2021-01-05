@@ -149,8 +149,9 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 		}
 	}
 
-	// confirm all excluded messages with zero value
-	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
+	// confirm all excluded messages not containing ledger transactions (including the milestone itself)
+	confirmedMessagesWithoutTransactions := append(mutations.MessagesExcludedWithoutTransactions, milestoneMessageID)
+	for _, messageID := range confirmedMessagesWithoutTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
 			meta.GetMetadata().SetIsNoTransaction(true)
 			if !meta.GetMetadata().IsReferenced() {
