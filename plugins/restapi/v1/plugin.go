@@ -123,9 +123,9 @@ const (
 	// GET creates a snapshot. (query parameters: "index")
 	RouteControlSnapshotCreate = "/control/snapshots/create"
 
-	// RouteDebugSolidifer is the debug route to manually trigger the solidifier.
+	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
 	// GET triggers the solidifier.
-	RouteDebugSolidifer = "/debug/solidifer"
+	RouteDebugSolidifier = "/debug/solidifier"
 
 	// RouteDebugOutputs is the debug route for getting all output IDs.
 	// GET returns the outputIDs for all outputs.
@@ -389,7 +389,7 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteDebugSolidifer, func(c echo.Context) error {
+	routeGroup.GET(RouteDebugSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()
 
 		return restapi.JSONResponse(c, http.StatusOK, "solidifier triggered")

@@ -38,7 +38,7 @@ func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
 }
 
 func getPeer(c echo.Context) (*peerResponse, error) {
-	peerID, err := peer.IDFromString(c.Param(ParameterPeerID))
+	peerID, err := peer.Decode(c.Param(ParameterPeerID))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
@@ -52,7 +52,7 @@ func getPeer(c echo.Context) (*peerResponse, error) {
 }
 
 func removePeer(c echo.Context) error {
-	peerID, err := peer.IDFromString(c.Param(ParameterPeerID))
+	peerID, err := peer.Decode(c.Param(ParameterPeerID))
 	if err != nil {
 		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
