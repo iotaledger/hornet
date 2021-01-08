@@ -89,7 +89,7 @@ type messageIDsByIndexResponse struct {
 // milestoneResponse defines the response of a GET milestones REST API call.
 type milestoneResponse struct {
 	// The index of the milestone.
-	Index uint32 `json:"milestoneIndex"`
+	Index uint32 `json:"index"`
 	// The hex encoded ID of the message containing the milestone.
 	MessageID string `json:"messageId"`
 	// The unix time of the milestone payload.
@@ -163,7 +163,7 @@ type addressesResponse struct {
 // outputIDsResponse defines the response of a GET debug milestone diff REST API call.
 type milestoneDiffResponse struct {
 	// The index of the milestone.
-	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	MilestoneIndex milestone.Index `json:"index"`
 	// The newly created outputs by this milestone diff.
 	Outputs []*outputResponse `json:"outputs"`
 	// The used outputs (spents) by this milestone diff.

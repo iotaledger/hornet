@@ -9,7 +9,7 @@ import (
 // milestonePayload defines the payload of the milestone latest and solid topics
 type milestonePayload struct {
 	// The index of the milestone.
-	Index uint32 `json:"milestoneIndex"`
+	Index uint32 `json:"index"`
 	// The unix time of the milestone payload.
 	Time int64 `json:"timestamp"`
 }
