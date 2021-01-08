@@ -240,19 +240,21 @@ func (m *Metrics) Snapshot() MetricsSnapshot {
 		SentMessageReq:       m.SentMessageRequests.Load(),
 		SentMilestoneReq:     m.SentMilestoneRequests.Load(),
 		SentHeartbeats:       m.SentHeartbeats.Load(),
+		DroppedPackets:       m.DroppedPackets.Load(),
 	}
 }
 
 // MetricsSnapshot represents a snapshot of the gossip protocol metrics.
 type MetricsSnapshot struct {
-	ReceivedMessages     uint32 `json:"allMessages"`
 	NewMessages          uint32 `json:"newMessages"`
 	KnownMessages        uint32 `json:"knownMessages"`
-	ReceivedMessageReq   uint32 `json:"receivedMessageReq"`
-	ReceivedMilestoneReq uint32 `json:"receivedMilestoneReq"`
+	ReceivedMessages     uint32 `json:"receivedMessages"`
+	ReceivedMessageReq   uint32 `json:"receivedMessageRequests"`
+	ReceivedMilestoneReq uint32 `json:"receivedMilestoneRequests"`
 	ReceivedHeartbeats   uint32 `json:"receivedHeartbeats"`
 	SentMessages         uint32 `json:"sentMessages"`
-	SentMessageReq       uint32 `json:"sentMessageReq"`
-	SentMilestoneReq     uint32 `json:"sentMilestoneReq"`
+	SentMessageReq       uint32 `json:"sentMessageRequests"`
+	SentMilestoneReq     uint32 `json:"sentMilestoneRequests"`
 	SentHeartbeats       uint32 `json:"sentHeartbeats"`
+	DroppedPackets       uint32 `json:"droppedPackets"`
 }
