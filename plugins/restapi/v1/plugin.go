@@ -188,6 +188,7 @@ type dependencies struct {
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	Manager          *p2p.Manager
+	Service          *gossip.Service
 	RequestQueue     gossip.RequestQueue
 	UTXO             *utxo.Manager
 	PoWHandler       *pow.Handler

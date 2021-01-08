@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 )
 
 // infoResponse defines the response of a GET info REST API call.
@@ -240,7 +241,7 @@ type peerResponse struct {
 	// Whether the peer is connected.
 	Connected bool `json:"connected"`
 	// The gossip metrics of the peer.
-	GossipMetrics *peerGossipMetrics `json:"gossipMetrics,omitempty"`
+	GossipMetrics gossip.MetricsSnapshot `json:"gossipMetrics,omitempty"`
 }
 
 // peerGossipMetrics defines the peer gossip metrics.

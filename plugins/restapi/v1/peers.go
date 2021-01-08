@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -24,16 +25,19 @@ func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
 		multiAddresses = append(multiAddresses, multiAddress.String())
 	}
 
+	gossipProto := deps.Service.Protocol(info.Peer.ID)
+	var gossipMetrics gossip.MetricsSnapshot
+	if gossipProto != nil {
+		gossipMetrics = gossipProto.Metrics.Snapshot()
+	}
+
 	return &peerResponse{
 		ID:             info.ID,
 		MultiAddresses: multiAddresses,
 		Alias:          alias,
 		Relation:       info.Relation,
 		Connected:      info.Connected,
-		GossipMetrics: &peerGossipMetrics{
-			DroppedSentPackets: info.DroppedSentPackets,
-			SentPackets:        info.SentPackets,
-		},
+		GossipMetrics:  gossipMetrics,
 	}
 }
 
