@@ -227,6 +227,23 @@ type Metrics struct {
 	DroppedPackets atomic.Uint32
 }
 
+// Snapshot returns MetricsSnapshot of the Metrics.
+func (m *Metrics) Snapshot() MetricsSnapshot {
+	return MetricsSnapshot{
+		ReceivedMessages:     m.ReceivedMessages.Load(),
+		NewMessages:          m.NewMessages.Load(),
+		KnownMessages:        m.KnownMessages.Load(),
+		ReceivedMessageReq:   m.ReceivedMessageRequests.Load(),
+		ReceivedMilestoneReq: m.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:   m.ReceivedHeartbeats.Load(),
+		SentMessages:         m.SentMessages.Load(),
+		SentMessageReq:       m.SentMessageRequests.Load(),
+		SentMilestoneReq:     m.SentMilestoneRequests.Load(),
+		SentHeartbeats:       m.SentHeartbeats.Load(),
+	}
+}
+
+// MetricsSnapshot represents a snapshot of the gossip protocol metrics.
 type MetricsSnapshot struct {
 	ReceivedMessages     uint32 `json:"allMessages"`
 	NewMessages          uint32 `json:"newMessages"`
