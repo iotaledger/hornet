@@ -20,6 +20,38 @@ const (
 	MessageMetadataConflictingTx = 3
 )
 
+// Conflict defines the reason why a message is marked as conflicting.
+type Conflict uint8
+
+const (
+	//ConflictNone the message has no conflict.
+	ConflictNone Conflict = iota
+
+	// ConflictInputUTXOAlreadySpent the referenced UTXO was already spent.
+	ConflictInputUTXOAlreadySpent
+
+	// ConflictInputUTXOAlreadySpentInThisMilestone the referenced UTXO was already spent while confirming this milestone
+	ConflictInputUTXOAlreadySpentInThisMilestone
+
+	// ConflictInputUTXONotFound the referenced UTXO cannot be found.
+	ConflictInputUTXONotFound
+
+	// ConflictInputOutputSumMismatch the sum of the inputs and output values does not match.
+	ConflictInputOutputSumMismatch
+
+	// ConflictInvalidSignature the unlock block signature is invalid.
+	ConflictInvalidSignature
+
+	// ConflictUnsupportedInputOrOutputType the input or output type used is unsupported.
+	ConflictUnsupportedInputOrOutputType
+
+	// ConflictUnsupportedAddressType the used address type is unsupported.
+	ConflictUnsupportedAddressType
+
+	// ConflictSemanticValidationFailed the semantic validation failed.
+	ConflictSemanticValidationFailed
+)
+
 type MessageMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
@@ -34,6 +66,8 @@ type MessageMetadata struct {
 
 	// The index of the milestone which referenced this msg
 	referencedIndex milestone.Index
+
+	conflict Conflict
 
 	// youngestConeRootIndex is the highest referenced index of the past cone of this message
 	youngestConeRootIndex milestone.Index
@@ -160,14 +194,25 @@ func (m *MessageMetadata) IsConflictingTx() bool {
 	return m.metadata.HasBit(MessageMetadataConflictingTx)
 }
 
-func (m *MessageMetadata) SetConflictingTx(conflictingTx bool) {
+func (m *MessageMetadata) SetConflictingTx(conflict Conflict) {
 	m.Lock()
 	defer m.Unlock()
 
-	if conflictingTx != m.metadata.HasBit(MessageMetadataConflictingTx) {
+	conflictingTx := conflict != ConflictNone
+
+	if conflictingTx != m.metadata.HasBit(MessageMetadataConflictingTx) ||
+		m.conflict != conflict {
 		m.metadata = m.metadata.ModifyBit(MessageMetadataConflictingTx, conflictingTx)
+		m.conflict = conflict
 		m.SetModified(true)
 	}
+}
+
+func (m *MessageMetadata) GetConflict() Conflict {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.conflict
 }
 
 func (m *MessageMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
@@ -211,7 +256,8 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 	/*
 		1 byte  metadata bitmask
 		4 bytes uint32 solidificationTimestamp
-		4 bytes uint32 confirmationIndex
+		4 bytes uint32 referencedIndex
+		1 byte  uint8 conflict
 		4 bytes uint32 youngestConeRootIndex
 		4 bytes uint32 oldestConeRootIndex
 		4 bytes uint32 coneRootCalculationIndex
@@ -219,13 +265,14 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		32 bytes parent2 id
 	*/
 
-	value := make([]byte, 21)
+	value := make([]byte, 22)
 	value[0] = byte(m.metadata)
 	binary.LittleEndian.PutUint32(value[1:], uint32(m.solidificationTimestamp))
 	binary.LittleEndian.PutUint32(value[5:], uint32(m.referencedIndex))
-	binary.LittleEndian.PutUint32(value[9:], uint32(m.youngestConeRootIndex))
-	binary.LittleEndian.PutUint32(value[13:], uint32(m.oldestConeRootIndex))
-	binary.LittleEndian.PutUint32(value[17:], uint32(m.coneRootCalculationIndex))
+	value[9] = byte(m.conflict)
+	binary.LittleEndian.PutUint32(value[10:], uint32(m.youngestConeRootIndex))
+	binary.LittleEndian.PutUint32(value[14:], uint32(m.oldestConeRootIndex))
+	binary.LittleEndian.PutUint32(value[18:], uint32(m.coneRootCalculationIndex))
 	value = append(value, m.parent1MessageID.Slice()...)
 	value = append(value, m.parent2MessageID.Slice()...)
 
@@ -237,7 +284,8 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	/*
 		1 byte  metadata bitmask
 		4 bytes uint32 solidificationTimestamp
-		4 bytes uint32 confirmationIndex
+		4 bytes uint32 referencedIndex
+		1 byte  uint8 conflict
 		4 bytes uint32 youngestConeRootIndex
 		4 bytes uint32 oldestConeRootIndex
 		4 bytes uint32 coneRootCalculationIndex
@@ -245,14 +293,15 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		32 bytes parent2 id
 	*/
 
-	m := NewMessageMetadata(hornet.MessageIDFromBytes(key[:32]), hornet.MessageIDFromBytes(data[21:21+32]), hornet.MessageIDFromBytes(data[21+32:21+32+32]))
+	m := NewMessageMetadata(hornet.MessageIDFromBytes(key[:32]), hornet.MessageIDFromBytes(data[22:22+32]), hornet.MessageIDFromBytes(data[22+32:22+32+32]))
 
 	m.metadata = bitmask.BitMask(data[0])
 	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
 	m.referencedIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
-	m.youngestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[9:13]))
-	m.oldestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[13:17]))
-	m.coneRootCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[17:21]))
+	m.conflict = Conflict(data[9])
+	m.youngestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[10:14]))
+	m.oldestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[14:18]))
+	m.coneRootCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[18:22]))
 
 	return m, nil
 }

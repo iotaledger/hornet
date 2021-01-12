@@ -169,9 +169,9 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 	}
 
 	// confirm all conflicting messages
-	for _, messageID := range mutations.MessagesExcludedWithConflictingTransactions {
-		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
-			meta.GetMetadata().SetConflictingTx(true)
+	for _, conflictedMessage := range mutations.MessagesExcludedWithConflictingTransactions {
+		if err := forMessageMetadataWithMessageID(conflictedMessage.MessageID, func(meta *storage.CachedMetadata) {
+			meta.GetMetadata().SetConflictingTx(conflictedMessage.Conflict)
 			if !meta.GetMetadata().IsReferenced() {
 				meta.GetMetadata().SetReferenced(true, milestoneIndex)
 				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)

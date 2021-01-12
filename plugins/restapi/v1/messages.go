@@ -65,8 +65,11 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	if referenced {
 		inclusionState := "noTransaction"
 
-		if metadata.IsConflictingTx() {
+		conflict := metadata.GetConflict()
+
+		if conflict != storage.ConflictNone {
 			inclusionState = "conflicting"
+			messageMetadataResponse.ConflictReason = &conflict
 		} else if metadata.IsIncludedTxInLedger() {
 			inclusionState = "included"
 		}

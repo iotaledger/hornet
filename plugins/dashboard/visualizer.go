@@ -128,7 +128,7 @@ func runVisualizer() {
 
 		var excludedIDs []string
 		for _, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs = append(excludedIDs, messageID.Hex()[:VisualizerIdLength])
+			excludedIDs = append(excludedIDs, messageID.MessageID.Hex()[:VisualizerIdLength])
 		}
 
 		hub.BroadcastMsg(
