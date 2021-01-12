@@ -57,11 +57,11 @@ func (o Outputs) InputToOutputMapping() iotago.InputToOutputMapping {
 	return mapping
 }
 
-func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, address *iotago.Ed25519Address, amount uint64) *Output {
+func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address *iotago.Ed25519Address, amount uint64) *Output {
 	return &Output{
 		outputID:   outputID,
 		messageID:  messageID,
-		outputType: iotago.OutputSigLockedSingleOutput,
+		outputType: outputType,
 		address:    address,
 		amount:     amount,
 	}
@@ -69,16 +69,18 @@ func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, addres
 
 func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
-	var deposit *iotago.SigLockedSingleOutput
+	var output iotago.Output
 	switch unsignedTx := transaction.Essence.(type) {
 	case *iotago.TransactionEssence:
 		if len(unsignedTx.Outputs) < int(index) {
 			return nil, errors.New("deposit not found")
 		}
 		output := unsignedTx.Outputs[int(index)]
-		switch d := output.(type) {
+		switch out := output.(type) {
 		case *iotago.SigLockedSingleOutput:
-			deposit = d
+			output = out
+		case *iotago.SigLockedDustAllowanceOutput:
+			output = out
 		default:
 			return nil, errors.New("unsuported output type")
 		}
@@ -87,7 +89,11 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 	}
 
 	var address *iotago.Ed25519Address
-	switch a := deposit.Address.(type) {
+	outputAddress, err := output.Target()
+	if err != nil {
+		return nil, err
+	}
+	switch a := outputAddress.(type) {
 	case *iotago.Ed25519Address:
 		address = a
 	default:
@@ -106,12 +112,17 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 	copy(outputID[:iotago.TransactionIDLength], txID[:])
 	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+iotago.UInt16ByteSize], bytes)
 
+	amount, err := output.Deposit()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Output{
 		outputID:   &outputID,
 		messageID:  messageID,
-		outputType: iotago.OutputSigLockedSingleOutput,
+		outputType: output.Type(),
 		address:    address,
-		amount:     deposit.Amount,
+		amount:     amount,
 	}, nil
 }
 

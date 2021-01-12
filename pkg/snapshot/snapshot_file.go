@@ -64,6 +64,8 @@ type Output struct {
 	MessageID [iotago.MessageIDLength]byte `json:"message_id"`
 	// The transaction ID and the index of the output.
 	OutputID [iotago.TransactionIDLength + 2]byte `json:"output_id"`
+	// The type of the output.
+	OutputType iotago.OutputType `json:"output_type"`
 	// The underlying address to which this output deposits to.
 	Address iotago.Serializable `json:"address"`
 	// The amount of the deposit.
