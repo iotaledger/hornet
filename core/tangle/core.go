@@ -144,16 +144,15 @@ func run() {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	attachHeartbeatEvents()
-	detachHeartbeatEvents()
-
-	CorePlugin.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
 		attachSolidifierGossipEvents()
+		attachHeartbeatEvents()
 		<-shutdownSignal
 		detachSolidifierGossipEvents()
+		detachHeartbeatEvents()
 	}, shutdown.PrioritySolidifierGossip)
 
-	CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Tangle.AbortMilestoneSolidification()
 
@@ -166,7 +165,7 @@ func run() {
 	deps.Tangle.RunTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
+	_ = CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
 	}, shutdown.PriorityStatusReport)
 
