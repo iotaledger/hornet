@@ -53,7 +53,7 @@ type WhiteFlagMutations struct {
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
 	// Contains the Dust diff for the given addresses.
-	DustDiff map[iotago.Address]*storage.DustDiff
+	dustDiff map[iotago.Address]*utxo.DustDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
@@ -74,7 +74,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
-		DustDiff:                                    make(map[iotago.Address]*storage.DustDiff),
+		dustDiff:                                    make(map[iotago.Address]*utxo.DustDiff),
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -184,12 +184,12 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// Dust validation
 		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, func(addr iotago.Serializable) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
 			address := addr.(iotago.Address)
-			dustAllowanceBalance, dustOutputCount, err := s.ReadDustForAddress(address)
+			dustAllowanceBalance, dustOutputCount, err := s.UTXO().ReadDustForAddress(address)
 			if err != nil {
 				return 0, 0, err
 			}
 
-			dustDiff, found := wfConf.DustDiff[address]
+			dustDiff, found := wfConf.dustDiff[address]
 			if found {
 				dustOutputCount = dustOutputCount + dustDiff.DustOutputCount
 				newBalance := int64(dustAllowanceBalance) + dustDiff.DustAllowanceBalanceDiff
@@ -240,19 +240,19 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 				switch out := transactionEssence.Outputs[i].(type) {
 				case *iotago.SigLockedDustAllowanceOutput:
-					dustDiff, found := wfConf.DustDiff[out.Address.(iotago.Address)]
+					dustDiff, found := wfConf.dustDiff[out.Address.(iotago.Address)]
 					if found {
 						dustDiff.DustAllowanceBalanceDiff += int64(out.Amount)
 					} else {
-						wfConf.DustDiff[out.Address.(iotago.Address)] = storage.NewDustDiff(int64(out.Amount), 0)
+						wfConf.dustDiff[out.Address.(iotago.Address)] = utxo.NewDustDiff(int64(out.Amount), 0)
 					}
 				case *iotago.SigLockedSingleOutput:
 					if out.Amount < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-						dustDiff, found := wfConf.DustDiff[out.Address.(iotago.Address)]
+						dustDiff, found := wfConf.dustDiff[out.Address.(iotago.Address)]
 						if found {
 							dustDiff.DustOutputCount += 1
 						} else {
-							wfConf.DustDiff[out.Address.(iotago.Address)] = storage.NewDustDiff(0, 1)
+							wfConf.dustDiff[out.Address.(iotago.Address)] = utxo.NewDustDiff(0, 1)
 						}
 					}
 				}

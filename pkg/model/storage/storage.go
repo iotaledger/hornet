@@ -36,7 +36,6 @@ type Storage struct {
 	// kv storages
 	healthStore   kvstore.KVStore
 	snapshotStore kvstore.KVStore
-	dustStore     kvstore.KVStore
 
 	// object storages
 	childrenStorage             *objectstorage.ObjectStorage
@@ -113,7 +112,6 @@ func (s *Storage) ConfigureStorages(store kvstore.KVStore, caches *profile.Cache
 	s.configureUnreferencedMessageStorage(store, caches.UnreferencedMessages)
 	s.configureIndexationStorage(store, caches.Indexations)
 	s.configureSnapshotStore(store)
-	s.configureDustStore(store)
 
 	s.UTXO()
 }

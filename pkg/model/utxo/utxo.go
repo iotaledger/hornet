@@ -24,12 +24,14 @@ var (
 
 type Manager struct {
 	utxoStorage kvstore.KVStore
+	dustStorage kvstore.KVStore
 	utxoLock    sync.RWMutex
 }
 
 func New(store kvstore.KVStore) *Manager {
 	return &Manager{
 		utxoStorage: store.WithRealm([]byte{common.StorePrefixUTXO}),
+		dustStorage: store.WithRealm([]byte{common.StorePrefixDust}),
 	}
 }
 

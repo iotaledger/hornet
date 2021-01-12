@@ -1,4 +1,4 @@
-package storage
+package utxo
 
 import (
 	"github.com/iotaledger/hive.go/marshalutil"

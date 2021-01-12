@@ -1,4 +1,4 @@
-package storage
+package utxo
 
 import (
 	"encoding/hex"
@@ -8,8 +8,6 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go"
-
-	"github.com/gohornet/hornet/pkg/common"
 )
 
 var (
@@ -17,18 +15,14 @@ var (
 	ErrInvalidDustForAddress = errors.New("invalid dust for address")
 )
 
-func (s *Storage) configureDustStore(store kvstore.KVStore) {
-	s.dustStore = store.WithRealm([]byte{common.StorePrefixDust})
+func (u *Manager) ReadDustForAddress(address iotago.Address) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+
+	return u.readDustForAddress([]byte(address.String()))
 }
 
-func (s *Storage) ReadDustForAddress(address iotago.Address) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+func (u *Manager) readDustForAddress(addressBytes []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
 
-	return s.readDustForAddress([]byte(address.String()))
-}
-
-func (s *Storage) readDustForAddress(addressBytes []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
-
-	value, err := s.dustStore.Get(addressBytes)
+	value, err := u.dustStorage.Get(addressBytes)
 	if err != nil {
 		// No error should ever happen here
 		return 0, 0, err
@@ -41,7 +35,7 @@ func (s *Storage) readDustForAddress(addressBytes []byte) (dustAllowanceBalance 
 	return 0, 0, nil
 }
 
-func (s *Storage) storeDustForAddress(addressBytes []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
+func (u *Manager) storeDustForAddress(addressBytes []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
 
 	if dustOutputCount == 0 && dustAllowanceBalance != 0 {
 		// Balance cannot be zero if there are no outputs
@@ -58,11 +52,11 @@ func (s *Storage) storeDustForAddress(addressBytes []byte, dustAllowanceBalance 
 	return nil
 }
 
-func (s *Storage) ApplyDustDiff(dustDiff map[iotago.Address]*DustDiff) error {
+func (u *Manager) applyDustDiff(dustDiff map[iotago.Address]*DustDiff) error {
 
-	mutations := s.dustStore.Batched()
+	mutations := u.dustStorage.Batched()
 	for addr, diff := range dustDiff {
-		if err := s.applyDustDiffForAddress([]byte(addr.String()), diff.DustAllowanceBalanceDiff, diff.DustOutputCount, mutations); err != nil {
+		if err := u.applyDustDiffForAddress([]byte(addr.String()), diff.DustAllowanceBalanceDiff, diff.DustOutputCount, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -70,9 +64,9 @@ func (s *Storage) ApplyDustDiff(dustDiff map[iotago.Address]*DustDiff) error {
 	return mutations.Commit()
 }
 
-func (s *Storage) applyDustDiffForAddress(addressBytes []byte, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
+func (u *Manager) applyDustDiffForAddress(addressBytes []byte, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
 
-	dustAllowanceBalance, dustOutputCount, err := s.readDustForAddress(addressBytes)
+	dustAllowanceBalance, dustOutputCount, err := u.readDustForAddress(addressBytes)
 	if err != nil {
 		return err
 	}
@@ -85,5 +79,5 @@ func (s *Storage) applyDustDiffForAddress(addressBytes []byte, dustAllowanceBala
 		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressBytes), dustAllowanceBalance, dustOutputCount)
 	}
 
-	return s.storeDustForAddress(addressBytes, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
+	return u.storeDustForAddress(addressBytes, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
 }
