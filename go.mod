@@ -17,7 +17,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.3.1
 	github.com/fhmq/hmq v0.0.0-20200826092422-b8bacb4c3d2c
-	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
@@ -67,5 +66,3 @@ require (
 )
 
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112081740-ecb37c02f887
-
-replace github.com/labstack/echo/v4 => github.com/djatwood/echo/v4 v4.1.18-0.20201103193655-d0c3a507ca73
