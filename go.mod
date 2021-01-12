@@ -68,4 +68,4 @@ require (
 
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112081740-ecb37c02f887
 
-replace github.com/dgrijalva/jwt-go => github.com/form3tech-oss/jwt-go v3.2.1+incompatible
+replace github.com/labstack/echo/v4 => github.com/djatwood/echo/v4 v4.1.18-0.20201103193655-d0c3a507ca73
