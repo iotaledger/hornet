@@ -68,3 +68,5 @@ require (
 	google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497 // indirect
 	google.golang.org/grpc v1.34.0 // indirect
 )
+
+replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112075059-596b2b339490
