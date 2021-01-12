@@ -186,6 +186,11 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 		}
 	}
 
+	// Store the collected Dust information
+	if err := s.ApplyDustDiff(mutations.DustDiff); err != nil {
+		return nil, err
+	}
+
 	onMilestoneConfirmed(confirmation)
 
 	for _, output := range newOutputs {

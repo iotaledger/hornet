@@ -48,6 +48,9 @@ const (
 	// ConflictUnsupportedAddressType the used address type is unsupported.
 	ConflictUnsupportedAddressType
 
+	// ConflictInvalidDustAllowance the dust allowance for the address is invalid.
+	ConflictInvalidDustAllowance
+
 	// ConflictSemanticValidationFailed the semantic validation failed.
 	ConflictSemanticValidationFailed
 )
