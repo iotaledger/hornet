@@ -52,11 +52,11 @@ func (u *Manager) storeDustForAddress(addressBytes []byte, dustAllowanceBalance 
 	return nil
 }
 
-func (u *Manager) applyDustDiff(dustDiff map[iotago.Address]*DustDiff) error {
+func (u *Manager) applyDustDiff(dustDiff map[string]*DustDiff) error {
 
 	mutations := u.dustStorage.Batched()
 	for addr, diff := range dustDiff {
-		if err := u.applyDustDiffForAddress([]byte(addr.String()), diff.DustAllowanceBalanceDiff, diff.DustOutputCount, mutations); err != nil {
+		if err := u.applyDustDiffForAddress(addr, diff.DustAllowanceBalanceDiff, diff.DustOutputCount, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -64,7 +64,9 @@ func (u *Manager) applyDustDiff(dustDiff map[iotago.Address]*DustDiff) error {
 	return mutations.Commit()
 }
 
-func (u *Manager) applyDustDiffForAddress(addressBytes []byte, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
+func (u *Manager) applyDustDiffForAddress(addressString string, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
+
+	addressBytes := []byte(addressString)
 
 	dustAllowanceBalance, dustOutputCount, err := u.readDustForAddress(addressBytes)
 	if err != nil {
@@ -80,4 +82,142 @@ func (u *Manager) applyDustDiffForAddress(addressBytes []byte, dustAllowanceBala
 	}
 
 	return u.storeDustForAddress(addressBytes, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
+}
+
+func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
+	dustDiff := make(map[string]*DustDiff)
+
+	for _, output := range newOutputs {
+		// Add new dust
+		switch output.outputType {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			address := output.Address().String()
+			diff, found := dustDiff[address]
+			if found {
+				diff.DustAllowanceBalanceDiff += int64(output.Amount())
+			} else {
+				dustDiff[address] = NewDustDiff(int64(output.Amount()), 0)
+			}
+		case iotago.OutputSigLockedSingleOutput:
+			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+				address := output.Address().String()
+				diff, found := dustDiff[address]
+				if found {
+					diff.DustOutputCount += 1
+				} else {
+					dustDiff[address] = NewDustDiff(0, 1)
+				}
+			}
+		}
+	}
+
+	for _, spent := range newSpents {
+
+		// Remove spent dust
+		output := spent.Output()
+		switch output.outputType {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			address := output.Address().String()
+			diff, found := dustDiff[address]
+			if found {
+				diff.DustAllowanceBalanceDiff -= int64(output.Amount())
+			} else {
+				dustDiff[address] = NewDustDiff(-int64(output.Amount()), 0)
+			}
+		case iotago.OutputSigLockedSingleOutput:
+			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+				address := output.Address().String()
+				diff, found := dustDiff[address]
+				if found {
+					diff.DustOutputCount -= 1
+				} else {
+					dustDiff[address] = NewDustDiff(0, -1)
+				}
+			}
+		}
+	}
+
+	return u.applyDustDiff(dustDiff)
+}
+
+func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
+
+	dustDiff := make(map[string]*DustDiff)
+
+	// we have to delete the newOutputs of this milestone
+	for _, output := range newOutputs {
+
+		// Remove unspent dust
+		switch output.outputType {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			address := output.Address().String()
+			diff, found := dustDiff[address]
+			if found {
+				diff.DustAllowanceBalanceDiff -= int64(output.Amount())
+			} else {
+				dustDiff[address] = NewDustDiff(-int64(output.Amount()), 0)
+			}
+		case iotago.OutputSigLockedSingleOutput:
+			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+				address := output.Address().String()
+				diff, found := dustDiff[address]
+				if found {
+					diff.DustOutputCount -= 1
+				} else {
+					dustDiff[address] = NewDustDiff(0, -1)
+				}
+			}
+		}
+	}
+
+	// we have to store the spents as output and mark them as unspent
+	for _, spent := range newSpents {
+
+		// Re-Add previously-spent dust
+		output := spent.Output()
+		switch output.outputType {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			address := output.Address().String()
+			diff, found := dustDiff[address]
+			if found {
+				diff.DustAllowanceBalanceDiff += int64(output.Amount())
+			} else {
+				dustDiff[address] = NewDustDiff(int64(output.Amount()), 0)
+			}
+		case iotago.OutputSigLockedSingleOutput:
+			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+				address := output.Address().String()
+				diff, found := dustDiff[address]
+				if found {
+					diff.DustOutputCount += 1
+				} else {
+					dustDiff[address] = NewDustDiff(0, 1)
+				}
+			}
+		}
+	}
+
+	return u.applyDustDiff(dustDiff)
+}
+
+func (u *Manager) storeDustForUnspentOutput(unspentOutput *Output) error {
+
+	dustMutations := u.dustStorage.Batched()
+
+	switch unspentOutput.outputType {
+	case iotago.OutputSigLockedDustAllowanceOutput:
+		if err := u.applyDustDiffForAddress(unspentOutput.Address().String(), int64(unspentOutput.Amount()), 0, dustMutations); err != nil {
+			dustMutations.Cancel()
+			return nil
+		}
+	case iotago.OutputSigLockedSingleOutput:
+		if unspentOutput.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+			if err := u.applyDustDiffForAddress(unspentOutput.Address().String(), 0, 1, dustMutations); err != nil {
+				dustMutations.Cancel()
+				return nil
+			}
+		}
+	}
+
+	return dustMutations.Commit()
 }

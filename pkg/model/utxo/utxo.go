@@ -153,7 +153,11 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		return err
 	}
 
-	return mutations.Commit()
+	if err := mutations.Commit(); err != nil {
+		return err
+	}
+
+	return u.applyNewDustWithoutLocking(newOutputs, newSpents)
 }
 
 func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
@@ -203,7 +207,11 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		return err
 	}
 
-	return mutations.Commit()
+	if err := mutations.Commit(); err != nil {
+		return err
+	}
+
+	return u.rollbackDustWithoutLocking(newOutputs, newSpents)
 }
 
 func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
@@ -250,5 +258,9 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 		return err
 	}
 
-	return mutations.Commit()
+	if err := mutations.Commit(); err != nil {
+		return err
+	}
+
+	return u.storeDustForUnspentOutput(unspentOutput)
 }
