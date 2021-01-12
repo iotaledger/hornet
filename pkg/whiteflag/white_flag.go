@@ -53,7 +53,7 @@ type WhiteFlagMutations struct {
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
 	// Contains the Dust diff for the given addresses.
-	dustDiff map[iotago.Address]*utxo.DustDiff
+	dustDiff map[string]*utxo.DustDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
@@ -74,7 +74,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
-		dustDiff:                                    make(map[iotago.Address]*utxo.DustDiff),
+		dustDiff:                                    make(map[string]*utxo.DustDiff),
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -189,7 +189,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 				return 0, 0, err
 			}
 
-			dustDiff, found := wfConf.dustDiff[address]
+			dustDiff, found := wfConf.dustDiff[address.String()]
 			if found {
 				dustOutputCount = dustOutputCount + dustDiff.DustOutputCount
 				newBalance := int64(dustAllowanceBalance) + dustDiff.DustAllowanceBalanceDiff
@@ -237,25 +237,6 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 					return err
 				}
 				depositOutputs = append(depositOutputs, output)
-
-				switch out := transactionEssence.Outputs[i].(type) {
-				case *iotago.SigLockedDustAllowanceOutput:
-					dustDiff, found := wfConf.dustDiff[out.Address.(iotago.Address)]
-					if found {
-						dustDiff.DustAllowanceBalanceDiff += int64(out.Amount)
-					} else {
-						wfConf.dustDiff[out.Address.(iotago.Address)] = utxo.NewDustDiff(int64(out.Amount), 0)
-					}
-				case *iotago.SigLockedSingleOutput:
-					if out.Amount < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-						dustDiff, found := wfConf.dustDiff[out.Address.(iotago.Address)]
-						if found {
-							dustDiff.DustOutputCount += 1
-						} else {
-							wfConf.dustDiff[out.Address.(iotago.Address)] = utxo.NewDustDiff(0, 1)
-						}
-					}
-				}
 			}
 		}
 
@@ -276,11 +257,55 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		for _, input := range inputOutputs {
 			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
 			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, transactionID, msIndex)
+
+			// Subtract spent dust from diff
+			switch input.OutputType() {
+			case iotago.OutputSigLockedDustAllowanceOutput:
+				address := input.Address().String()
+				dustDiff, found := wfConf.dustDiff[address]
+				if found {
+					dustDiff.DustAllowanceBalanceDiff -= int64(input.Amount())
+				} else {
+					wfConf.dustDiff[address] = utxo.NewDustDiff(-int64(input.Amount()), 0)
+				}
+			case iotago.OutputSigLockedSingleOutput:
+				if input.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+					address := input.Address().String()
+					dustDiff, found := wfConf.dustDiff[address]
+					if found {
+						dustDiff.DustOutputCount -= 1
+					} else {
+						wfConf.dustDiff[address] = utxo.NewDustDiff(0, -1)
+					}
+				}
+			}
 		}
 
 		// add new outputs
 		for _, output := range depositOutputs {
 			wfConf.NewOutputs[string(output.OutputID()[:])] = output
+
+			// Add new dust to diff
+			switch output.OutputType() {
+			case iotago.OutputSigLockedDustAllowanceOutput:
+				address := output.Address().String()
+				dustDiff, found := wfConf.dustDiff[address]
+				if found {
+					dustDiff.DustAllowanceBalanceDiff += int64(output.Amount())
+				} else {
+					wfConf.dustDiff[address] = utxo.NewDustDiff(int64(output.Amount()), 0)
+				}
+			case iotago.OutputSigLockedSingleOutput:
+				if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
+					address := output.Address().String()
+					dustDiff, found := wfConf.dustDiff[address]
+					if found {
+						dustDiff.DustOutputCount += 1
+					} else {
+						wfConf.dustDiff[address] = utxo.NewDustDiff(0, 1)
+					}
+				}
+			}
 		}
 
 		return nil
