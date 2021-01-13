@@ -49,4 +49,30 @@ jobs:
         run: |
           export RELEASE_VERSION=${GITHUB_REF#refs/*/}
           docker build . -f docker/Dockerfile.dev -t iotaledger/hornet:$GIT_SHA -t iotaledger/hornet:$RELEASE_VERSION -t iotaledger/hornet:$GIT_SHA iotaledger/hornet:latest -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/hornet:$RELEASE_VERSION --platform linux/amd64,linux/arm64 --push
-        if: startsWith(github.ref, 'refs/tags/v')        
+        if: startsWith(github.ref, 'refs/tags/v')
+
+      - name: Passing env var to deploy job
+        id: git_sha
+        run: echo "::set-output name=git_sha::${{ env.GIT_SHA }}"
+
+    outputs:
+      git_sha: ${{ steps.git_sha.outputs.git_sha }}
+
+  trigger-deploy:
+    name: Triggering deployment
+    needs: build
+    runs-on: ubuntu-latest
+
+    # strategy:
+    #   matrix:
+    #     environment: ["comnet", "devnet", "mainnet"]
+
+    steps:
+      - name: Triggering Hornet deployment - Comnet 
+      # For now deployment "environment" is hardcoded to comnet. Each env should/shall have its own github deployment
+        run: |
+          curl -X POST https://api.github.com/repos/iotaledger/hornet/deployments \
+          -H 'Accept: application/vnd.github.v3+json' \
+          -u ${{ secrets.GIT_TOKEN }} \
+          --data '{"ref": "${{ needs.build.outputs.git_sha }}", "task": "deploy", "automerge": false, "required_contexts": [], "payload": {}, "environment": "comnet", "description": "", "transient_environment": false, "production_environment": false}'
+
