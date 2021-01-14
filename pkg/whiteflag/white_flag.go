@@ -52,8 +52,8 @@ type WhiteFlagMutations struct {
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
-	// Contains the Dust diff for the given addresses.
-	dustDiff map[string]*utxo.DustDiff
+	// Contains the Dust allowance diff for the given addresses.
+	dustAllowanceDiff *utxo.DustAllowanceDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
@@ -74,7 +74,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
-		dustDiff:                                    make(map[string]*utxo.DustDiff),
+		dustAllowanceDiff:                           utxo.NewDustAllowanceDiff(),
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -183,22 +183,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 		// Dust validation
 		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, func(addr iotago.Serializable) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
-			address := addr.(iotago.Address)
-			dustAllowanceBalance, dustOutputCount, err := s.UTXO().ReadDustForAddress(address)
-			if err != nil {
-				return 0, 0, err
-			}
-
-			if dustDiff, found := wfConf.dustDiff[address.String()]; found {
-				dustOutputCount = dustOutputCount + dustDiff.DustOutputCount
-				newBalance := int64(dustAllowanceBalance) + dustDiff.DustAllowanceBalanceDiff
-				if newBalance < 0 {
-					return 0, 0, fmt.Errorf("%w: negative dust balance on address %s", iotago.ErrInvalidDustAllowance, address.String())
-				}
-				dustAllowanceBalance = uint64(newBalance)
-			}
-
-			return dustAllowanceBalance, dustOutputCount, nil
+			return s.UTXO().ReadDustForAddress(addr.(iotago.Address), wfConf.dustAllowanceDiff)
 		})
 
 		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
@@ -252,58 +237,23 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// mark the given message to be part of milestone ledger by changing message inclusion set
 		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
+		var newSpents utxo.Spents
+
 		// save the inputs as spent
 		for _, input := range inputOutputs {
 			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
-			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, transactionID, msIndex)
-
-			// Subtract spent dust from diff
-			switch input.OutputType() {
-			case iotago.OutputSigLockedDustAllowanceOutput:
-				address := input.Address().String()
-				if dustDiff, found := wfConf.dustDiff[address]; found {
-					dustDiff.DustAllowanceBalanceDiff -= int64(input.Amount())
-				} else {
-					wfConf.dustDiff[address] = utxo.NewDustDiff(-int64(input.Amount()), 0)
-				}
-			case iotago.OutputSigLockedSingleOutput:
-				if input.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-					address := input.Address().String()
-					if dustDiff, found := wfConf.dustDiff[address]; found {
-						dustDiff.DustOutputCount -= 1
-					} else {
-						wfConf.dustDiff[address] = utxo.NewDustDiff(0, -1)
-					}
-				}
-			}
+			spent := utxo.NewSpent(input, transactionID, msIndex)
+			wfConf.NewSpents[string(input.OutputID()[:])] = spent
+			newSpents = append(newSpents, spent)
 		}
 
 		// add new outputs
 		for _, output := range depositOutputs {
 			wfConf.NewOutputs[string(output.OutputID()[:])] = output
-
-			// Add new dust to diff
-			switch output.OutputType() {
-			case iotago.OutputSigLockedDustAllowanceOutput:
-				address := output.Address().String()
-				if dustDiff, found := wfConf.dustDiff[address]; found {
-					dustDiff.DustAllowanceBalanceDiff += int64(output.Amount())
-				} else {
-					wfConf.dustDiff[address] = utxo.NewDustDiff(int64(output.Amount()), 0)
-				}
-			case iotago.OutputSigLockedSingleOutput:
-				if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-					address := output.Address().String()
-					if dustDiff, found := wfConf.dustDiff[address]; found {
-						dustDiff.DustOutputCount += 1
-					} else {
-						wfConf.dustDiff[address] = utxo.NewDustDiff(0, 1)
-					}
-				}
-			}
 		}
 
-		return nil
+		// Apply the new outputs and spents to the current dust allowance diff
+		return wfConf.dustAllowanceDiff.Add(depositOutputs, newSpents)
 	}
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.

@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/iotaledger/hive.go/marshalutil"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -15,14 +17,58 @@ var (
 	ErrInvalidDustForAddress = errors.New("invalid dust for address")
 )
 
-func (u *Manager) ReadDustForAddress(address iotago.Address) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+func dustFromBytes(value []byte) (dustAllowanceBalance uint64, outputCount int64, err error) {
+	marshalUtil := marshalutil.New(value)
 
-	return u.readDustForAddress([]byte(address.String()))
+	if dustAllowanceBalance, err = marshalUtil.ReadUint64(); err != nil {
+		return
+	}
+
+	if outputCount, err = marshalUtil.ReadInt64(); err != nil {
+		return
+	}
+
+	return
 }
 
-func (u *Manager) readDustForAddress(addressMapKey []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+func bytesFromDust(dustAllowanceBalance uint64, outputCount int64) []byte {
+	marshalUtil := marshalutil.New(16)
+	marshalUtil.WriteUint64(dustAllowanceBalance)
+	marshalUtil.WriteInt64(outputCount)
+	return marshalUtil.Bytes()
+}
 
-	value, err := u.dustStorage.Get(addressMapKey)
+func (u *Manager) ReadDustForAddress(address iotago.Address, applyDiff *DustAllowanceDiff) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+
+	addressKey, err := address.Serialize(iotago.DeSeriModeNoValidation)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	balance, count, err := u.readDustForAddress(addressKey)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	diffBalance, diffCount, err := applyDiff.DiffForAddress(address)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	newBalance := int64(balance) + diffBalance
+	if newBalance < 0 {
+		return 0, 0, fmt.Errorf("%w: negative dust balance on address %s", iotago.ErrInvalidDustAllowance, address.String())
+	}
+	balance = uint64(newBalance)
+
+	count += diffCount
+
+	return balance, count, nil
+}
+
+func (u *Manager) readDustForAddress(addressKey []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+
+	value, err := u.dustStorage.Get(addressKey)
 	if err != nil {
 		// No error should ever happen here
 		return 0, 0, err
@@ -35,28 +81,29 @@ func (u *Manager) readDustForAddress(addressMapKey []byte) (dustAllowanceBalance
 	return 0, 0, nil
 }
 
-func (u *Manager) storeDustForAddress(addressMapKey []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
+func (u *Manager) storeDustForAddress(addressKey []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
 
 	if dustOutputCount == 0 && dustAllowanceBalance != 0 {
 		// Balance cannot be non-zero if there are no outputs
-		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressMapKey), dustAllowanceBalance, dustOutputCount)
+		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressKey), dustAllowanceBalance, dustOutputCount)
 	}
 
 	if dustAllowanceBalance == 0 {
 		// Remove from database
-		return mutations.Delete(addressMapKey)
+		return mutations.Delete(addressKey)
 	} else {
-		return mutations.Set(addressMapKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
+		return mutations.Set(addressKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
 	}
 
 	return nil
 }
 
-func (u *Manager) applyDustDiff(dustDiff map[string]*DustDiff) error {
+// This applies the diff to the current database
+func (u *Manager) applyDustAllowanceDiff(allowance *DustAllowanceDiff) error {
 
 	mutations := u.dustStorage.Batched()
-	for addr, diff := range dustDiff {
-		if err := u.applyDustDiffForAddress(addr, diff.DustAllowanceBalanceDiff, diff.DustOutputCount, mutations); err != nil {
+	for addressMapKey, diff := range allowance.allowance {
+		if err := u.applyDustDiffForAddress([]byte(addressMapKey), diff.allowanceBalanceDiff, diff.outputCount, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -64,11 +111,10 @@ func (u *Manager) applyDustDiff(dustDiff map[string]*DustDiff) error {
 	return mutations.Commit()
 }
 
-func (u *Manager) applyDustDiffForAddress(addressString string, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
+// This applies the diff to the current address by first reading the current value and adding the diff on it
+func (u *Manager) applyDustDiffForAddress(addressKey []byte, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
 
-	addressMapKey := []byte(addressString)
-
-	dustAllowanceBalance, dustOutputCount, err := u.readDustForAddress(addressMapKey)
+	dustAllowanceBalance, dustOutputCount, err := u.readDustForAddress(addressKey)
 	if err != nil {
 		return err
 	}
@@ -78,138 +124,33 @@ func (u *Manager) applyDustDiffForAddress(addressString string, dustAllowanceBal
 
 	if newDustOutputCount < 0 || newDustAllowanceBalance < 0 {
 		// Count or balance cannot be negative
-		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressMapKey), dustAllowanceBalance, dustOutputCount)
+		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressKey), dustAllowanceBalance, dustOutputCount)
 	}
 
-	return u.storeDustForAddress(addressMapKey, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
+	return u.storeDustForAddress(addressKey, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
 }
 
 func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
-	dustDiff := make(map[string]*DustDiff)
 
-	for _, output := range newOutputs {
-		// Add new dust
-		switch output.outputType {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			address := output.Address().String()
-			if diff, found := dustDiff[address]; found {
-				diff.DustAllowanceBalanceDiff += int64(output.Amount())
-			} else {
-				dustDiff[address] = NewDustDiff(int64(output.Amount()), 0)
-			}
-		case iotago.OutputSigLockedSingleOutput:
-			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-				address := output.Address().String()
-				if diff, found := dustDiff[address]; found {
-					diff.DustOutputCount += 1
-				} else {
-					dustDiff[address] = NewDustDiff(0, 1)
-				}
-			}
-		}
+	allowance := NewDustAllowanceDiff()
+	if err := allowance.Add(newOutputs, newSpents); err != nil {
+		return err
 	}
-
-	for _, spent := range newSpents {
-
-		// Remove spent dust
-		output := spent.Output()
-		switch output.outputType {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			address := output.Address().String()
-			if diff, found := dustDiff[address]; found {
-				diff.DustAllowanceBalanceDiff -= int64(output.Amount())
-			} else {
-				dustDiff[address] = NewDustDiff(-int64(output.Amount()), 0)
-			}
-		case iotago.OutputSigLockedSingleOutput:
-			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-				address := output.Address().String()
-				if diff, found := dustDiff[address]; found {
-					diff.DustOutputCount -= 1
-				} else {
-					dustDiff[address] = NewDustDiff(0, -1)
-				}
-			}
-		}
-	}
-
-	return u.applyDustDiff(dustDiff)
+	return u.applyDustAllowanceDiff(allowance)
 }
 
 func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
-
-	dustDiff := make(map[string]*DustDiff)
-
-	// we have to delete the newOutputs of this milestone
-	for _, output := range newOutputs {
-
-		// Remove unspent dust
-		switch output.outputType {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			address := output.Address().String()
-			if diff, found := dustDiff[address]; found {
-				diff.DustAllowanceBalanceDiff -= int64(output.Amount())
-			} else {
-				dustDiff[address] = NewDustDiff(-int64(output.Amount()), 0)
-			}
-		case iotago.OutputSigLockedSingleOutput:
-			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-				address := output.Address().String()
-				if diff, found := dustDiff[address]; found {
-					diff.DustOutputCount -= 1
-				} else {
-					dustDiff[address] = NewDustDiff(0, -1)
-				}
-			}
-		}
+	allowance := NewDustAllowanceDiff()
+	if err := allowance.Remove(newOutputs, newSpents); err != nil {
+		return err
 	}
-
-	// we have to store the spents as output and mark them as unspent
-	for _, spent := range newSpents {
-
-		// Re-Add previously-spent dust
-		output := spent.Output()
-		switch output.outputType {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			address := output.Address().String()
-			if diff, found := dustDiff[address]; found {
-				diff.DustAllowanceBalanceDiff += int64(output.Amount())
-			} else {
-				dustDiff[address] = NewDustDiff(int64(output.Amount()), 0)
-			}
-		case iotago.OutputSigLockedSingleOutput:
-			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-				address := output.Address().String()
-				if diff, found := dustDiff[address]; found {
-					diff.DustOutputCount += 1
-				} else {
-					dustDiff[address] = NewDustDiff(0, 1)
-				}
-			}
-		}
-	}
-
-	return u.applyDustDiff(dustDiff)
+	return u.applyDustAllowanceDiff(allowance)
 }
 
 func (u *Manager) storeDustForUnspentOutput(unspentOutput *Output) error {
-
-	dustMutations := u.dustStorage.Batched()
-
-	switch unspentOutput.outputType {
-	case iotago.OutputSigLockedDustAllowanceOutput:
-		if err := u.applyDustDiffForAddress(unspentOutput.Address().String(), int64(unspentOutput.Amount()), 0, dustMutations); err != nil {
-			dustMutations.Cancel()
-			return nil
-		}
-	case iotago.OutputSigLockedSingleOutput:
-		if unspentOutput.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
-			if err := u.applyDustDiffForAddress(unspentOutput.Address().String(), 0, 1, dustMutations); err != nil {
-				dustMutations.Cancel()
-				return nil
-			}
-		}
+	allowance := NewDustAllowanceDiff()
+	if err := allowance.Add([]*Output{unspentOutput}, []*Spent{}); err != nil {
+		return err
 	}
-
-	return dustMutations.Commit()
+	return u.applyDustAllowanceDiff(allowance)
 }
