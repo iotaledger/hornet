@@ -91,11 +91,9 @@ func (u *Manager) storeDustForAddress(addressKey []byte, dustAllowanceBalance ui
 	if dustAllowanceBalance == 0 {
 		// Remove from database
 		return mutations.Delete(addressKey)
-	} else {
-		return mutations.Set(addressKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
 	}
 
-	return nil
+	return mutations.Set(addressKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
 }
 
 // This applies the diff to the current database
