@@ -79,7 +79,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, address ...*iota
 	return u.ForEachUnspentOutputWithoutLocking(consumer, address...)
 }
 
-func (u *Manager) UnspentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) ([]*Output, error) {
+func (u *Manager) UnspentOutputsForAddress(address *iotago.Ed25519Address, lockLedger bool, maxFind ...int) ([]*Output, error) {
 
 	var outputs []*Output
 
@@ -95,14 +95,20 @@ func (u *Manager) UnspentOutputsForAddress(address *iotago.Ed25519Address, maxFi
 		return true
 	}
 
-	if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
-		return nil, err
+	if lockLedger {
+		if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := u.ForEachUnspentOutputWithoutLocking(consumerFunc, address); err != nil {
+			return nil, err
+		}
 	}
 
 	return outputs, nil
 }
 
-func (u *Manager) AddressBalance(address *iotago.Ed25519Address, maxFind ...int) (balance uint64, count int, err error) {
+func (u *Manager) AddressBalance(address *iotago.Ed25519Address, lockLedger bool, maxFind ...int) (balance uint64, count int, err error) {
 
 	balance = 0
 	i := 0
@@ -117,8 +123,14 @@ func (u *Manager) AddressBalance(address *iotago.Ed25519Address, maxFind ...int)
 		return true
 	}
 
-	if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
-		return 0, 0, err
+	if lockLedger {
+		if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
+			return 0, 0, err
+		}
+	} else {
+		if err := u.ForEachUnspentOutputWithoutLocking(consumerFunc, address); err != nil {
+			return 0, 0, err
+		}
 	}
 
 	return balance, i, nil
