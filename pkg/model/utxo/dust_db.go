@@ -20,9 +20,9 @@ func (u *Manager) ReadDustForAddress(address iotago.Address) (dustAllowanceBalan
 	return u.readDustForAddress([]byte(address.String()))
 }
 
-func (u *Manager) readDustForAddress(addressBytes []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
+func (u *Manager) readDustForAddress(addressMapKey []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
 
-	value, err := u.dustStorage.Get(addressBytes)
+	value, err := u.dustStorage.Get(addressMapKey)
 	if err != nil {
 		// No error should ever happen here
 		return 0, 0, err
@@ -35,18 +35,18 @@ func (u *Manager) readDustForAddress(addressBytes []byte) (dustAllowanceBalance 
 	return 0, 0, nil
 }
 
-func (u *Manager) storeDustForAddress(addressBytes []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
+func (u *Manager) storeDustForAddress(addressMapKey []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
 
 	if dustOutputCount == 0 && dustAllowanceBalance != 0 {
-		// Balance cannot be zero if there are no outputs
-		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressBytes), dustAllowanceBalance, dustOutputCount)
+		// Balance cannot be non-zero if there are no outputs
+		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressMapKey), dustAllowanceBalance, dustOutputCount)
 	}
 
 	if dustAllowanceBalance == 0 {
 		// Remove from database
-		return mutations.Delete(addressBytes)
+		return mutations.Delete(addressMapKey)
 	} else {
-		return mutations.Set(addressBytes, bytesFromDust(dustAllowanceBalance, dustOutputCount))
+		return mutations.Set(addressMapKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
 	}
 
 	return nil
@@ -66,9 +66,9 @@ func (u *Manager) applyDustDiff(dustDiff map[string]*DustDiff) error {
 
 func (u *Manager) applyDustDiffForAddress(addressString string, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
 
-	addressBytes := []byte(addressString)
+	addressMapKey := []byte(addressString)
 
-	dustAllowanceBalance, dustOutputCount, err := u.readDustForAddress(addressBytes)
+	dustAllowanceBalance, dustOutputCount, err := u.readDustForAddress(addressMapKey)
 	if err != nil {
 		return err
 	}
@@ -78,10 +78,10 @@ func (u *Manager) applyDustDiffForAddress(addressString string, dustAllowanceBal
 
 	if newDustOutputCount < 0 || newDustAllowanceBalance < 0 {
 		// Count or balance cannot be negative
-		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressBytes), dustAllowanceBalance, dustOutputCount)
+		return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressMapKey), dustAllowanceBalance, dustOutputCount)
 	}
 
-	return u.storeDustForAddress(addressBytes, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
+	return u.storeDustForAddress(addressMapKey, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
 }
 
 func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
@@ -92,8 +92,7 @@ func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
 			address := output.Address().String()
-			diff, found := dustDiff[address]
-			if found {
+			if diff, found := dustDiff[address]; found {
 				diff.DustAllowanceBalanceDiff += int64(output.Amount())
 			} else {
 				dustDiff[address] = NewDustDiff(int64(output.Amount()), 0)
@@ -101,8 +100,7 @@ func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		case iotago.OutputSigLockedSingleOutput:
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				address := output.Address().String()
-				diff, found := dustDiff[address]
-				if found {
+				if diff, found := dustDiff[address]; found {
 					diff.DustOutputCount += 1
 				} else {
 					dustDiff[address] = NewDustDiff(0, 1)
@@ -118,8 +116,7 @@ func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
 			address := output.Address().String()
-			diff, found := dustDiff[address]
-			if found {
+			if diff, found := dustDiff[address]; found {
 				diff.DustAllowanceBalanceDiff -= int64(output.Amount())
 			} else {
 				dustDiff[address] = NewDustDiff(-int64(output.Amount()), 0)
@@ -127,8 +124,7 @@ func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		case iotago.OutputSigLockedSingleOutput:
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				address := output.Address().String()
-				diff, found := dustDiff[address]
-				if found {
+				if diff, found := dustDiff[address]; found {
 					diff.DustOutputCount -= 1
 				} else {
 					dustDiff[address] = NewDustDiff(0, -1)
@@ -151,8 +147,7 @@ func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
 			address := output.Address().String()
-			diff, found := dustDiff[address]
-			if found {
+			if diff, found := dustDiff[address]; found {
 				diff.DustAllowanceBalanceDiff -= int64(output.Amount())
 			} else {
 				dustDiff[address] = NewDustDiff(-int64(output.Amount()), 0)
@@ -160,8 +155,7 @@ func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		case iotago.OutputSigLockedSingleOutput:
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				address := output.Address().String()
-				diff, found := dustDiff[address]
-				if found {
+				if diff, found := dustDiff[address]; found {
 					diff.DustOutputCount -= 1
 				} else {
 					dustDiff[address] = NewDustDiff(0, -1)
@@ -178,8 +172,7 @@ func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
 			address := output.Address().String()
-			diff, found := dustDiff[address]
-			if found {
+			if diff, found := dustDiff[address]; found {
 				diff.DustAllowanceBalanceDiff += int64(output.Amount())
 			} else {
 				dustDiff[address] = NewDustDiff(int64(output.Amount()), 0)
@@ -187,8 +180,7 @@ func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spent
 		case iotago.OutputSigLockedSingleOutput:
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				address := output.Address().String()
-				diff, found := dustDiff[address]
-				if found {
+				if diff, found := dustDiff[address]; found {
 					diff.DustOutputCount += 1
 				} else {
 					dustDiff[address] = NewDustDiff(0, 1)

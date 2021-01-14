@@ -189,8 +189,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 				return 0, 0, err
 			}
 
-			dustDiff, found := wfConf.dustDiff[address.String()]
-			if found {
+			if dustDiff, found := wfConf.dustDiff[address.String()]; found {
 				dustOutputCount = dustOutputCount + dustDiff.DustOutputCount
 				newBalance := int64(dustAllowanceBalance) + dustDiff.DustAllowanceBalanceDiff
 				if newBalance < 0 {
@@ -262,8 +261,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			switch input.OutputType() {
 			case iotago.OutputSigLockedDustAllowanceOutput:
 				address := input.Address().String()
-				dustDiff, found := wfConf.dustDiff[address]
-				if found {
+				if dustDiff, found := wfConf.dustDiff[address]; found {
 					dustDiff.DustAllowanceBalanceDiff -= int64(input.Amount())
 				} else {
 					wfConf.dustDiff[address] = utxo.NewDustDiff(-int64(input.Amount()), 0)
@@ -271,8 +269,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			case iotago.OutputSigLockedSingleOutput:
 				if input.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 					address := input.Address().String()
-					dustDiff, found := wfConf.dustDiff[address]
-					if found {
+					if dustDiff, found := wfConf.dustDiff[address]; found {
 						dustDiff.DustOutputCount -= 1
 					} else {
 						wfConf.dustDiff[address] = utxo.NewDustDiff(0, -1)
@@ -289,8 +286,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			switch output.OutputType() {
 			case iotago.OutputSigLockedDustAllowanceOutput:
 				address := output.Address().String()
-				dustDiff, found := wfConf.dustDiff[address]
-				if found {
+				if dustDiff, found := wfConf.dustDiff[address]; found {
 					dustDiff.DustAllowanceBalanceDiff += int64(output.Amount())
 				} else {
 					wfConf.dustDiff[address] = utxo.NewDustDiff(int64(output.Amount()), 0)
@@ -298,8 +294,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			case iotago.OutputSigLockedSingleOutput:
 				if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 					address := output.Address().String()
-					dustDiff, found := wfConf.dustDiff[address]
-					if found {
+					if dustDiff, found := wfConf.dustDiff[address]; found {
 						dustDiff.DustOutputCount += 1
 					} else {
 						wfConf.dustDiff[address] = utxo.NewDustDiff(0, 1)
