@@ -3,8 +3,8 @@ package mqtt
 import (
 	"encoding/json"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 // milestonePayload defines the payload of the milestone latest and solid topics
@@ -27,6 +27,8 @@ type messageMetadataPayload struct {
 	Solid bool `json:"isSolid"`
 	// The milestone index that references this message.
 	ReferencedByMilestoneIndex *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
+	// If this message represents a milestone this is the milestone index
+	MilestoneIndex *milestone.Index `json:"milestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
 	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
 	// The reason why this message is marked as conflicting.

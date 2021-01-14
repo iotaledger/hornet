@@ -95,6 +95,10 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			ReferencedByMilestoneIndex: referencedByMilestone,
 		}
 
+		if metadata.IsMilestone() {
+			messageMetadataResponse.MilestoneIndex = referencedByMilestone
+		}
+
 		if referenced {
 			inclusionState := "noTransaction"
 
@@ -185,7 +189,7 @@ func publishOutput(output *utxo.Output, spent bool) {
 
 	addressBech32TestnetTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(iotago.PrefixTestnet))
 	addressBech32TestnetTopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32TestnetTopic)
-	
+
 	addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
 	addressEd25519TopicHasSubscribers := mqttBroker.HasSubscribers(addressEd25519Topic)
 
