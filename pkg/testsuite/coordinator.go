@@ -1,8 +1,14 @@
 package testsuite
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"time"
+
+	"github.com/gohornet/hornet/pkg/model/utxo"
+
+	"github.com/gohornet/hornet/pkg/keymanager"
 
 	"github.com/stretchr/testify/require"
 
@@ -11,64 +17,53 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	utils2 "github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-)
-
-const (
-	cooPrivateKey = "651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
-	cooPublicKey  = "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
-
-	mwm = 1
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
-func (te *TestEnvironment) configureCoordinator() {
+func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey) {
 
 	storeMessageFunc := func(msg *storage.Message, msIndex ...milestone.Index) error {
 		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
 
 		ms := cachedMessage.GetMessage().GetMilestone()
 		if ms != nil {
-			storage.SetLatestMilestoneIndex(milestone.Index(ms.Index))
+			te.storage.SetLatestMilestoneIndex(milestone.Index(ms.Index))
 		}
 
 		return nil
 	}
 
-	cooPrivKey, err := utils2.ParseEd25519PrivateKeyFromString(cooPrivateKey)
-	if err != nil {
-		panic(err)
-
+	keyManager := keymanager.New()
+	for _, key := range cooPrivateKeys {
+		keyManager.AddKeyRange(hex.EncodeToString(key.Public().(ed25519.PublicKey)), 0, 0)
 	}
 
-	cooPubKey, err := utils2.ParseEd25519PublicKeyFromString(cooPublicKey)
-	if err != nil {
-		panic(err)
+	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
 
-	}
-
-	te.coo, err = coordinator.New(cooPrivKey, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, te.powHandler, storeMessageFunc)
+	coo, err := coordinator.New(te.storage, te.networkID, inMemoryEd25519MilestoneSignerProvider, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10, 1, te.PowHandler, storeMessageFunc)
 	require.NoError(te.testState, err)
-	require.NotNil(te.testState, te.coo)
+	require.NotNil(te.testState, coo)
+	te.coo = coo
 
 	te.coo.InitState(true, 0)
 
 	// save snapshot info
-	storage.SetSnapshotMilestone(cooPubKey, hornet.GetNullMessageID(), 0, 0, 0, time.Now())
+	te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
 
 	// configure Milestones
-	storage.ConfigureMilestones(cooPubKey, merkleHashFunc)
+	te.storage.ConfigureMilestones(keyManager, len(cooPrivateKeys))
 
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.testState, err)
 
 	te.lastMilestoneMessageID = milestoneMessageID
 
-	ms := storage.GetCachedMilestoneOrNil(1)
+	ms := te.storage.GetCachedMilestoneOrNil(1)
 	require.NotNil(te.testState, ms)
-	defer ms.Release(true)
+
+	te.Milestones = append(te.Milestones, ms)
 
 	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
 
@@ -81,17 +76,22 @@ func (te *TestEnvironment) configureCoordinator() {
 		}
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.GetMilestone().MessageID, func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {}, func(confirmation *whiteflag.Confirmation) {
-		storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
-	})
+	conf, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, cachedMsgMetas, ms.GetMilestone().MessageID,
+		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
+		func(confirmation *whiteflag.Confirmation) {
+			te.storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+		},
+		func(output *utxo.Output) {},
+		func(spent *utxo.Spent) {},
+	)
 	require.NoError(te.testState, err)
-	require.Equal(te.testState, 3, conf.MessagesReferenced)
+	require.Equal(te.testState, 1, conf.MessagesReferenced)
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
 func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
 
-	currentIndex := storage.GetSolidMilestoneIndex()
+	currentIndex := te.storage.GetSolidMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
@@ -103,7 +103,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, 
 	te.VerifyLMI(currentIndex + 1)
 
 	milestoneIndex := currentIndex + 1
-	ms := storage.GetCachedMilestoneOrNil(milestoneIndex)
+	ms := te.storage.GetCachedMilestoneOrNil(milestoneIndex)
 	require.NotNil(te.testState, ms)
 
 	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
@@ -118,16 +118,19 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, 
 	}()
 
 	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(cachedMsgMetas, ms.GetMilestone().MessageID, func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {}, func(confirmation *whiteflag.Confirmation) {
-		wfConf = confirmation
-		storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
-	})
+	confStats, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, cachedMsgMetas, ms.GetMilestone().MessageID,
+		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
+		func(confirmation *whiteflag.Confirmation) {
+			wfConf = confirmation
+			te.storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+		},
+		func(output *utxo.Output) {},
+		func(spent *utxo.Spent) {},
+	)
 	require.NoError(te.testState, err)
 
 	require.Equal(te.testState, currentIndex+1, confStats.Index)
 	te.VerifyLSMI(confStats.Index)
-
-	te.cachedMessages = append(te.cachedMessages, ms)
 
 	te.AssertTotalSupplyStillValid()
 
