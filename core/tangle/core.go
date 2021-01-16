@@ -100,8 +100,6 @@ func provide(c *dig.Container) {
 func configure() {
 	log = logger.NewLogger(CorePlugin.Name)
 
-	deps.Storage.LoadInitialValuesFromDatabase()
-
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
