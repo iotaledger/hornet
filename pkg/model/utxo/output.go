@@ -75,8 +75,8 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 		if len(unsignedTx.Outputs) < int(index) {
 			return nil, errors.New("deposit not found")
 		}
-		output := unsignedTx.Outputs[int(index)]
-		switch out := output.(type) {
+		txOutput := unsignedTx.Outputs[int(index)]
+		switch out := txOutput.(type) {
 		case *iotago.SigLockedSingleOutput:
 			output = out
 		case *iotago.SigLockedDustAllowanceOutput:
