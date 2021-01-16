@@ -55,8 +55,8 @@ func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedB
 	balanceStatus += fmt.Sprintf("\tExpected:\t%d\n", expectedBalance)
 	fmt.Print(balanceStatus)
 	require.NoError(te.testState, err)
-	require.Equal(te.testState, expectedBalance, addrBalance)
-	require.Equal(te.testState, expectedBalance, wallet.Balance())
+	require.Exactly(te.testState, expectedBalance, addrBalance)
+	require.Exactly(te.testState, expectedBalance, wallet.Balance())
 }
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.

@@ -101,7 +101,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	// Verify the messages have the expected conflict reason
 	te.AssertMessageConflictReason(messageC.GetMessageID(), storage.ConflictInputUTXONotFound)
 
-	// Verify balances (seed, index, balance)
+	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
 	te.AssertWalletBalance(seed2Wallet, 3_000_000)
 	te.AssertWalletBalance(seed3Wallet, 0)
@@ -147,7 +147,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	// Verify the messages have the expected conflict reason
 	te.AssertMessageConflictReason(messageD.GetMessageID(), storage.ConflictInputUTXONotFound)
 
-	// Verify balances (seed, index, balance)
+	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
 	te.AssertWalletBalance(seed2Wallet, 1_500_000)
 	te.AssertWalletBalance(seed3Wallet, 0)
@@ -204,7 +204,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	// Confirming milestone at message B (message B is not included)
+	// Confirming milestone at message B
 	conf := te.IssueAndConfirmMilestoneOnTip(cachedMessageB.GetMessage().GetMessageID(), true)
 
 	require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
@@ -215,9 +215,55 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	// Verify the messages have the expected conflict reason
 	te.AssertMessageConflictReason(messageB.GetMessageID(), storage.ConflictInvalidDustAllowance)
 
-	// Verify balances (seed, index, balance)
+	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761)
 	te.AssertWalletBalance(seed2Wallet, 1_000_000)
+
+	// Dust allowance from seed1 to seed2 with 1_000_000
+	messageC, messageCConsumedOutputs, messageCSentOutput, messageCRemainderOutput := utils.MsgWithDustAllowance(t,
+		te.Milestones[1].GetMilestone().MessageID,
+		cachedMessageB.GetMessage().GetMessageID(),
+		"C",
+		seed1Wallet,
+		seed2Wallet,
+		1_000_000,
+		te.PowHandler,
+	)
+	cachedMessageC := te.StoreMessage(messageC)
+	seed1Wallet.BookSpents(messageCConsumedOutputs)
+	seed2Wallet.BookOutput(messageCSentOutput)
+	seed1Wallet.BookOutput(messageCRemainderOutput)
+
+	// Send Dust from seed1 to seed2 with 1
+	messageD, messageDConsumedOutputs, messageDSentOutput, messageDRemainderOutput := utils.MsgWithValueTx(t,
+		cachedMessageB.GetMessage().GetMessageID(),
+		cachedMessageC.GetMessage().GetMessageID(),
+		"D",
+		seed1Wallet,
+		seed2Wallet,
+		1,
+		te.PowHandler,
+	)
+	cachedMessageD := te.StoreMessage(messageD)
+	seed1Wallet.BookSpents(messageDConsumedOutputs)
+	seed2Wallet.BookOutput(messageDSentOutput)
+	seed1Wallet.BookOutput(messageDRemainderOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Confirming milestone at message D
+	conf = te.IssueAndConfirmMilestoneOnTip(cachedMessageD.GetMessage().GetMessageID(), true)
+
+	require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 2, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
+	te.AssertWalletBalance(seed2Wallet, 2_000_001)
+
 }
 
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {

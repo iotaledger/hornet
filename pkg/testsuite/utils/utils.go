@@ -212,20 +212,16 @@ func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.Mes
 	// Book the outputs in the wallets
 	messageTx := message.GetTransaction()
 	txEssence := messageTx.Essence.(*iotago.TransactionEssence)
-	for i, output := range txEssence.Outputs {
-		sigLockedSingleOutput := output.(*iotago.SigLockedSingleOutput)
-		ed25519Address := sigLockedSingleOutput.Address.(*iotago.Ed25519Address)
+	for i, _ := range txEssence.Outputs {
+		output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
+		require.NoError(t, err)
 
-		if bytes.Equal(ed25519Address[:], toAddr[:]) {
-			output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
-			require.NoError(t, err)
+		if bytes.Equal(output.Address()[:], toAddr[:]) {
 			sentOutput = output
 			continue
 		}
 
-		if remainderAmount > 0 && bytes.Equal(ed25519Address[:], fromAddr[:]) {
-			output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
-			require.NoError(t, err)
+		if remainderAmount > 0 && bytes.Equal(output.Address()[:], fromAddr[:]) {
 			remainderOutput = output
 		}
 	}
