@@ -15,7 +15,6 @@ import (
 type ConfirmedMilestoneStats struct {
 	Index                                       milestone.Index
 	ConfirmationTime                            int64
-	CachedMessages                              storage.CachedMessages
 	MessagesReferenced                          int
 	MessagesExcludedWithConflictingTransactions int
 	MessagesIncludedWithTransactions            int
