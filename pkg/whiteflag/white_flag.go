@@ -52,7 +52,7 @@ type WhiteFlagMutations struct {
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
-	// Contains the Dust allowance diff for the given addresses.
+	// Contains the calculated Dust allowance diff.
 	dustAllowanceDiff *utxo.DustAllowanceDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte

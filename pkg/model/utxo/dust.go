@@ -60,7 +60,10 @@ func (d *DustAllowanceDiff) Add(newOutputs Outputs, newSpents Spents) error {
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
 			// Add new dust allowance
-			addressKey := output.Address().String()
+			addressKey, err := d.addressKeyForOutput(output)
+			if err != nil {
+				return err
+			}
 			if diff, found := d.allowance[addressKey]; found {
 				diff.allowanceBalanceDiff += int64(output.Amount())
 			} else {
@@ -69,7 +72,10 @@ func (d *DustAllowanceDiff) Add(newOutputs Outputs, newSpents Spents) error {
 		case iotago.OutputSigLockedSingleOutput:
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				// Add new dust
-				addressKey := output.Address().String()
+				addressKey, err := d.addressKeyForOutput(output)
+				if err != nil {
+					return err
+				}
 				if diff, found := d.allowance[addressKey]; found {
 					diff.outputCount += 1
 				} else {
