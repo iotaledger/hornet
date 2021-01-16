@@ -302,6 +302,42 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
 	te.AssertWalletBalance(seed2Wallet, 2_000_001)
 	te.AssertWalletBalance(seed3Wallet, 0)
+
+	// Spend all outputs, including dust allowance, from seed2 (2_000_001) to seed3 (0)
+	messageF, messageFConsumedOutputs, messageFSentOutput, messageFRemainderOutput := utils.MsgWithValueTx(t,
+		te.Milestones[3].GetMilestone().MessageID,
+		te.Milestones[4].GetMilestone().MessageID,
+		"F",
+		seed2Wallet,
+		seed3Wallet,
+		2_000_001,
+		te.PowHandler,
+	)
+	cachedMessageF := te.StoreMessage(messageF)
+	seed2Wallet.BookSpents(messageFConsumedOutputs)
+	seed3Wallet.BookOutput(messageFSentOutput)
+	seed2Wallet.BookOutput(messageFRemainderOutput)
+
+	seed2Wallet.PrintStatus()
+	seed3Wallet.PrintStatus()
+
+	// Confirming milestone at message F
+	conf = te.IssueAndConfirmMilestoneOnTip(cachedMessageF.GetMessage().GetMessageID(), true)
+
+	require.Equal(t, 1+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 1, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify that the dust allowance spent
+	unspent, err = te.UTXO().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
+	require.NoError(t, err)
+	require.False(t, unspent)
+
+	// Verify balances
+	te.AssertWalletBalance(seed2Wallet, 0)
+	te.AssertWalletBalance(seed3Wallet, 2_000_001)
+
 }
 
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
