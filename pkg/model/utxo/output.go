@@ -27,6 +27,13 @@ func (o *Output) OutputID() *iotago.UTXOInputID {
 	return o.outputID
 }
 
+func (o *Output) UTXOInput() *iotago.UTXOInput {
+	input := &iotago.UTXOInput{}
+	copy(input.TransactionID[:], o.outputID[:iotago.TransactionIDLength])
+	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+2])
+	return input
+}
+
 func (o *Output) MessageID() *hornet.MessageID {
 	return o.messageID
 }
