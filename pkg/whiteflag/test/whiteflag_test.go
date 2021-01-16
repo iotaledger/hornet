@@ -36,12 +36,13 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_283_277_761)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
 	// Issue some transactions
-	// Valid transfer from seed1[0] (2_779_530_283_277_761) with remainder seed1[1] (2_779_530_282_277_761) to seed2[0]_A (1_000_000)
+	// Valid transfer from seed1 (2_779_530_283_277_761) with remainder seed1 (2_779_530_282_277_761) to seed2 (1_000_000)
 	messageA, messageAConsumedOutputs, messageASentOutput, messageARemainderOutput := utils.MsgWithValueTx(t,
 		te.Milestones[0].GetMilestone().MessageID,
 		te.Milestones[1].GetMilestone().MessageID,
@@ -60,7 +61,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	// Valid transfer from seed1[1] (2_779_530_282_277_761) with remainder seed1[2] (2_779_530_280_277_761) to seed2[0]_B (2_000_000)
+	// Valid transfer from seed1 (2_779_530_282_277_761) with remainder seed1 (2_779_530_280_277_761) to seed2 (2_000_000)
 	messageB, messageBConsumedOutputs, messageBSentOutput, messageBRemainderOutput := utils.MsgWithValueTx(t,
 		cachedMessageA.GetMessage().GetMessageID(),
 		te.Milestones[0].GetMilestone().MessageID,
@@ -79,7 +80,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	// Invalid transfer from seed3[0] (0) to seed2[0] (100_000) (invalid input)
+	// Invalid transfer from seed3 (0) to seed2 (100_000) (invalid input)
 	messageC, _, _, _ := utils.MsgWithValueTx(t,
 		te.Milestones[2].GetMilestone().MessageID,
 		cachedMessageB.GetMessage().GetMessageID(),
@@ -109,7 +110,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed3Wallet, 0)
 	te.AssertWalletBalance(seed4Wallet, 0)
 
-	// Invalid transfer from seed4[1] (0) to seed2[0] (1_500_000) (invalid input)
+	// Invalid transfer from seed4 (0) to seed2 (1_500_000) (invalid input)
 	messageD, _, _, _ := utils.MsgWithValueTx(t,
 		cachedMessageA.GetMessage().GetMessageID(),
 		cachedMessageC.GetMessage().GetMessageID(),
@@ -122,7 +123,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	)
 	cachedMessageD := te.StoreMessage(messageD)
 
-	// Valid transfer from seed2[0]_A (1_000_000) and seed2[0]_B (2_000_000) with remainder seed2[1] (1_500_000) to seed4[0] (1_500_000)
+	// Valid transfer from seed2 (1_000_000) and seed2 (2_000_000) with remainder seed2 (1_500_000) to seed4 (1_500_000)
 	messageE, messageEConsumedOutputs, messageESentOutput, messageERemainderOutput := utils.MsgWithValueTx(t,
 		cachedMessageB.GetMessage().GetMessageID(),
 		cachedMessageD.GetMessage().GetMessageID(),
@@ -156,6 +157,77 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed2Wallet, 1_500_000)
 	te.AssertWalletBalance(seed3Wallet, 0)
 	te.AssertWalletBalance(seed4Wallet, 1_500_000)
+}
+
+func TestWhiteFlagWithDust(t *testing.T) {
+
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Issue some transactions
+	// Valid transfer from seed1 (2_779_530_283_277_761) to seed2 (1_000_000)
+	messageA, messageAConsumedOutputs, messageASentOutput, messageARemainderOutput := utils.MsgWithValueTx(t,
+		te.Milestones[0].GetMilestone().MessageID,
+		te.Milestones[1].GetMilestone().MessageID,
+		"A",
+		seed1Wallet,
+		seed2Wallet,
+		1_000_000,
+		te.PowHandler,
+		false,
+	)
+	cachedMessageA := te.StoreMessage(messageA)
+	seed1Wallet.BookSpents(messageAConsumedOutputs)
+	seed2Wallet.BookOutput(messageASentOutput)
+	seed1Wallet.BookOutput(messageARemainderOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Invalid Dust transfer from seed1 (999_999) to seed2
+	messageB, messageBConsumedOutputs, messageBSentOutput, messageBRemainderOutput := utils.MsgWithValueTx(t,
+		cachedMessageA.GetMessage().GetMessageID(),
+		te.Milestones[0].GetMilestone().MessageID,
+		"B",
+		seed1Wallet,
+		seed2Wallet,
+		999_999,
+		te.PowHandler,
+		false,
+	)
+	cachedMessageB := te.StoreMessage(messageB)
+	seed1Wallet.BookSpents(messageBConsumedOutputs)
+	seed2Wallet.BookOutput(messageBSentOutput)
+	seed1Wallet.BookOutput(messageBRemainderOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Confirming milestone at message B (message B is not included)
+	conf := te.IssueAndConfirmMilestoneOnTip(cachedMessageB.GetMessage().GetMessageID(), true)
+
+	require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 1, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageB.GetMessageID(), storage.ConflictInvalidDustAllowance)
+
+	// Verify balances (seed, index, balance)
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761)
+	te.AssertWalletBalance(seed2Wallet, 1_000_000)
 }
 
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
