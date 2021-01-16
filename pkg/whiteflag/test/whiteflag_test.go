@@ -51,7 +51,6 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		seed2Wallet,
 		1_000_000,
 		te.PowHandler,
-		false,
 	)
 	cachedMessageA := te.StoreMessage(messageA)
 	seed1Wallet.BookSpents(messageAConsumedOutputs)
@@ -70,7 +69,6 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		seed2Wallet,
 		2_000_000,
 		te.PowHandler,
-		false,
 	)
 	cachedMessageB := te.StoreMessage(messageB)
 	seed1Wallet.BookSpents(messageBConsumedOutputs)
@@ -81,7 +79,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Invalid transfer from seed3 (0) to seed2 (100_000) (invalid input)
-	messageC, _, _, _ := utils.MsgWithValueTx(t,
+	messageC, _, _, _ := utils.MsgWithInvalidValueTx(t,
 		te.Milestones[2].GetMilestone().MessageID,
 		cachedMessageB.GetMessage().GetMessageID(),
 		"C",
@@ -89,7 +87,6 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		seed2Wallet,
 		100_000,
 		te.PowHandler,
-		true,
 	)
 	cachedMessageC := te.StoreMessage(messageC)
 
@@ -111,7 +108,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed4Wallet, 0)
 
 	// Invalid transfer from seed4 (0) to seed2 (1_500_000) (invalid input)
-	messageD, _, _, _ := utils.MsgWithValueTx(t,
+	messageD, _, _, _ := utils.MsgWithInvalidValueTx(t,
 		cachedMessageA.GetMessage().GetMessageID(),
 		cachedMessageC.GetMessage().GetMessageID(),
 		"D",
@@ -119,7 +116,6 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		seed2Wallet,
 		1_500_000,
 		te.PowHandler,
-		true,
 	)
 	cachedMessageD := te.StoreMessage(messageD)
 
@@ -132,7 +128,6 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		seed4Wallet,
 		1_500_000,
 		te.PowHandler,
-		false,
 	)
 	cachedMessageE := te.StoreMessage(messageE)
 	seed2Wallet.BookSpents(messageEConsumedOutputs)
@@ -185,7 +180,6 @@ func TestWhiteFlagWithDust(t *testing.T) {
 		seed2Wallet,
 		1_000_000,
 		te.PowHandler,
-		false,
 	)
 	cachedMessageA := te.StoreMessage(messageA)
 	seed1Wallet.BookSpents(messageAConsumedOutputs)
@@ -196,7 +190,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Invalid Dust transfer from seed1 (999_999) to seed2
-	messageB, messageBConsumedOutputs, messageBSentOutput, messageBRemainderOutput := utils.MsgWithValueTx(t,
+	messageB, _, _, _ := utils.MsgWithValueTx(t,
 		cachedMessageA.GetMessage().GetMessageID(),
 		te.Milestones[0].GetMilestone().MessageID,
 		"B",
@@ -204,12 +198,8 @@ func TestWhiteFlagWithDust(t *testing.T) {
 		seed2Wallet,
 		999_999,
 		te.PowHandler,
-		false,
 	)
 	cachedMessageB := te.StoreMessage(messageB)
-	seed1Wallet.BookSpents(messageBConsumedOutputs)
-	seed2Wallet.BookOutput(messageBSentOutput)
-	seed1Wallet.BookOutput(messageBRemainderOutput)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()

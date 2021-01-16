@@ -131,7 +131,19 @@ func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.
 	return message
 }
 
-func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler, allowInvalidInputs bool) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
+func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, false)
+}
+
+func MsgWithInvalidValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, true, false)
+}
+
+func MsgWithDustAllowance(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, true)
+}
+
+func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler, allowInvalidInputs bool, dustUnlock bool) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
 
 	builder := iotago.NewTransactionBuilder()
 
@@ -163,7 +175,11 @@ func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.Mes
 		}
 	}
 
-	builder.AddOutput(&iotago.SigLockedSingleOutput{Address: toAddr, Amount: amount})
+	if dustUnlock {
+		builder.AddOutput(&iotago.SigLockedDustAllowanceOutput{Address: toAddr, Amount: amount})
+	} else {
+		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: toAddr, Amount: amount})
+	}
 
 	var remainderAmount uint64
 	if amount < consumedAmount {
