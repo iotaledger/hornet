@@ -52,16 +52,30 @@ func (o *Output) Amount() uint64 {
 
 type Outputs []*Output
 
-func (o Outputs) InputToOutputMapping() iotago.InputToOutputMapping {
+func (o Outputs) InputToOutputMapping() (iotago.InputToOutputMapping, error) {
 
 	mapping := iotago.InputToOutputMapping{}
 	for _, output := range o {
-		mapping[*output.outputID] = &iotago.SigLockedSingleOutput{
-			Address: output.address,
-			Amount:  output.amount,
+
+		switch output.OutputType() {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			mapping[*output.outputID] = &iotago.SigLockedDustAllowanceOutput{
+				Address: output.address,
+				Amount:  output.amount,
+			}
+
+		case iotago.OutputSigLockedSingleOutput:
+			mapping[*output.outputID] = &iotago.SigLockedSingleOutput{
+				Address: output.address,
+				Amount:  output.amount,
+			}
+
+		default:
+			return nil, fmt.Errorf("unsupported output type")
 		}
+
 	}
-	return mapping
+	return mapping, nil
 }
 
 func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address *iotago.Ed25519Address, amount uint64) *Output {

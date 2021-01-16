@@ -146,6 +146,10 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	return te
 }
 
+func (te *TestEnvironment) UTXO() *utxo.Manager {
+	return te.storage.UTXO()
+}
+
 // CleanupTestEnvironment cleans up everything at the end of the test.
 func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	te.cachedMessages.Release(true)

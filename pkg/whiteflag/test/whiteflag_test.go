@@ -158,6 +158,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
 	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
+	seed3Wallet := utils.NewHDWallet("Seed3", seed3, 0)
 
 	genesisAddress := seed1Wallet.Address()
 
@@ -233,6 +234,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	seed1Wallet.BookSpents(messageCConsumedOutputs)
 	seed2Wallet.BookOutput(messageCSentOutput)
 	seed1Wallet.BookOutput(messageCRemainderOutput)
+	seed2WalletDustAllowanceOutput := messageCSentOutput
 
 	// Send Dust from seed1 to seed2 with 1
 	messageD, messageDConsumedOutputs, messageDSentOutput, messageDRemainderOutput := utils.MsgWithValueTx(t,
@@ -264,6 +266,42 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
 	te.AssertWalletBalance(seed2Wallet, 2_000_001)
 
+	// Spend dust allowance from seed2 (2_000_001) to seed3 (0) (dust allowance)
+	messageE, _, _, _ := utils.MsgWithValueTxUsingGivenUTXO(t,
+		te.Milestones[3].GetMilestone().MessageID,
+		te.Milestones[2].GetMilestone().MessageID,
+		"E",
+		seed2Wallet,
+		seed3Wallet,
+		1_000_000,
+		te.PowHandler,
+		seed2WalletDustAllowanceOutput,
+	)
+	cachedMessageE := te.StoreMessage(messageE)
+
+	seed2Wallet.PrintStatus()
+	seed3Wallet.PrintStatus()
+
+	// Confirming milestone at message E
+	conf = te.IssueAndConfirmMilestoneOnTip(cachedMessageE.GetMessage().GetMessageID(), true)
+
+	require.Equal(t, 1+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 0, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageE.GetMessageID(), storage.ConflictInvalidDustAllowance)
+
+	// Verify that the dust allowance is still unspent
+	unspent, err := te.UTXO().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
+	require.NoError(t, err)
+	require.True(t, unspent)
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
+	te.AssertWalletBalance(seed2Wallet, 2_000_001)
+	te.AssertWalletBalance(seed3Wallet, 0)
 }
 
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {

@@ -111,7 +111,16 @@ func (hd *HDWallet) PrintStatus() {
 	status += fmt.Sprintf("Balance: %d\n", hd.Balance())
 	status += "Outputs: \n"
 	for _, utxo := range hd.utxo {
-		status += fmt.Sprintf("\t%s = %d\n", utxo.OutputID().ToHex(), utxo.Amount())
+		var outputType string
+		switch utxo.OutputType() {
+		case iotago.OutputSigLockedSingleOutput:
+			outputType = "SingleOutput"
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			outputType = "DustAllowance"
+		default:
+			outputType = fmt.Sprintf("%d", utxo.OutputType())
+		}
+		status += fmt.Sprintf("\t%s [%s] = %d\n", utxo.OutputID().ToHex(), outputType, utxo.Amount())
 	}
 	fmt.Printf("%s\n", status)
 }
@@ -132,18 +141,23 @@ func MsgWithIndexation(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.
 }
 
 func MsgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
-	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, false)
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, false, nil)
+}
+
+func MsgWithValueTxUsingGivenUTXO(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler, outputToUse *utxo.Output) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
+	require.NotNil(t, outputToUse)
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, false, outputToUse)
 }
 
 func MsgWithInvalidValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
-	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, true, false)
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, true, false, nil)
 }
 
 func MsgWithDustAllowance(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
-	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, true)
+	return msgWithValueTx(t, parent1, parent2, indexation, fromWallet, toWallet, amount, powHandler, false, true, nil)
 }
 
-func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler, allowInvalidInputs bool, dustUnlock bool) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
+func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.MessageID, indexation string, fromWallet *HDWallet, toWallet *HDWallet, amount uint64, powHandler *pow.Handler, fakeInputs bool, dustUnlock bool, outputToUse *utxo.Output) (message *storage.Message, consumedOutputs []*utxo.Output, sentOutput *utxo.Output, remainderOutput *utxo.Output) {
 
 	builder := iotago.NewTransactionBuilder()
 
@@ -153,18 +167,23 @@ func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.Mes
 	var consumedInputs []*utxo.Output
 	var consumedAmount uint64
 
-	walletOutputs := fromWallet.Outputs()
+	var outputsThatCanBeConsumed []*utxo.Output
 
-	if !allowInvalidInputs {
-		require.NotEmpty(t, fromWallet.Outputs())
+	if outputToUse != nil {
+		// Only use the given output
+		outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, outputToUse)
+	} else {
+		if fakeInputs {
+			// Add a fake output with enough balance to create a valid transaction
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, amount))
+		} else {
+			outputsThatCanBeConsumed = fromWallet.Outputs()
+		}
 	}
 
-	if allowInvalidInputs && len(walletOutputs) == 0 {
-		// Add a fake output with enough balance to create a valid transaction
-		walletOutputs = append(walletOutputs, utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, amount))
-	}
+	require.NotEmpty(t, outputsThatCanBeConsumed)
 
-	for _, utxo := range walletOutputs {
+	for _, utxo := range outputsThatCanBeConsumed {
 
 		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.UTXOInput()})
 		consumedInputs = append(consumedInputs, utxo)
@@ -207,7 +226,27 @@ func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.Mes
 	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	require.NoError(t, err)
 
-	fmt.Println(fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount))
+	var outputType string
+	if dustUnlock {
+		outputType = "DustAllowance"
+	} else {
+		outputType = "SingleOutput"
+	}
+
+	log := fmt.Sprintf("Send %d iota %s from %s to %s and remaining %d iota to original wallet", amount, outputType, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
+	if outputToUse != nil {
+		var usedType string
+		switch outputToUse.OutputType() {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			usedType = "DustAllowance"
+		case iotago.OutputSigLockedSingleOutput:
+			usedType = "SingleOutput"
+		default:
+			usedType = fmt.Sprintf("%d", outputToUse.OutputType())
+		}
+		log += fmt.Sprintf(" using UTXO: %s [%s]", outputToUse.OutputID().ToHex(), usedType)
+	}
+	fmt.Println(log)
 
 	// Book the outputs in the wallets
 	messageTx := message.GetTransaction()

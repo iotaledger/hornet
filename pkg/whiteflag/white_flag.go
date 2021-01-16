@@ -187,7 +187,11 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		})
 
 		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
-		if err := transaction.SemanticallyValidate(inputOutputs.InputToOutputMapping(), dustValidation); err != nil {
+		mapping, err := inputOutputs.InputToOutputMapping()
+		if err != nil {
+			return err
+		}
+		if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
 
 			if errors.Is(err, iotago.ErrMissingUTXO) {
 				conflict = storage.ConflictInputUTXONotFound
