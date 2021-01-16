@@ -65,6 +65,13 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 	require.NoError(te.testState, err)
 }
 
+func (te *TestEnvironment) AssertMessageConflictReason(messageID *hornet.MessageID, conflict storage.Conflict) {
+	metadata := te.storage.GetCachedMessageMetadataOrNil(messageID)
+	require.NotNil(te.testState, metadata)
+	defer metadata.Release(true)
+	require.Equal(te.testState, metadata.GetMetadata().GetConflict(), conflict)
+}
+
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
 func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confirmation) string {
 

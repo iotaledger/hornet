@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 )
@@ -99,6 +100,9 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	require.Equal(t, 1, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
 
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageC.GetMessageID(), storage.ConflictInputUTXONotFound)
+
 	// Verify balances (seed, index, balance)
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
 	te.AssertWalletBalance(seed2Wallet, 3_000_000)
@@ -143,6 +147,9 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	require.Equal(t, 1, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 1, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageD.GetMessageID(), storage.ConflictInputUTXONotFound)
 
 	// Verify balances (seed, index, balance)
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
