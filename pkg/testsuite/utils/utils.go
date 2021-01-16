@@ -255,12 +255,12 @@ func msgWithValueTx(t *testing.T, parent1 *hornet.MessageID, parent2 *hornet.Mes
 		output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
 		require.NoError(t, err)
 
-		if bytes.Equal(output.Address()[:], toAddr[:]) {
+		if bytes.Equal(output.Address()[:], toAddr[:]) && output.Amount() == amount {
 			sentOutput = output
 			continue
 		}
 
-		if remainderAmount > 0 && bytes.Equal(output.Address()[:], fromAddr[:]) {
+		if remainderAmount > 0 && bytes.Equal(output.Address()[:], fromAddr[:]) && output.Amount() == remainderAmount {
 			remainderOutput = output
 		}
 	}

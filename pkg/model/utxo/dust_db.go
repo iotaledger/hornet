@@ -86,12 +86,7 @@ func (u *Manager) readDustForAddress(addressKey []byte) (dustAllowanceBalance ui
 
 func (u *Manager) storeDustForAddress(addressKey []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
 
-	if dustOutputCount == 0 {
-		if dustAllowanceBalance != 0 {
-			// Balance cannot be non-zero if there are no outputs
-			return fmt.Errorf("%w: %s dustAllowanceBalance %d, dustOutputCount %d", ErrInvalidDustForAddress, hex.EncodeToString(addressKey), dustAllowanceBalance, dustOutputCount)
-		}
-
+	if dustOutputCount == 0 && dustAllowanceBalance == 0 {
 		// Remove from database
 		return mutations.Delete(addressKey)
 	}

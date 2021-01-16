@@ -340,6 +340,118 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 }
 
+func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
+
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Issue some transactions
+	// Valid transfer from seed1 (2_779_530_283_277_761) to seed2 (1_000_000)
+	messageA, messageAConsumedOutputs, messageASentOutput, messageARemainderOutput := utils.MsgWithValueTx(t,
+		te.Milestones[0].GetMilestone().MessageID,
+		te.Milestones[1].GetMilestone().MessageID,
+		"A",
+		seed1Wallet,
+		seed2Wallet,
+		1_000_000,
+		te.PowHandler,
+	)
+	cachedMessageA := te.StoreMessage(messageA)
+	seed1Wallet.BookSpents(messageAConsumedOutputs)
+	seed2Wallet.BookOutput(messageASentOutput)
+	seed1Wallet.BookOutput(messageARemainderOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Dust allowance from seed2 to seed2 with 1_000_000
+	messageB, messageBConsumedOutputs, messageBSentOutput, messageBRemainderOutput := utils.MsgWithDustAllowance(t,
+		cachedMessageA.GetMessage().GetMessageID(),
+		te.Milestones[1].GetMilestone().MessageID,
+		"B",
+		seed2Wallet,
+		seed2Wallet,
+		1_000_000,
+		te.PowHandler,
+	)
+	cachedMessageB := te.StoreMessage(messageB)
+	seed2Wallet.BookSpents(messageBConsumedOutputs)
+	seed2Wallet.BookOutput(messageBSentOutput)
+	seed2Wallet.BookOutput(messageBRemainderOutput)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Confirming milestone at message B
+	conf := te.IssueAndConfirmMilestoneOnTip(cachedMessageB.GetMessage().GetMessageID(), true)
+
+	require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 2, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761)
+	te.AssertWalletBalance(seed2Wallet, 1_000_000)
+
+	//
+	//// Dust allowance from seed1 to seed2 with 1_000_000
+	//messageC, messageCConsumedOutputs, messageCSentOutput, messageCRemainderOutput := utils.MsgWithDustAllowance(t,
+	//	te.Milestones[1].GetMilestone().MessageID,
+	//	cachedMessageB.GetMessage().GetMessageID(),
+	//	"C",
+	//	seed1Wallet,
+	//	seed2Wallet,
+	//	1_000_000,
+	//	te.PowHandler,
+	//)
+	//cachedMessageC := te.StoreMessage(messageC)
+	//seed1Wallet.BookSpents(messageCConsumedOutputs)
+	//seed2Wallet.BookOutput(messageCSentOutput)
+	//seed1Wallet.BookOutput(messageCRemainderOutput)
+	//
+	//// Send Dust from seed1 to seed2 with 1
+	//messageD, messageDConsumedOutputs, messageDSentOutput, messageDRemainderOutput := utils.MsgWithValueTx(t,
+	//	cachedMessageB.GetMessage().GetMessageID(),
+	//	cachedMessageC.GetMessage().GetMessageID(),
+	//	"D",
+	//	seed1Wallet,
+	//	seed2Wallet,
+	//	1,
+	//	te.PowHandler,
+	//)
+	//cachedMessageD := te.StoreMessage(messageD)
+	//seed1Wallet.BookSpents(messageDConsumedOutputs)
+	//seed2Wallet.BookOutput(messageDSentOutput)
+	//seed1Wallet.BookOutput(messageDRemainderOutput)
+	//
+	//seed1Wallet.PrintStatus()
+	//seed2Wallet.PrintStatus()
+	//
+	//// Confirming milestone at message D
+	//conf = te.IssueAndConfirmMilestoneOnTip(cachedMessageD.GetMessage().GetMessageID(), true)
+	//
+	//require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
+	//require.Equal(t, 2, conf.MessagesIncludedWithTransactions)
+	//require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
+	//require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+	//
+	//// Verify balances
+	//te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
+	//te.AssertWalletBalance(seed2Wallet, 2_000_001)
+}
+
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 
 	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
