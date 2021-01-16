@@ -70,7 +70,10 @@ func (u *Manager) readDustForAddress(addressKey []byte) (dustAllowanceBalance ui
 
 	value, err := u.dustStorage.Get(addressKey)
 	if err != nil {
-		// No error should ever happen here
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			// No dust information found in the database for this address
+			return 0, 0, nil
+		}
 		return 0, 0, err
 	}
 
