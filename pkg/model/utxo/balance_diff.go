@@ -10,14 +10,6 @@ type singleBalanceDiff struct {
 	dustOutputCountDiff      int64
 }
 
-func newSingleBalanceDiff(balanceDiff int64, dustAllowanceBalance int64, dustOutputCount int64) *singleBalanceDiff {
-	return &singleBalanceDiff{
-		balanceDiff:              balanceDiff,
-		dustAllowanceBalanceDiff: dustAllowanceBalance,
-		dustOutputCountDiff:      dustOutputCount,
-	}
-}
-
 type BalanceDiff struct {
 	balances map[string]*singleBalanceDiff
 }
@@ -68,7 +60,7 @@ func (d *BalanceDiff) singleDiffForOutput(output *Output) (*singleBalanceDiff, e
 		return diff, nil
 	}
 
-	diff := newSingleBalanceDiff(0, 0, 0)
+	diff := &singleBalanceDiff{}
 	d.balances[addressKey] = diff
 	return diff, nil
 }
