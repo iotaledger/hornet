@@ -65,7 +65,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	// Confirming milestone at message C (message D and E are not included)
 	conf := te.IssueAndConfirmMilestoneOnTip(messageB.StoredMessageID(), true)
-	require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 2+1, conf.MessagesReferenced) // 2 + milestone itself
 	require.Equal(t, 2, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
