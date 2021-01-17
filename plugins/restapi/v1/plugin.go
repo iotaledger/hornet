@@ -11,6 +11,8 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	powcore "github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -197,6 +199,7 @@ type dependencies struct {
 	AppInfo          *app.AppInfo
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
+	Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
 	TipSelector      *tipselect.TipSelector
 	Echo             *echo.Echo
 }

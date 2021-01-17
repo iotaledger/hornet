@@ -13,6 +13,8 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -67,6 +69,7 @@ type dependencies struct {
 	Storage    *storage.Storage
 	Tangle     *tangle.Tangle
 	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	Bech32HRP  iotago.NetworkPrefix         `name:"bech32HRP"`
 	Echo       *echo.Echo
 }
 

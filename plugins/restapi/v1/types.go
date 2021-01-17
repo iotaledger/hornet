@@ -18,6 +18,8 @@ type infoResponse struct {
 	IsHealthy bool `json:"isHealthy"`
 	// The ID of the network.
 	NetworkID string `json:"networkId"`
+	// The Bech32 HRP used.
+	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
 	MinPowScore float64 `json:"minPowScore"`
 	// The latest known milestone index.

@@ -65,6 +65,7 @@
   },
   "protocol": {
     "networkID": "alphanet1",
+    "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
