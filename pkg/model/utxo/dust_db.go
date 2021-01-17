@@ -80,11 +80,7 @@ func (u *Manager) readDustForAddress(addressKey []byte) (dustAllowanceBalance ui
 		return 0, 0, err
 	}
 
-	if value != nil {
-		return dustFromBytes(value)
-	}
-
-	return 0, 0, nil
+	return dustFromBytes(value)
 }
 
 func (u *Manager) storeDustForAddress(addressKey []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
