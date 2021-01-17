@@ -62,6 +62,10 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
 
+	if metadata.IsMilestone() {
+		messageMetadataResponse.MilestoneIndex = referencedByMilestone
+	}
+
 	if referenced {
 		inclusionState := "noTransaction"
 

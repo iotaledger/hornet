@@ -13,6 +13,7 @@
 
 # IDE related files
 .vscode/
+.idea/
 
 # dist packages
 dist/

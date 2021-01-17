@@ -35,7 +35,7 @@ type Confirmation struct {
 
 type MessageWithConflict struct {
 	MessageID *hornet.MessageID
-	Conflict storage.Conflict
+	Conflict  storage.Conflict
 }
 
 // WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
@@ -52,6 +52,8 @@ type WhiteFlagMutations struct {
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
+	// Contains the calculated Dust allowance diff.
+	dustAllowanceDiff *utxo.DustAllowanceDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
@@ -72,6 +74,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
+		dustAllowanceDiff:                           utxo.NewDustAllowanceDiff(),
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -178,8 +181,17 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			inputOutputs = append(inputOutputs, output)
 		}
 
+		// Dust validation
+		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
+			return s.UTXO().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
+		})
+
 		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
-		if err := transaction.SemanticallyValidate(inputOutputs.InputToOutputMapping()); err != nil {
+		mapping, err := inputOutputs.InputToOutputMapping()
+		if err != nil {
+			return err
+		}
+		if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
 
 			if errors.Is(err, iotago.ErrMissingUTXO) {
 				conflict = storage.ConflictInputUTXONotFound
@@ -191,6 +203,8 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 				conflict = storage.ConflictUnsupportedInputOrOutputType
 			} else if errors.Is(err, iotago.ErrUnknownAddrType) {
 				conflict = storage.ConflictUnsupportedAddressType
+			} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
+				conflict = storage.ConflictInvalidDustAllowance
 			} else {
 				conflict = storage.ConflictSemanticValidationFailed
 			}
@@ -227,10 +241,14 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// mark the given message to be part of milestone ledger by changing message inclusion set
 		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
+		var newSpents utxo.Spents
+
 		// save the inputs as spent
 		for _, input := range inputOutputs {
 			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
-			wfConf.NewSpents[string(input.OutputID()[:])] = utxo.NewSpent(input, transactionID, msIndex)
+			spent := utxo.NewSpent(input, transactionID, msIndex)
+			wfConf.NewSpents[string(input.OutputID()[:])] = spent
+			newSpents = append(newSpents, spent)
 		}
 
 		// add new outputs
@@ -238,7 +256,8 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			wfConf.NewOutputs[string(output.OutputID()[:])] = output
 		}
 
-		return nil
+		// Apply the new outputs and spents to the current dust allowance diff
+		return wfConf.dustAllowanceDiff.Add(depositOutputs, newSpents)
 	}
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.

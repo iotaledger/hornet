@@ -27,7 +27,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210105145855-ce2c8231a283
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201222215724-43ffdd479925
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210117171617-a11976731b86
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.17

@@ -27,12 +27,18 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 		return fmt.Sprintf("%d", ms.Index)
 	}
 
-	indexation := cachedMessage.GetMessage().GetIndexation()
+	indexation := storage.CheckIfIndexation(cachedMessage.GetMessage())
 
 	index := indexation.Index
 	if len(index) > 4 {
 		index = index[:4]
 	}
+
+	if cachedMessage.GetMetadata().IsConflictingTx() {
+		conflict := cachedMessage.GetMetadata().GetConflict()
+		return fmt.Sprintf("%s (%d)", index, conflict)
+	}
+
 	return index
 }
 

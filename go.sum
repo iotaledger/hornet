@@ -357,8 +357,8 @@ github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod
 github.com/iotaledger/hive.go v0.0.0-20210105145855-ce2c8231a283 h1:p+pORoK/Btoohoevz6Kl1xdV7iqTEridJ6hQsuGr2eo=
 github.com/iotaledger/hive.go v0.0.0-20210105145855-ce2c8231a283/go.mod h1:dFt9vuTF3FdDPx7ve+uSDiNrX2PW2eV8sq7N06jeaFw=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20200924093814-add1daca64b6/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
-github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201222215724-43ffdd479925 h1:4kwpHfSIa3eGvE85WJ/eyz8ZcJEsZkyTYORU2m76zTk=
-github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201222215724-43ffdd479925/go.mod h1:70AnUp7PT4kXRUCA8Ptw4Ddh80RIx6SmOO2eon/TqTQ=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210117171617-a11976731b86 h1:/V4+EoiwpopJO30NJ0zFXzM9oscdqJZ3hc6TQMjla3M=
+github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210117171617-a11976731b86/go.mod h1:70AnUp7PT4kXRUCA8Ptw4Ddh80RIx6SmOO2eon/TqTQ=
 github.com/ipfs/go-cid v0.0.1/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.2/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.3/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=

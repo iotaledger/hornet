@@ -32,7 +32,7 @@ func TestValue(t *testing.T) {
 	target2 := ed25519.NewKeyFromSeed(randSeed())
 	target2Addr := iotago.AddressFromEd25519PubKey(target2.Public().(ed25519.PublicKey))
 
-	var target1Deposit, target2Deposit uint64 = 1000, iotago.TokenSupply - 1000
+	var target1Deposit, target2Deposit uint64 = 10_000_000, iotago.TokenSupply - 10_000_000
 
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}

@@ -18,6 +18,7 @@ const (
 	MessageMetadataReferenced    = 1
 	MessageMetadataNoTx          = 2
 	MessageMetadataConflictingTx = 3
+	MessageMetadataMilestone     = 4
 )
 
 // Conflict defines the reason why a message is marked as conflicting.
@@ -47,6 +48,9 @@ const (
 
 	// ConflictUnsupportedAddressType the used address type is unsupported.
 	ConflictUnsupportedAddressType
+
+	// ConflictInvalidDustAllowance the dust allowance for the address is invalid.
+	ConflictInvalidDustAllowance
 
 	// ConflictSemanticValidationFailed the semantic validation failed.
 	ConflictSemanticValidationFailed
@@ -213,6 +217,23 @@ func (m *MessageMetadata) GetConflict() Conflict {
 	defer m.RUnlock()
 
 	return m.conflict
+}
+
+func (m *MessageMetadata) IsMilestone() bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasBit(MessageMetadataMilestone)
+}
+
+func (m *MessageMetadata) SetMilestone(milestone bool) {
+	m.Lock()
+	defer m.Unlock()
+
+	if milestone != m.metadata.HasBit(MessageMetadataMilestone) {
+		m.metadata = m.metadata.ModifyBit(MessageMetadataMilestone, milestone)
+		m.SetModified(true)
+	}
 }
 
 func (m *MessageMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {

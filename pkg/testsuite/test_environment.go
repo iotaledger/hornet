@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,15 +15,15 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-
 	iotago "github.com/iotaledger/iota.go"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 var (
@@ -32,11 +33,11 @@ var (
 
 // TestEnvironment holds the state of the test environment.
 type TestEnvironment struct {
-	// testState is the state of the current test case.
-	testState *testing.T
+	// TestState is the state of the current test case.
+	TestState *testing.T
 
 	// Milestones are the created milestones by the coordinator during the test.
-	Milestones storage.CachedMessages
+	Milestones storage.CachedMilestones
 
 	// cachedMessages is used to cleanup all messages at the end of a test.
 	cachedMessages storage.CachedMessages
@@ -44,8 +45,14 @@ type TestEnvironment struct {
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
 
-	// powHandler holds the powHandler instance.
-	powHandler *pow.Handler
+	// PowHandler holds the PowHandler instance.
+	PowHandler *pow.Handler
+
+	// networkID is the network ID used for this test network
+	networkID uint64
+
+	// cooPrivateKey holds the coo private key
+	cooPrivateKey ed25519.PrivateKey
 
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
@@ -58,6 +65,15 @@ type TestEnvironment struct {
 
 	// store is the temporary key value store for the test.
 	store kvstore.KVStore
+
+	// storage is the tangle storage for this test
+	storage *storage.Storage
+
+	// serverMetrics holds metrics about the tangle
+	serverMetrics *metrics.ServerMetrics
+
+	// GenesisOutput marks the initial output created when bootstrapping the tangle
+	GenesisOutput *utxo.Output
 }
 
 // searchProjectRootFolder searches the hornet root directory.
@@ -75,55 +91,54 @@ func searchProjectRootFolder() string {
 	return wd
 }
 
-// SetupTestEnvironment initializes a clean database with initial balances,
+// SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint64, numberOfMilestones int, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
-		testState:              testState,
-		Milestones:             make(storage.CachedMessages, 0),
+		TestState:              testState,
+		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		powHandler:             pow.New(nil, 1, "", 30*time.Second),
+		PowHandler:             pow.New(nil, 1, "", 30*time.Second),
+		networkID:              iotago.NetworkIDFromString("alphanet1"),
 		lastMilestoneMessageID: hornet.GetNullMessageID(),
+		serverMetrics:          &metrics.ServerMetrics{},
 	}
+
+	cooPrvKey1, err := utils.ParseEd25519PrivateKeyFromString("651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c")
+	require.NoError(testState, err)
+	cooPrvKey2, err := utils.ParseEd25519PrivateKeyFromString("0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c")
+	require.NoError(testState, err)
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testState.Name()))
-	require.NoError(te.testState, err)
+	require.NoError(te.TestState, err)
 	te.tempDir = tempDir
 
-	balances := initialBalances
-	var sum uint64
-	for _, value := range balances {
-		sum += value
-	}
-
-	// Move remaining supply to 999..999
-	balances[hornet.GetNullMessageID().MapKey()] = iotago.TokenSupply - sum
+	testState.Logf("Testdir: %s", tempDir)
 
 	te.store = mapdb.NewMapDB()
-	te.configureStorages(te.store)
+	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches)
 
-	storage.ResetSolidEntryPoints()
-	storage.ResetMilestoneIndexes()
+	// Initialize SEP
+	te.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 0)
 
-	snapshotIndex := milestone.Index(0)
-
-	storage.StoreSnapshotBalancesInDatabase(balances, snapshotIndex)
-	storage.StoreLedgerBalancesInDatabase(balances, snapshotIndex)
+	// Initialize UTXO
+	te.GenesisOutput = utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
 
 	te.AssertTotalSupplyStillValid()
 
 	// Start up the coordinator
-	te.configureCoordinator()
+	te.configureCoordinator([]ed25519.PrivateKey{cooPrvKey1, cooPrvKey2})
 	require.NotNil(testState, te.coo)
 
 	te.VerifyLSMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		conf := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
-		require.Equal(testState, 3, conf.MessagesReferenced)                  // 3 for milestone
-		require.Equal(testState, 3, conf.MessagesExcludedWithoutTransactions) // 3 for milestone
+		require.Equal(testState, 1, conf.MessagesReferenced)                  // 1 for milestone
+		require.Equal(testState, 1, conf.MessagesExcludedWithoutTransactions) // 1 for milestone
 		require.Equal(testState, 0, conf.MessagesIncludedWithTransactions)
 		require.Equal(testState, 0, conf.MessagesExcludedWithConflictingTransactions)
 	}
@@ -131,23 +146,20 @@ func SetupTestEnvironment(testState *testing.T, initialBalances map[string]uint6
 	return te
 }
 
-// configureStorages initializes the storage layer.
-func (te *TestEnvironment) configureStorages(store kvstore.KVStore) {
-
-	storage.ConfigureStorages(store, profile.Profile2GB.Caches)
-
-	setupTangleOnce.Do(func() {
-		storage.LoadInitialValuesFromDatabase()
-	})
+func (te *TestEnvironment) UTXO() *utxo.Manager {
+	return te.storage.UTXO()
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
 func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
-	te.cachedMessages.Release()
+	te.cachedMessages.Release(true)
+	te.cachedMessages = nil
+
+	te.Milestones.Release(true)
 	te.cachedMessages = nil
 
 	// this should not hang, i.e. all objects should be released
-	storage.ShutdownStorages()
+	te.storage.ShutdownStorages()
 
 	te.store.Clear()
 

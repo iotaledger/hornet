@@ -66,8 +66,8 @@ type Storage struct {
 	waitForNodeSyncedChannels     []chan struct{}
 
 	// milestones
-	keyManager                         *keymanager.KeyManager
-	milestonePublicKeyCount            int
+	keyManager              *keymanager.KeyManager
+	milestonePublicKeyCount int
 
 	// utxo
 	utxoManager *utxo.Manager
@@ -89,8 +89,10 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		},
 	}
 
-	s.ConfigureStorages(s.store, cachesProfile)
+	s.configureStorages(s.store, cachesProfile)
 	s.loadSolidMilestoneFromDatabase()
+	s.loadSnapshotInfo()
+	s.loadSolidEntryPoints()
 
 	return s
 }
@@ -103,7 +105,7 @@ func (s *Storage) UTXO() *utxo.Manager {
 	return s.utxoManager
 }
 
-func (s *Storage) ConfigureStorages(store kvstore.KVStore, caches *profile.Caches) {
+func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Caches) {
 
 	s.configureHealthStore(store)
 	s.configureMessageStorage(store, caches.Messages)
@@ -131,11 +133,6 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownMessagesStorage()
 	s.ShutdownChildrenStorage()
 	s.ShutdownUnreferencedMessagesStorage()
-}
-
-func (s *Storage) LoadInitialValuesFromDatabase() {
-	s.loadSnapshotInfo()
-	s.loadSolidEntryPoints()
 }
 
 func (s *Storage) loadSolidMilestoneFromDatabase() {

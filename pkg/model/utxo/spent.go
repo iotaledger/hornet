@@ -164,7 +164,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, address ...*iotago.
 	return u.ForEachSpentOutputWithoutLocking(consumer, address...)
 }
 
-func (u *Manager) SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind ...int) (Spents, error) {
+func (u *Manager) SpentOutputsForAddress(address *iotago.Ed25519Address, lockLedger bool, maxFind ...int) (Spents, error) {
 
 	var spents []*Spent
 
@@ -180,8 +180,14 @@ func (u *Manager) SpentOutputsForAddress(address *iotago.Ed25519Address, maxFind
 		return true
 	}
 
-	if err := u.ForEachSpentOutput(consumerFunc, address); err != nil {
-		return nil, err
+	if lockLedger {
+		if err := u.ForEachSpentOutput(consumerFunc, address); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := u.ForEachSpentOutputWithoutLocking(consumerFunc, address); err != nil {
+			return nil, err
+		}
 	}
 
 	return spents, nil

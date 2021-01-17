@@ -64,6 +64,8 @@ type Output struct {
 	MessageID [iotago.MessageIDLength]byte `json:"message_id"`
 	// The transaction ID and the index of the output.
 	OutputID [iotago.TransactionIDLength + 2]byte `json:"output_id"`
+	// The type of the output.
+	OutputType iotago.OutputType `json:"output_type"`
 	// The underlying address to which this output deposits to.
 	Address iotago.Serializable `json:"address"`
 	// The amount of the deposit.
@@ -77,6 +79,9 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	}
 	if _, err := b.Write(s.OutputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to write output ID for ls-output: %w", err)
+	}
+	if err := b.WriteByte(s.OutputType); err != nil {
+		return nil, fmt.Errorf("unable to write output type for ls-output: %w", err)
 	}
 	addrData, err := s.Address.Serialize(iotago.DeSeriModePerformValidation)
 	if err != nil {
@@ -463,6 +468,12 @@ func readOutput(reader io.Reader) (*Output, error) {
 	if _, err := io.ReadFull(reader, output.OutputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
 	}
+
+	typeBuf := make([]byte, 1)
+	if _, err := io.ReadFull(reader, typeBuf); err != nil {
+		return nil, fmt.Errorf("unable to read LS output type: %w", err)
+	}
+	output.OutputType = typeBuf[0]
 
 	// look ahead address type
 	var addrTypeBuf [iotago.SmallTypeDenotationByteSize]byte

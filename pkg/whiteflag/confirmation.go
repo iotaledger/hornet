@@ -15,7 +15,6 @@ import (
 type ConfirmedMilestoneStats struct {
 	Index                                       milestone.Index
 	ConfirmationTime                            int64
-	CachedMessages                              storage.CachedMessages
 	MessagesReferenced                          int
 	MessagesExcludedWithConflictingTransactions int
 	MessagesIncludedWithTransactions            int
@@ -149,9 +148,8 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 		}
 	}
 
-	// confirm all excluded messages not containing ledger transactions (including the milestone itself)
-	confirmedMessagesWithoutTransactions := append(mutations.MessagesExcludedWithoutTransactions, milestoneMessageID)
-	for _, messageID := range confirmedMessagesWithoutTransactions {
+	// confirm all excluded messages not containing ledger transactions
+	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
 			meta.GetMetadata().SetIsNoTransaction(true)
 			if !meta.GetMetadata().IsReferenced() {
@@ -166,6 +164,23 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 		}); err != nil {
 			return nil, err
 		}
+	}
+
+	// confirm the milestone itself
+	if err := forMessageMetadataWithMessageID(milestoneMessageID, func(meta *storage.CachedMetadata) {
+		meta.GetMetadata().SetIsNoTransaction(true)
+		if !meta.GetMetadata().IsReferenced() {
+			meta.GetMetadata().SetReferenced(true, milestoneIndex)
+			meta.GetMetadata().SetMilestone(true)
+			meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+			conf.MessagesReferenced++
+			conf.MessagesExcludedWithoutTransactions++
+			serverMetrics.NoTransactionMessages.Inc()
+			serverMetrics.ReferencedMessages.Inc()
+			forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+		}
+	}); err != nil {
+		return nil, err
 	}
 
 	// confirm all conflicting messages

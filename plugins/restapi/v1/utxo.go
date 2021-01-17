@@ -20,24 +20,35 @@ import (
 
 func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error) {
 
-	sigLockedSingleDeposit := &iotago.SigLockedSingleOutput{
-		Address: output.Address(),
-		Amount:  output.Amount(),
+	var rawOutput iotago.Output
+	switch output.OutputType() {
+	case iotago.OutputSigLockedSingleOutput:
+		rawOutput = &iotago.SigLockedSingleOutput{
+			Address: output.Address(),
+			Amount:  output.Amount(),
+		}
+	case iotago.OutputSigLockedDustAllowanceOutput:
+		rawOutput = &iotago.SigLockedDustAllowanceOutput{
+			Address: output.Address(),
+			Amount:  output.Amount(),
+		}
+	default:
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "unsupported output type: %d", output.OutputType())
 	}
 
-	sigLockedSingleDepositJSON, err := sigLockedSingleDeposit.MarshalJSON()
+	rawOutputJSON, err := rawOutput.MarshalJSON()
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %s", hex.EncodeToString(output.UTXOKey()), err)
 	}
 
-	rawMsgSigLockedSingleDepositJSON := json.RawMessage(sigLockedSingleDepositJSON)
+	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputResponse{
 		MessageID:     output.MessageID().Hex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
-		RawOutput:     &rawMsgSigLockedSingleDepositJSON,
+		RawOutput:     &rawRawOutputJSON,
 	}, nil
 }
 
@@ -56,7 +67,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	output, err := deps.UTXO.ReadOutputByOutputID(&outputID)
+	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(&outputID)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "output not found: %s", outputIDParam)
@@ -65,7 +76,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading output failed: %s, error: %s", outputIDParam, err)
 	}
 
-	unspent, err := deps.UTXO.IsOutputUnspent(&outputID)
+	unspent, err := deps.UTXO.IsOutputUnspentWithoutLocking(output)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent status failed: %s, error: %s", outputIDParam, err)
 	}
@@ -76,7 +87,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
-	balance, count, err := deps.UTXO.AddressBalance(address, maxResults)
+	balance, count, err := deps.UTXO.AddressBalance(address, false, maxResults)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading address balance failed: %s, error: %s", address, err)
 	}
@@ -140,7 +151,7 @@ func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
 func ed25519Outputs(address *iotago.Ed25519Address, includeSpent bool) (*addressOutputsResponse, error) {
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
-	unspentOutputs, err := deps.UTXO.UnspentOutputsForAddress(address, maxResults)
+	unspentOutputs, err := deps.UTXO.UnspentOutputsForAddress(address, false, maxResults)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
@@ -152,7 +163,7 @@ func ed25519Outputs(address *iotago.Ed25519Address, includeSpent bool) (*address
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
 
-		spents, err := deps.UTXO.SpentOutputsForAddress(address, maxResults-len(outputIDs))
+		spents, err := deps.UTXO.SpentOutputsForAddress(address, false, maxResults-len(outputIDs))
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed: %s, error: %s", address, err)
 		}

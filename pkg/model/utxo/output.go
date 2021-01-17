@@ -27,6 +27,13 @@ func (o *Output) OutputID() *iotago.UTXOInputID {
 	return o.outputID
 }
 
+func (o *Output) UTXOInput() *iotago.UTXOInput {
+	input := &iotago.UTXOInput{}
+	copy(input.TransactionID[:], o.outputID[:iotago.TransactionIDLength])
+	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+2])
+	return input
+}
+
 func (o *Output) MessageID() *hornet.MessageID {
 	return o.messageID
 }
@@ -45,23 +52,37 @@ func (o *Output) Amount() uint64 {
 
 type Outputs []*Output
 
-func (o Outputs) InputToOutputMapping() iotago.InputToOutputMapping {
+func (o Outputs) InputToOutputMapping() (iotago.InputToOutputMapping, error) {
 
 	mapping := iotago.InputToOutputMapping{}
 	for _, output := range o {
-		mapping[*output.outputID] = &iotago.SigLockedSingleOutput{
-			Address: output.address,
-			Amount:  output.amount,
+
+		switch output.OutputType() {
+		case iotago.OutputSigLockedDustAllowanceOutput:
+			mapping[*output.outputID] = &iotago.SigLockedDustAllowanceOutput{
+				Address: output.address,
+				Amount:  output.amount,
+			}
+
+		case iotago.OutputSigLockedSingleOutput:
+			mapping[*output.outputID] = &iotago.SigLockedSingleOutput{
+				Address: output.address,
+				Amount:  output.amount,
+			}
+
+		default:
+			return nil, fmt.Errorf("unsupported output type")
 		}
+
 	}
-	return mapping
+	return mapping, nil
 }
 
-func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, address *iotago.Ed25519Address, amount uint64) *Output {
+func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address *iotago.Ed25519Address, amount uint64) *Output {
 	return &Output{
 		outputID:   outputID,
 		messageID:  messageID,
-		outputType: iotago.OutputSigLockedSingleOutput,
+		outputType: outputType,
 		address:    address,
 		amount:     amount,
 	}
@@ -69,16 +90,18 @@ func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, addres
 
 func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
-	var deposit *iotago.SigLockedSingleOutput
+	var output iotago.Output
 	switch unsignedTx := transaction.Essence.(type) {
 	case *iotago.TransactionEssence:
 		if len(unsignedTx.Outputs) < int(index) {
 			return nil, errors.New("deposit not found")
 		}
-		output := unsignedTx.Outputs[int(index)]
-		switch d := output.(type) {
+		txOutput := unsignedTx.Outputs[int(index)]
+		switch out := txOutput.(type) {
 		case *iotago.SigLockedSingleOutput:
-			deposit = d
+			output = out
+		case *iotago.SigLockedDustAllowanceOutput:
+			output = out
 		default:
 			return nil, errors.New("unsuported output type")
 		}
@@ -87,7 +110,11 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 	}
 
 	var address *iotago.Ed25519Address
-	switch a := deposit.Address.(type) {
+	outputAddress, err := output.Target()
+	if err != nil {
+		return nil, err
+	}
+	switch a := outputAddress.(type) {
 	case *iotago.Ed25519Address:
 		address = a
 	default:
@@ -106,12 +133,17 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 	copy(outputID[:iotago.TransactionIDLength], txID[:])
 	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+iotago.UInt16ByteSize], bytes)
 
+	amount, err := output.Deposit()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Output{
 		outputID:   &outputID,
 		messageID:  messageID,
-		outputType: iotago.OutputSigLockedSingleOutput,
+		outputType: output.Type(),
 		address:    address,
-		amount:     deposit.Amount,
+		amount:     amount,
 	}, nil
 }
 

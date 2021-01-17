@@ -91,6 +91,24 @@ type CachedMilestone struct {
 	objectstorage.CachedObject
 }
 
+type CachedMilestones []*CachedMilestone
+
+// msg +1
+func (c CachedMilestones) Retain() CachedMilestones {
+	cachedResult := CachedMilestones{}
+	for _, cachedMs := range c {
+		cachedResult = append(cachedResult, cachedMs.Retain())
+	}
+	return cachedResult
+}
+
+// msg -1
+func (c CachedMilestones) Release(force ...bool) {
+	for _, cachedMs := range c {
+		cachedMs.Release(force...)
+	}
+}
+
 // milestone +1
 func (c *CachedMilestone) Retain() *CachedMilestone {
 	return &CachedMilestone{c.CachedObject.Retain()}
