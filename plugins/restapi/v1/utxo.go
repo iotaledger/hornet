@@ -20,24 +20,35 @@ import (
 
 func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error) {
 
-	sigLockedSingleDeposit := &iotago.SigLockedSingleOutput{
-		Address: output.Address(),
-		Amount:  output.Amount(),
+	var rawOutput iotago.Output
+	switch output.OutputType() {
+	case iotago.OutputSigLockedSingleOutput:
+		rawOutput = &iotago.SigLockedSingleOutput{
+			Address: output.Address(),
+			Amount:  output.Amount(),
+		}
+	case iotago.OutputSigLockedDustAllowanceOutput:
+		rawOutput = &iotago.SigLockedDustAllowanceOutput{
+			Address: output.Address(),
+			Amount:  output.Amount(),
+		}
+	default:
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "unsupported output type: %d", output.OutputType())
 	}
 
-	sigLockedSingleDepositJSON, err := sigLockedSingleDeposit.MarshalJSON()
+	rawOutputJSON, err := rawOutput.MarshalJSON()
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %s", hex.EncodeToString(output.UTXOKey()), err)
 	}
 
-	rawMsgSigLockedSingleDepositJSON := json.RawMessage(sigLockedSingleDepositJSON)
+	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputResponse{
 		MessageID:     output.MessageID().Hex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
-		RawOutput:     &rawMsgSigLockedSingleDepositJSON,
+		RawOutput:     &rawRawOutputJSON,
 	}, nil
 }
 
