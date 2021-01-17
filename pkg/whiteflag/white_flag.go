@@ -245,7 +245,6 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 		// save the inputs as spent
 		for _, input := range inputOutputs {
-			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
 			spent := utxo.NewSpent(input, transactionID, msIndex)
 			wfConf.NewSpents[string(input.OutputID()[:])] = spent
 			newSpents = append(newSpents, spent)
