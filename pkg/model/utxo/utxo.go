@@ -24,14 +24,12 @@ var (
 
 type Manager struct {
 	utxoStorage kvstore.KVStore
-	dustStorage kvstore.KVStore
 	utxoLock    sync.RWMutex
 }
 
 func New(store kvstore.KVStore) *Manager {
 	return &Manager{
 		utxoStorage: store.WithRealm([]byte{common.StorePrefixUTXO}),
-		dustStorage: store.WithRealm([]byte{common.StorePrefixDust}),
 	}
 }
 
@@ -153,11 +151,12 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		return err
 	}
 
-	if err := mutations.Commit(); err != nil {
+	if err := u.applyNewDustWithoutLocking(newOutputs, newSpents, mutations); err != nil {
+		mutations.Cancel()
 		return err
 	}
 
-	return u.applyNewDustWithoutLocking(newOutputs, newSpents)
+	return mutations.Commit()
 }
 
 func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
@@ -207,11 +206,12 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		return err
 	}
 
-	if err := mutations.Commit(); err != nil {
+	if err := u.rollbackDustWithoutLocking(newOutputs, newSpents, mutations); err != nil {
+		mutations.Cancel()
 		return err
 	}
 
-	return u.rollbackDustWithoutLocking(newOutputs, newSpents)
+	return mutations.Commit()
 }
 
 func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
@@ -258,9 +258,10 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 		return err
 	}
 
-	if err := mutations.Commit(); err != nil {
+	if err := u.storeDustForUnspentOutput(unspentOutput, mutations); err != nil {
+		mutations.Cancel()
 		return err
 	}
 
-	return u.storeDustForUnspentOutput(unspentOutput)
+	return mutations.Commit()
 }

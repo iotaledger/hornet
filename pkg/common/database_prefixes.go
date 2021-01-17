@@ -10,6 +10,5 @@ const (
 	StorePrefixUnreferencedMessages byte = 6
 	StorePrefixIndexation           byte = 7
 	StorePrefixUTXO                 byte = 8
-	StorePrefixDust                 byte = 9
-	StorePrefixAutopeering          byte = 10
+	StorePrefixAutopeering          byte = 9
 )

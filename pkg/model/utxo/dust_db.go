@@ -4,11 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/marshalutil"
-
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/marshalutil"
+
 	iotago "github.com/iotaledger/iota.go"
 )
 
@@ -68,7 +69,9 @@ func (u *Manager) ReadDustForAddress(address iotago.Address, applyDiff *DustAllo
 
 func (u *Manager) readDustForAddress(addressKey []byte) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
 
-	value, err := u.dustStorage.Get(addressKey)
+	dbKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixDust}, addressKey)
+
+	value, err := u.utxoStorage.Get(dbKey)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			// No dust information found in the database for this address
@@ -86,25 +89,25 @@ func (u *Manager) readDustForAddress(addressKey []byte) (dustAllowanceBalance ui
 
 func (u *Manager) storeDustForAddress(addressKey []byte, dustAllowanceBalance uint64, dustOutputCount int64, mutations kvstore.BatchedMutations) error {
 
+	dbKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixDust}, addressKey)
+
 	if dustOutputCount == 0 && dustAllowanceBalance == 0 {
 		// Remove from database
-		return mutations.Delete(addressKey)
+		return mutations.Delete(dbKey)
 	}
 
-	return mutations.Set(addressKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
+	return mutations.Set(dbKey, bytesFromDust(dustAllowanceBalance, dustOutputCount))
 }
 
 // This applies the diff to the current database
-func (u *Manager) applyDustAllowanceDiff(allowance *DustAllowanceDiff) error {
+func (u *Manager) applyDustAllowanceDiff(allowance *DustAllowanceDiff, mutations kvstore.BatchedMutations) error {
 
-	mutations := u.dustStorage.Batched()
 	for addressMapKey, diff := range allowance.allowance {
 		if err := u.applyDustDiffForAddress([]byte(addressMapKey), diff.allowanceBalanceDiff, diff.outputCount, mutations); err != nil {
-			mutations.Cancel()
 			return err
 		}
 	}
-	return mutations.Commit()
+	return nil
 }
 
 // This applies the diff to the current address by first reading the current value and adding the diff on it
@@ -126,27 +129,27 @@ func (u *Manager) applyDustDiffForAddress(addressKey []byte, dustAllowanceBalanc
 	return u.storeDustForAddress(addressKey, uint64(newDustAllowanceBalance), newDustOutputCount, mutations)
 }
 
-func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) applyNewDustWithoutLocking(newOutputs Outputs, newSpents Spents, mutations kvstore.BatchedMutations) error {
 
 	allowance := NewDustAllowanceDiff()
 	if err := allowance.Add(newOutputs, newSpents); err != nil {
 		return err
 	}
-	return u.applyDustAllowanceDiff(allowance)
+	return u.applyDustAllowanceDiff(allowance, mutations)
 }
 
-func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) rollbackDustWithoutLocking(newOutputs Outputs, newSpents Spents, mutations kvstore.BatchedMutations) error {
 	allowance := NewDustAllowanceDiff()
 	if err := allowance.Remove(newOutputs, newSpents); err != nil {
 		return err
 	}
-	return u.applyDustAllowanceDiff(allowance)
+	return u.applyDustAllowanceDiff(allowance, mutations)
 }
 
-func (u *Manager) storeDustForUnspentOutput(unspentOutput *Output) error {
+func (u *Manager) storeDustForUnspentOutput(unspentOutput *Output, mutations kvstore.BatchedMutations) error {
 	allowance := NewDustAllowanceDiff()
 	if err := allowance.Add([]*Output{unspentOutput}, []*Spent{}); err != nil {
 		return err
 	}
-	return u.applyDustAllowanceDiff(allowance)
+	return u.applyDustAllowanceDiff(allowance, mutations)
 }
