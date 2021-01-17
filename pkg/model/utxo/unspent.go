@@ -108,7 +108,7 @@ func (u *Manager) UnspentOutputsForAddress(address *iotago.Ed25519Address, lockL
 	return outputs, nil
 }
 
-func (u *Manager) AddressBalance(address *iotago.Ed25519Address, lockLedger bool, maxFind ...int) (balance uint64, count int, err error) {
+func (u *Manager) ComputeAddressBalance(address *iotago.Ed25519Address, lockLedger bool, maxFind ...int) (balance uint64, count int, err error) {
 
 	balance = 0
 	i := 0

@@ -1,30 +1,34 @@
 package utxo
 
-import iotago "github.com/iotaledger/iota.go"
+import (
+	iotago "github.com/iotaledger/iota.go"
+)
 
-type dustDiff struct {
-	allowanceBalanceDiff int64
-	outputCount          int64
+type singleBalanceDiff struct {
+	balanceDiff              int64
+	dustAllowanceBalanceDiff int64
+	dustOutputCountDiff      int64
 }
 
-func newDustDiff(dustAllowanceBalance int64, dustOutputCount int64) *dustDiff {
-	return &dustDiff{
-		allowanceBalanceDiff: dustAllowanceBalance,
-		outputCount:          dustOutputCount,
+func newSingleBalanceDiff(balanceDiff int64, dustAllowanceBalance int64, dustOutputCount int64) *singleBalanceDiff {
+	return &singleBalanceDiff{
+		balanceDiff:              balanceDiff,
+		dustAllowanceBalanceDiff: dustAllowanceBalance,
+		dustOutputCountDiff:      dustOutputCount,
 	}
 }
 
-type DustAllowanceDiff struct {
-	allowance map[string]*dustDiff
+type BalanceDiff struct {
+	allowance map[string]*singleBalanceDiff
 }
 
-func NewDustAllowanceDiff() *DustAllowanceDiff {
-	return &DustAllowanceDiff{
-		allowance: make(map[string]*dustDiff),
+func NewBalanceDiff() *BalanceDiff {
+	return &BalanceDiff{
+		allowance: make(map[string]*singleBalanceDiff),
 	}
 }
 
-func (d *DustAllowanceDiff) addressKeyForAddress(address iotago.Address) (string, error) {
+func (d *BalanceDiff) addressKeyForAddress(address iotago.Address) (string, error) {
 	bytes, err := address.Serialize(iotago.DeSeriModeNoValidation)
 	if err != nil {
 		return "", err
@@ -32,7 +36,7 @@ func (d *DustAllowanceDiff) addressKeyForAddress(address iotago.Address) (string
 	return string(bytes), nil
 }
 
-func (d *DustAllowanceDiff) addressKeyForOutput(output *Output) (string, error) {
+func (d *BalanceDiff) addressKeyForOutput(output *Output) (string, error) {
 	bytes, err := output.Address().Serialize(iotago.DeSeriModeNoValidation)
 	if err != nil {
 		return "", err
@@ -40,47 +44,58 @@ func (d *DustAllowanceDiff) addressKeyForOutput(output *Output) (string, error) 
 	return string(bytes), nil
 }
 
-func (d *DustAllowanceDiff) DiffForAddress(address iotago.Address) (dustAllowanceBalance int64, dustOutputCount int64, err error) {
+func (d *BalanceDiff) DiffForAddress(address iotago.Address) (balanceDiff int64, dustAllowanceBalance int64, dustOutputCount int64, err error) {
 
 	addressKey, err := d.addressKeyForAddress(address)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	if diff, found := d.allowance[addressKey]; found {
-		return diff.allowanceBalanceDiff, diff.outputCount, nil
+		return diff.balanceDiff, diff.dustAllowanceBalanceDiff, diff.dustOutputCountDiff, nil
 	}
-	return 0, 0, nil
+	return 0, 0, 0, nil
 }
 
-func (d *DustAllowanceDiff) Add(newOutputs Outputs, newSpents Spents) error {
+func (d *BalanceDiff) singleDiffForOutput(output *Output) (*singleBalanceDiff, error) {
+
+	addressKey, err := d.addressKeyForOutput(output)
+	if err != nil {
+		return nil, err
+	}
+
+	if diff, found := d.allowance[addressKey]; found {
+		return diff, nil
+	}
+
+	diff := newSingleBalanceDiff(0, 0, 0)
+	d.allowance[addressKey] = diff
+	return diff, nil
+}
+
+func (d *BalanceDiff) Add(newOutputs Outputs, newSpents Spents) error {
 
 	for _, output := range newOutputs {
 
+		diff, err := d.singleDiffForOutput(output)
+		if err != nil {
+			return err
+		}
+
+		// Increase balance
+		diff.balanceDiff += int64(output.Amount())
+
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
+
 			// Add new dust allowance
-			addressKey, err := d.addressKeyForOutput(output)
-			if err != nil {
-				return err
-			}
-			if diff, found := d.allowance[addressKey]; found {
-				diff.allowanceBalanceDiff += int64(output.Amount())
-			} else {
-				d.allowance[addressKey] = newDustDiff(int64(output.Amount()), 0)
-			}
+			diff.dustAllowanceBalanceDiff += int64(output.Amount())
+
 		case iotago.OutputSigLockedSingleOutput:
+
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				// Add new dust
-				addressKey, err := d.addressKeyForOutput(output)
-				if err != nil {
-					return err
-				}
-				if diff, found := d.allowance[addressKey]; found {
-					diff.outputCount += 1
-				} else {
-					d.allowance[addressKey] = newDustDiff(0, 1)
-				}
+				diff.dustOutputCountDiff += 1
 			}
 		}
 	}
@@ -88,65 +103,57 @@ func (d *DustAllowanceDiff) Add(newOutputs Outputs, newSpents Spents) error {
 	for _, spent := range newSpents {
 
 		output := spent.Output()
+
+		diff, err := d.singleDiffForOutput(output)
+		if err != nil {
+			return err
+		}
+
+		// Decrease balance
+		diff.balanceDiff -= int64(output.Amount())
+
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
+
 			// Remove spent dust allowance
-			addressKey, err := d.addressKeyForOutput(output)
-			if err != nil {
-				return err
-			}
-			if diff, found := d.allowance[addressKey]; found {
-				diff.allowanceBalanceDiff -= int64(output.Amount())
-			} else {
-				d.allowance[addressKey] = newDustDiff(-int64(output.Amount()), 0)
-			}
+			diff.dustAllowanceBalanceDiff -= int64(output.Amount())
+
 		case iotago.OutputSigLockedSingleOutput:
+
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				// Remove spent dust
-				addressKey, err := d.addressKeyForOutput(output)
-				if err != nil {
-					return err
-				}
-				if diff, found := d.allowance[addressKey]; found {
-					diff.outputCount -= 1
-				} else {
-					d.allowance[addressKey] = newDustDiff(0, -1)
-				}
+				diff.dustOutputCountDiff -= 1
 			}
 		}
 	}
+
 	return nil
 }
 
-func (d *DustAllowanceDiff) Remove(newOutputs Outputs, newSpents Spents) error {
+func (d *BalanceDiff) Remove(newOutputs Outputs, newSpents Spents) error {
 
 	// we have to delete the newOutputs
 	for _, output := range newOutputs {
 
+		diff, err := d.singleDiffForOutput(output)
+		if err != nil {
+			return err
+		}
+
+		// Remove unspent balance
+		diff.balanceDiff -= int64(output.Amount())
+
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
+
 			// Remove unspent dust allowance
-			addressKey, err := d.addressKeyForOutput(output)
-			if err != nil {
-				return err
-			}
-			if diff, found := d.allowance[addressKey]; found {
-				diff.allowanceBalanceDiff -= int64(output.Amount())
-			} else {
-				d.allowance[addressKey] = newDustDiff(-int64(output.Amount()), 0)
-			}
+			diff.dustAllowanceBalanceDiff -= int64(output.Amount())
+
 		case iotago.OutputSigLockedSingleOutput:
+
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				// Remove unspent dust
-				addressKey, err := d.addressKeyForOutput(output)
-				if err != nil {
-					return err
-				}
-				if diff, found := d.allowance[addressKey]; found {
-					diff.outputCount -= 1
-				} else {
-					d.allowance[addressKey] = newDustDiff(0, -1)
-				}
+				diff.dustOutputCountDiff -= 1
 			}
 		}
 	}
@@ -155,30 +162,26 @@ func (d *DustAllowanceDiff) Remove(newOutputs Outputs, newSpents Spents) error {
 	for _, spent := range newSpents {
 
 		output := spent.Output()
+
+		diff, err := d.singleDiffForOutput(output)
+		if err != nil {
+			return err
+		}
+
+		// Re-add previously-spent balance
+		diff.balanceDiff += int64(output.Amount())
+
 		switch output.outputType {
 		case iotago.OutputSigLockedDustAllowanceOutput:
+
 			// Re-Add previously-spent dust allowance
-			addressKey, err := d.addressKeyForOutput(output)
-			if err != nil {
-				return err
-			}
-			if diff, found := d.allowance[addressKey]; found {
-				diff.allowanceBalanceDiff += int64(output.Amount())
-			} else {
-				d.allowance[addressKey] = newDustDiff(int64(output.Amount()), 0)
-			}
+			diff.dustAllowanceBalanceDiff += int64(output.Amount())
+
 		case iotago.OutputSigLockedSingleOutput:
+
 			if output.Amount() < iotago.OutputSigLockedDustAllowanceOutputMinDeposit {
 				// Re-Add previously-spent dust
-				addressKey, err := d.addressKeyForOutput(output)
-				if err != nil {
-					return err
-				}
-				if diff, found := d.allowance[addressKey]; found {
-					diff.outputCount += 1
-				} else {
-					d.allowance[addressKey] = newDustDiff(0, 1)
-				}
+				diff.dustOutputCountDiff += 1
 			}
 		}
 	}
