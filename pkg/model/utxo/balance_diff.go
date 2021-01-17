@@ -19,12 +19,12 @@ func newSingleBalanceDiff(balanceDiff int64, dustAllowanceBalance int64, dustOut
 }
 
 type BalanceDiff struct {
-	allowance map[string]*singleBalanceDiff
+	balances map[string]*singleBalanceDiff
 }
 
 func NewBalanceDiff() *BalanceDiff {
 	return &BalanceDiff{
-		allowance: make(map[string]*singleBalanceDiff),
+		balances: make(map[string]*singleBalanceDiff),
 	}
 }
 
@@ -51,7 +51,7 @@ func (d *BalanceDiff) DiffForAddress(address iotago.Address) (balanceDiff int64,
 		return 0, 0, 0, err
 	}
 
-	if diff, found := d.allowance[addressKey]; found {
+	if diff, found := d.balances[addressKey]; found {
 		return diff.balanceDiff, diff.dustAllowanceBalanceDiff, diff.dustOutputCountDiff, nil
 	}
 	return 0, 0, 0, nil
@@ -64,12 +64,12 @@ func (d *BalanceDiff) singleDiffForOutput(output *Output) (*singleBalanceDiff, e
 		return nil, err
 	}
 
-	if diff, found := d.allowance[addressKey]; found {
+	if diff, found := d.balances[addressKey]; found {
 		return diff, nil
 	}
 
 	diff := newSingleBalanceDiff(0, 0, 0)
-	d.allowance[addressKey] = diff
+	d.balances[addressKey] = diff
 	return diff, nil
 }
 

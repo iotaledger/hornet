@@ -170,7 +170,7 @@ func (u *Manager) storeBalanceForAddress(addressKey []byte, balance uint64, dust
 // This applies the diff to the current database
 func (u *Manager) applyBalanceDiff(allowance *BalanceDiff, mutations kvstore.BatchedMutations) error {
 
-	for addressMapKey, diff := range allowance.allowance {
+	for addressMapKey, diff := range allowance.balances {
 		if err := u.applyBalanceDiffForAddress([]byte(addressMapKey), diff.balanceDiff, diff.dustAllowanceBalanceDiff, diff.dustOutputCountDiff, mutations); err != nil {
 			return err
 		}
@@ -205,25 +205,25 @@ func (u *Manager) applyBalanceDiffForAddress(addressKey []byte, balanceDiff int6
 
 func (u *Manager) applyNewBalancesWithoutLocking(newOutputs Outputs, newSpents Spents, mutations kvstore.BatchedMutations) error {
 
-	allowance := NewBalanceDiff()
-	if err := allowance.Add(newOutputs, newSpents); err != nil {
+	balances := NewBalanceDiff()
+	if err := balances.Add(newOutputs, newSpents); err != nil {
 		return err
 	}
-	return u.applyBalanceDiff(allowance, mutations)
+	return u.applyBalanceDiff(balances, mutations)
 }
 
 func (u *Manager) rollbackBalancesWithoutLocking(newOutputs Outputs, newSpents Spents, mutations kvstore.BatchedMutations) error {
-	allowance := NewBalanceDiff()
-	if err := allowance.Remove(newOutputs, newSpents); err != nil {
+	balances := NewBalanceDiff()
+	if err := balances.Remove(newOutputs, newSpents); err != nil {
 		return err
 	}
-	return u.applyBalanceDiff(allowance, mutations)
+	return u.applyBalanceDiff(balances, mutations)
 }
 
 func (u *Manager) storeBalanceForUnspentOutput(unspentOutput *Output, mutations kvstore.BatchedMutations) error {
-	allowance := NewBalanceDiff()
-	if err := allowance.Add([]*Output{unspentOutput}, []*Spent{}); err != nil {
+	balances := NewBalanceDiff()
+	if err := balances.Add([]*Output{unspentOutput}, []*Spent{}); err != nil {
 		return err
 	}
-	return u.applyBalanceDiff(allowance, mutations)
+	return u.applyBalanceDiff(balances, mutations)
 }
