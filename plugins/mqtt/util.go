@@ -157,24 +157,35 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 
 func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 
-	sigLockedSingleDeposit := &iotago.SigLockedSingleOutput{
-		Address: output.Address(),
-		Amount:  output.Amount(),
+	var rawOutput iotago.Output
+	switch output.OutputType() {
+	case iotago.OutputSigLockedSingleOutput:
+		rawOutput = &iotago.SigLockedSingleOutput{
+			Address: output.Address(),
+			Amount:  output.Amount(),
+		}
+	case iotago.OutputSigLockedDustAllowanceOutput:
+		rawOutput = &iotago.SigLockedDustAllowanceOutput{
+			Address: output.Address(),
+			Amount:  output.Amount(),
+		}
+	default:
+		return nil
 	}
 
-	sigLockedSingleDepositJSON, err := sigLockedSingleDeposit.MarshalJSON()
+	rawOutputJSON, err := rawOutput.MarshalJSON()
 	if err != nil {
 		return nil
 	}
 
-	rawMsgSigLockedSingleDepositJSON := json.RawMessage(sigLockedSingleDepositJSON)
+	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputPayload{
 		MessageID:     output.MessageID().Hex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
-		RawOutput:     &rawMsgSigLockedSingleDepositJSON,
+		RawOutput:     &rawRawOutputJSON,
 	}
 }
 
