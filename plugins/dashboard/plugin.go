@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"encoding/hex"
 	"net/http"
 	"runtime"
 	"time"
@@ -134,15 +135,24 @@ func run() {
 	if deps.NodeConfig.Bool(CfgDashboardBasicAuthEnabled) {
 		// grab auth info
 		expectedUsername := deps.NodeConfig.String(CfgDashboardBasicAuthUsername)
-		expectedPasswordHash := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordHash)
-		passwordSalt := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordSalt)
-
 		if len(expectedUsername) == 0 {
 			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", CfgDashboardBasicAuthUsername)
 		}
 
-		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (scrypt hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
+		expectedPasswordHashHex := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordHash)
+		if len(expectedPasswordHashHex) != 64 {
+			log.Fatalf("'%s' must be 64 (hex encoded scrypt hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
+		}
+
+		expectedPasswordHash, err := hex.DecodeString(expectedPasswordHashHex)
+		if err != nil {
+			log.Fatalf("'%s' must be hex encoded", CfgDashboardBasicAuthPasswordHash)
+		}
+
+		passwordSaltHex := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordSalt)
+		passwordSalt, err := hex.DecodeString(passwordSaltHex)
+		if err != nil {
+			log.Fatalf("'%s' must be hex encoded", CfgDashboardBasicAuthPasswordSalt)
 		}
 
 		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
