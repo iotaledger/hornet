@@ -18,14 +18,14 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMes
 
 	// Store message in the database
 	cachedMsg, alreadyAdded := te.storage.AddMessageToStorage(msg, te.storage.GetLatestMilestoneIndex(), false, true, true)
-	require.NotNil(te.testState, cachedMsg)
-	require.False(te.testState, alreadyAdded)
+	require.NotNil(te.TestState, cachedMsg)
+	require.False(te.TestState, alreadyAdded)
 
 	// Solidify msg if not a milestone
 	ms := msg.GetMilestone()
 	if ms == nil {
 		cachedMsg.GetMetadata().SetSolid(true)
-		require.True(te.testState, cachedMsg.GetMetadata().IsSolid())
+		require.True(te.TestState, cachedMsg.GetMetadata().IsSolid())
 	}
 
 	te.cachedMessages = append(te.cachedMessages, cachedMsg)
@@ -36,13 +36,13 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMes
 // VerifyLSMI checks if the latest solid milestone index is equal to the given milestone index.
 func (te *TestEnvironment) VerifyLSMI(index milestone.Index) {
 	lsmi := te.storage.GetSolidMilestoneIndex()
-	require.Equal(te.testState, index, lsmi)
+	require.Equal(te.TestState, index, lsmi)
 }
 
 // VerifyLMI checks if the latest milestone index is equal to the given milestone index.
 func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 	lmi := te.storage.GetLatestMilestoneIndex()
-	require.Equal(te.testState, index, lmi)
+	require.Equal(te.TestState, index, lmi)
 }
 
 // AssertAddressBalance generates an address for the given seed and index and checks correct balance.
@@ -54,22 +54,22 @@ func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedB
 	balanceStatus += fmt.Sprintf("\tWallet:\t\t%d\n", wallet.Balance())
 	balanceStatus += fmt.Sprintf("\tExpected:\t%d\n", expectedBalance)
 	fmt.Print(balanceStatus)
-	require.NoError(te.testState, err)
-	require.Exactly(te.testState, expectedBalance, addrBalance)
-	require.Exactly(te.testState, expectedBalance, wallet.Balance())
+	require.NoError(te.TestState, err)
+	require.Exactly(te.TestState, expectedBalance, addrBalance)
+	require.Exactly(te.TestState, expectedBalance, wallet.Balance())
 }
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.
 func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 	err := te.storage.UTXO().CheckLedgerState()
-	require.NoError(te.testState, err)
+	require.NoError(te.TestState, err)
 }
 
 func (te *TestEnvironment) AssertMessageConflictReason(messageID *hornet.MessageID, conflict storage.Conflict) {
 	metadata := te.storage.GetCachedMessageMetadataOrNil(messageID)
-	require.NotNil(te.testState, metadata)
+	require.NotNil(te.TestState, metadata)
 	defer metadata.Release(true)
-	require.Equal(te.testState, metadata.GetMetadata().GetConflict(), conflict)
+	require.Equal(te.TestState, metadata.GetMetadata().GetConflict(), conflict)
 }
 
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
@@ -105,7 +105,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 			if _, visited := visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]; !visited {
 				cachedMsg := te.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
-				require.NotNil(te.testState, cachedMsg)
+				require.NotNil(te.TestState, cachedMsg)
 				visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = cachedMsg
 			}
 
@@ -117,14 +117,14 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
 		false, nil)
-	require.NoError(te.testState, err)
+	require.NoError(te.TestState, err)
 
 	var milestoneMsgs []string
 	var includedMsgs []string
 	var ignoredMsgs []string
 	var conflictingMsgs []string
 
-	dotFile := fmt.Sprintf("digraph %s\n{\n", te.testState.Name())
+	dotFile := fmt.Sprintf("digraph %s\n{\n", te.TestState.Name())
 	for _, cachedMessage := range visitedCachedMessages {
 		message := cachedMessage.GetMessage()
 		meta := cachedMessage.GetMetadata()
@@ -139,7 +139,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent1\" ];\n", shortIndex, utils.ShortenedHash(message.GetParent1MessageID()))
 		} else {
 			cachedMessageParent1 := te.storage.GetCachedMessageOrNil(message.GetParent1MessageID())
-			require.NotNil(te.testState, cachedMessageParent1)
+			require.NotNil(te.TestState, cachedMessageParent1)
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent1\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent1.Retain()))
 			cachedMessageParent1.Release(true)
 		}
@@ -148,7 +148,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent2\" ];\n", shortIndex, utils.ShortenedHash(message.GetParent2MessageID()))
 		} else {
 			cachedMessageParent2 := te.storage.GetCachedMessageOrNil(message.GetParent2MessageID())
-			require.NotNil(te.testState, cachedMessageParent2)
+			require.NotNil(te.TestState, cachedMessageParent2)
 			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent2\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent2.Retain()))
 			cachedMessageParent2.Release(true)
 		}

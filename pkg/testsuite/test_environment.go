@@ -33,8 +33,8 @@ var (
 
 // TestEnvironment holds the state of the test environment.
 type TestEnvironment struct {
-	// testState is the state of the current test case.
-	testState *testing.T
+	// TestState is the state of the current test case.
+	TestState *testing.T
 
 	// Milestones are the created milestones by the coordinator during the test.
 	Milestones storage.CachedMilestones
@@ -96,7 +96,7 @@ func searchProjectRootFolder() string {
 func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
-		testState:              testState,
+		TestState:              testState,
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
@@ -112,7 +112,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	require.NoError(testState, err)
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testState.Name()))
-	require.NoError(te.testState, err)
+	require.NoError(te.TestState, err)
 	te.tempDir = tempDir
 
 	testState.Logf("Testdir: %s", tempDir)
