@@ -53,7 +53,7 @@ type WhiteFlagMutations struct {
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
 	// Contains the calculated Dust allowance diff.
-	dustAllowanceDiff *utxo.DustAllowanceDiff
+	dustAllowanceDiff *utxo.BalanceDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
@@ -74,7 +74,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
-		dustAllowanceDiff:                           utxo.NewDustAllowanceDiff(),
+		dustAllowanceDiff:                           utxo.NewBalanceDiff(),
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -245,7 +245,6 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 
 		// save the inputs as spent
 		for _, input := range inputOutputs {
-			delete(wfConf.NewOutputs, string(input.OutputID()[:]))
 			spent := utxo.NewSpent(input, transactionID, msIndex)
 			wfConf.NewSpents[string(input.OutputID()[:])] = spent
 			newSpents = append(newSpents, spent)

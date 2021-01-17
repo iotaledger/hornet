@@ -23,6 +23,58 @@ var (
 	showConfirmationGraphs = false
 )
 
+func TestWhiteFlagSendAllCoins(t *testing.T) {
+
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_283_277_761)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Issue some transactions
+	messageA := te.NewMessageBuilder("A").
+		Parents(te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID).
+		FromWallet(seed1Wallet).
+		ToWallet(seed2Wallet).
+		Amount(2_779_530_283_277_761).
+		Build().
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// Issue some transactions
+	messageB := te.NewMessageBuilder("B").
+		Parents(messageA.StoredMessageID(), te.Milestones[1].GetMilestone().MessageID).
+		FromWallet(seed2Wallet).
+		ToWallet(seed1Wallet).
+		Amount(2_779_530_283_277_761).
+		Build().
+		Store().
+		BookOnWallets()
+
+	// Confirming milestone at message C (message D and E are not included)
+	conf := te.IssueAndConfirmMilestoneOnTip(messageB.StoredMessageID(), true)
+	require.Equal(t, 2+1, conf.MessagesReferenced) // 2 + milestone itself
+	require.Equal(t, 2, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_283_277_761)
+	te.AssertWalletBalance(seed2Wallet, 0)
+}
+
 func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)

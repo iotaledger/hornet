@@ -151,7 +151,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		return err
 	}
 
-	if err := u.applyNewDustWithoutLocking(newOutputs, newSpents, mutations); err != nil {
+	if err := u.applyNewBalancesWithoutLocking(newOutputs, newSpents, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}
@@ -206,7 +206,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		return err
 	}
 
-	if err := u.rollbackDustWithoutLocking(newOutputs, newSpents, mutations); err != nil {
+	if err := u.rollbackBalancesWithoutLocking(newOutputs, newSpents, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}
@@ -238,7 +238,7 @@ func (u *Manager) CheckLedgerState() error {
 		return ErrOutputsSumNotEqualTotalSupply
 	}
 
-	return nil
+	return u.checkBalancesLedger()
 }
 
 func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
@@ -258,7 +258,7 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 		return err
 	}
 
-	if err := u.storeDustForUnspentOutput(unspentOutput, mutations); err != nil {
+	if err := u.storeBalanceForUnspentOutput(unspentOutput, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}

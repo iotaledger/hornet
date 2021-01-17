@@ -85,9 +85,8 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 }
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
-	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
-	balance, count, err := deps.UTXO.AddressBalance(address, false, maxResults)
+	balance, err := deps.UTXO.AddressBalanceWithoutLocking(address)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading address balance failed: %s, error: %s", address, err)
 	}
@@ -95,8 +94,6 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 	return &addressBalanceResponse{
 		AddressType: iotago.AddressEd25519,
 		Address:     address.String(),
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(count),
 		Balance:     balance,
 	}, nil
 }

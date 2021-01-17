@@ -6,5 +6,5 @@ const (
 	UTXOStoreKeyPrefixUnspent              byte = 2
 	UTXOStoreKeyPrefixSpent                byte = 3
 	UTXOStoreKeyPrefixMilestoneDiffs       byte = 4
-	UTXOStoreKeyPrefixDust                 byte = 5
+	UTXOStoreKeyPrefixBalances             byte = 5
 )
