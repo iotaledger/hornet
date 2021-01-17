@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -98,15 +99,24 @@ func configure() {
 	if deps.NodeConfig.Bool(CfgRestAPIBasicAuthEnabled) {
 		// grab auth info
 		expectedUsername := deps.NodeConfig.String(CfgRestAPIBasicAuthUsername)
-		expectedPasswordHash := deps.NodeConfig.String(CfgRestAPIBasicAuthPasswordHash)
-		passwordSalt := deps.NodeConfig.String(CfgRestAPIBasicAuthPasswordSalt)
-
 		if len(expectedUsername) == 0 {
 			log.Fatalf("'%s' must not be empty if web API basic auth is enabled", CfgRestAPIBasicAuthUsername)
 		}
 
-		if len(expectedPasswordHash) != 64 {
-			log.Fatalf("'%s' must be 64 (scrypt hash) in length if web API basic auth is enabled", CfgRestAPIBasicAuthPasswordHash)
+		expectedPasswordHashHex := deps.NodeConfig.String(CfgRestAPIBasicAuthPasswordHash)
+		if len(expectedPasswordHashHex) != 64 {
+			log.Fatalf("'%s' must be 64 (hex encoded scrypt hash) in length if web API basic auth is enabled", CfgRestAPIBasicAuthPasswordHash)
+		}
+
+		expectedPasswordHash, err := hex.DecodeString(expectedPasswordHashHex)
+		if err != nil {
+			log.Fatalf("'%s' must be hex encoded", CfgRestAPIBasicAuthPasswordHash)
+		}
+
+		passwordSaltHex := deps.NodeConfig.String(CfgRestAPIBasicAuthPasswordSalt)
+		passwordSalt, err := hex.DecodeString(passwordSaltHex)
+		if err != nil {
+			log.Fatalf("'%s' must be hex encoded", CfgRestAPIBasicAuthPasswordSalt)
 		}
 
 		excludedRoutes := make(map[string]struct{})
