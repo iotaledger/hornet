@@ -3,12 +3,15 @@ package protocfg
 import (
 	"encoding/json"
 
-	"github.com/gohornet/hornet/pkg/model/coordinator"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
+
+	"github.com/iotaledger/hive.go/configuration"
+
+	iotago "github.com/iotaledger/iota.go"
+
+	"github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/pkg/node"
 )
 
 const (
@@ -20,6 +23,8 @@ const (
 	CfgProtocolMinPoWScore = "protocol.minPoWScore"
 	// the network ID on which this node operates on.
 	CfgProtocolNetworkIDName = "protocol.networkID"
+	// the HRP which should be used for Bech32 addresses.
+	CfgProtocolBech32HRP = "protocol.bech32HRP"
 	// the amount of public keys in a milestone
 	CfgProtocolMilestonePublicKeyCount = "protocol.milestonePublicKeyCount"
 )
@@ -37,6 +42,7 @@ func init() {
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
 						fs.String(CfgProtocolNetworkIDName, "mainnet1", "the network ID on which this node operates on.")
+						fs.String(CfgProtocolBech32HRP, iotago.PrefixMainnet.String(), "the HRP which should be used for Bech32 addresses.")
 						return fs
 					}(),
 				},
@@ -63,12 +69,20 @@ func provide(c *dig.Container) {
 		dig.Out
 
 		PublicKeyRanges coordinator.PublicKeyRanges
-		NetworkID       uint64 `name:"networkId"`
+		NetworkID       uint64               `name:"networkId"`
+		Bech32HRP       iotago.NetworkPrefix `name:"bech32HRP"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) protoresult {
+
+		prefix, err := iotago.ParsePrefix(deps.NodeConfig.String(CfgProtocolBech32HRP))
+		if err != nil {
+			panic(err)
+		}
+
 		res := protoresult{
 			NetworkID: iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
+			Bech32HRP: prefix,
 		}
 
 		if err := deps.NodeConfig.SetDefault(CfgProtocolPublicKeyRanges, &coordinator.PublicKeyRanges{

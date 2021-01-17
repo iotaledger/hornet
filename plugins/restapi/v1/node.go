@@ -47,6 +47,7 @@ func info() (*infoResponse, error) {
 		Version:              deps.AppInfo.Version,
 		IsHealthy:            deps.Tangle.IsNodeHealthy(),
 		NetworkID:            deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		Bech32HRP:            deps.Bech32HRP.String(),
 		MinPowScore:          deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
 		LatestMilestoneIndex: latestMilestoneIndex,
 		SolidMilestoneIndex:  solidMilestoneIndex,

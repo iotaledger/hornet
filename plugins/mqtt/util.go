@@ -195,16 +195,13 @@ func publishOutput(output *utxo.Output, spent bool) {
 	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
 
 	// Since we do not know on which network we are running (Mainnet vs Testnet), we have to check if anyone is subscribed to the bech32 address on both Mainnet and Testnet
-	addressBech32MainnetTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(iotago.PrefixMainnet))
-	addressBech32MainnetTopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32MainnetTopic)
-
-	addressBech32TestnetTopic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(iotago.PrefixTestnet))
-	addressBech32TestnetTopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32TestnetTopic)
+	addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
+	addressBech32TopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32Topic)
 
 	addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
 	addressEd25519TopicHasSubscribers := mqttBroker.HasSubscribers(addressEd25519Topic)
 
-	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32MainnetTopicHasSubscribers || addressBech32TestnetTopicHasSubscribers {
+	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
 		if payload := payloadForOutput(output, spent); payload != nil {
 
 			// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
@@ -218,12 +215,8 @@ func publishOutput(output *utxo.Output, spent bool) {
 				mqttBroker.Send(outputsTopic, jsonPayload)
 			}
 
-			if addressBech32MainnetTopicHasSubscribers {
-				mqttBroker.Send(addressBech32MainnetTopic, jsonPayload)
-			}
-
-			if addressBech32TestnetTopicHasSubscribers {
-				mqttBroker.Send(addressBech32TestnetTopic, jsonPayload)
+			if addressBech32TopicHasSubscribers {
+				mqttBroker.Send(addressBech32Topic, jsonPayload)
 			}
 
 			if addressEd25519TopicHasSubscribers {

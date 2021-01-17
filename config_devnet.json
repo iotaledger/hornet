@@ -65,6 +65,7 @@
   },
   "protocol": {
     "networkID": "devnet1",
+    "bech32HRP": "atoi",
     "minPoWScore": 2000,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
