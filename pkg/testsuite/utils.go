@@ -43,7 +43,7 @@ type Message struct {
 	storedMessageID *hornet.MessageID
 }
 
-func NewMessageBuilder(te *TestEnvironment, indexation string) *MessageBuilder {
+func (te *TestEnvironment) NewMessageBuilder(indexation string) *MessageBuilder {
 	return &MessageBuilder{
 		te:         te,
 		indexation: indexation,
