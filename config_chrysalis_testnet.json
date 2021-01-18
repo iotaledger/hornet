@@ -64,7 +64,7 @@
     "delay": 60480
   },
   "protocol": {
-    "networkID": "alphanet2",
+    "networkID": "testnet2",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
