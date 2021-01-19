@@ -25,7 +25,6 @@ const (
 
 // Curl defines an instance of a batched Curl hasher.
 type Curl struct {
-	rounds      curl.CurlRounds
 	inputSize   int
 	timeout     time.Duration
 	workerCount int
@@ -50,9 +49,8 @@ type job struct {
 }
 
 // NewCurl initializes a new batched Curl instance.
-func NewCurl(rounds curl.CurlRounds, inputSize int, timeout time.Duration, workerCount int) *Curl {
+func NewCurl(inputSize int, timeout time.Duration, workerCount int) *Curl {
 	c := &Curl{
-		rounds:      rounds,
 		inputSize:   inputSize,
 		timeout:     timeout,
 		workerCount: workerCount,
@@ -66,7 +64,7 @@ func NewCurl(rounds curl.CurlRounds, inputSize int, timeout time.Duration, worke
 
 // NewCurlP81 returns a new batched Curl-P-81.
 func NewCurlP81(inputSize int, timeout time.Duration, workerCount int) *Curl {
-	return NewCurl(curl.CurlP81, inputSize, timeout, workerCount)
+	return NewCurl(inputSize, timeout, workerCount)
 }
 
 // WorkerCount returns the number of parallel workers computing the hashes.
@@ -195,7 +193,7 @@ func (c *Curl) process(batch []job) {
 	// if below threshold, compute the hashes in serial
 	if len(batch) < bctThreshold {
 		for i := range batch {
-			hash, err := curl.HashTrits(batch[i].trits, c.rounds)
+			hash, err := curl.HashTrits(batch[i].trits)
 			batch[i].result <- CurlResult{hash, err}
 		}
 		return
@@ -213,7 +211,7 @@ func (c *Curl) process(batch []job) {
 }
 
 func (c *Curl) hashBatchedTrits(batchBuf []trinary.Trits) error {
-	h := bct.NewCurl(c.rounds)
+	h := bct.NewCurlP81()
 	if err := h.Absorb(batchBuf, c.inputSize); err != nil {
 		return err
 	}

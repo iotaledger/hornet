@@ -6,6 +6,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/iotaledger/iota.go/bundle"
+	"github.com/iotaledger/iota.go/math"
+	"github.com/iotaledger/iota.go/transaction"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/iotaledger/iota.go/address"
@@ -22,6 +25,39 @@ func init() {
 	addEndpoint("broadcastTransactions", broadcastTransactions, implementedAPIcalls)
 	addEndpoint("findTransactions", findTransactions, implementedAPIcalls)
 	addEndpoint("storeTransactions", storeTransactions, implementedAPIcalls)
+}
+
+// checks whether the given trytes make up a syntactically and semantically valid migration bundle.
+// for each input transaction it is also checked, whether the migration
+// bundle is spending the entirety of the funds residing on the given address.
+func isMigrationBundle(trytes []trinary.Trytes) error {
+	// the trytes to broadcast must make up a complete migration bundle
+	bndl, err := transaction.AsTransactionObjects(trytes, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := bundle.ValidBundle(bndl, true); err != nil {
+		return err
+	}
+
+	// check also that the input transactions are spending the entirety of
+	// the funds residing on the given address:
+	// obviously this is racy in re to what milestone is currently applied
+	// but is still in place as a rudimentary safe-guard.
+	for txIndex, tx := range bndl {
+		if tx.Value < 0 {
+			balance, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.HashFromAddressTrytes(tx.Address))
+			if err != nil {
+				return err
+			}
+			if balance != math.AbsInt64(tx.Value) {
+				return fmt.Errorf("input transaction %d does not spend entirety of funds residing on its address", txIndex)
+			}
+		}
+	}
+
+	return nil
 }
 
 func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
@@ -46,6 +82,13 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			c.JSON(http.StatusBadRequest, e)
 			return
 		}
+	}
+
+	// we only allow the broadcasting of migration bundles
+	if err := isMigrationBundle(query.Trytes); err != nil {
+		e.Error = err.Error()
+		c.JSON(http.StatusBadRequest, e)
+		return
 	}
 
 	for _, trytes := range query.Trytes {

@@ -18,4 +18,5 @@ const (
 	StorePrefixUnconfirmedTransactions byte = 14
 	StorePrefixSpentAddresses          byte = 15
 	StorePrefixAutopeering             byte = 16
+	StorePrefixWhiteFlag               byte = 17
 )

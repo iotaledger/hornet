@@ -58,6 +58,7 @@ func ConfigureDatabases(directory string) {
 func ConfigureStorages(tangleStore kvstore.KVStore, snapshotStore kvstore.KVStore, spentStore kvstore.KVStore, caches profile.Caches) {
 
 	configureHealthStore(tangleStore)
+	configureWhiteFlagStore(tangleStore)
 	configureTransactionStorage(tangleStore, caches.Transactions)
 	configureBundleTransactionsStorage(tangleStore, caches.BundleTransactions)
 	configureBundleStorage(tangleStore, caches.Bundles)
