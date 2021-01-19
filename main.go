@@ -20,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/snapshot"
-	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
@@ -58,7 +57,6 @@ func main() {
 			dashboard.PLUGIN,
 			zmq.PLUGIN,
 			mqtt.PLUGIN,
-			spammer.PLUGIN,
 			coordinator.PLUGIN,
 			prometheus.PLUGIN,
 		}...)

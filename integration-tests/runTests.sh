@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEST_NAMES='common autopeering benchmark'
+TEST_NAMES='common autopeering'
 
 echo "Build Hornet image"
 docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.

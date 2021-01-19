@@ -83,7 +83,7 @@ func (te *TestEnvironment) configureCoordinator() {
 		}
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *tangle.WhiteFlagConfirmation) {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
@@ -119,8 +119,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.Hash, create
 		}
 	}()
 
-	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	var wfConf *tangle.WhiteFlagConfirmation
+	confStats, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *tangle.WhiteFlagConfirmation) {
 		wfConf = confirmation
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})

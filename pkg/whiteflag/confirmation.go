@@ -27,7 +27,7 @@ type ConfirmedMilestoneStats struct {
 // ConfirmMilestone traverses a milestone and collects all unconfirmed tx,
 // then the ledger diffs are calculated, the ledger state is checked and all tx are marked as confirmed.
 // all cachedTxMetas have to be released outside.
-func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *Confirmation)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsBundle *tangle.CachedBundle, forEachConfirmedTx func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64), onMilestoneConfirmed func(confirmation *tangle.WhiteFlagConfirmation)) (*ConfirmedMilestoneStats, error) {
 	defer cachedMsBundle.Release(true)
 	msBundle := cachedMsBundle.GetBundle()
 
@@ -60,7 +60,7 @@ func ConfirmMilestone(cachedTxMetas map[string]*tangle.CachedMetadata, cachedMsB
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
 	}
 
-	confirmation := &Confirmation{
+	confirmation := &tangle.WhiteFlagConfirmation{
 		MilestoneIndex: milestoneIndex,
 		MilestoneHash:  msBundle.GetTailHash(),
 		Mutations:      mutations,

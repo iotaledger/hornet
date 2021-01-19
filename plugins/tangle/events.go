@@ -5,7 +5,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{}) {
@@ -13,7 +12,7 @@ func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{
 }
 
 func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(confirmation *whiteflag.Confirmation))(params[0].(*whiteflag.Confirmation))
+	handler.(func(confirmation *tangle.WhiteFlagConfirmation))(params[0].(*tangle.WhiteFlagConfirmation))
 }
 
 var Events = pluginEvents{

@@ -103,6 +103,10 @@ type FindTransactionsReturn struct {
 	Duration int            `json:"duration"`
 }
 
+type GetMigration struct {
+	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+}
+
 ///////////////////// getBalances /////////////////////////////////
 
 // GetBalances struct

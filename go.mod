@@ -19,18 +19,18 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-zeromq/zmq4 v0.12.0
 	github.com/gobuffalo/packr/v2 v2.8.0
+	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20201016154508-2514b782563a
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20201113171647-14f7a0d87712
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210120185515-43362a448148
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/mr-tron/base58 v1.2.0
-	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
@@ -48,7 +48,8 @@ require (
 	gitlab.com/powsrv.io/go/client v0.0.0-20200807151725-8bc5209c1820
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.7.0
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
 	golang.org/x/tools v0.0.0-20201021171030-d105bfabbdbe // indirect
 	google.golang.org/genproto v0.0.0-20201021134325-0d71844de594 // indirect
 	google.golang.org/grpc v1.33.1 // indirect

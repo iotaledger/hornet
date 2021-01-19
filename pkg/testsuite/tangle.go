@@ -16,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
 // storeTransaction adds the transaction to the storage layer.
@@ -130,7 +129,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 }
 
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
-func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confirmation) string {
+func (te *TestEnvironment) generateDotFileFromConfirmation(conf *tangle.WhiteFlagConfirmation) string {
 
 	indexOf := func(hash hornet.Hash) int {
 		if conf == nil {

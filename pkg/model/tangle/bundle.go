@@ -308,57 +308,54 @@ func (bundle *Bundle) validate() bool {
 		cachedCurrentTx.Release(true) // tx -1
 	}
 
-	// validate bundle semantics and signatures
-	if iotagobundle.ValidBundle(iotaGoBundle) != nil {
+	// validate bundle semantics and signatures, note that this means that any non milestone
+	// bundle must be a valid migration bundle
+	if iotagobundle.ValidBundle(iotaGoBundle, !bundle.IsMilestone()) != nil {
 		bundle.setValid(false)
 		bundle.setValidStrictSemantics(false)
 		return false
 	}
 
-	validStrictSemantics := true
-
-	// enforce that non head transactions within the bundle approve as their branch transaction
-	// the trunk transaction of the head transaction.
-	// Milestones already follow these rules.
-	if !bundle.IsMilestone() {
-		if len(iotaGoBundle) > 1 {
-			for i := 0; i < len(iotaGoBundle)-1; i++ {
-				if iotaGoBundle[i].BranchTransaction != headTx.Tx.TrunkTransaction {
-					validStrictSemantics = false
-				}
-			}
-		}
-	}
-
-	// verify that the head transaction only approves tail transactions.
-	// this is fine within the validation code, since the bundle is only complete when it is solid.
-	// however, as a special rule, milestone bundles might not be solid
-	if !bundle.IsMilestone() && validStrictSemantics {
-		approveeHashes := hornet.Hashes{headTx.GetTrunkHash()}
-		if !bytes.Equal(headTx.GetTrunkHash(), headTx.GetBranchHash()) {
-			approveeHashes = append(approveeHashes, headTx.GetBranchHash())
-		}
-
-		for _, approveeHash := range approveeHashes {
-			if SolidEntryPointsContain(approveeHash) {
-				continue
-			}
-			cachedApproveeTxMeta := GetCachedTxMetadataOrNil(approveeHash) // meta +1
-			if cachedApproveeTxMeta == nil {
-				log.Panicf("Tx with hash %v not found", approveeHash.Trytes())
-			}
-
-			if !cachedApproveeTxMeta.GetMetadata().IsTail() {
-				validStrictSemantics = false
-				cachedApproveeTxMeta.Release(true) // meta -1
-				break
-			}
-			cachedApproveeTxMeta.Release(true) // meta -1
-		}
-	}
-
-	bundle.setValidStrictSemantics(validStrictSemantics)
 	bundle.setValid(true)
+
+	// milestones are excluded from strict semantic checks
+	if bundle.IsMilestone() {
+		bundle.setValidStrictSemantics(true)
+		return true
+	}
+
+	// check whether the bundle passes strict semantic validation:
+	//	- all non head txs approve as their branch tx the trunk tx of the head tx.
+	//	- the head tx only approves tail txs
+
+	for i := 0; i < len(iotaGoBundle)-1; i++ {
+		if iotaGoBundle[i].BranchTransaction != headTx.Tx.TrunkTransaction {
+			return true
+		}
+	}
+
+	approveeHashes := hornet.Hashes{headTx.GetTrunkHash()}
+	if !bytes.Equal(headTx.GetTrunkHash(), headTx.GetBranchHash()) {
+		approveeHashes = append(approveeHashes, headTx.GetBranchHash())
+	}
+
+	for _, approveeHash := range approveeHashes {
+		if SolidEntryPointsContain(approveeHash) {
+			continue
+		}
+		cachedApproveeTxMeta := GetCachedTxMetadataOrNil(approveeHash) // meta +1
+		if cachedApproveeTxMeta == nil {
+			log.Panicf("Tx with hash %v not found", approveeHash.Trytes())
+		}
+
+		if !cachedApproveeTxMeta.GetMetadata().IsTail() {
+			cachedApproveeTxMeta.Release(true) // meta -1
+			return true
+		}
+		cachedApproveeTxMeta.Release(true) // meta -1
+	}
+
+	bundle.setValidStrictSemantics(true)
 	return true
 }
 

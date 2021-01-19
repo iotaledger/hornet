@@ -187,6 +187,12 @@ func (proc *Processor) CompressAndEmit(tx *transaction.Transaction, txTrits trin
 		return ErrInvalidTimestamp
 	}
 
+	/*
+		if !transaction.HasValidNonce(tx, config.NodeConfig.GetUint64(config.CfgCoordinatorMWM)) {
+			return consts.ErrInvalidTransactionHash
+		}
+	*/
+
 	if _, isInvalidMilestoneTx := invalidMilestoneHashes[string(hornetTx.GetTxHash())]; isInvalidMilestoneTx {
 		// do not accept the invalid milestone transactions
 		return consts.ErrInvalidTransactionHash
