@@ -155,7 +155,7 @@ func ed25519Outputs(address *iotago.Ed25519Address, includeSpent bool) (*address
 
 	outputIDs := []string{}
 	for _, unspentOutput := range unspentOutputs {
-		outputIDs = append(outputIDs, hex.EncodeToString(unspentOutput.OutputID()[:]))
+		outputIDs = append(outputIDs, unspentOutput.OutputID().ToHex())
 	}
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
@@ -166,7 +166,7 @@ func ed25519Outputs(address *iotago.Ed25519Address, includeSpent bool) (*address
 		}
 
 		for _, spent := range spents {
-			outputIDs = append(outputIDs, hex.EncodeToString(spent.OutputID()[:]))
+			outputIDs = append(outputIDs, spent.OutputID().ToHex())
 		}
 	}
 

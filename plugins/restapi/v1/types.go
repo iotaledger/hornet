@@ -104,6 +104,16 @@ type milestoneResponse struct {
 	Time int64 `json:"timestamp"`
 }
 
+// milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
+type milestoneUTXOChangesResponse struct {
+	// The index of the milestone.
+	Index uint32 `json:"index"`
+	// The output IDs (transaction hash + output index) of the newly created outputs.
+	CreatedOutputs []string `json:"createdOutputs"`
+	// The output IDs (transaction hash + output index) of the consumed (spent) outputs.
+	ConsumedOutputs []string `json:"consumedOutputs"`
+}
+
 // outputResponse defines the response of a GET outputs REST API call.
 type outputResponse struct {
 	// The hex encoded message ID of the message.

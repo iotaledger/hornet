@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/gohornet/hornet/core/protocfg"
@@ -82,26 +81,4 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	}
 
 	return &tipsResponse{Tip1: tips[0].Hex(), Tip2: tips[1].Hex()}, nil
-}
-
-func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
-	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
-
-	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
-	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
-	}
-
-	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
-	if cachedMilestone == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "milestone not found: %d", msIndex)
-	}
-	defer cachedMilestone.Release(true)
-
-	return &milestoneResponse{
-		Index:     uint32(cachedMilestone.GetMilestone().Index),
-		MessageID: cachedMilestone.GetMilestone().MessageID.Hex(),
-		Time:      cachedMilestone.GetMilestone().Timestamp.Unix(),
-	}, nil
-
 }
