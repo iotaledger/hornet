@@ -27,9 +27,9 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
 ############################
 # Image
 ############################
-# using static nonroot image
-# user:group is nonroot:nonroot, uid:gid = 65532:65532
-FROM gcr.io/distroless/static@sha256:23aa732bba4c8618c0d97c26a72a32997363d591807b0d4c31b0bbc8a774bddf
+# https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
+# using distroless base image, contains: glibc, libssl and openssl
+FROM gcr.io/distroless/base@sha256:5e0cc69445ed1d8a17198250a7249d56dd4b6966bb6b2118e60ae9194c310647
 
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp
