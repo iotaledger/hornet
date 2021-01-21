@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"encoding/hex"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +21,7 @@ func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	outputIDs := []string{}
 	outputConsumerFunc := func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, hex.EncodeToString(output.OutputID()[:]))
+		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
 	}
 
@@ -40,7 +39,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	outputIDs := []string{}
 	outputConsumerFunc := func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, hex.EncodeToString(output.OutputID()[:]))
+		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
 	}
 
@@ -59,7 +58,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	outputIDs := []string{}
 
 	spentConsumerFunc := func(spent *utxo.Spent) bool {
-		outputIDs = append(outputIDs, hex.EncodeToString(spent.OutputID()[:]))
+		outputIDs = append(outputIDs, spent.OutputID().ToHex())
 		return true
 	}
 

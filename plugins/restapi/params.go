@@ -44,6 +44,7 @@ var params = &node.PluginParams{
 					"/api/v1/messages/:messageID/children",
 					"/api/v1/messages",
 					"/api/v1/milestones/:milestoneIndex",
+					"/api/v1/milestones/:milestoneIndex/utxo-changes",
 					"/api/v1/outputs/:outputID",
 					"/api/v1/addresses/:address",
 					"/api/v1/addresses/:address/outputs",

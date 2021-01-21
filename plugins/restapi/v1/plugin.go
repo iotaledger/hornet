@@ -83,6 +83,10 @@ const (
 	// GET returns the milestone.
 	RouteMilestone = "/milestones/:" + ParameterMilestoneIndex
 
+	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by it's milestoneIndex.
+	// GET returns the output IDs of all UTXO changes.
+	RouteMilestoneUTXOChanges = "/milestones/:" + ParameterMilestoneIndex + "/utxo-changes"
+
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + ParameterOutputID
@@ -288,6 +292,15 @@ func configure() {
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
 		resp, err := milestoneByIndex(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteMilestoneUTXOChanges, func(c echo.Context) error {
+		resp, err := milestoneUTXOChangesByIndex(c)
 		if err != nil {
 			return err
 		}
