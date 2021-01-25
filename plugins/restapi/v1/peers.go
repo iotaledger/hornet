@@ -12,7 +12,8 @@ import (
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 )
 
-func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
+// Wraps the given peer info snapshot with additional metadata, such as gossip protocol information.
+func WrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *PeerResponse {
 	var alias *string
 
 	if info.Alias != "" {
@@ -31,7 +32,7 @@ func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
 		gossipMetrics = gossipProto.Metrics.Snapshot()
 	}
 
-	return &peerResponse{
+	return &PeerResponse{
 		ID:             info.ID,
 		MultiAddresses: multiAddresses,
 		Alias:          alias,
@@ -41,7 +42,7 @@ func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
 	}
 }
 
-func getPeer(c echo.Context) (*peerResponse, error) {
+func getPeer(c echo.Context) (*PeerResponse, error) {
 	peerID, err := peer.Decode(c.Param(ParameterPeerID))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
@@ -52,7 +53,7 @@ func getPeer(c echo.Context) (*peerResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", peerID.String())
 	}
 
-	return wrapInfoSnapshot(info), nil
+	return WrapInfoSnapshot(info), nil
 }
 
 func removePeer(c echo.Context) error {
@@ -63,17 +64,17 @@ func removePeer(c echo.Context) error {
 	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
 
-func listPeers(c echo.Context) ([]*peerResponse, error) {
-	var results []*peerResponse
+func listPeers(c echo.Context) ([]*PeerResponse, error) {
+	var results []*PeerResponse
 
 	for _, info := range deps.Manager.PeerInfoSnapshots() {
-		results = append(results, wrapInfoSnapshot(info))
+		results = append(results, WrapInfoSnapshot(info))
 	}
 
 	return results, nil
 }
 
-func addPeer(c echo.Context) (*peerResponse, error) {
+func addPeer(c echo.Context) (*PeerResponse, error) {
 
 	request := &addPeerRequest{}
 
@@ -104,5 +105,5 @@ func addPeer(c echo.Context) (*peerResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", addrInfo.ID.String())
 	}
 
-	return wrapInfoSnapshot(info), nil
+	return WrapInfoSnapshot(info), nil
 }

@@ -241,8 +241,8 @@ type addPeerRequest struct {
 	Alias *string `json:"alias,omitempty"`
 }
 
-// peerResponse defines the response of a GET peer REST API call.
-type peerResponse struct {
+// PeerResponse defines the response of a GET peer REST API call.
+type PeerResponse struct {
 	// The libp2p identifier of the peer.
 	ID string `json:"id"`
 	// The libp2p multi addresses of the peer.
@@ -255,24 +255,6 @@ type peerResponse struct {
 	Connected bool `json:"connected"`
 	// The gossip metrics of the peer.
 	GossipMetrics gossip.MetricsSnapshot `json:"gossipMetrics,omitempty"`
-}
-
-// peerGossipMetrics defines the peer gossip metrics.
-type peerGossipMetrics struct {
-	// The total amount of sent packages.
-	SentPackets uint32 `json:"sentPackets"`
-	// The total amount of dropped sent packages.
-	DroppedSentPackets uint32 `json:"droppedSentPackets"`
-	// The total amount of received heartbeats.
-	ReceivedHeartbeats uint32 `json:"receivedHeartbeats"`
-	// The total amount of sent heartbeats.
-	SentHeartbeats uint32 `json:"sentHeartbeats"`
-	// The total amount of received messages.
-	ReceivedMessages uint32 `json:"receivedMessages"`
-	// The total amount of received new messages.
-	NewMessages uint32 `json:"newMessages"`
-	// The total amount of received known messages.
-	KnownMessages uint32 `json:"knownMessages"`
 }
 
 // pruneDatabaseResponse defines the response of a prune database REST API call.

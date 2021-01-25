@@ -6,11 +6,11 @@ import (
 	"runtime"
 	"time"
 
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -307,20 +307,6 @@ type MemMetrics struct {
 	LastPauseGC  uint64 `json:"last_pause_gc"`
 }
 
-// PeerMetric represents metrics of a peer.
-type PeerMetric struct {
-	Identity         string                `json:"identity"`
-	Alias            string                `json:"alias,omitempty"`
-	OriginAddr       string                `json:"origin_addr"`
-	ConnectionOrigin network.Direction     `json:"connection_origin"`
-	ProtocolVersion  uint16                `json:"protocol_version"`
-	BytesRead        uint64                `json:"bytes_read"`
-	BytesWritten     uint64                `json:"bytes_written"`
-	Heartbeat        *gossip.Heartbeat     `json:"heartbeat"`
-	Info             *p2p.PeerInfoSnapshot `json:"info"`
-	Connected        bool                  `json:"connected"`
-}
-
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
 	RequestQueue             Cache `json:"request_queue"`
@@ -335,24 +321,12 @@ type Cache struct {
 	Size int `json:"size"`
 }
 
-func peerMetrics() []*PeerMetric {
-	var stats []*PeerMetric
+func peerMetrics() []*restapiv1.PeerResponse {
+	var peerRes []*restapiv1.PeerResponse
 	for _, info := range deps.Manager.PeerInfoSnapshots() {
-		m := &PeerMetric{
-			OriginAddr: info.Addresses[0].String(),
-			Info:       info,
-		}
-		if info.Peer != nil {
-			m.Identity = info.Peer.ID.String()
-			m.Alias = info.Alias
-			m.Connected = info.Connected
-		} else {
-			m.Identity = info.ID
-		}
-		stats = append(stats, m)
+		peerRes = append(peerRes, restapiv1.WrapInfoSnapshot(info))
 	}
-
-	return stats
+	return peerRes
 }
 
 func currentSyncStatus() *SyncStatus {
