@@ -27,9 +27,9 @@ func WrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *PeerResponse {
 	}
 
 	gossipProto := deps.Service.Protocol(info.Peer.ID)
-	var gossipMetrics gossip.MetricsSnapshot
+	var gossipInfo *gossip.Info
 	if gossipProto != nil {
-		gossipMetrics = gossipProto.Metrics.Snapshot()
+		gossipInfo = gossipProto.Info()
 	}
 
 	return &PeerResponse{
@@ -38,7 +38,7 @@ func WrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *PeerResponse {
 		Alias:          alias,
 		Relation:       info.Relation,
 		Connected:      info.Connected,
-		GossipMetrics:  gossipMetrics,
+		Gossip:         gossipInfo,
 	}
 }
 

@@ -199,6 +199,14 @@ func (p *Protocol) IsSynced(lsi milestone.Index) bool {
 	return true
 }
 
+// Info returns
+func (p *Protocol) Info() *Info {
+	return &Info{
+		Heartbeat: p.LatestHeartbeat,
+		Metrics:   p.Metrics.Snapshot(),
+	}
+}
+
 // Metrics defines a set of metrics regarding a gossip protocol instance.
 type Metrics struct {
 	// The number of received messages which are new.
@@ -257,4 +265,10 @@ type MetricsSnapshot struct {
 	SentMilestoneReq     uint32 `json:"sentMilestoneRequests"`
 	SentHeartbeats       uint32 `json:"sentHeartbeats"`
 	DroppedPackets       uint32 `json:"droppedPackets"`
+}
+
+// Info represents information about an ongoing gossip protocol.
+type Info struct {
+	Heartbeat *Heartbeat      `json:"heartbeat"`
+	Metrics   MetricsSnapshot `json:"metrics"`
 }
