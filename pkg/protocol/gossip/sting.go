@@ -164,11 +164,11 @@ func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 // Heartbeat contains information about a nodes current solid and pruned milestone index
 // and its connected and synced neighbors count.
 type Heartbeat struct {
-	SolidMilestoneIndex  milestone.Index `json:"solid_milestone_index"`
-	PrunedMilestoneIndex milestone.Index `json:"pruned_milestone_index"`
-	LatestMilestoneIndex milestone.Index `json:"latest_milestone_index"`
-	ConnectedNeighbors   int             `json:"connected_neighbors"`
-	SyncedNeighbors      int             `json:"synced_neighbors"`
+	SolidMilestoneIndex  milestone.Index `json:"solidMilestoneIndex"`
+	PrunedMilestoneIndex milestone.Index `json:"prunedMilestoneIndex"`
+	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
+	ConnectedNeighbors   int             `json:"connectedNeighbors"`
+	SyncedNeighbors      int             `json:"syncedNeighbors"`
 }
 
 /// ParseHeartbeat parses the given message into a heartbeat.

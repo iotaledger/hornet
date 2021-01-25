@@ -253,8 +253,8 @@ type PeerResponse struct {
 	Relation string `json:"relation"`
 	// Whether the peer is connected.
 	Connected bool `json:"connected"`
-	// The gossip metrics of the peer.
-	GossipMetrics gossip.MetricsSnapshot `json:"gossipMetrics,omitempty"`
+	// The gossip protocol information of the peer.
+	Gossip *gossip.Info `json:"gossip,omitempty"`
 }
 
 // pruneDatabaseResponse defines the response of a prune database REST API call.
