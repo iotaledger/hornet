@@ -182,7 +182,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		}
 
 		// Dust validation
-		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
+		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
 			return s.UTXO().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
 		})
 
