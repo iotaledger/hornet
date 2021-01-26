@@ -1,7 +1,6 @@
 package utxo
 
 import (
-	"bytes"
 	"encoding/binary"
 	"testing"
 
@@ -16,11 +15,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-func EqualSpents(t *testing.T, expected *Spent, actual *Spent) {
-	require.True(t, bytes.Equal(expected.outputID[:], actual.outputID[:]))
-	require.True(t, bytes.Equal(expected.TargetTransactionID()[:], actual.TargetTransactionID()[:]))
+func EqualSpent(t *testing.T, expected *Spent, actual *Spent) {
+	require.Equal(t, expected.outputID[:], actual.outputID[:])
+	require.Equal(t, expected.TargetTransactionID()[:], actual.TargetTransactionID()[:])
 	require.Equal(t, expected.ConfirmationIndex(), actual.ConfirmationIndex())
-	EqualOutputs(t, expected.Output(), actual.Output())
+	EqualOutput(t, expected.Output(), actual.Output())
 }
 
 func TestSpentSerialization(t *testing.T) {
@@ -48,10 +47,10 @@ func TestSpentSerialization(t *testing.T) {
 
 	spent := NewSpent(output, transactionID, confirmationIndex)
 
-	require.True(t, bytes.Equal(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), spent.kvStorableKey()))
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), spent.kvStorableKey())
 
 	value := spent.kvStorableValue()
-	require.True(t, bytes.Equal(transactionID[:], value[:32]))
+	require.Equal(t, transactionID[:], value[:32])
 	require.Equal(t, confirmationIndex, milestone.Index(binary.LittleEndian.Uint32(value[32:36])))
 
 	store := mapdb.NewMapDB()
@@ -63,6 +62,9 @@ func TestSpentSerialization(t *testing.T) {
 	readSpent, err := utxo.readSpentForOutputIDWithoutLocking(outputID)
 	require.NoError(t, err)
 
-	EqualSpents(t, spent, readSpent)
+	EqualSpent(t, spent, readSpent)
 
+	unspent, err := utxo.IsOutputUnspent(outputID)
+	require.NoError(t, err)
+	require.False(t, unspent)
 }

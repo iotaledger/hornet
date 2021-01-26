@@ -1,7 +1,6 @@
 package utxo
 
 import (
-	"bytes"
 	"encoding/binary"
 	"math/rand"
 	"testing"
@@ -25,9 +24,9 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func EqualOutputs(t *testing.T, expected *Output, actual *Output) {
-	require.True(t, bytes.Equal(expected.OutputID()[:], actual.OutputID()[:]))
-	require.True(t, bytes.Equal(expected.MessageID()[:], actual.MessageID()[:]))
+func EqualOutput(t *testing.T, expected *Output, actual *Output) {
+	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
+	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Address().String(), actual.Address().String())
 	require.Equal(t, expected.Amount(), actual.Amount())
@@ -51,22 +50,22 @@ func TestOutputSerialization(t *testing.T) {
 
 	output := CreateOutput(outputID, messageID, outputType, address, amount)
 
-	require.True(t, bytes.Equal(byteutils.ConcatBytes([]byte{iotago.AddressEd25519}, addressBytes), output.addressBytes()))
+	require.Equal(t, byteutils.ConcatBytes([]byte{iotago.AddressEd25519}, addressBytes), output.addressBytes())
 
-	require.True(t, bytes.Equal(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey()))
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 
 	value := output.kvStorableValue()
-	require.True(t, bytes.Equal(messageID[:], value[:32]))
+	require.Equal(t, messageID[:], value[:32])
 	require.Equal(t, outputType, value[32])
 	require.Equal(t, amount, binary.LittleEndian.Uint64(value[33:41]))
 	require.Equal(t, iotago.AddressEd25519, value[41])
-	require.True(t, bytes.Equal(addressBytes, value[42:74]))
+	require.Equal(t, addressBytes, value[42:74])
 
-	require.True(t, bytes.Equal(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), output.spentDatabaseKey()))
-	require.True(t, bytes.Equal(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), output.unspentDatabaseKey()))
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), output.spentDatabaseKey())
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), output.unspentDatabaseKey())
 
 	input := output.UTXOInput()
-	require.True(t, bytes.Equal(outputID[:32], input.TransactionID[:]))
+	require.Equal(t, outputID[:32], input.TransactionID[:])
 	require.Equal(t, binary.LittleEndian.Uint16(outputID[32:34]), input.TransactionOutputIndex)
 
 	store := mapdb.NewMapDB()
@@ -78,6 +77,9 @@ func TestOutputSerialization(t *testing.T) {
 	readOutput, err := utxo.ReadOutputByOutputID(outputID)
 	require.NoError(t, err)
 
-	EqualOutputs(t, output, readOutput)
+	EqualOutput(t, output, readOutput)
 
+	unspent, err := utxo.IsOutputUnspent(outputID)
+	require.NoError(t, err)
+	require.True(t, unspent)
 }

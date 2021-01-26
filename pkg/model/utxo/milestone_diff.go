@@ -94,7 +94,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 		spents = append(spents, spent)
 	}
 
-	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key))
+	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
 	ms.Outputs = outputs
 	ms.Spents = spents
 

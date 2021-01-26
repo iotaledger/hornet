@@ -90,7 +90,7 @@ func (o Outputs) InputToOutputMapping() (iotago.InputToOutputMapping, error) {
 	return mapping, nil
 }
 
-func CreateOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address *iotago.Ed25519Address, amount uint64) *Output {
+func CreateOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
 	return &Output{
 		outputID:   outputID,
 		messageID:  messageID,

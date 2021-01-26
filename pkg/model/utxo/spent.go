@@ -133,13 +133,14 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
 func (u *Manager) loadOutputOfSpent(s *Spent) error {
 
-	outputValue, err := u.utxoStorage.Get(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, s.outputID[:]))
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, s.outputID[:])
+	value, err := u.utxoStorage.Get(key)
 	if err != nil {
 		return err
 	}
 
 	output := &Output{}
-	if err := output.kvStorableLoad(u, s.outputID[:], outputValue); err != nil {
+	if err := output.kvStorableLoad(u, key, value); err != nil {
 		return err
 	}
 
