@@ -54,14 +54,14 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	_, spents, err := u.GetMilestoneDiffsWithoutLocking(msIndex)
+	diff, err := u.GetMilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		return err
 	}
 
 	mutations := u.utxoStorage.Batched()
 
-	for _, spent := range spents {
+	for _, spent := range diff.Spents {
 		if err := deleteOutput(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
@@ -141,7 +141,13 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		}
 	}
 
-	if err := storeDiff(msIndex, newOutputs, newSpents, mutations); err != nil {
+	msDiff := &MilestoneDiff{
+		Index:   msIndex,
+		Outputs: newOutputs,
+		Spents:  newSpents,
+	}
+
+	if err := storeDiff(msDiff, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}
@@ -230,7 +236,7 @@ func (u *Manager) CheckLedgerState() error {
 		return true
 	}
 
-	if err := u.ForEachUnspentOutput(consumerFunc); err != nil {
+	if err := u.ForEachUnspentOutput(consumerFunc, nil); err != nil {
 		return err
 	}
 

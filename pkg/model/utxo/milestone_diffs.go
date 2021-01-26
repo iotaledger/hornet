@@ -1,60 +1,52 @@
 package utxo
 
 import (
-	"bytes"
 	"encoding/binary"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	iotago "github.com/iotaledger/iota.go"
 )
 
-func storeDiff(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, mutations kvstore.BatchedMutations) error {
+type MilestoneDiff struct {
+	kvStorable
 
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, uint32(msIndex))
-
-	var value bytes.Buffer
-
-	outputCount := make([]byte, 4)
-	binary.LittleEndian.PutUint32(outputCount, uint32(len(newOutputs)))
-
-	value.Write(outputCount)
-	for _, output := range newOutputs {
-		value.Write(output.kvStorableKey())
-	}
-
-	spentCount := make([]byte, 4)
-	binary.LittleEndian.PutUint32(spentCount, uint32(len(newSpents)))
-
-	value.Write(spentCount)
-	for _, spent := range newSpents {
-		value.Write(spent.kvStorableKey())
-	}
-
-	return mutations.Set(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key), value.Bytes())
+	Index   milestone.Index
+	Outputs Outputs
+	Spents  Spents
 }
 
-func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
-
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, uint32(msIndex))
-
-	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
+func milestoneDiffKeyForIndex(msIndex milestone.Index) []byte {
+	m := marshalutil.New(5)
+	m.WriteByte(UTXOStoreKeyPrefixMilestoneDiffs)
+	m.WriteUint32(uint32(msIndex))
+	return m.Bytes()
 }
 
-func (u *Manager) GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outputs, Spents, error) {
+func (ms *MilestoneDiff) kvStorableKey() []byte {
+	return milestoneDiffKeyForIndex(ms.Index)
+}
 
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, uint32(msIndex))
+func (ms *MilestoneDiff) kvStorableValue() []byte {
 
-	value, err := u.utxoStorage.Get(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, key))
-	if err != nil {
-		return nil, nil, err
+	m := marshalutil.New(4 + len(ms.Outputs)*34 + len(ms.Spents)*67)
+
+	m.WriteUint32(uint32(len(ms.Outputs)))
+	for _, output := range ms.Outputs {
+		m.WriteBytes(output.outputID[:])
 	}
 
+	m.WriteUint32(uint32(len(ms.Spents)))
+	for _, spent := range ms.Spents {
+		m.WriteBytes(spent.output.addressBytes())
+		m.WriteBytes(spent.output.outputID[:])
+	}
+
+	return m.Bytes()
+}
+
+func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
 	marshalUtil := marshalutil.New(value)
 
 	var outputs Outputs
@@ -62,21 +54,18 @@ func (u *Manager) GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outp
 
 	outputCount, err := marshalUtil.ReadUint32()
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	for i := 0; i < int(outputCount); i++ {
-		outputIDBytes, err := marshalUtil.ReadBytes(iotago.TransactionIDLength + 2)
-		if err != nil {
-			return nil, nil, err
+		var outputID *iotago.UTXOInputID
+		if outputID, err = parseOutputID(marshalUtil); err != nil {
+			return err
 		}
 
-		var outputID iotago.UTXOInputID
-		copy(outputID[:], outputIDBytes)
-
-		output, err := u.ReadOutputByOutputIDWithoutLocking(&outputID)
+		output, err := utxoManager.ReadOutputByOutputIDWithoutLocking(outputID)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 
 		outputs = append(outputs, output)
@@ -84,40 +73,68 @@ func (u *Manager) GetMilestoneDiffsWithoutLocking(msIndex milestone.Index) (Outp
 
 	spentCount, err := marshalUtil.ReadUint32()
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	for i := 0; i < int(spentCount); i++ {
-		addressBytes, err := marshalUtil.ReadBytes(iotago.Ed25519AddressBytesLength)
-		if err != nil {
-			return nil, nil, err
+		if _, err := parseAddress(marshalUtil); err != nil {
+			return err
 		}
 
-		outputIDBytes, err := marshalUtil.ReadBytes(iotago.TransactionIDLength + 2)
-		if err != nil {
-			return nil, nil, err
+		var outputID *iotago.UTXOInputID
+		if outputID, err = parseOutputID(marshalUtil); err != nil {
+			return err
 		}
 
-		var address iotago.Ed25519Address
-		copy(address[:], addressBytes)
-
-		var outputID iotago.UTXOInputID
-		copy(outputID[:], outputIDBytes)
-
-		spent, err := u.ReadSpentForAddressAndTransactionWithoutLocking(&address, &outputID)
+		spent, err := utxoManager.readSpentForOutputIDWithoutLocking(outputID)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 
 		spents = append(spents, spent)
 	}
 
-	return outputs, spents, nil
+	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key))
+	ms.Outputs = outputs
+	ms.Spents = spents
+
+	return nil
 }
 
-func (u *Manager) GetMilestoneDiffs(msIndex milestone.Index) (Outputs, Spents, error) {
+//- DB helpers
+
+func storeDiff(diff *MilestoneDiff, mutations kvstore.BatchedMutations) error {
+
+	return mutations.Set(diff.kvStorableKey(), diff.kvStorableValue())
+}
+
+func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	return mutations.Delete(milestoneDiffKeyForIndex(msIndex))
+}
+
+//- Manager
+
+func (u *Manager) GetMilestoneDiffWithoutLocking(msIndex milestone.Index) (*MilestoneDiff, error) {
+
+	key := milestoneDiffKeyForIndex(msIndex)
+
+	value, err := u.utxoStorage.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	diff := &MilestoneDiff{}
+	if err := diff.kvStorableLoad(u, key, value); err != nil {
+		return nil, err
+	}
+
+	return diff, nil
+}
+
+func (u *Manager) GetMilestoneDiff(msIndex milestone.Index) (*MilestoneDiff, error) {
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
-	return u.GetMilestoneDiffsWithoutLocking(msIndex)
+	return u.GetMilestoneDiffWithoutLocking(msIndex)
 }

@@ -38,7 +38,7 @@ func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error)
 
 	rawOutputJSON, err := rawOutput.MarshalJSON()
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %s", hex.EncodeToString(output.UTXOKey()), err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %s", output.OutputID().ToHex(), err)
 	}
 
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
@@ -60,7 +60,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
-	if len(outputIDBytes) != (iotago.TransactionIDLength + iotago.UInt16ByteSize) {
+	if len(outputIDBytes) != utxo.OutputIDLength {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
