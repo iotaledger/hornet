@@ -83,18 +83,18 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 			return err
 		}
 		key = byteutils.ConcatBytes(key, addrBytes)
-	}
 
-	// Filter by type
-	if opt.filterOutputType != nil {
-		key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
+		// Filter by type
+		if opt.filterOutputType != nil {
+			key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
+		}
 	}
 
 	var i int
 
 	if err := u.utxoStorage.IterateKeys(key, func(key kvstore.Key) bool {
 
-		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
 		}
 

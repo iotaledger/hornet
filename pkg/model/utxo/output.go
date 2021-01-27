@@ -246,7 +246,7 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 	var i int
 	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
 
-		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
 		}
 
