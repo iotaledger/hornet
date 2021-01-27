@@ -2,6 +2,7 @@ package whiteflag
 
 import (
 	"crypto"
+	"encoding"
 	"fmt"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -273,8 +274,15 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	}
 
 	// compute merkle tree root hash
-	merkleTreeHash := NewHasher(crypto.BLAKE2b_256).TreeHash(wfConf.MessagesIncludedWithTransactions)
-	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:iotago.MilestoneInclusionMerkleProofLength])
+	marshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
+	for i := range wfConf.MessagesIncludedWithTransactions {
+		marshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
+	}
+	merkleTreeHash, err := NewHasher(crypto.BLAKE2b_256).Hash(marshalers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute Merkle tree hash: %w", err)
+	}
+	copy(wfConf.MerkleTreeHash[:], merkleTreeHash)
 
 	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch

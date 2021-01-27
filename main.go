@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/gohornet/hornet/plugins/profiling"
@@ -52,6 +53,7 @@ func main() {
 			spammer.Plugin,
 			mqtt.Plugin,
 			coordinator.Plugin,
+			migrator.Plugin,
 			prometheus.Plugin,
 		}...),
 	)
