@@ -177,18 +177,6 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 
 	mutations := u.utxoStorage.Batched()
 
-	// we have to delete the newOutputs of this milestone
-	for _, output := range newOutputs {
-		if err := deleteOutput(output, mutations); err != nil {
-			mutations.Cancel()
-			return err
-		}
-		if err := deleteFromUnspent(output, mutations); err != nil {
-			mutations.Cancel()
-			return err
-		}
-	}
-
 	// we have to store the spents as output and mark them as unspent
 	for _, spent := range newSpents {
 		if err := storeOutput(spent.output, mutations); err != nil {
@@ -197,6 +185,18 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		}
 
 		if err := deleteSpentAndMarkUnspent(spent, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	// we have to delete the newOutputs of this milestone
+	for _, output := range newOutputs {
+		if err := deleteOutput(output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+		if err := deleteFromUnspent(output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}

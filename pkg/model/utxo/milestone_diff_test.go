@@ -111,6 +111,8 @@ func randomSpent(output *Output) *Spent {
 
 func TestMilestoneDiffSerialization(t *testing.T) {
 
+	utxo := New(mapdb.NewMapDB())
+
 	outputs := Outputs{
 		randomOutput(iotago.OutputSigLockedSingleOutput),
 		randomOutput(iotago.OutputSigLockedSingleOutput),
@@ -125,8 +127,6 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	msIndex := milestone.Index(756)
-
-	utxo := New(mapdb.NewMapDB())
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
 
