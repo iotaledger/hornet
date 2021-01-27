@@ -8,13 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/vfs/memfs"
+	"github.com/stretchr/testify/require"
+
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/blang/vfs/memfs"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/stretchr/testify/require"
 )
 
 type test struct {
@@ -275,7 +277,7 @@ func rand32ByteHash() [iotago.TransactionIDLength]byte {
 func randLSTransactionUnspentOutputs() *snapshot.Output {
 	addr, _ := randEd25519Addr()
 
-	var outputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+	var outputID [utxo.OutputIDLength]byte
 	transactionID := rand32ByteHash()
 	copy(outputID[:], transactionID[:])
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
@@ -290,7 +292,7 @@ func randLSTransactionUnspentOutputs() *snapshot.Output {
 func randLSTransactionSpents() *snapshot.Spent {
 	addr, _ := randEd25519Addr()
 
-	var outputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+	var outputID [utxo.OutputIDLength]byte
 	transactionID := rand32ByteHash()
 	copy(outputID[:], transactionID[:])
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))

@@ -6,11 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	iotago "github.com/iotaledger/iota.go"
-	"github.com/pkg/errors"
 )
 
 func snapshotGen(args []string) error {
@@ -96,7 +99,7 @@ func snapshotGen(args []string) error {
 		outputAdded = true
 
 		var nullMessageID [iotago.MessageIDLength]byte
-		var nullOutputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+		var nullOutputID [utxo.OutputIDLength]byte
 
 		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: iotago.TokenSupply}, nil
 	}

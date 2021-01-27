@@ -40,7 +40,7 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
-	newOutputs, newSpents, err := deps.UTXO.GetMilestoneDiffsWithoutLocking(milestone.Index(msIndex))
+	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(milestone.Index(msIndex))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "can't load milestone diff for index: %s, error: %s", milestoneIndex, err)
 	}
@@ -48,11 +48,11 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 	createdOutputs := []string{}
 	consumedOutputs := []string{}
 
-	for _, output := range newOutputs {
+	for _, output := range diff.Outputs {
 		createdOutputs = append(createdOutputs, output.OutputID().ToHex())
 	}
 
-	for _, output := range newSpents {
+	for _, output := range diff.Spents {
 		consumedOutputs = append(consumedOutputs, output.OutputID().ToHex())
 	}
 

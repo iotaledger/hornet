@@ -43,7 +43,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc)
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -62,7 +62,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachSpentOutput(spentConsumerFunc)
+	err := deps.UTXO.ForEachSpentOutput(spentConsumerFunc, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %s", err)
 	}
@@ -94,7 +94,7 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc)
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
 	}
@@ -131,7 +131,7 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc)
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
 	}
@@ -154,12 +154,12 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
-	diffOutputs, diffSpents, err := deps.UTXO.GetMilestoneDiffs(milestone.Index(msIndex))
+	diff, err := deps.UTXO.GetMilestoneDiff(milestone.Index(msIndex))
 
 	outputs := []*outputResponse{}
 	spents := []*outputResponse{}
 
-	for _, output := range diffOutputs {
+	for _, output := range diff.Outputs {
 		o, err := newOutputResponse(output, false)
 		if err != nil {
 			return nil, err
@@ -167,7 +167,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		outputs = append(outputs, o)
 	}
 
-	for _, spent := range diffSpents {
+	for _, spent := range diff.Spents {
 		o, err := newOutputResponse(spent.Output(), true)
 		if err != nil {
 			return nil, err

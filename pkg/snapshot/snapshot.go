@@ -354,10 +354,10 @@ func newLSMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	errChan := make(chan error)
 
 	go func() {
-		if err := utxoManager.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
+		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
 			prodChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
 			return true
-		}); err != nil {
+		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err
 		}
 
@@ -518,7 +518,7 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 		var msIndex milestone.Index
 
 		for msIndex, done = msIndexIterator(); !done; msIndex, done = msIndexIterator() {
-			newOutputs, newSpents, err := utxoManager.GetMilestoneDiffsWithoutLocking(msIndex)
+			diff, err := utxoManager.GetMilestoneDiffWithoutLocking(msIndex)
 			if err != nil {
 				errChan <- err
 				close(prodChan)
@@ -529,13 +529,13 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 			var createdOutputs []*Output
 			var consumedOutputs []*Spent
 
-			for _, output := range newOutputs {
+			for _, output := range diff.Outputs {
 				createdOutputs = append(createdOutputs, &Output{
 					MessageID: *output.MessageID(), OutputID: *output.OutputID(),
 					Address: output.Address(), Amount: output.Amount()})
 			}
 
-			for _, spent := range newSpents {
+			for _, spent := range diff.Spents {
 				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{
 					MessageID: *spent.MessageID(), OutputID: *spent.OutputID(),
 					Address: spent.Address(), Amount: spent.Amount()},
@@ -758,7 +758,7 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 			outputID := iotago.UTXOInputID(output.OutputID)
 			messageID := hornet.MessageID(output.MessageID)
 
-			return utxoManager.AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
+			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -801,7 +801,7 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			output := obj.(*Output)
 			outputID := iotago.UTXOInputID(output.OutputID)
 			messageID := hornet.MessageID(output.MessageID)
-			newOutputs = append(newOutputs, utxo.GetOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
+			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
 			return nil
 		})
 
@@ -815,7 +815,7 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			spent := obj.(*Spent)
 			outputID := iotago.UTXOInputID(spent.OutputID)
 			messageID := hornet.MessageID(spent.MessageID)
-			newSpents = append(newSpents, utxo.NewSpent(utxo.GetOutput(&outputID, &messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
+			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, &messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
 			return nil
 		})
 

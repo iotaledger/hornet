@@ -1,7 +1,6 @@
 package testsuite
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/stretchr/testify/require"
@@ -127,7 +126,7 @@ func (b *MessageBuilder) Build() *Message {
 	} else {
 		if b.fakeInputs {
 			// Add a fake output with enough balance to create a valid transaction
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -212,12 +211,12 @@ func (b *MessageBuilder) Build() *Message {
 		output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
 		require.NoError(b.te.TestState, err)
 
-		if bytes.Equal(output.Address()[:], toAddr[:]) && output.Amount() == b.amount {
+		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
 			sentOutput = output
 			continue
 		}
 
-		if remainderAmount > 0 && bytes.Equal(output.Address()[:], fromAddr[:]) && output.Amount() == remainderAmount {
+		if remainderAmount > 0 && output.Address().String() == fromAddr.String() && output.Amount() == remainderAmount {
 			remainderOutput = output
 		}
 	}
