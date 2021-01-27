@@ -30,6 +30,7 @@ const (
 	PriorityMetricsPublishers
 	PrioritySpammer // depends on PriorityPoWHandler
 	PriorityStatusReport
+	PriorityMigrator
 	PriorityCoordinator // depends on PriorityPoWHandler
 	PriorityUpdateCheck
 	PriorityPrometheus
