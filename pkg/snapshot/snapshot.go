@@ -354,10 +354,10 @@ func newLSMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	errChan := make(chan error)
 
 	go func() {
-		if err := utxoManager.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
+		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
 			prodChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
 			return true
-		}, nil); err != nil {
+		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err
 		}
 

@@ -49,7 +49,7 @@ func TestUTXOIterationWithoutFilters(t *testing.T) {
 	}
 
 	// Test iteration without filters
-	require.NoError(t, utxo.ForEachOutputWithoutLocking(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
 		_, has := outputByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
 		delete(outputByOutputID, string(output.OutputID()[:]))
@@ -58,21 +58,21 @@ func TestUTXOIterationWithoutFilters(t *testing.T) {
 
 	require.Empty(t, outputByOutputID)
 
-	require.NoError(t, utxo.ForEachUnspentOutputWithoutLocking(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		_, has := unspentByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
 		delete(unspentByOutputID, string(output.OutputID()[:]))
 		return true
-	}, nil))
+	}))
 
 	require.Empty(t, unspentByOutputID)
 
-	require.NoError(t, utxo.ForEachSpentOutputWithoutLocking(func(spent *Spent) bool {
+	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		_, has := spentByOutputID[string(spent.OutputID()[:])]
 		require.True(t, has)
 		delete(spentByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, nil))
+	}))
 
 	require.Empty(t, spentByOutputID)
 
@@ -109,21 +109,21 @@ func TestUTXOIterationWithAddressFilter(t *testing.T) {
 	unspentByOutputID[string(outputs[0].OutputID()[:])] = struct{}{}
 	spentByOutputID[string(outputs[2].OutputID()[:])] = struct{}{}
 
-	require.NoError(t, utxo.ForEachUnspentOutputWithoutLocking(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		_, has := unspentByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
 		delete(unspentByOutputID, string(output.OutputID()[:]))
 		return true
-	}, address))
+	}, FilterAddress(address)))
 
 	require.Empty(t, unspentByOutputID)
 
-	require.NoError(t, utxo.ForEachSpentOutputWithoutLocking(func(spent *Spent) bool {
+	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		_, has := spentByOutputID[string(spent.OutputID()[:])]
 		require.True(t, has)
 		delete(spentByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, address))
+	}, FilterAddress(address)))
 
 	require.Empty(t, spentByOutputID)
 }
@@ -178,39 +178,39 @@ func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
 	spentByOutputID[string(outputs[3].OutputID()[:])] = struct{}{}
 	spentDustByOutputID[string(outputs[2].OutputID()[:])] = struct{}{}
 
-	require.NoError(t, utxo.ForEachUnspentOutputWithoutLocking(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		_, has := unspentByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
 		delete(unspentByOutputID, string(output.OutputID()[:]))
 		return true
-	}, address, iotago.OutputSigLockedSingleOutput))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput)))
 
 	require.Empty(t, unspentByOutputID)
 
-	require.NoError(t, utxo.ForEachSpentOutputWithoutLocking(func(spent *Spent) bool {
+	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		_, has := spentByOutputID[string(spent.OutputID()[:])]
 		require.True(t, has)
 		delete(spentByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, address, iotago.OutputSigLockedSingleOutput))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput)))
 
 	require.Empty(t, spentByOutputID)
 
-	require.NoError(t, utxo.ForEachUnspentOutputWithoutLocking(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		_, has := unspentDustByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
 		delete(unspentDustByOutputID, string(output.OutputID()[:]))
 		return true
-	}, address, iotago.OutputSigLockedDustAllowanceOutput))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput)))
 
 	require.Empty(t, unspentDustByOutputID)
 
-	require.NoError(t, utxo.ForEachSpentOutputWithoutLocking(func(spent *Spent) bool {
+	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		_, has := spentDustByOutputID[string(spent.OutputID()[:])]
 		require.True(t, has)
 		delete(spentDustByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, address, iotago.OutputSigLockedDustAllowanceOutput))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput)))
 
 	require.Empty(t, spentDustByOutputID)
 }
@@ -295,48 +295,48 @@ func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
 	require.Equal(t, expectedBalanceOnAddress, balance)
 
 	// Test no MaxResultCount
-	loadedSpents, err := utxo.SpentOutputsForAddress(address)
+	loadedSpents, err := utxo.SpentOutputs(FilterAddress(address))
 	require.NoError(t, err)
 	require.Equal(t, 3, len(loadedSpents))
 
-	loadedUnspent, err := utxo.UnspentOutputsForAddress(address)
+	loadedUnspent, err := utxo.UnspentOutputs(FilterAddress(address))
 	require.NoError(t, err)
 	require.Equal(t, 4, len(loadedUnspent))
 
-	computedBalance, count, err := utxo.ComputeAddressBalance(address)
+	computedBalance, count, err := utxo.ComputeBalance(FilterAddress(address))
 	require.NoError(t, err)
 	require.Equal(t, 4, count)
 	require.Equal(t, expectedBalanceOnAddress, computedBalance)
 
 	// Test MaxResultCount
-	loadedSpents, err = utxo.SpentOutputsForAddress(address, MaxResultCount(2))
+	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), MaxResultCount(2))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputsForAddress(address, MaxResultCount(2))
+	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), MaxResultCount(2))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(loadedUnspent))
 
-	computedBalance, count, err = utxo.ComputeAddressBalance(address, MaxResultCount(2))
+	computedBalance, count, err = utxo.ComputeBalance(FilterAddress(address), MaxResultCount(2))
 	require.NoError(t, err)
 	require.Equal(t, 2, count)
 	require.NotEqual(t, expectedBalanceOnAddress, computedBalance)
 
 	// Test OutputType = SingleOutput
-	loadedSpents, err = utxo.SpentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedSingleOutput))
+	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput))
 	require.NoError(t, err)
 	require.Equal(t, 1, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedSingleOutput))
+	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput))
 	require.NoError(t, err)
 	require.Equal(t, 3, len(loadedUnspent))
 
 	// Test OutputType = DustAllowance
-	loadedSpents, err = utxo.SpentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
+	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
+	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
 	require.NoError(t, err)
 	require.Equal(t, 1, len(loadedUnspent))
 }
@@ -373,14 +373,14 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		unspentCount++
 		return true
-	}, nil))
+	}))
 	require.Equal(t, 3, unspentCount)
 
 	var spentCount int
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		spentCount++
 		return true
-	}, nil))
+	}))
 	require.Equal(t, 2, spentCount)
 
 	require.NoError(t, utxo.RollbackConfirmationWithoutLocking(msIndex, outputs, spents))
@@ -393,12 +393,12 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		require.Fail(t, "should not be called")
 		return true
-	}, nil))
+	}))
 
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		require.Fail(t, "should not be called")
 		return true
-	}, nil))
+	}))
 }
 
 func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
@@ -483,7 +483,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		require.True(t, has)
 		delete(unspentByOutputID, string(output.OutputID()[:]))
 		return true
-	}, nil))
+	}))
 	require.Empty(t, unspentByOutputID)
 	require.Equal(t, 4, unspentCount)
 
@@ -494,7 +494,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		require.True(t, has)
 		delete(spentByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, nil))
+	}))
 	require.Empty(t, spentByOutputID)
 	require.Equal(t, 3, spentCount)
 
@@ -532,7 +532,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		require.True(t, has)
 		delete(unspentByOutputID, string(output.OutputID()[:]))
 		return true
-	}, nil))
+	}))
 	require.Empty(t, unspentByOutputID)
 
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
@@ -540,6 +540,6 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		require.True(t, has)
 		delete(spentByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, nil))
+	}))
 	require.Empty(t, spentByOutputID)
 }

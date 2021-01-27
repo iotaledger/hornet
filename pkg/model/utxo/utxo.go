@@ -236,7 +236,7 @@ func (u *Manager) CheckLedgerState() error {
 		return true
 	}
 
-	if err := u.ForEachUnspentOutput(consumerFunc, nil); err != nil {
+	if err := u.ForEachUnspentOutput(consumerFunc); err != nil {
 		return err
 	}
 
@@ -273,12 +273,19 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 }
 
 type UTXOIterateOptions struct {
+	address          iotago.Address
 	readLockLedger   bool
 	maxResultCount   int
 	filterOutputType *iotago.OutputType
 }
 
 type UTXOIterateOption func(*UTXOIterateOptions)
+
+func FilterAddress(address iotago.Address) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.address = address
+	}
+}
 
 func ReadLockLedger(lockLedger bool) UTXOIterateOption {
 	return func(args *UTXOIterateOptions) {
@@ -300,7 +307,8 @@ func FilterOutputType(outputType iotago.OutputType) UTXOIterateOption {
 
 func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
 	result := &UTXOIterateOptions{
-		readLockLedger:   false,
+		address:          nil,
+		readLockLedger:   true,
 		maxResultCount:   0,
 		filterOutputType: nil,
 	}
@@ -311,104 +319,50 @@ func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
 	return result
 }
 
-func (u *Manager) SpentOutputsForAddress(address iotago.Address, options ...UTXOIterateOption) (Spents, error) {
-
-	opt := iterateOptions(options)
+func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
 
 	var spents []*Spent
 
-	i := 0
 	consumerFunc := func(spent *Spent) bool {
-
-		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
-			return false
-		}
-
-		i++
 		spents = append(spents, spent)
 		return true
 	}
 
-	var outputTypeFilter []iotago.OutputType
-	if opt.filterOutputType != nil {
-		outputTypeFilter = append(outputTypeFilter, *(opt.filterOutputType))
-	}
-
-	if opt.readLockLedger {
-		if err := u.ForEachSpentOutput(consumerFunc, address, outputTypeFilter...); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := u.ForEachSpentOutputWithoutLocking(consumerFunc, address, outputTypeFilter...); err != nil {
-			return nil, err
-		}
+	if err := u.ForEachSpentOutput(consumerFunc, options...); err != nil {
+		return nil, err
 	}
 
 	return spents, nil
 }
 
-func (u *Manager) UnspentOutputsForAddress(address iotago.Address, options ...UTXOIterateOption) ([]*Output, error) {
-
-	opt := iterateOptions(options)
+func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) ([]*Output, error) {
 
 	var outputs []*Output
-
-	i := 0
 	consumerFunc := func(output *Output) bool {
-
-		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
-			return false
-		}
-
-		i++
 		outputs = append(outputs, output)
 		return true
 	}
 
-	var outputTypeFilter []iotago.OutputType
-	if opt.filterOutputType != nil {
-		outputTypeFilter = append(outputTypeFilter, *(opt.filterOutputType))
-	}
-
-	if opt.readLockLedger {
-		if err := u.ForEachUnspentOutput(consumerFunc, address, outputTypeFilter...); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := u.ForEachUnspentOutputWithoutLocking(consumerFunc, address, outputTypeFilter...); err != nil {
-			return nil, err
-		}
+	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+		return nil, err
 	}
 
 	return outputs, nil
 }
 
-func (u *Manager) ComputeAddressBalance(address iotago.Address, options ...UTXOIterateOption) (balance uint64, count int, err error) {
-
-	opt := iterateOptions(options)
+func (u *Manager) ComputeBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
 
 	balance = 0
-	i := 0
+	count = 0
 	consumerFunc := func(output *Output) bool {
-
-		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
-			return false
-		}
-
-		i++
 		balance += output.amount
+		count++
 		return true
 	}
 
-	if opt.readLockLedger {
-		if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
-			return 0, 0, err
-		}
-	} else {
-		if err := u.ForEachUnspentOutputWithoutLocking(consumerFunc, address); err != nil {
-			return 0, 0, err
-		}
+	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+		return 0, 0, err
 	}
 
-	return balance, i, nil
+	return balance, count, nil
 }

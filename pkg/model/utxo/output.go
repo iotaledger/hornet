@@ -233,11 +233,24 @@ func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 
 //- Manager
 
-func (u *Manager) ForEachOutputWithoutLocking(consumer OutputConsumer) error {
+func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
 
 	var innerErr error
-
+	var i int
 	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
+
+		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+			return false
+		}
+
+		i++
 
 		output := &Output{}
 		if err := output.kvStorableLoad(u, key, value); err != nil {
@@ -251,14 +264,6 @@ func (u *Manager) ForEachOutputWithoutLocking(consumer OutputConsumer) error {
 	}
 
 	return innerErr
-}
-
-func (u *Manager) ForEachOutput(consumer OutputConsumer) error {
-
-	u.ReadLockLedger()
-	defer u.ReadUnlockLedger()
-
-	return u.ForEachOutputWithoutLocking(consumer)
 }
 
 func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {

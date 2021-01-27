@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -49,7 +50,7 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
 	addrBalance, err := te.storage.UTXO().AddressBalance(wallet.Address())
 	require.NoError(te.TestState, err)
-	computedAddrBalance, _, err := te.storage.UTXO().ComputeAddressBalance(wallet.Address(), true)
+	computedAddrBalance, _, err := te.storage.UTXO().ComputeBalance(utxo.FilterAddress(wallet.Address()))
 	require.NoError(te.TestState, err)
 
 	var balanceStatus string

@@ -149,15 +149,22 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 	return nil
 }
 
-func (u *Manager) ForEachSpentOutputWithoutLocking(consumer SpentConsumer, address iotago.Address, outputType ...iotago.OutputType) error {
+func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIterateOption) error {
+
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
 
 	var innerErr error
 
 	key := []byte{UTXOStoreKeyPrefixSpent}
 
 	// Filter by address
-	if address != nil {
-		addrBytes, err := address.Serialize(iotago.DeSeriModeNoValidation)
+	if opt.address != nil {
+		addrBytes, err := opt.address.Serialize(iotago.DeSeriModeNoValidation)
 		if err != nil {
 			return err
 		}
@@ -165,11 +172,19 @@ func (u *Manager) ForEachSpentOutputWithoutLocking(consumer SpentConsumer, addre
 	}
 
 	// Filter by output type
-	if len(outputType) > 0 {
-		key = byteutils.ConcatBytes(key, []byte{outputType[0]})
+	if opt.filterOutputType != nil {
+		key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
 	}
 
+	var i int
+
 	if err := u.utxoStorage.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
+
+		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+			return false
+		}
+
+		i++
 
 		spent := &Spent{}
 		if err := spent.kvStorableLoad(u, key, value); err != nil {
@@ -188,14 +203,6 @@ func (u *Manager) ForEachSpentOutputWithoutLocking(consumer SpentConsumer, addre
 	}
 
 	return innerErr
-}
-
-func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, address iotago.Address, outputType ...iotago.OutputType) error {
-
-	u.ReadLockLedger()
-	defer u.ReadUnlockLedger()
-
-	return u.ForEachSpentOutputWithoutLocking(consumer, address, outputType...)
 }
 
 func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {

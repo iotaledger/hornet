@@ -145,15 +145,19 @@ func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
 	return ed25519Balance(&address)
 }
 
-func ed25519Outputs(address *iotago.Ed25519Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
+func outputsResponse(address iotago.Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
 
-	var opts []utxo.UTXOIterateOption
+	opts := []utxo.UTXOIterateOption{
+		utxo.FilterAddress(address),
+		utxo.ReadLockLedger(false),
+	}
+
 	if filterType != nil {
 		opts = append(opts, utxo.FilterOutputType(*filterType))
 	}
 
-	unspentOutputs, err := deps.UTXO.UnspentOutputsForAddress(address, append(opts, utxo.MaxResultCount(maxResults))...)
+	unspentOutputs, err := deps.UTXO.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
@@ -165,7 +169,7 @@ func ed25519Outputs(address *iotago.Ed25519Address, includeSpent bool, filterTyp
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
 
-		spents, err := deps.UTXO.SpentOutputsForAddress(address, append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
+		spents, err := deps.UTXO.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed: %s, error: %s", address, err)
 		}
@@ -201,7 +205,7 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		outputType := iotago.OutputType(outputTypeInt)
-		if outputType != iotago.OutputSigLockedSingleOutput || outputType != iotago.OutputSigLockedDustAllowanceOutput {
+		if outputType != iotago.OutputSigLockedSingleOutput && outputType != iotago.OutputSigLockedDustAllowanceOutput {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		filteredType = &outputType
@@ -213,15 +217,7 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
 	}
 
-	switch address := bech32Address.(type) {
-	case *iotago.WOTSAddress:
-		// TODO: implement
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, iotago.ErrWOTSNotImplemented)
-	case *iotago.Ed25519Address:
-		return ed25519Outputs(address, includeSpent, filteredType)
-	default:
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", addressParam)
-	}
+	return outputsResponse(bech32Address, includeSpent, filteredType)
 }
 
 func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error) {
@@ -240,7 +236,7 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		outputType := iotago.OutputType(outputTypeInt)
-		if outputType != iotago.OutputSigLockedSingleOutput || outputType != iotago.OutputSigLockedDustAllowanceOutput {
+		if outputType != iotago.OutputSigLockedSingleOutput && outputType != iotago.OutputSigLockedDustAllowanceOutput {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		filteredType = &outputType
@@ -259,5 +255,5 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	return ed25519Outputs(&address, includeSpent, filteredType)
+	return outputsResponse(&address, includeSpent, filteredType)
 }

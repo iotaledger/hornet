@@ -63,15 +63,22 @@ func (u *Manager) IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
 	return u.IsOutputUnspentWithoutLocking(output)
 }
 
-func (u *Manager) ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, address iotago.Address, outputType ...iotago.OutputType) error {
+func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
 
 	var innerErr error
 
 	key := []byte{UTXOStoreKeyPrefixUnspent}
 
 	// Filter by address
-	if address != nil {
-		addrBytes, err := address.Serialize(iotago.DeSeriModeNoValidation)
+	if opt.address != nil {
+		addrBytes, err := opt.address.Serialize(iotago.DeSeriModeNoValidation)
 		if err != nil {
 			return err
 		}
@@ -79,11 +86,19 @@ func (u *Manager) ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, ad
 	}
 
 	// Filter by type
-	if len(outputType) > 0 {
-		key = byteutils.ConcatBytes(key, []byte{outputType[0]})
+	if opt.filterOutputType != nil {
+		key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
 	}
 
+	var i int
+
 	if err := u.utxoStorage.IterateKeys(key, func(key kvstore.Key) bool {
+
+		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+			return false
+		}
+
+		i++
 
 		outputIDBytes, err := outputIDBytesFromUnspentDatabaseKey(key)
 		if err != nil {
@@ -110,12 +125,4 @@ func (u *Manager) ForEachUnspentOutputWithoutLocking(consumer OutputConsumer, ad
 	}
 
 	return innerErr
-}
-
-func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, address iotago.Address, outputType ...iotago.OutputType) error {
-
-	u.ReadLockLedger()
-	defer u.ReadUnlockLedger()
-
-	return u.ForEachUnspentOutputWithoutLocking(consumer, address, outputType...)
 }
