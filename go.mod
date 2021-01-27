@@ -29,7 +29,8 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210105145855-ce2c8231a283
-	github.com/iotaledger/iota.go/v2 v2.0.0
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210128205444-34dfc25315f2
+	github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.17
@@ -45,7 +46,6 @@ require (
 	github.com/libp2p/go-sockaddr v0.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/multiformats/go-multiaddr v0.3.1
-	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
@@ -69,5 +69,3 @@ require (
 	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	google.golang.org/grpc v1.35.0 // indirect
 )
-
-replace github.com/iotaledger/iota.go/v2 => github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
