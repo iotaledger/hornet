@@ -172,8 +172,8 @@ func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(74)
 	ms.WriteBytes(o.messageID.Slice())
 	ms.WriteByte(o.outputType)
-	ms.WriteUint64(o.amount)
 	ms.WriteBytes(o.addressBytes())
+	ms.WriteUint64(o.amount)
 	return ms.Bytes()
 }
 
@@ -207,13 +207,14 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 		return err
 	}
 
-	// Read Amount
-	o.amount, err = valueUtil.ReadUint64()
-	if err != nil {
+	// Read Address
+	if o.address, err = parseAddress(valueUtil); err != nil {
 		return err
 	}
 
-	if o.address, err = parseAddress(valueUtil); err != nil {
+	// Read Amount
+	o.amount, err = valueUtil.ReadUint64()
+	if err != nil {
 		return err
 	}
 

@@ -57,9 +57,9 @@ func TestOutputSerialization(t *testing.T) {
 	value := output.kvStorableValue()
 	require.Equal(t, messageID[:], value[:32])
 	require.Equal(t, outputType, value[32])
-	require.Equal(t, amount, binary.LittleEndian.Uint64(value[33:41]))
-	require.Equal(t, iotago.AddressEd25519, value[41])
-	require.Equal(t, addressBytes, value[42:74])
+	require.Equal(t, iotago.AddressEd25519, value[33])
+	require.Equal(t, addressBytes, value[34:66])
+	require.Equal(t, amount, binary.LittleEndian.Uint64(value[66:74]))
 
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSpent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), output.spentDatabaseKey())
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixUnspent}, []byte{iotago.AddressEd25519}, addressBytes, []byte{outputType}, outputID[:]), output.unspentDatabaseKey())

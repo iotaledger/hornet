@@ -31,8 +31,8 @@ const (
                    1 byte       + 32 bytes + 2 bytes
 
    Value:
-       MessageID + iotago.OutputType +  Amount  + iotago.Ed25519Address.Serialized()
-        32 bytes +       1 byte      +  8 bytes +       1 byte type + 32 bytes
+       MessageID + iotago.OutputType + iotago.Ed25519Address.Serialized() +  Amount
+        32 bytes +       1 byte      +       1 byte type + 32 bytes       +  8 bytes
 
 
    Unspent Output:
