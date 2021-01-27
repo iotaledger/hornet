@@ -271,3 +271,144 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 
 	return mutations.Commit()
 }
+
+type UTXOIterateOptions struct {
+	readLockLedger   bool
+	maxResultCount   int
+	filterOutputType *iotago.OutputType
+}
+
+type UTXOIterateOption func(*UTXOIterateOptions)
+
+func ReadLockLedger(lockLedger bool) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.readLockLedger = lockLedger
+	}
+}
+
+func MaxResultCount(count int) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.maxResultCount = count
+	}
+}
+
+func FilterOutputType(outputType iotago.OutputType) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.filterOutputType = &outputType
+	}
+}
+
+func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
+	result := &UTXOIterateOptions{
+		readLockLedger:   false,
+		maxResultCount:   0,
+		filterOutputType: nil,
+	}
+
+	for _, optionalOption := range optionalOptions {
+		optionalOption(result)
+	}
+	return result
+}
+
+func (u *Manager) SpentOutputsForAddress(address iotago.Address, options ...UTXOIterateOption) (Spents, error) {
+
+	opt := iterateOptions(options)
+
+	var spents []*Spent
+
+	i := 0
+	consumerFunc := func(spent *Spent) bool {
+
+		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+			return false
+		}
+
+		i++
+		spents = append(spents, spent)
+		return true
+	}
+
+	var outputTypeFilter []iotago.OutputType
+	if opt.filterOutputType != nil {
+		outputTypeFilter = append(outputTypeFilter, *(opt.filterOutputType))
+	}
+
+	if opt.readLockLedger {
+		if err := u.ForEachSpentOutput(consumerFunc, address, outputTypeFilter...); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := u.ForEachSpentOutputWithoutLocking(consumerFunc, address, outputTypeFilter...); err != nil {
+			return nil, err
+		}
+	}
+
+	return spents, nil
+}
+
+func (u *Manager) UnspentOutputsForAddress(address iotago.Address, options ...UTXOIterateOption) ([]*Output, error) {
+
+	opt := iterateOptions(options)
+
+	var outputs []*Output
+
+	i := 0
+	consumerFunc := func(output *Output) bool {
+
+		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+			return false
+		}
+
+		i++
+		outputs = append(outputs, output)
+		return true
+	}
+
+	var outputTypeFilter []iotago.OutputType
+	if opt.filterOutputType != nil {
+		outputTypeFilter = append(outputTypeFilter, *(opt.filterOutputType))
+	}
+
+	if opt.readLockLedger {
+		if err := u.ForEachUnspentOutput(consumerFunc, address, outputTypeFilter...); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := u.ForEachUnspentOutputWithoutLocking(consumerFunc, address, outputTypeFilter...); err != nil {
+			return nil, err
+		}
+	}
+
+	return outputs, nil
+}
+
+func (u *Manager) ComputeAddressBalance(address iotago.Address, options ...UTXOIterateOption) (balance uint64, count int, err error) {
+
+	opt := iterateOptions(options)
+
+	balance = 0
+	i := 0
+	consumerFunc := func(output *Output) bool {
+
+		if (opt.maxResultCount > 0) && (i+1 > opt.maxResultCount) {
+			return false
+		}
+
+		i++
+		balance += output.amount
+		return true
+	}
+
+	if opt.readLockLedger {
+		if err := u.ForEachUnspentOutput(consumerFunc, address); err != nil {
+			return 0, 0, err
+		}
+	} else {
+		if err := u.ForEachUnspentOutputWithoutLocking(consumerFunc, address); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	return balance, i, nil
+}

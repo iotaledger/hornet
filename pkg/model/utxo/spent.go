@@ -198,35 +198,6 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, address iotago.Addr
 	return u.ForEachSpentOutputWithoutLocking(consumer, address, outputType...)
 }
 
-func (u *Manager) SpentOutputsForAddress(address iotago.Address, lockLedger bool, maxFind ...int) (Spents, error) {
-
-	var spents []*Spent
-
-	i := 0
-	consumerFunc := func(spent *Spent) bool {
-		i++
-
-		if (len(maxFind) > 0) && (i > maxFind[0]) {
-			return false
-		}
-
-		spents = append(spents, spent)
-		return true
-	}
-
-	if lockLedger {
-		if err := u.ForEachSpentOutput(consumerFunc, address); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := u.ForEachSpentOutputWithoutLocking(consumerFunc, address); err != nil {
-			return nil, err
-		}
-	}
-
-	return spents, nil
-}
-
 func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
 
 	unspentKey := spent.Output().unspentDatabaseKey()

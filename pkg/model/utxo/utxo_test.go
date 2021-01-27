@@ -36,12 +36,13 @@ func TestUTXOIterationWithoutFilters(t *testing.T) {
 	// Prepare values to check
 	outputByOutputID := make(map[string]struct{})
 	unspentByOutputID := make(map[string]struct{})
+	spentByOutputID := make(map[string]struct{})
+
 	for _, output := range outputs {
 		outputByOutputID[string(output.OutputID()[:])] = struct{}{}
 		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
 	}
 
-	spentByOutputID := make(map[string]struct{})
 	for _, spent := range spents {
 		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
 		delete(unspentByOutputID, string(spent.OutputID()[:]))
@@ -212,6 +213,132 @@ func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
 	}, address, iotago.OutputSigLockedDustAllowanceOutput))
 
 	require.Empty(t, spentDustByOutputID)
+}
+
+func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
+
+	utxo := New(mapdb.NewMapDB())
+
+	address := randomAddress()
+
+	outputs := Outputs{
+		randomOutput(iotago.OutputSigLockedSingleOutput, address),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputSigLockedSingleOutput, address),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputSigLockedSingleOutput, address),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputSigLockedSingleOutput, address),
+		randomOutput(iotago.OutputSigLockedSingleOutput),
+	}
+	dustOutputs := Outputs{
+		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
+		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
+		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
+		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
+		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
+	}
+
+	//Control the address balance
+	outputs[0].amount = 5_000_000
+	outputs[2].amount = 150
+	outputs[6].amount = 3_125_125
+	outputs[9].amount = 89_923_223
+	dustOutputs[0].amount = 1_000_000
+	dustOutputs[2].amount = 5_500_000
+	dustOutputs[4].amount = 1_000_000
+
+	spents := Spents{
+		randomSpent(outputs[2]),
+		randomSpent(outputs[3]),
+	}
+	dustSpents := Spents{
+		randomSpent(dustOutputs[2]),
+		randomSpent(dustOutputs[4]),
+	}
+
+	expectedBalanceOnAddress := uint64(105_548_498 - 6_500_150)
+
+	msIndex := milestone.Index(756)
+
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(outputs, dustOutputs...), append(spents, dustSpents...)))
+
+	// Prepare values to check
+	unspentByOutputID := make(map[string]struct{})
+	unspentDustByOutputID := make(map[string]struct{})
+	spentByOutputID := make(map[string]struct{})
+	spentDustByOutputID := make(map[string]struct{})
+
+	for _, output := range outputs {
+		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
+	}
+
+	for _, output := range dustOutputs {
+		unspentDustByOutputID[string(output.OutputID()[:])] = struct{}{}
+	}
+
+	for _, spent := range spents {
+		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
+		delete(unspentByOutputID, string(spent.OutputID()[:]))
+	}
+
+	for _, spent := range dustSpents {
+		spentDustByOutputID[string(spent.OutputID()[:])] = struct{}{}
+		delete(unspentDustByOutputID, string(spent.OutputID()[:]))
+	}
+
+	balance, err := utxo.AddressBalanceWithoutLocking(address)
+	require.NoError(t, err)
+	require.Equal(t, expectedBalanceOnAddress, balance)
+
+	// Test no MaxResultCount
+	loadedSpents, err := utxo.SpentOutputsForAddress(address)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(loadedSpents))
+
+	loadedUnspent, err := utxo.UnspentOutputsForAddress(address)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(loadedUnspent))
+
+	computedBalance, count, err := utxo.ComputeAddressBalance(address)
+	require.NoError(t, err)
+	require.Equal(t, 4, count)
+	require.Equal(t, expectedBalanceOnAddress, computedBalance)
+
+	// Test MaxResultCount
+	loadedSpents, err = utxo.SpentOutputsForAddress(address, MaxResultCount(2))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(loadedSpents))
+
+	loadedUnspent, err = utxo.UnspentOutputsForAddress(address, MaxResultCount(2))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(loadedUnspent))
+
+	computedBalance, count, err = utxo.ComputeAddressBalance(address, MaxResultCount(2))
+	require.NoError(t, err)
+	require.Equal(t, 2, count)
+	require.NotEqual(t, expectedBalanceOnAddress, computedBalance)
+
+	// Test OutputType = SingleOutput
+	loadedSpents, err = utxo.SpentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedSingleOutput))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(loadedSpents))
+
+	loadedUnspent, err = utxo.UnspentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedSingleOutput))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(loadedUnspent))
+
+	// Test OutputType = DustAllowance
+	loadedSpents, err = utxo.SpentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(loadedSpents))
+
+	loadedUnspent, err = utxo.UnspentOutputsForAddress(address, FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(loadedUnspent))
 }
 
 func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
