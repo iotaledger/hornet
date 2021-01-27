@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"crypto"
+	"encoding"
 	"encoding/hex"
 	"testing"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
-func mustMessageIDFromHexString(h string) hornet.MessageID {
+func mustMessageIDFromHexString(h string) encoding.BinaryMarshaler {
 	msgID, err := hornet.MessageIDFromHex(h)
 	if err != nil {
 		panic(err)
@@ -24,7 +25,7 @@ func mustMessageIDFromHexString(h string) hornet.MessageID {
 
 func TestWhiteFlagMerkleTreeHash(t *testing.T) {
 
-	var includedMessages hornet.MessageIDs
+	var includedMessages []encoding.BinaryMarshaler
 
 	// https://github.com/Wollac/iota-crypto-demo/tree/master/examples/merkle
 
@@ -36,7 +37,8 @@ func TestWhiteFlagMerkleTreeHash(t *testing.T) {
 	includedMessages = append(includedMessages, mustMessageIDFromHexString("0bf5059875921e668a5bdf2c7fc4844592d2572bcd0668d2d6c52f5054e2d083"))
 	includedMessages = append(includedMessages, mustMessageIDFromHexString("6bf84c7174cb7476364cc3dbd968b0f7172ed85794bb358b0c3b525da1786f9f"))
 
-	hash := whiteflag.NewHasher(crypto.BLAKE2b_256).TreeHash(includedMessages)
+	hash, err := whiteflag.NewHasher(crypto.BLAKE2b_256).Hash(includedMessages)
+	require.NoError(t, err)
 
 	expectedHash, err := hex.DecodeString("bf67ce7ba23e8c0951b5abaec4f5524360d2c26d971ff226d3359fa70cdb0beb")
 	require.NoError(t, err)

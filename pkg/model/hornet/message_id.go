@@ -32,6 +32,11 @@ func (m MessageID) ToMapKey() string {
 	return string(m)
 }
 
+// MarshalBinary implements the encoding.BinaryMarshaler interface.
+func (m MessageID) MarshalBinary() ([]byte, error) {
+	return m, nil
+}
+
 // GetNullMessageID returns the ID of the genesis message.
 func GetNullMessageID() MessageID {
 	nullMessageID := make(MessageID, 32)

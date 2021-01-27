@@ -4,8 +4,6 @@ go 1.15
 
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112081740-ecb37c02f887
 
-replace github.com/iotaledger/iota.go/v2 => github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
-
 require (
 	github.com/Microsoft/go-winio v0.4.15 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
@@ -31,7 +29,8 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210105145855-ce2c8231a283
-	github.com/iotaledger/iota.go/v2 v2.0.0
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210128205444-34dfc25315f2
+	github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.17
@@ -47,7 +46,6 @@ require (
 	github.com/libp2p/go-sockaddr v0.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/multiformats/go-multiaddr v0.3.1
-	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1

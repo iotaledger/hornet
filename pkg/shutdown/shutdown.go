@@ -27,6 +27,7 @@ const (
 	PriorityMetricsPublishers
 	PrioritySpammer
 	PriorityStatusReport
+	PriorityMigrator
 	PriorityCoordinator
 	PriorityUpdateCheck
 	PriorityPrometheus
