@@ -283,9 +283,10 @@ func randLSTransactionUnspentOutputs() *snapshot.Output {
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
 
 	return &snapshot.Output{
-		OutputID: outputID,
-		Address:  addr,
-		Amount:   uint64(rand.Intn(1000000) + 1),
+		OutputID:   outputID,
+		OutputType: byte(rand.Intn(1)),
+		Address:    addr,
+		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
 }
 
@@ -298,9 +299,10 @@ func randLSTransactionSpents() *snapshot.Spent {
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
 
 	output := &snapshot.Output{
-		OutputID: outputID,
-		Address:  addr,
-		Amount:   uint64(rand.Intn(1000000) + 1),
+		OutputID:   outputID,
+		OutputType: byte(rand.Intn(1)),
+		Address:    addr,
+		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
 
 	return &snapshot.Spent{Output: *output, TargetTransactionID: rand32ByteHash()}
