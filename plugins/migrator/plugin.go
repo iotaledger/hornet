@@ -28,7 +28,7 @@ func init() {
 	flag.CommandLine.MarkHidden(CfgMigratorStartIndex)
 
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.Disabled,
 		Pluggable: node.Pluggable{
 			Name:      "Migrator",
 			DepsFunc:  func(cDeps pluginDependencies) { deps = cDeps },
