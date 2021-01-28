@@ -355,7 +355,7 @@ func newLSMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 
 	go func() {
 		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
-			prodChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
+			prodChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), OutputType: output.OutputType(), Address: output.Address(), Amount: output.Amount()}
 			return true
 		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err

@@ -1,6 +1,8 @@
 package utxo
 
 import (
+	"fmt"
+
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -174,6 +176,8 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 		if opt.filterOutputType != nil {
 			key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
 		}
+	} else if opt.filterOutputType != nil {
+		return fmt.Errorf("output type filtering is only valid when also filtering for an address")
 	}
 
 	var i int
