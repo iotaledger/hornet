@@ -24,15 +24,15 @@ import (
 
 var hasher = whiteflag.NewHasher(crypto.BLAKE2b_512)
 
-type migrator struct {
+type validator struct {
 	api *api.API
 
 	coordinatorAddress         trinary.Hash
 	coordinatorMerkleTreeDepth int
 }
 
-func newMigrator(api *api.API, coordinatorAddress trinary.Hash, coordinatorMerkleTreeDepth int) *migrator {
-	return &migrator{
+func newValidator(api *api.API, coordinatorAddress trinary.Hash, coordinatorMerkleTreeDepth int) *validator {
+	return &validator{
 		api:                        api,
 		coordinatorAddress:         coordinatorAddress,
 		coordinatorMerkleTreeDepth: coordinatorMerkleTreeDepth,
@@ -40,7 +40,7 @@ func newMigrator(api *api.API, coordinatorAddress trinary.Hash, coordinatorMerkl
 }
 
 // validateMilestoneBundle performs syntactic validation of the milestone and checks whether it has the correct index.
-func (m *migrator) validateMilestoneBundle(ms bundle.Bundle, msIndex uint32) error {
+func (m *validator) validateMilestoneBundle(ms bundle.Bundle, msIndex uint32) error {
 	// since in a milestone bundle only the (complete) head is signed, there is no need to validate other transactions
 	head := ms[len(ms)-1]
 	tag := trinary.IntToTrytes(int64(msIndex), legacy.TagTrinarySize/legacy.TritsPerTryte)
@@ -66,7 +66,7 @@ func (m *migrator) validateMilestoneBundle(ms bundle.Bundle, msIndex uint32) err
 }
 
 // validateMilestoneSignature validates the signature of the given milestone bundle.
-func (m *migrator) validateMilestoneSignature(ms bundle.Bundle) error {
+func (m *validator) validateMilestoneSignature(ms bundle.Bundle) error {
 	head := ms[len(ms)-1]
 	msData := head.SignatureMessageFragment
 	msIndex := uint32(trinary.TrytesToInt(head.Tag))
@@ -92,7 +92,7 @@ func (m *migrator) validateMilestoneSignature(ms bundle.Bundle) error {
 }
 
 // whiteFlagMerkleTreeHash returns the Merkle tree root of the included state-mutating transactions.
-func (m *migrator) whiteFlagMerkleTreeHash(ms bundle.Bundle) ([]byte, error) {
+func (m *validator) whiteFlagMerkleTreeHash(ms bundle.Bundle) ([]byte, error) {
 	head := ms[len(ms)-1]
 	data := head.SignatureMessageFragment[m.coordinatorMerkleTreeDepth*legacy.HashTrytesSize:]
 	trytesLen := b1t6.EncodedLen(hasher.Size()) / legacy.TritsPerTryte
@@ -121,7 +121,7 @@ func asBundle(rawTrytes []trinary.Trytes) (bundle.Bundle, error) {
 	return bundles[0], nil
 }
 
-func (m *migrator) validateConfirmation(confirmation *api.WhiteFlagConfirmation, msIndex uint32) ([]bundle.Bundle, error) {
+func (m *validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation, msIndex uint32) ([]bundle.Bundle, error) {
 	ms, err := asBundle(confirmation.MilestoneBundle)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse milestone bundle: %w", err)
@@ -161,7 +161,7 @@ func (m *migrator) validateConfirmation(confirmation *api.WhiteFlagConfirmation,
 	return includedBundles, nil
 }
 
-func (m *migrator) queryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFundsEntry, error) {
+func (m *validator) queryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFundsEntry, error) {
 	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
 	if err != nil {
 		return nil, fmt.Errorf("API call failed: %w", err)
@@ -188,7 +188,7 @@ func (m *migrator) queryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFu
 	return migrated, nil
 }
 
-func (m *migrator) nextMigrations(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
+func (m *validator) nextMigrations(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
 	info, err := m.api.GetNodeInfo()
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to get node info: %w", err)
