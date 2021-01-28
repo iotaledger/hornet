@@ -29,8 +29,8 @@ type State struct {
 
 // MigratorService is a service querying and validating batches of migrated funds.
 type MigratorService struct {
-	migrator *migrator
-	state    State
+	validator *validator
+	state     State
 
 	mutex      syncutils.Mutex
 	migrations chan *migrationResult
@@ -46,7 +46,7 @@ type migrationResult struct {
 // NewService creates a new MigratorService.
 func NewService(api *api.API, stateFilePath string, coordinatorAddress trinary.Hash, coordinatorMerkleTreeDepth int) *MigratorService {
 	return &MigratorService{
-		migrator:      newMigrator(api, coordinatorAddress, coordinatorMerkleTreeDepth),
+		validator:     newValidator(api, coordinatorAddress, coordinatorMerkleTreeDepth),
 		migrations:    make(chan *migrationResult),
 		stateFilePath: stateFilePath,
 	}
@@ -102,7 +102,7 @@ func (s *MigratorService) InitState(state *State) error {
 func (s *MigratorService) Start(shutdownSignal <-chan struct{}) error {
 	startIndex := s.state.LatestMilestoneIndex
 	for {
-		stopIndex, migratedFunds, err := s.migrator.nextMigrations(startIndex)
+		stopIndex, migratedFunds, err := s.validator.nextMigrations(startIndex)
 		if err != nil {
 			return err
 		}

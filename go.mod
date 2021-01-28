@@ -64,4 +64,5 @@ require (
 	go.uber.org/dig v1.10.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/tools v0.0.0-20201123232213-4aa1a224cdb5 // indirect
+	google.golang.org/grpc v1.34.0 // indirect
 )
