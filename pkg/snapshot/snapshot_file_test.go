@@ -284,7 +284,7 @@ func randLSTransactionUnspentOutputs() *snapshot.Output {
 
 	return &snapshot.Output{
 		OutputID:   outputID,
-		OutputType: byte(rand.Intn(1)),
+		OutputType: byte(rand.Intn(256)),
 		Address:    addr,
 		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
@@ -300,7 +300,7 @@ func randLSTransactionSpents() *snapshot.Spent {
 
 	output := &snapshot.Output{
 		OutputID:   outputID,
-		OutputType: byte(rand.Intn(1)),
+		OutputType: byte(rand.Intn(256)),
 		Address:    addr,
 		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
