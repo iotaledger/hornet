@@ -54,14 +54,14 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	_, spents, err := u.GetMilestoneDiffsWithoutLocking(msIndex)
+	diff, err := u.GetMilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		return err
 	}
 
 	mutations := u.utxoStorage.Batched()
 
-	for _, spent := range spents {
+	for _, spent := range diff.Spents {
 		if err := deleteOutput(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
@@ -141,7 +141,13 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		}
 	}
 
-	if err := storeDiff(msIndex, newOutputs, newSpents, mutations); err != nil {
+	msDiff := &MilestoneDiff{
+		Index:   msIndex,
+		Outputs: newOutputs,
+		Spents:  newSpents,
+	}
+
+	if err := storeDiff(msDiff, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}
@@ -171,18 +177,6 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 
 	mutations := u.utxoStorage.Batched()
 
-	// we have to delete the newOutputs of this milestone
-	for _, output := range newOutputs {
-		if err := deleteOutput(output, mutations); err != nil {
-			mutations.Cancel()
-			return err
-		}
-		if err := deleteFromUnspent(output, mutations); err != nil {
-			mutations.Cancel()
-			return err
-		}
-	}
-
 	// we have to store the spents as output and mark them as unspent
 	for _, spent := range newSpents {
 		if err := storeOutput(spent.output, mutations); err != nil {
@@ -191,6 +185,18 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		}
 
 		if err := deleteSpentAndMarkUnspent(spent, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	// we have to delete the newOutputs of this milestone
+	for _, output := range newOutputs {
+		if err := deleteOutput(output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+		if err := deleteFromUnspent(output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -264,4 +270,99 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 	}
 
 	return mutations.Commit()
+}
+
+type UTXOIterateOptions struct {
+	address          iotago.Address
+	readLockLedger   bool
+	maxResultCount   int
+	filterOutputType *iotago.OutputType
+}
+
+type UTXOIterateOption func(*UTXOIterateOptions)
+
+func FilterAddress(address iotago.Address) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.address = address
+	}
+}
+
+func ReadLockLedger(lockLedger bool) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.readLockLedger = lockLedger
+	}
+}
+
+func MaxResultCount(count int) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.maxResultCount = count
+	}
+}
+
+func FilterOutputType(outputType iotago.OutputType) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.filterOutputType = &outputType
+	}
+}
+
+func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
+	result := &UTXOIterateOptions{
+		address:          nil,
+		readLockLedger:   true,
+		maxResultCount:   0,
+		filterOutputType: nil,
+	}
+
+	for _, optionalOption := range optionalOptions {
+		optionalOption(result)
+	}
+	return result
+}
+
+func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
+
+	var spents []*Spent
+
+	consumerFunc := func(spent *Spent) bool {
+		spents = append(spents, spent)
+		return true
+	}
+
+	if err := u.ForEachSpentOutput(consumerFunc, options...); err != nil {
+		return nil, err
+	}
+
+	return spents, nil
+}
+
+func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) ([]*Output, error) {
+
+	var outputs []*Output
+	consumerFunc := func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}
+
+	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+		return nil, err
+	}
+
+	return outputs, nil
+}
+
+func (u *Manager) ComputeBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
+
+	balance = 0
+	count = 0
+	consumerFunc := func(output *Output) bool {
+		balance += output.amount
+		count++
+		return true
+	}
+
+	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+		return 0, 0, err
+	}
+
+	return balance, count, nil
 }

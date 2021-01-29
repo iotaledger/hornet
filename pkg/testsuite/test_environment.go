@@ -124,7 +124,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	te.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 0)
 
 	// Initialize UTXO
-	te.GenesisOutput = utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
 	te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
 
 	te.AssertTotalSupplyStillValid()

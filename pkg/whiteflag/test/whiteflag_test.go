@@ -408,8 +408,9 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	// Generate lots of dust messages
 	lastDustMessage := messageA
-	dustTxCount := 100
-	for i := 0; i < dustTxCount; i++ {
+	var totalDustTxCount int
+	var dustTxCount int
+	for i := 0; i < 10; i++ {
 		// Dust from seed1 to seed2 with 1
 		lastDustMessage = te.NewMessageBuilder(fmt.Sprintf("C%d", i)).
 			Parents(lastDustMessage.StoredMessageID(), te.Milestones[2].GetMilestone().MessageID).
@@ -419,6 +420,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 			Build().
 			Store().
 			BookOnWallets()
+		dustTxCount++
 	}
 
 	require.NotNil(t, lastDustMessage)
@@ -431,9 +433,13 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
 
+	totalDustTxCount += dustTxCount
+
+	require.Equal(t, 10, totalDustTxCount)
+
 	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(dustTxCount))
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(dustTxCount))
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount))
+	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount))
 
 	// Dust from seed1 to seed2 with 1 (failure: dust allowance)
 	messageD := te.NewMessageBuilder("D").
@@ -456,41 +462,75 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 	te.AssertMessageConflictReason(messageD.StoredMessageID(), storage.ConflictInvalidDustAllowance)
 
 	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(dustTxCount))
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(dustTxCount))
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount))
+	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount))
 
 	// More Dust allowance from seed1 to seed2 with 1_000_000
 	messageE := te.NewMessageBuilder("E").
 		Parents(messageD.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		Amount(1_000_000).
+		Amount(10_000_000).
 		DustAllowance().
 		Build().
 		Store().
 		BookOnWallets()
 
-	// Dust from seed1 to seed2 with 1
-	messageF := te.NewMessageBuilder("F").
-		Parents(messageE.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1).
-		Build().
-		Store().
-		BookOnWallets()
+	// Generate lots of dust messages from seed1 to seed2
+	lastDustMessage = messageE
+	dustTxCount = 0
+	for i := 0; i < 100-totalDustTxCount; i++ {
+		// Dust from seed1 to seed2 with 1
+		lastDustMessage = te.NewMessageBuilder(fmt.Sprintf("F%d", i)).
+			Parents(lastDustMessage.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID).
+			FromWallet(seed1Wallet).
+			ToWallet(seed2Wallet).
+			Amount(1).
+			Build().
+			Store().
+			BookOnWallets()
+		dustTxCount++
+	}
+
+	totalDustTxCount += dustTxCount
+
+	require.Equal(t, 100, totalDustTxCount)
 
 	// Confirming milestone at message F
-	conf = te.IssueAndConfirmMilestoneOnTip(messageF.StoredMessageID(), true)
+	conf = te.IssueAndConfirmMilestoneOnTip(lastDustMessage.StoredMessageID(), true)
 
-	require.Equal(t, 2+1, conf.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 2, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 1+dustTxCount+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 1+dustTxCount, conf.MessagesIncludedWithTransactions)
 	require.Equal(t, 0, conf.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
 
 	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(dustTxCount)-1_000_000-1)
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(dustTxCount)+1_000_000+1)
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount)-10_000_000)
+	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount)+10_000_000)
+
+	// Dust from seed1 to seed2 with 1 (failure: dust allowance)
+	messageG := te.NewMessageBuilder("G").
+		Parents(lastDustMessage.StoredMessageID(), te.Milestones[4].GetMilestone().MessageID).
+		FromWallet(seed1Wallet).
+		ToWallet(seed2Wallet).
+		Amount(1).
+		Build().
+		Store()
+
+	// Confirming milestone at message G
+	conf = te.IssueAndConfirmMilestoneOnTip(messageG.StoredMessageID(), true)
+
+	require.Equal(t, 1+1, conf.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 0, conf.MessagesIncludedWithTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, conf.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageG.StoredMessageID(), storage.ConflictInvalidDustAllowance)
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount)-10_000_000)
+	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount)+10_000_000)
 }
 
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
