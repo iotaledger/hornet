@@ -58,7 +58,7 @@ func TestOutputSerialization(t *testing.T) {
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 
 	value := output.kvStorableValue()
-	require.Equal(t, messageID[:], value[:32])
+	require.Equal(t, messageID, hornet.MessageIDFromSlice(value[:32]))
 	require.Equal(t, outputType, value[32])
 	require.Equal(t, iotago.AddressEd25519, value[33])
 	require.Equal(t, addressBytes, value[34:66])
