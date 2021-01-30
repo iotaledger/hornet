@@ -160,15 +160,14 @@ type sepRetrieverFunc func() hornet.MessageIDs
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 	var generatedSEPs hornet.MessageIDs
-	return func() (*hornet.MessageID, error) {
+	return func() (hornet.MessageID, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
-			x := rand32ByteHash()
-			msgID := hornet.MessageID(x)
-			generatedSEPs = append(generatedSEPs, &msgID)
-			return &msgID, nil
+			msgID := randMessageID()
+			generatedSEPs = append(generatedSEPs, msgID)
+			return msgID, nil
 		}, func() hornet.MessageIDs {
 			return generatedSEPs
 		}
@@ -176,7 +175,7 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 	var generatedSEPs hornet.MessageIDs
-	return func(sep *hornet.MessageID) error {
+	return func(sep hornet.MessageID) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
 		}, func() hornet.MessageIDs {
@@ -265,6 +264,10 @@ func randBytes(length int) []byte {
 		b = append(b, byte(rand.Intn(256)))
 	}
 	return b
+}
+
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
 }
 
 func rand32ByteHash() [iotago.TransactionIDLength]byte {

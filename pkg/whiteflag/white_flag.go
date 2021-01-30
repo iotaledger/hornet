@@ -28,13 +28,13 @@ type Confirmation struct {
 	// The index of the milestone that got confirmed.
 	MilestoneIndex milestone.Index
 	// The message ID of the milestone that got confirmed.
-	MilestoneMessageID *hornet.MessageID
+	MilestoneMessageID hornet.MessageID
 	// The ledger mutations and referenced messages of this milestone.
 	Mutations *WhiteFlagMutations
 }
 
 type MessageWithConflict struct {
-	MessageID *hornet.MessageID
+	MessageID hornet.MessageID
 	Conflict  storage.Conflict
 }
 
@@ -58,7 +58,7 @@ type WhiteFlagMutations struct {
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
 
-// ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by parent1 and parent2.
+// ComputeWhiteFlagMutations computes the ledger changes in accordance to the white-flag rules for the cone referenced by the parents.
 // Via a post-order depth-first search the approved messages of the given cone are traversed and
 // in their corresponding order applied/mutated against the previous ledger state, respectively previous applied mutations.
 // Messages within the approving cone must be valid. Messages causing conflicts are ignored but do not create an error.
@@ -66,7 +66,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -82,7 +82,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	condition := func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
+		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().ToMapKey()
 		if _, exists := cachedMessageMetas[cachedMetadataMapKey]; !exists {
 			// release the msg metadata at the end to speed up calculation
 			cachedMessageMetas[cachedMetadataMapKey] = cachedMetadata.Retain()
@@ -96,14 +96,14 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	consumer := func(cachedMetadata *storage.CachedMetadata) error { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
+		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().ToMapKey()
 
 		// load up message
 		cachedMessage, exists := cachedMessages[cachedMetadataMapKey]
 		if !exists {
 			cachedMessage = s.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
-				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
+				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().ToHex(), cachedMetadata.GetMetadata().GetMessageID().ToHex())
 			}
 
 			// release the messages at the end to speed up calculation
@@ -260,10 +260,10 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	}
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
-	// If parent1 and parent2 of a message are both SEPs, are already processed or already referenced,
+	// If the parents are SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
-	if err := dag.TraverseParent1AndParent2(s, parent1MessageID, parent2MessageID,
+	if err := dag.TraverseParents(s, parents,
 		condition,
 		consumer,
 		// called on missing parents

@@ -12,8 +12,8 @@ import (
 
 // ShortenedHash returns a shortened hex encoded hash for the given hash.
 // this is used for the dot file.
-func ShortenedHash(hash *hornet.MessageID) string {
-	hexHash := hash.Hex()
+func ShortenedHash(hash hornet.MessageID) string {
+	hexHash := hash.ToHex()
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 

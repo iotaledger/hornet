@@ -24,6 +24,10 @@ func randBytes(length int) []byte {
 	return b
 }
 
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
+}
+
 func EqualOutput(t *testing.T, expected *Output, actual *Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
 	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
@@ -37,8 +41,7 @@ func TestOutputSerialization(t *testing.T) {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(34))
 
-	messageID := &hornet.MessageID{}
-	copy(messageID[:], randBytes(32))
+	messageID := randMessageID()
 
 	outputType := iotago.OutputSigLockedDustAllowanceOutput
 

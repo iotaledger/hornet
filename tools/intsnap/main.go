@@ -5,9 +5,10 @@ import (
 	"os"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	iotago "github.com/iotaledger/iota.go"
 )
 
 func main() {
@@ -131,7 +132,7 @@ func writeFullSnapshot() {
 	defer full.Close()
 
 	var seps, sepsMax = 0, 10
-	fullSnapSEPProd := func() (*hornet.MessageID, error) {
+	fullSnapSEPProd := func() (hornet.MessageID, error) {
 		seps++
 		if seps > sepsMax {
 			return nil, nil
@@ -256,7 +257,7 @@ func writeDeltaSnapshot() {
 	defer delta.Close()
 
 	var seps, sepsMax = 0, 10
-	deltaSnapSEPProd := func() (*hornet.MessageID, error) {
+	deltaSnapSEPProd := func() (hornet.MessageID, error) {
 		seps++
 		if seps > sepsMax {
 			return nil, nil
@@ -283,12 +284,11 @@ func must(err error) {
 	}
 }
 
-func randMsgID() *hornet.MessageID {
-	var b iotago.MessageID
+func randMsgID() hornet.MessageID {
+	b := make(hornet.MessageID, 32)
 	_, err := rand.Read(b[:])
 	must(err)
-	bb := hornet.MessageID(b)
-	return &bb
+	return b
 }
 
 func static32ByteID(fill byte) [32]byte {

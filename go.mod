@@ -2,6 +2,8 @@ module github.com/gohornet/hornet
 
 go 1.15
 
+replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112081740-ecb37c02f887
+
 require (
 	github.com/Microsoft/go-winio v0.4.15 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
@@ -27,7 +29,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210105145855-ce2c8231a283
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210125151213-fd4f31d35dbb
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210127084742-7c18e48bad1c
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.17
@@ -54,15 +56,16 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.11
-	github.com/wollac/iota-crypto-demo v0.0.0-20201119181127-32188ea0d129
+	github.com/wollac/iota-crypto-demo v0.0.0-20210114174742-33291668a736
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
+	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.0.0-20201123232213-4aa1a224cdb5 // indirect
-	google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497 // indirect
-	google.golang.org/grpc v1.34.0 // indirect
+	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
+	google.golang.org/grpc v1.35.0 // indirect
 )
-
-replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112081740-ecb37c02f887

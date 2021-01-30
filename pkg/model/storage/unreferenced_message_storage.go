@@ -31,7 +31,7 @@ func (c *CachedUnreferencedMessage) GetUnreferencedMessage() *UnreferencedMessag
 
 func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 
-	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromBytes(key[4:36]))
+	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
 	return unreferencedTx, nil
 }
 
@@ -62,7 +62,7 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, forceReleas
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromBytes(key[4:36]))
+		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromSlice(key[4:36]))
 		return true
 	}, false, key)
 
@@ -70,17 +70,17 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, forceReleas
 }
 
 // UnreferencedMessageConsumer consumes the given unreferenced message during looping through all unreferenced messages in the persistence layer.
-type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID *hornet.MessageID) bool
+type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.MessageID) bool
 
 // ForEachUnreferencedMessage loops over all unreferenced messages.
 func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, skipCache bool) {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromBytes(key[4:36]))
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
 	}, skipCache)
 }
 
 // unreferencedTx +1
-func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID *hornet.MessageID) *CachedUnreferencedMessage {
+func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID) *CachedUnreferencedMessage {
 	unreferencedTx := NewUnreferencedMessage(msIndex, messageID)
 	return &CachedUnreferencedMessage{CachedObject: s.unreferencedMessagesStorage.Store(unreferencedTx)}
 }

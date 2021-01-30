@@ -33,9 +33,9 @@ type HeaviestSelector struct {
 }
 
 type trackedMessage struct {
-	messageID *hornet.MessageID // message ID of the corresponding message
-	tip       *list.Element     // pointer to the element in the tip list
-	refs      *bitset.BitSet    // BitSet of all the referenced messages
+	messageID hornet.MessageID // message ID of the corresponding message
+	tip       *list.Element    // pointer to the element in the tip list
+	refs      *bitset.BitSet   // BitSet of all the referenced messages
 }
 
 type trackedMessagesList struct {
@@ -83,7 +83,7 @@ func (il *trackedMessagesList) referenceTip(tip *trackedMessage) {
 
 // removeTip removes the tip from the map.
 func (il *trackedMessagesList) removeTip(tip *trackedMessage) {
-	delete(il.msgs, tip.messageID.MapKey())
+	delete(il.msgs, tip.messageID.ToMapKey())
 }
 
 // New creates a new HeaviestSelector instance.
@@ -237,30 +237,37 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *storage.MessageMetadata) (
 	defer s.Unlock()
 
 	// filter duplicate messages
-	if _, contains := s.trackedMessages[msgMeta.GetMessageID().MapKey()]; contains {
+	if _, contains := s.trackedMessages[msgMeta.GetMessageID().ToMapKey()]; contains {
 		return
 	}
 
-	parent1Item := s.trackedMessages[msgMeta.GetParent1MessageID().MapKey()]
-	parent2Item := s.trackedMessages[msgMeta.GetParent2MessageID().MapKey()]
+	parentItems := []*trackedMessage{}
+	for _, parent := range msgMeta.GetParents() {
+		parentItem := s.trackedMessages[parent.ToMapKey()]
+		if parentItem == nil {
+			continue
+		}
+
+		parentItems = append(parentItems, parentItem)
+	}
 
 	// compute the referenced messages
 	// all the known children in the HeaviestSelector are represented by a unique bit in a bitset.
 	// if a new child is added, we expand the bitset by 1 bit and store the Union of the bitsets
-	// of parent1 and parent2 for this child, to know which parts of the cone are referenced by this child.
+	// of the parents for this child, to know which parts of the cone are referenced by this child.
 	idx := uint(len(s.trackedMessages))
 	it := &trackedMessage{messageID: msgMeta.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
-	if parent1Item != nil {
-		it.refs.InPlaceUnion(parent1Item.refs)
+
+	for _, parentItem := range parentItems {
+		it.refs.InPlaceUnion(parentItem.refs)
 	}
-	if parent2Item != nil {
-		it.refs.InPlaceUnion(parent2Item.refs)
-	}
-	s.trackedMessages[it.messageID.MapKey()] = it
+	s.trackedMessages[it.messageID.ToMapKey()] = it
 
 	// update tips
-	s.removeTip(parent1Item)
-	s.removeTip(parent2Item)
+	for _, parentItem := range parentItems {
+		s.removeTip(parentItem)
+	}
+
 	it.tip = s.tips.PushBack(it)
 
 	return s.GetTrackedMessagesCount()
@@ -283,7 +290,7 @@ func (s *HeaviestSelector) tipsToList() *trackedMessagesList {
 	result := make(map[string]*trackedMessage)
 	for e := s.tips.Front(); e != nil; e = e.Next() {
 		tip := e.Value.(*trackedMessage)
-		result[tip.messageID.MapKey()] = tip
+		result[tip.messageID.ToMapKey()] = tip
 	}
 	return &trackedMessagesList{msgs: result}
 }

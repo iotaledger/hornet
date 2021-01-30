@@ -6,16 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/utxo"
-
-	"github.com/gohornet/hornet/pkg/keymanager"
-
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -89,13 +87,14 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip *hornet.MessageID, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
 
 	currentIndex := te.storage.GetSolidMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
-	milestoneMessageID, noncriticalErr, criticalErr := te.coo.IssueMilestone(te.lastMilestoneMessageID, tip)
+
+	milestoneMessageID, noncriticalErr, criticalErr := te.coo.IssueMilestone(hornet.MessageIDs{te.lastMilestoneMessageID, tip})
 	require.NoError(te.TestState, noncriticalErr)
 	require.NoError(te.TestState, criticalErr)
 	te.lastMilestoneMessageID = milestoneMessageID

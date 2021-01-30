@@ -251,9 +251,11 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 		return nil
 	}
 
-	if message.message.Parent1 != ms.Parent1 || message.message.Parent2 != ms.Parent2 {
-		// parents in message and payload have to be equal
-		return nil
+	for idx, parent := range message.message.Parents {
+		if parent != ms.Parents[idx] {
+			// parents in message and payload have to be equal
+			return nil
+		}
 	}
 
 	if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
@@ -264,7 +266,7 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (s *Storage) StoreMilestone(messageID *hornet.MessageID, ms *iotago.Milestone) {
+func (s *Storage) StoreMilestone(messageID hornet.MessageID, ms *iotago.Milestone) {
 
 	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), messageID, time.Unix(int64(ms.Timestamp), 0))
 

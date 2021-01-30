@@ -58,7 +58,7 @@ type TestEnvironment struct {
 	coo *coordinator.Coordinator
 
 	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID *hornet.MessageID
+	lastMilestoneMessageID hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string

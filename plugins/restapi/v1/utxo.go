@@ -44,7 +44,7 @@ func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error)
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputResponse{
-		MessageID:     output.MessageID().Hex(),
+		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),

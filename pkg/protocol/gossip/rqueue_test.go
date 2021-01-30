@@ -1,13 +1,16 @@
 package gossip_test
 
 import (
+	"bytes"
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	iotago "github.com/iotaledger/iota.go"
-	"github.com/stretchr/testify/assert"
 )
 
 func randBytes(length int) []byte {
@@ -18,16 +21,8 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func rand32ByteHash() [iotago.TransactionIDLength]byte {
-	var h [iotago.TransactionIDLength]byte
-	b := randBytes(32)
-	copy(h[:], b)
-	return h
-}
-
-func randMessageID() *hornet.MessageID {
-	messageID := hornet.MessageID(rand32ByteHash())
-	return &messageID
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
 }
 
 func TestRequestQueue(t *testing.T) {
@@ -140,7 +135,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, *(queuedReq.MessageID) == *(requests[len(requests)-1].MessageID))
+		assert.False(t, bytes.Equal(queuedReq.MessageID, requests[len(requests)-1].MessageID))
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))

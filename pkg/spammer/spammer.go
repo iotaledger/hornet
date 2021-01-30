@@ -69,8 +69,8 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 
 	iotaMsg := &iotago.Message{
 		NetworkID: s.networkID,
-		Parent1:   *tips[0], Parent2: *tips[1],
-		Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)},
+		Parents:   tips.ToSliceOfArrays(),
+		Payload:   &iotago.Indexation{Index: indexation, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()

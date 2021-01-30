@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
@@ -42,7 +43,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	// Issue some transactions
 	messageA := te.NewMessageBuilder("A").
-		Parents(te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(2_779_530_283_277_761).
@@ -55,7 +56,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	// Issue some transactions
 	messageB := te.NewMessageBuilder("B").
-		Parents(messageA.StoredMessageID(), te.Milestones[1].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[1].GetMilestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
 		Amount(2_779_530_283_277_761).
@@ -97,7 +98,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	// Issue some transactions
 	// Valid transfer from seed1 (2_779_530_283_277_761) with remainder seed1 (2_779_530_282_277_761) to seed2 (1_000_000)
 	messageA := te.NewMessageBuilder("A").
-		Parents(te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -110,7 +111,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Valid transfer from seed1 (2_779_530_282_277_761) with remainder seed1 (2_779_530_280_277_761) to seed2 (2_000_000)
 	messageB := te.NewMessageBuilder("B").
-		Parents(messageA.StoredMessageID(), te.Milestones[0].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(2_000_000).
@@ -123,7 +124,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Invalid transfer from seed3 (0) to seed2 (100_000) (invalid input)
 	messageC := te.NewMessageBuilder("C").
-		Parents(te.Milestones[2].GetMilestone().MessageID, messageB.StoredMessageID()).
+		Parents(hornet.MessageIDs{te.Milestones[2].GetMilestone().MessageID, messageB.StoredMessageID()}).
 		FromWallet(seed3Wallet).
 		ToWallet(seed2Wallet).
 		Amount(100_000).
@@ -149,7 +150,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Invalid transfer from seed4 (0) to seed2 (1_500_000) (invalid input)
 	messageD := te.NewMessageBuilder("D").
-		Parents(messageA.StoredMessageID(), messageC.StoredMessageID()).
+		Parents(hornet.MessageIDs{messageA.StoredMessageID(), messageC.StoredMessageID()}).
 		FromWallet(seed4Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_500_000).
@@ -159,7 +160,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Valid transfer from seed2 (1_000_000) and seed2 (2_000_000) with remainder seed2 (1_500_000) to seed4 (1_500_000)
 	messageE := te.NewMessageBuilder("E").
-		Parents(messageB.StoredMessageID(), messageD.StoredMessageID()).
+		Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageD.StoredMessageID()}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed4Wallet).
 		Amount(1_500_000).
@@ -207,7 +208,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	// Issue some transactions
 	// Valid transfer from seed1 (1_000_000) to seed2
 	messageA := te.NewMessageBuilder("A").
-		Parents(te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -220,7 +221,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	// Invalid Dust transfer from seed1 (999_999) to seed2
 	messageB := te.NewMessageBuilder("B").
-		Parents(messageA.StoredMessageID(), te.Milestones[0].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(999_999).
@@ -247,7 +248,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	// Dust allowance from seed1 to seed2 with 1_000_000
 	messageC := te.NewMessageBuilder("C").
-		Parents(te.Milestones[1].GetMilestone().MessageID, messageB.StoredMessageID()).
+		Parents(hornet.MessageIDs{te.Milestones[1].GetMilestone().MessageID, messageB.StoredMessageID()}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -261,7 +262,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	// Send Dust from seed1 to seed2 with 1
 	messageD := te.NewMessageBuilder("D").
-		Parents(messageB.StoredMessageID(), messageC.StoredMessageID()).
+		Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1).
@@ -286,7 +287,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	// Spend dust allowance from seed2 (2_000_001) to seed3 (0) (failure: invalid dust allowance)
 	messageE := te.NewMessageBuilder("E").
-		Parents(te.Milestones[3].GetMilestone().MessageID, te.Milestones[2].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{te.Milestones[3].GetMilestone().MessageID, te.Milestones[2].GetMilestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed3Wallet).
 		Amount(1_000_000).
@@ -320,7 +321,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	// Spend all outputs, including dust allowance, from seed2 (2_000_001) to seed3 (0)
 	messageF := te.NewMessageBuilder("F").
-		Parents(te.Milestones[3].GetMilestone().MessageID, te.Milestones[4].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{te.Milestones[3].GetMilestone().MessageID, te.Milestones[4].GetMilestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed3Wallet).
 		Amount(2_000_001).
@@ -369,7 +370,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 	// Issue some transactions
 	// Valid transfer from seed1 (2_779_530_283_277_761) to seed2 (1_000_000)
 	messageA := te.NewMessageBuilder("A").
-		Parents(te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -382,7 +383,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	// Dust allowance from seed2 to seed2 with 1_000_000
 	messageB := te.NewMessageBuilder("B").
-		Parents(messageA.StoredMessageID(), te.Milestones[1].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[1].GetMilestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -413,7 +414,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		// Dust from seed1 to seed2 with 1
 		lastDustMessage = te.NewMessageBuilder(fmt.Sprintf("C%d", i)).
-			Parents(lastDustMessage.StoredMessageID(), te.Milestones[2].GetMilestone().MessageID).
+			Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[2].GetMilestone().MessageID}).
 			FromWallet(seed1Wallet).
 			ToWallet(seed2Wallet).
 			Amount(1).
@@ -443,7 +444,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	// Dust from seed1 to seed2 with 1 (failure: dust allowance)
 	messageD := te.NewMessageBuilder("D").
-		Parents(lastDustMessage.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1).
@@ -467,7 +468,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	// More Dust allowance from seed1 to seed2 with 1_000_000
 	messageE := te.NewMessageBuilder("E").
-		Parents(messageD.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{messageD.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(10_000_000).
@@ -482,7 +483,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 	for i := 0; i < 100-totalDustTxCount; i++ {
 		// Dust from seed1 to seed2 with 1
 		lastDustMessage = te.NewMessageBuilder(fmt.Sprintf("F%d", i)).
-			Parents(lastDustMessage.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID).
+			Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[3].GetMilestone().MessageID}).
 			FromWallet(seed1Wallet).
 			ToWallet(seed2Wallet).
 			Amount(1).
@@ -510,7 +511,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	// Dust from seed1 to seed2 with 1 (failure: dust allowance)
 	messageG := te.NewMessageBuilder("G").
-		Parents(lastDustMessage.StoredMessageID(), te.Milestones[4].GetMilestone().MessageID).
+		Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[4].GetMilestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1).
@@ -545,11 +546,11 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet.BookOutput(te.GenesisOutput)
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").Parents(te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID).BuildIndexation().Store()
-	messageB := te.NewMessageBuilder("B").Parents(messageA.StoredMessageID(), te.Milestones[0].GetMilestone().MessageID).BuildIndexation().Store()
-	messageC := te.NewMessageBuilder("C").Parents(te.Milestones[2].GetMilestone().MessageID, te.Milestones[0].GetMilestone().MessageID).BuildIndexation().Store()
-	messageD := te.NewMessageBuilder("D").Parents(messageB.StoredMessageID(), messageC.StoredMessageID()).BuildIndexation().Store()
-	messageE := te.NewMessageBuilder("E").Parents(messageB.StoredMessageID(), messageA.StoredMessageID()).BuildIndexation().Store()
+	messageA := te.NewMessageBuilder("A").Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID, te.Milestones[1].GetMilestone().MessageID}).BuildIndexation().Store()
+	messageB := te.NewMessageBuilder("B").Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].GetMilestone().MessageID}).BuildIndexation().Store()
+	messageC := te.NewMessageBuilder("C").Parents(hornet.MessageIDs{te.Milestones[2].GetMilestone().MessageID, te.Milestones[0].GetMilestone().MessageID}).BuildIndexation().Store()
+	messageD := te.NewMessageBuilder("D").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).BuildIndexation().Store()
+	messageE := te.NewMessageBuilder("E").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageA.StoredMessageID()}).BuildIndexation().Store()
 
 	// Confirming milestone include all msg up to message E. This should only include A, B and E
 	conf := te.IssueAndConfirmMilestoneOnTip(messageE.StoredMessageID(), true)
@@ -559,7 +560,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	require.Equal(t, 3+1, conf.MessagesExcludedWithoutTransactions) // 1 is for the milestone itself
 
 	// Issue another message
-	messageF := te.NewMessageBuilder("F").Parents(messageD.StoredMessageID(), messageE.StoredMessageID()).BuildIndexation().Store()
+	messageF := te.NewMessageBuilder("F").Parents(hornet.MessageIDs{messageD.StoredMessageID(), messageE.StoredMessageID()}).BuildIndexation().Store()
 
 	// Confirming milestone at message F. This should confirm D, C and F
 	conf = te.IssueAndConfirmMilestoneOnTip(messageF.StoredMessageID(), true)

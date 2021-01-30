@@ -79,7 +79,7 @@ func snapshotGen(args []string) error {
 	// solid entry points
 	// add "NullMessageID" as sole entry point
 	nullHashAdded := false
-	solidEntryPointProducerFunc := func() (*hornet.MessageID, error) {
+	solidEntryPointProducerFunc := func() (hornet.MessageID, error) {
 		if nullHashAdded {
 			return nil, nil
 		}

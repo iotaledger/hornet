@@ -190,7 +190,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 
 	for _, req := range queued {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.Hex(),
+			MessageID:        req.MessageID.ToHex(),
 			Type:             "queued",
 			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
@@ -200,7 +200,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 
 	for _, req := range pending {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.Hex(),
+			MessageID:        req.MessageID.ToHex(),
 			Type:             "pending",
 			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
@@ -210,7 +210,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 
 	for _, req := range processing {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.Hex(),
+			MessageID:        req.MessageID.ToHex(),
 			Type:             "processing",
 			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
@@ -247,7 +247,7 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 	entryPoints := []*entryPoint{}
 	tanglePath := []*messageWithParents{}
 
-	if err := dag.TraverseParents(deps.Storage, messageID,
+	if err := dag.TraverseParentsOfMessage(deps.Storage, messageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -255,7 +255,7 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 
 			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced {
 				if !startMsgReferened || (at < startMsgReferenedAt) {
-					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedMsgMeta.GetMetadata().GetMessageID().Hex(), ReferencedByMilestone: at})
+					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}
@@ -265,12 +265,10 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 		// consumer
 		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 			cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
-
 				tanglePath = append(tanglePath,
 					&messageWithParents{
-						MessageID: metadata.GetMessageID().Hex(),
-						Parent1:   metadata.GetParent1MessageID().Hex(),
-						Parent2:   metadata.GetParent2MessageID().Hex(),
+						MessageID: metadata.GetMessageID().ToHex(),
+						Parents:   metadata.GetParents().ToHex(),
 					},
 				)
 			})
@@ -281,8 +279,8 @@ func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID *hornet.MessageID) {
-			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.Hex(), ReferencedByMilestone: entryPointIndex})
+		func(messageID hornet.MessageID) {
+			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
 		},
 		false, nil); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "traverse parents failed, error: %s", err)

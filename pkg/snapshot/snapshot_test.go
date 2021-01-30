@@ -12,7 +12,6 @@ import (
 
 	iotago "github.com/iotaledger/iota.go"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 )
 
@@ -36,8 +35,7 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(34))
 
-	messageID := &hornet.MessageID{}
-	copy(messageID[:], randBytes(32))
+	messageID := randBytes(32)
 
 	var addr iotago.Address
 	if len(address) > 0 {

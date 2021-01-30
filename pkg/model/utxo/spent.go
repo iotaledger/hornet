@@ -34,7 +34,7 @@ func (s *Spent) OutputID() *iotago.UTXOInputID {
 	return s.output.outputID
 }
 
-func (s *Spent) MessageID() *hornet.MessageID {
+func (s *Spent) MessageID() hornet.MessageID {
 	return s.output.messageID
 }
 

@@ -3,9 +3,10 @@ package storage
 import (
 	"time"
 
+	iotago "github.com/iotaledger/iota.go"
+
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
-	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -29,7 +30,7 @@ func (c *CachedChild) GetChild() *Child {
 }
 
 func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	child := NewChild(hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]), hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
+	child := NewChild(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	return child, nil
 }
 
@@ -56,7 +57,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 }
 
 // children +-0
-func (s *Storage) GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...int) hornet.MessageIDs {
+func (s *Storage) GetChildrenMessageIDs(messageID hornet.MessageID, maxFind ...int) hornet.MessageIDs {
 	var childrenMessageIDs hornet.MessageIDs
 
 	i := 0
@@ -66,49 +67,49 @@ func (s *Storage) GetChildrenMessageIDs(messageID *hornet.MessageID, maxFind ...
 			return false
 		}
 
-		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
+		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 		return true
-	}, false, messageID.Slice())
+	}, false, messageID)
 
 	return childrenMessageIDs
 }
 
 // ContainsChild returns if the given child exists in the cache/persistence layer.
-func (s *Storage) ContainsChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
-	return s.childrenStorage.Contains(append(messageID.Slice(), childMessageID.Slice()...))
+func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID hornet.MessageID) bool {
+	return s.childrenStorage.Contains(append(messageID, childMessageID...))
 }
 
 // ChildConsumer consumes the given child during looping through all children in the persistence layer.
-type ChildConsumer func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool
+type ChildConsumer func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool
 
 // ForEachChild loops over all children.
 func (s *Storage) ForEachChild(consumer ChildConsumer, skipCache bool) {
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(hornet.MessageIDFromBytes(key[:iotago.MessageIDLength]), hornet.MessageIDFromBytes(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
+		return consumer(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	}, skipCache)
 }
 
 // child +1
-func (s *Storage) StoreChild(parentMessageID *hornet.MessageID, childMessageID *hornet.MessageID) *CachedChild {
+func (s *Storage) StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *CachedChild {
 	child := NewChild(parentMessageID, childMessageID)
 	return &CachedChild{CachedObject: s.childrenStorage.Store(child)}
 }
 
 // child +-0
-func (s *Storage) DeleteChild(messageID *hornet.MessageID, childMessageID *hornet.MessageID) {
+func (s *Storage) DeleteChild(messageID hornet.MessageID, childMessageID hornet.MessageID) {
 	child := NewChild(messageID, childMessageID)
 	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 
 // child +-0
-func (s *Storage) DeleteChildren(messageID *hornet.MessageID) {
+func (s *Storage) DeleteChildren(messageID hornet.MessageID) {
 
 	var keysToDelete [][]byte
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, false, messageID.Slice())
+	}, false, messageID)
 
 	for _, key := range keysToDelete {
 		s.childrenStorage.Delete(key)
