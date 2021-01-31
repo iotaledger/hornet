@@ -104,16 +104,6 @@ func TestTipselect(t *testing.T) {
 						return false, nil
 					}
 
-					// if the msg was not referenced yet, but already contains recent (calculation index matches LSMI) information
-					// about ycri and ocri, do not walk further
-					_, ocri, ci := cachedMetadata.GetMetadata().GetConeRootIndexes()
-					if ci == lsmi {
-						if oldestReferencedMilestoneIndex > ocri {
-							oldestReferencedMilestoneIndex = ocri
-						}
-						return false, nil
-					}
-
 					return true, nil
 				},
 				// consumer
