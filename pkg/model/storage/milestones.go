@@ -2,12 +2,13 @@ package storage
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
+
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/hornet"

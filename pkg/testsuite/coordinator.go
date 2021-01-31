@@ -1,12 +1,13 @@
 package testsuite
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
