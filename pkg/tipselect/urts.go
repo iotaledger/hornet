@@ -334,9 +334,10 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 	maxRetries := (tipCount - 1) * 10
 
 	seen := make(map[string]struct{})
-	orderedArrayWithoutDups := iotago.LexicalOrderedByteSlices{}
+	orderedSlicesWithoutDups := make(iotago.LexicalOrderedByteSlices, tipCount)
 
 	// retry the tipselection several times if parents not unique
+	uniqueElements := 0
 	for i := 0; i < maxRetries; i++ {
 		tip, err := ts.selectTipWithoutLocking(tipsMap)
 		if err != nil {
@@ -354,12 +355,19 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 			continue
 		}
 		seen[tipMapKey] = struct{}{}
-		orderedArrayWithoutDups = append(orderedArrayWithoutDups, tip)
-	}
-	sort.Sort(orderedArrayWithoutDups)
+		orderedSlicesWithoutDups[uniqueElements] = tip
+		uniqueElements++
 
-	result := make(hornet.MessageIDs, len(orderedArrayWithoutDups))
-	for i, v := range orderedArrayWithoutDups {
+		if uniqueElements >= tipCount {
+			// collected enough tips
+			break
+		}
+	}
+	orderedSlicesWithoutDups = orderedSlicesWithoutDups[:uniqueElements]
+	sort.Sort(orderedSlicesWithoutDups)
+
+	result := make(hornet.MessageIDs, len(orderedSlicesWithoutDups))
+	for i, v := range orderedSlicesWithoutDups {
 		// this is necessary, otherwise we create a pointer to the loop variable
 		tmp := v
 		result[i] = tmp
