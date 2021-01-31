@@ -87,7 +87,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, createConfirmationGraph bool) *whiteflag.ConfirmedMilestoneStats {
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	currentIndex := te.storage.GetSolidMilestoneIndex()
 	te.VerifyLMI(currentIndex)
@@ -145,5 +145,5 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 
 	te.Milestones = append(te.Milestones, ms)
 
-	return confStats
+	return wfConf, confStats
 }
