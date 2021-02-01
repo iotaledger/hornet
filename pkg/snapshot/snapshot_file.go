@@ -632,7 +632,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	defer deltaSnapshotFile.Close()
 
 	// build up ledger state to delta snapshot index
-	deltaSnapSEPs := make([]hornet.MessageID, 0)
+	deltaSnapSEPs := make(hornet.MessageIDs, 0)
 	if err := StreamSnapshotDataFrom(deltaSnapshotFile,
 		func(header *ReadFileHeader) error {
 			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)

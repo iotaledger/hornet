@@ -1,6 +1,7 @@
 package hornet
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -113,7 +114,7 @@ func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 	sort.Sort(sorted)
 
 	var result MessageIDs
-	var prev []byte
+	var prev MessageID
 	for i, id := range sorted {
 		// only add to the result, if it its different from its predecessor
 		if i == 0 || !bytes.Equal(prev, id) {

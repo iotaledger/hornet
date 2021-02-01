@@ -4,6 +4,8 @@ go 1.15
 
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210112081740-ecb37c02f887
 
+replace github.com/iotaledger/iota.go/v2 => github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
+
 require (
 	github.com/Microsoft/go-winio v0.4.15 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
@@ -53,10 +55,10 @@ require (
 	github.com/prometheus/client_golang v1.8.0
 	github.com/shirou/gopsutil v3.20.10+incompatible
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/willf/bitset v1.1.11
-	github.com/wollac/iota-crypto-demo v0.0.0-20210114174742-33291668a736
+	github.com/wollac/iota-crypto-demo v0.0.0-20210201165040-34d42c11da45
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
@@ -64,10 +66,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
-	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.0.0-20201123232213-4aa1a224cdb5 // indirect
 	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	google.golang.org/grpc v1.35.0 // indirect
 )
-
-replace github.com/iotaledger/iota.go/v2 => github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
