@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 

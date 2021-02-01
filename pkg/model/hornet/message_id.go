@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // MessageID is the ID of a Message.

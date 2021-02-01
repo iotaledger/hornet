@@ -1,9 +1,9 @@
 package coordinator
 
 import (
-	"crypto/ed25519"
 	"time"
 
+	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"

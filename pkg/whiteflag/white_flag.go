@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation

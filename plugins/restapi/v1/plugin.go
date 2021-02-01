@@ -11,7 +11,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	powcore "github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/app"

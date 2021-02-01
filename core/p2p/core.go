@@ -3,6 +3,7 @@ package p2p
 
 import (
 	"context"
+	stded25519 "crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -213,7 +214,8 @@ func loadIdentityFromConfig(nodeConfig *configuration.Configuration) (crypto.Pri
 			return nil, fmt.Errorf("config parameter '%s' contains an invalid private key", CfgP2PIdentityPrivKey)
 		}
 
-		sk, _, err := crypto.KeyPairFromStdKey(&prvKey)
+		stdPrvKey := stded25519.PrivateKey(prvKey)
+		sk, _, err := crypto.KeyPairFromStdKey(&stdPrvKey)
 		if err != nil {
 			return nil, fmt.Errorf("unable to load Ed25519 key pair for peer identity: %w", err)
 		}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/dchest/blake2b"
 	"github.com/iotaledger/hive.go/objectstorage"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
