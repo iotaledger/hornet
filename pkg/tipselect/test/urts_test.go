@@ -39,7 +39,7 @@ var (
 	seed1, _ = hex.DecodeString("96d9ff7a79e4b0a5f3e5848ae7867064402da92a62eabb4ebbe463f12d1f3b1aace1775488f51cb1e3a80732a03ef60b111d6833ab605aa9f8faebeb33bbe3d9")
 )
 
-func TestTipselect(t *testing.T) {
+func TestTipSelect(t *testing.T) {
 
 	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
 	genesisAddress := genesisWallet.Address()
@@ -70,9 +70,7 @@ func TestTipselect(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID}).BuildIndexation().Store()
 		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) {            // metadata -1
-			ts.AddTip(metadata)
-		})
+		cachedMsgMeta.ConsumeMetadata(ts.AddTip)                                           // metadata -1
 		msgCount++
 	}
 
@@ -145,7 +143,7 @@ func TestTipselect(t *testing.T) {
 
 		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(tips).BuildIndexation().Store()
 		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) {            // metadata -1
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 			ts.AddTip(metadata)
 		})
 		msgCount++
