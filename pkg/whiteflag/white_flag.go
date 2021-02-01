@@ -199,10 +199,6 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 				conflict = storage.ConflictInputOutputSumMismatch
 			} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
 				conflict = storage.ConflictInvalidSignature
-			} else if errors.Is(err, iotago.ErrUnknownInputType) || errors.Is(err, iotago.ErrUnknownOutputType) {
-				conflict = storage.ConflictUnsupportedInputOrOutputType
-			} else if errors.Is(err, iotago.ErrUnknownAddrType) {
-				conflict = storage.ConflictUnsupportedAddressType
 			} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
 				conflict = storage.ConflictInvalidDustAllowance
 			} else {
