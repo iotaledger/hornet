@@ -29,31 +29,25 @@ const (
 	ConflictNone Conflict = iota
 
 	// ConflictInputUTXOAlreadySpent the referenced UTXO was already spent.
-	ConflictInputUTXOAlreadySpent
+	ConflictInputUTXOAlreadySpent = 1
 
 	// ConflictInputUTXOAlreadySpentInThisMilestone the referenced UTXO was already spent while confirming this milestone
-	ConflictInputUTXOAlreadySpentInThisMilestone
+	ConflictInputUTXOAlreadySpentInThisMilestone = 2
 
 	// ConflictInputUTXONotFound the referenced UTXO cannot be found.
-	ConflictInputUTXONotFound
+	ConflictInputUTXONotFound = 3
 
 	// ConflictInputOutputSumMismatch the sum of the inputs and output values does not match.
-	ConflictInputOutputSumMismatch
+	ConflictInputOutputSumMismatch = 4
 
 	// ConflictInvalidSignature the unlock block signature is invalid.
-	ConflictInvalidSignature
-
-	// ConflictUnsupportedInputOrOutputType the input or output type used is unsupported.
-	ConflictUnsupportedInputOrOutputType
-
-	// ConflictUnsupportedAddressType the used address type is unsupported.
-	ConflictUnsupportedAddressType
+	ConflictInvalidSignature = 5
 
 	// ConflictInvalidDustAllowance the dust allowance for the address is invalid.
-	ConflictInvalidDustAllowance
+	ConflictInvalidDustAllowance = 6
 
 	// ConflictSemanticValidationFailed the semantic validation failed.
-	ConflictSemanticValidationFailed
+	ConflictSemanticValidationFailed = 255
 )
 
 type MessageMetadata struct {
