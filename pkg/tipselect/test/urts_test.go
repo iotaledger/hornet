@@ -120,8 +120,8 @@ func TestTipSelect(t *testing.T) {
 			require.NoError(te.TestState, err)
 
 			minReferencedMilestone := lsmi
-			if minReferencedMilestone > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI) {
-				minReferencedMilestone -= milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI)
+			if minReferencedMilestone > milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI) {
+				minReferencedMilestone -= milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI)
 			} else {
 				minReferencedMilestone = 1
 			}
@@ -133,9 +133,7 @@ func TestTipSelect(t *testing.T) {
 
 		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(tips).BuildIndexation().Store()
 		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
-			ts.AddTip(metadata)
-		})
+		cachedMsgMeta.ConsumeMetadata(ts.AddTip)                                           // metadata -1
 		msgCount++
 
 		if i%10 == 0 {
