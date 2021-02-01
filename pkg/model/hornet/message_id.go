@@ -73,7 +73,7 @@ func MessageIDFromSlice(b []byte) MessageID {
 
 // MessageIDFromArray creates a MessageID from a byte array.
 func MessageIDFromArray(b iotago.MessageID) MessageID {
-	return MessageID(b[:])
+	return append(MessageID{}, b[:]...)
 }
 
 // ToHex converts the MessageIDs to their hex string representation.
@@ -89,9 +89,7 @@ func (m MessageIDs) ToHex() []string {
 func (m MessageIDs) ToSliceOfSlices() [][]byte {
 	var results [][]byte
 	for _, msgID := range m {
-		// this is necessary, otherwise we create a pointer to the loop variable
-		tmp := msgID
-		results = append(results, tmp)
+		results = append(results, msgID)
 	}
 	return results
 }
@@ -107,32 +105,22 @@ func (m MessageIDs) ToSliceOfArrays() iotago.MessageIDs {
 
 // RemoveDupsAndSortByLexicalOrder returns a new slice of MessageIDs sorted by lexical order and without duplicates.
 func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
+	// sort the messages lexicographically
+	sorted := make(iotago.LexicalOrderedByteSlices, len(m))
+	for i, id := range m {
+		sorted[i] = id
+	}
+	sort.Sort(sorted)
 
-	seen := make(map[string]struct{})
-	orderedArray := make(iotago.LexicalOrderedByteSlices, len(m))
-
-	uniqueElements := 0
-	for _, v := range m {
-		// this is necessary, otherwise we create a pointer to the loop variable
-		tmp := v
-		k := string(v)
-		if _, has := seen[k]; has {
-			continue
+	var result MessageIDs
+	var prev []byte
+	for i, id := range sorted {
+		// only add to the result, if it its different from its predecessor
+		if i == 0 || !bytes.Equal(prev, id) {
+			result = append(result, id)
 		}
-		seen[k] = struct{}{}
-		orderedArray[uniqueElements] = tmp
-		uniqueElements++
+		prev = id
 	}
-	orderedArray = orderedArray[:uniqueElements]
-	sort.Sort(orderedArray)
-
-	result := make(MessageIDs, uniqueElements)
-	for i, v := range orderedArray {
-		// this is necessary, otherwise we create a pointer to the loop variable
-		tmp := v
-		result[i] = tmp
-	}
-
 	return result
 }
 
@@ -140,9 +128,8 @@ func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 func MessageIDsFromSliceOfArrays(b iotago.MessageIDs) MessageIDs {
 	result := make(MessageIDs, len(b))
 	for i, msgID := range b {
-		// this is necessary, otherwise we create a pointer to the loop variable
-		tmp := msgID
-		result[i] = tmp[:]
+		// as msgID is reused between iterations, it must be copied
+		result[i] = MessageIDFromArray(msgID)
 	}
 	return result
 }
