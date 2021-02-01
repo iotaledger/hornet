@@ -14,12 +14,12 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
-func mustMessageIDFromHexString(h string) *hornet.MessageID {
-	b, err := hex.DecodeString(h)
+func mustMessageIDFromHexString(h string) hornet.MessageID {
+	msgID, err := hornet.MessageIDFromHex(h)
 	if err != nil {
 		panic(err)
 	}
-	return hornet.MessageIDFromBytes(b)
+	return msgID
 }
 
 func TestWhiteFlagMerkleTreeHash(t *testing.T) {

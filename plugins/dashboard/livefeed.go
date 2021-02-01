@@ -11,7 +11,7 @@ func runLiveFeed() {
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		if milestoneMessageID := getMilestoneMessageID(msIndex); milestoneMessageID != nil {
-			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.Hex(), Index: msIndex}})
+			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.ToHex(), Index: msIndex}})
 		}
 	})
 

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -67,8 +67,8 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 
 	metadata := cachedMetadata.GetMetadata()
 
-	messageId := metadata.GetMessageID().Hex()
-	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageId)
+	messageID := metadata.GetMessageID().ToHex()
+	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageID)
 	hasSingleMessageTopicSubscriber := mqttBroker.HasSubscribers(singleMessageTopic)
 
 	hasAllMessagesTopicSubscriber := mqttBroker.HasSubscribers(topicMessagesReferenced)
@@ -88,9 +88,8 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		}
 
 		messageMetadataResponse := &messageMetadataPayload{
-			MessageID:                  metadata.GetMessageID().Hex(),
-			Parent1:                    metadata.GetParent1MessageID().Hex(),
-			Parent2:                    metadata.GetParent2MessageID().Hex(),
+			MessageID:                  metadata.GetMessageID().ToHex(),
+			Parents:                    metadata.GetParents().ToHex(),
 			Solid:                      metadata.IsSolid(),
 			ReferencedByMilestoneIndex: referencedByMilestone,
 		}
@@ -181,7 +180,7 @@ func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputPayload{
-		MessageID:     output.MessageID().Hex(),
+		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
@@ -226,33 +225,33 @@ func publishOutput(output *utxo.Output, spent bool) {
 	}
 }
 
-func messageIdFromTopic(topicName string) *hornet.MessageID {
+func messageIdFromTopic(topicName string) hornet.MessageID {
 	if strings.HasPrefix(topicName, "messages/") && strings.HasSuffix(topicName, "/metadata") {
-		messageIdHex := strings.Replace(topicName, "messages/", "", 1)
-		messageIdHex = strings.Replace(messageIdHex, "/metadata", "", 1)
+		messageIDHex := strings.Replace(topicName, "messages/", "", 1)
+		messageIDHex = strings.Replace(messageIDHex, "/metadata", "", 1)
 
-		messageId, err := hornet.MessageIDFromHex(messageIdHex)
+		messageID, err := hornet.MessageIDFromHex(messageIDHex)
 		if err != nil {
 			return nil
 		}
-		return messageId
+		return messageID
 	}
 	return nil
 }
 
 func outputIdFromTopic(topicName string) *iotago.UTXOInputID {
 	if strings.HasPrefix(topicName, "outputs/") {
-		outputIdHex := strings.Replace(topicName, "outputs/", "", 1)
+		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
 
-		bytes, err := hex.DecodeString(outputIdHex)
+		bytes, err := hex.DecodeString(outputIDHex)
 		if err != nil {
 			return nil
 		}
 
 		if len(bytes) == iotago.TransactionIDLength+iotago.UInt16ByteSize {
-			outputId := &iotago.UTXOInputID{}
-			copy(outputId[:], bytes)
-			return outputId
+			outputID := &iotago.UTXOInputID{}
+			copy(outputID[:], bytes)
+			return outputID
 		}
 	}
 	return nil

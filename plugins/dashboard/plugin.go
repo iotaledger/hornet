@@ -223,7 +223,7 @@ func run() {
 	runSpammerMetricWorker()
 }
 
-func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
+func getMilestoneMessageID(index milestone.Index) hornet.MessageID {
 	cachedMs := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil

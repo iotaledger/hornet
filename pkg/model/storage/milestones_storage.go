@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
@@ -30,7 +30,7 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageIDLength]),
+		MessageID: hornet.MessageIDFromSlice(data[:iotago.MessageIDLength]),
 		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
 	}, nil
 }
@@ -60,14 +60,14 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	Index     milestone.Index
-	MessageID *hornet.MessageID
+	MessageID hornet.MessageID
 	Timestamp time.Time
 }
 
 // ObjectStorage interface
 
 func (ms *Milestone) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.MessageID.Hex(), ms.Index))
+	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.MessageID.ToHex(), ms.Index))
 }
 
 func (ms *Milestone) ObjectStorageKey() []byte {
@@ -83,7 +83,7 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	value := make([]byte, 8)
 	binary.LittleEndian.PutUint64(value, uint64(ms.Timestamp.Unix()))
 
-	return byteutils.ConcatBytes(ms.MessageID.Slice(), value)
+	return byteutils.ConcatBytes(ms.MessageID, value)
 }
 
 // Cached Object
@@ -160,7 +160,7 @@ func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCac
 }
 
 // milestone +1
-func (s *Storage) storeMilestone(index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
+func (s *Storage) storeMilestone(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) *CachedMilestone {
 	milestone := &Milestone{
 		Index:     index,
 		MessageID: messageID,

@@ -25,7 +25,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 
 	// Check if message is still unreferenced
 	for _, messageID := range s.storage.GetUnreferencedMessageIDs(targetIndex, true) {
-		messageIDMapKey := messageID.MapKey()
+		messageIDMapKey := messageID.ToMapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
 		}
@@ -76,8 +76,9 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 
 		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // msg -1
 			// Delete the reference in the parents
-			s.storage.DeleteChild(msg.GetParent1MessageID(), msg.GetMessageID())
-			s.storage.DeleteChild(msg.GetParent2MessageID(), msg.GetMessageID())
+			for _, parent := range msg.GetParents() {
+				s.storage.DeleteChild(parent, msg.GetMessageID())
+			}
 
 			// delete all children of this message
 			s.storage.DeleteChildren(msg.GetMessageID())
@@ -175,7 +176,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		messageIDsToDeleteMap := make(map[string]struct{})
 
-		err := dag.TraverseParents(s.storage, cachedMs.GetMilestone().MessageID,
+		err := dag.TraverseParentsOfMessage(s.storage, cachedMs.GetMilestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
@@ -186,11 +187,11 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 			// consumer
 			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
-				messageIDsToDeleteMap[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
+				messageIDsToDeleteMap[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = struct{}{}
 				return nil
 			},
 			// called on missing parents
-			func(parentMessageID *hornet.MessageID) error { return nil },
+			func(parentMessageID hornet.MessageID) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,

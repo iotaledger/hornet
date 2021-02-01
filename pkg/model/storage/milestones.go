@@ -2,12 +2,13 @@ package storage
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
+
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -251,9 +252,11 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 		return nil
 	}
 
-	if message.message.Parent1 != ms.Parent1 || message.message.Parent2 != ms.Parent2 {
-		// parents in message and payload have to be equal
-		return nil
+	for idx, parent := range message.message.Parents {
+		if parent != ms.Parents[idx] {
+			// parents in message and payload have to be equal
+			return nil
+		}
 	}
 
 	if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
@@ -264,7 +267,7 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (s *Storage) StoreMilestone(messageID *hornet.MessageID, ms *iotago.Milestone) {
+func (s *Storage) StoreMilestone(messageID hornet.MessageID, ms *iotago.Milestone) {
 
 	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), messageID, time.Unix(int64(ms.Timestamp), 0))
 

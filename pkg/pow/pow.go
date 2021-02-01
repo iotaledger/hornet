@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/iotaledger/iota.go/pow"
 
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/pow"
 )
 
 const (

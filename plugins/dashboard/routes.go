@@ -236,7 +236,7 @@ func websocketRoute(ctx echo.Context) error {
 			start := deps.Storage.GetLatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
 				if milestoneMessageID := getMilestoneMessageID(i); milestoneMessageID != nil {
-					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.Hex(), Index: i}})
+					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.ToHex(), Index: i}})
 				} else {
 					break
 				}

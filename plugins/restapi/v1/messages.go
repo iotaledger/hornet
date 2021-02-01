@@ -11,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -42,7 +42,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageID.Hex())
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsgMeta.Release(true)
 
@@ -55,9 +55,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	}
 
 	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:                  metadata.GetMessageID().Hex(),
-		Parent1:                    metadata.GetParent1MessageID().Hex(),
-		Parent2:                    metadata.GetParent2MessageID().Hex(),
+		MessageID:                  metadata.GetMessageID().ToHex(),
+		Parents:                    metadata.GetParents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
@@ -152,17 +151,13 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-
-	childrenMessageIDsHex := []string{}
-	for _, childrenMessageID := range deps.Storage.GetChildrenMessageIDs(messageID, maxResults) {
-		childrenMessageIDsHex = append(childrenMessageIDsHex, childrenMessageID.Hex())
-	}
+	childrenMessageIDs := deps.Storage.GetChildrenMessageIDs(messageID, maxResults)
 
 	return &childrenResponse{
-		MessageID:  messageID.Hex(),
+		MessageID:  messageID.ToHex(),
 		MaxResults: uint32(maxResults),
-		Count:      uint32(len(childrenMessageIDsHex)),
-		Children:   childrenMessageIDsHex,
+		Count:      uint32(len(childrenMessageIDs)),
+		Children:   childrenMessageIDs.ToHex(),
 	}, nil
 }
 
@@ -174,17 +169,13 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 	}
 
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-
-	messageIDsHex := []string{}
-	for _, messageID := range deps.Storage.GetIndexMessageIDs(index, maxResults) {
-		messageIDsHex = append(messageIDsHex, messageID.Hex())
-	}
+	indexMessageIDs := deps.Storage.GetIndexMessageIDs(index, maxResults)
 
 	return &messageIDsByIndexResponse{
 		Index:      index,
 		MaxResults: uint32(maxResults),
-		Count:      uint32(len(messageIDsHex)),
-		MessageIDs: messageIDsHex,
+		Count:      uint32(len(indexMessageIDs)),
+		MessageIDs: indexMessageIDs.ToHex(),
 	}, nil
 }
 
@@ -227,19 +218,15 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		msg.NetworkID = deps.NetworkID
 	}
 
-	var emptyMessageID = hornet.MessageID{}
-	if msg.Parent1 == emptyMessageID || msg.Parent2 == emptyMessageID {
-
+	if len(msg.Parents) == 0 {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
-
 		if err != nil {
 			if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
 				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
 			}
 			return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
 		}
-		msg.Parent1 = *tips[0]
-		msg.Parent2 = *tips[1]
+		msg.Parents = tips.ToSliceOfArrays()
 	}
 
 	if msg.Nonce == 0 {
@@ -269,6 +256,6 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	return &messageCreatedResponse{
-		MessageID: message.GetMessageID().Hex(),
+		MessageID: message.GetMessageID().ToHex(),
 	}, nil
 }

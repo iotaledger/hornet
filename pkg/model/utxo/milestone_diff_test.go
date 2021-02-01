@@ -10,9 +10,8 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -21,8 +20,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(34))
 
-	messageID := &hornet.MessageID{}
-	copy(messageID[:], randBytes(32))
+	messageID := randMessageID()
 
 	outputType := iotago.OutputSigLockedDustAllowanceOutput
 
@@ -69,8 +67,7 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *Outp
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(34))
 
-	messageID := &hornet.MessageID{}
-	copy(messageID[:], randBytes(32))
+	messageID := randMessageID()
 
 	var addr iotago.Address
 	if len(address) > 0 {

@@ -147,7 +147,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendMessageRequest sends a storage.Message request message to the given peer.
-func (p *Protocol) SendMessageRequest(requestedMessageID *hornet.MessageID) {
+func (p *Protocol) SendMessageRequest(requestedMessageID hornet.MessageID) {
 	txReqData, _ := NewMessageRequestMsg(requestedMessageID)
 	p.Enqueue(txReqData)
 }

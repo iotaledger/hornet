@@ -1,7 +1,6 @@
 package testsuite
 
 import (
-	"crypto/ed25519"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,7 +14,8 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -58,7 +58,7 @@ type TestEnvironment struct {
 	coo *coordinator.Coordinator
 
 	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID *hornet.MessageID
+	lastMilestoneMessageID hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
@@ -136,14 +136,18 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	te.VerifyLSMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		conf := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
-		require.Equal(testState, 1, conf.MessagesReferenced)                  // 1 for milestone
-		require.Equal(testState, 1, conf.MessagesExcludedWithoutTransactions) // 1 for milestone
-		require.Equal(testState, 0, conf.MessagesIncludedWithTransactions)
-		require.Equal(testState, 0, conf.MessagesExcludedWithConflictingTransactions)
+		_, confStats := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
+		require.Equal(testState, 1, confStats.MessagesReferenced)                  // 1 for milestone
+		require.Equal(testState, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
+		require.Equal(testState, 0, confStats.MessagesIncludedWithTransactions)
+		require.Equal(testState, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	}
 
 	return te
+}
+
+func (te *TestEnvironment) Storage() *storage.Storage {
+	return te.storage
 }
 
 func (te *TestEnvironment) UTXO() *utxo.Manager {

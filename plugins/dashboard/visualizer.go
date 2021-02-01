@@ -19,13 +19,12 @@ const (
 
 // vertex defines a vertex in a DAG.
 type vertex struct {
-	ID               string `json:"id"`
-	Parent1MessageID string `json:"parent1_id"`
-	Parent2MessageID string `json:"parent2_2"`
-	IsSolid          bool   `json:"is_solid"`
-	IsReferenced     bool   `json:"is_referenced"`
-	IsMilestone      bool   `json:"is_milestone"`
-	IsTip            bool   `json:"is_tip"`
+	ID           string   `json:"id"`
+	Parents      []string `json:"parents"`
+	IsSolid      bool     `json:"is_solid"`
+	IsReferenced bool     `json:"is_referenced"`
+	IsMilestone  bool     `json:"is_milestone"`
+	IsTip        bool     `json:"is_tip"`
 }
 
 // metainfo signals that metadata of a given message changed.
@@ -53,17 +52,21 @@ func runVisualizer() {
 				return
 			}
 
+			parentsHex := []string{}
+			for _, parent := range msg.GetParents() {
+				parentsHex = append(parentsHex, parent.ToHex()[:VisualizerIdLength])
+			}
+
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:               msg.GetMessageID().Hex(),
-						Parent1MessageID: msg.GetParent1MessageID().Hex()[:VisualizerIdLength],
-						Parent2MessageID: msg.GetParent2MessageID().Hex()[:VisualizerIdLength],
-						IsSolid:          metadata.IsSolid(),
-						IsReferenced:     metadata.IsReferenced(),
-						IsMilestone:      false,
-						IsTip:            false,
+						ID:           msg.GetMessageID().ToHex(),
+						Parents:      parentsHex,
+						IsSolid:      metadata.IsSolid(),
+						IsReferenced: metadata.IsReferenced(),
+						IsMilestone:  false,
+						IsTip:        false,
 					},
 				},
 			)
@@ -81,7 +84,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: cachedMsgMeta.GetMetadata().GetMessageID().Hex()[:VisualizerIdLength],
+						ID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex()[:VisualizerIdLength],
 					},
 				},
 			)
@@ -99,14 +102,14 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: cachedMilestone.GetMilestone().MessageID.Hex()[:VisualizerIdLength],
+					ID: cachedMilestone.GetMilestone().MessageID.ToHex()[:VisualizerIdLength],
 				},
 			},
 		)
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
+	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
 		if !deps.Storage.IsNodeSyncedWithThreshold() {
 			return
 		}
@@ -115,7 +118,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: messageID.Hex()[:VisualizerIdLength],
+					ID: messageID.ToHex()[:VisualizerIdLength],
 				},
 			},
 		)
@@ -128,14 +131,14 @@ func runVisualizer() {
 
 		var excludedIDs []string
 		for _, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs = append(excludedIDs, messageID.MessageID.Hex()[:VisualizerIdLength])
+			excludedIDs = append(excludedIDs, messageID.MessageID.ToHex()[:VisualizerIdLength])
 		}
 
 		hub.BroadcastMsg(
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneMessageID.Hex()[:VisualizerIdLength],
+					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIdLength],
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -151,7 +154,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.Hex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
 					IsTip: true,
 				},
 			},
@@ -167,7 +170,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.Hex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
 					IsTip: false,
 				},
 			},

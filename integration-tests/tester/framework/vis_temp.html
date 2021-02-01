@@ -68,14 +68,17 @@
                 } else {
                     node = graph.addNode(vert.id, vert);
                 }
-                if (vert.parent1 && (!node.links || !node.links.some(link => link.toId === vert.parent1))) {
-                    graph.addLink(vert.id, vert.parent1);
-                }
-                if (vert.parent1 === vert.parent2) {
-                    return
-                }
-                if (vert.parent2 && (!node.links || !node.links.some(link => link.toId === vert.parent2))) {
-                    graph.addLink(vert.id, vert.parent2);
+
+                if (vert.parents) {
+                    var added = [];
+                    for (let i = 0; i < vert.parents.length; i++) {
+                        const parent = vert.parents[i];
+                        if (!added.includes(parent) &&
+                            (!node.links || !node.links.some(link => link.toId === parent))) {
+                            added.push(parent);
+                            graph.addLink(vert.id, parent);
+                        }
+                    }
                 }
             }
         }, 0);

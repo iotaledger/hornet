@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
@@ -23,7 +23,7 @@ type Output struct {
 	kvStorable
 
 	outputID   *iotago.UTXOInputID
-	messageID  *hornet.MessageID
+	messageID  hornet.MessageID
 	outputType iotago.OutputType
 	address    iotago.Address
 	amount     uint64
@@ -33,7 +33,7 @@ func (o *Output) OutputID() *iotago.UTXOInputID {
 	return o.outputID
 }
 
-func (o *Output) MessageID() *hornet.MessageID {
+func (o *Output) MessageID() hornet.MessageID {
 	return o.messageID
 }
 
@@ -90,7 +90,7 @@ func (o Outputs) InputToOutputMapping() (iotago.InputToOutputMapping, error) {
 	return mapping, nil
 }
 
-func CreateOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
+func CreateOutput(outputID *iotago.UTXOInputID, messageID hornet.MessageID, outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
 	return &Output{
 		outputID:   outputID,
 		messageID:  messageID,
@@ -100,7 +100,7 @@ func CreateOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, out
 	}
 }
 
-func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	var output iotago.Output
 	switch unsignedTx := transaction.Essence.(type) {
@@ -170,7 +170,7 @@ func (o *Output) kvStorableKey() (key []byte) {
 
 func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(74)
-	ms.WriteBytes(o.messageID.Slice())
+	ms.WriteBytes(o.messageID)
 	ms.WriteByte(o.outputType)
 	ms.WriteBytes(o.addressBytes())
 	ms.WriteUint64(o.amount)

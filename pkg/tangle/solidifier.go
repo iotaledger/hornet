@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -49,14 +50,14 @@ func (t *Tangle) markMessageAsSolid(cachedMetadata *storage.CachedMetadata) {
 	cachedMetadata.GetMetadata().SetSolid(true)
 
 	t.Events.MessageSolid.Trigger(cachedMetadata)
-	t.messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().MapKey())
+	t.messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().ToMapKey())
 }
 
 // solidQueueCheck traverses a milestone and checks if it is solid
 // Missing msg are requested
 // Can be aborted with abortSignal
 // all cachedMsgMetas have to be released outside.
-func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal chan struct{}) (solid bool, aborted bool) {
+func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal chan struct{}) (solid bool, aborted bool) {
 	ts := time.Now()
 
 	msgsChecked := 0
@@ -64,13 +65,13 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 	messageIDsToRequest := make(map[string]struct{})
 
 	// collect all msg to solidify by traversing the tangle
-	if err := dag.TraverseParents(t.storage, milestoneMessageID,
+	if err := dag.TraverseParentsOfMessage(t.storage, milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().MapKey()
+			cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()
 			if _, exists := cachedMessageMetas[cachedMsgMetaMapKey]; !exists {
 				// release the msg metadata at the end to speed up calculation
 				cachedMessageMetas[cachedMsgMetaMapKey] = cachedMsgMeta.Retain()
@@ -92,9 +93,9 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 			return nil
 		},
 		// called on missing parents
-		func(parentMessageID *hornet.MessageID) error {
+		func(parentMessageID hornet.MessageID) error {
 			// msg does not exist => request missing msg
-			messageIDsToRequest[parentMessageID.MapKey()] = struct{}{}
+			messageIDsToRequest[parentMessageID.ToMapKey()] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -122,9 +123,9 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
-		cachedMsgMeta, exists := cachedMessageMetas[messageID.MapKey()]
+		cachedMsgMeta, exists := cachedMessageMetas[messageID.ToMapKey()]
 		if !exists {
-			t.log.Panicf("solidQueueCheck: Message not found: %v", messageID.Hex())
+			t.log.Panicf("solidQueueCheck: Message not found: %v", messageID.ToHex())
 		}
 
 		t.markMessageAsSolid(cachedMsgMeta.Retain())
@@ -146,7 +147,7 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 func (t *Tangle) SolidifyFutureConeOfMsg(cachedMsgMeta *storage.CachedMetadata) error {
 
 	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
-	cachedMsgMetas[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = cachedMsgMeta
+	cachedMsgMetas[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = cachedMsgMeta
 
 	defer func() {
 		// release all msg metadata at the end
@@ -175,30 +176,25 @@ func (t *Tangle) solidifyFutureCone(cachedMsgMetas map[string]*storage.CachedMet
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().MapKey()
+				cachedMsgMetaMapKey := cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()
 				if _, exists := cachedMsgMetas[cachedMsgMetaMapKey]; !exists {
 					// release the msg metadata at the end to speed up calculation
 					cachedMsgMetas[cachedMsgMetaMapKey] = cachedMsgMeta.Retain()
 				}
 
-				if cachedMsgMeta.GetMetadata().IsSolid() && *startMessageID != *cachedMsgMeta.GetMetadata().GetMessageID() {
+				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
 					// do not walk the future cone if the current message is already solid, except it was the startTx
 					return false, nil
 				}
 
 				// check if current message is solid by checking the solidity of its parents
-				parentMessageIDs := hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetParent1MessageID()}
-				if *cachedMsgMeta.GetMetadata().GetParent1MessageID() != *cachedMsgMeta.GetMetadata().GetParent2MessageID() {
-					parentMessageIDs = append(parentMessageIDs, cachedMsgMeta.GetMetadata().GetParent2MessageID())
-				}
-
-				for _, parentMessageID := range parentMessageIDs {
+				for _, parentMessageID := range cachedMsgMeta.GetMetadata().GetParents() {
 					if t.storage.SolidEntryPointsContain(parentMessageID) {
 						// Ignore solid entry points (snapshot milestone included)
 						continue
 					}
 
-					parentMsgMetaMapKey := parentMessageID.MapKey()
+					parentMsgMetaMapKey := parentMessageID.ToMapKey()
 
 					// load up msg metadata
 					cachedParentTxMeta, exists := cachedMsgMetas[parentMsgMetaMapKey]
@@ -476,13 +472,13 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 }
 
 // searchMissingMilestone searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal chan struct{}) (found bool, err error) {
+func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal chan struct{}) (found bool, err error) {
 
 	var milestoneFound bool
 
 	ts := time.Now()
 
-	if err := dag.TraverseParents(t.storage, milestoneMessageID,
+	if err := dag.TraverseParentsOfMessage(t.storage, milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -501,7 +497,7 @@ func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, sta
 
 			cachedMessage := t.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID()) // message +1
 			if cachedMessage == nil {
-				return fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.GetMetadata().GetMessageID().Hex())
+				return fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.GetMetadata().GetMessageID().ToHex())
 			}
 			defer cachedMessage.Release(true) // message -1
 

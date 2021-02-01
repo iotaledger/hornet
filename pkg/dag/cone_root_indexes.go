@@ -1,6 +1,8 @@
 package dag
 
 import (
+	"bytes"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -52,7 +54,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 
 	// traverse the parents of this message to calculate the cone root indexes for this message.
 	// this walk will also collect all outdated messages in the same cone, to update them afterwards.
-	if err := TraverseParents(s, cachedMsgMeta.GetMetadata().GetMessageID(),
+	if err := TraverseParentsOfMessage(s, cachedMsgMeta.GetMetadata().GetMessageID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
@@ -64,7 +66,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 				return false, nil
 			}
 
-			if *startMessageID == *cachedMetadata.GetMetadata().GetMessageID() {
+			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
 				// do not update indexes for the start message
 				return true, nil
 			}
@@ -83,7 +85,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 		func(cachedMetadata *storage.CachedMetadata) error { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			if *startMessageID == *cachedMetadata.GetMetadata().GetMessageID() {
+			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
 				// skip the start message, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
@@ -95,7 +97,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID *hornet.MessageID) {
+		func(messageID hornet.MessageID) {
 			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _ := s.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
@@ -138,7 +140,7 @@ func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, lsm
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]
+				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()]
 
 				// only traverse this message if it was not traversed before and is solid
 				return !previouslyTraversed && cachedMsgMeta.GetMetadata().IsSolid(), nil
@@ -146,7 +148,7 @@ func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, lsm
 			// consumer
 			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
-				traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
+				traversed[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this message
 				GetConeRootIndexes(s, cachedMsgMeta.Retain(), lsmi) // meta pass +1

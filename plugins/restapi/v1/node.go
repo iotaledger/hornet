@@ -3,14 +3,14 @@ package v1
 import (
 	"strings"
 
-	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
@@ -80,5 +80,5 @@ func tips(c echo.Context) (*tipsResponse, error) {
 		return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
 	}
 
-	return &tipsResponse{Tip1: tips[0].Hex(), Tip2: tips[1].Hex()}, nil
+	return &tipsResponse{Tips: tips.ToHex()}, nil
 }

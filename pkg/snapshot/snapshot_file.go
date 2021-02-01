@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/byteutils"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -160,11 +160,11 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
-type SEPProducerFunc func() (*hornet.MessageID, error)
+type SEPProducerFunc func() (hornet.MessageID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
-type SEPConsumerFunc func(*hornet.MessageID) error
+type SEPConsumerFunc func(hornet.MessageID) error
 
 // HeaderConsumerFunc consumes the snapshot file header.
 // A returned error signals to cancel further reading.
@@ -385,11 +385,11 @@ func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		var solidEntryPointMessageID hornet.MessageID
-		if _, err := io.ReadFull(reader, solidEntryPointMessageID[:]); err != nil {
+		solidEntryPointMessageID := make(hornet.MessageID, iotago.MessageIDLength)
+		if _, err := io.ReadFull(reader, solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
-		if err := sepConsumer(&solidEntryPointMessageID); err != nil {
+		if err := sepConsumer(solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
 	}
@@ -541,7 +541,7 @@ func ReadSnapshotHeader(filePath string) (*ReadFileHeader, error) {
 	if err := StreamSnapshotDataFrom(file, func(header *ReadFileHeader) error {
 		readHeader = header
 		return wantedAbort
-	}, func(id *hornet.MessageID) error {
+	}, func(id hornet.MessageID) error {
 		return nil
 	}, func(output *Output) error {
 		return nil
@@ -618,7 +618,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 		func(header *ReadFileHeader) error {
 			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
 		},
-		func(id *hornet.MessageID) error {
+		func(id hornet.MessageID) error {
 			return nil
 		}, newOutputConsumer(mergeUTXOManager), newMsDiffConsumer(mergeUTXOManager),
 	); err != nil {
@@ -632,11 +632,11 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	defer deltaSnapshotFile.Close()
 
 	// build up ledger state to delta snapshot index
-	deltaSnapSEPs := make([]*hornet.MessageID, 0)
+	deltaSnapSEPs := make(hornet.MessageIDs, 0)
 	if err := StreamSnapshotDataFrom(deltaSnapshotFile,
 		func(header *ReadFileHeader) error {
 			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
-		}, func(msgID *hornet.MessageID) error {
+		}, func(msgID hornet.MessageID) error {
 			deltaSnapSEPs = append(deltaSnapSEPs, msgID)
 			return nil
 		}, nil, newMsDiffConsumer(mergeUTXOManager),
@@ -652,7 +652,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	defer targetSnapshotFile.Close()
 
 	var sepsIndex int
-	sepsIter := func() (*hornet.MessageID, error) {
+	sepsIter := func() (hornet.MessageID, error) {
 		if sepsIndex == len(deltaSnapSEPs) {
 			return nil, nil
 		}

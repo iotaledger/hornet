@@ -26,7 +26,7 @@ type ConfirmedMilestoneStats struct {
 // ConfirmMilestone traverses a milestone and collects all unreferenced msg,
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // all cachedMsgMetas have to be released outside.
-func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, cachedMessageMetas map[string]*storage.CachedMetadata, milestoneMessageID *hornet.MessageID, forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation), forEachNewOutput func(output *utxo.Output), forEachNewSpent func(spent *utxo.Spent)) (*ConfirmedMilestoneStats, error) {
+func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, cachedMessageMetas map[string]*storage.CachedMetadata, milestoneMessageID hornet.MessageID, forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64), onMilestoneConfirmed func(confirmation *Confirmation), forEachNewOutput func(output *utxo.Output), forEachNewSpent func(spent *utxo.Spent)) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*storage.CachedMessage)
 
@@ -41,11 +41,11 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 
 	cachedMilestoneMessage := s.GetCachedMessageOrNil(milestoneMessageID)
 	if cachedMilestoneMessage == nil {
-		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.Hex())
+		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
 	}
 	defer cachedMilestoneMessage.Release(true)
 
-	cachedMilestoneMessageMapKey := cachedMilestoneMessage.GetMessage().GetMessageID().MapKey()
+	cachedMilestoneMessageMapKey := cachedMilestoneMessage.GetMessage().GetMessageID().ToMapKey()
 	if _, exists := cachedMessages[cachedMilestoneMessageMapKey]; !exists {
 		// release the messages at the end to speed up calculation
 		cachedMessages[cachedMilestoneMessageMapKey] = cachedMilestoneMessage.Retain()
@@ -58,14 +58,14 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 	ms := message.GetMilestone()
 
 	if ms == nil {
-		return nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.GetMessageID().Hex())
+		return nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.GetMessageID().ToHex())
 	}
 
 	milestoneIndex := milestone.Index(ms.Index)
 
 	ts := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, cachedMessageMetas, cachedMessages, message.GetParent1MessageID(), message.GetParent2MessageID())
+	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, cachedMessageMetas, cachedMessages, message.GetParents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
@@ -102,13 +102,13 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
 
-	loadMessageMetadata := func(messageID *hornet.MessageID) (*storage.CachedMetadata, error) {
-		messageIDMapKey := messageID.MapKey()
+	loadMessageMetadata := func(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
+		messageIDMapKey := messageID.ToMapKey()
 		cachedMsgMeta, exists := cachedMessageMetas[messageIDMapKey]
 		if !exists {
 			cachedMsgMeta = s.GetCachedMessageMetadataOrNil(messageID) // meta +1
 			if cachedMsgMeta == nil {
-				return nil, fmt.Errorf("confirmMilestone: Message not found: %v", messageID.Hex())
+				return nil, fmt.Errorf("confirmMilestone: Message not found: %v", messageID.ToHex())
 			}
 			cachedMessageMetas[messageIDMapKey] = cachedMsgMeta
 		}
@@ -116,7 +116,7 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 	}
 
 	// load the message for the given id
-	forMessageMetadataWithMessageID := func(messageID *hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
+	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
 		meta, err := loadMessageMetadata(messageID)
 		if err != nil {
 			return err

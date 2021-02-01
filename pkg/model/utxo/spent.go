@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -34,7 +34,7 @@ func (s *Spent) OutputID() *iotago.UTXOInputID {
 	return s.output.outputID
 }
 
-func (s *Spent) MessageID() *hornet.MessageID {
+func (s *Spent) MessageID() hornet.MessageID {
 	return s.output.messageID
 }
 

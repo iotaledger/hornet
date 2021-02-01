@@ -86,13 +86,13 @@ func collectInfo() {
 	lmi := deps.Storage.GetLatestMilestoneIndex()
 	infoMilestoneIndex.Set(float64(lmi))
 	infoMilestone.Reset()
-	infoMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(lmi))).Set(1)
+	infoMilestone.WithLabelValues(hornet.GetNullMessageID().ToHex(), strconv.Itoa(int(lmi))).Set(1)
 
 	// Latest milestone message ID
 	cachedLatestMilestone := deps.Storage.GetCachedMilestoneOrNil(lmi)
 	if cachedLatestMilestone != nil {
 		infoMilestone.Reset()
-		infoMilestone.WithLabelValues(cachedLatestMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(lmi))).Set(1)
+		infoMilestone.WithLabelValues(cachedLatestMilestone.GetMilestone().MessageID.ToHex(), strconv.Itoa(int(lmi))).Set(1)
 		cachedLatestMilestone.Release(true)
 	}
 
@@ -100,13 +100,13 @@ func collectInfo() {
 	smi := deps.Storage.GetSolidMilestoneIndex()
 	infoSolidMilestoneIndex.Set(float64(smi))
 	infoSolidMilestone.Reset()
-	infoSolidMilestone.WithLabelValues(hornet.GetNullMessageID().Hex(), strconv.Itoa(int(smi))).Set(1)
+	infoSolidMilestone.WithLabelValues(hornet.GetNullMessageID().ToHex(), strconv.Itoa(int(smi))).Set(1)
 
 	// Solid milestone message ID
 	cachedSolidMilestone := deps.Storage.GetCachedMilestoneOrNil(smi)
 	if cachedSolidMilestone != nil {
 		infoSolidMilestone.Reset()
-		infoSolidMilestone.WithLabelValues(cachedSolidMilestone.GetMilestone().MessageID.Hex(), strconv.Itoa(int(smi))).Set(1)
+		infoSolidMilestone.WithLabelValues(cachedSolidMilestone.GetMilestone().MessageID.ToHex(), strconv.Itoa(int(smi))).Set(1)
 		cachedSolidMilestone.Release(true)
 	}
 

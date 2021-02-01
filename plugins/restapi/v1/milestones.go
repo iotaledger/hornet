@@ -27,7 +27,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 	return &milestoneResponse{
 		Index:     uint32(cachedMilestone.GetMilestone().Index),
-		MessageID: cachedMilestone.GetMilestone().MessageID.Hex(),
+		MessageID: cachedMilestone.GetMilestone().MessageID.ToHex(),
 		Time:      cachedMilestone.GetMilestone().Timestamp.Unix(),
 	}, nil
 }

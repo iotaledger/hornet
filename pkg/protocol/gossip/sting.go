@@ -94,7 +94,7 @@ func NewMessageMsg(msgData []byte) ([]byte, error) {
 }
 
 // NewMessageRequestMsg creates a message request message.
-func NewMessageRequestMsg(requestedMessageID *hornet.MessageID) ([]byte, error) {
+func NewMessageRequestMsg(requestedMessageID hornet.MessageID) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MessageRequestMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeMessageRequest, MessageRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err

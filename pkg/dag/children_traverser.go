@@ -63,7 +63,7 @@ func (t *ChildrenTraverser) reset() {
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID *hornet.MessageID) error {
+func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -75,7 +75,7 @@ func (t *ChildrenTraverser) Traverse(startMessageID *hornet.MessageID) error {
 
 	t.stack.PushFront(startMessageID)
 	if !t.walkAlreadyDiscovered {
-		t.discovered[startMessageID.MapKey()] = struct{}{}
+		t.discovered[startMessageID.ToMapKey()] = struct{}{}
 	}
 
 	for t.stack.Len() > 0 {
@@ -99,8 +99,8 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(*hornet.MessageID)
-	currentMessageIDMapKey := currentMessageID.MapKey()
+	currentMessageID := ele.Value.(hornet.MessageID)
+	currentMessageIDMapKey := currentMessageID.ToMapKey()
 
 	// remove the message from the stack
 	t.stack.Remove(ele)
@@ -110,7 +110,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		cachedMsgMeta = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
+			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
 		}
 		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
 	}
@@ -137,7 +137,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID) {
 		if !t.walkAlreadyDiscovered {
-			childMessageIDMapKey := childMessageID.MapKey()
+			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {
 				// child was already discovered
 				continue
