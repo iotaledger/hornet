@@ -165,7 +165,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
 	t.Events.ProcessedMessage.Trigger(incomingMsg.GetMessageID())
-	t.messageProcessedSyncEvent.Trigger(incomingMsg.GetMessageID().MapKey())
+	t.messageProcessedSyncEvent.Trigger(incomingMsg.GetMessageID().ToMapKey())
 
 	if request != nil {
 		// mark the received request as processed
@@ -183,23 +183,23 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 }
 
 // RegisterMessageProcessedEvent returns a channel that gets closed when the message is processed.
-func (t *Tangle) RegisterMessageProcessedEvent(messageID *hornet.MessageID) chan struct{} {
-	return t.messageProcessedSyncEvent.RegisterEvent(messageID.MapKey())
+func (t *Tangle) RegisterMessageProcessedEvent(messageID hornet.MessageID) chan struct{} {
+	return t.messageProcessedSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
 // DeregisterMessageProcessedEvent removes a registed event to free the memory if not used.
-func (t *Tangle) DeregisterMessageProcessedEvent(messageID *hornet.MessageID) {
-	t.messageProcessedSyncEvent.DeregisterEvent(messageID.MapKey())
+func (t *Tangle) DeregisterMessageProcessedEvent(messageID hornet.MessageID) {
+	t.messageProcessedSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
 
 // RegisterMessageSolidEvent returns a channel that gets closed when the message is marked as solid.
-func (t *Tangle) RegisterMessageSolidEvent(messageID *hornet.MessageID) chan struct{} {
-	return t.messageSolidSyncEvent.RegisterEvent(messageID.MapKey())
+func (t *Tangle) RegisterMessageSolidEvent(messageID hornet.MessageID) chan struct{} {
+	return t.messageSolidSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
 // DeregisterMessageSolidEvent removes a registed event to free the memory if not used.
-func (t *Tangle) DeregisterMessageSolidEvent(messageID *hornet.MessageID) {
-	t.messageSolidSyncEvent.DeregisterEvent(messageID.MapKey())
+func (t *Tangle) DeregisterMessageSolidEvent(messageID hornet.MessageID) {
+	t.messageSolidSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
 
 // RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.

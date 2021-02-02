@@ -9,9 +9,8 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -27,8 +26,7 @@ func TestSpentSerialization(t *testing.T) {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(iotago.TransactionIDLength+iotago.UInt16ByteSize))
 
-	messageID := &hornet.MessageID{}
-	copy(messageID[:], randBytes(iotago.MessageIDLength))
+	messageID := randMessageID()
 
 	outputType := iotago.OutputSigLockedDustAllowanceOutput
 

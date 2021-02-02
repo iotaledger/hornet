@@ -12,8 +12,8 @@ import (
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	iotago "github.com/iotaledger/iota.go"
-	"github.com/iotaledger/iota.go/pow"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/pow"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -137,6 +137,7 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 }
 
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
+// All messages passed to this function must be checked with "DeSeriModePerformValidation" before.
 func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	if msg.GetNetworkID() != proc.opts.NetworkID {
@@ -216,7 +217,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMessage := proc.storage.GetCachedMessageOrNil(hornet.MessageIDFromBytes(data)) // message +1
+	cachedMessage := proc.storage.GetCachedMessageOrNil(hornet.MessageIDFromSlice(data)) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the requested message
 		return

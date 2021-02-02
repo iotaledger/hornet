@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"crypto/ed25519"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 // LoadStringFromEnvironment loads a string from the given environment variable.

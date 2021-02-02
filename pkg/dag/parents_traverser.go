@@ -67,11 +67,11 @@ func (t *ParentTraverser) reset() {
 	t.stack = list.New()
 }
 
-// Traverse starts to traverse the parents (past cone) of the given start message until
+// Traverse starts to traverse the parents (past cone) in the given order until
 // the traversal stops due to no more messages passing the given condition.
-// It is a DFS with parent1 / parent2.
+// It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) Traverse(startMessageID *hornet.MessageID, traverseSolidEntryPoints bool) error {
+func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -83,49 +83,18 @@ func (t *ParentTraverser) Traverse(startMessageID *hornet.MessageID, traverseSol
 
 	defer t.cleanup(true)
 
-	t.stack.PushFront(startMessageID)
-	for t.stack.Len() > 0 {
-		if err := t.processStackParents(); err != nil {
-			return err
-		}
-	}
+	// we feed the stack with the parents one after another,
+	// to make sure that we examine all paths.
+	// however, we only need to do it if the parent wasn't processed yet.
+	// the referenced parent message could for example already be processed
+	// if it is directly/indirectly approved by former parents.
+	for _, parent := range parents {
+		t.stack.PushFront(parent)
 
-	return nil
-}
-
-// TraverseParent1AndParent2 starts to traverse the parents (past cone) of the given parent1 until
-// the traversal stops due to no more messages passing the given condition.
-// Afterwards it traverses the parents (past cone) of the given parent2.
-// It is a DFS with parent1 / parent2.
-// Caution: condition func is not in DFS order
-func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, traverseSolidEntryPoints bool) error {
-
-	// make sure only one traversal is running
-	t.traverserLock.Lock()
-
-	// Prepare for a new traversal
-	t.reset()
-
-	t.traverseSolidEntryPoints = traverseSolidEntryPoints
-
-	defer t.cleanup(true)
-
-	t.stack.PushFront(parent1MessageID)
-	for t.stack.Len() > 0 {
-		if err := t.processStackParents(); err != nil {
-			return err
-		}
-	}
-
-	// since we first feed the stack the parent1,
-	// we need to make sure that we also examine the parent2 path.
-	// however, we only need to do it if the parent2 wasn't processed yet.
-	// the referenced parent2 message could for example already be processed
-	// if it is directly/indirectly approved by the parent1.
-	t.stack.PushFront(parent2MessageID)
-	for t.stack.Len() > 0 {
-		if err := t.processStackParents(); err != nil {
-			return err
+		for t.stack.Len() > 0 {
+			if err := t.processStackParents(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -133,7 +102,7 @@ func (t *ParentTraverser) TraverseParent1AndParent2(parent1MessageID *hornet.Mes
 }
 
 // processStackParents checks if the current element in the stack must be processed or traversed.
-// first the parent1 is traversed, then the parent2.
+// the paths of the parents are traversed one after another.
 func (t *ParentTraverser) processStackParents() error {
 
 	select {
@@ -144,8 +113,8 @@ func (t *ParentTraverser) processStackParents() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(*hornet.MessageID)
-	currentMessageIDMapKey := currentMessageID.MapKey()
+	currentMessageID := ele.Value.(hornet.MessageID)
+	currentMessageIDMapKey := currentMessageID.ToMapKey()
 
 	if _, wasProcessed := t.processed[currentMessageIDMapKey]; wasProcessed {
 		// message was already processed
@@ -161,7 +130,7 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 
 		if !t.traverseSolidEntryPoints {
-			// remove the message from the stack, parent1 and parent2 are not traversed
+			// remove the message from the stack, the parents are not traversed
 			t.processed[currentMessageIDMapKey] = struct{}{}
 			delete(t.checked, currentMessageIDMapKey)
 			t.stack.Remove(ele)
@@ -173,14 +142,14 @@ func (t *ParentTraverser) processStackParents() error {
 	if !exists {
 		cachedMetadata = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMetadata == nil {
-			// remove the message from the stack, parent1 and parent2 are not traversed
+			// remove the message from the stack, the parents are not traversed
 			t.processed[currentMessageIDMapKey] = struct{}{}
 			delete(t.checked, currentMessageIDMapKey)
 			t.stack.Remove(ele)
 
 			if t.onMissingParent == nil {
 				// stop processing the stack with an error
-				return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.Hex())
+				return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.ToHex())
 			}
 
 			// stop processing the stack if the caller returns an error
@@ -205,7 +174,7 @@ func (t *ParentTraverser) processStackParents() error {
 	}
 
 	if !traverse {
-		// remove the message from the stack, parent1 and parent2 are not traversed
+		// remove the message from the stack, the parents are not traversed
 		// parent will not get consumed
 		t.processed[currentMessageIDMapKey] = struct{}{}
 		delete(t.checked, currentMessageIDMapKey)
@@ -213,16 +182,8 @@ func (t *ParentTraverser) processStackParents() error {
 		return nil
 	}
 
-	parent1MessageID := cachedMetadata.GetMetadata().GetParent1MessageID()
-	parent2MessageID := cachedMetadata.GetMetadata().GetParent2MessageID()
-
-	parentMessageIDs := hornet.MessageIDs{parent1MessageID}
-	if *parent1MessageID != *parent2MessageID {
-		parentMessageIDs = append(parentMessageIDs, parent2MessageID)
-	}
-
-	for _, parentMessageID := range parentMessageIDs {
-		if _, parentProcessed := t.processed[parentMessageID.MapKey()]; !parentProcessed {
+	for _, parentMessageID := range cachedMetadata.GetMetadata().GetParents() {
+		if _, parentProcessed := t.processed[parentMessageID.ToMapKey()]; !parentProcessed {
 			// parent was not processed yet
 			// traverse this message
 			t.stack.PushFront(parentMessageID)

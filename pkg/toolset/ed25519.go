@@ -1,13 +1,13 @@
 package toolset
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 
+	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/utils"
 )

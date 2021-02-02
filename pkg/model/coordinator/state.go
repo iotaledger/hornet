@@ -18,7 +18,7 @@ type State struct {
 	encoding.BinaryUnmarshaler
 
 	LatestMilestoneIndex     milestone.Index
-	LatestMilestoneMessageID *hornet.MessageID
+	LatestMilestoneMessageID hornet.MessageID
 	LatestMilestoneTime      time.Time
 }
 
@@ -34,7 +34,7 @@ func (cs *State) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, 4+32+8)
 
 	binary.LittleEndian.PutUint32(data[0:4], uint32(cs.LatestMilestoneIndex))
-	copy(data[4:36], cs.LatestMilestoneMessageID.Slice())
+	copy(data[4:36], cs.LatestMilestoneMessageID)
 	binary.LittleEndian.PutUint64(data[36:44], uint64(cs.LatestMilestoneTime.UnixNano()))
 
 	return data, nil
@@ -54,7 +54,7 @@ func (cs *State) UnmarshalBinary(data []byte) error {
 	}
 
 	cs.LatestMilestoneIndex = milestone.Index(binary.LittleEndian.Uint32(data[0:4]))
-	cs.LatestMilestoneMessageID = hornet.MessageIDFromBytes(data[4:36])
+	cs.LatestMilestoneMessageID = hornet.MessageIDFromSlice(data[4:36])
 	cs.LatestMilestoneTime = time.Unix(0, int64(binary.LittleEndian.Uint64(data[36:44])))
 
 	return nil

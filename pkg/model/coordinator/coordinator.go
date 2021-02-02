@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -173,7 +174,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 }
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
-func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID, newMilestoneIndex milestone.Index) error {
+func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index) error {
 
 	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
 	cachedMessages := make(map[string]*storage.CachedMessage)
@@ -192,13 +193,15 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 		}
 	}()
 
+	parents = parents.RemoveDupsAndSortByLexicalOrder()
+
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, cachedMsgMetas, cachedMessages, parent1MessageID, parent2MessageID)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, cachedMsgMetas, cachedMessages, parents)
 	if err != nil {
 		return fmt.Errorf("failed to compute white flag mutations: %w", err)
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parent1MessageID, parent2MessageID, coo.signerProvider, mutations.MerkleTreeHash, coo.powParallelism, coo.powHandler)
+	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, mutations.MerkleTreeHash, coo.powParallelism, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create milestone: %w", err)
 	}
@@ -225,15 +228,15 @@ func (coo *Coordinator) createAndSendMilestone(parent1MessageID *hornet.MessageI
 
 // Bootstrap creates the first milestone, if the network was not bootstrapped yet.
 // Returns critical errors.
-func (coo *Coordinator) Bootstrap() (*hornet.MessageID, error) {
+func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
-		// parent1 and parent2 reference the last known milestone or NullMessageID if startIndex = 1 (see InitState)
-		if err := coo.createAndSendMilestone(coo.state.LatestMilestoneMessageID, coo.state.LatestMilestoneMessageID, coo.state.LatestMilestoneIndex+1); err != nil {
+		// only one parent references the last known milestone or NullMessageID if startIndex = 1 (see InitState)
+		if err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1); err != nil {
 			// creating milestone failed => critical error
 			return nil, err
 		}
@@ -248,7 +251,7 @@ func (coo *Coordinator) Bootstrap() (*hornet.MessageID, error) {
 // a checkpoint can contain multiple chained messages to reference big parts of the unreferenced cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID *hornet.MessageID, tips hornet.MessageIDs) (*hornet.MessageID, error) {
+func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID hornet.MessageID, tips hornet.MessageIDs) (hornet.MessageID, error) {
 
 	if len(tips) == 0 {
 		return nil, ErrNoTipsGiven
@@ -267,8 +270,23 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 		return nil, common.ErrNodeLoadTooHigh
 	}
 
-	for i, tip := range tips {
-		msg, err := createCheckpoint(coo.networkID, tip, lastCheckpointMessageID, coo.powParallelism, coo.powHandler)
+	// maximum 8 parents per message (7 tips + last checkpoint messageID)
+	checkpointsNumber := int(math.Ceil(float64(len(tips)) / 7.0))
+
+	// issue several checkpoints until all tips are used
+	for i := 0; i < checkpointsNumber; i++ {
+		tipStart := i * 7
+		tipEnd := tipStart + 7
+
+		if tipEnd > len(tips) {
+			tipEnd = len(tips)
+		}
+
+		parents := hornet.MessageIDs{lastCheckpointMessageID}
+		parents = append(parents, tips[tipStart:tipEnd]...)
+		parents = parents.RemoveDupsAndSortByLexicalOrder()
+
+		msg, err := createCheckpoint(coo.networkID, parents, coo.powParallelism, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create checkPoint: %w", err)
 		}
@@ -279,7 +297,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 
 		lastCheckpointMessageID = msg.GetMessageID()
 
-		coo.Events.IssuedCheckpointMessage.Trigger(checkpointIndex, i, len(tips), lastCheckpointMessageID)
+		coo.Events.IssuedCheckpointMessage.Trigger(checkpointIndex, i, checkpointsNumber, lastCheckpointMessageID)
 	}
 
 	return lastCheckpointMessageID, nil
@@ -287,7 +305,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 
 // IssueMilestone creates the next milestone.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) IssueMilestone(parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*hornet.MessageID, error, error) {
+func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.MessageID, error, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
@@ -303,7 +321,7 @@ func (coo *Coordinator) IssueMilestone(parent1MessageID *hornet.MessageID, paren
 		return nil, common.ErrNodeLoadTooHigh, nil
 	}
 
-	if err := coo.createAndSendMilestone(parent1MessageID, parent2MessageID, coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(parents, coo.state.LatestMilestoneIndex+1); err != nil {
 		// creating milestone failed => critical error
 		return nil, nil, err
 	}

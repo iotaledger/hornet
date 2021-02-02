@@ -10,7 +10,7 @@ import (
 
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -48,7 +48,7 @@ var (
 )
 
 type solidEntryPoint struct {
-	messageID *hornet.MessageID
+	messageID hornet.MessageID
 	index     milestone.Index
 }
 
@@ -119,13 +119,13 @@ func (s *Snapshot) IsSnapshottingOrPruning() bool {
 }
 
 // isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-func (s *Snapshot) isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index) bool {
+func (s *Snapshot) isSolidEntryPoint(messageID hornet.MessageID, targetIndex milestone.Index) bool {
 
 	for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
 		cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(childMessageID) // meta +1
 		if cachedMsgMeta == nil {
 			// Ignore this message since it doesn't exist anymore
-			s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.Hex(), childMessageID.Hex())
+			s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
 			continue
 		}
 
@@ -142,13 +142,13 @@ func (s *Snapshot) isSolidEntryPoint(messageID *hornet.MessageID, targetIndex mi
 }
 
 // getMilestoneParents traverses a milestone and collects all messages that were referenced by that milestone or newer.
-func (s *Snapshot) getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal <-chan struct{}) (hornet.MessageIDs, error) {
+func (s *Snapshot) getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal <-chan struct{}) (hornet.MessageIDs, error) {
 
 	var parentMessageIDs hornet.MessageIDs
 
 	ts := time.Now()
 
-	if err := dag.TraverseParents(s.storage, milestoneMessageID,
+	if err := dag.TraverseParentsOfMessage(s.storage, milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
@@ -246,17 +246,17 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 			cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(parentMessageID)
 			if cachedMsgMeta == nil {
-				return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.Hex())
+				return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.ToHex())
 			}
 
 			referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
 			if !referenced {
 				cachedMsgMeta.Release(true)
-				return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", parentMessageID.Hex())
+				return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", parentMessageID.ToHex())
 			}
 			cachedMsgMeta.Release(true)
 
-			parentMessageIDMapKey := parentMessageID.MapKey()
+			parentMessageIDMapKey := parentMessageID.ToMapKey()
 			if _, exists := solidEntryPoints[parentMessageIDMapKey]; !exists {
 				solidEntryPoints[parentMessageIDMapKey] = at
 				if !solidEntryPointConsumer(&solidEntryPoint{messageID: parentMessageID, index: at}) {
@@ -339,12 +339,12 @@ func newSEPsProducer(s *Snapshot, targetIndex milestone.Index, abortSignal <-cha
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
-	return func() (*hornet.MessageID, error) {
+	return func() (hornet.MessageID, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
-		return obj.(*hornet.MessageID), nil
+		return obj.(hornet.MessageID), nil
 	}
 }
 
@@ -355,7 +355,7 @@ func newLSMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 
 	go func() {
 		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
-			prodChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), OutputType: output.OutputType(), Address: output.Address(), Amount: output.Amount()}
+			prodChan <- &Output{MessageID: output.MessageID().ToArray(), OutputID: *output.OutputID(), OutputType: output.OutputType(), Address: output.Address(), Amount: output.Amount()}
 			return true
 		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err
@@ -480,7 +480,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 				}
 				return nil
 			},
-			func(id *hornet.MessageID) error {
+			func(id hornet.MessageID) error {
 				// we don't care about solid entry points
 				return nil
 			}, nil,
@@ -531,13 +531,13 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 
 			for _, output := range diff.Outputs {
 				createdOutputs = append(createdOutputs, &Output{
-					MessageID: *output.MessageID(), OutputID: *output.OutputID(),
+					MessageID: output.MessageID().ToArray(), OutputID: *output.OutputID(),
 					Address: output.Address(), Amount: output.Amount()})
 			}
 
 			for _, spent := range diff.Spents {
 				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{
-					MessageID: *spent.MessageID(), OutputID: *spent.OutputID(),
+					MessageID: spent.MessageID().ToArray(), OutputID: *spent.OutputID(),
 					Address: spent.Address(), Amount: spent.Amount()},
 					TargetTransactionID: *spent.TargetTransactionID()},
 				)
@@ -756,9 +756,9 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 		case *iotago.Ed25519Address:
 
 			outputID := iotago.UTXOInputID(output.OutputID)
-			messageID := hornet.MessageID(output.MessageID)
+			messageID := hornet.MessageIDFromArray(output.MessageID)
 
-			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
+			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -800,8 +800,8 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		createdOutputAggr := callbackPerAddress(errorOnWOTSAddr, func(obj interface{}, addr *iotago.Ed25519Address) error {
 			output := obj.(*Output)
 			outputID := iotago.UTXOInputID(output.OutputID)
-			messageID := hornet.MessageID(output.MessageID)
-			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
+			messageID := hornet.MessageIDFromArray(output.MessageID)
+			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
 			return nil
 		})
 
@@ -814,8 +814,8 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		spentOutputAggr := callbackPerAddress(errorOnWOTSAddr, func(obj interface{}, addr *iotago.Ed25519Address) error {
 			spent := obj.(*Spent)
 			outputID := iotago.UTXOInputID(spent.OutputID)
-			messageID := hornet.MessageID(spent.MessageID)
-			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, &messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
+			messageID := hornet.MessageIDFromArray(spent.MessageID)
+			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
 			return nil
 		})
 
@@ -876,7 +876,7 @@ func newSEPsConsumer(storage *storage.Storage, header *ReadFileHeader) SEPConsum
 	// of the snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
-	return func(solidEntryPointMessageID *hornet.MessageID) error {
+	return func(solidEntryPointMessageID hornet.MessageID) error {
 		storage.SolidEntryPointsAdd(solidEntryPointMessageID, header.SEPMilestoneIndex)
 		return nil
 	}

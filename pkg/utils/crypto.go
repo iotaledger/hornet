@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 
+	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
 )
 

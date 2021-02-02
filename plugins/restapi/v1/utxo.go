@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
@@ -44,7 +44,7 @@ func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error)
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputResponse{
-		MessageID:     output.MessageID().Hex(),
+		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),

@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -79,7 +79,7 @@ func snapshotGen(args []string) error {
 	// solid entry points
 	// add "NullMessageID" as sole entry point
 	nullHashAdded := false
-	solidEntryPointProducerFunc := func() (*hornet.MessageID, error) {
+	solidEntryPointProducerFunc := func() (hornet.MessageID, error) {
 		if nullHashAdded {
 			return nil, nil
 		}

@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
@@ -22,6 +22,10 @@ func randBytes(length int) []byte {
 		b = append(b, byte(rand.Intn(256)))
 	}
 	return b
+}
+
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
 }
 
 func EqualOutput(t *testing.T, expected *Output, actual *Output) {
@@ -37,8 +41,7 @@ func TestOutputSerialization(t *testing.T) {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(34))
 
-	messageID := &hornet.MessageID{}
-	copy(messageID[:], randBytes(32))
+	messageID := randMessageID()
 
 	outputType := iotago.OutputSigLockedDustAllowanceOutput
 
@@ -55,7 +58,7 @@ func TestOutputSerialization(t *testing.T) {
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 
 	value := output.kvStorableValue()
-	require.Equal(t, messageID[:], value[:32])
+	require.Equal(t, messageID, hornet.MessageIDFromSlice(value[:32]))
 	require.Equal(t, outputType, value[32])
 	require.Equal(t, iotago.AddressEd25519, value[33])
 	require.Equal(t, addressBytes, value[34:66])

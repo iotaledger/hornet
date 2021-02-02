@@ -3,7 +3,7 @@ package utxo
 import (
 	"github.com/iotaledger/hive.go/marshalutil"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
@@ -28,12 +28,12 @@ func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, err
 	return t, nil
 }
 
-func parseMessageID(ms *marshalutil.MarshalUtil) (*hornet.MessageID, error) {
+func parseMessageID(ms *marshalutil.MarshalUtil) (hornet.MessageID, error) {
 	bytes, err := ms.ReadBytes(iotago.MessageIDLength)
 	if err != nil {
 		return nil, err
 	}
-	return hornet.MessageIDFromBytes(bytes), nil
+	return hornet.MessageIDFromSlice(bytes), nil
 }
 
 func parseAddress(ms *marshalutil.MarshalUtil) (iotago.Address, error) {

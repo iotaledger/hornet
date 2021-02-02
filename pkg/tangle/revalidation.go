@@ -265,7 +265,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	t.storage.ForEachMessageID(func(messageID *hornet.MessageID) bool {
+	t.storage.ForEachMessageID(func(messageID hornet.MessageID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -282,19 +282,19 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 		// delete message if metadata doesn't exist
 		if storedTxMeta == nil {
-			messagesToDelete[messageID.MapKey()] = struct{}{}
+			messagesToDelete[messageID.ToMapKey()] = struct{}{}
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			messagesToDelete[messageID.MapKey()] = struct{}{}
+			messagesToDelete[messageID.ToMapKey()] = struct{}{}
 			return true
 		}
 
 		// not referenced or above snapshot index
 		if referenced, by := storedTxMeta.GetReferenced(); !referenced || by > info.SnapshotIndex {
-			messagesToDelete[messageID.MapKey()] = struct{}{}
+			messagesToDelete[messageID.ToMapKey()] = struct{}{}
 			return true
 		}
 
@@ -341,7 +341,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	t.storage.ForEachMessageMetadataMessageID(func(messageID *hornet.MessageID) bool {
+	t.storage.ForEachMessageMetadataMessageID(func(messageID hornet.MessageID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -356,7 +356,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 		// delete metadata if message doesn't exist
 		if !t.storage.MessageExistsInStore(messageID) {
-			metadataToDelete[messageID.MapKey()] = struct{}{}
+			metadataToDelete[messageID.ToMapKey()] = struct{}{}
 		}
 
 		return true
@@ -397,8 +397,8 @@ func (t *Tangle) cleanupMessageMetadata() error {
 func (t *Tangle) cleanupChildren() error {
 
 	type child struct {
-		messageID      *hornet.MessageID
-		childMessageID *hornet.MessageID
+		messageID      hornet.MessageID
+		childMessageID hornet.MessageID
 	}
 
 	start := time.Now()
@@ -407,7 +407,7 @@ func (t *Tangle) cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	t.storage.ForEachChild(func(messageID *hornet.MessageID, childMessageID *hornet.MessageID) bool {
+	t.storage.ForEachChild(func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -420,7 +420,7 @@ func (t *Tangle) cleanupChildren() error {
 			t.log.Infof("analyzed %d children", childCounter)
 		}
 
-		childrenMapKey := messageID.MapKey() + childMessageID.MapKey()
+		childrenMapKey := messageID.ToMapKey() + childMessageID.ToMapKey()
 
 		// delete child if message doesn't exist
 		if !t.storage.MessageExistsInStore(messageID) {
@@ -471,6 +471,8 @@ func (t *Tangle) cleanupAddresses() error {
 	return nil
 
 	/*
+		TODO?
+
 		type address struct {
 			address   hornet.Hash
 			messageID hornet.Hash
@@ -544,7 +546,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID *hornet.MessageID) bool {
+	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID hornet.MessageID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -599,6 +601,7 @@ func (t *Tangle) applySnapshotLedger(info *storage.SnapshotInfo) error {
 	t.log.Info("applying snapshot balances to the ledger state...")
 
 	/*
+		TODO?
 		// Get the ledger state of the last snapshot
 		snapshotBalances, snapshotIndex, err := t.storage.GetAllSnapshotBalances(nil)
 		if err != nil {

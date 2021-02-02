@@ -2,13 +2,13 @@ package utils
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"fmt"
 
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
-	iotago "github.com/iotaledger/iota.go"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
 )
@@ -85,7 +85,7 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 	}
 
 	pubKey, privKey := slip10.Ed25519Key(key)
-	return privKey, pubKey
+	return ed25519.PrivateKey(privKey), ed25519.PublicKey(pubKey)
 }
 
 func (hd *HDWallet) Outputs() []*utxo.Output {
