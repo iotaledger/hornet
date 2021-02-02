@@ -40,6 +40,7 @@ type MigratorService struct {
 
 type migrationResult struct {
 	stopIndex     uint32
+	lastBatch     bool
 	migratedFunds []*iota.MigratedFundsEntry
 }
 
@@ -66,7 +67,7 @@ func (s *MigratorService) GetReceipt() *iota.Receipt {
 		return nil
 	}
 	s.updateState(result)
-	return createReceipt(result.stopIndex, result.migratedFunds)
+	return createReceipt(result.stopIndex, result.lastBatch, result.migratedFunds)
 }
 
 // PersistState persists the current state to a file.
@@ -111,11 +112,13 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}) error {
 
 		for {
 			batch := migratedFunds
+			lastBatch := true
 			if len(batch) > MaxReceipts {
 				batch = batch[:MaxReceipts]
+				lastBatch = false
 			}
 			select {
-			case s.migrations <- &migrationResult{stopIndex, batch}:
+			case s.migrations <- &migrationResult{stopIndex, lastBatch, batch}:
 			case <-shutdownSignal:
 				close(s.migrations)
 				return nil
@@ -140,17 +143,18 @@ func (s *MigratorService) updateState(result *migrationResult) {
 	s.state.LatestIncludedIndex += uint32(len(result.migratedFunds))
 }
 
-func createReceipt(migratedAt uint32, funds []*iota.MigratedFundsEntry) *iota.Receipt {
+func createReceipt(migratedAt uint32, final bool, funds []*iota.MigratedFundsEntry) *iota.Receipt {
 	// never create an empty receipt
 	if len(funds) == 0 {
 		return nil
 	}
 	receipt := &iota.Receipt{
 		MigratedAt: migratedAt,
+		Final:      final,
 		Funds:      make([]iota.Serializable, len(funds)),
 	}
-	for i, entry := range funds {
-		receipt.Funds[i] = entry
+	for i := range funds {
+		receipt.Funds[i] = funds[i]
 	}
 	return receipt
 }
