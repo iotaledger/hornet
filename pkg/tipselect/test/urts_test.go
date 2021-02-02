@@ -31,10 +31,6 @@ const (
 	SpammerTipsThresholdSemiLazy           = 30
 )
 
-const (
-	Uint32Max = 4294967295
-)
-
 var (
 	seed1, _ = hex.DecodeString("96d9ff7a79e4b0a5f3e5848ae7867064402da92a62eabb4ebbe463f12d1f3b1aace1775488f51cb1e3a80732a03ef60b111d6833ab605aa9f8faebeb33bbe3d9")
 )
@@ -85,8 +81,18 @@ func TestTipSelect(t *testing.T) {
 		lsmi := te.Storage().GetSolidMilestoneIndex()
 
 		for _, tip := range tips {
-			// we walk the cone of every tip to check the oldest milestone index it references
-			var oldestReferencedMilestoneIndex milestone.Index = Uint32Max
+			// we walk the cone of every tip to check the youngest and oldest milestone index it references
+			var youngestConeRootIndex milestone.Index = 0
+			var oldestConeRootIndex milestone.Index = 0
+
+			updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
+				if (youngestConeRootIndex == 0) || (youngestConeRootIndex < ycri) {
+					youngestConeRootIndex = ycri
+				}
+				if (oldestConeRootIndex == 0) || (oldestConeRootIndex > ocri) {
+					oldestConeRootIndex = ocri
+				}
+			}
 
 			err := dag.TraverseParentsOfMessage(te.Storage(), tip,
 				// traversal stops if no more messages pass the given condition
@@ -94,11 +100,9 @@ func TestTipSelect(t *testing.T) {
 				func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
 					defer cachedMetadata.Release(true) // meta -1
 
-					// first check if the msg was referenced => update oldestReferencedMilestoneIndex with the confirmation index
+					// first check if the msg was referenced => update ycri and ocri with the confirmation index
 					if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
-						if oldestReferencedMilestoneIndex > at {
-							oldestReferencedMilestoneIndex = at
-						}
+						updateIndexes(at, at)
 						return false, nil
 					}
 
@@ -113,22 +117,29 @@ func TestTipSelect(t *testing.T) {
 				func(messageID hornet.MessageID) {
 					// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 					at, _ := te.Storage().SolidEntryPointsIndex(messageID)
-					if oldestReferencedMilestoneIndex > at {
-						oldestReferencedMilestoneIndex = at
-					}
+					updateIndexes(at, at)
 				}, false, nil)
 			require.NoError(te.TestState, err)
 
-			minReferencedMilestone := lsmi
-			if minReferencedMilestone > milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI) {
-				minReferencedMilestone -= milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI)
+			minOldestConeRootIndex := lsmi
+			if minOldestConeRootIndex > milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI) {
+				minOldestConeRootIndex -= milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI)
 			} else {
-				minReferencedMilestone = 1
+				minOldestConeRootIndex = 1
 			}
-			println(fmt.Sprintf("LSMI: %d, MinReferenced: %d, OldestReferenced: %d", lsmi, minReferencedMilestone, oldestReferencedMilestoneIndex))
 
-			require.GreaterOrEqual(te.TestState, uint32(oldestReferencedMilestoneIndex), uint32(minReferencedMilestone))
-			require.LessOrEqual(te.TestState, uint32(oldestReferencedMilestoneIndex), uint32(lsmi))
+			minYoungestConeRootIndex := lsmi
+			if minYoungestConeRootIndex > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI) {
+				minYoungestConeRootIndex -= milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI)
+			} else {
+				minYoungestConeRootIndex = 1
+			}
+
+			require.GreaterOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
+			require.LessOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(lsmi))
+
+			require.GreaterOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(minYoungestConeRootIndex))
+			require.LessOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(lsmi))
 		}
 
 		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(tips).BuildIndexation().Store()
