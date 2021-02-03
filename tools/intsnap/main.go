@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -22,7 +23,13 @@ var fullSnapshotHeader = &snapshot.FileHeader{
 	NetworkID:            iotago.NetworkIDFromString("alphanet1"),
 	SEPMilestoneIndex:    1,
 	LedgerMilestoneIndex: 3,
+	TreasuryOutput: &utxo.TreasuryOutput{
+		MilestoneID: iotago.MilestoneID{},
+		Amount:      originTreasurySupply,
+	},
 }
+
+var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Amount - fullSnapshotOutputs[1].Amount
 
 var fullSnapshotOutputs = []*snapshot.Output{
 	{
@@ -37,7 +44,7 @@ var fullSnapshotOutputs = []*snapshot.Output{
 		OutputID:   static34ByteID(5),
 		OutputType: iotago.OutputSigLockedSingleOutput,
 		Address:    staticEd25519Address(5),
-		Amount:     iotago.TokenSupply - 10_000_000,
+		Amount:     20_000_000,
 	},
 }
 
@@ -217,13 +224,23 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	},
 	{
 		MilestoneIndex: 5,
+		SpentTreasuryOutput: &utxo.TreasuryOutput{
+			MilestoneID: iotago.MilestoneID{},
+			Amount:      originTreasurySupply,
+			Spent:       true,
+		},
+		TreasuryOutput: &utxo.TreasuryOutput{
+			MilestoneID: iotago.MilestoneID{1, 2, 3},
+			Amount:      originTreasurySupply - 10_000_000,
+			Spent:       false,
+		},
 		Created: []*snapshot.Output{
 			{
 				MessageID:  static32ByteID(9),
 				OutputID:   static34ByteID(9),
 				OutputType: iotago.OutputSigLockedSingleOutput,
 				Address:    staticEd25519Address(9),
-				Amount:     iotago.TokenSupply,
+				Amount:     fullSnapshotOutputs[0].Amount + fullSnapshotOutputs[1].Amount + 10_000_000,
 			},
 		},
 		Consumed: []*snapshot.Spent{

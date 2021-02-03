@@ -7,6 +7,7 @@ const (
 	UTXOStoreKeyPrefixSpent                byte = 3
 	UTXOStoreKeyPrefixMilestoneDiffs       byte = 4
 	UTXOStoreKeyPrefixBalances             byte = 5
+	UTXOStoreKeyPrefixTreasuryOutput       byte = 6
 )
 
 /*
@@ -56,6 +57,16 @@ const (
                   32 bytes                        +            4 bytes
 
 
+   Treasury Output:
+   =======
+   Key:
+       UTXOStoreKeyPrefixTreasuryOutput + spent  + milestone hash
+                   1 byte               + 1 byte +    32 bytes
+
+   Value:
+       Amount
+       8 bytes
+
    Milestone diffs:
    ================
    Key:
@@ -63,8 +74,8 @@ const (
                  1 byte                 +     4 bytes
 
    Value:
-       OutputCount  +  OutputCount * iotago.UTXOInputID + SpentCount + SpentCount * (iotago.Ed25519Address.Serialized() + iotago.UTXOInputID)
-         4 bytes    +  OutputCount * (32 byte + 2 byte) +   4 bytes  + SpentCount * ( 	  1 byte type + 32 bytes	    +  32 bytes + 2 bytes)
+       OutputCount  +  OutputCount * iotago.UTXOInputID + SpentCount + SpentCount * (iotago.Ed25519Address.Serialized() + iotago.UTXOInputID)   + has treasury + TreasuryOutputMilestoneHash + SpentTreasuryOutputMilestoneHash
+         4 bytes    +  OutputCount * (32 byte + 2 byte) +   4 bytes  + SpentCount * ( 	  1 byte type + 32 bytes	    +  32 bytes + 2 bytes)  +    1 byte    +          32 bytes           +          32 bytes
 
 
    Balances:

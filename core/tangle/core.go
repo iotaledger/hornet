@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -88,11 +89,12 @@ func provide(c *dig.Container) {
 		Requester        *gossippkg.Requester
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
+		ReceiptService   *migrator.ReceiptService `optional:"true"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
 		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
-			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), *syncedAtStartup)
+			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), deps.ReceiptService, *syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}

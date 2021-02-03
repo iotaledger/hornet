@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
@@ -49,13 +50,15 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo       *app.AppInfo
-	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-	Storage       *storage.Storage
-	ServerMetrics *metrics.ServerMetrics
-	Service       *gossip.Service
-	Manager       *p2p.Manager
-	RequestQueue  gossip.RequestQueue
+	AppInfo         *app.AppInfo
+	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+	Storage         *storage.Storage
+	ServerMetrics   *metrics.ServerMetrics
+	Service         *gossip.Service
+	ReceiptService  *migrator.ReceiptService  `optional:"true"`
+	MigratorService *migrator.MigratorService `optional:"true"`
+	Manager         *p2p.Manager
+	RequestQueue    gossip.RequestQueue
 }
 
 func configure() {
@@ -65,6 +68,10 @@ func configure() {
 	configureInfo()
 	configurePeers()
 	configureServer()
+	if deps.MigratorService != nil {
+		// TODO: enable this afterwards
+		//configureMigrator()
+	}
 
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -365,19 +366,38 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
-		t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
-	}, func(confirmation *whiteflag.Confirmation) {
-		t.storage.SetSolidMilestoneIndex(milestoneIndexToSolidify)
-		t.Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
-		t.Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
-		t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
-		t.Events.MilestoneConfirmed.Trigger(confirmation)
-	}, func(output *utxo.Output) {
-		t.Events.NewUTXOOutput.Trigger(output)
-	}, func(spent *utxo.Spent) {
-		t.Events.NewUTXOSpent.Trigger(spent)
-	})
+	var validateAndStoreReceipt func(r *iotago.Receipt) error
+	if t.receiptService != nil {
+		validateAndStoreReceipt = func(r *iotago.Receipt) error {
+			if t.receiptService.ValidationEnabled {
+				if err := t.receiptService.Validate(r); err != nil {
+					return fmt.Errorf("unable to confirm milestone due to receipt validation failure: %w", err)
+				}
+			}
+			if err := t.receiptService.Store(r); err != nil {
+				return fmt.Errorf("unable to confirm milestone due to receipt persistance failure: %w", err)
+			}
+			return nil
+		}
+	}
+
+	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID,
+		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
+		},
+		func(confirmation *whiteflag.Confirmation) {
+			t.storage.SetSolidMilestoneIndex(milestoneIndexToSolidify)
+			t.Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
+			t.Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+			t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
+			t.Events.MilestoneConfirmed.Trigger(confirmation)
+		},
+		func(output *utxo.Output) {
+			t.Events.NewUTXOOutput.Trigger(output)
+		},
+		func(spent *utxo.Spent) {
+			t.Events.NewUTXOSpent.Trigger(spent)
+		}, validateAndStoreReceipt)
 
 	if err != nil {
 		t.log.Panic(err)

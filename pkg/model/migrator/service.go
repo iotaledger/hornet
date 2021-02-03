@@ -1,20 +1,24 @@
 package migrator
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/iota.go/api"
-	"github.com/iotaledger/iota.go/trinary"
-	"github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"go.uber.org/atomic"
 )
 
 const (
-	// MaxReceipts defines the maximum size of a receipt returned by MigratorService.GetReceipt.
+	// MaxReceipts defines the maximum size of a receipt returned by MigratorService.Receipt.
 	MaxReceipts = 100
+)
+
+var (
+	// ErrStateFileAlreadyExists is returned when a new state is tried to be initialized but a state file already exists.
+	ErrStateFileAlreadyExists = errors.New("migrator state file already exists")
 )
 
 // State stores the latest state of the MigratorService.
@@ -29,7 +33,9 @@ type State struct {
 
 // MigratorService is a service querying and validating batches of migrated funds.
 type MigratorService struct {
-	validator *validator
+	Healthy *atomic.Bool
+
+	validator *Validator
 	state     State
 
 	mutex      syncutils.Mutex
@@ -41,24 +47,30 @@ type MigratorService struct {
 type migrationResult struct {
 	stopIndex     uint32
 	lastBatch     bool
-	migratedFunds []*iota.MigratedFundsEntry
+	migratedFunds []*iotago.MigratedFundsEntry
 }
 
 // NewService creates a new MigratorService.
-func NewService(api *api.API, stateFilePath string, coordinatorAddress trinary.Hash, coordinatorMerkleTreeDepth int) *MigratorService {
+func NewService(validator *Validator, stateFilePath string) *MigratorService {
 	return &MigratorService{
-		validator:     newValidator(api, coordinatorAddress, coordinatorMerkleTreeDepth),
+		validator:     validator,
 		migrations:    make(chan *migrationResult),
 		stateFilePath: stateFilePath,
+		Healthy:       atomic.NewBool(true),
 	}
 }
 
-// GetReceipt returns the next receipt of migrated funds.
+// State returns a copy of the service's state.
+func (s *MigratorService) State() State {
+	return s.state
+}
+
+// Receipt returns the next receipt of migrated funds.
 // Each receipt can only consists of migrations confirmed by one milestone, it will never be larger than MaxReceipts.
-// GetReceipt returns nil, if there are currently no new migrations available. Although the actual API calls and
-// validations happen in the background, GetReceipt might block until the next receipt is ready.
-// When s is stopped, GetReceipt will always return nil.
-func (s *MigratorService) GetReceipt() *iota.Receipt {
+// Receipt returns nil, if there are currently no new migrations available. Although the actual API calls and
+// validations happen in the background, Receipt might block until the next receipt is ready.
+// When s is stopped, Receipt will always return nil.
+func (s *MigratorService) Receipt() *iotago.Receipt {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	// make the channel receive and the state update atomic, so that the state always matches the result
@@ -71,7 +83,7 @@ func (s *MigratorService) GetReceipt() *iota.Receipt {
 }
 
 // PersistState persists the current state to a file.
-// PersistState must be called when the receipt returned by the last call of GetReceipt has been send to the network.
+// PersistState must be called when the receipt returned by the last call of Receipt has been send to the network.
 func (s *MigratorService) PersistState() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -88,7 +100,7 @@ func (s *MigratorService) InitState(state *State) error {
 	if state != nil {
 		// check whether the state file exists
 		if _, err := os.Stat(s.stateFilePath); !os.IsNotExist(err) {
-			return coordinator.ErrNetworkBootstrapped
+			return ErrStateFileAlreadyExists
 		}
 		s.state = *state
 		return nil
@@ -99,16 +111,28 @@ func (s *MigratorService) InitState(state *State) error {
 	return nil
 }
 
+// OnServiceErrorFunc is a function which is called when the service encounters an
+// error which prevents it from functioning properly.
+// Returning true from the error handler tells the service to terminate.
+type OnServiceErrorFunc func(err error) (terminate bool)
+
 // Start stats the MigratorService s, it stops when shutdownSignal is closed.
-func (s *MigratorService) Start(shutdownSignal <-chan struct{}) error {
+func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServiceErrorFunc) {
 	startIndex := s.state.LatestMilestoneIndex
 	for {
 		stopIndex, migratedFunds, err := s.validator.nextMigrations(startIndex)
 		if err != nil {
-			return err
+			s.Healthy.Store(false)
+			if onError != nil && onError(err) {
+				close(s.migrations)
+				return
+			}
+			continue
 		}
+
 		// always continue with the next index
 		startIndex = stopIndex + 1
+		s.Healthy.Store(true)
 
 		for {
 			batch := migratedFunds
@@ -121,7 +145,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}) error {
 			case s.migrations <- &migrationResult{stopIndex, lastBatch, batch}:
 			case <-shutdownSignal:
 				close(s.migrations)
-				return nil
+				return
 			}
 			migratedFunds = migratedFunds[len(batch):]
 			if len(migratedFunds) == 0 {
@@ -143,15 +167,15 @@ func (s *MigratorService) updateState(result *migrationResult) {
 	s.state.LatestIncludedIndex += uint32(len(result.migratedFunds))
 }
 
-func createReceipt(migratedAt uint32, final bool, funds []*iota.MigratedFundsEntry) *iota.Receipt {
+func createReceipt(migratedAt uint32, final bool, funds []*iotago.MigratedFundsEntry) *iotago.Receipt {
 	// never create an empty receipt
 	if len(funds) == 0 {
 		return nil
 	}
-	receipt := &iota.Receipt{
+	receipt := &iotago.Receipt{
 		MigratedAt: migratedAt,
 		Final:      final,
-		Funds:      make([]iota.Serializable, len(funds)),
+		Funds:      make([]iotago.Serializable, len(funds)),
 	}
 	for i := range funds {
 		receipt.Funds[i] = funds[i]

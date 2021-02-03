@@ -6,6 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/migrator"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
@@ -59,8 +62,10 @@ type PublicKeyRanges []*PublicKeyRange
 type Coordinator struct {
 	milestoneLock syncutils.Mutex
 
-	storage        *storage.Storage
-	signerProvider MilestoneSignerProvider
+	storage         *storage.Storage
+	migratorService *migrator.MigratorService
+	utxoManager     *utxo.Manager
+	signerProvider  MilestoneSignerProvider
 
 	// config options
 	stateFilePath            string
@@ -81,7 +86,11 @@ type Coordinator struct {
 }
 
 // New creates a new coordinator instance.
-func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider, stateFilePath string, milestoneIntervalSec int, powParallelism int, powHandler *pow.Handler, sendMessageFunc SendMessageFunc) (*Coordinator, error) {
+func New(
+	storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
+	stateFilePath string, milestoneIntervalSec int, powParallelism int,
+	powHandler *pow.Handler, migratorService *migrator.MigratorService, utxoManager *utxo.Manager,
+	sendMessageFunc SendMessageFunc) (*Coordinator, error) {
 
 	result := &Coordinator{
 		storage:              storage,
@@ -92,6 +101,8 @@ func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSig
 		powParallelism:       powParallelism,
 		powHandler:           powHandler,
 		sendMesssageFunc:     sendMessageFunc,
+		migratorService:      migratorService,
+		utxoManager:          utxoManager,
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
@@ -196,7 +207,26 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return fmt.Errorf("failed to compute white flag mutations: %w", err)
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, mutations.MerkleTreeHash, coo.powParallelism, coo.powHandler)
+	// get receipt data in case migrator is enabled
+	var receipt *iotago.Receipt
+	if coo.migratorService != nil {
+		receipt = coo.migratorService.Receipt()
+		if receipt != nil {
+			currentTreasuryOutput, err := coo.utxoManager.UnspentTreasuryOutput()
+			if err != nil {
+				return fmt.Errorf("unable to fetch unspent treasury output: %w", err)
+			}
+
+			// embed treasury within the receipt
+			input := &iotago.TreasuryInput{}
+			copy(input[:], currentTreasuryOutput.MilestoneID[:])
+			output := &iotago.TreasuryOutput{Amount: currentTreasuryOutput.Amount - receipt.Sum()}
+			treasuryTx := &iotago.TreasuryTransaction{Input: input, Output: output}
+			receipt.Transaction = treasuryTx
+		}
+	}
+
+	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.powParallelism, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create milestone: %w", err)
 	}

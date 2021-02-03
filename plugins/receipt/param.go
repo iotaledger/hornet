@@ -1,0 +1,39 @@
+package receipt
+
+import (
+	"time"
+
+	"github.com/gohornet/hornet/pkg/node"
+	flag "github.com/spf13/pflag"
+)
+
+const (
+	// CfgReceiptsFolderPath configures the path to the receipts folder.
+	CfgReceiptsFolderPath = "receipts.path"
+	// CfgReceiptsValidatorValidate configures whether to validate receipts.
+	CfgReceiptsValidatorValidate = "receipts.validator.validate"
+	// CfgReceiptsValidatorAPIAddress configures the address of the legacy node API to query for white-flag confirmation data.
+	CfgReceiptsValidatorAPIAddress = "receipts.validator.api.address"
+	// CfgReceiptsValidatorAPITimeout configures the timeout of API calls.
+	CfgReceiptsValidatorAPITimeout = "receipts.validator.api.timeout"
+	// CfgReceiptsValidatorCoordinatorAddress configures the address of the legacy coordinator.
+	CfgReceiptsValidatorCoordinatorAddress = "receipts.validator.coordinator.address"
+	// CfgReceiptsValidatorCoordinatorMerkleTreeDepth configures the depth of the Merkle tree of the legacy coordinator.
+	CfgReceiptsValidatorCoordinatorMerkleTreeDepth = "receipts.validator.coordinator.merkleTreeDepth"
+)
+
+var params = &node.PluginParams{
+	Params: map[string]*flag.FlagSet{
+		"nodeConfig": func() *flag.FlagSet {
+			fs := flag.NewFlagSet("", flag.ContinueOnError)
+			fs.String(CfgReceiptsFolderPath, "./receipts", "path to the receipts folder")
+			fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")
+			fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14265", "address of the legacy node API")
+			fs.Duration(CfgReceiptsValidatorAPITimeout, 5*time.Second, "timeout of API calls")
+			fs.String(CfgReceiptsValidatorCoordinatorAddress, "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ", "address of the legacy coordinator")
+			fs.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth, 18, "depth of the Merkle tree of the coordinator")
+			return fs
+		}(),
+	},
+	Masked: nil,
+}

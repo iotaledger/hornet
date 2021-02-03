@@ -22,7 +22,8 @@
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs",
       "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs"
+      "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",

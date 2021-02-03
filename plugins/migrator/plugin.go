@@ -1,19 +1,16 @@
 package migrator
 
 import (
-	"fmt"
-	"net/http"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/iota.go/api"
-
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 const (
@@ -61,21 +58,10 @@ func provide(c *dig.Container) {
 	type serviceDependencies struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Validator  *migrator.Validator
 	}
 	if err := c.Provide(func(deps serviceDependencies) (*migrator.MigratorService, error) {
-		iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
-			URI:    deps.NodeConfig.String(CfgMigratorAPIAddress),
-			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgMigratorAPITimeout)},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize API: %w", err)
-		}
-		return migrator.NewService(
-			iotaAPI,
-			deps.NodeConfig.String(CfgMigratorStateFilePath),
-			deps.NodeConfig.String(CfgMigratorCoordinatorAddress),
-			deps.NodeConfig.Int(CfgMigratorCoordinatorMerkleTreeDepth),
-		), nil
+		return migrator.NewService(deps.Validator, deps.NodeConfig.String(CfgMigratorStateFilePath)), nil
 	}); err != nil {
 		panic(err)
 	}
@@ -86,9 +72,7 @@ func configure() {
 
 	var state *migrator.State
 	if *bootstrap {
-		state = &migrator.State{
-			LatestMilestoneIndex: *startIndex,
-		}
+		state = &migrator.State{LatestMilestoneIndex: *startIndex}
 	}
 	// TODO: perform sanity check, that the latest migration milestone has MigratedAt lower than the state
 	if err := deps.MigratorService.InitState(state); err != nil {
@@ -99,9 +83,12 @@ func configure() {
 func run() {
 	err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		log.Infof("Starting %s ... done", Plugin.Name)
-		if err := deps.MigratorService.Start(shutdownSignal); err != nil {
-			log.Panic(err)
-		}
+		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
+			// lets just log the err and halt querying for a configured period
+			log.Warn(err)
+			time.Sleep(deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod))
+			return false
+		})
 		log.Infof("Stopping %s ... done", Plugin.Name)
 	}, shutdown.PriorityMigrator)
 	if err != nil {

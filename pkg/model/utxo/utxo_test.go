@@ -31,7 +31,7 @@ func TestUTXOIterationWithoutFilters(t *testing.T) {
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	// Prepare values to check
 	outputByOutputID := make(map[string]struct{})
@@ -99,7 +99,7 @@ func TestUTXOIterationWithAddressFilter(t *testing.T) {
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	// Prepare values to check
 	unspentByOutputID := make(map[string]struct{})
@@ -160,7 +160,7 @@ func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	// Prepare values to check
 	unspentByOutputID := make(map[string]struct{})
@@ -264,7 +264,7 @@ func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(outputs, dustOutputs...), append(spents, dustSpents...)))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(outputs, dustOutputs...), append(spents, dustSpents...), nil))
 
 	// Prepare values to check
 	unspentByOutputID := make(map[string]struct{})
@@ -360,7 +360,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	var outputCount int
 	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
@@ -383,7 +383,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	}))
 	require.Equal(t, 2, spentCount)
 
-	require.NoError(t, utxo.RollbackConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.RollbackConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
 		require.Fail(t, "should not be called")
@@ -417,7 +417,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 
 	previousMsIndex := milestone.Index(48)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(previousMsIndex, previousOutputs, previousSpents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(previousMsIndex, previousOutputs, previousSpents, nil))
 
 	ledgerIndex, err := utxo.ReadLedgerIndex()
 	require.NoError(t, err)
@@ -437,7 +437,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 
 	msIndex := milestone.Index(49)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	ledgerIndex, err = utxo.ReadLedgerIndex()
 	require.NoError(t, err)
@@ -498,7 +498,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Empty(t, spentByOutputID)
 	require.Equal(t, 3, spentCount)
 
-	require.NoError(t, utxo.RollbackConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.RollbackConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	ledgerIndex, err = utxo.ReadLedgerIndex()
 	require.NoError(t, err)

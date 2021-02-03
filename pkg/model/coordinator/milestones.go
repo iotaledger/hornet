@@ -32,7 +32,7 @@ func createCheckpoint(networkID uint64, parents hornet.MessageIDs, powParallelis
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(index milestone.Index, networkID uint64, parents hornet.MessageIDs, signerProvider MilestoneSignerProvider, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powParallelism int, powHandler *pow.Handler) (*storage.Message, error) {
+func createMilestone(index milestone.Index, networkID uint64, parents hornet.MessageIDs, signerProvider MilestoneSignerProvider, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powParallelism int, powHandler *pow.Handler) (*storage.Message, error) {
 	milestoneIndexSigner := signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
@@ -40,6 +40,9 @@ func createMilestone(index milestone.Index, networkID uint64, parents hornet.Mes
 	msPayload, err := iotago.NewMilestone(uint32(index), uint64(time.Now().Unix()), parentsSliceOfArray, whiteFlagMerkleRootTreeHash, pubKeys)
 	if err != nil {
 		return nil, err
+	}
+	if receipt != nil {
+		msPayload.Receipt = receipt
 	}
 
 	iotaMsg := &iotago.Message{

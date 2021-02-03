@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/gohornet/hornet/core/app"
@@ -15,7 +16,9 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/profiling"
+	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -78,6 +81,8 @@ func DefaultConfig() *NodeConfig {
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
+		Receipts:    DefaultReceiptValidatorConfig(),
+		Migrator:    DefaultMigratorConfig(),
 	}
 	cfg.ExposedPorts = nat.PortSet{
 		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.RestAPI.BindAddress, ":")[1])): {},
@@ -113,6 +118,10 @@ type NodeConfig struct {
 	Profiling ProfilingConfig
 	// Dashboard config.
 	Dashboard DashboardConfig
+	// Receipts config
+	Receipts ReceiptsConfig
+	// Migrator config.
+	Migrator MigratorConfig
 }
 
 // AsCoo adjusts the config to make it usable as the Coordinator's config.
@@ -121,6 +130,12 @@ func (cfg *NodeConfig) AsCoo() {
 	cfg.Coordinator.RunAsCoo = true
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Coordinator")
 	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.Coordinator.PrivateKeys, ",")))
+}
+
+// WithMigrator adjusts the config to activate the migrator plugin.
+func (cfg *NodeConfig) WithMigration() {
+	cfg.Migrator.Bootstrap = true
+	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Migrator", "Receipts")
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -134,6 +149,8 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Receipts.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Migrator.CLIFlags()...)
 	return cliFlags
 }
 
@@ -227,6 +244,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/addresses/:address/outputs",
 			"/api/v1/addresses/ed25519/:address",
 			"/api/v1/addresses/ed25519/:address/outputs",
+			"/api/v1/treasury",
 			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
 			"/api/plugins/*",
@@ -313,6 +331,73 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
 		IssuanceIntervalSeconds: 10,
+	}
+}
+
+// ReceiptsConfig defines the receipt validator plugin specific configuration.
+type ReceiptsConfig struct {
+	// The path to the receipts folder.
+	FolderPath string
+	// Whether the receipts plugin should validate receipts
+	Validate bool
+	// The API to query.
+	APIAddress string
+	// The API timeout.
+	APITimeout time.Duration
+	// Legacy Coordinator address
+	CoordinatorAddress string
+	// The merkle tree depth.
+	CoordinatorMerkleTreeDepth int
+}
+
+func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsFolderPath, receiptsConfig.FolderPath),
+		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, receiptsConfig.APIAddress),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPITimeout, receiptsConfig.APITimeout),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorCoordinatorAddress, receiptsConfig.CoordinatorAddress),
+		fmt.Sprintf("--%s=%d", receipt.CfgReceiptsValidatorCoordinatorMerkleTreeDepth, receiptsConfig.CoordinatorMerkleTreeDepth),
+	}
+}
+
+// DefaultReceiptValidatorConfig returns the default migrator plugin config.
+func DefaultReceiptValidatorConfig() ReceiptsConfig {
+	return ReceiptsConfig{
+		FolderPath:                 "./receipts",
+		Validate:                   false,
+		APIAddress:                 "http://localhost:14265",
+		APITimeout:                 5 * time.Second,
+		CoordinatorAddress:         "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
+		CoordinatorMerkleTreeDepth: 18,
+	}
+}
+
+// MigratorConfig defines migrator plugin specific configuration.
+type MigratorConfig struct {
+	// Whether to run the migrator plugin in bootstrap mode.
+	Bootstrap bool
+	// The index of the first legacy milestone to migrate.
+	StartIndex int
+	// The state file path.
+	StateFilePath string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (migConfig *MigratorConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%v", migrator.CfgMigratorBootstrap, migConfig.Bootstrap),
+		fmt.Sprintf("--%s=%d", migrator.CfgMigratorStartIndex, migConfig.StartIndex),
+		fmt.Sprintf("--%s=%s", migrator.CfgMigratorStateFilePath, migConfig.StateFilePath),
+	}
+}
+
+// DefaultMigratorConfig returns the default migrator plugin config.
+func DefaultMigratorConfig() MigratorConfig {
+	return MigratorConfig{
+		Bootstrap:     false,
+		StartIndex:    1,
+		StateFilePath: "migrator.state",
 	}
 }
 
