@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	powsrvio "gitlab.com/powsrv.io/go/client"
+
 	"github.com/gohornet/hornet/pkg/common"
 
 	"github.com/iotaledger/hive.go/logger"
@@ -17,7 +19,7 @@ const (
 	nonceBytes = 8 // len(uint64)
 )
 
-type ProofOfWorkFunc func(message *iotago.Message, parallelism ...int) (uint64, error)
+type proofOfWorkFunc func(data []byte, parallelism ...int) (uint64, error)
 
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
 // or uses local PoW if no API key was specified or the connection failed.
@@ -26,14 +28,14 @@ type Handler struct {
 
 	targetScore float64
 
-	//powsrvClient       *powsrvio.PowClient
+	powsrvClient       *powsrvio.PowClient
 	powsrvLock         syncutils.RWMutex
 	powsrvInitCooldown time.Duration
 	powsrvLastInit     time.Time
 	powsrvConnected    bool
 	powsrvErrorHandled bool
 
-	localPoWFunc ProofOfWorkFunc
+	localPoWFunc proofOfWorkFunc
 	localPowType string
 }
 
@@ -42,31 +44,25 @@ type Handler struct {
 func New(log *logger.Logger, targetScore float64, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
 
 	localPoWType := "local"
-	localPoWFunc := func(message *iotago.Message, parallelism ...int) (uint64, error) {
-		msgData, err := message.Serialize(iotago.DeSeriModeNoValidation)
-		if err != nil {
-			return 0, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
-		}
-		return pow.New(parallelism...).Mine(context.Background(), msgData[:len(msgData)-nonceBytes], targetScore)
+	localPoWFunc := func(data []byte, parallelism ...int) (uint64, error) {
+		return pow.New(parallelism...).Mine(context.Background(), data, targetScore)
 	}
 
-	/*
-		//var powsrvClient *powsrvio.PowClient
+	var powsrvClient *powsrvio.PowClient
 
-		// Check if powsrv.io API key is set
-		if powsrvAPIKey != "" {
-				powsrvClient = &powsrvio.PowClient{
-					APIKey:        powsrvAPIKey,
-					ReadTimeOutMs: 3000,
-					Verbose:       false,
-				}
+	// Check if powsrv.io API key is set
+	if powsrvAPIKey != "" {
+		powsrvClient = &powsrvio.PowClient{
+			APIKey:        powsrvAPIKey,
+			ReadTimeOutMs: 3000,
+			Verbose:       false,
 		}
-	*/
+	}
 
 	return &Handler{
-		log:         log,
-		targetScore: targetScore,
-		//powsrvClient:       powsrvClient,
+		log:                log,
+		targetScore:        targetScore,
+		powsrvClient:       powsrvClient,
 		powsrvInitCooldown: powsrvInitCooldown,
 		powsrvLastInit:     time.Time{},
 		powsrvConnected:    false,
@@ -79,11 +75,10 @@ func New(log *logger.Logger, targetScore float64, powsrvAPIKey string, powsrvIni
 // connectPowsrv tries to connect to powsrv.io if not connected already.
 // it returns if the powsrv is connected or not.
 func (h *Handler) connectPowsrv() bool {
-	/*
-		if h.powsrvClient == nil {
-			return false
-		}
-	*/
+
+	if h.powsrvClient == nil {
+		return false
+	}
 
 	h.powsrvLock.RLock()
 	if h.powsrvConnected {
@@ -108,18 +103,17 @@ func (h *Handler) connectPowsrv() bool {
 
 	h.powsrvLastInit = time.Now()
 
-	/*
-		// close an existing connection first
-		h.powsrvClient.Close()
+	// close an existing connection first
+	h.powsrvClient.Close()
 
-		// connect to powsrv.io
-		if err := h.powsrvClient.Init(); err != nil {
-			if h.log != nil {
-				h.log.Warnf("Error connecting to powsrv.io: %s", err)
-			}
-			return false
+	// connect to powsrv.io
+	if err := h.powsrvClient.Init(); err != nil {
+		if h.log != nil {
+			h.log.Warnf("Error connecting to powsrv.io: %s", err)
 		}
-	*/
+		return false
+	}
+
 	h.powsrvConnected = true
 	h.powsrvErrorHandled = false
 	return true
@@ -142,13 +136,12 @@ func (h *Handler) disconnectPowsrv() {
 	}
 
 	h.powsrvConnected = false
-	/*
-		if h.powsrvClient == nil {
-			return
-		}
 
-		h.powsrvClient.Close()
-	*/
+	if h.powsrvClient == nil {
+		return
+	}
+
+	h.powsrvClient.Close()
 }
 
 // GetPoWType returns the fastest available PoW type which gets used for PoW requests
@@ -174,38 +167,45 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 	default:
 	}
 
-	nonce, err := h.localPoWFunc(msg, parallelism...)
+	msgData, err := msg.Serialize(iotago.DeSeriModeNoValidation)
+	if err != nil {
+		return fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
+	}
+	powData := msgData[:len(msgData)-nonceBytes]
+
+	if h.connectPowsrv() {
+		// connected to powsrv.io
+		// powsrv.io only accepts targetScore <= 4000
+		if h.targetScore <= 4000 {
+
+			h.powsrvLock.RLock()
+			nonce, err := h.powsrvClient.Mine(powData, h.targetScore)
+			if err == nil {
+				h.powsrvLock.RUnlock()
+				msg.Nonce = nonce
+				return nil
+			}
+			h.powsrvLock.RUnlock()
+
+			h.powsrvLock.Lock()
+			if !h.powsrvErrorHandled {
+				// some error occurred => disconnect from powsrv.io
+				if h.log != nil {
+					h.log.Warnf("Error during PoW via powsrv.io: %s", err)
+				}
+				h.disconnectPowsrv()
+			}
+			h.powsrvLock.Unlock()
+		}
+	}
+
+	// Fall back to local PoW
+	nonce, err := h.localPoWFunc(powData, parallelism...)
 	if err != nil {
 		return err
 	}
 	msg.Nonce = nonce
 	return nil
-
-	/*
-		if h.connectPowsrv() {
-			// connected to powsrv.io
-			// powsrv.io only accepts targetScore <= 14
-			if targetScore <= 14 {
-				h.powsrvLock.RLock()
-				nonce, err := h.powsrvClient.PowFunc(trytes, targetScore)
-				if err == nil {
-					h.powsrvLock.RUnlock()
-					return nonce, nil
-				}
-				h.powsrvLock.RUnlock()
-
-				h.powsrvLock.Lock()
-				if !h.powsrvErrorHandled {
-					// some error occurred => disconnect from powsrv.io
-					if h.log != nil {
-						h.log.Warnf("Error during PoW via powsrv.io: %s", err)
-					}
-					h.disconnectPowsrv()
-				}
-				h.powsrvLock.Unlock()
-			}
-		}
-	*/
 }
 
 // Close closes the PoW handler
