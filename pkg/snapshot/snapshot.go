@@ -483,7 +483,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 			func(id hornet.MessageID) error {
 				// we don't care about solid entry points
 				return nil
-			}, nil,
+			}, nil, nil,
 			func(milestoneDiff *MilestoneDiff) error {
 				prodChan <- milestoneDiff
 				return nil
@@ -553,8 +553,11 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 			}
 
 			prodChan <- &MilestoneDiff{
-				MilestoneIndex: msIndex, Created: createdOutputs,
-				Consumed: consumedOutputs,
+				MilestoneIndex:      msIndex,
+				Created:             createdOutputs,
+				Consumed:            consumedOutputs,
+				TreasuryOutput:      diff.TreasuryOutput,
+				SpentTreasuryOutput: diff.SpentTreasuryOutput,
 			}
 		}
 
@@ -700,6 +703,12 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			return err
 		}
 
+		// read out treasury tx
+		header.TreasuryOutput, err = s.utxo.UnspentTreasuryOutput()
+		if err != nil {
+			return err
+		}
+
 		// a full snapshot contains the ledger UTXOs as of the LSMI
 		// and the milestone diffs from the LSMI back to the target index (excluding the target index)
 		utxoProducer = newLSMIUTXOProducer(s.utxo)
@@ -774,6 +783,18 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 	}
 }
 
+// returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
+func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
+	return func(output *utxo.TreasuryOutput) error {
+		// delete previous
+		existing, err := utxoManager.UnspentTreasuryOutput()
+		if err == nil {
+			_ = utxoManager.DeleteTreasuryOutput(existing)
+		}
+		return utxoManager.AddTreasuryOutput(output)
+	}
+}
+
 // returns a function which calls the corresponding address type callback function with
 // the origin argument and type casted address.
 func callbackPerAddress(
@@ -839,11 +860,19 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			return err
 		}
 
+		var treasuryMut *utxo.TreasuryMutationTuple
+		if msDiff.TreasuryOutput != nil {
+			treasuryMut = &utxo.TreasuryMutationTuple{
+				NewOutput:   msDiff.TreasuryOutput,
+				SpentOutput: msDiff.SpentTreasuryOutput,
+			}
+		}
+
 		switch {
 		case ledgerIndex == msDiff.MilestoneIndex:
-			return utxoManager.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+			return utxoManager.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents, treasuryMut)
 		case ledgerIndex+1 == msDiff.MilestoneIndex:
-			return utxoManager.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+			return utxoManager.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents, treasuryMut)
 		default:
 			return ErrWrongMilestoneDiffIndex
 		}
@@ -911,15 +940,21 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	headerConsumer := newFileHeaderConsumer(s.log, s.utxo, networkID, snapshotType, header)
 	sepConsumer := newSEPsConsumer(s.storage, header)
 	var outputConsumer OutputConsumerFunc
+	var treasuryOutputConsumer UnspentTreasuryOutputConsumerFunc
 	if snapshotType == Full {
 		outputConsumer = newOutputConsumer(s.utxo)
+		treasuryOutputConsumer = newUnspentTreasuryOutputConsumer(s.utxo)
 	}
 	msDiffConsumer := newMsDiffConsumer(s.utxo)
-	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
+	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
 	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts))
+
+	_ = s.utxo.ForEachTreasuryOutput(func(output *utxo.TreasuryOutput) bool {
+		return true
+	})
 	if err := s.utxo.CheckLedgerState(); err != nil {
 		return err
 	}

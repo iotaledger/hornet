@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
+	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -54,6 +55,7 @@ func main() {
 			mqtt.Plugin,
 			coordinator.Plugin,
 			migrator.Plugin,
+			receipt.Plugin,
 			prometheus.Plugin,
 		}...),
 	)

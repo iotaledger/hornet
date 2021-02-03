@@ -119,7 +119,15 @@ func (u *Manager) ReadLedgerIndex() (milestone.Index, error) {
 	return u.ReadLedgerIndexWithoutLocking()
 }
 
-func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+// TreasuryMutationTuple holds data about a mutation happening to the treasury.
+type TreasuryMutationTuple struct {
+	// The treasury transaction causes this mutation.
+	NewOutput *TreasuryOutput
+	// The previous treasury output which funded the new transaction.
+	SpentOutput *TreasuryOutput
+}
+
+func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
 
 	mutations := u.utxoStorage.Batched()
 
@@ -147,6 +155,22 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		Spents:  newSpents,
 	}
 
+	if tm != nil {
+		if err := storeTreasuryOutput(tm.NewOutput, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+
+		msDiff.TreasuryOutput = tm.NewOutput
+
+		// this simply re-keys the output
+		if err := markTreasuryOutputAsSpent(tm.SpentOutput, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+		msDiff.SpentTreasuryOutput = tm.SpentOutput
+	}
+
 	if err := storeDiff(msDiff, mutations); err != nil {
 		mutations.Cancel()
 		return err
@@ -165,15 +189,15 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 	return mutations.Commit()
 }
 
-func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
 
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	return u.ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+	return u.ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm)
 }
 
-func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
 
 	mutations := u.utxoStorage.Batched()
 
@@ -202,6 +226,18 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		}
 	}
 
+	if tm != nil {
+		if err := deleteTreasuryOutput(tm.NewOutput, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+
+		if err := markTreasuryOutputAsUnspent(tm.SpentOutput, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
 	if err := deleteDiff(msIndex, mutations); err != nil {
 		mutations.Cancel()
 		return err
@@ -220,11 +256,11 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 	return mutations.Commit()
 }
 
-func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents) error {
+func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents)
+	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm)
 }
 
 func (u *Manager) CheckLedgerState() error {
@@ -240,11 +276,17 @@ func (u *Manager) CheckLedgerState() error {
 		return err
 	}
 
+	treasuryOutput, err := u.UnspentTreasuryOutput()
+	if err != nil {
+		return err
+	}
+	total += treasuryOutput.Amount
+
 	if total != iotago.TokenSupply {
 		return ErrOutputsSumNotEqualTotalSupply
 	}
 
-	return u.checkBalancesLedger()
+	return u.checkBalancesLedger(treasuryOutput.Amount)
 }
 
 func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {

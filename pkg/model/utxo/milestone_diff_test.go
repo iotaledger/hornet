@@ -125,7 +125,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 
 	readDiff, err := utxo.GetMilestoneDiffWithoutLocking(msIndex)
 	require.NoError(t, err)

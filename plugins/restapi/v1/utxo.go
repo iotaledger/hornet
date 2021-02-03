@@ -260,3 +260,14 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 
 	return outputsResponse(&address, includeSpent, filteredType)
 }
+
+func treasury(c echo.Context) (*treasuryResponse, error) {
+	treasuryOutput, err := deps.UTXO.UnspentTreasuryOutput()
+	if err != nil {
+		return nil, err
+	}
+	return &treasuryResponse{
+		MilestoneID: hex.EncodeToString(treasuryOutput.MilestoneID[:]),
+		Amount:      treasuryOutput.Amount,
+	}, nil
+}

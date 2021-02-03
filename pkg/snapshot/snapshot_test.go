@@ -266,7 +266,7 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 			randomSpent(outputs[2], msIndex),
 		}
 
-		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents))
+		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
 	}
 
 	producerU1 := newMsDiffsProducer(u1, MsDiffDirectionOnwards, startIndex, targetIndex)

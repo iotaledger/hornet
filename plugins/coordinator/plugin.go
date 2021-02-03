@@ -3,6 +3,8 @@ package coordinator
 import (
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/migrator"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -92,6 +94,8 @@ type dependencies struct {
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	PoWHandler       *powpackage.Handler
+	MigratorService  *migrator.MigratorService `optional:"true"`
+	UTXOManager      *utxo.Manager
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
@@ -158,6 +162,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		powParallelism = 1
 	}
 
+	if deps.MigratorService == nil {
+		log.Info("running Coordinator without migration enabled")
+	}
+
 	coo, err := coordinator.New(
 		deps.Storage,
 		deps.NetworkID,
@@ -166,6 +174,8 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
 		powParallelism,
 		powHandler,
+		deps.MigratorService,
+		deps.UTXOManager,
 		sendMessage,
 	)
 	if err != nil {

@@ -100,6 +100,20 @@
       "heaviestBranchSelectionDeadlineMilliseconds": 100
     }
   },
+  "receipts": {
+    "path": "./receipts",
+    "validator": {
+      "validate": false,
+      "api": {
+        "address": "http://localhost:14265",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
+        "merkleTreeDepth": 18
+      }
+    }
+  },
   "tipsel": {
     "maxDeltaMsgYoungestConeRootIndexToLSMI": 8,
     "maxDeltaMsgOldestConeRootIndexToLSMI": 13,

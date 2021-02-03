@@ -22,6 +22,7 @@
       "/api/v1/addresses/:address/outputs",
       "/api/v1/addresses/ed25519/:address",
       "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury",
       "/api/v1/peers/:peerID",
       "/api/v1/peers"
     ],
@@ -89,6 +90,20 @@
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionDeadlineMilliseconds": 100
+    }
+  },
+  "receipts": {
+    "path": "./receipts",
+    "validator": {
+      "validate": false,
+      "api": {
+        "address": "http://localhost:14265",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
+        "merkleTreeDepth": 18
+      }
     }
   },
   "tipsel": {

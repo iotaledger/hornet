@@ -20,6 +20,9 @@ var (
 
 	// ErrServiceUnavailable defines the service unavailable error.
 	ErrServiceUnavailable = errors.New("service unavailable")
+
+	// ErrServiceUnavailable defines the service not implemented error.
+	ErrServiceNotImplemented = errors.New("service not implemented")
 )
 
 // JSONResponse wraps the result into a "data" field and sends the JSON response with status code.

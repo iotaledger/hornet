@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -26,6 +27,7 @@ type Tangle struct {
 	messageProcessor *gossip.MessageProcessor
 	serverMetrics    *metrics.ServerMetrics
 	requester        *gossip.Requester
+	receiptService   *migrator.ReceiptService
 	shutdownCtx      context.Context
 	daemon           daemon.Daemon
 
@@ -113,9 +115,12 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 
 */
 
-func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueue, service *gossip.Service, messageProcessor *gossip.MessageProcessor,
+func New(
+	log *logger.Logger, s *storage.Storage,
+	requestQueue gossip.RequestQueue,
+	service *gossip.Service, messageProcessor *gossip.MessageProcessor,
 	serverMetrics *metrics.ServerMetrics, shutdownCtx context.Context,
-	requester *gossip.Requester, daemon daemon.Daemon, updateSyncedAtStartup bool) *Tangle {
+	requester *gossip.Requester, daemon daemon.Daemon, receiptService *migrator.ReceiptService, updateSyncedAtStartup bool) *Tangle {
 	return &Tangle{
 		log:                         log,
 		storage:                     s,
@@ -123,6 +128,7 @@ func New(log *logger.Logger, s *storage.Storage, requestQueue gossip.RequestQueu
 		service:                     service,
 		messageProcessor:            messageProcessor,
 		serverMetrics:               serverMetrics,
+		receiptService:              receiptService,
 		shutdownCtx:                 shutdownCtx,
 		requester:                   requester,
 		daemon:                      daemon,

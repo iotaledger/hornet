@@ -205,6 +205,10 @@ func setupRoutes() {
 			statusCode = http.StatusServiceUnavailable
 			message = "service unavailable"
 
+		case restapi.ErrServiceNotImplemented:
+			statusCode = http.StatusNotImplemented
+			message = "service not implemented"
+
 		case restapi.ErrInternalError:
 			statusCode = http.StatusInternalServerError
 			message = "internal server error"
