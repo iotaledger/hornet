@@ -123,7 +123,7 @@ func configure() {
 				return
 			}
 
-			unspent, err := deps.Storage.UTXO().IsOutputUnspent(outputId)
+			unspent, err := deps.Storage.UTXO().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return
 			}
