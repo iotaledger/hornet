@@ -118,12 +118,12 @@ func configure() {
 		}
 
 		if outputId := outputIdFromTopic(topicName); outputId != nil {
-			output, err := deps.Storage.UTXO().ReadOutputByOutputID(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
 			if err != nil {
 				return
 			}
 
-			unspent, err := deps.Storage.UTXO().IsOutputUnspent(outputId)
+			unspent, err := deps.Storage.UTXO().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return
 			}

@@ -25,7 +25,7 @@ func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachOutput(outputConsumerFunc)
+	err := deps.UTXO.ForEachOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -43,7 +43,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, nil)
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -62,7 +62,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachSpentOutput(spentConsumerFunc, nil)
+	err := deps.UTXO.ForEachSpentOutput(spentConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %s", err)
 	}
@@ -94,7 +94,7 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, nil)
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
 	}
@@ -131,7 +131,7 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, nil)
+	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
 	}
@@ -154,7 +154,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
-	diff, err := deps.UTXO.GetMilestoneDiff(milestone.Index(msIndex))
+	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(milestone.Index(msIndex))
 
 	outputs := []*outputResponse{}
 	spents := []*outputResponse{}
