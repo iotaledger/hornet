@@ -26,6 +26,7 @@ dist/
 alphanetdb*/
 comnetdb*/
 devnetdb*/
+testnetdb*/
 mainnetdb*/
 p2pstore*/
 

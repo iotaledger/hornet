@@ -101,7 +101,13 @@ func snapshotGen(args []string) error {
 		var nullMessageID [iotago.MessageIDLength]byte
 		var nullOutputID [utxo.OutputIDLength]byte
 
-		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: iotago.TokenSupply}, nil
+		return &snapshot.Output{
+			MessageID:  nullMessageID,
+			OutputID:   nullOutputID,
+			OutputType: iotago.OutputSigLockedSingleOutput,
+			Address:    &address,
+			Amount:     iotago.TokenSupply,
+		}, nil
 	}
 
 	// milestone diffs

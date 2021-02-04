@@ -150,13 +150,7 @@ func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, inde
 		return nil, err
 	}
 
-	return &Output{
-		outputID:   &outputID,
-		messageID:  messageID,
-		outputType: output.Type(),
-		address:    address,
-		amount:     amount,
-	}, nil
+	return CreateOutput(&outputID, messageID, output.Type(), address, amount), nil
 }
 
 //- kvStorable
