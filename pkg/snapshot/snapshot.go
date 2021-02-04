@@ -531,14 +531,20 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 
 			for _, output := range diff.Outputs {
 				createdOutputs = append(createdOutputs, &Output{
-					MessageID: output.MessageID().ToArray(), OutputID: *output.OutputID(),
-					Address: output.Address(), Amount: output.Amount()})
+					MessageID:  output.MessageID().ToArray(),
+					OutputID:   *output.OutputID(),
+					OutputType: output.OutputType(),
+					Address:    output.Address(),
+					Amount:     output.Amount()})
 			}
 
 			for _, spent := range diff.Spents {
 				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{
-					MessageID: spent.MessageID().ToArray(), OutputID: *spent.OutputID(),
-					Address: spent.Address(), Amount: spent.Amount()},
+					MessageID:  spent.MessageID().ToArray(),
+					OutputID:   *spent.OutputID(),
+					OutputType: spent.OutputType(),
+					Address:    spent.Address(),
+					Amount:     spent.Amount()},
 					TargetTransactionID: *spent.TargetTransactionID()},
 				)
 			}
