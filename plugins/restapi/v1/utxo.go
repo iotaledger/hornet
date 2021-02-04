@@ -92,7 +92,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 	}
 
 	return &addressBalanceResponse{
-		AddressType: iotago.AddressEd25519,
+		AddressType: address.Type(),
 		Address:     address.String(),
 		Balance:     balance,
 	}, nil
@@ -180,7 +180,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 	}
 
 	return &addressOutputsResponse{
-		AddressType: iotago.AddressEd25519,
+		AddressType: address.Type(),
 		Address:     address.String(),
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),

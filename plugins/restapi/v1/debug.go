@@ -77,8 +77,6 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 	addressMap := map[string]*address{}
 
 	outputConsumerFunc := func(output *utxo.Output) bool {
-		// ToDo: check for different address types
-
 		if addr, exists := addressMap[output.Address().String()]; exists {
 			// add balance to total balance
 			addr.Balance += output.Amount()
@@ -86,7 +84,7 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 		}
 
 		addressMap[output.Address().String()] = &address{
-			AddressType: iotago.AddressEd25519,
+			AddressType: output.Address().Type(),
 			Address:     output.Address().String(),
 			Balance:     output.Amount(),
 		}
@@ -123,7 +121,7 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 		}
 
 		addressMap[output.Address().String()] = &address{
-			AddressType: iotago.AddressEd25519,
+			AddressType: output.Address().Type(),
 			Address:     output.Address().String(),
 			Balance:     output.Amount(),
 		}
