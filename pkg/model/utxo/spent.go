@@ -233,7 +233,7 @@ func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 
 func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Spent, error) {
 
-	output, err := u.ReadOutputByOutputID(outputID)
+	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return nil, err
 	}

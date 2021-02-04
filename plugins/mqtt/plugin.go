@@ -118,7 +118,7 @@ func configure() {
 		}
 
 		if outputId := outputIdFromTopic(topicName); outputId != nil {
-			output, err := deps.Storage.UTXO().ReadOutputByOutputID(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
 			if err != nil {
 				return
 			}
