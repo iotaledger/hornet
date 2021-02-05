@@ -322,11 +322,12 @@ type Cache struct {
 }
 
 func peerMetrics() []*restapiv1.PeerResponse {
-	var peerRes []*restapiv1.PeerResponse
-	for _, info := range deps.Manager.PeerInfoSnapshots() {
-		peerRes = append(peerRes, restapiv1.WrapInfoSnapshot(info))
+	peerInfos := deps.Manager.PeerInfoSnapshots()
+	results := make([]*restapiv1.PeerResponse, len(peerInfos))
+	for i, info := range peerInfos {
+		results[i] = restapiv1.WrapInfoSnapshot(info)
 	}
-	return peerRes
+	return results
 }
 
 func currentSyncStatus() *SyncStatus {

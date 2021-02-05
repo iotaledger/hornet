@@ -237,13 +237,13 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// mark the given message to be part of milestone ledger by changing message inclusion set
 		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
-		var newSpents utxo.Spents
+		newSpents := make(utxo.Spents, len(inputOutputs))
 
 		// save the inputs as spent
-		for _, input := range inputOutputs {
+		for i, input := range inputOutputs {
 			spent := utxo.NewSpent(input, transactionID, msIndex)
 			wfConf.NewSpents[string(input.OutputID()[:])] = spent
-			newSpents = append(newSpents, spent)
+			newSpents[i] = spent
 		}
 
 		// add new outputs

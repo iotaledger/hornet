@@ -1,7 +1,6 @@
 package coordinator
 
 import (
-
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 
@@ -50,7 +49,7 @@ func (p *InMemoryEd25519MilestoneSignerProvider) MilestoneIndexSigner(index mile
 	pubKeySet := p.keyManger.GetPublicKeysSetForMilestoneIndex(index)
 
 	keyPairs := p.keyManger.GetKeyPairsForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
-	pubKeys := []iotago.MilestonePublicKey{}
+	pubKeys := make([]iotago.MilestonePublicKey, 0, len(keyPairs))
 	for pubKey := range keyPairs {
 		pubKeys = append(pubKeys, pubKey)
 	}

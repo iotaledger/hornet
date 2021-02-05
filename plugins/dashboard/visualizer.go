@@ -52,9 +52,9 @@ func runVisualizer() {
 				return
 			}
 
-			parentsHex := []string{}
-			for _, parent := range msg.GetParents() {
-				parentsHex = append(parentsHex, parent.ToHex()[:VisualizerIdLength])
+			parentsHex := make([]string, len(msg.GetParents()))
+			for i, parent := range msg.GetParents() {
+				parentsHex[i] = parent.ToHex()[:VisualizerIdLength]
 			}
 
 			hub.BroadcastMsg(
@@ -129,9 +129,9 @@ func runVisualizer() {
 			return
 		}
 
-		var excludedIDs []string
-		for _, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs = append(excludedIDs, messageID.MessageID.ToHex()[:VisualizerIdLength])
+		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
+		for i, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
+			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIdLength]
 		}
 
 		hub.BroadcastMsg(

@@ -92,7 +92,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 	}
 
 	return &addressBalanceResponse{
-		AddressType: iotago.AddressEd25519,
+		AddressType: address.Type(),
 		Address:     address.String(),
 		Balance:     balance,
 	}, nil
@@ -162,9 +162,9 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
-	outputIDs := []string{}
-	for _, unspentOutput := range unspentOutputs {
-		outputIDs = append(outputIDs, unspentOutput.OutputID().ToHex())
+	outputIDs := make([]string, len(unspentOutputs))
+	for i, unspentOutput := range unspentOutputs {
+		outputIDs[i] = unspentOutput.OutputID().ToHex()
 	}
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
@@ -174,13 +174,16 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 			return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed: %s, error: %s", address, err)
 		}
 
-		for _, spent := range spents {
-			outputIDs = append(outputIDs, spent.OutputID().ToHex())
+		outputIDsSpent := make([]string, len(spents))
+		for i, spent := range spents {
+			outputIDsSpent[i] = spent.OutputID().ToHex()
 		}
+
+		outputIDs = append(outputIDs, outputIDsSpent...)
 	}
 
 	return &addressOutputsResponse{
-		AddressType: iotago.AddressEd25519,
+		AddressType: address.Type(),
 		Address:     address.String(),
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),

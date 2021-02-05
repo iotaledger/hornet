@@ -79,27 +79,27 @@ func MessageIDFromArray(b iotago.MessageID) MessageID {
 
 // ToHex converts the MessageIDs to their hex string representation.
 func (m MessageIDs) ToHex() []string {
-	var results []string
-	for _, msgID := range m {
-		results = append(results, msgID.ToHex())
+	results := make([]string, len(m))
+	for i, msgID := range m {
+		results[i] = msgID.ToHex()
 	}
 	return results
 }
 
 // ToSliceOfSlices converts the MessageIDs to a slice of byte slices.
 func (m MessageIDs) ToSliceOfSlices() [][]byte {
-	var results [][]byte
-	for _, msgID := range m {
-		results = append(results, msgID)
+	results := make([][]byte, len(m))
+	for i, msgID := range m {
+		results[i] = msgID
 	}
 	return results
 }
 
 // ToSliceOfArrays converts the MessageIDs to a slice of byte arrays.
 func (m MessageIDs) ToSliceOfArrays() iotago.MessageIDs {
-	var results iotago.MessageIDs
-	for _, msgID := range m {
-		results = append(results, msgID.ToArray())
+	results := make(iotago.MessageIDs, len(m))
+	for i, msgID := range m {
+		results[i] = msgID.ToArray()
 	}
 	return results
 }

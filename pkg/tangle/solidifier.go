@@ -111,7 +111,7 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 	tCollect := time.Now()
 
 	if len(messageIDsToRequest) > 0 {
-		var messageIDs hornet.MessageIDs
+		messageIDs := make(hornet.MessageIDs, 0, len(messageIDsToRequest))
 		for messageID := range messageIDsToRequest {
 			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
 		}

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
@@ -77,8 +76,6 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 	addressMap := map[string]*address{}
 
 	outputConsumerFunc := func(output *utxo.Output) bool {
-		// ToDo: check for different address types
-
 		if addr, exists := addressMap[output.Address().String()]; exists {
 			// add balance to total balance
 			addr.Balance += output.Amount()
@@ -86,7 +83,7 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 		}
 
 		addressMap[output.Address().String()] = &address{
-			AddressType: iotago.AddressEd25519,
+			AddressType: output.Address().Type(),
 			Address:     output.Address().String(),
 			Balance:     output.Amount(),
 		}
@@ -99,7 +96,7 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
 	}
 
-	addresses := []*address{}
+	addresses := make([]*address, 0, len(addressMap))
 	for _, addr := range addressMap {
 		addresses = append(addresses, addr)
 	}
@@ -123,7 +120,7 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 		}
 
 		addressMap[output.Address().String()] = &address{
-			AddressType: iotago.AddressEd25519,
+			AddressType: output.Address().Type(),
 			Address:     output.Address().String(),
 			Balance:     output.Amount(),
 		}
@@ -136,7 +133,7 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
 	}
 
-	addresses := []*address{}
+	addresses := make([]*address, 0, len(addressMap))
 	for _, addr := range addressMap {
 		addresses = append(addresses, addr)
 	}
@@ -156,23 +153,23 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
 	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(milestone.Index(msIndex))
 
-	outputs := []*outputResponse{}
-	spents := []*outputResponse{}
+	outputs := make([]*outputResponse, len(diff.Outputs))
+	spents := make([]*outputResponse, len(diff.Spents))
 
-	for _, output := range diff.Outputs {
+	for i, output := range diff.Outputs {
 		o, err := newOutputResponse(output, false)
 		if err != nil {
 			return nil, err
 		}
-		outputs = append(outputs, o)
+		outputs[i] = o
 	}
 
-	for _, spent := range diff.Spents {
+	for i, spent := range diff.Spents {
 		o, err := newOutputResponse(spent.Output(), true)
 		if err != nil {
 			return nil, err
 		}
-		spents = append(spents, o)
+		spents[i] = o
 	}
 
 	return &milestoneDiffResponse{
@@ -184,9 +181,8 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
 func debugRequests(c echo.Context) (*requestsResponse, error) {
 
-	debugReqs := []*request{}
-
 	queued, pending, processing := deps.RequestQueue.Requests()
+	debugReqs := make([]*request, 0, len(queued)+len(pending)+len(processing))
 
 	for _, req := range queued {
 		debugReqs = append(debugReqs, &request{

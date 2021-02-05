@@ -45,15 +45,15 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "can't load milestone diff for index: %s, error: %s", milestoneIndex, err)
 	}
 
-	createdOutputs := []string{}
-	consumedOutputs := []string{}
+	createdOutputs := make([]string, len(diff.Outputs))
+	consumedOutputs := make([]string, len(diff.Spents))
 
-	for _, output := range diff.Outputs {
-		createdOutputs = append(createdOutputs, output.OutputID().ToHex())
+	for i, output := range diff.Outputs {
+		createdOutputs[i] = output.OutputID().ToHex()
 	}
 
-	for _, output := range diff.Spents {
-		consumedOutputs = append(consumedOutputs, output.OutputID().ToHex())
+	for i, output := range diff.Spents {
+		consumedOutputs[i] = output.OutputID().ToHex()
 	}
 
 	return &milestoneUTXOChangesResponse{

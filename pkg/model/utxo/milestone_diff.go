@@ -49,14 +49,12 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
 	marshalUtil := marshalutil.New(value)
 
-	var outputs Outputs
-	var spents Spents
-
 	outputCount, err := marshalUtil.ReadUint32()
 	if err != nil {
 		return err
 	}
 
+	outputs := make(Outputs, int(outputCount))
 	for i := 0; i < int(outputCount); i++ {
 		var outputID *iotago.UTXOInputID
 		if outputID, err = parseOutputID(marshalUtil); err != nil {
@@ -68,7 +66,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 			return err
 		}
 
-		outputs = append(outputs, output)
+		outputs[i] = output
 	}
 
 	spentCount, err := marshalUtil.ReadUint32()
@@ -76,6 +74,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 		return err
 	}
 
+	spents := make(Spents, spentCount)
 	for i := 0; i < int(spentCount); i++ {
 		if _, err := parseAddress(marshalUtil); err != nil {
 			return err
@@ -91,7 +90,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 			return err
 		}
 
-		spents = append(spents, spent)
+		spents[i] = spent
 	}
 
 	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
