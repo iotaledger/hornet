@@ -526,27 +526,30 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 				return
 			}
 
-			var createdOutputs []*Output
-			var consumedOutputs []*Spent
+			createdOutputs := make([]*Output, len(diff.Outputs))
+			consumedOutputs := make([]*Spent, len(diff.Spents))
 
-			for _, output := range diff.Outputs {
-				createdOutputs = append(createdOutputs, &Output{
+			for i, output := range diff.Outputs {
+				createdOutputs[i] = &Output{
 					MessageID:  output.MessageID().ToArray(),
 					OutputID:   *output.OutputID(),
 					OutputType: output.OutputType(),
 					Address:    output.Address(),
-					Amount:     output.Amount()})
+					Amount:     output.Amount(),
+				}
 			}
 
-			for _, spent := range diff.Spents {
-				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{
-					MessageID:  spent.MessageID().ToArray(),
-					OutputID:   *spent.OutputID(),
-					OutputType: spent.OutputType(),
-					Address:    spent.Address(),
-					Amount:     spent.Amount()},
-					TargetTransactionID: *spent.TargetTransactionID()},
-				)
+			for i, spent := range diff.Spents {
+				consumedOutputs[i] = &Spent{
+					Output: Output{
+						MessageID:  spent.MessageID().ToArray(),
+						OutputID:   *spent.OutputID(),
+						OutputType: spent.OutputType(),
+						Address:    spent.Address(),
+						Amount:     spent.Amount(),
+					},
+					TargetTransactionID: *spent.TargetTransactionID(),
+				}
 			}
 
 			prodChan <- &MilestoneDiff{

@@ -93,16 +93,16 @@ type CachedMilestone struct {
 
 type CachedMilestones []*CachedMilestone
 
-// msg +1
+// milestone +1
 func (c CachedMilestones) Retain() CachedMilestones {
-	cachedResult := CachedMilestones{}
-	for _, cachedMs := range c {
-		cachedResult = append(cachedResult, cachedMs.Retain())
+	cachedResult := make(CachedMilestones, len(c))
+	for i, cachedMs := range c {
+		cachedResult[i] = cachedMs.Retain()
 	}
 	return cachedResult
 }
 
-// msg -1
+// milestone -1
 func (c CachedMilestones) Release(force ...bool) {
 	for _, cachedMs := range c {
 		cachedMs.Release(force...)

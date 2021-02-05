@@ -20,10 +20,9 @@ func WrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *PeerResponse {
 		alias = &info.Alias
 	}
 
-	multiAddresses := []string{}
-
-	for _, multiAddress := range info.Addresses {
-		multiAddresses = append(multiAddresses, multiAddress.String())
+	multiAddresses := make([]string, len(info.Addresses))
+	for i, multiAddress := range info.Addresses {
+		multiAddresses[i] = multiAddress.String()
 	}
 
 	gossipProto := deps.Service.Protocol(info.Peer.ID)
@@ -65,12 +64,11 @@ func removePeer(c echo.Context) error {
 }
 
 func listPeers(c echo.Context) ([]*PeerResponse, error) {
-	var results []*PeerResponse
-
-	for _, info := range deps.Manager.PeerInfoSnapshots() {
-		results = append(results, WrapInfoSnapshot(info))
+	peerInfos := deps.Manager.PeerInfoSnapshots()
+	results := make([]*PeerResponse, len(peerInfos))
+	for i, info := range peerInfos {
+		results[i] = WrapInfoSnapshot(info)
 	}
-
 	return results, nil
 }
 

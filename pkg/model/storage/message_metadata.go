@@ -352,6 +352,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
+	m.parents = make(hornet.MessageIDs, parentsCount)
 	for i := 0; i < int(parentsCount); i++ {
 		parentBytes, err := marshalUtil.ReadBytes(iotago.MessageIDLength)
 		if err != nil {
@@ -359,7 +360,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		}
 
 		parent := hornet.MessageIDFromSlice(parentBytes)
-		m.parents = append(m.parents, parent)
+		m.parents[i] = parent
 	}
 
 	return m, nil

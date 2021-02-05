@@ -49,9 +49,9 @@ type CachedMessages []*CachedMessage
 
 // msg +1
 func (cachedMsgs CachedMessages) Retain() CachedMessages {
-	cachedResult := CachedMessages{}
-	for _, cachedMsg := range cachedMsgs {
-		cachedResult = append(cachedResult, cachedMsg.Retain())
+	cachedResult := make(CachedMessages, len(cachedMsgs))
+	for i, cachedMsg := range cachedMsgs {
+		cachedResult[i] = cachedMsg.Retain()
 	}
 	return cachedResult
 }

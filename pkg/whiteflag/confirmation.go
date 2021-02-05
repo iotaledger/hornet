@@ -87,12 +87,12 @@ func ConfirmMilestone(s *storage.Storage, serverMetrics *metrics.ServerMetrics, 
 
 	tc := time.Now()
 
-	var newOutputs utxo.Outputs
+	newOutputs := make(utxo.Outputs, 0, len(mutations.NewOutputs))
 	for _, output := range mutations.NewOutputs {
 		newOutputs = append(newOutputs, output)
 	}
 
-	var newSpents utxo.Spents
+	newSpents := make(utxo.Spents, 0, len(mutations.NewSpents))
 	for _, spent := range mutations.NewSpents {
 		newSpents = append(newSpents, spent)
 	}
