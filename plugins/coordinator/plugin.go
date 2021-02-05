@@ -36,6 +36,8 @@ const (
 	CfgCoordinatorBootstrap = "cooBootstrap"
 	// the index of the first milestone at bootstrap
 	CfgCoordinatorStartIndex = "cooStartIndex"
+	// the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash)
+	MilestoneMaxAdditionalTipsLimit = 6
 )
 
 func init() {
@@ -245,26 +247,38 @@ func run() {
 				lastCheckpointMessageID = checkpointMessageID
 
 			case <-nextMilestoneSignal:
+				var milestoneTips hornet.MessageIDs
 
 				// issue a new checkpoint right in front of the milestone
-				tips, err := selector.SelectTips(1)
+				checkpointTips, err := selector.SelectTips(1)
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					if err != mselection.ErrNoTipsAvailable {
 						log.Warn(err)
 					}
 				} else {
-					checkpointMessageID, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
-					if err != nil {
-						// issuing checkpoint failed => not critical
-						log.Warn(err)
+					if len(checkpointTips) > MilestoneMaxAdditionalTipsLimit {
+						// issue a checkpoint with all the tips that wouldn't fit into the milestone (more than MilestoneMaxAdditionalTipsLimit)
+						checkpointMessageID, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, checkpointTips[MilestoneMaxAdditionalTipsLimit:])
+						if err != nil {
+							// issuing checkpoint failed => not critical
+							log.Warn(err)
+						} else {
+							// use the new checkpoint message ID
+							lastCheckpointMessageID = checkpointMessageID
+						}
+
+						// use the other tips for the milestone
+						milestoneTips = checkpointTips[:MilestoneMaxAdditionalTipsLimit]
 					} else {
-						// use the new checkpoint message ID
-						lastCheckpointMessageID = checkpointMessageID
+						// do not issue a checkpoint and use the tips for the milestone instead since they fit into the milestone directly
+						milestoneTips = checkpointTips
 					}
 				}
 
-				milestoneMessageID, err, criticalErr := coo.IssueMilestone(hornet.MessageIDs{lastMilestoneMessageID, lastCheckpointMessageID})
+				milestoneTips = append(milestoneTips, hornet.MessageIDs{lastMilestoneMessageID, lastCheckpointMessageID}...)
+
+				milestoneMessageID, err, criticalErr := coo.IssueMilestone(milestoneTips)
 				if criticalErr != nil {
 					log.Panic(criticalErr)
 				}
