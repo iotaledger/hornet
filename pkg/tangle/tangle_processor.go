@@ -8,11 +8,13 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 func (t *Tangle) ConfigureTangleProcessor() {
@@ -57,6 +59,12 @@ func (t *Tangle) RunTangleProcessor() {
 	})
 
 	onReceivedValidMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
+
+		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			// do not process the milestone if the node was shut down
+			return
+		}
+
 		_, added := processValidMilestoneWorkerPool.Submit(cachedMilestone) // milestone pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
