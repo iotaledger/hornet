@@ -54,7 +54,7 @@ const (
 	// GET returns the node info.
 	RouteInfo = "/info"
 
-	// RouteTips is the route for getting two tips.
+	// RouteTips is the route for getting tips.
 	// GET returns the tips.
 	RouteTips = "/tips"
 
@@ -128,43 +128,6 @@ const (
 	// RouteControlSnapshotCreate is the control route to manually create a snapshot file.
 	// GET creates a snapshot. (query parameters: "index")
 	RouteControlSnapshotCreate = "/control/snapshots/create"
-
-	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
-	// GET triggers the solidifier.
-	RouteDebugSolidifier = "/debug/solidifier"
-
-	// RouteDebugOutputs is the debug route for getting all output IDs.
-	// GET returns the outputIDs for all outputs.
-	RouteDebugOutputs = "/debug/outputs"
-
-	// RouteDebugOutputsUnspent is the debug route for getting all unspent output IDs.
-	// GET returns the outputIDs for all unspent outputs.
-	RouteDebugOutputsUnspent = "/debug/outputs/unspent"
-
-	// RouteDebugOutputsSpent is the debug route for getting all spent output IDs.
-	// GET returns the outputIDs for all spent outputs.
-	RouteDebugOutputsSpent = "/debug/outputs/spent"
-
-	// RouteDebugAddresses is the debug route for getting all known addresses.
-	// GET returns all known addresses encoded in hex.
-	RouteDebugAddresses = "/debug/addresses"
-
-	// RouteDebugAddressesEd25519 is the debug route for getting all known ed25519 addresses.
-	// GET returns all known ed25519 addresses encoded in hex.
-	RouteDebugAddressesEd25519 = "/debug/addresses/ed25519"
-
-	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
-	// GET returns the utxo diff (new outputs & spents) for the milestone index.
-	RouteDebugMilestoneDiffs = "/debug/ms-diff/:" + ParameterMilestoneIndex
-
-	// RouteDebugRequests is the debug route for getting all pending requests.
-	// GET returns a list of all pending requests.
-	RouteDebugRequests = "/debug/requests"
-
-	// RouteDebugMessageCone is the debug route for traversing a cone of a message.
-	// it traverses the parents of a message until they reference an older milestone than the start message.
-	// GET returns the path of this traversal and the "entry points".
-	RouteDebugMessageCone = "/debug/message-cones/:" + ParameterMessageID
 )
 
 func init() {
@@ -195,7 +158,6 @@ type dependencies struct {
 	Tangle           *tangle.Tangle
 	Manager          *p2p.Manager
 	Service          *gossip.Service
-	RequestQueue     gossip.RequestQueue
 	UTXO             *utxo.Manager
 	PoWHandler       *pow.Handler
 	MessageProcessor *gossip.MessageProcessor
@@ -399,84 +361,6 @@ func configure() {
 
 	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
 		resp, err := createSnapshot(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugSolidifier, func(c echo.Context) error {
-		deps.Tangle.TriggerSolidifier()
-
-		return restapi.JSONResponse(c, http.StatusOK, "solidifier triggered")
-	})
-
-	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
-		resp, err := debugOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
-		resp, err := debugUnspentOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
-		resp, err := debugSpentOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
-		resp, err := debugAddresses(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
-		resp, err := debugAddressesEd25519(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
-		resp, err := debugMilestoneDiff(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
-		resp, err := debugRequests(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
-		resp, err := debugMessageCone(c)
 		if err != nil {
 			return err
 		}

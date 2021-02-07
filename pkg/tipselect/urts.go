@@ -25,7 +25,7 @@ import (
 // Score defines the score of a tip.
 type Score int
 
-// TipSelectionFunc is a function which performs a tipselection and returns two tips.
+// TipSelectionFunc is a function which performs a tipselection and returns tips.
 type TipSelectionFunc = func() (hornet.MessageIDs, error)
 
 // TipSelStats holds the stats for a tipselection run.

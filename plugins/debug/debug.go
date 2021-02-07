@@ -1,7 +1,6 @@
-package v1
+package debug
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
@@ -10,10 +9,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
+	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 )
 
 func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
@@ -144,20 +143,19 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 }
 
 func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
-	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
 
-	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
+	msIndex, err := v1.ParseMilestoneIndexParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
+		return nil, err
 	}
 
-	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(milestone.Index(msIndex))
+	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
 
-	outputs := make([]*outputResponse, len(diff.Outputs))
-	spents := make([]*outputResponse, len(diff.Spents))
+	outputs := make([]*v1.OutputResponse, len(diff.Outputs))
+	spents := make([]*v1.OutputResponse, len(diff.Spents))
 
 	for i, output := range diff.Outputs {
-		o, err := newOutputResponse(output, false)
+		o, err := v1.NewOutputResponse(output, false)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +163,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	for i, spent := range diff.Spents {
-		o, err := newOutputResponse(spent.Output(), true)
+		o, err := v1.NewOutputResponse(spent.Output(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +171,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	return &milestoneDiffResponse{
-		MilestoneIndex: milestone.Index(msIndex),
+		MilestoneIndex: msIndex,
 		Outputs:        outputs,
 		Spents:         spents,
 	}, nil
