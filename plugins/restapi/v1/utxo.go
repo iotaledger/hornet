@@ -18,7 +18,7 @@ import (
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 )
 
-func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error) {
+func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error) {
 
 	var rawOutput iotago.Output
 	switch output.OutputType() {
@@ -43,7 +43,7 @@ func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error)
 
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
-	return &outputResponse{
+	return &OutputResponse{
 		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
@@ -52,7 +52,7 @@ func newOutputResponse(output *utxo.Output, spent bool) (*outputResponse, error)
 	}, nil
 }
 
-func outputByID(c echo.Context) (*outputResponse, error) {
+func outputByID(c echo.Context) (*OutputResponse, error) {
 	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
 
 	outputIDBytes, err := hex.DecodeString(outputIDParam)
@@ -81,7 +81,7 @@ func outputByID(c echo.Context) (*outputResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent status failed: %s, error: %s", outputIDParam, err)
 	}
 
-	return newOutputResponse(output, !unspent)
+	return NewOutputResponse(output, !unspent)
 }
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {

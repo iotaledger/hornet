@@ -101,7 +101,7 @@ func passThroughAPIRoute(e echo.Context) error {
 func passThroughSpammerRoute(e echo.Context) error {
 	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
 
-	data, err := readDataFromURL("http://" + apiBindAddr + "/spammer?" + e.Request().URL.RawQuery)
+	data, err := readDataFromURL("http://" + apiBindAddr + "/api/plugins/spammer?" + e.Request().URL.RawQuery)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func setupRoutes(e *echo.Echo) {
 
 	// Pass all the explorer request through to the local rest API
 	e.GET("/api/*", passThroughAPIRoute)
-	e.GET("/plugins/spammer*", passThroughSpammerRoute)
+	e.GET("/api/plugins/spammer*", passThroughSpammerRoute)
 
 	// Everything else fallback to index for routing.
 	e.GET("*", indexRoute)

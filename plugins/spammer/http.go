@@ -16,7 +16,7 @@ const (
 	// query parameters: "cmd" (start, stop)
 	//					 "mpsRateLimit" (optional)
 	//					 "cpuMaxUsage" (optional)
-	RouteSpammer = "/spammer"
+	RouteSpammer = "/api/plugins/spammer"
 )
 
 type spamSettings struct {

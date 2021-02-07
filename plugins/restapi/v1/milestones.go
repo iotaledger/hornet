@@ -11,15 +11,28 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
-func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
+func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
 	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
+	if milestoneIndex == "" {
+		return 0, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterMilestoneIndex)
+	}
 
 	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
+		return 0, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
-	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(milestone.Index(msIndex)) // milestone +1
+	return milestone.Index(msIndex), nil
+}
+
+func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
+
+	msIndex, err := ParseMilestoneIndexParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "milestone not found: %d", msIndex)
 	}
@@ -33,16 +46,15 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 }
 
 func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
-	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
 
-	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
+	msIndex, err := ParseMilestoneIndexParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
+		return nil, err
 	}
 
-	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(milestone.Index(msIndex))
+	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "can't load milestone diff for index: %s, error: %s", milestoneIndex, err)
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 
 	createdOutputs := make([]string, len(diff.Outputs))

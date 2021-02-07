@@ -229,12 +229,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/addresses/ed25519/:address/outputs",
 			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
-			"/api/v1/debug/outputs",
-			"/api/v1/debug/outputs/unspent",
-			"/api/v1/debug/outputs/spent",
-			"/api/v1/debug/ms-diff/:milestoneIndex",
-			"/api/v1/debug/requests",
-			"/api/v1/debug/message-cones/:messageID",
+			"/api/plugins/*",
 		},
 		EnableProofOfWork: true,
 	}
