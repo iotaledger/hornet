@@ -1,21 +1,119 @@
 package debug
 
 import (
+	"context"
+	"encoding/hex"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 )
 
-func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
+func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {
+
+	request := &computeWhiteFlagMutationsRequest{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
+	}
+
+	// check if the requested milestone index would be the next one
+	if request.Index > deps.Storage.GetSolidMilestoneIndex()+1 {
+		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
+	}
+
+	if len(request.Parents) < 1 {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no parents given")
+	}
+
+	parents, err := hornet.MessageIDsFromHex(request.Parents)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid parents, error: %s", err)
+	}
+
+	// register all parents for message solid events
+	// this has to be done, even if the parents may be solid already, to prevent race conditions
+	msgSolidEventChans := make([]chan struct{}, len(parents))
+	for i, parent := range parents {
+		msgSolidEventChans[i] = deps.Tangle.RegisterMessageSolidEvent(parent)
+	}
+
+	// check all parents for solidity
+	for _, parent := range parents {
+		cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(parent)
+		if cachedMsgMeta == nil {
+			continue
+		}
+
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
+			if !metadata.IsSolid() {
+				return
+			}
+
+			// deregister the event, because the parent is already solid (this also fires the event)
+			deps.Tangle.DeregisterMessageSolidEvent(parent)
+		})
+	}
+
+	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
+	cachedMessages := make(map[string]*storage.CachedMessage)
+
+	defer func() {
+		// deregister the events to free the memory
+		for _, parent := range parents {
+			deps.Tangle.DeregisterMessageSolidEvent(parent)
+		}
+
+		// release all messages at the end
+		for _, cachedMessage := range cachedMessages {
+			cachedMessage.Release(true) // message -1
+		}
+
+		// Release all message metadata at the end
+		for _, cachedMsgMeta := range cachedMsgMetas {
+			cachedMsgMeta.Release(true) // meta -1
+		}
+	}()
+
+	// check if all requested parents are solid
+	solid, _ := deps.Tangle.SolidQueueCheck(cachedMsgMetas, request.Index, parents, nil)
+
+	if !solid {
+		// wait for at most "whiteFlagParentsSolidTimeout" for the parents to become solid
+		ctx, cancel := context.WithTimeout(context.Background(), whiteflagParentsSolidTimeout)
+		defer cancel()
+
+		for _, msgSolidEventChan := range msgSolidEventChans {
+			// wait until the message is solid
+			if err := utils.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
+				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "parents not solid")
+			}
+		}
+	}
+
+	// at this point all parents are solid
+	// compute merkle tree root
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(deps.Storage, request.Index, cachedMsgMetas, cachedMessages, parents)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInternalError, "failed to compute white flag mutations: %s", err)
+	}
+
+	return &computeWhiteFlagMutationsResponse{
+		MerkleTreeHash: hex.EncodeToString(mutations.MerkleTreeHash[:]),
+	}, nil
+}
+
+func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	outputIDs := []string{}
 	outputConsumerFunc := func(output *utxo.Output) bool {
@@ -33,7 +131,7 @@ func debugOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}, nil
 }
 
-func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
+func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	outputIDs := []string{}
 	outputConsumerFunc := func(output *utxo.Output) bool {
@@ -51,7 +149,7 @@ func debugUnspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}, nil
 }
 
-func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
+func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	outputIDs := []string{}
 
@@ -70,7 +168,7 @@ func debugSpentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}, nil
 }
 
-func debugAddresses(c echo.Context) (*addressesResponse, error) {
+func addresses(c echo.Context) (*addressesResponse, error) {
 
 	addressMap := map[string]*address{}
 
@@ -105,7 +203,7 @@ func debugAddresses(c echo.Context) (*addressesResponse, error) {
 	}, nil
 }
 
-func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
+func addressesEd25519(c echo.Context) (*addressesResponse, error) {
 
 	addressMap := map[string]*address{}
 
@@ -142,7 +240,7 @@ func debugAddressesEd25519(c echo.Context) (*addressesResponse, error) {
 	}, nil
 }
 
-func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
+func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
 	msIndex, err := v1.ParseMilestoneIndexParam(c)
 	if err != nil {
@@ -177,7 +275,7 @@ func debugMilestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}, nil
 }
 
-func debugRequests(c echo.Context) (*requestsResponse, error) {
+func requests(c echo.Context) (*requestsResponse, error) {
 
 	queued, pending, processing := deps.RequestQueue.Requests()
 	debugReqs := make([]*request, 0, len(queued)+len(pending)+len(processing))
@@ -217,7 +315,7 @@ func debugRequests(c echo.Context) (*requestsResponse, error) {
 	}, nil
 }
 
-func debugMessageCone(c echo.Context) (*messageConeResponse, error) {
+func messageCone(c echo.Context) (*messageConeResponse, error) {
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)

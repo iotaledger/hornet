@@ -5,6 +5,20 @@ import (
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 )
 
+// computeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.
+type computeWhiteFlagMutationsRequest struct {
+	// The index of the milestone.
+	Index milestone.Index `json:"index"`
+	// The hex encoded message IDs of the parents the milestone references.
+	Parents []string `json:"parentMessageIds"`
+}
+
+// computeWhiteFlagMutationsRequest defines the response for a POST debugComputeWhiteFlagMutations REST API call.
+type computeWhiteFlagMutationsResponse struct {
+	// The hex encoded merkle tree hash as a result of the white flag computation.
+	MerkleTreeHash string `json:"merkleTreeHash"`
+}
+
 // outputIDsResponse defines the response of a GET debug outputs REST API call.
 type outputIDsResponse struct {
 	// The output IDs (transaction hash + output index) of the outputs.

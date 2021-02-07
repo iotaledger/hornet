@@ -26,7 +26,7 @@ type HeaviestSelector struct {
 	minHeaviestBranchUnreferencedMessagesThreshold int
 	maxHeaviestBranchTipsPerCheckpoint             int
 	randomTipsPerCheckpoint                        int
-	heaviestBranchSelectionDeadline                time.Duration
+	heaviestBranchSelectionTimeout                 time.Duration
 
 	trackedMessages map[string]*trackedMessage // map of all tracked messages
 	tips            *list.List                 // list of available tips
@@ -87,12 +87,12 @@ func (il *trackedMessagesList) removeTip(tip *trackedMessage) {
 }
 
 // New creates a new HeaviestSelector instance.
-func New(minHeaviestBranchUnreferencedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionDeadline time.Duration) *HeaviestSelector {
+func New(minHeaviestBranchUnreferencedMessagesThreshold int, maxHeaviestBranchTipsPerCheckpoint int, randomTipsPerCheckpoint int, heaviestBranchSelectionTimeout time.Duration) *HeaviestSelector {
 	s := &HeaviestSelector{
 		minHeaviestBranchUnreferencedMessagesThreshold: minHeaviestBranchUnreferencedMessagesThreshold,
 		maxHeaviestBranchTipsPerCheckpoint:             maxHeaviestBranchTipsPerCheckpoint,
 		randomTipsPerCheckpoint:                        randomTipsPerCheckpoint,
-		heaviestBranchSelectionDeadline:                heaviestBranchSelectionDeadline,
+		heaviestBranchSelectionTimeout:                 heaviestBranchSelectionTimeout,
 	}
 	s.reset()
 	return s
@@ -180,7 +180,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.MessageIDs, e
 	var tips hornet.MessageIDs
 
 	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.heaviestBranchSelectionDeadline))
+	ctx, cancel := context.WithTimeout(context.Background(), s.heaviestBranchSelectionTimeout)
 	defer cancel()
 
 	deadlineExceeded := false

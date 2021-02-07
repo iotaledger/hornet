@@ -103,7 +103,7 @@ func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 		return true
 	}
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// we wait either until the node got synced or we reached the deadline

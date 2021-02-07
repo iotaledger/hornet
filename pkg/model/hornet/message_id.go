@@ -125,12 +125,27 @@ func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 	return result
 }
 
-// MessageIDsFromSliceOfArrays creates slice of MessageIDs from a slice of arrays.
+// MessageIDsFromHex creates a slice of MessageIDs from a slice of hex string representations.
+func MessageIDsFromHex(hexStrings []string) (MessageIDs, error) {
+	results := make(MessageIDs, len(hexStrings))
+
+	for i, hexString := range hexStrings {
+		msgID, err := MessageIDFromHex(hexString)
+		if err != nil {
+			return nil, err
+		}
+		results[i] = msgID
+	}
+
+	return results, nil
+}
+
+// MessageIDsFromSliceOfArrays creates a slice of MessageIDs from a slice of arrays.
 func MessageIDsFromSliceOfArrays(b iotago.MessageIDs) MessageIDs {
-	result := make(MessageIDs, len(b))
+	results := make(MessageIDs, len(b))
 	for i, msgID := range b {
 		// as msgID is reused between iterations, it must be copied
-		result[i] = MessageIDFromArray(msgID)
+		results[i] = MessageIDFromArray(msgID)
 	}
-	return result
+	return results
 }

@@ -595,7 +595,9 @@ func (m *Manager) reconnectPeer(peerID peer.ID) (bool, error) {
 // if the connection fails, the peer is either cleared from the Manager if its relation is PeerRelationUnknown
 // or a reconnect attempt is scheduled if it is PeerRelationKnown.
 func (m *Manager) connect(addrInfo peer.AddrInfo) error {
-	ctx, _ := context.WithTimeout(context.Background(), connTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
+	defer cancel()
+
 	err := m.host.Connect(ctx, addrInfo)
 	if err != nil {
 		// unsuccessful connect:

@@ -408,7 +408,9 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) (*Protocol,
 
 // opens up a stream to the given peer.
 func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
-	ctx, _ := context.WithTimeout(context.Background(), s.opts.StreamConnectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.opts.StreamConnectTimeout)
+	defer cancel()
+
 	stream, err := s.host.NewStream(ctx, peerID, s.protocol)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create gossip stream to %s: %w", peerID, err)
