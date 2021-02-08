@@ -2,10 +2,12 @@ package debug
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
 	"go.uber.org/dig"
+
+	"github.com/iotaledger/hive.go/configuration"
 
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -24,6 +26,10 @@ const (
 )
 
 const (
+	// RouteDebugComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
+	// POST computes the white flag confirmation.
+	RouteDebugComputeWhiteFlag = "/whiteflag"
+
 	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
 	// GET triggers the solidifier.
 	RouteDebugSolidifier = "/solidifier"
@@ -68,6 +74,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Debug",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Configure: configure,
 		},
 	}
@@ -75,11 +82,9 @@ func init() {
 
 var (
 	Plugin *node.Plugin
+	deps   dependencies
 
-	// ErrNodeNotSync is returned when the node was not synced.
-	ErrNodeNotSync = errors.New("node not synced")
-
-	deps dependencies
+	whiteflagParentsSolidTimeout time.Duration
 )
 
 type dependencies struct {
@@ -88,11 +93,24 @@ type dependencies struct {
 	Tangle       *tangle.Tangle
 	RequestQueue gossip.RequestQueue
 	UTXO         *utxo.Manager
+	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 	Echo         *echo.Echo
 }
 
 func configure() {
+
+	whiteflagParentsSolidTimeout = time.Duration(deps.NodeConfig.Int(CfgDebugWhiteFlagParentsSolidTimeoutMilliseconds)) * time.Millisecond
+
 	routeGroup := deps.Echo.Group("/api/plugins/debug")
+
+	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
+		resp, err := computeWhiteFlagMutations(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
 
 	routeGroup.GET(RouteDebugSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()
@@ -101,7 +119,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
-		resp, err := debugOutputsIDs(c)
+		resp, err := outputsIDs(c)
 		if err != nil {
 			return err
 		}
@@ -110,7 +128,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
-		resp, err := debugUnspentOutputsIDs(c)
+		resp, err := unspentOutputsIDs(c)
 		if err != nil {
 			return err
 		}
@@ -119,7 +137,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
-		resp, err := debugSpentOutputsIDs(c)
+		resp, err := spentOutputsIDs(c)
 		if err != nil {
 			return err
 		}
@@ -128,7 +146,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
-		resp, err := debugAddresses(c)
+		resp, err := addresses(c)
 		if err != nil {
 			return err
 		}
@@ -137,7 +155,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
-		resp, err := debugAddressesEd25519(c)
+		resp, err := addressesEd25519(c)
 		if err != nil {
 			return err
 		}
@@ -146,7 +164,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
-		resp, err := debugMilestoneDiff(c)
+		resp, err := milestoneDiff(c)
 		if err != nil {
 			return err
 		}
@@ -155,7 +173,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
-		resp, err := debugRequests(c)
+		resp, err := requests(c)
 		if err != nil {
 			return err
 		}
@@ -164,7 +182,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
-		resp, err := debugMessageCone(c)
+		resp, err := messageCone(c)
 		if err != nil {
 			return err
 		}

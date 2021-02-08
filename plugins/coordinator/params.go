@@ -27,7 +27,7 @@ const (
 	// one heaviest branch tip was found, otherwise no random tips will be picked
 	CfgCoordinatorTipselectRandomTipsPerCheckpoint = "coordinator.tipsel.randomTipsPerCheckpoint"
 	// the maximum duration to select the heaviest branch tips in milliseconds
-	CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds = "coordinator.tipsel.heaviestBranchSelectionDeadlineMilliseconds"
+	CfgCoordinatorTipselectHeaviestBranchSelectionTimeoutMilliseconds = "coordinator.tipsel.heaviestBranchSelectionTimeoutMilliseconds"
 )
 
 var params = &node.PluginParams{
@@ -41,7 +41,7 @@ var params = &node.PluginParams{
 			fs.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold, 20, "minimum threshold of unreferenced messages in the heaviest branch")
 			fs.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint messages with heaviest branch tips")
 			fs.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint messages with random tips")
-			fs.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
+			fs.Int(CfgCoordinatorTipselectHeaviestBranchSelectionTimeoutMilliseconds, 100, "the maximum duration to select the heaviest branch tips in milliseconds")
 			return fs
 		}(),
 	},

@@ -92,7 +92,7 @@
       "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
-      "heaviestBranchSelectionDeadlineMilliseconds": 100
+      "heaviestBranchSelectionTimeoutMilliseconds": 100
     }
   },
   "tipsel": {

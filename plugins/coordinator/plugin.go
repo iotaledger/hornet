@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
+	"golang.org/x/net/context"
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -128,7 +129,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
 		deps.NodeConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
 		deps.NodeConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(deps.NodeConfig.Int(CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
+		time.Duration(deps.NodeConfig.Int(CfgCoordinatorTipselectHeaviestBranchSelectionTimeoutMilliseconds))*time.Millisecond,
 	)
 
 	nextCheckpointSignal = make(chan struct{})
@@ -328,11 +329,11 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 	}
 
 	// wait until the message is solid
-	utils.WaitForChannelClosed(msgSolidEventChan)
+	utils.WaitForChannelClosed(context.Background(), msgSolidEventChan)
 
 	if len(msIndex) > 0 {
 		// if it was a milestone, also wait until the milestone was confirmed
-		utils.WaitForChannelClosed(milestoneConfirmedEventChan)
+		utils.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan)
 	}
 
 	return nil

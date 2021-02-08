@@ -108,11 +108,11 @@ func configure() {
 		topicName := string(topic)
 
 		if messageId := messageIdFromTopic(topicName); messageId != nil {
-			if cachedMetadata := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
-				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+			if cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMsgMeta != nil {
+				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 					return // Avoid Release (done inside workerpool task)
 				}
-				cachedMetadata.Release(true)
+				cachedMsgMeta.Release(true)
 			}
 			return
 		}

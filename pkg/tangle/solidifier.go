@@ -53,11 +53,11 @@ func (t *Tangle) markMessageAsSolid(cachedMetadata *storage.CachedMetadata) {
 	t.messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().ToMapKey())
 }
 
-// solidQueueCheck traverses a milestone and checks if it is solid
-// Missing msg are requested
-// Can be aborted with abortSignal
+// SolidQueueCheck traverses a milestone and checks if it is solid.
+// Missing messages are requested.
+// Can be aborted with abortSignal.
 // all cachedMsgMetas have to be released outside.
-func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMetadata, milestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal chan struct{}) (solid bool, aborted bool) {
+func (t *Tangle) SolidQueueCheck(cachedMessageMetas map[string]*storage.CachedMetadata, milestoneIndex milestone.Index, parents hornet.MessageIDs, abortSignal chan struct{}) (solid bool, aborted bool) {
 	ts := time.Now()
 
 	msgsChecked := 0
@@ -65,7 +65,7 @@ func (t *Tangle) solidQueueCheck(cachedMessageMetas map[string]*storage.CachedMe
 	messageIDsToRequest := make(map[string]struct{})
 
 	// collect all msg to solidify by traversing the tangle
-	if err := dag.TraverseParentsOfMessage(t.storage, milestoneMessageID,
+	if err := dag.TraverseParents(t.storage, parents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -197,20 +197,20 @@ func (t *Tangle) solidifyFutureCone(cachedMsgMetas map[string]*storage.CachedMet
 					parentMsgMetaMapKey := parentMessageID.ToMapKey()
 
 					// load up msg metadata
-					cachedParentTxMeta, exists := cachedMsgMetas[parentMsgMetaMapKey]
+					cachedParentMsgMeta, exists := cachedMsgMetas[parentMsgMetaMapKey]
 					if !exists {
-						cachedParentTxMeta = t.storage.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
-						if cachedParentTxMeta == nil {
+						cachedParentMsgMeta = t.storage.GetCachedMessageMetadataOrNil(parentMessageID) // meta +1
+						if cachedParentMsgMeta == nil {
 							// parent is missing => message is not solid
 							// do not walk the future cone if the current message is not solid
 							return false, nil
 						}
 
 						// release the msg metadata at the end to speed up calculation
-						cachedMsgMetas[parentMsgMetaMapKey] = cachedParentTxMeta
+						cachedMsgMetas[parentMsgMetaMapKey] = cachedParentMsgMeta
 					}
 
-					if !cachedParentTxMeta.GetMetadata().IsSolid() {
+					if !cachedParentMsgMeta.GetMetadata().IsSolid() {
 						// parent is not solid => message is not solid
 						// do not walk the future cone if the current message is not solid
 						return false, nil
@@ -325,7 +325,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	}()
 
 	t.log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := t.solidQueueCheck(cachedMsgMetas, milestoneIndexToSolidify, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
+	if becameSolid, aborted := t.SolidQueueCheck(cachedMsgMetas, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.GetMilestone().MessageID}, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			t.log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)

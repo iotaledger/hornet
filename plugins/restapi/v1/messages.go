@@ -251,7 +251,11 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
-	if err := utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout); err == context.DeadlineExceeded {
+	// wait for at most "messageProcessedTimeout" for the message to be processed
+	ctx, cancel := context.WithTimeout(context.Background(), messageProcessedTimeout)
+	defer cancel()
+
+	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); err == context.DeadlineExceeded {
 		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
 	}
 
