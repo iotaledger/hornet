@@ -192,6 +192,9 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 	return includedBundles, nil
 }
 
+// nextMigrations queries the next existing migrations starting from milestone index startIndex.
+// It returns the migrations as well as milestone index that confirmed those migrations.
+// If there are currently no more migrations, it returns the latest milestone index that was checked.
 func (m *Validator) nextMigrations(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
 	info, err := m.api.GetNodeInfo()
 	if err != nil {
