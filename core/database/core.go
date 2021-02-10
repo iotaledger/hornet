@@ -1,12 +1,15 @@
 package database
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/kvstore/badger"
+	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -52,7 +55,16 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps pebbledeps) kvstore.KVStore {
-		return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false))
+		switch deps.NodeConfig.String(CfgDatabaseEngine) {
+		case "pebble":
+			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false))
+		case "bolt":
+			return bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db"))
+		case "badger":
+			return badger.New(database.NewBadgerDB(deps.NodeConfig.String(CfgDatabasePath)))
+		default:
+			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/badger", deps.NodeConfig.String(CfgDatabaseEngine)))
+		}
 	}); err != nil {
 		panic(err)
 	}

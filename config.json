@@ -44,6 +44,7 @@
     }
   },
   "db": {
+    "engine": "pebble",
     "path": "mainnetdb"
   },
   "snapshots": {

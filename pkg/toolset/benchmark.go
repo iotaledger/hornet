@@ -13,6 +13,7 @@ import (
 	"github.com/dustin/go-humanize"
 
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/kvstore/badger"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 
@@ -78,16 +79,16 @@ func benchmarkIO(args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [COUNT] [SIZE] [DATABASE]", ToolBenchmarkIO))
+		println(fmt.Sprintf("	%s [COUNT] [SIZE] [DB_ENGINE]", ToolBenchmarkIO))
 		println()
 		println("	[COUNT] 	- objects count (optional)")
 		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DATABASE]  - database implementation (optional, values: bolt, pebble)")
+		println("	[DB_ENGINE] - database engine (optional, values: bolt, pebble, badger)")
 	}
 
 	objectCnt := 500000
 	size := 1000
-	dbImplementation := "pebble"
+	dbEngine := "pebble"
 
 	if len(args) > 3 {
 		printUsage()
@@ -111,7 +112,7 @@ func benchmarkIO(args []string) error {
 	}
 
 	if len(args) == 3 {
-		dbImplementation = strings.ToLower(args[2])
+		dbEngine = strings.ToLower(args[2])
 	}
 
 	tempDir, err := ioutil.TempDir("", "benchmarkIO")
@@ -123,15 +124,15 @@ func benchmarkIO(args []string) error {
 
 	var store kvstore.KVStore
 
-	switch dbImplementation {
-	//case "badger":
-	//	store = badger.New(database.NewBadgerDB(tempDir))
+	switch dbEngine {
 	case "pebble":
 		store = pebble.New(database.NewPebbleDB(tempDir, false))
 	case "bolt":
 		store = bolt.New(database.NewBoltDB(tempDir, "bolt.db"))
+	case "badger":
+		store = badger.New(database.NewBadgerDB(tempDir))
 	default:
-		return fmt.Errorf("unknown database implementation: %s", dbImplementation)
+		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/bolt/badger", dbEngine)
 	}
 
 	batchWriter := kvstore.NewBatchedWriter(store)
@@ -154,7 +155,7 @@ func benchmarkIO(args []string) error {
 			bytesPerSecond := uint64(float64(bytes) / duration.Seconds())
 			objectsPerSecond := uint64(float64(i) / duration.Seconds())
 			percentage, remaining := utils.EstimateRemainingTime(ts, int64(i), int64(objectCnt))
-			fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)", humanize.Bytes(bytesPerSecond), i, size, dbImplementation, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second)))
+			fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second)))
 		}
 	}
 
@@ -174,7 +175,7 @@ func benchmarkIO(args []string) error {
 	bytesPerSecond := uint64(float64(totalBytes) / duration.Seconds())
 	objectsPerSecond := uint64(float64(objectCnt) / duration.Seconds())
 
-	fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbImplementation, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
+	fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbEngine, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
 
 	return nil
 }

@@ -45,6 +45,7 @@
     }
   },
   "db": {
+    "engine": "pebble",
     "path": "devnetdb"
   },
   "snapshots": {
