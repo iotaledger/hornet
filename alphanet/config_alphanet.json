@@ -47,6 +47,7 @@
     }
   },
   "db": {
+    "engine": "pebble",
     "path": "alphanetdb"
   },
   "snapshots": {
