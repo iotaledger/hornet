@@ -15,6 +15,7 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/typeutils"
 )
 
 const (
@@ -32,6 +33,8 @@ var (
 	ErrCantConnectToItself = errors.New("the host can't connect to itself")
 	// Returned if a peer is tried to be added to the manager which is already added.
 	ErrPeerInManagerAlready = errors.New("peer is already in manager")
+	// Returned if the manager is shutting down.
+	ErrManagerShutdown = errors.New("manager is shutting down")
 )
 
 // PeerRelation defines the type of relation to a remote peer.
@@ -193,6 +196,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		host:               host,
 		peers:              map[peer.ID]*Peer{},
 		opts:               mngOpts,
+		stopped:            typeutils.NewAtomicBool(),
 		connectPeerChan:    make(chan *connectpeermsg, 10),
 		disconnectPeerChan: make(chan *disconnectpeermsg, 10),
 		isConnectedReqChan: make(chan *isconnectedrequestmsg, 10),
@@ -217,7 +221,10 @@ type Manager struct {
 	host host.Host
 	// holds the set of peers.
 	peers map[peer.ID]*Peer
-	opts  *ManagerOptions
+	// holds the manager options.
+	opts *ManagerOptions
+	// tells whether the manager was shut down.
+	stopped *typeutils.AtomicBool
 	// event loop channels
 	connectPeerChan    chan *connectpeermsg
 	disconnectPeerChan chan *disconnectpeermsg
@@ -250,10 +257,51 @@ func (m *Manager) Start(shutdownSignal <-chan struct{}) {
 	m.Events.StateChange.Trigger(ManagerStateStopped)
 }
 
+// shutdown sets the stopped flag and drains all outstanding requests of the event loop.
+func (m *Manager) shutdown() {
+	m.stopped.Set()
+
+	// drain all outstanding requests of the event loop.
+	// we do not care about correct handling of the channels, because we are shutting down anyway.
+drainLoop:
+	for {
+		select {
+		case connectPeerMsg := <-m.connectPeerChan:
+			// do not connect to the peer
+			connectPeerMsg.back <- ErrManagerShutdown
+
+		case disconnectPeerMsg := <-m.disconnectPeerChan:
+			disconnectPeerMsg.back <- ErrManagerShutdown
+
+		case <-m.reconnectChan:
+
+		case isConnectedReqMsg := <-m.isConnectedReqChan:
+			isConnectedReqMsg.back <- false
+
+		case <-m.connectedChan:
+
+		case <-m.disconnectedChan:
+
+		case forEachMsg := <-m.forEachChan:
+			forEachMsg.back <- struct{}{}
+
+		case callMsg := <-m.callChan:
+			callMsg.back <- struct{}{}
+
+		default:
+			break drainLoop
+		}
+	}
+}
+
 // ConnectPeer connects to the given peer.
 // If the peer is considered "known", then its connection is protected from trimming.
 // Optionally an alias for the peer can be defined to better identify it afterwards.
 func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation, alias ...string) error {
+	if m.stopped.IsSet() {
+		return ErrManagerShutdown
+	}
+
 	var al string
 	if len(alias) > 0 {
 		al = alias[0]
@@ -266,6 +314,10 @@ func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation
 // DisconnectPeer disconnects the given peer.
 // If the peer is considered "known", then its connection is unprotected from future trimming.
 func (m *Manager) DisconnectPeer(peerID peer.ID, disconnectReason ...error) error {
+	if m.stopped.IsSet() {
+		return ErrManagerShutdown
+	}
+
 	back := make(chan error)
 	var reason error
 	if len(disconnectReason) > 0 {
@@ -277,6 +329,10 @@ func (m *Manager) DisconnectPeer(peerID peer.ID, disconnectReason ...error) erro
 
 // IsConnected tells whether there is a connection to the given peer.
 func (m *Manager) IsConnected(peerID peer.ID) bool {
+	if m.stopped.IsSet() {
+		return false
+	}
+
 	back := make(chan bool)
 	m.isConnectedReqChan <- &isconnectedrequestmsg{peerID: peerID, back: back}
 	return <-back
@@ -290,6 +346,10 @@ type PeerForEachFunc func(p *Peer) bool
 // ForEach calls the given PeerForEachFunc on each Peer.
 // Optionally only loops over the peers with the given filter relation.
 func (m *Manager) ForEach(f PeerForEachFunc, filter ...PeerRelation) {
+	if m.stopped.IsSet() {
+		return
+	}
+
 	back := make(chan struct{})
 	m.forEachChan <- &foreachmsg{f: f, back: back, filter: filter}
 	<-back
@@ -337,6 +397,10 @@ type PeerFunc func(p *Peer)
 // Call calls the given PeerFunc synchronized within the Manager's event loop, if the peer exists.
 // PeerFunc must not call any function on Manager.
 func (m *Manager) Call(peerID peer.ID, f PeerFunc) {
+	if m.stopped.IsSet() {
+		return
+	}
+
 	back := make(chan struct{})
 	m.callChan <- &callmsg{peerID: peerID, f: f, back: back}
 	<-back
@@ -395,6 +459,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 	for {
 		select {
 		case <-shutdownSignal:
+			m.shutdown()
 			return
 
 		case connectPeerMsg := <-m.connectPeerChan:
@@ -556,6 +621,10 @@ func (m *Manager) scheduleReconnectIfKnown(peerID peer.ID) {
 
 	delay := m.opts.reconnectDelay()
 	p.reconnectTimer = time.AfterFunc(delay, func() {
+		if m.stopped.IsSet() {
+			return
+		}
+
 		m.reconnectChan <- &reconnectmsg{peerID: peerID}
 	})
 	m.Events.ScheduledReconnect.Trigger(p, delay)
@@ -646,7 +715,7 @@ func (m *Manager) forEach(f PeerForEachFunc, filter ...PeerRelation) {
 		if len(filter) > 0 && p.Relation != filter[0] {
 			continue
 		}
-		if !f(p) {
+		if m.stopped.IsSet() || !f(p) {
 			break
 		}
 	}
@@ -704,9 +773,15 @@ type netNotifiee Manager
 func (m *netNotifiee) Listen(net network.Network, multiaddr multiaddr.Multiaddr)      {}
 func (m *netNotifiee) ListenClose(net network.Network, multiaddr multiaddr.Multiaddr) {}
 func (m *netNotifiee) Connected(net network.Network, conn network.Conn) {
+	if m.stopped.IsSet() {
+		return
+	}
 	m.connectedChan <- &connectionmsg{net: net, conn: conn}
 }
 func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn) {
+	if m.stopped.IsSet() {
+		return
+	}
 	m.disconnectedChan <- &disconnectmsg{net: net, conn: conn, reason: errors.New("connection closed by libp2p network event")}
 }
 func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream) {}

@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/multiformats/go-multiaddr"
+
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/typeutils"
+
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 // ServiceEvents are events happening around a Service.
@@ -51,12 +54,15 @@ const (
 	// StreamCancelReasonDuplicated defines a stream cancellation because
 	// it would lead to a duplicated ongoing stream.
 	StreamCancelReasonDuplicated StreamCancelReason = "duplicated stream"
-	// StreamCancelReasonUnknownPeer defines a stream cancellation because
+	// StreamCancelReasonInsufficientPeerRelation defines a stream cancellation because
 	// the relation to the other peer is insufficient.
 	StreamCancelReasonInsufficientPeerRelation StreamCancelReason = "insufficient peer relation"
-	// StreamCancelNoUnknownPeerSlotAvailable defines a stream cancellation
+	// StreamCancelReasonNoUnknownPeerSlotAvailable defines a stream cancellation
 	// because no more unknown peers slot were available.
-	StreamCancelNoUnknownPeerSlotAvailable StreamCancelReason = "no unknown peer slot available"
+	StreamCancelReasonNoUnknownPeerSlotAvailable StreamCancelReason = "no unknown peer slot available"
+	// StreamCancelReasonHostShutdown defines a stream cancellation
+	// because the host is shutting down.
+	StreamCancelReasonHostShutdown StreamCancelReason = "host shutdown"
 )
 
 const (
@@ -163,6 +169,7 @@ func NewService(
 		manager:             manager,
 		serverMetrics:       serverMetrics,
 		opts:                srvOpts,
+		stopped:             typeutils.NewAtomicBool(),
 		unknownPeers:        map[peer.ID]struct{}{},
 		inboundStreamChan:   make(chan network.Stream, 10),
 		connectedChan:       make(chan *connectionmsg, 10),
@@ -181,13 +188,20 @@ func NewService(
 // Service handles ongoing gossip streams.
 type Service struct {
 	// Events happening around a Service.
-	Events        ServiceEvents
-	host          host.Host
-	protocol      protocol.ID
-	streams       map[peer.ID]*Protocol
-	manager       *p2p.Manager
+	Events ServiceEvents
+	// the libp2p host instance from which to work with.
+	host     host.Host
+	protocol protocol.ID
+	// holds the set of protocols.
+	streams map[peer.ID]*Protocol
+	// the instance of the manager to work with.
+	manager *p2p.Manager
+	// the instance of the server metrics.
 	serverMetrics *metrics.ServerMetrics
-	opts          *ServiceOptions
+	// holds the service options.
+	opts *ServiceOptions
+	// tells whether the service was shut down.
+	stopped *typeutils.AtomicBool
 	// the amount of unknown peers with which a gossip stream is ongoing.
 	unknownPeers map[peer.ID]struct{}
 	// event loop channels
@@ -202,6 +216,10 @@ type Service struct {
 
 // Protocol returns the gossip.Protocol instance for the given peer or nil.
 func (s *Service) Protocol(peerID peer.ID) *Protocol {
+	if s.stopped.IsSet() {
+		return nil
+	}
+
 	back := make(chan *Protocol)
 	s.streamReqChan <- &streamreqmsg{peerID: peerID, back: back}
 	return <-back
@@ -214,6 +232,10 @@ type ProtocolForEachFunc func(proto *Protocol) bool
 
 // ForEach calls the given ProtocolForEachFunc on each Protocol.
 func (s *Service) ForEach(f ProtocolForEachFunc) {
+	if s.stopped.IsSet() {
+		return
+	}
+
 	back := make(chan struct{})
 	s.forEachChan <- &foreachmsg{f: f, back: back}
 	<-back
@@ -235,15 +257,27 @@ func (s *Service) SynchronizedCount(latestMilestoneIndex milestone.Index) int {
 // Start starts the Service's event loop.
 func (s *Service) Start(shutdownSignal <-chan struct{}) {
 	s.host.SetStreamHandler(s.protocol, func(stream network.Stream) {
+		if s.stopped.IsSet() {
+			return
+		}
 		s.inboundStreamChan <- stream
 	})
 	s.manager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
+		if s.stopped.IsSet() {
+			return
+		}
 		s.connectedChan <- &connectionmsg{peer: peer, conn: conn}
 	}))
 	s.manager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
+		if s.stopped.IsSet() {
+			return
+		}
 		s.disconnectedChan <- &connectionmsg{peer: peerOptErr.Peer, conn: nil}
 	}))
 	s.manager.Events.RelationUpdated.Attach(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
+		if s.stopped.IsSet() {
+			return
+		}
 		s.relationUpdatedChan <- &relationupdatedmsg{peer: peer, oldRelation: oldRel}
 	}))
 	// manage libp2p network events
@@ -251,6 +285,38 @@ func (s *Service) Start(shutdownSignal <-chan struct{}) {
 	s.eventLoop(shutdownSignal)
 	// de-register libp2p network events
 	s.host.Network().StopNotify((*netNotifiee)(s))
+}
+
+// shutdown sets the stopped flag and drains all outstanding requests of the event loop.
+func (s *Service) shutdown() {
+	s.stopped.Set()
+
+	// drain all outstanding requests of the event loop.
+	// we do not care about correct handling of the channels, because we are shutting down anyway.
+drainLoop:
+	for {
+		select {
+
+		case <-s.inboundStreamChan:
+
+		case <-s.connectedChan:
+
+		case <-s.disconnectedChan:
+
+		case <-s.streamClosedChan:
+
+		case <-s.relationUpdatedChan:
+
+		case streamReqMsg := <-s.streamReqChan:
+			streamReqMsg.back <- nil
+
+		case forEachMsg := <-s.forEachChan:
+			forEachMsg.back <- struct{}{}
+
+		default:
+			break drainLoop
+		}
+	}
 }
 
 type connectionmsg struct {
@@ -283,6 +349,7 @@ func (s *Service) eventLoop(shutdownSignal <-chan struct{}) {
 	for {
 		select {
 		case <-shutdownSignal:
+			s.shutdown()
 			return
 
 		case inboundStream := <-s.inboundStreamChan:
@@ -352,7 +419,7 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 	case !hasKnownRelation && s.opts.UnknownPeersLimit == 0:
 		cancelReason = StreamCancelReasonInsufficientPeerRelation
 	case !hasKnownRelation && len(s.unknownPeers) == s.opts.UnknownPeersLimit:
-		cancelReason = StreamCancelNoUnknownPeerSlotAvailable
+		cancelReason = StreamCancelReasonNoUnknownPeerSlotAvailable
 	}
 
 	if len(cancelReason) > 0 {
@@ -493,7 +560,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 // calls the given ProtocolForEachFunc on each protocol.
 func (s *Service) forEach(f ProtocolForEachFunc) {
 	for _, p := range s.streams {
-		if !f(p) {
+		if s.stopped.IsSet() || !f(p) {
 			break
 		}
 	}
@@ -532,6 +599,9 @@ func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn)      
 func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream)        {}
 func (m *netNotifiee) ClosedStream(net network.Network, stream network.Stream) {
 	if stream.Protocol() != m.protocol {
+		return
+	}
+	if m.stopped.IsSet() {
 		return
 	}
 	m.streamClosedChan <- &streamclosedmsg{peerID: stream.Conn().RemotePeer(), stream: stream}
