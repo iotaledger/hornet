@@ -1,10 +1,10 @@
 package test
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/dag"
@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
-	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
@@ -31,16 +30,9 @@ const (
 	SpammerTipsThresholdSemiLazy           = 30
 )
 
-var (
-	seed1, _ = hex.DecodeString("96d9ff7a79e4b0a5f3e5848ae7867064402da92a62eabb4ebbe463f12d1f3b1aace1775488f51cb1e3a80732a03ef60b111d6833ab605aa9f8faebeb33bbe3d9")
-)
-
 func TestTipSelect(t *testing.T) {
 
-	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
-	genesisAddress := genesisWallet.Address()
-
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 0, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, 1.0, false)
 	defer te.CleanupTestEnvironment(true)
 
 	serverMetrics := metrics.ServerMetrics{}

@@ -31,7 +31,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, 1.0, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -85,7 +85,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, 1.0, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -196,7 +196,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, 1.0, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -358,7 +358,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, 1.0, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -539,7 +539,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
 	genesisAddress := genesisWallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, 1.0, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
