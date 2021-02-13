@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -119,6 +120,9 @@ func configure() {
 		keyManager,
 		deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
 	)
+
+	// genesis is always a SEP
+	deps.Storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 1)
 
 	configureEvents()
 	deps.Tangle.ConfigureTangleProcessor()
