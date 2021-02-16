@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -152,7 +153,15 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		}
 	}
 
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+	var signingProvider coordinator.MilestoneSignerProvider
+	switch deps.NodeConfig.String(CfgCoordinatorSigningProvider) {
+	case "local":
+		signingProvider = coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+	case "remote":
+		signingProvider = coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress), deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+	default:
+		panic(fmt.Sprintf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider)))
+	}
 
 	powParallelism := deps.NodeConfig.Int(CfgCoordinatorPoWParallelism)
 	if powParallelism < 1 {
@@ -162,7 +171,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	coo, err := coordinator.New(
 		deps.Storage,
 		deps.NetworkID,
-		inMemoryEd25519MilestoneSignerProvider,
+		signingProvider,
 		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
 		powParallelism,

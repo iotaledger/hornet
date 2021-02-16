@@ -12,6 +12,10 @@ const (
 	CfgCoordinatorStateFilePath = "coordinator.stateFilePath"
 	// the interval milestones are issued
 	CfgCoordinatorIntervalSeconds = "coordinator.intervalSeconds"
+	// the signing provider the coordinator uses to sign a milestone (local/remote)
+	CfgCoordinatorSigningProvider = "coordinator.signing.provider"
+	// the address of the remote signing provider (insecure connection!)
+	CfgCoordinatorSigningRemoteAddress = "coordinator.signing.remoteAddress"
 	// the parallelism for PoW regarding checkpoints and milestone issuance
 	CfgCoordinatorPoWParallelism = "coordinator.powParallelism"
 	// the maximum amount of known messages for milestone tipselection
@@ -36,7 +40,9 @@ var params = &node.PluginParams{
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
 			fs.Int(CfgCoordinatorIntervalSeconds, 10, "the interval milestones are issued")
-			fs.Int(CfgCoordinatorPoWParallelism, runtime.NumCPU()-1, "the parallelism for PoW regarding checkpoints and milestone issuance")
+			fs.String(CfgCoordinatorSigningProvider, "local", "the signing provider the coordinator uses to sign a milestone (local/remote)")
+			fs.String(CfgCoordinatorSigningRemoteAddress, "localhost:12345", "the address of the remote signing provider")
+			fs.Int(CfgCoordinatorPoWParallelism, runtime.NumCPU()-1, "the parallelism for PoW regarding checkpoints and milestone issuance (insecure connection!)")
 			fs.Int(CfgCoordinatorCheckpointsMaxTrackedMessages, 10000, "maximum amount of known messages for milestone tipselection")
 			fs.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold, 20, "minimum threshold of unreferenced messages in the heaviest branch")
 			fs.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint messages with heaviest branch tips")

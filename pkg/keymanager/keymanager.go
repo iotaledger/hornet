@@ -7,11 +7,10 @@ import (
 	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 type KeyRange struct {
-	PublicKey  *iotago.MilestonePublicKey
+	PublicKey  iotago.MilestonePublicKey
 	StartIndex milestone.Index
 	EndIndex   milestone.Index
 }
@@ -24,17 +23,12 @@ func New() *KeyManager {
 	return &KeyManager{}
 }
 
-func (k *KeyManager) AddKeyRange(publicKey string, startIndex milestone.Index, endIndex milestone.Index) error {
-
-	pubKey, err := utils.ParseEd25519PublicKeyFromString(publicKey)
-	if err != nil {
-		return err
-	}
+func (k *KeyManager) AddKeyRange(publicKey ed25519.PublicKey, startIndex milestone.Index, endIndex milestone.Index) error {
 
 	var msPubKey iotago.MilestonePublicKey
-	copy(msPubKey[:], pubKey)
+	copy(msPubKey[:], publicKey)
 
-	k.keyRanges = append(k.keyRanges, &KeyRange{PublicKey: &msPubKey, StartIndex: startIndex, EndIndex: endIndex})
+	k.keyRanges = append(k.keyRanges, &KeyRange{PublicKey: msPubKey, StartIndex: startIndex, EndIndex: endIndex})
 
 	// sort by start index
 	sort.Slice(k.keyRanges, func(i int, j int) bool {
@@ -44,8 +38,8 @@ func (k *KeyManager) AddKeyRange(publicKey string, startIndex milestone.Index, e
 	return nil
 }
 
-func (k *KeyManager) GetPublicKeysForMilestoneIndex(msIndex milestone.Index) []*iotago.MilestonePublicKey {
-	var pubKeys []*iotago.MilestonePublicKey
+func (k *KeyManager) GetPublicKeysForMilestoneIndex(msIndex milestone.Index) []iotago.MilestonePublicKey {
+	var pubKeys []iotago.MilestonePublicKey
 
 	for _, pubKeyRange := range k.keyRanges {
 		if pubKeyRange.StartIndex <= msIndex {
@@ -67,7 +61,7 @@ func (k *KeyManager) GetPublicKeysSetForMilestoneIndex(msIndex milestone.Index) 
 	result := iotago.MilestonePublicKeySet{}
 
 	for _, pubKey := range pubKeys {
-		result[*pubKey] = struct{}{}
+		result[pubKey] = struct{}{}
 	}
 
 	return result
