@@ -123,11 +123,6 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			return fmt.Errorf("previous milestone does not match latest milestone in database! previous: %d, database: %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
-		if startIndex == 1 {
-			// if we bootstrap a network, NullMessageID has to be set as a solid entry point
-			coo.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), startIndex)
-		}
-
 		latestMilestoneMessageID := hornet.GetNullMessageID()
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
