@@ -93,23 +93,36 @@ func (s *MigratorService) PersistState() error {
 }
 
 // InitState initializes the state of s.
-// If initialState is not nil, s is bootstrapped using it as its initial state.
+// If msIndex is not nil, s is bootstrapped using that index as its initial state,
+// otherwise the state is loaded from file.
 // InitState must be called before Start.
-func (s *MigratorService) InitState(state *State) error {
+func (s *MigratorService) InitState(msIndex *uint32) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if state != nil {
-		// check whether the state file exists
+	var state State
+	if msIndex == nil {
+		// restore state from file
+		if err := utils.ReadFromFile(s.stateFilePath, &state); err != nil {
+			return fmt.Errorf("failed to load state file: %w", err)
+		}
+	} else {
+		// for bootstrapping the state file must not exist
 		if _, err := os.Stat(s.stateFilePath); !os.IsNotExist(err) {
 			return ErrStateFileAlreadyExists
 		}
-		s.state = *state
-		return nil
+		state = State{
+			LatestMilestoneIndex: *msIndex,
+			LatestIncludedIndex:  0,
+		}
 	}
-	if err := utils.ReadFromFile(s.stateFilePath, &s.state); err != nil {
-		return fmt.Errorf("failed to load state file: %w", err)
+
+	// validate the state
+	if state.LatestMilestoneIndex == 0 {
+		return fmt.Errorf("%w: latest milestone index must not be zero", ErrInvalidState)
 	}
+
+	s.state = state
 	return nil
 }
 
