@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	"encoding/hex"
 	"net/http"
 	"runtime"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
 
@@ -19,7 +19,6 @@ import (
 	"github.com/iotaledger/hive.go/websockethub"
 
 	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -46,41 +45,6 @@ func init() {
 }
 
 const (
-	// MsgTypeSyncStatus is the type of the SyncStatus message.
-	MsgTypeSyncStatus byte = iota
-	// MsgTypeNodeStatus is the type of the NodeStatus message.
-	MsgTypeNodeStatus
-	// MsgTypeMPSMetric is the type of the messages per second (MPS) metric message.
-	MsgTypeMPSMetric
-	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
-	MsgTypeTipSelMetric
-	// MsgTypeMs is the type of the Ms message.
-	MsgTypeMs
-	// MsgTypePeerMetric is the type of the PeerMetric message.
-	MsgTypePeerMetric
-	// MsgTypeConfirmedMsMetrics is the type of the ConfirmedMsMetrics message.
-	MsgTypeConfirmedMsMetrics
-	// MsgTypeVertex is the type of the Vertex message for the visualizer.
-	MsgTypeVertex
-	// MsgTypeSolidInfo is the type of the SolidInfo message for the visualizer.
-	MsgTypeSolidInfo
-	// MsgTypeConfirmedInfo is the type of the ConfirmedInfo message for the visualizer.
-	MsgTypeConfirmedInfo
-	// MsgTypeMilestoneInfo is the type of the MilestoneInfo message for the visualizer.
-	MsgTypeMilestoneInfo
-	// MsgTypeTipInfo is the type of the TipInfo message for the visualizer.
-	MsgTypeTipInfo
-	// MsgTypeDatabaseSizeMetric is the type of the database Size message for the metrics.
-	MsgTypeDatabaseSizeMetric
-	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
-	MsgTypeDatabaseCleanupEvent
-	// MsgTypeSpamMetrics is the type of the SpamMetric message.
-	MsgTypeSpamMetrics
-	// MsgTypeAvgSpamMetrics is the type of the AvgSpamMetric message.
-	MsgTypeAvgSpamMetrics
-)
-
-const (
 	broadcastQueueSize    = 20000
 	clientSendChannelSize = 1000
 )
@@ -97,6 +61,8 @@ var (
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
+	jwtAuth *JWTAuth
+
 	cachedMilestoneMetrics []*tangle.ConfirmedMilestoneMetric
 )
 
@@ -112,6 +78,7 @@ type dependencies struct {
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	AppInfo          *app.AppInfo
 	Host             host.Host
+	NodePrivateKey   crypto.PrivKey
 }
 
 func configure() {
@@ -124,6 +91,14 @@ func configure() {
 	}
 
 	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
+
+	jwtAuth = NewJWTAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
+		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
+		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt),
+		time.Duration(deps.NodeConfig.Int(CfgDashboardAuthSessionTimeout))*time.Minute,
+		deps.Host.ID().String(),
+		deps.NodePrivateKey,
+	)
 }
 
 func run() {
@@ -132,42 +107,6 @@ func run() {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if deps.NodeConfig.Bool(CfgDashboardBasicAuthEnabled) {
-		// grab auth info
-		expectedUsername := deps.NodeConfig.String(CfgDashboardBasicAuthUsername)
-		if len(expectedUsername) == 0 {
-			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", CfgDashboardBasicAuthUsername)
-		}
-
-		expectedPasswordHashHex := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordHash)
-		if len(expectedPasswordHashHex) != 64 {
-			log.Fatalf("'%s' must be 64 (hex encoded scrypt hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
-		}
-
-		expectedPasswordHash, err := hex.DecodeString(expectedPasswordHashHex)
-		if err != nil {
-			log.Fatalf("'%s' must be hex encoded", CfgDashboardBasicAuthPasswordHash)
-		}
-
-		passwordSaltHex := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordSalt)
-		passwordSalt, err := hex.DecodeString(passwordSaltHex)
-		if err != nil {
-			log.Fatalf("'%s' must be hex encoded", CfgDashboardBasicAuthPasswordSalt)
-		}
-
-		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username != expectedUsername {
-				return false, nil
-			}
-
-			if valid, _ := basicauth.VerifyPassword([]byte(password), []byte(passwordSalt), []byte(expectedPasswordHash)); !valid {
-				return false, nil
-			}
-
-			return true, nil
-		}))
-	}
-
 	setupRoutes(e)
 	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
@@ -175,6 +114,7 @@ func run() {
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
+		hub.BroadcastMsg(&Msg{Type: MsgTypePublicNodeStatus, Data: currentPublicNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
@@ -251,12 +191,16 @@ type SyncStatus struct {
 	LMI  milestone.Index `json:"lmi"`
 }
 
+// PublicNodeStatus represents the public node status.
+type PublicNodeStatus struct {
+	SnapshotIndex milestone.Index `json:"snapshot_index"`
+	PruningIndex  milestone.Index `json:"pruning_index"`
+	IsHealthy     bool            `json:"is_healthy"`
+	IsSynced      bool            `json:"is_synced"`
+}
+
 // NodeStatus represents the node status.
 type NodeStatus struct {
-	SnapshotIndex          milestone.Index `json:"snapshot_index"`
-	PruningIndex           milestone.Index `json:"pruning_index"`
-	IsHealthy              bool            `json:"is_healthy"`
-	IsSynced               bool            `json:"is_synced"`
 	Version                string          `json:"version"`
 	LatestVersion          string          `json:"latest_version"`
 	Uptime                 int64           `json:"uptime"`
@@ -334,6 +278,21 @@ func currentSyncStatus() *SyncStatus {
 	return &SyncStatus{LSMI: deps.Storage.GetSolidMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
 }
 
+func currentPublicNodeStatus() *PublicNodeStatus {
+	status := &PublicNodeStatus{}
+
+	status.IsHealthy = deps.Tangle.IsNodeHealthy()
+	status.IsSynced = deps.Storage.IsNodeSyncedWithThreshold()
+
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	if snapshotInfo != nil {
+		status.SnapshotIndex = snapshotInfo.SnapshotIndex
+		status.PruningIndex = snapshotInfo.PruningIndex
+	}
+
+	return status
+}
+
 func currentNodeStatus() *NodeStatus {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -350,18 +309,10 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = deps.AppInfo.Version
 	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.Storage.IsNodeSyncedWithThreshold()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
 	status.AutopeeringID = deps.Host.ID().String()
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
-
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
-	if snapshotInfo != nil {
-		status.SnapshotIndex = snapshotInfo.SnapshotIndex
-		status.PruningIndex = snapshotInfo.PruningIndex
-	}
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueQueued = queued
 	status.RequestQueuePending = pending

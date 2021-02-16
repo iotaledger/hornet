@@ -74,7 +74,16 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps hostdeps) (host.Host, error) {
+	type protoresult struct {
+		dig.Out
+
+		Host           host.Host
+		NodePrivateKey crypto.PrivKey
+	}
+
+	if err := c.Provide(func(deps hostdeps) (protoresult, error) {
+
+		res := protoresult{}
 
 		ctx := context.Background()
 
@@ -123,10 +132,13 @@ func provide(c *dig.Container) {
 		)
 
 		if err != nil {
-			return nil, fmt.Errorf("unable to initialize peer: %w", err)
+			return res, fmt.Errorf("unable to initialize peer: %w", err)
 		}
 
-		return createdHost, nil
+		res.Host = createdHost
+		res.NodePrivateKey = prvKey
+
+		return res, nil
 	}); err != nil {
 		panic(err)
 	}

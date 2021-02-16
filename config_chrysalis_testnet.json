@@ -37,11 +37,11 @@
   "dashboard": {
     "bindAddress": "localhost:8081",
     "dev": false,
-    "basicAuth": {
-      "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+    "auth": {
+      "sessionTimeoutInMinutes": 4320,
+      "username": "test",
+      "passwordHash": "6bec4583c08ec9f6fa61bc9233bc9cdde8cfb4e3d6bb24e8a8c54d425280775f",
+      "passwordSalt": "59f87e10582a8f1bb0bb6a38d5476b22b5fc7c035e8ab5edd6bb4a01c8b601be"
     }
   },
   "db": {

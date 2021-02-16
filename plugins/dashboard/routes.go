@@ -10,9 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/websockethub"
-
 	"github.com/gohornet/hornet/plugins/restapi"
 )
 
@@ -98,17 +95,6 @@ func passThroughAPIRoute(e echo.Context) error {
 	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, data)
 }
 
-func passThroughSpammerRoute(e echo.Context) error {
-	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
-
-	data, err := readDataFromURL("http://" + apiBindAddr + "/api/plugins/spammer?" + e.Request().URL.RawQuery)
-	if err != nil {
-		return err
-	}
-
-	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, data)
-}
-
 func calculateMimeType(e echo.Context) string {
 	url := e.Request().URL.String()
 
@@ -139,12 +125,48 @@ func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func loginRoute(c echo.Context) error {
+
+	type loginRequest struct {
+		JWT      string `json:"jwt"`
+		User     string `json:"user"`
+		Password string `json:"password"`
+	}
+
+	request := &loginRequest{}
+
+	if err := c.Bind(request); err != nil {
+		return errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
+	}
+
+	if len(request.JWT) > 0 {
+		// Verify JWT is still valid
+		if !jwtAuth.VerifyJWT(request.JWT) {
+			return echo.ErrUnauthorized
+		}
+	} else if !jwtAuth.VerifyUsernameAndPassword(request.User, request.Password) {
+		return echo.ErrUnauthorized
+	}
+
+	t, err := jwtAuth.IssueJWT()
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"jwt": t,
+	})
+}
+
 func setupRoutes(e *echo.Echo) {
 
 	e.Pre(enforceMaxOneDotPerURL)
 
 	e.GET("/ws", websocketRoute)
 	e.GET("/", indexRoute)
+
+	e.GET("/login", indexRoute)
+	e.POST("/login", loginRoute)
 
 	e.GET("/static/*", passThroughRoute)
 	e.GET("/branding/*", passThroughRoute)
@@ -154,8 +176,19 @@ func setupRoutes(e *echo.Echo) {
 	e.GET("/main*.js", passThroughRoute)
 
 	// Pass all the explorer request through to the local rest API
-	e.GET("/api/*", passThroughAPIRoute)
-	e.GET("/api/plugins/spammer*", passThroughSpammerRoute)
+	api := e.Group("/api/v1/")
+	api.GET("info", passThroughAPIRoute)
+	api.GET("messages*", passThroughAPIRoute)
+	api.GET("outputs*", passThroughAPIRoute)
+	api.GET("addresses*", passThroughAPIRoute)
+	api.GET("milestones*", passThroughAPIRoute)
+	api.GET("peers*", passThroughAPIRoute, jwtAuth.Middleware())
+	//TODO: add support for POST/DELETE
+	//api.POST("peers*", passThroughAPIRoute, jwtAuth.Middleware())
+	//api.DELETE("peers*", passThroughAPIRoute, jwtAuth.Middleware())
+
+	// Plugins
+	e.GET("/api/plugins/*", passThroughAPIRoute, jwtAuth.Middleware())
 
 	// Everything else fallback to index for routing.
 	e.GET("*", indexRoute)
@@ -200,115 +233,4 @@ func setupRoutes(e *echo.Echo) {
 		message = fmt.Sprintf("%s, error: %+v", message, err)
 		c.String(statusCode, message)
 	}
-}
-
-func websocketRoute(ctx echo.Context) error {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Errorf("recovered from panic within WS handle func: %s", r)
-		}
-	}()
-
-	// this function sends the initial values for some topics
-	sendInitValue := func(client *websockethub.Client, initValuesSent map[byte]struct{}, topic byte) {
-		if _, sent := initValuesSent[topic]; sent {
-			return
-		}
-		initValuesSent[topic] = struct{}{}
-
-		switch topic {
-		case MsgTypeSyncStatus:
-			client.Send(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
-
-		case MsgTypeNodeStatus:
-			client.Send(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
-
-		case MsgTypeConfirmedMsMetrics:
-			client.Send(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: cachedMilestoneMetrics})
-
-		case MsgTypeDatabaseSizeMetric:
-			client.Send(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: cachedDbSizeMetrics})
-
-		case MsgTypeDatabaseCleanupEvent:
-			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDbCleanup})
-
-		case MsgTypeMs:
-			start := deps.Storage.GetLatestMilestoneIndex()
-			for i := start - 10; i <= start; i++ {
-				if milestoneMessageID := getMilestoneMessageID(i); milestoneMessageID != nil {
-					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.ToHex(), Index: i}})
-				} else {
-					break
-				}
-			}
-		}
-	}
-
-	topicsLock := syncutils.RWMutex{}
-	registeredTopics := make(map[byte]struct{})
-	initValuesSent := make(map[byte]struct{})
-
-	hub.ServeWebsocket(ctx.Response(), ctx.Request(),
-		// onCreate gets called when the client is created
-		func(client *websockethub.Client) {
-			client.FilterCallback = func(c *websockethub.Client, data interface{}) bool {
-				msg, ok := data.(*Msg)
-				if !ok {
-					return false
-				}
-
-				topicsLock.RLock()
-				_, registered := registeredTopics[msg.Type]
-				topicsLock.RUnlock()
-				return registered
-			}
-			client.ReceiveChan = make(chan *websockethub.WebsocketMsg, 100)
-
-			go func() {
-				for {
-					select {
-					case <-client.ExitSignal:
-						// client was disconnected
-						return
-
-					case msg, ok := <-client.ReceiveChan:
-						if !ok {
-							// client was disconnected
-							return
-						}
-
-						if msg.MsgType == websockethub.BinaryMessage {
-							if len(msg.Data) < 2 {
-								continue
-							}
-
-							cmd := msg.Data[0]
-							topic := msg.Data[1]
-
-							if cmd == WebsocketCmdRegister {
-								// register topic fo this client
-								topicsLock.Lock()
-								registeredTopics[topic] = struct{}{}
-								topicsLock.Unlock()
-
-								sendInitValue(client, initValuesSent, topic)
-
-							} else if cmd == WebsocketCmdUnregister {
-								// unregister topic fo this client
-								topicsLock.Lock()
-								delete(registeredTopics, topic)
-								topicsLock.Unlock()
-							}
-						}
-					}
-				}
-			}()
-		},
-
-		// onConnect gets called when the client was registered
-		func(client *websockethub.Client) {
-			log.Info("WebSocket client connection established")
-		})
-
-	return nil
 }
