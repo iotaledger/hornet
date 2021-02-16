@@ -76,11 +76,9 @@ func TestConeRootIndexes(t *testing.T) {
 		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(messages[len(messages)-1])
 		ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, lsmi)
 
-		minOldestConeRootIndex := lsmi
-		if minOldestConeRootIndex > milestone.Index(BelowMaxDepth) {
-			minOldestConeRootIndex -= milestone.Index(BelowMaxDepth)
-		} else {
-			minOldestConeRootIndex = 1
+		minOldestConeRootIndex := milestone.Index(1)
+		if lsmi > milestone.Index(BelowMaxDepth) {
+			minOldestConeRootIndex = lsmi - milestone.Index(BelowMaxDepth)
 		}
 
 		require.GreaterOrEqual(te.TestState, uint32(ocri), uint32(minOldestConeRootIndex))
@@ -99,13 +97,6 @@ func TestConeRootIndexes(t *testing.T) {
 
 	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID())
 	ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, lsmi)
-
-	minOldestConeRootIndex := lsmi
-	if minOldestConeRootIndex > milestone.Index(BelowMaxDepth) {
-		minOldestConeRootIndex -= milestone.Index(BelowMaxDepth)
-	} else {
-		minOldestConeRootIndex = 1
-	}
 
 	// NullHash is SEP for index 0
 	require.Equal(te.TestState, uint32(0), uint32(ocri))

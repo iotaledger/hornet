@@ -117,18 +117,14 @@ func TestTipSelect(t *testing.T) {
 				}, false, nil)
 			require.NoError(te.TestState, err)
 
-			minOldestConeRootIndex := lsmi
-			if minOldestConeRootIndex > milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI) {
-				minOldestConeRootIndex -= milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI)
-			} else {
-				minOldestConeRootIndex = 1
+			minOldestConeRootIndex := milestone.Index(1)
+			if lsmi > milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI) {
+				minOldestConeRootIndex = lsmi - milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI)
 			}
 
-			minYoungestConeRootIndex := lsmi
-			if minYoungestConeRootIndex > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI) {
-				minYoungestConeRootIndex -= milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI)
-			} else {
-				minYoungestConeRootIndex = 1
+			minYoungestConeRootIndex := milestone.Index(1)
+			if lsmi > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI) {
+				minYoungestConeRootIndex = lsmi - milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI)
 			}
 
 			require.GreaterOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
