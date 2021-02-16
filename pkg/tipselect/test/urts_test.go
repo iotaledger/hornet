@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -77,11 +78,14 @@ func TestTipSelect(t *testing.T) {
 			var youngestConeRootIndex milestone.Index = 0
 			var oldestConeRootIndex milestone.Index = 0
 
+			youngestConeRootIndex = 0
+			oldestConeRootIndex = math.MaxUint32
+
 			updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
-				if (youngestConeRootIndex == 0) || (youngestConeRootIndex < ycri) {
+				if youngestConeRootIndex < ycri {
 					youngestConeRootIndex = ycri
 				}
-				if (oldestConeRootIndex == 0) || (oldestConeRootIndex > ocri) {
+				if oldestConeRootIndex > ocri {
 					oldestConeRootIndex = ocri
 				}
 			}
