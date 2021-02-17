@@ -116,9 +116,7 @@ func configure() {
 			log.Panicf("can't load public key ranges: %s", err)
 		}
 
-		if err := keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex); err != nil {
-			log.Panicf("can't load public key ranges: %s", err)
-		}
+		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 	}
 
 	deps.Storage.ConfigureMilestones(

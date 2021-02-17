@@ -9,21 +9,25 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
+// KeyRange defines a public key of a milestone including the range it is valid.
 type KeyRange struct {
 	PublicKey  iotago.MilestonePublicKey
 	StartIndex milestone.Index
 	EndIndex   milestone.Index
 }
 
+// KeyManager provides public and private keys for ranges of milestone indexes.
 type KeyManager struct {
 	keyRanges []*KeyRange
 }
 
+// New returns a new KeyManager.
 func New() *KeyManager {
 	return &KeyManager{}
 }
 
-func (k *KeyManager) AddKeyRange(publicKey ed25519.PublicKey, startIndex milestone.Index, endIndex milestone.Index) error {
+// AddKeyRange adds a new public key to the MilestoneKeyManager including its valid range.
+func (k *KeyManager) AddKeyRange(publicKey ed25519.PublicKey, startIndex milestone.Index, endIndex milestone.Index) {
 
 	var msPubKey iotago.MilestonePublicKey
 	copy(msPubKey[:], publicKey)
@@ -34,10 +38,9 @@ func (k *KeyManager) AddKeyRange(publicKey ed25519.PublicKey, startIndex milesto
 	sort.Slice(k.keyRanges, func(i int, j int) bool {
 		return k.keyRanges[i].StartIndex < k.keyRanges[j].StartIndex
 	})
-
-	return nil
 }
 
+// GetPublicKeysForMilestoneIndex returns the valid public keys for a certain milestone index.
 func (k *KeyManager) GetPublicKeysForMilestoneIndex(msIndex milestone.Index) []iotago.MilestonePublicKey {
 	var pubKeys []iotago.MilestonePublicKey
 
@@ -55,6 +58,7 @@ func (k *KeyManager) GetPublicKeysForMilestoneIndex(msIndex milestone.Index) []i
 	return pubKeys
 }
 
+// GetPublicKeysSetForMilestoneIndex returns a set of valid public keys for a certain milestone index.
 func (k *KeyManager) GetPublicKeysSetForMilestoneIndex(msIndex milestone.Index) iotago.MilestonePublicKeySet {
 	pubKeys := k.GetPublicKeysForMilestoneIndex(msIndex)
 
@@ -67,7 +71,8 @@ func (k *KeyManager) GetPublicKeysSetForMilestoneIndex(msIndex milestone.Index) 
 	return result
 }
 
-func (k *KeyManager) GetKeyPairsForMilestoneIndex(msIndex milestone.Index, privateKeys []ed25519.PrivateKey, milestonePublicKeysCount int) iotago.MilestonePublicKeyMapping {
+// GetMilestonePublicKeyMappingForMilestoneIndex returns a MilestonePublicKeyMapping for a certain milestone index.
+func (k *KeyManager) GetMilestonePublicKeyMappingForMilestoneIndex(msIndex milestone.Index, privateKeys []ed25519.PrivateKey, milestonePublicKeysCount int) iotago.MilestonePublicKeyMapping {
 	pubKeySet := k.GetPublicKeysSetForMilestoneIndex(msIndex)
 
 	result := iotago.MilestonePublicKeyMapping{}

@@ -48,7 +48,7 @@ func (p *InMemoryEd25519MilestoneSignerProvider) MilestoneIndexSigner(index mile
 
 	pubKeySet := p.keyManger.GetPublicKeysSetForMilestoneIndex(index)
 
-	keyPairs := p.keyManger.GetKeyPairsForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
+	keyPairs := p.keyManger.GetMilestonePublicKeyMappingForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
 	pubKeys := make([]iotago.MilestonePublicKey, 0, len(keyPairs))
 	for pubKey := range keyPairs {
 		pubKeys = append(pubKeys, pubKey)
