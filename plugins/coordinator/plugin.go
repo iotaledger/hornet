@@ -120,11 +120,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, ErrDatabaseTainted
 	}
 
-	privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
-	if err != nil {
-		return nil, err
-	}
-
 	// use the heaviest branch tip selection for the milestones
 	selector = mselection.New(
 		deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
@@ -143,24 +138,35 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	belowMaxDepth = milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth))
 
-	if len(privateKeys) == 0 {
-		return nil, errors.New("no private keys given")
-	}
-
-	for _, privateKey := range privateKeys {
-		if len(privateKey) != ed25519.PrivateKeySize {
-			return nil, errors.New("wrong private key length")
-		}
-	}
-
 	var signingProvider coordinator.MilestoneSignerProvider
 	switch deps.NodeConfig.String(CfgCoordinatorSigningProvider) {
 	case "local":
+		privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
+		if err != nil {
+			return nil, err
+		}
+
+		if len(privateKeys) == 0 {
+			return nil, errors.New("no private keys given")
+		}
+
+		for _, privateKey := range privateKeys {
+			if len(privateKey) != ed25519.PrivateKeySize {
+				return nil, errors.New("wrong private key length")
+			}
+		}
+
 		signingProvider = coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+
 	case "remote":
-		signingProvider = coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress), deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		remoteEndpoint := deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress)
+		if remoteEndpoint == "" {
+			return nil, errors.New("no address given for remote signing provider")
+		}
+		signingProvider = coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+
 	default:
-		panic(fmt.Sprintf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider)))
+		return nil, fmt.Errorf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider))
 	}
 
 	powParallelism := deps.NodeConfig.Int(CfgCoordinatorPoWParallelism)
