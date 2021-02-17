@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/blang/vfs/memfs"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/stretchr/testify/require"
 
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -217,14 +218,54 @@ type msDiffRetrieverFunc func() []*snapshot.MilestoneDiff
 
 func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRetrieverFunc) {
 	var generateMsDiffs []*snapshot.MilestoneDiff
+	pub, prv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	var mappingPubKey iotago.MilestonePublicKey
+	copy(mappingPubKey[:], pub)
+	pubKeys := []iotago.MilestonePublicKey{mappingPubKey}
+
+	keyMapping := iotago.MilestonePublicKeyMapping{}
+	keyMapping[mappingPubKey] = prv
+
 	return func() (*snapshot.MilestoneDiff, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
 
+			parents := iotago.MilestoneParentMessageIDs{rand32ByteHash()}
+			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, rand32ByteHash(), pubKeys)
+			if err != nil {
+				panic(err)
+			}
+
+			treasuryInput := &iotago.TreasuryInput{}
+			copy(treasuryInput[:], randBytes(32))
+			ed25519Addr, _ := randEd25519Addr()
+			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
+			copy(migratedFundsEntry.TailTransactionHash[:], randBytes(49))
+			receipt, err := iotago.NewReceiptBuilder(ms.Index).
+				AddTreasuryTransaction(&iotago.TreasuryTransaction{
+					Input:  treasuryInput,
+					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
+				}).
+				AddEntry(migratedFundsEntry).
+				Build()
+			if err != nil {
+				panic(err)
+			}
+
+			ms.Receipt = receipt
+
+			if err := ms.Sign(iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
+				panic(err)
+			}
+
 			msDiff := &snapshot.MilestoneDiff{
-				MilestoneIndex: milestone.Index(rand.Int63()),
+				Milestone: ms,
 			}
 
 			createdCount := rand.Intn(500) + 1
@@ -241,10 +282,6 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 				MilestoneID: rand32ByteHash(),
 				Amount:      uint64(rand.Intn(1000)),
 				Spent:       true, // doesn't matter
-			}
-			msDiff.TreasuryOutput = &utxo.TreasuryOutput{
-				MilestoneID: rand32ByteHash(),
-				Amount:      uint64(rand.Intn(1000)),
 			}
 
 			generateMsDiffs = append(generateMsDiffs, msDiff)
@@ -293,6 +330,13 @@ func randMessageID() hornet.MessageID {
 func rand32ByteHash() [iotago.TransactionIDLength]byte {
 	var h [iotago.TransactionIDLength]byte
 	b := randBytes(32)
+	copy(h[:], b)
+	return h
+}
+
+func rand49ByteHash() iotago.LegacyTailTransactionHash {
+	var h iotago.LegacyTailTransactionHash
+	b := randBytes(49)
 	copy(h[:], b)
 	return h
 }

@@ -132,8 +132,8 @@ func (u *Manager) readUnspentTreasuryOutputWithoutLocking(msHash []byte) (*Treas
 	return to, nil
 }
 
-// AddTreasuryOutput adds the given treasury output to the database.
-func (u *Manager) AddTreasuryOutput(to *TreasuryOutput) error {
+// StoreTreasuryOutput adds the given treasury output to the database.
+func (u *Manager) StoreTreasuryOutput(to *TreasuryOutput) error {
 	return u.utxoStorage.Set(to.kvStorableKey(), to.kvStorableValue())
 }
 
@@ -173,8 +173,10 @@ func (u *Manager) UnspentTreasuryOutput() (*TreasuryOutput, error) {
 	return unspentTreasuryOutput, nil
 }
 
+// TreasuryOutputConsumer is a function that consumes an output.
 type TreasuryOutputConsumer func(output *TreasuryOutput) bool
 
+// ForEachTreasuryOutput iterates over all stored treasury outputs.
 func (u *Manager) ForEachTreasuryOutput(consumer TreasuryOutputConsumer, options ...UTXOIterateOption) error {
 
 	opt := iterateOptions(options)

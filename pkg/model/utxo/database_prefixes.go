@@ -8,6 +8,7 @@ const (
 	UTXOStoreKeyPrefixMilestoneDiffs       byte = 4
 	UTXOStoreKeyPrefixBalances             byte = 5
 	UTXOStoreKeyPrefixTreasuryOutput       byte = 6
+	UTXOStoreKeyPrefixReceipts             byte = 7
 )
 
 /*
@@ -62,6 +63,12 @@ const (
    Key:
        UTXOStoreKeyPrefixTreasuryOutput + spent  + milestone hash
                    1 byte               + 1 byte +    32 bytes
+
+   Receipts:
+   =======
+   Key:
+       UTXOStoreKeyPrefixReceipts + migrated_at_index  + milestone_index
+                   1 byte         +      32 byte       +    32 bytes
 
    Value:
        Amount

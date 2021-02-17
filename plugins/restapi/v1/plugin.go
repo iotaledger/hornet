@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
@@ -210,7 +209,6 @@ type dependencies struct {
 	PoWHandler       *pow.Handler
 	MessageProcessor *gossip.MessageProcessor
 	Snapshot         *snapshot.Snapshot
-	ReceiptService   *migrator.ReceiptService `optional:"true"`
 	AppInfo          *app.AppInfo
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
@@ -373,24 +371,22 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	if deps.ReceiptService != nil {
-		routeGroup.GET(RouteReceipts, func(c echo.Context) error {
-			resp, err := receipts(c)
-			if err != nil {
-				return err
-			}
+	routeGroup.GET(RouteReceipts, func(c echo.Context) error {
+		resp, err := receipts(c)
+		if err != nil {
+			return err
+		}
 
-			return restapi.JSONResponse(c, http.StatusOK, resp)
-		})
-		routeGroup.GET(RouteReceiptsMigratedAtIndex, func(c echo.Context) error {
-			resp, err := receiptsByMigratedAtIndex(c)
-			if err != nil {
-				return err
-			}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+	routeGroup.GET(RouteReceiptsMigratedAtIndex, func(c echo.Context) error {
+		resp, err := receiptsByMigratedAtIndex(c)
+		if err != nil {
+			return err
+		}
 
-			return restapi.JSONResponse(c, http.StatusOK, resp)
-		})
-	}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
 		resp, err := getPeer(c)

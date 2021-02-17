@@ -101,7 +101,10 @@
     }
   },
   "receipts": {
-    "path": "./receipts",
+    "backup": {
+      "enabled": false,
+      "folder": "./receipts"
+    },
     "validator": {
       "validate": false,
       "api": {

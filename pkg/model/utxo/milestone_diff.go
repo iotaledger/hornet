@@ -154,12 +154,10 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 //- DB helpers
 
 func storeDiff(diff *MilestoneDiff, mutations kvstore.BatchedMutations) error {
-
 	return mutations.Set(diff.kvStorableKey(), diff.kvStorableValue())
 }
 
 func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
-
 	return mutations.Delete(milestoneDiffKeyForIndex(msIndex))
 }
 

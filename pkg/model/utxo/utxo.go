@@ -49,7 +49,7 @@ func (u *Manager) WriteUnlockLedger() {
 	u.utxoLock.Unlock()
 }
 
-func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index) error {
+func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
 
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
@@ -76,6 +76,16 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index) error {
 	if err := deleteDiff(msIndex, mutations); err != nil {
 		mutations.Cancel()
 		return err
+	}
+
+	// TODO: delete treasury output?
+
+	if len(receiptMigratedAtIndex) > 0 {
+		placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
+		if err := deleteReceipt(placeHolder, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
 	}
 
 	return mutations.Commit()
@@ -127,7 +137,7 @@ type TreasuryMutationTuple struct {
 	SpentOutput *TreasuryOutput
 }
 
-func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
+func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 
 	mutations := u.utxoStorage.Batched()
 
@@ -153,6 +163,13 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		Index:   msIndex,
 		Outputs: newOutputs,
 		Spents:  newSpents,
+	}
+
+	if rt != nil {
+		if err := storeReceipt(rt, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
 	}
 
 	if tm != nil {
@@ -189,15 +206,14 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 	return mutations.Commit()
 }
 
-func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
-
+func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	return u.ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm)
+	return u.ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm, rt)
 }
 
-func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
+func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 
 	mutations := u.utxoStorage.Batched()
 
@@ -221,6 +237,13 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 			return err
 		}
 		if err := deleteFromUnspent(output, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	if rt != nil {
+		if err := deleteReceipt(rt, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -256,11 +279,11 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 	return mutations.Commit()
 }
 
-func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple) error {
+func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm)
+	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm, rt)
 }
 
 func (u *Manager) CheckLedgerState() error {

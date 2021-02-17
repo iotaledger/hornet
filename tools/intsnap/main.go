@@ -17,6 +17,30 @@ func main() {
 	writeDeltaSnapshot()
 }
 
+// for the testing purposes it doesn't actually matter
+// whether the milestones are correct. therefore the milestone is just
+// filled with enough data that it still passes deserialization with validation.
+func blankMilestone(index uint32) *iotago.Milestone {
+	return &iotago.Milestone{
+		Index:     index,
+		Timestamp: 0,
+		Receipt:   nil,
+		Parents: iotago.MilestoneParentMessageIDs{
+			static32ByteID(0),
+			static32ByteID(1),
+		},
+		InclusionMerkleProof: static32ByteID(2),
+		PublicKeys: []iotago.MilestonePublicKey{
+			static32ByteID(0),
+			static32ByteID(1),
+		},
+		Signatures: []iotago.MilestoneSignature{
+			static64ByteID(0),
+			static64ByteID(1),
+		},
+	}
+}
+
 var fullSnapshotHeader = &snapshot.FileHeader{
 	Version:              snapshot.SupportedFormatVersion,
 	Type:                 snapshot.Full,
@@ -50,7 +74,7 @@ var fullSnapshotOutputs = []*snapshot.Output{
 
 var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
-		MilestoneIndex: 3,
+		Milestone: blankMilestone(3),
 		Created: []*snapshot.Output{
 			{
 				MessageID:  static32ByteID(6),
@@ -91,7 +115,7 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 		},
 	},
 	{
-		MilestoneIndex: 2,
+		Milestone: blankMilestone(2),
 		Created: []*snapshot.Output{
 			{
 				MessageID:  static32ByteID(4),
@@ -182,7 +206,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	fullSnapshotMsDiffs[1],
 	fullSnapshotMsDiffs[0],
 	{
-		MilestoneIndex: 4,
+		Milestone: blankMilestone(4),
 		Created: []*snapshot.Output{
 			{
 				MessageID:  static32ByteID(8),
@@ -223,16 +247,33 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 		},
 	},
 	{
-		MilestoneIndex: 5,
+		// milestone 5 has a receipt
+		Milestone: func() *iotago.Milestone {
+			ms := blankMilestone(5)
+			ttx := &iotago.TreasuryTransaction{
+				Input: &iotago.TreasuryInput{},
+				Output: &iotago.TreasuryOutput{
+					Amount: originTreasurySupply - 10_000_000,
+				},
+			}
+			receipt, err := iotago.NewReceiptBuilder(9001).
+				AddTreasuryTransaction(ttx).
+				AddEntry(&iotago.MigratedFundsEntry{
+					TailTransactionHash: iotago.LegacyTailTransactionHash{},
+					Address:             &iotago.Ed25519Address{},
+					Deposit:             10_000_000,
+				}).
+				Build()
+			if err != nil {
+				panic(err)
+			}
+			ms.Receipt = receipt
+			return ms
+		}(),
 		SpentTreasuryOutput: &utxo.TreasuryOutput{
 			MilestoneID: iotago.MilestoneID{},
 			Amount:      originTreasurySupply,
 			Spent:       true,
-		},
-		TreasuryOutput: &utxo.TreasuryOutput{
-			MilestoneID: iotago.MilestoneID{1, 2, 3},
-			Amount:      originTreasurySupply - 10_000_000,
-			Spent:       false,
 		},
 		Created: []*snapshot.Output{
 			{
@@ -305,6 +346,14 @@ func randMsgID() hornet.MessageID {
 	b := make(hornet.MessageID, 32)
 	_, err := rand.Read(b[:])
 	must(err)
+	return b
+}
+
+func static64ByteID(fill byte) [64]byte {
+	var b [64]byte
+	for i := 0; i < len(b); i++ {
+		b[i] = fill
+	}
 	return b
 }
 

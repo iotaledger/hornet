@@ -243,7 +243,7 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	map2 := mapdb.NewMapDB()
 	u2 := utxo.New(map2)
 
-	// Fill the first UTXO manager with some data
+	// fill the first UTXO manager with some data
 	var startIndex milestone.Index = 1000
 	var targetIndex milestone.Index = 1050
 	msIterator := newMsIndexIterator(MsDiffDirectionOnwards, startIndex, targetIndex)
@@ -266,16 +266,18 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 			randomSpent(outputs[2], msIndex),
 		}
 
-		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil))
+		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 	}
 
-	producerU1 := newMsDiffsProducer(u1, MsDiffDirectionOnwards, startIndex, targetIndex)
+	producerU1 := newMsDiffsProducer(func(index milestone.Index) *iotago.Milestone {
+		return &iotago.Milestone{Index: uint32(index)}
+	}, u1, MsDiffDirectionOnwards, startIndex, targetIndex)
 	consumerU2 := newMsDiffConsumer(u2)
 
 	err := u2.StoreLedgerIndex(startIndex)
 	require.NoError(t, err)
 
-	// Produce milestone diffs from UTXO manager 1 and apply them to UTXO manager 2 by consuming
+	// produce milestone diffs from UTXO manager 1 and apply them to UTXO manager 2 by consuming
 	for {
 		msDiff, err := producerU1()
 		require.NoError(t, err)

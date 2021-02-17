@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -366,21 +365,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	var validateAndStoreReceipt func(r *iotago.Receipt) error
-	if t.receiptService != nil {
-		validateAndStoreReceipt = func(r *iotago.Receipt) error {
-			if t.receiptService.ValidationEnabled {
-				if err := t.receiptService.Validate(r); err != nil {
-					return fmt.Errorf("unable to confirm milestone due to receipt validation failure: %w", err)
-				}
-			}
-			if err := t.receiptService.Store(r); err != nil {
-				return fmt.Errorf("unable to confirm milestone due to receipt persistance failure: %w", err)
-			}
-			return nil
-		}
-	}
-
 	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
@@ -397,7 +381,23 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		},
 		func(spent *utxo.Spent) {
 			t.Events.NewUTXOSpent.Trigger(spent)
-		}, validateAndStoreReceipt)
+		},
+		func(rt *utxo.ReceiptTuple) error {
+			if t.receiptService != nil {
+				if t.receiptService.ValidationEnabled {
+					if err := t.receiptService.Validate(rt.Receipt); err != nil {
+						return fmt.Errorf("unable to confirm milestone due to receipt validation failure: %w", err)
+					}
+				}
+				if t.receiptService.BackupEnabled {
+					if err := t.receiptService.Backup(rt); err != nil {
+						return fmt.Errorf("unable to confirm milestone due to receipt backup failure: %w", err)
+					}
+				}
+			}
+			t.Events.NewReceipt.Trigger(rt.Receipt)
+			return nil
+		})
 
 	if err != nil {
 		t.log.Panic(err)

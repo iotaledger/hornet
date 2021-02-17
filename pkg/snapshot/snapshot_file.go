@@ -116,79 +116,93 @@ func (s *Spent) MarshalBinary() ([]byte, error) {
 	return byteutils.ConcatBytes(bytes, s.TargetTransactionID[:]), nil
 }
 
-// MilestoneDiff represents the outputs which were created and consumed for the given milestone.
+// MilestoneDiff represents the outputs which were created and consumed for the given milestone
+// and the message itself which contains the milestone.
 type MilestoneDiff struct {
-	// The index of the milestone for which the diff applies.
-	MilestoneIndex milestone.Index `json:"milestone_index"`
+	// The milestone payload itself.
+	Milestone *iotago.Milestone `json:"milestone"`
 	// The created outputs with this milestone.
 	Created []*Output `json:"created"`
 	// The consumed spents with this milestone.
 	Consumed []*Spent `json:"consumed"`
-	// The created treasury output with this milestone.
-	TreasuryOutput *utxo.TreasuryOutput
 	// The consumed treasury output with this milestone.
 	SpentTreasuryOutput *utxo.TreasuryOutput
 }
 
+// TreasuryOutput extracts the new treasury output from within the milestone receipt.
+// Might return nil if there is no receipt within the milestone.
+func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
+	if md.Milestone.Receipt == nil {
+		return nil
+	}
+	to := md.Milestone.Receipt.(*iotago.Receipt).
+		Transaction.(*iotago.TreasuryTransaction).
+		Output.(*iotago.TreasuryOutput)
+	msID, err := md.Milestone.ID()
+	if err != nil {
+		panic(err)
+	}
+	utxoTo := &utxo.TreasuryOutput{Amount: to.Amount}
+	copy(utxoTo.MilestoneID[:], msID[:])
+	return utxoTo
+}
+
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
-	if err := binary.Write(&b, binary.LittleEndian, md.MilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to write milestone index for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
+
+	msBytes, err := md.Milestone.Serialize(iotago.DeSeriModePerformValidation)
+	if err != nil {
+		return nil, fmt.Errorf("unable to serialize milestone for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+	}
+
+	if err := binary.Write(&b, binary.LittleEndian, uint32(len(msBytes))); err != nil {
+		return nil, fmt.Errorf("unable to write milestone payload length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+	}
+
+	if _, err := b.Write(msBytes); err != nil {
+		return nil, fmt.Errorf("unable to write milestone payload for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+	}
+
+	// write in spent treasury output
+	if md.Milestone.Receipt != nil {
+		if md.SpentTreasuryOutput == nil {
+			panic("milestone diff includes a receipt but no spent treasury output is set")
+		}
+		if _, err := b.Write(md.SpentTreasuryOutput.MilestoneID[:]); err != nil {
+			return nil, fmt.Errorf("unable to write treasury input milestone hash for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+		}
+
+		if err := binary.Write(&b, binary.LittleEndian, md.SpentTreasuryOutput.Amount); err != nil {
+			return nil, fmt.Errorf("unable to write treasury input amount for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+		}
 	}
 
 	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Created))); err != nil {
-		return nil, fmt.Errorf("unable to write created outputs array length for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
+		return nil, fmt.Errorf("unable to write created outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
 	for x, output := range md.Created {
 		outputBytes, err := output.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("unable to serialize output %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to serialize output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 		if _, err := b.Write(outputBytes); err != nil {
-			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 	}
 
 	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Consumed))); err != nil {
-		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
+		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
 	for x, spent := range md.Consumed {
 		spentBytes, err := spent.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("unable to serialize spent %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to serialize spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 		if _, err := b.Write(spentBytes); err != nil {
-			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
-	}
-
-	if md.TreasuryOutput == nil {
-		if err := b.WriteByte(0); err != nil {
-			return nil, fmt.Errorf("unable to write treasury flag for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
-		}
-		return b.Bytes(), nil
-	}
-
-	if err := b.WriteByte(1); err != nil {
-		return nil, fmt.Errorf("unable to write treasury flag for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
-	}
-
-	if _, err := b.Write(md.SpentTreasuryOutput.MilestoneID[:]); err != nil {
-		return nil, fmt.Errorf("unable to write treasury input milestone hash for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
-	}
-
-	if err := binary.Write(&b, binary.LittleEndian, md.SpentTreasuryOutput.Amount); err != nil {
-		return nil, fmt.Errorf("unable to write treasury input amount for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
-	}
-
-	if _, err := b.Write(md.TreasuryOutput.MilestoneID[:]); err != nil {
-		return nil, fmt.Errorf("unable to write treasury output milestone hash for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
-	}
-
-	if err := binary.Write(&b, binary.LittleEndian, md.TreasuryOutput.Amount); err != nil {
-		return nil, fmt.Errorf("unable to write treasury output amount for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
 	}
 
 	return b.Bytes(), nil
@@ -500,8 +514,34 @@ func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 	msDiff := &MilestoneDiff{}
 
-	if err := binary.Read(reader, binary.LittleEndian, &msDiff.MilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff ms-index: %w", err)
+	var msLength uint32
+	if err := binary.Read(reader, binary.LittleEndian, &msLength); err != nil {
+		return nil, fmt.Errorf("unable to read LS ms-diff ms length: %w", err)
+	}
+
+	msBytes := make([]byte, msLength)
+	ms := &iotago.Milestone{}
+	if _, err := io.ReadFull(reader, msBytes); err != nil {
+		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
+	}
+
+	if _, err := ms.Deserialize(msBytes, iotago.DeSeriModePerformValidation); err != nil {
+		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
+	}
+
+	msDiff.Milestone = ms
+
+	if ms.Receipt != nil {
+		spentTreasuryOutput := &utxo.TreasuryOutput{Spent: true}
+		if _, err := io.ReadFull(reader, spentTreasuryOutput.MilestoneID[:]); err != nil {
+			return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone hash: %w", err)
+		}
+
+		if err := binary.Read(reader, binary.LittleEndian, &spentTreasuryOutput.Amount); err != nil {
+			return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone amount: %w", err)
+		}
+
+		msDiff.SpentTreasuryOutput = spentTreasuryOutput
 	}
 
 	var createdCount, consumedCount uint64
@@ -530,36 +570,6 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		}
 		msDiff.Consumed[i] = diffConsumedSpent
 	}
-
-	hasTreasuryTx := make([]byte, 1)
-	if _, err := io.ReadFull(reader, hasTreasuryTx); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff treasury tx flag: %w", err)
-	}
-
-	if hasTreasuryTx[0] == 0 {
-		return msDiff, nil
-	}
-
-	spentTreasuryOutput := &utxo.TreasuryOutput{Spent: true}
-	if _, err := io.ReadFull(reader, spentTreasuryOutput.MilestoneID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone hash: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &spentTreasuryOutput.Amount); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone amount: %w", err)
-	}
-
-	msDiff.SpentTreasuryOutput = spentTreasuryOutput
-
-	treasuryOutput := &utxo.TreasuryOutput{}
-	if _, err := io.ReadFull(reader, treasuryOutput.MilestoneID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff treasury output milestone hash: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &treasuryOutput.Amount); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff treasury output milestone amount: %w", err)
-	}
-	msDiff.TreasuryOutput = treasuryOutput
 
 	return msDiff, nil
 }

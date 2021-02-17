@@ -7,15 +7,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strconv"
-	"strings"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
-	receiptFilePattern = "%d.%d.bin"
+	receiptFilePattern = "%d.%d.json"
 )
 
 var (
@@ -31,196 +30,51 @@ type ReceiptValidateFunc func(r *iotago.Receipt) error
 
 // ReceiptService is in charge of persisting and validating a batch of receipts.
 type ReceiptService struct {
+	// Whether the service is configured to back up receipts.
+	BackupEnabled bool
 	// Whether the service is configured to validate receipts.
 	ValidationEnabled bool
+	backupFolder      string
 	validator         *Validator
-	// the path under which the receipts are stored
-	path string
+	utxoManager       *utxo.Manager
 }
 
 // NewReceiptService creates a new ReceiptService.
-func NewReceiptService(v *Validator, validationEnabled bool, receiptsPath string) *ReceiptService {
+func NewReceiptService(v *Validator, utxoManager *utxo.Manager, validationEnabled bool, backupEnabled bool, backupFolder string) *ReceiptService {
 	return &ReceiptService{
 		ValidationEnabled: validationEnabled,
+		BackupEnabled:     backupEnabled,
+		utxoManager:       utxoManager,
 		validator:         v,
-		path:              receiptsPath,
+		backupFolder:      backupFolder,
 	}
 }
 
 // Init initializes the ReceiptService and returns the amount of receipts currently stored.
 func (rs *ReceiptService) Init() error {
-	if err := os.MkdirAll(rs.path, 0666); err != nil {
+	if !rs.BackupEnabled {
+		return nil
+	}
+	if err := os.MkdirAll(rs.backupFolder, 0666); err != nil {
 		return err
 	}
 	return nil
 }
 
-// NumReceiptsStored returns the number of receipts stored.
-func (rs *ReceiptService) NumReceiptsStored() (int, error) {
-	fileInfos, err := rs.receiptFileInfos()
-	if err != nil {
-		return 0, err
+// Backup backups the given receipt to disk.
+func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
+	if !rs.BackupEnabled {
+		panic("receipt service is not configured to backup receipts")
 	}
-
-	var receiptsCount int
-	for _, fileInfo := range fileInfos {
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		msIndex, _ := receiptFileNameToIndices(fileInfo.Name())
-		if msIndex == notAReceiptIndex {
-			continue
-		}
-		receiptsCount++
-	}
-
-	return receiptsCount, nil
-}
-
-// Receipts returns all stored receipts.
-func (rs *ReceiptService) Receipts() ([]*iotago.Receipt, error) {
-	return rs.receipts(nil, nil)
-}
-
-// ReceiptsByMigratedAtIndex returns the receipts for the given legacy milestone index.
-func (rs *ReceiptService) ReceiptsByMigratedAtIndex(migratedAtIndex uint32) ([]*iotago.Receipt, error) {
-	return rs.receipts(func(msIndex int) bool {
-		return uint32(msIndex) == migratedAtIndex
-	}, nil)
-}
-
-// receipts returns the receipts which pass the filters.
-// filters can be nil to retrieve all receipts.
-func (rs *ReceiptService) receipts(msIndexFilter func(msIndex int) bool, receiptFilter func(r *iotago.Receipt) bool) ([]*iotago.Receipt, error) {
-	fileInfos, err := rs.receiptFileInfos()
-	if err != nil {
-		return nil, err
-	}
-
-	receipts := make([]*iotago.Receipt, 0)
-	for _, fileInfo := range fileInfos {
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		msIndex, _ := receiptFileNameToIndices(fileInfo.Name())
-		if msIndex == notAReceiptIndex {
-			continue
-		}
-
-		if msIndexFilter != nil && !msIndexFilter(msIndex) {
-			continue
-		}
-
-		receiptBytes, err := ioutil.ReadFile(path.Join(rs.path, fileInfo.Name()))
-		if err != nil {
-			return nil, fmt.Errorf("unable to read receipt '%s': %w", fileInfo.Name(), err)
-		}
-
-		r := &iotago.Receipt{}
-		if _, err := r.Deserialize(receiptBytes, iotago.DeSeriModePerformValidation); err != nil {
-			return nil, fmt.Errorf("invalid stored receipt '%s': %w", fileInfo.Name(), err)
-		}
-
-		if receiptFilter != nil && !receiptFilter(r) {
-			continue
-		}
-
-		receipts = append(receipts, r)
-	}
-	return receipts, nil
-}
-
-// Store stores the given receipt.
-func (rs *ReceiptService) store(r *iotago.Receipt, receiptIndex int) error {
-	receiptFileName := path.Join(rs.path, fmt.Sprintf(receiptFilePattern, r.MigratedAt, receiptIndex))
-	receiptBytes, err := r.Serialize(iotago.DeSeriModePerformValidation)
+	receiptFileName := path.Join(rs.backupFolder, fmt.Sprintf(receiptFilePattern, r.Receipt.MigratedAt, r.MilestoneIndex))
+	receiptJSON, err := r.Receipt.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(receiptFileName, receiptBytes, 0666); err != nil {
+	if err := ioutil.WriteFile(receiptFileName, receiptJSON, 0666); err != nil {
 		return fmt.Errorf("unable to persist receipt onto disk: %w", err)
 	}
 	return nil
-}
-
-const notAReceiptIndex = -1
-
-func receiptFileNameToIndices(fileName string) (msIndex int, receiptIndex int) {
-	split := strings.Split(fileName, ".")
-	if len(split) != 3 {
-		return notAReceiptIndex, notAReceiptIndex
-	}
-
-	var err error
-	msIndex, err = strconv.Atoi(split[0])
-	if err != nil {
-		return notAReceiptIndex, notAReceiptIndex
-	}
-
-	receiptIndex, err = strconv.Atoi(split[1])
-	if err != nil {
-		return notAReceiptIndex, notAReceiptIndex
-	}
-
-	return msIndex, receiptIndex
-}
-
-// retrieves the file infos from files within the receipts folder.
-func (rs *ReceiptService) receiptFileInfos() ([]os.FileInfo, error) {
-	fileInfos, err := ioutil.ReadDir(rs.path)
-	if err != nil {
-		return nil, fmt.Errorf("unable to query files within receipt folder: %w", err)
-	}
-	return fileInfos, nil
-}
-
-// returns the latest legacy milestone index and the index of receipt.
-func (rs *ReceiptService) latestIndex() (msIndex int, receiptIndex int, err error) {
-	fileInfos, err := rs.receiptFileInfos()
-	if err != nil {
-		return 0, 0, err
-	}
-
-	var hMsIndex, hReceiptIndex int
-	for _, fileInfo := range fileInfos {
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		msIndex, receiptIndex := receiptFileNameToIndices(fileInfo.Name())
-		if msIndex == notAReceiptIndex {
-			continue
-		}
-
-		if msIndex > hMsIndex {
-			hMsIndex = msIndex
-			hReceiptIndex = 0
-			continue
-		}
-
-		if msIndex == hMsIndex && receiptIndex > hReceiptIndex {
-			hReceiptIndex = receiptIndex
-		}
-	}
-
-	return hMsIndex, hReceiptIndex, nil
-}
-
-// Store stores the given receipt to disk.
-func (rs *ReceiptService) Store(r *iotago.Receipt) error {
-	hMsIndex, hReceiptIndex, err := rs.latestIndex()
-	if err != nil {
-		return fmt.Errorf("unable to determine latest receipt: %w", err)
-	}
-
-	var receiptIndex int
-	if int(r.MigratedAt) == hMsIndex {
-		receiptIndex = hReceiptIndex + 1
-	}
-
-	return rs.store(r, receiptIndex)
 }
 
 // Validate validates the given receipt against data fetched from a legacy node.
@@ -231,14 +85,18 @@ func (rs *ReceiptService) Validate(r *iotago.Receipt) error {
 		panic("receipt service is not configured to validate receipts")
 	}
 
-	hMsIndex, _, err := rs.latestIndex()
-	if err != nil {
-		return fmt.Errorf("unable to determine latest receipt: %w", err)
+	var highestMigratedAtIndex uint32
+	if err := rs.utxoManager.ForEachReceiptTuple(func(rt *utxo.ReceiptTuple) bool {
+		if highestMigratedAtIndex == 0 || rt.Receipt.MigratedAt > highestMigratedAtIndex {
+			highestMigratedAtIndex = rt.Receipt.MigratedAt
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("unable to determine latest migrated at index: %w", err)
 	}
 
-	hMsIndexUint32 := uint32(hMsIndex)
-	if r.MigratedAt < hMsIndexUint32 {
-		return fmt.Errorf("%w: current latest stored receipt has milestone index %d but new receipt has index %d", ErrInvalidReceiptServiceState, hMsIndex, r.MigratedAt)
+	if r.MigratedAt < highestMigratedAtIndex {
+		return fmt.Errorf("%w: current latest stored receipt has migrated at index %d but new receipt has index %d", ErrInvalidReceiptServiceState, highestMigratedAtIndex, r.MigratedAt)
 	}
 
 	return rs.validateAgainstWhiteFlagData(r)
@@ -309,8 +167,11 @@ func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.Rece
 	receipts := []*iotago.Receipt{finalReceipt}
 
 	// collect migrated funds from previous receipt
-	receiptsWithSameIndex, err := rs.ReceiptsByMigratedAtIndex(finalReceipt.MigratedAt)
-	if err != nil {
+	receiptsWithSameIndex := make([]*iotago.Receipt, 0)
+	if err := rs.utxoManager.ForEachMigratedAtReceiptTuple(finalReceipt.MigratedAt, func(rt *utxo.ReceiptTuple) bool {
+		receiptsWithSameIndex = append(receiptsWithSameIndex, rt.Receipt)
+		return true
+	}); err != nil {
 		return err
 	}
 	receipts = append(receipts, receiptsWithSameIndex...)

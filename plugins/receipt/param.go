@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	// CfgReceiptsFolderPath configures the path to the receipts folder.
-	CfgReceiptsFolderPath = "receipts.path"
+	// CfgReceiptsBackupEnabled configures whether receipts are additionally stored in the specified folder.
+	CfgReceiptsBackupEnabled = "receipts.backup.enabled"
+	// CfgReceiptsBackupFolder configures the path to the receipts backup folder.
+	CfgReceiptsBackupFolder = "receipts.backup.folder"
 	// CfgReceiptsValidatorValidate configures whether to validate receipts.
 	CfgReceiptsValidatorValidate = "receipts.validator.validate"
 	// CfgReceiptsValidatorAPIAddress configures the address of the legacy node API to query for white-flag confirmation data.
@@ -26,7 +28,8 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgReceiptsFolderPath, "./receipts", "path to the receipts folder")
+			fs.String(CfgReceiptsBackupFolder, "./receipts", "path to the receipts backup folder")
+			fs.Bool(CfgReceiptsBackupEnabled, false, "whether to backup receipts in the backup folder")
 			fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")
 			fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14265", "address of the legacy node API")
 			fs.Duration(CfgReceiptsValidatorAPITimeout, 5*time.Second, "timeout of API calls")
