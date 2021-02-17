@@ -12,6 +12,8 @@ require (
 	github.com/cockroachdb/pebble v0.0.0-20210205133808-a516e691fb72
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
+	github.com/dchest/blake2b v1.0.0
+	github.com/dgraph-io/badger/v2 v2.0.3 // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -69,5 +71,4 @@ require (
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 	golang.org/x/tools v0.1.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
-	golang.org/x/tools v0.0.0-20201123232213-4aa1a224cdb5 // indirect
 )
