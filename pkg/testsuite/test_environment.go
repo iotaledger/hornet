@@ -126,7 +126,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	// Initialize UTXO
 	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
 	te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
-	te.storage.UTXO().AddTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
+	te.storage.UTXO().StoreTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
 
 	te.AssertTotalSupplyStillValid()
 

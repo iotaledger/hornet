@@ -156,6 +156,7 @@ func New(
 			MilestoneSolidificationFailed: events.NewEvent(milestone.IndexCaller),
 			NewUTXOOutput:                 events.NewEvent(UTXOOutputCaller),
 			NewUTXOSpent:                  events.NewEvent(UTXOSpentCaller),
+			NewReceipt:                    events.NewEvent(ReceiptCaller),
 		},
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/iota.go/api"
 	"go.uber.org/dig"
 
@@ -64,12 +66,15 @@ func provide(c *dig.Container) {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		Validator  *migrator.Validator
+		UTXO       *utxo.Manager
+		Storage    *storage.Storage
 	}
 	if err := c.Provide(func(deps serviceDependencies) (*migrator.ReceiptService, error) {
 		return migrator.NewReceiptService(
-			deps.Validator,
+			deps.Validator, deps.UTXO,
 			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
-			deps.NodeConfig.String(CfgReceiptsFolderPath),
+			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
+			deps.NodeConfig.String(CfgReceiptsBackupFolder),
 		), nil
 	}); err != nil {
 		panic(err)
@@ -81,11 +86,4 @@ func configure() {
 	if err := deps.ReceiptService.Init(); err != nil {
 		panic(err)
 	}
-
-	numReceipts, err := deps.ReceiptService.NumReceiptsStored()
-	if err != nil {
-		panic(err)
-	}
-
-	log.Infof("stored receipts: %d", numReceipts)
 }

@@ -336,8 +336,10 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 
 // ReceiptsConfig defines the receipt validator plugin specific configuration.
 type ReceiptsConfig struct {
+	// Whether receipt backups are enabled.
+	BackupEnabled bool
 	// The path to the receipts folder.
-	FolderPath string
+	BackupFolder string
 	// Whether the receipts plugin should validate receipts
 	Validate bool
 	// The API to query.
@@ -352,7 +354,8 @@ type ReceiptsConfig struct {
 
 func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsFolderPath, receiptsConfig.FolderPath),
+		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsBackupEnabled, receiptsConfig.BackupEnabled),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupFolder, receiptsConfig.BackupFolder),
 		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, receiptsConfig.APIAddress),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPITimeout, receiptsConfig.APITimeout),
@@ -364,7 +367,8 @@ func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 // DefaultReceiptValidatorConfig returns the default migrator plugin config.
 func DefaultReceiptValidatorConfig() ReceiptsConfig {
 	return ReceiptsConfig{
-		FolderPath:                 "./receipts",
+		BackupEnabled:              false,
+		BackupFolder:               "./receipts",
 		Validate:                   false,
 		APIAddress:                 "http://localhost:14265",
 		APITimeout:                 5 * time.Second,

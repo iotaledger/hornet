@@ -12,6 +12,8 @@ const (
 
 	topicOutputs = "outputs/{outputId}"
 
+	topicReceipts = "receipts"
+
 	topicAddressesOutput        = "addresses/{address}/outputs"
 	topicAddressesEd25519Output = "addresses/ed25519/{address}/outputs"
 )

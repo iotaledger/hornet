@@ -37,7 +37,7 @@ func ConfirmMilestone(
 	onMilestoneConfirmed func(confirmation *Confirmation),
 	forEachNewOutput func(output *utxo.Output),
 	forEachNewSpent func(spent *utxo.Spent),
-	validateAndStoreReceipt func(r *iotago.Receipt) error) (*ConfirmedMilestoneStats, error) {
+	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, error) {
 
 	cachedMessages := make(map[string]*storage.CachedMessage)
 
@@ -109,6 +109,7 @@ func ConfirmMilestone(
 
 	var receipt *iotago.Receipt
 	var tm *utxo.TreasuryMutationTuple
+	var rt *utxo.ReceiptTuple
 
 	// validate receipt and extract migrated funds
 	if ms.Receipt != nil {
@@ -116,9 +117,14 @@ func ConfirmMilestone(
 
 		receipt = ms.Receipt.(*iotago.Receipt)
 
+		rt = &utxo.ReceiptTuple{
+			Receipt:        receipt,
+			MilestoneIndex: milestone.Index(ms.Index),
+		}
+
 		// receipt validation is optional
-		if validateAndStoreReceipt != nil {
-			if err := validateAndStoreReceipt(receipt); err != nil {
+		if onReceipt != nil {
+			if err := onReceipt(rt); err != nil {
 				return nil, err
 			}
 		}
@@ -149,7 +155,7 @@ func ConfirmMilestone(
 		newSpents = append(newSpents, spent)
 	}
 
-	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm)
+	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt)
 		err != nil {
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
