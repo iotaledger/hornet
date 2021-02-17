@@ -70,12 +70,12 @@ func provide(c *dig.Container) {
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	var state *migrator.State
+	var msIndex *uint32
 	if *bootstrap {
-		state = &migrator.State{LatestMilestoneIndex: *startIndex}
+		msIndex = startIndex
 	}
 	// TODO: perform sanity check, that the latest migration milestone has MigratedAt lower than the state
-	if err := deps.MigratorService.InitState(state); err != nil {
+	if err := deps.MigratorService.InitState(msIndex); err != nil {
 		log.Fatalf("failed to initialize migrator: %s", err)
 	}
 }

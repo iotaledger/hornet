@@ -19,6 +19,8 @@ const (
 var (
 	// ErrStateFileAlreadyExists is returned when a new state is tried to be initialized but a state file already exists.
 	ErrStateFileAlreadyExists = errors.New("migrator state file already exists")
+	// ErrInvalidState is returned when the content of the state file is invalid.
+	ErrInvalidState = errors.New("invalid migrator state")
 )
 
 // State stores the latest state of the MigratorService.
@@ -91,23 +93,36 @@ func (s *MigratorService) PersistState() error {
 }
 
 // InitState initializes the state of s.
-// If initialState is not nil, s is bootstrapped using it as its initial state.
+// If msIndex is not nil, s is bootstrapped using that index as its initial state,
+// otherwise the state is loaded from file.
 // InitState must be called before Start.
-func (s *MigratorService) InitState(state *State) error {
+func (s *MigratorService) InitState(msIndex *uint32) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if state != nil {
-		// check whether the state file exists
+	var state State
+	if msIndex == nil {
+		// restore state from file
+		if err := utils.ReadFromFile(s.stateFilePath, &state); err != nil {
+			return fmt.Errorf("failed to load state file: %w", err)
+		}
+	} else {
+		// for bootstrapping the state file must not exist
 		if _, err := os.Stat(s.stateFilePath); !os.IsNotExist(err) {
 			return ErrStateFileAlreadyExists
 		}
-		s.state = *state
-		return nil
+		state = State{
+			LatestMilestoneIndex: *msIndex,
+			LatestIncludedIndex:  0,
+		}
 	}
-	if err := utils.ReadFromFile(s.stateFilePath, &s.state); err != nil {
-		return fmt.Errorf("failed to load state file: %w", err)
+
+	// validate the state
+	if state.LatestMilestoneIndex == 0 {
+		return fmt.Errorf("%w: latest milestone index must not be zero", ErrInvalidState)
 	}
+
+	s.state = state
 	return nil
 }
 
@@ -118,9 +133,9 @@ type OnServiceErrorFunc func(err error) (terminate bool)
 
 // Start stats the MigratorService s, it stops when shutdownSignal is closed.
 func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServiceErrorFunc) {
-	startIndex := s.state.LatestMilestoneIndex
+	var startIndex uint32
 	for {
-		stopIndex, migratedFunds, err := s.validator.nextMigrations(startIndex)
+		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
 		if err != nil {
 			s.Healthy.Store(false)
 			if onError != nil && onError(err) {
@@ -131,7 +146,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 		}
 
 		// always continue with the next index
-		startIndex = stopIndex + 1
+		startIndex = msIndex + 1
 		s.Healthy.Store(true)
 
 		for {
@@ -142,7 +157,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 				lastBatch = false
 			}
 			select {
-			case s.migrations <- &migrationResult{stopIndex, lastBatch, batch}:
+			case s.migrations <- &migrationResult{msIndex, lastBatch, batch}:
 			case <-shutdownSignal:
 				close(s.migrations)
 				return
@@ -153,6 +168,39 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 			}
 		}
 	}
+}
+
+// stateMigrations queries the next existing migrations after the current state.
+// It returns an empty slice, if the state corresponded to the last migration index of that milestone.
+// It returns an error if the current state contains an included migration index that is too large.
+func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntry, error) {
+	migratedFunds, err := s.validator.QueryMigratedFunds(s.state.LatestMilestoneIndex)
+	if err != nil {
+		return 0, nil, err
+	}
+	l := uint32(len(migratedFunds))
+	if l >= s.state.LatestIncludedIndex {
+		return s.state.LatestMilestoneIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
+	}
+	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", ErrInvalidState, s.state.LatestIncludedIndex, l)
+}
+
+// nextMigrations queries the next existing migrations starting from milestone index startIndex.
+// If startIndex is 0 the indices from state are used.
+func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
+	if startIndex == 0 {
+		msIndex, migratedFunds, err := s.stateMigrations()
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to query migrations corresponding to initial state: %w", err)
+		}
+		// return remaining migrations
+		if len(migratedFunds) > 0 {
+			return msIndex, migratedFunds, nil
+		}
+		// otherwise query the next available migrations
+		startIndex = msIndex + 1
+	}
+	return s.validator.nextMigrations(startIndex)
 }
 
 func (s *MigratorService) updateState(result *migrationResult) {
