@@ -2,6 +2,7 @@ package dag
 
 import (
 	"bytes"
+	"math"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -22,6 +23,7 @@ func updateOutdatedConeRootIndexes(s *storage.Storage, outdatedMessageIDs hornet
 }
 
 // GetConeRootIndexes searches the cone root indexes for a given message.
+// cachedMsgMeta has to be solid, otherwise youngestConeRootIndex and oldestConeRootIndex will be 0 if a message is missing in the cone.
 func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadata, lsmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index) {
 	defer cachedMsgMeta.Release(true) // meta -1
 
@@ -33,13 +35,13 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 	}
 
 	youngestConeRootIndex = 0
-	oldestConeRootIndex = 0
+	oldestConeRootIndex = math.MaxUint32
 
 	updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
-		if (youngestConeRootIndex == 0) || (youngestConeRootIndex < ycri) {
+		if youngestConeRootIndex < ycri {
 			youngestConeRootIndex = ycri
 		}
-		if (oldestConeRootIndex == 0) || (oldestConeRootIndex > ocri) {
+		if oldestConeRootIndex > ocri {
 			oldestConeRootIndex = ocri
 		}
 	}
@@ -114,7 +116,8 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 	updateOutdatedConeRootIndexes(s, outdatedMessageIDs, lsmi)
 
 	// only set the calculated cone root indexes if all messages in the past cone were found
-	if !indexesValid {
+	// and the oldestConeRootIndex was found.
+	if !indexesValid || oldestConeRootIndex == math.MaxUint32 {
 		return 0, 0
 	}
 

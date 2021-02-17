@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -140,9 +139,6 @@ func configure() {
 			log.Panic(err.Error())
 		}
 	}
-
-	// genesis is always a SEP
-	deps.Storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 1)
 
 }
 
