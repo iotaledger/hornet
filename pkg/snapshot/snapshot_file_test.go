@@ -334,13 +334,6 @@ func rand32ByteHash() [iotago.TransactionIDLength]byte {
 	return h
 }
 
-func rand49ByteHash() iotago.LegacyTailTransactionHash {
-	var h iotago.LegacyTailTransactionHash
-	b := randBytes(49)
-	copy(h[:], b)
-	return h
-}
-
 func randLSTransactionUnspentOutputs() *snapshot.Output {
 	addr, _ := randEd25519Addr()
 
