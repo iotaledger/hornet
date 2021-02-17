@@ -24,6 +24,7 @@ import (
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -110,9 +111,12 @@ func configure() {
 
 	keyManager := keymanager.New()
 	for _, keyRange := range deps.CoordinatorPublicKeyRanges {
-		if err := keyManager.AddKeyRange(keyRange.Key, keyRange.StartIndex, keyRange.EndIndex); err != nil {
+		pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
+		if err != nil {
 			log.Panicf("can't load public key ranges: %s", err)
 		}
+
+		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 	}
 
 	deps.Storage.ConfigureMilestones(

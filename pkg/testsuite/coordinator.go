@@ -1,7 +1,6 @@
 package testsuite
 
 import (
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -36,7 +35,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	keyManager := keymanager.New()
 	for _, key := range cooPrivateKeys {
-		keyManager.AddKeyRange(hex.EncodeToString(key.Public().(ed25519.PublicKey)), 0, 0)
+		keyManager.AddKeyRange(key.Public().(ed25519.PublicKey), 0, 0)
 	}
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))

@@ -33,7 +33,7 @@ type InMemoryEd25519MilestoneSignerProvider struct {
 	publicKeysCount int
 }
 
-// NewInMemoryEd25519MilestoneSignerProvider create a new InMemoryEd25519MilestoneSignerProvider.
+// NewInMemoryEd25519MilestoneSignerProvider creates a new InMemoryEd25519MilestoneSignerProvider.
 func NewInMemoryEd25519MilestoneSignerProvider(privateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager, publicKeysCount int) *InMemoryEd25519MilestoneSignerProvider {
 
 	return &InMemoryEd25519MilestoneSignerProvider{
@@ -48,7 +48,7 @@ func (p *InMemoryEd25519MilestoneSignerProvider) MilestoneIndexSigner(index mile
 
 	pubKeySet := p.keyManger.GetPublicKeysSetForMilestoneIndex(index)
 
-	keyPairs := p.keyManger.GetKeyPairsForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
+	keyPairs := p.keyManger.GetMilestonePublicKeyMappingForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
 	pubKeys := make([]iotago.MilestonePublicKey, 0, len(keyPairs))
 	for pubKey := range keyPairs {
 		pubKeys = append(pubKeys, pubKey)
@@ -87,5 +87,59 @@ func (s *InMemoryEd25519MilestoneIndexSigner) PublicKeysSet() iotago.MilestonePu
 
 // SigningFunc returns a function to sign the particular milestone.
 func (s *InMemoryEd25519MilestoneIndexSigner) SigningFunc() iotago.MilestoneSigningFunc {
+	return s.signingFunc
+}
+
+// InsecureRemoteEd25519MilestoneSignerProvider provides InsecureRemoteEd25519MilestoneIndexSigner.
+type InsecureRemoteEd25519MilestoneSignerProvider struct {
+	signingFunc     iotago.MilestoneSigningFunc
+	keyManger       *keymanager.KeyManager
+	publicKeysCount int
+}
+
+// NewInsecureRemoteEd25519MilestoneSignerProvider creates a new InsecureRemoteEd25519MilestoneSignerProvider.
+func NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint string, keyManager *keymanager.KeyManager, publicKeysCount int) *InsecureRemoteEd25519MilestoneSignerProvider {
+
+	return &InsecureRemoteEd25519MilestoneSignerProvider{
+		signingFunc:     iotago.InsecureRemoteEd25519MilestoneSigner(remoteEndpoint),
+		keyManger:       keyManager,
+		publicKeysCount: publicKeysCount,
+	}
+}
+
+// MilestoneIndexSigner returns a new signer for the milestone index.
+func (p *InsecureRemoteEd25519MilestoneSignerProvider) MilestoneIndexSigner(index milestone.Index) MilestoneIndexSigner {
+
+	return &InsecureRemoteEd25519MilestoneIndexSigner{
+		pubKeys:     p.keyManger.GetPublicKeysForMilestoneIndex(index),
+		pubKeySet:   p.keyManger.GetPublicKeysSetForMilestoneIndex(index),
+		signingFunc: p.signingFunc,
+	}
+}
+
+// PublicKeysCount returns the amount of public keys in a milestone.
+func (p *InsecureRemoteEd25519MilestoneSignerProvider) PublicKeysCount() int {
+	return p.publicKeysCount
+}
+
+// InsecureRemoteEd25519MilestoneIndexSigner is an in memory signer for a particular milestone.
+type InsecureRemoteEd25519MilestoneIndexSigner struct {
+	pubKeys     []iotago.MilestonePublicKey
+	pubKeySet   iotago.MilestonePublicKeySet
+	signingFunc iotago.MilestoneSigningFunc
+}
+
+// PublicKeys returns a slice of the used public keys.
+func (s *InsecureRemoteEd25519MilestoneIndexSigner) PublicKeys() []iotago.MilestonePublicKey {
+	return s.pubKeys
+}
+
+// PublicKeysSet returns a map of the used public keys.
+func (s *InsecureRemoteEd25519MilestoneIndexSigner) PublicKeysSet() iotago.MilestonePublicKeySet {
+	return s.pubKeySet
+}
+
+// SigningFunc returns a function to sign the particular milestone.
+func (s *InsecureRemoteEd25519MilestoneIndexSigner) SigningFunc() iotago.MilestoneSigningFunc {
 	return s.signingFunc
 }

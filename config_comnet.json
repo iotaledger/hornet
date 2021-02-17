@@ -93,6 +93,10 @@
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
       "heaviestBranchSelectionTimeoutMilliseconds": 100
+    },
+    "signing": {
+      "provider": "local",
+      "remoteAddress": "localhost:12345"
     }
   },
   "tipsel": {
