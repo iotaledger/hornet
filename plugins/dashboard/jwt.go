@@ -23,7 +23,6 @@ type JWTAuth struct {
 	secret         []byte
 	nodeId         string
 	sessionTimeout time.Duration
-	middleware     echo.MiddlewareFunc
 }
 
 func NewJWTAuth(username string, passwordHashHex string, passwordSaltHex string, sessionTimeout time.Duration, nodeId string, secret crypto.PrivKey) *JWTAuth {
@@ -55,11 +54,6 @@ func NewJWTAuth(username string, passwordHashHex string, passwordSaltHex string,
 		log.Fatal(err)
 	}
 
-	config := middleware.JWTConfig{
-		Claims:     &jwtClaims{},
-		SigningKey: secretBytes,
-	}
-
 	return &JWTAuth{
 		username:       username,
 		passwordHash:   passwordHash,
@@ -67,7 +61,6 @@ func NewJWTAuth(username string, passwordHashHex string, passwordSaltHex string,
 		secret:         secretBytes,
 		sessionTimeout: sessionTimeout,
 		nodeId:         nodeId,
-		middleware:     middleware.JWTWithConfig(config),
 	}
 }
 
@@ -107,8 +100,15 @@ func (c *jwtClaims) VerifyAudience() bool {
 	return c.compare(c.Audience, jwtAuth.nodeId)
 }
 
-func (j *JWTAuth) Middleware() echo.MiddlewareFunc {
-	return j.middleware
+func (j *JWTAuth) Middleware(skipper middleware.Skipper) echo.MiddlewareFunc {
+
+	config := middleware.JWTConfig{
+		Skipper:    skipper,
+		Claims:     &jwtClaims{},
+		SigningKey: j.secret,
+	}
+
+	return middleware.JWTWithConfig(config)
 }
 
 func (j *JWTAuth) IssueJWT() (string, error) {

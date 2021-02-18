@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/plugins/restapi"
@@ -20,16 +22,16 @@ const (
 
 var (
 	// ErrInvalidParameter defines the invalid parameter error.
-	ErrInvalidParameter = errors.New("invalid parameter")
+	ErrInvalidParameter = echo.ErrBadRequest
 
 	// ErrInternalError defines the internal error.
-	ErrInternalError = errors.New("internal error")
+	ErrInternalError = echo.ErrInternalServerError
 
 	// ErrNotFound defines the not found error.
-	ErrNotFound = errors.New("not found")
+	ErrNotFound = echo.ErrNotFound
 
 	// ErrForbidden defines the forbidden error.
-	ErrForbidden = errors.New("forbidden")
+	ErrForbidden = echo.ErrForbidden
 
 	// holds dashboard assets
 	appBox = packr.New("Dashboard_App", "./frontend/build")
@@ -85,14 +87,120 @@ func passThroughRoute(e echo.Context) error {
 	return e.Blob(http.StatusOK, contentType, staticBlob)
 }
 
-func passThroughAPIRoute(e echo.Context) error {
-	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
+func appBoxMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) (err error) {
+			contentType := calculateMimeType(c)
 
-	data, err := readDataFromURL("http://" + apiBindAddr + e.Request().URL.Path + "?" + e.Request().URL.RawQuery)
-	if err != nil {
-		return err
+			path := strings.TrimPrefix(c.Request().URL.Path, "/")
+			if len(path) == 0 {
+				path = "index.html"
+				contentType = echo.MIMETextHTMLCharsetUTF8
+			}
+			staticBlob, err := appBox.Find(path)
+			if err != nil {
+				return next(c)
+			}
+			return c.Blob(http.StatusOK, contentType, staticBlob)
+		}
 	}
-	return e.Blob(http.StatusOK, echo.MIMEApplicationJSONCharsetUTF8, data)
+}
+
+func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
+
+	apiUrl, err := url.Parse("http://127.0.0.1:9090")
+	if err != nil {
+		log.Fatalf("wrong devmode url: %s", err)
+	}
+
+	return middleware.Proxy(middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
+		{
+			URL: apiUrl,
+		},
+	}))
+}
+
+func apiMiddlewares() []echo.MiddlewareFunc {
+
+	allowedRoutes := map[string][]string{
+		http.MethodGet: {
+			"/api/v1/info",
+			"/api/v1/messages",
+			"/api/v1/outputs",
+			"/api/v1/addresses",
+			"/api/v1/milestones",
+			"/api/v1/peers",
+			"/api/plugins/spammer",
+		},
+		http.MethodPost: {
+			"/api/v1/peers",
+		},
+		http.MethodDelete: {
+			"/api/v1/peers",
+		},
+	}
+
+	jwtAuthRoutes := []string{
+		"/api/v1/peers",
+		"/api/plugins",
+	}
+
+	proxySkipper := func(context echo.Context) bool {
+		// Check which for which route we will skip JWT authentication
+		routesForMethod, exists := allowedRoutes[context.Request().Method]
+		if !exists {
+			return true
+		}
+
+		path := echo.GetPath(context.Request())
+		for _, prefix := range routesForMethod {
+			if strings.HasPrefix(path, prefix) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
+	apiUrl, err := url.Parse(fmt.Sprintf("http://%s", apiBindAddr))
+	if err != nil {
+		log.Fatalf("wrong dashboard API url: %s", err)
+	}
+
+	balancer := middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
+		{
+			URL: apiUrl,
+		},
+	})
+
+	config := middleware.ProxyConfig{
+		Skipper:  proxySkipper,
+		Balancer: balancer,
+	}
+
+	jwtAuthSkipper := func(context echo.Context) bool {
+		path := echo.GetPath(context.Request())
+		for _, prefix := range jwtAuthRoutes {
+			if strings.HasPrefix(path, prefix) {
+				return false
+			}
+		}
+		return true
+	}
+
+	notFoundMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) (err error) {
+			return ErrNotFound
+		}
+	}
+
+	return []echo.MiddlewareFunc{
+		jwtAuth.Middleware(jwtAuthSkipper),
+		middleware.ProxyWithConfig(config),
+		notFoundMiddleware,
+	}
+
 }
 
 func calculateMimeType(e echo.Context) string {
@@ -112,7 +220,7 @@ func calculateMimeType(e echo.Context) string {
 	case strings.HasSuffix(url, ".svg"):
 		return "image/svg+xml"
 	default:
-		return echo.MIMEOctetStream
+		return echo.MIMETextHTMLCharsetUTF8
 	}
 }
 
@@ -125,7 +233,7 @@ func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func loginRoute(c echo.Context) error {
+func authRoute(c echo.Context) error {
 
 	type loginRequest struct {
 		JWT      string `json:"jwt"`
@@ -161,76 +269,17 @@ func loginRoute(c echo.Context) error {
 func setupRoutes(e *echo.Echo) {
 
 	e.Pre(enforceMaxOneDotPerURL)
+	e.Use(middleware.CSRF())
 
-	e.GET("/ws", websocketRoute)
-	e.GET("/", indexRoute)
-
-	e.GET("/login", indexRoute)
-	e.POST("/login", loginRoute)
-
-	e.GET("/static/*", passThroughRoute)
-	e.GET("/branding/*", passThroughRoute)
-	e.GET("/favicon/*", passThroughRoute)
-
-	// Hot reload code
-	e.GET("/main*.js", passThroughRoute)
+	middleware := appBoxMiddleware()
+	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
+		middleware = devModeReverseProxyMiddleware()
+	}
+	e.Group("/*").Use(middleware)
 
 	// Pass all the explorer request through to the local rest API
-	api := e.Group("/api/v1/")
-	api.GET("info", passThroughAPIRoute)
-	api.GET("messages*", passThroughAPIRoute)
-	api.GET("outputs*", passThroughAPIRoute)
-	api.GET("addresses*", passThroughAPIRoute)
-	api.GET("milestones*", passThroughAPIRoute)
-	api.GET("peers*", passThroughAPIRoute, jwtAuth.Middleware())
-	//TODO: add support for POST/DELETE
-	//api.POST("peers*", passThroughAPIRoute, jwtAuth.Middleware())
-	//api.DELETE("peers*", passThroughAPIRoute, jwtAuth.Middleware())
+	e.Group("/api", apiMiddlewares()...)
 
-	// Plugins
-	e.GET("/api/plugins/*", passThroughAPIRoute, jwtAuth.Middleware())
-
-	// Everything else fallback to index for routing.
-	e.GET("*", indexRoute)
-
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		c.Logger().Error(err)
-
-		var statusCode int
-		var message string
-
-		switch errors.Cause(err) {
-
-		case echo.ErrNotFound:
-			c.Redirect(http.StatusSeeOther, "/")
-			return
-
-		case echo.ErrUnauthorized:
-			statusCode = http.StatusUnauthorized
-			message = "unauthorized"
-
-		case ErrForbidden:
-			statusCode = http.StatusForbidden
-			message = "access forbidden"
-
-		case ErrInternalError:
-			statusCode = http.StatusInternalServerError
-			message = "internal server error"
-
-		case ErrNotFound:
-			statusCode = http.StatusNotFound
-			message = "not found"
-
-		case ErrInvalidParameter:
-			statusCode = http.StatusBadRequest
-			message = "bad request"
-
-		default:
-			statusCode = http.StatusInternalServerError
-			message = "internal server error"
-		}
-
-		message = fmt.Sprintf("%s, error: %+v", message, err)
-		c.String(statusCode, message)
-	}
+	e.GET("/ws", websocketRoute)
+	e.POST("/auth", authRoute)
 }
