@@ -65,7 +65,7 @@
     "delay": 60480
   },
   "protocol": {
-    "networkID": "testnet4",
+    "networkID": "testnet5",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
