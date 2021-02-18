@@ -55,7 +55,7 @@ func (rs *ReceiptService) Init() error {
 	if !rs.BackupEnabled {
 		return nil
 	}
-	if err := os.MkdirAll(rs.backupFolder, 0666); err != nil {
+	if err := os.MkdirAll(rs.backupFolder, os.ModePerm); err != nil {
 		return err
 	}
 	return nil
@@ -66,12 +66,13 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 	if !rs.BackupEnabled {
 		panic("receipt service is not configured to backup receipts")
 	}
+
 	receiptFileName := path.Join(rs.backupFolder, fmt.Sprintf(receiptFilePattern, r.Receipt.MigratedAt, r.MilestoneIndex))
 	receiptJSON, err := r.Receipt.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(receiptFileName, receiptJSON, 0666); err != nil {
+	if err := ioutil.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
 		return fmt.Errorf("unable to persist receipt onto disk: %w", err)
 	}
 	return nil

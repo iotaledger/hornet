@@ -6,7 +6,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/api"
+	iotago "github.com/iotaledger/iota.go/v2"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -38,6 +41,8 @@ var (
 type pluginDependencies struct {
 	dig.In
 	ReceiptService *migrator.ReceiptService
+	Tangle         *tangle.Tangle
+	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 }
 
 // provide provides the ReceiptService as a singleton.
@@ -83,6 +88,10 @@ func provide(c *dig.Container) {
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
+	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
+		log.Infof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
+	}))
+	log.Infof("storing receipt backups in %s", deps.NodeConfig.String(CfgReceiptsBackupFolder))
 	if err := deps.ReceiptService.Init(); err != nil {
 		panic(err)
 	}
