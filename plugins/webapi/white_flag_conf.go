@@ -40,12 +40,12 @@ func getWhiteFlagConfirmation(i interface{}, c *gin.Context, _ <-chan struct{}) 
 		c.JSON(http.StatusNotFound, e)
 		return
 	}
+	defer cachedMsBundle.Release()
 
 	msBundleTrytes, err := cachedBundleTxsToTrytes(cachedMsBundle.GetBundle().GetTransactions())
 	if err != nil {
 		e.Error = err.Error()
 		c.JSON(http.StatusNotFound, e)
-		cachedMsBundle.Release()
 		return
 	}
 	res.MilestoneBundle = msBundleTrytes
