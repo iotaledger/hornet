@@ -2,7 +2,6 @@ module github.com/gohornet/hornet
 
 go 1.15
 
-
 replace github.com/iotaledger/hive.go => github.com/alexsporn/hive.go v0.0.0-20210218171704-b68267147ea6
 
 require (
@@ -13,7 +12,6 @@ require (
 	github.com/cockroachdb/pebble v0.0.0-20210205133808-a516e691fb72
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
-	github.com/dchest/blake2b v1.0.0
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
