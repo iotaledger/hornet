@@ -107,7 +107,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 				txCount := atomic.AddInt32(&spammed, 1)
 				data := fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339))
 				iotaMsg := &iotago.Message{Payload: &iotago.Indexation{
-					Index: "SPAM",
+					Index: []byte("SPAM"),
 					Data:  []byte(data)},
 				}
 

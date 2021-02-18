@@ -54,7 +54,7 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 
 	indexation := cachedMessage.GetMessage().GetIndexation()
 	if indexation != nil {
-		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", indexation.Index)
+		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
 		if mqttBroker.HasSubscribers(indexationTopic) {
 			mqttBroker.Send(indexationTopic, cachedMessage.GetMessage().GetData())
 		}

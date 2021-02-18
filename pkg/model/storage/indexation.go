@@ -1,9 +1,9 @@
 package storage
 
 import (
+	"encoding/hex"
 	"fmt"
 
-	"github.com/dchest/blake2b"
 	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go/v2"
 
@@ -11,27 +11,29 @@ import (
 )
 
 const (
-	IndexationHashLength = 32
+	IndexationIndexLength = 64
 )
+
+// PadIndexationIndex returns a padded indexation index.
+func PadIndexationIndex(index []byte) []byte {
+	return append(index, make([]byte, IndexationIndexLength-len(index))...)
+}
 
 type Indexation struct {
 	objectstorage.StorableObjectFlags
-	indexationHash hornet.MessageID
-	messageID      hornet.MessageID
+	index     []byte
+	messageID hornet.MessageID
 }
 
-func NewIndexation(index string, messageID hornet.MessageID) *Indexation {
-
-	indexationHash := hornet.MessageIDFromArray((blake2b.Sum256([]byte(index))))
-
+func NewIndexation(index []byte, messageID hornet.MessageID) *Indexation {
 	return &Indexation{
-		indexationHash: indexationHash,
-		messageID:      messageID,
+		index:     PadIndexationIndex(index),
+		messageID: messageID,
 	}
 }
 
 func (i *Indexation) GetHash() hornet.MessageID {
-	return i.indexationHash
+	return i.index
 }
 
 func (i *Indexation) GetMessageID() hornet.MessageID {
@@ -41,11 +43,11 @@ func (i *Indexation) GetMessageID() hornet.MessageID {
 // ObjectStorage interface
 
 func (i *Indexation) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Indexation should never be updated: %v, MessageID: %v", i.indexationHash.ToHex(), i.messageID.ToHex()))
+	panic(fmt.Sprintf("Indexation should never be updated: %v, MessageID: %v", hex.EncodeToString(i.index), i.messageID.ToHex()))
 }
 
 func (i *Indexation) ObjectStorageKey() []byte {
-	return append(i.indexationHash, i.messageID...)
+	return append(i.index, i.messageID...)
 }
 
 func (i *Indexation) ObjectStorageValue() (_ []byte) {

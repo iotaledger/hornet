@@ -3,8 +3,6 @@ package storage
 import (
 	"time"
 
-	"github.com/dchest/blake2b"
-
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
@@ -25,8 +23,8 @@ func (c *CachedIndexation) GetIndexation() *Indexation {
 
 func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Indexation{
-		indexationHash: hornet.MessageIDFromSlice(key[:IndexationHashLength]),
-		messageID:      hornet.MessageIDFromSlice(key[IndexationHashLength : IndexationHashLength+iotago.MessageIDLength]),
+		index:     hornet.MessageIDFromSlice(key[:IndexationIndexLength]),
+		messageID: hornet.MessageIDFromSlice(key[IndexationIndexLength : IndexationIndexLength+iotago.MessageIDLength]),
 	}, nil
 }
 
@@ -41,7 +39,7 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 		indexationFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
-		objectstorage.PartitionKey(IndexationHashLength, iotago.MessageIDLength),
+		objectstorage.PartitionKey(IndexationIndexLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
@@ -53,10 +51,10 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 }
 
 // indexation +-0
-func (s *Storage) GetIndexMessageIDs(index string, maxFind ...int) hornet.MessageIDs {
+func (s *Storage) GetIndexMessageIDs(index []byte, maxFind ...int) hornet.MessageIDs {
 	var messageIDs hornet.MessageIDs
 
-	indexationHash := blake2b.Sum256([]byte(index))
+	indexPadded := PadIndexationIndex(index)
 
 	i := 0
 	s.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -65,9 +63,9 @@ func (s *Storage) GetIndexMessageIDs(index string, maxFind ...int) hornet.Messag
 			return false
 		}
 
-		messageIDs = append(messageIDs, hornet.MessageIDFromSlice(key[IndexationHashLength:IndexationHashLength+iotago.MessageIDLength]))
+		messageIDs = append(messageIDs, hornet.MessageIDFromSlice(key[IndexationIndexLength:IndexationIndexLength+iotago.MessageIDLength]))
 		return true
-	}, false, indexationHash[:])
+	}, false, indexPadded[:])
 
 	return messageIDs
 }
@@ -76,22 +74,22 @@ func (s *Storage) GetIndexMessageIDs(index string, maxFind ...int) hornet.Messag
 type IndexConsumer func(messageID hornet.MessageID) bool
 
 // ForEachMessageIDWithIndex loops over all messages with the given index.
-func (s *Storage) ForEachMessageIDWithIndex(index string, consumer IndexConsumer, skipCache bool) {
-	indexationHash := blake2b.Sum256([]byte(index))
+func (s *Storage) ForEachMessageIDWithIndex(index []byte, consumer IndexConsumer, skipCache bool) {
+	indexPadded := PadIndexationIndex(index)
 
 	s.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(key[IndexationHashLength : IndexationHashLength+iotago.MessageIDLength]))
-	}, skipCache, indexationHash[:])
+		return consumer(hornet.MessageIDFromSlice(key[IndexationIndexLength : IndexationIndexLength+iotago.MessageIDLength]))
+	}, skipCache, indexPadded[:])
 }
 
 // indexation +1
-func (s *Storage) StoreIndexation(index string, messageID hornet.MessageID) *CachedIndexation {
+func (s *Storage) StoreIndexation(index []byte, messageID hornet.MessageID) *CachedIndexation {
 	indexation := NewIndexation(index, messageID)
 	return &CachedIndexation{CachedObject: s.indexationStorage.Store(indexation)}
 }
 
 // indexation +-0
-func (s *Storage) DeleteIndexation(index string, messageID hornet.MessageID) {
+func (s *Storage) DeleteIndexation(index []byte, messageID hornet.MessageID) {
 	indexation := NewIndexation(index, messageID)
 	s.indexationStorage.Delete(indexation.ObjectStorageKey())
 }

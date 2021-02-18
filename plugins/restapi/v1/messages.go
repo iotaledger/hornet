@@ -2,6 +2,8 @@ package v1
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -168,8 +170,17 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
 	}
 
+	indexBytes, err := hex.DecodeString(index)
+	if err != nil {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index invalid hex")
+	}
+
+	if len(indexBytes) > storage.IndexationIndexLength {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter index too long, max. %d bytes but is %d", storage.IndexationIndexLength, len(indexBytes)))
+	}
+
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-	indexMessageIDs := deps.Storage.GetIndexMessageIDs(index, maxResults)
+	indexMessageIDs := deps.Storage.GetIndexMessageIDs(indexBytes, maxResults)
 
 	return &messageIDsByIndexResponse{
 		Index:      index,
