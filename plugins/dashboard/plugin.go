@@ -45,8 +45,9 @@ func init() {
 }
 
 const (
-	broadcastQueueSize    = 20000
-	clientSendChannelSize = 1000
+	broadcastQueueSize      = 20000
+	clientSendChannelSize   = 1000
+	maxWebsocketMessageSize = 400
 )
 
 var (
@@ -90,7 +91,7 @@ func configure() {
 		EnableCompression: true,
 	}
 
-	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
+	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
 	jwtAuth = NewJWTAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
