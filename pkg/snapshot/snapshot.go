@@ -760,8 +760,6 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 	return func(output *Output) error {
 		switch addr := output.Address.(type) {
-		case *iotago.WOTSAddress:
-			return iotago.ErrWOTSNotImplemented
 		case *iotago.Ed25519Address:
 
 			outputID := iotago.UTXOInputID(output.OutputID)
@@ -777,23 +775,15 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 // returns a function which calls the corresponding address type callback function with
 // the origin argument and type casted address.
 func callbackPerAddress(
-	wotsAddrF func(interface{}, *iotago.WOTSAddress) error,
 	edAddrF func(interface{}, *iotago.Ed25519Address) error) func(interface{}, iotago.Serializable) error {
 	return func(obj interface{}, addr iotago.Serializable) error {
 		switch a := addr.(type) {
-		case *iotago.WOTSAddress:
-			return wotsAddrF(obj, a)
 		case *iotago.Ed25519Address:
 			return edAddrF(obj, a)
 		default:
 			return iotago.ErrUnknownAddrType
 		}
 	}
-}
-
-// returns an iota.ErrWOTSNotImplemented error if called.
-func errorOnWOTSAddr(_ interface{}, _ *iotago.WOTSAddress) error {
-	return iotago.ErrWOTSNotImplemented
 }
 
 // creates a milestone diff consumer storing them into the database.
@@ -806,7 +796,7 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		var newOutputs []*utxo.Output
 		var newSpents []*utxo.Spent
 
-		createdOutputAggr := callbackPerAddress(errorOnWOTSAddr, func(obj interface{}, addr *iotago.Ed25519Address) error {
+		createdOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 			output := obj.(*Output)
 			outputID := iotago.UTXOInputID(output.OutputID)
 			messageID := hornet.MessageIDFromArray(output.MessageID)
@@ -820,7 +810,7 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			}
 		}
 
-		spentOutputAggr := callbackPerAddress(errorOnWOTSAddr, func(obj interface{}, addr *iotago.Ed25519Address) error {
+		spentOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 			spent := obj.(*Spent)
 			outputID := iotago.UTXOInputID(spent.OutputID)
 			messageID := hornet.MessageIDFromArray(spent.MessageID)

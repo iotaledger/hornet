@@ -489,8 +489,6 @@ func readOutput(reader io.Reader) (*Output, error) {
 
 	var addrDataWithoutType []byte
 	switch addr.(type) {
-	case *iotago.WOTSAddress:
-		addrDataWithoutType = make([]byte, iotago.WOTSAddressBytesLength)
 	case *iotago.Ed25519Address:
 		addrDataWithoutType = make([]byte, iotago.Ed25519AddressBytesLength)
 	default:

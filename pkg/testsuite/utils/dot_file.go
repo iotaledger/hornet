@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -33,13 +34,14 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 	if len(index) > 4 {
 		index = index[:4]
 	}
+	indexHex := hex.EncodeToString(index)
 
 	if cachedMessage.GetMetadata().IsConflictingTx() {
 		conflict := cachedMessage.GetMetadata().GetConflict()
-		return fmt.Sprintf("%s (%d)", index, conflict)
+		return fmt.Sprintf("%s (%d)", indexHex, conflict)
 	}
 
-	return index
+	return indexHex
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.

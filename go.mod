@@ -2,8 +2,6 @@ module github.com/gohornet/hornet
 
 go 1.15
 
-replace github.com/iotaledger/iota.go/v2 => github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b
-
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
@@ -30,7 +28,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210209220536-c4c55778aaf7
-	github.com/iotaledger/iota.go/v2 v2.0.0
+	github.com/iotaledger/iota.go/v2 v2.0.0-20210218145050-36683a2a177c
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.17

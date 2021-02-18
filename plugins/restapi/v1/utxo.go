@@ -112,9 +112,6 @@ func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
 	}
 
 	switch address := bech32Address.(type) {
-	case *iotago.WOTSAddress:
-		// TODO: implement
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, iotago.ErrWOTSNotImplemented)
 	case *iotago.Ed25519Address:
 		return ed25519Balance(address)
 	default:

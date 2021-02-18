@@ -59,6 +59,11 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 		indexation = s.indexSemiLazy
 	}
 
+	index := []byte(indexation)
+	if len(index) > storage.IndexationIndexLength {
+		index = index[:storage.IndexationIndexLength]
+	}
+
 	txCount := int(s.serverMetrics.SentSpamMessages.Load()) + 1
 
 	now := time.Now()
@@ -70,7 +75,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	iotaMsg := &iotago.Message{
 		NetworkID: s.networkID,
 		Parents:   tips.ToSliceOfArrays(),
-		Payload:   &iotago.Indexation{Index: indexation, Data: []byte(messageString)},
+		Payload:   &iotago.Indexation{Index: index, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()
