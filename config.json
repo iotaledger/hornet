@@ -36,7 +36,6 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
-    "dev": false,
     "auth": {
       "sessionTimeoutInMinutes": 4320,
       "username": "admin",
