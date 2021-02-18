@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -37,56 +36,6 @@ var (
 	appBox = packr.New("Dashboard_App", "./frontend/build")
 )
 
-func indexRoute(e echo.Context) error {
-	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
-		res, err := http.Get("http://127.0.0.1:9090/")
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-
-		devIndexHTML, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		return e.HTMLBlob(http.StatusOK, devIndexHTML)
-	}
-
-	indexHTML, err := appBox.Find("index.html")
-	if err != nil {
-		return err
-	}
-
-	return e.HTMLBlob(http.StatusOK, indexHTML)
-}
-
-func readDataFromURL(url string) ([]byte, error) {
-	res, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	return ioutil.ReadAll(res.Body)
-}
-
-func passThroughRoute(e echo.Context) error {
-	contentType := calculateMimeType(e)
-
-	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
-		data, err := readDataFromURL("http://127.0.0.1:9090" + e.Request().URL.Path)
-		if err != nil {
-			return err
-		}
-		return e.Blob(http.StatusOK, contentType, data)
-	}
-	staticBlob, err := appBox.Find(e.Request().URL.Path)
-	if err != nil {
-		return err
-	}
-	return e.Blob(http.StatusOK, contentType, staticBlob)
-}
-
 func appBoxMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
@@ -99,7 +48,13 @@ func appBoxMiddleware() echo.MiddlewareFunc {
 			}
 			staticBlob, err := appBox.Find(path)
 			if err != nil {
-				return next(c)
+				// If the asset cannot be found, fall back to the index.html for routing
+				path = "index.html"
+				contentType = echo.MIMETextHTMLCharsetUTF8
+				staticBlob, err = appBox.Find(path)
+				if err != nil {
+					return next(c)
+				}
 			}
 			return c.Blob(http.StatusOK, contentType, staticBlob)
 		}
