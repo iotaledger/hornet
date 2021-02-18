@@ -36,11 +36,12 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
-    "basicAuth": {
-      "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+    "dev": false,
+    "auth": {
+      "sessionTimeoutInMinutes": 4320,
+      "username": "admin",
+      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
   "db": {
