@@ -87,9 +87,9 @@ func (c *jwtClaims) compare(field string, expected string) bool {
 	}
 	if subtle.ConstantTimeCompare([]byte(field), []byte(expected)) != 0 {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 func (c *jwtClaims) VerifySubject() bool {

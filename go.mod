@@ -2,7 +2,7 @@ module github.com/gohornet/hornet
 
 go 1.15
 
-replace github.com/iotaledger/hive.go => github.com/alexsporn/hive.go v0.0.0-20210218171704-b68267147ea6
+replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210219001101-655bfbe0823a
 
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect

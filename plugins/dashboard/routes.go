@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -118,14 +119,19 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 
 	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
-	apiUrl, err := url.Parse(fmt.Sprintf("http://%s", apiBindAddr))
+	_, apiBindPort, err := net.SplitHostPort(apiBindAddr)
+	if err != nil {
+		log.Fatalf("wrong REST API bind address: %s", err)
+	}
+
+	apiURL, err := url.Parse(fmt.Sprintf("http://localhost:%s", apiBindPort))
 	if err != nil {
 		log.Fatalf("wrong dashboard API url: %s", err)
 	}
 
 	balancer := middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
 		{
-			URL: apiUrl,
+			URL: apiURL,
 		},
 	})
 
